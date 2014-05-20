@@ -640,6 +640,13 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		TSelf NoCaching();
 
+        /// <summary>
+        /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
+        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
+        /// called just once for each document in the result set
+        /// </summary>
+	    TSelf SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
+
 		/// <summary>
 		/// Sets a transformer to use after executing a query
 		/// </summary>

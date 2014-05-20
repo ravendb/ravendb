@@ -8,13 +8,20 @@ namespace Raven.Database.Indexing
 {
 	public class FieldsToFetch
 	{
-		private readonly string additionalField;
+	    private readonly string additionalField;
 		private readonly HashSet<string> fieldsToFetch;
 		private readonly AggregationOperation aggregationOperation;
 		private HashSet<string > ensuredFieldNames;
 		public bool FetchAllStoredFields { get; set; }
 
-		public FieldsToFetch(string[] fieldsToFetch, AggregationOperation aggregationOperation, string additionalField)
+
+        public FieldsToFetch(IndexQuery query, string additionalField) 
+             :this(query.FieldsToFetch, query.AggregationOperation, additionalField)
+        {
+            this.Query = query;
+        }
+
+	    public FieldsToFetch(string[] fieldsToFetch, AggregationOperation aggregationOperation, string additionalField)
 		{
 			this.additionalField = additionalField;
 			if (fieldsToFetch != null)
@@ -60,8 +67,9 @@ namespace Raven.Database.Indexing
 				}
 			}
 		}
+	    public IndexQuery Query { get; private set; }
 
-		private IEnumerable<string> GetFieldsToReturn()
+	    private IEnumerable<string> GetFieldsToReturn()
 		{
 			if (fieldsToFetch == null)
 				yield break;

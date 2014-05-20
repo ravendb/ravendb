@@ -716,6 +716,7 @@ namespace Raven.Client.Document
 											orderByFields = orderByFields,
 											groupByFields = groupByFields,
 											aggregationOp = aggregationOp,
+                                            allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 											negate = negate,
 											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
@@ -940,5 +941,11 @@ namespace Raven.Client.Document
 		    base.SetResultTransformer(resultsTransformer);
 	        return this;
 		}
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
+	    {
+            base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+	        return this;
+	    }
 	}
 }

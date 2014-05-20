@@ -70,7 +70,13 @@ namespace Raven.Client.Document
 	        return this;
 	    }
 
-		public IDocumentQuery<T> OrderByScore()
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
+        {
+            base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+            return this;
+        }
+
+	    public IDocumentQuery<T> OrderByScore()
 		{
 			AddOrder(Constants.TemporaryScoreValue, false);
 			return this;
@@ -123,6 +129,7 @@ namespace Raven.Client.Document
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
 				negate = negate,

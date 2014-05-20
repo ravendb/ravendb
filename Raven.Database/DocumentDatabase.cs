@@ -1317,8 +1317,7 @@ namespace Raven.Database
 							}
 							var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
 							var indexDefinition = GetIndexDefinition(fixedName);
-							var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
-																  viewGenerator.ReduceDefinition == null
+							var fieldsToFetch = new FieldsToFetch(query, viewGenerator.ReduceDefinition == null
 																	? Constants.DocumentIdFieldName
 																	: Constants.ReduceKeyFieldName);
 							Func<IndexQueryResult, bool> shouldIncludeInResults =
