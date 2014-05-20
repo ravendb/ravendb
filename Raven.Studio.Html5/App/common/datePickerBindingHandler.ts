@@ -25,8 +25,18 @@ class datePickerBindingHandler {
     init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options = allBindings().datepickerOptions || {};
         var dpicker = $(element).datetimepicker(options);
+
+
+
         $(element).data("DateTimePicker").setMaxDate(moment(new Date()));
         dpicker.on('dp.change', function (ev) {
+            if (options.endDateElement) {
+                $("#" + options.endDateElement).data("DateTimePicker").setMinDate(ev.date);
+            }
+            if (options.startDateElement) {
+                $("#" + options.startDateElement).data("DateTimePicker").setMaxDate(ev.date);
+            }
+
             var newDate = moment(ev.date);
             var value = valueAccessor();
             value(newDate);
