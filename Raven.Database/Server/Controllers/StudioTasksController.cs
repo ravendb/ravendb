@@ -37,23 +37,48 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("studio-tasks/import")]
 		[Route("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase()
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
-            if (!this.Request.Content.IsMimeMultipartContent()) 
-            { 
-                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType); 
+            if (!this.Request.Content.IsMimeMultipartContent())
+            {
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
             var streamProvider = new MultipartMemoryStreamProvider();
             await Request.Content.ReadAsMultipartAsync(streamProvider);
-            var fileStream = await streamProvider.Contents.First().ReadAsStreamAsync();
-			var dataDumper = new DataDumper(Database);
+            var fileStream = await streamProvider.Contents
+                .First(c => c.Headers.ContentDisposition.Name == "\"file\"")
+                .ReadAsStreamAsync();
+
+            var dataDumper = new DataDumper(Database);
             var importOptions = new SmugglerImportOptions
-			{
+            {
                 FromStream = fileStream
-			};
-            var options = new SmugglerOptions();
-			await dataDumper.ImportData(importOptions, options);
+            };
+            var options = new SmugglerOptions
+            {
+                BatchSize = batchSize,
+                ShouldExcludeExpired = includeExpiredDocuments,
+                OperateOnTypes = operateOnTypes,
+                TransformScript = transformScript
+            };
+
+            // Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
+            // Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
+            if (filtersPipeDelimited != null)
+            {
+                options.Filters.AddRange(filtersPipeDelimited
+                    .Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+                    .Select(o => new FilterSetting
+                    {
+                        Path = o[0],
+                        Values = new List<string> { o[1] },
+                        ShouldMatch = bool.Parse(o[2])
+                    }));
+            }
+
+            await dataDumper.ImportData(importOptions, options);
             return GetEmptyMessage();
 		}
 
@@ -62,7 +87,7 @@ namespace Raven.Database.Server.Controllers
             public string SmugglerOptions { get; set; }
 	    }
         
-	    [HttpPost]
+		[HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
         public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
