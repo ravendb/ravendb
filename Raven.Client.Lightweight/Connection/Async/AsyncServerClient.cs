@@ -1874,14 +1874,27 @@ namespace Raven.Client.Connection.Async
 
 			private async Task TryReadNextPageStart()
 			{
-				if (pagingInformation == null || !(await reader.ReadAsync().ConfigureAwait(false)) || reader.TokenType != JsonToken.PropertyName || !Equals("NextPageStart", reader.Value))
+				if (!(await reader.ReadAsync().ConfigureAwait(false)) || reader.TokenType != JsonToken.PropertyName)
 					return;
 
-				var nextPageStart = await reader.ReadAsInt32().ConfigureAwait(false);
-				if (nextPageStart.HasValue == false)
-					throw new InvalidOperationException("Unexpected end of data");
+			    switch ((string)reader.Value)
+			    {
+                    case "NextPageStart":
+                        var nextPageStart = await reader.ReadAsInt32().ConfigureAwait(false);
+			            if (pagingInformation == null)
+			                return;				        
+                        if (nextPageStart.HasValue == false)
+					        throw new InvalidOperationException("Unexpected end of data");
 
-				pagingInformation.Fill(start, pageSize, nextPageStart.Value);
+			            pagingInformation.Fill(start, pageSize, nextPageStart.Value);
+			            break;
+                    case "Error":
+			            var err = await reader.ReadAsString().ConfigureAwait(false);
+                        throw new InvalidOperationException("Server error" + Environment.NewLine + err);
+                    default:
+                        throw new InvalidOperationException("Unexpected property name: " + reader.Value);
+			    }
+				
 			}
 
 			public RavenJObject Current { get; private set; }

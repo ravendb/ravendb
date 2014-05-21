@@ -84,7 +84,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
 		/// </summary>
-		protected readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata =
+		protected readonly Dictionary<object, InMemoryDocumentSessionOperations.DocumentMetadata> entitiesAndMetadata =
 			new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparer<object>.Default);
 
         protected readonly Dictionary<string, JsonDocument> includedDocumentsByKey = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
@@ -285,7 +285,6 @@ namespace Raven.Client.Document
 		{
 			return knownMissingIds.Contains(id);
 		}
-
 
 		/// <summary>
 		/// Gets the document id.
@@ -1444,6 +1443,34 @@ more responsive application.
                 indexName += "/" + Conventions.GetTypeTagName(typeof(T));
             }
             return indexName;
+        }
+
+        public bool CheckIfIdAlreadyIncluded(string[] ids,  KeyValuePair<string, Type>[] includes )
+        {
+            foreach (var id in ids)
+            {
+                if(knownMissingIds.Contains(id))
+                    continue;
+
+                object data;
+                if (entitiesByKey.TryGetValue(id, out data) == false)
+                    return false;
+                DocumentMetadata value;
+                if (entitiesAndMetadata.TryGetValue(data, out value) == false)
+                    return false;
+                foreach (var include in includes)
+                {
+                    var hasAll = true;
+                    IncludesUtil.Include(value.OriginalValue, include.Key, s =>
+                    {
+                        hasAll &= IsLoaded(s);
+                        return true;
+                    });
+                    if (hasAll == false)
+                        return false;
+                }
+            }
+            return true;
         }
 	}
 }

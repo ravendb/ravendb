@@ -6,6 +6,7 @@
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
+using Raven.Tests.Server.Runner.Imports;
 
 namespace Raven.Tests.Server.Runner.Responders
 {

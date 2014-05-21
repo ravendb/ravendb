@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -124,6 +125,19 @@ namespace Raven.Database.Prefetching
 				}
 
 				return innerList[innerList.Count - 1].Etag; // take the last one
+			}
+			finally
+			{
+				slim.ExitReadLock();
+			}
+		}
+
+		public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
+		{
+			slim.EnterReadLock();
+			try
+			{
+				return innerList.Aggregate(seed, aggregate);
 			}
 			finally
 			{

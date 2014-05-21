@@ -82,6 +82,8 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
+
+			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 			
 			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
@@ -832,6 +834,11 @@ namespace Raven.Database.Config
 		/// Default: 5
 		/// </summary>
 		public int MaxNumberOfStoredCommitPoints { get; set; }
+
+		/// <summary>
+		/// Limit of how much indexing process can take memory (in MBytes)
+		/// </summary>
+		public int MemoryLimitForIndexingInMB { get; set; }
 
 		public string IndexStoragePath
 		{

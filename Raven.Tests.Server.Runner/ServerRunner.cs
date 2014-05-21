@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Util.Streams;
+using Raven.Tests.Server.Runner.Imports;
 
 namespace Raven.Tests.Server.Runner
 {

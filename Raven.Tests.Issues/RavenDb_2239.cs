@@ -145,12 +145,10 @@ namespace Raven.Tests.Issues
                 sw.Restart();
                 TestSetupData(store);
 
-                WaitForUserToContinueTheTest(store);
-                Trace.WriteLine(" fill db finished " + sw.Elapsed);
                 int cntr = 0;
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<AggregateException>(() =>
+                    Assert.Throws<InvalidOperationException>(() =>
                     {
                         using (
                             var enumerator =
@@ -161,14 +159,13 @@ namespace Raven.Tests.Issues
                         {
                             enumerator.MoveNext();
                             sw.Stop();
-                            Trace.WriteLine("Time to first result with transformer: " + sw.Elapsed);
+                            sw.Restart();
                             cntr++;
                             while (enumerator.MoveNext())
                             {
-                                sw.Restart();
-                                Trace.WriteLine("Time to first result with transformer: " + sw.Elapsed);
                                 cntr++;
                             }
+
                         }
                     });
                     Assert.True(cntr == 10);
