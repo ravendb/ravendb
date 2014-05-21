@@ -19,7 +19,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
+					tx.State.Root.Add(i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -30,7 +30,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Delete(tx, i.ToString("0000"));
+					tx.State.Root.Delete(i.ToString("0000"));
 				}
 
 				tx.Commit();
@@ -41,7 +41,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
+					tx.State.Root.Add(i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();

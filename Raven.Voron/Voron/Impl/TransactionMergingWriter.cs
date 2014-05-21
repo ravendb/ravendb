@@ -174,25 +174,25 @@ namespace Voron.Impl
 								case WriteBatch.BatchOperationType.Add:
 									var stream = operation.Value as Stream;
 									if (stream != null)
-										tree.Add(tx, operation.Key, stream, operation.Version);
+										tree.Add(operation.Key, stream, operation.Version);
 									else
-										tree.Add(tx, operation.Key, (Slice)operation.Value, operation.Version);
+										tree.Add(operation.Key, (Slice)operation.Value, operation.Version);
 									actionType = DebugActionType.Add;
 									break;
 								case WriteBatch.BatchOperationType.Delete:
-									tree.Delete(tx, operation.Key, operation.Version);
+									tree.Delete(operation.Key, operation.Version);
 									actionType = DebugActionType.Delete;
 									break;
 								case WriteBatch.BatchOperationType.MultiAdd:
-									tree.MultiAdd(tx, operation.Key, operation.Value as Slice, version: operation.Version);
+									tree.MultiAdd(operation.Key, operation.Value as Slice, version: operation.Version);
 									actionType = DebugActionType.MultiAdd;
 									break;
 								case WriteBatch.BatchOperationType.MultiDelete:
-									tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
+									tree.MultiDelete(operation.Key, operation.Value as Slice, operation.Version);
 									actionType = DebugActionType.MultiDelete;
 									break;
 								case WriteBatch.BatchOperationType.Increment:
-									tree.Increment(tx, operation.Key, (long)operation.Value, operation.Version);
+									tree.Increment(operation.Key, (long)operation.Value, operation.Version);
 									actionType = DebugActionType.Increment;
 									break;
 								default:

@@ -233,12 +233,12 @@ namespace Voron
 	        if (tree == null)
 	            return;
 
-            foreach (var page in tree.AllPages(tx))
+            foreach (var page in tree.AllPages())
             {
                 tx.FreePage(page);
             }
 
-            tx.State.Root.Delete(tx, name);
+            tx.State.Root.Delete(name);
 
             tx.RemoveTree(name);
         }
@@ -255,7 +255,7 @@ namespace Voron
             Slice key = name;
 
             // we are in a write transaction, no need to handle locks
-            var header = (TreeRootHeader*)tx.State.Root.DirectRead(tx, key);
+            var header = (TreeRootHeader*)tx.State.Root.DirectRead(key);
             if (header != null)
             {
                 tree = Tree.Open(tx, _sliceComparer, header);
@@ -266,7 +266,7 @@ namespace Voron
 
             tree = Tree.Create(tx, _sliceComparer);
             tree.Name = name;
-            var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+            var space = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
 
             tree.State.CopyTo((TreeRootHeader*)space);
             tree.State.IsModified = true;
@@ -438,14 +438,14 @@ namespace Voron
         {
             var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{
-					{"Root", State.Root.AllPages(tx)},
-					{"Free Space Overhead", State.FreeSpaceRoot.AllPages(tx)},
+					{"Root", State.Root.AllPages()},
+					{"Free Space Overhead", State.FreeSpaceRoot.AllPages()},
 					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
             foreach (var tree in tx.Trees)
             {
-                results.Add(tree.Name, tree.AllPages(tx));
+                results.Add(tree.Name, tree.AllPages());
             }
 
             return results;

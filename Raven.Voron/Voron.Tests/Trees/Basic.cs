@@ -20,8 +20,8 @@ namespace Voron.Tests.Trees
             List<long> allPages = null;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
-                allPages = tx.State.Root.AllPages(tx);
+                tx.State.Root.Add("a", new MemoryStream(buffer));
+                allPages = tx.State.Root.AllPages();
                 tx.Commit();
             }
 
@@ -38,7 +38,7 @@ namespace Voron.Tests.Trees
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "test", StreamFor("value"));
+                tx.State.Root.Add("test", StreamFor("value"));
             }
         }
 
@@ -47,9 +47,9 @@ namespace Voron.Tests.Trees
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "b", StreamFor("2"));
-                tx.State.Root.Add(tx, "c", StreamFor("3"));
-                tx.State.Root.Add(tx, "a", StreamFor("1"));
+                tx.State.Root.Add("b", StreamFor("2"));
+                tx.State.Root.Add("c", StreamFor("3"));
+                tx.State.Root.Add("a", StreamFor("1"));
                 var actual = ReadKey(tx, "a");
 
                 Assert.Equal("a", actual.Item1);
@@ -63,7 +63,7 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Slice key = "test";
-                tx.State.Root.Add(tx, key, StreamFor("value"));
+                tx.State.Root.Add(key, StreamFor("value"));
 
                 tx.Commit();
 
@@ -82,7 +82,7 @@ namespace Voron.Tests.Trees
                 for (int i = 0; i < 256; i++)
                 {
                     stream.Position = 0;
-                    tx.State.Root.Add(tx, "test-" + i, stream);
+                    tx.State.Root.Add("test-" + i, stream);
 
                 }
 
@@ -107,7 +107,7 @@ namespace Voron.Tests.Trees
             {
                 for (int i = 0; i < count; i++)
                 {
-                    tx.State.Root.Add(tx, "test-" + i.ToString("000"), StreamFor("val-" + i));
+                    tx.State.Root.Add("test-" + i.ToString("000"), StreamFor("val-" + i));
 
                 }
 
@@ -140,7 +140,7 @@ namespace Voron.Tests.Trees
                         {
 
                         }
-                        tx.State.Root.Add(tx, "test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
+                        tx.State.Root.Add("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
                     }
                 }
 

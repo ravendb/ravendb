@@ -31,7 +31,7 @@ namespace Voron.Tests.Journal
             {
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    tx.State.Root.Add(tx, "item/" + i, new MemoryStream(bytes));
+                    tx.State.Root.Add("item/" + i, new MemoryStream(bytes));
                     tx.Commit();
                 }
             }
@@ -42,7 +42,7 @@ namespace Voron.Tests.Journal
             {
                 using (var tx = Env.NewTransaction(TransactionFlags.Read))
                 {
-                    Assert.NotNull(tx.State.Root.Read(tx, "item/" + i));
+                    Assert.NotNull(tx.State.Root.Read("item/" + i));
                 }
             }
         }
@@ -52,13 +52,13 @@ namespace Voron.Tests.Journal
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "items/1", StreamFor("values/1"));
+                tx.State.Root.Add("items/1", StreamFor("values/1"));
                 // tx.Commit(); uncommitted transaction
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                Assert.Null(tx.State.Root.Read(tx, "items/1"));
+                Assert.Null(tx.State.Root.Read("items/1"));
             }
         }
 
@@ -70,7 +70,7 @@ namespace Voron.Tests.Journal
                
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    tx.State.Root.Add(tx, "items/" + i, StreamFor("values/" + i));
+                    tx.State.Root.Add("items/" + i, StreamFor("values/" + i));
                     tx.Commit();
                 }
             }

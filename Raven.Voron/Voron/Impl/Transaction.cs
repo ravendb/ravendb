@@ -87,12 +87,12 @@ namespace Voron.Impl
                 // for write transactions, we can use the current one (which == null)
 			    _scratchPagerState = scratchPagerState;
 
-				_state = env.State;
+				_state = env.State.Clone(this);
 				_journal.GetSnapshots().ForEach(AddJournalSnapshot);
 				return;
 			}
 
-			_state = env.State.Clone();
+			_state = env.State.Clone(this);
 
 			InitTransactionHeader();
 
@@ -141,7 +141,7 @@ namespace Voron.Impl
 		    if (_trees.TryGetValue(treeName, out tree))
 		        return tree;
 
-            var header = (TreeRootHeader*)State.Root.DirectRead(this, treeName);
+            var header = (TreeRootHeader*)State.Root.DirectRead(treeName);
 		    if (header != null)
 		    {
 		        tree = Tree.Open(this, _env.SliceComparer, header);
@@ -154,7 +154,7 @@ namespace Voron.Impl
 		    return null;
 		}
 
-	    public Page ModifyPage(long num, Page page)
+	    internal Page ModifyPage(long num, Page page)
 		{
 			_env.AssertFlushingNotFailed();
 
@@ -200,7 +200,7 @@ namespace Voron.Impl
 		    return p;
 		}
 
-		public Page AllocatePage(int numberOfPages, long? pageNumber = null)
+		internal Page AllocatePage(int numberOfPages, long? pageNumber = null)
 		{
 			if (pageNumber == null)
 			{
@@ -260,7 +260,7 @@ namespace Voron.Impl
 			return GetNodeDataSize(node) / Constants.PageNumberSize;
 		}
 
-		internal int GetNodeDataSize(NodeHeader* node)
+		private int GetNodeDataSize(NodeHeader* node)
 		{
 			if (node->Flags == (NodeFlags.PageRef)) // lots of data, enough to overflow!
 			{
@@ -292,7 +292,7 @@ namespace Voron.Impl
 				var treeState = tree.State;
 				if (treeState.IsModified)
 				{
-					var treePtr = (TreeRootHeader*)State.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
+					var treePtr = (TreeRootHeader*)State.Root.DirectAdd(tree.Name, sizeof(TreeRootHeader));
 					treeState.CopyTo(treePtr);
 				}
 			}
@@ -348,7 +348,7 @@ namespace Voron.Impl
 				var key = multiValueTree.Key.Item2;
 				var childTree = multiValueTree.Value;
 
-				var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
+				var trh = (TreeRootHeader*)parentTree.DirectAdd(key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
 				childTree.State.CopyTo(trh);
 
 				//parentTree.SetAsMultiValueTreeRef(this, key);
@@ -367,8 +367,7 @@ namespace Voron.Impl
 			}
 		}
 
-
-		public void FreePage(long pageNumber)
+		internal void FreePage(long pageNumber)
 		{
 			Debug.Assert(pageNumber >= 2);
 			_dirtyPages.Remove(pageNumber);
@@ -385,18 +384,13 @@ namespace Voron.Impl
 			}
 		}
 
-		public void AddPagerState(PagerState state)
+		internal void AddPagerState(PagerState state)
 		{
 			LatestPagerState = state;
 			_pagerStates.Add(state);
 		}
 
-		public Cursor NewCursor(Tree tree)
-		{
-			return new Cursor();
-		}
-
-		public void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
+		internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
 		{
 			if (_multiValueTrees == null)
 				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
@@ -404,7 +398,7 @@ namespace Voron.Impl
 			_multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
 		}
 
-		public bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
+		internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
 		{
 			mvTree = null;
 			if (_multiValueTrees == null)
@@ -412,7 +406,7 @@ namespace Voron.Impl
 			return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
 		}
 
-		public bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
+		internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
 		{
 			var keyToRemove = Tuple.Create(parentTree, key);
 			if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
@@ -421,11 +415,10 @@ namespace Voron.Impl
 			return _multiValueTrees.Remove(keyToRemove);
 		}
 
-		public bool RemoveTree(string name)
+		internal bool RemoveTree(string name)
 		{
 		    return _trees.Remove(name);
 		}
-
 
 		private void AddJournalSnapshot(JournalSnapshot snapshot)
 		{
@@ -436,12 +429,12 @@ namespace Voron.Impl
 			JournalSnapshots.Add(snapshot);
 		}
 
-		public List<PageFromScratchBuffer> GetTransactionPages()
+		internal List<PageFromScratchBuffer> GetTransactionPages()
 		{
 			return _transactionPages;
 		}
 
-		public RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
+		internal RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
 		{
 			RecentlyFoundPages pages;
 			if (_recentlyFoundPages.TryGetValue(tree, out pages))
@@ -450,12 +443,12 @@ namespace Voron.Impl
 			return null;
 		}
 
-	    public void ClearRecentFoundPages(Tree tree)
+		internal void ClearRecentFoundPages(Tree tree)
 	    {
 	        _recentlyFoundPages.Remove(tree);
 	    }
 
-		public void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
+		internal void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
 		{
 			RecentlyFoundPages pages;
 		    if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
@@ -464,7 +457,7 @@ namespace Voron.Impl
 			pages.Add(foundPage);
 		}
 
-	    public void AddTree(string name, Tree tree)
+		internal void AddTree(string name, Tree tree)
 	    {
 	        Tree value;
 	        if (_trees.TryGetValue(name, out value) && value != null)

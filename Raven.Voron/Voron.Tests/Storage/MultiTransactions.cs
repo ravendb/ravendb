@@ -23,7 +23,7 @@ namespace Voron.Tests.Storage
                         {
                             ms.Position = 0;
                             
-                            tx.State.Root.Add(tx, (x * i).ToString("0000000000000000"), ms);
+                            tx.State.Root.Add((x * i).ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();

@@ -27,14 +27,14 @@ namespace Voron.Tests.Bugs
 
 							addedIds.Add("test/0/user-" + i, id);
 
-							multiTree.MultiAdd(tx, "test/0/user-" + i, id);
+							multiTree.MultiAdd("test/0/user-" + i, id);
 						}
 					}
 
 					foreach (var multiTreeName in multiTrees)
 					{
                         var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
-						multiTree.MultiAdd(tx, "test/0/user-50", Guid.NewGuid().ToString());
+						multiTree.MultiAdd("test/0/user-50", Guid.NewGuid().ToString());
 					}
 
 					tx.Commit();
@@ -49,7 +49,7 @@ namespace Voron.Tests.Bugs
                         {
                             var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
 					
-							multiTree.MultiDelete(tx, "test/0/user-" + i, addedIds["test/0/user-" + i]);
+							multiTree.MultiDelete("test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
 
 						tx.Commit();
@@ -70,7 +70,7 @@ namespace Voron.Tests.Bugs
                         {
                             var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
 					
-							multiTree.MultiDelete(tx, "test/0/user-" + i, addedIds["test/0/user-" + i]);
+							multiTree.MultiDelete("test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
 
 						tx.Commit();
@@ -126,12 +126,12 @@ namespace Voron.Tests.Bugs
 				var eKey = new string('e', 600);
 				var fKey = new string('f', 920);
 
-				tree.Add(tx, aKey, new MemoryStream(new byte[1000]));
-				tree.Add(tx, bKey, new MemoryStream(new byte[1000]));
-				tree.Add(tx, cKey, new MemoryStream(new byte[1000]));
-				tree.Add(tx, dKey, new MemoryStream(new byte[1000]));
-				tree.Add(tx, eKey, new MemoryStream(new byte[800]));
-				tree.Add(tx, fKey, new MemoryStream(new byte[10]));
+				tree.Add(aKey, new MemoryStream(new byte[1000]));
+				tree.Add(bKey, new MemoryStream(new byte[1000]));
+				tree.Add(cKey, new MemoryStream(new byte[1000]));
+				tree.Add(dKey, new MemoryStream(new byte[1000]));
+				tree.Add(eKey, new MemoryStream(new byte[800]));
+				tree.Add(fKey, new MemoryStream(new byte[10]));
 
 				RenderAndShow(tx, 1, "rebalancing-issue");
 
@@ -139,11 +139,11 @@ namespace Voron.Tests.Bugs
 				// tree rebalance will try to fix the first reference (the implicit ref page node) in the parent page which is almost full 
 				// and will fail because there is no space to put a new node
 
-				tree.Delete(tx, aKey); // this line throws "The page is full and cannot add an entry, this is probably a bug"
+				tree.Delete(aKey); // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
 				tx.Commit();
 
-				using (var iterator = tree.Iterate(tx))
+				using (var iterator = tree.Iterate())
 				{
 					Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
