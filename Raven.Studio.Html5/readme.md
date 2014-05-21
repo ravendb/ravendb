@@ -6,11 +6,6 @@ Raven.Studio.Html5 is a single page application (SPA) with no server-side compon
 
 The application code is written in <a href="http://typescriptlang.org">TypeScript</a>.
 
-## Screenshots
-<img src="http://judahhimango.com/images/ravenstudio3.0screen1.png" />
-<img src="http://judahhimango.com/images/ravenstudio3.0screen2.png" />
-<img src="http://judahhimango.com/images/ravenstudio3.0screen3.png" />
-
 ## Code layout
 -	<b>Index.html</b> - this is the single page hosting the app.
 -	<b>/App/common</b> - app code shared across multiple views
