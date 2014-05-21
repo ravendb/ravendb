@@ -238,6 +238,7 @@
     <Compile Include="Client\Aws\RavenAwsS3Client.cs" />
     <Compile Include="Client\Azure\RavenAzureClient.cs" />
     <Compile Include="Client\RavenStorageClient.cs" />
+    <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
     <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
     <Compile Include="Counters\Controllers\CounterStorageController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />

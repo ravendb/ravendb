@@ -23,6 +23,7 @@
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\counter\createCounterStorageCommand.ts" />
+    <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStoragesCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationsCommand.ts" />
@@ -153,6 +154,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorages.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\createCounterStorage.ts" />
+    <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
@@ -288,6 +290,7 @@
     <Content Include="App\views\counter\counterStorages.html" />
     <Content Include="App\views\counter\createCounterStorage.html" />
     <Content Include="App\views\counter\createCounter.html" />
+    <Content Include="App\views\counter\deleteCounterStorageConfirm.html" />
     <Content Include="App\views\counter\editCounterStorage.html" />
     <Content Include="App\views\executePatchConfirm.html" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />

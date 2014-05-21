@@ -702,7 +702,8 @@ interface filterSettingDto {
 }
 
 interface counterStorageDto {
-    Name:string;
+    Name: string;
+    Path?: string;
 }
 
 interface  counterDto {

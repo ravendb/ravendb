@@ -23,14 +23,15 @@
             </ul>
             <div class="btn-toolbar">
                 <button type="button" class="btn btn-primary" data-bind="click: createNewCountersStorage" accesskey="n" title="Create a new file system. (Alt+N)"><i class="fa fa-plus"></i> New Counter Storage</button>
-                <!--<form class="form-inline" style="display: inline-block; vertical-align: middle;">
-                    <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchFilesystemByText, valueUpdate: 'afterkeydown'" title="Search for a file system (Alt+S)">
-                </form>-->
+                <form class="form-inline" style="display: inline-block; vertical-align: middle;">
+                    <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchCounterStorageByText, valueUpdate: 'afterkeydown'" title="Search for a file system (Alt+S)">
+                </form>
+                <button class="btn btn-danger" data-bind="visible:!!selectedCounterStorage(), click:deleteSelectedCounterStorage"><i class="fa fa-trash-o"></i></button>
             </div>
             <br />
 
             <div class="filesystems-container" data-bind="foreach: storages">
-                <div class="filesystem" data-bind="click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
+                <div class="filesystem" data-bind="visible:isVisible,click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
                     <h4><a data-bind="text: name, attr: { href: $root.getCounterStorageUrl($data) }"></a></h4>
                     <!--<span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>-->
                 </div>
