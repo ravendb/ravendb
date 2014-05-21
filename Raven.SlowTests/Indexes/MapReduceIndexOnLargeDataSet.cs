@@ -35,7 +35,7 @@ namespace Raven.Tests.Indexes
 				using (var s = store.OpenSession())
 				{
 					var ret = s.Query<dynamic>("test")
-					           .Customize(x => x.WaitForNonStaleResults())
+					           .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
 					           .ToArray();
 					Assert.Equal(25, ret.Length);
 					foreach (var x in ret)
