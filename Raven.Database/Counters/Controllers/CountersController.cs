@@ -52,7 +52,7 @@ namespace Raven.Database.Counters.Controllers
 						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
 						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
 						{
-							Negative = s.Negative, Positive = s.Positive, Name = Storage.ServerNameFor(s.SourceId)
+							Negative = s.Negative, Positive = s.Positive, Name = reader.ServerNameFor(s.SourceId)
 						}).ToList()
 					}).ToList();
 				return Request.CreateResponse(HttpStatusCode.OK, results);
