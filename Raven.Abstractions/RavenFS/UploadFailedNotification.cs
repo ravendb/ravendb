@@ -2,7 +2,7 @@
 
 namespace Raven.Client.RavenFS
 {
-	public class UploadFailed : Notification
+	public class CancellationNotification : Notification
 	{
 		public Guid UploadId { get; set; }
 		public string File { get; set; }

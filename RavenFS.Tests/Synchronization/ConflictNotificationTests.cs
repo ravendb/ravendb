@@ -43,7 +43,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var notificationTask =
 				destinationClient.Notifications.Conflicts()
-				                 .OfType<ConflictDetected>()
+                                 .OfType<ConflictDetectedNotification>()
 				                 .Timeout(TimeSpan.FromSeconds(5))
 				                 .Take(1)
 				                 .ToTask();

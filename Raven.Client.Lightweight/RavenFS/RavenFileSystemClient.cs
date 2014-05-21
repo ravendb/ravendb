@@ -80,10 +80,12 @@ namespace Raven.Client.RavenFS
                 ApiKey = apiKey;
 
                 convention = new FileConvention();
-                notifications = new ServerNotifications(serverUrl, convention);
                 replicationInformer = new RavenFileSystemReplicationInformer(convention, jsonRequestFactory);
                 readStripingBase = replicationInformer.GetReadStripingBase();
 
+                notifications = new ServerNotifications(serverUrl, convention);
+                // notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
+                               
                 InitializeSecurity();
             }
             catch (Exception)
@@ -562,7 +564,7 @@ namespace Raven.Client.RavenFS
             });
         }
 
-        private void CancelFileUpload(UploadFailed uploadFailed)
+        private void CancelFileUpload(CancellationNotification uploadFailed)
         {
             CancellationTokenSource cts;
             if (uploadCancellationTokens.TryGetValue(uploadFailed.UploadId, out cts))

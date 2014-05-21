@@ -118,18 +118,18 @@ namespace Raven.Client.RavenFS.Changes
 			return TaskEx.WhenAll(pendingConnectionTasks);
 		}
 
-		public IObservable<ConfigChange> ConfigurationChanges()
+		public IObservable<ConfigurationChangeNotification> ConfigurationChanges()
 		{
 			EnsureConnectionInitiated();
 
 #pragma warning disable 4014
-			var observable = subjects.GetOrAdd("config", s => new NotificationSubject<ConfigChange>(
-															   () => ConfigureConnection("watch-config"),
+			var observable = subjects.GetOrAdd("config", s => new NotificationSubject<ConfigurationChangeNotification>(
+                                                               () => ConfigureConnection("watch-config"),
 															   () => ConfigureConnection("unwatch-config"),
 															   item => true));
 #pragma warning restore 4014
 
-			return (IObservable<ConfigChange>)observable;
+			return (IObservable<ConfigurationChangeNotification>)observable;
 		}
 
 		private async Task ConfigureConnection(string command, string value = "")
@@ -147,7 +147,7 @@ namespace Raven.Client.RavenFS.Changes
 
 #pragma warning disable 4014
 			var observable = subjects.GetOrAdd("conflicts", s => new NotificationSubject<ConflictNotification>(
-															   () => ConfigureConnection("watch-conflicts"),
+                                                               () => ConfigureConnection("watch-conflicts"),
 															   () => ConfigureConnection("unwatch-conflicts"),
 															   item => true));
 #pragma warning restore 4014
@@ -155,7 +155,7 @@ namespace Raven.Client.RavenFS.Changes
 			return (IObservable<ConflictNotification>)observable;
 		}
 
-		public IObservable<FileChange> FolderChanges(string folder)
+		public IObservable<FileChangeNotification> FolderChanges(string folder)
 		{
 			if (!folder.StartsWith("/"))
 			{
@@ -167,41 +167,41 @@ namespace Raven.Client.RavenFS.Changes
 			EnsureConnectionInitiated();
 
 #pragma warning disable 4014
-			var observable = subjects.GetOrAdd("folder/" + canonicalisedFolder, s => new NotificationSubject<FileChange>(
-															   () => ConfigureConnection("watch-folder", folder),
+			var observable = subjects.GetOrAdd("folder/" + canonicalisedFolder, s => new NotificationSubject<FileChangeNotification>(
+                                                               () => ConfigureConnection("watch-folder", folder),
 															   () => ConfigureConnection("unwatch-folder", folder),
 															   f => f.File.StartsWith(folder, StringComparison.InvariantCultureIgnoreCase)));
 #pragma warning restore 4014
 
-			return (IObservable<FileChange>)observable;
+			return (IObservable<FileChangeNotification>)observable;
 		}
 
-		public IObservable<SynchronizationUpdate> SynchronizationUpdates()
+		public IObservable<SynchronizationUpdateNotification> SynchronizationUpdates()
 		{
 			EnsureConnectionInitiated();
 
 #pragma warning disable 4014
-			var observable = subjects.GetOrAdd("sync", s => new NotificationSubject<SynchronizationUpdate>(
-															   () => ConfigureConnection("watch-sync"),
+			var observable = subjects.GetOrAdd("sync", s => new NotificationSubject<SynchronizationUpdateNotification>(
+                                                               () => ConfigureConnection("watch-sync"),
 															   () => ConfigureConnection("unwatch-sync"),
 															   x => true));
 #pragma warning restore 4014
 
-			return (IObservable<SynchronizationUpdate>)observable;
+			return (IObservable<SynchronizationUpdateNotification>)observable;
 		}
 
-		internal IObservable<UploadFailed> FailedUploads()
+        internal IObservable<CancellationNotification> FailedUploads()
 		{
 			EnsureConnectionInitiated();
 
 #pragma warning disable 4014
-			var observable = subjects.GetOrAdd("cancellations", s => new NotificationSubject<UploadFailed>(
+            var observable = subjects.GetOrAdd("cancellations", s => new NotificationSubject<CancellationNotification>(
 															   () => ConfigureConnection("watch-cancellations"),
 															   () => ConfigureConnection("unwatch-cancellations"),
 															   x => true));
 #pragma warning restore 4014
 
-			return (IObservable<UploadFailed>)observable;
+            return (IObservable<CancellationNotification>)observable;
 		}
 
 		private Task Send(string command, string value)
@@ -269,31 +269,31 @@ namespace Raven.Client.RavenFS.Changes
 			var ravenJObject = RavenJObject.Parse(dataFromConnection);
 			var value = ravenJObject.Value<RavenJObject>("Value");
 			var type = ravenJObject.Value<string>("Type");
-			//var notification = NotificationJSonUtilities.Parse<Notification>(dataFromConnection);
+
 			Notification notification;
 
 			switch (type)
 			{
-				case "ConfigChange":
-					notification = JsonConvert.DeserializeObject<ConfigChange>(value.ToString());
+                case "ConfigurationChangeNotification":
+                    notification = JsonConvert.DeserializeObject<ConfigurationChangeNotification>(value.ToString());
 					break;
-				case "FileChange":
-					notification = JsonConvert.DeserializeObject<FileChange>(value.ToString());
+                case "FileChangeNotification":
+                    notification = JsonConvert.DeserializeObject<FileChangeNotification>(value.ToString());
 					break;
-				case "ConflictNotification":
-					notification = JsonConvert.DeserializeObject<ConflictNotification>(value.ToString());
+                case "ConflictNotification":
+                    notification = JsonConvert.DeserializeObject<ConflictNotification>(value.ToString());
 					break;
-				case "SynchronizationUpdate":
-					notification = JsonConvert.DeserializeObject<SynchronizationUpdate>(value.ToString());
+                case "SynchronizationUpdateNotification":
+                    notification = JsonConvert.DeserializeObject<SynchronizationUpdateNotification>(value.ToString());
 					break;
-				case "UploadFailed":
-					notification = JsonConvert.DeserializeObject<UploadFailed>(value.ToString());
+                case "CancellationNotification":
+                    notification = JsonConvert.DeserializeObject<CancellationNotification>(value.ToString());
 					break;
-				case "ConflictDetected":
-					notification = JsonConvert.DeserializeObject<ConflictDetected>(value.ToString());
+                case "ConflictDetectedNotification":
+                    notification = JsonConvert.DeserializeObject<ConflictDetectedNotification>(value.ToString());
 					break;
-				case "ConflictResolved":
-					notification = JsonConvert.DeserializeObject<ConflictResolved>(value.ToString());
+                case "ConflictResolvedNotification":
+                    notification = JsonConvert.DeserializeObject<ConflictResolvedNotification>(value.ToString());
 					break;
 				case "Heartbeat":
 					return;

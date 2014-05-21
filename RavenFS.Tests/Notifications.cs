@@ -116,7 +116,7 @@ namespace RavenFS.Tests
             var configChange = await notificationTask;
 
             Assert.Equal("Test", configChange.Name);
-            Assert.Equal(ConfigChangeAction.Set, configChange.Action);
+            Assert.Equal(ConfigurationChangeAction.Set, configChange.Action);
         }
 
 		[Fact]
@@ -131,7 +131,7 @@ namespace RavenFS.Tests
             var configChange = await notificationTask;
 
             Assert.Equal("Test", configChange.Name);
-            Assert.Equal(ConfigChangeAction.Delete, configChange.Action);
+            Assert.Equal(ConfigurationChangeAction.Delete, configChange.Action);
         }
 
 		public override void Dispose()

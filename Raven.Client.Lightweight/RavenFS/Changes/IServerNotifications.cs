@@ -7,9 +7,9 @@ namespace Raven.Client.RavenFS.Changes
 	{
 		Task ConnectionTask { get; }
 		Task WhenSubscriptionsActive();
-		IObservable<ConfigChange> ConfigurationChanges();
+		IObservable<ConfigurationChangeNotification> ConfigurationChanges();
 		IObservable<ConflictNotification> Conflicts();
-		IObservable<FileChange> FolderChanges(string folder);
-		IObservable<SynchronizationUpdate> SynchronizationUpdates();
+		IObservable<FileChangeNotification> FolderChanges(string folder);
+		IObservable<SynchronizationUpdateNotification> SynchronizationUpdates();
 	}
 }

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.RavenFS
 {
-	public class ConflictDetected : ConflictNotification
+	public class ConflictDetectedNotification : ConflictNotification
 	{
 		public string SourceServerUrl { get; set; }
 	}
