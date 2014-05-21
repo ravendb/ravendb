@@ -4,12 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 
-namespace Raven.Database.Bundles.PeriodicBackups.Triggers
+namespace Raven.Database.Bundles.PeriodicExports.Triggers
 {
-    [ExportMetadata("Bundle", "PeriodicBackup")]
+	[ExportMetadata("Bundle", "PeriodicExport")]
     [ExportMetadata("Order", 10001)]
     [InheritedExport(typeof(AbstractPutTrigger))]
     public class AncestryPutTrigger : AbstractPutTrigger
@@ -20,10 +21,10 @@ namespace Raven.Database.Bundles.PeriodicBackups.Triggers
             {
                 Database.TransactionalStorage.Batch(accessor =>
                 {
-                    var tombstone = accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, key);
+                    var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, key);
                     if (tombstone == null)
                         return;
-                    accessor.Lists.Remove(Constants.RavenPeriodicBackupsDocsTombstones, key);
+                    accessor.Lists.Remove(Constants.RavenPeriodicExportsDocsTombstones, key);
                 });
             }
         }

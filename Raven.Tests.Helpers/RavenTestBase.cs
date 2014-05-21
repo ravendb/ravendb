@@ -363,9 +363,9 @@ namespace Raven.Tests.Helpers
 		}
 
 
-		public void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus, Func<PeriodicBackupStatus, Etag> compareSelector)
+		public void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus, Func<PeriodicExportStatus, Etag> compareSelector)
 		{
-			PeriodicBackupStatus currentStatus = null;
+			PeriodicExportStatus currentStatus = null;
 			var done = SpinWait.SpinUntil(() =>
 			{
 				currentStatus = GetPerodicBackupStatus(db);
@@ -389,38 +389,38 @@ namespace Raven.Tests.Helpers
 			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
-        protected PeriodicBackupStatus GetPerodicBackupStatus(DocumentDatabase db)
+        protected PeriodicExportStatus GetPerodicBackupStatus(DocumentDatabase db)
 	    {
             return GetPerodicBackupStatus(key => db.Documents.Get(key, null));
 	    }
 
-        protected PeriodicBackupStatus GetPerodicBackupStatus(IDatabaseCommands commands)
+        protected PeriodicExportStatus GetPerodicBackupStatus(IDatabaseCommands commands)
         {
             return GetPerodicBackupStatus(commands.Get);
         }
 
-        private PeriodicBackupStatus GetPerodicBackupStatus(Func<string, JsonDocument> getDocument)
+        private PeriodicExportStatus GetPerodicBackupStatus(Func<string, JsonDocument> getDocument)
         {
-            var jsonDocument = getDocument(PeriodicBackupStatus.RavenDocumentKey);
+            var jsonDocument = getDocument(PeriodicExportStatus.RavenDocumentKey);
             if (jsonDocument == null)
-                return new PeriodicBackupStatus();
+                return new PeriodicExportStatus();
 
-            return jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+            return jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
         }
 
-        protected void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus)
+        protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus)
         {
-            WaitForPeriodicBackup(key => db.Documents.Get(key, null), previousStatus);
+            WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus);
         }
 
-        protected void WaitForPeriodicBackup(IDatabaseCommands commands, PeriodicBackupStatus previousStatus)
+        protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus)
         {
-            WaitForPeriodicBackup(commands.Get, previousStatus);
+            WaitForPeriodicExport(commands.Get, previousStatus);
         }
 
-        private void WaitForPeriodicBackup(Func<string, JsonDocument> getDocument, PeriodicBackupStatus previousStatus)
+        private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus)
         {
-            PeriodicBackupStatus currentStatus = null;
+            PeriodicExportStatus currentStatus = null;
             var done = SpinWait.SpinUntil(() =>
             {
                 currentStatus = GetPerodicBackupStatus(getDocument);

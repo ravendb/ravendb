@@ -127,7 +127,7 @@
     <Compile Include="MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
-    <Compile Include="PeriodicBackups\PeriodicBackupTests.cs" />
+    <Compile Include="PeriodicExports\PeriodicBackupTests.cs" />
     <Compile Include="Replication\Async\AttachmentReplication.cs" />
     <Compile Include="Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />

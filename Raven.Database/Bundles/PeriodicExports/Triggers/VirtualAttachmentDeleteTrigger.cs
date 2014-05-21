@@ -4,13 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Bundles.PeriodicBackups.Triggers
+namespace Raven.Database.Bundles.PeriodicExports.Triggers
 {
-    [ExportMetadata("Bundle", "PeriodicBackup")]
+	[ExportMetadata("Bundle", "PeriodicExport")]
 	[ExportMetadata("Order", 10001)]
 	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
 	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
@@ -23,7 +24,7 @@ namespace Raven.Database.Bundles.PeriodicBackups.Triggers
 			};
 
             Database.TransactionalStorage.Batch(accessor =>
-                accessor.Lists.Set(Constants.RavenPeriodicBackupsAttachmentsTombstones, key, metadata, UuidType.Attachments));
+                accessor.Lists.Set(Constants.RavenPeriodicExportsAttachmentsTombstones, key, metadata, UuidType.Attachments));
 		}
 	}
 }

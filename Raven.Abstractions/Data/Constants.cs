@@ -102,8 +102,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
         //Periodic backup
-        public const string RavenPeriodicBackupsDocsTombstones = "Raven/PeriodicBackups/Docs/Tombstones";
-        public const string RavenPeriodicBackupsAttachmentsTombstones = "Raven/PeriodicBackups/Attachments/Tombstones";
+		public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
+		public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
 

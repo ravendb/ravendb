@@ -95,8 +95,8 @@ namespace Raven.SlowTests.Issues
 			//setup periodic backup
 			using (var session = documentStore.OpenSession("SourceDB"))
 			{
-				session.Store(new PeriodicBackupSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
-					PeriodicBackupSetup.RavenDocumentKey);
+				session.Store(new PeriodicExportSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
+					PeriodicExportSetup.RavenDocumentKey);
 				session.SaveChanges();
 			}
 

@@ -1,27 +1,27 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="AdminPeriodicBackupController.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AdminPeriodicExportController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Controllers;
 
-namespace Raven.Database.Bundles.PeriodicBackups.Controllers
+namespace Raven.Database.Bundles.PeriodicExports.Controllers
 {
-    public class AdminPeriodicBackupController : AdminBundlesApiController
+    public class AdminPeriodicExportController : AdminBundlesApiController
     {
         public override string BundleName
         {
-            get { return "PeriodicBackup"; }
+            get { return "PeriodicExport"; }
         }
 
         [HttpPost]
-        [Route("admin/periodicBackup/purge-tombstones")]
-        [Route("databases/{databaseName}/admin/periodicBackup/purge-tombstones")]
+		[Route("admin/periodicExport/purge-tombstones")]
+		[Route("databases/{databaseName}/admin/periodicExport/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()
         {
             var docEtagStr = GetQueryStringValue("docEtag");
@@ -45,11 +45,11 @@ namespace Raven.Database.Bundles.PeriodicBackups.Controllers
             {
                 if (docEtag != null)
                 {
-                    accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsDocsTombstones, docEtag);
+                    accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsDocsTombstones, docEtag);
                 }
                 if (attachmentEtag != null)
                 {
-                    accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsAttachmentsTombstones, attachmentEtag);
+                    accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsAttachmentsTombstones, attachmentEtag);
                 }
             });
 
