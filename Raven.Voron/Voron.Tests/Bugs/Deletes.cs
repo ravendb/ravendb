@@ -49,7 +49,7 @@
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 			    var t1 = tx.Environment.State.GetTree(tx,"tree1");
-				t1.Delete(tx, "Foo180"); // rebalancer fails to move 1st node from one branch to another
+				t1.Delete("Foo180"); // rebalancer fails to move 1st node from one branch to another
 			}
 		}
 	}

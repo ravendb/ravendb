@@ -34,8 +34,8 @@ namespace Voron.Tests.Journal
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "items/1", new MemoryStream(ones));
-				tx.State.Root.Add(tx, "items/2", new MemoryStream(ones));
+				tx.State.Root.Add("items/1", new MemoryStream(ones));
+				tx.State.Root.Add("items/2", new MemoryStream(ones));
 				tx.Commit();
 			}
 
@@ -45,13 +45,13 @@ namespace Voron.Tests.Journal
 			{
 				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					txw.State.Root.Add(txw, "items/1", new MemoryStream(nines));
+					txw.State.Root.Add("items/1", new MemoryStream(nines));
 					txw.Commit();
 				}
 
 				Env.FlushLogToDataFile(); // should not flush pages of items/1 because there is an active read transaction
 
-				var readResult = txr.State.Root.Read(txr, "items/1");
+				var readResult = txr.State.Root.Read("items/1");
 
 				int used;
 				var readData = readResult.Reader.ReadBytes(readResult.Reader.Length, out used).Take(used).ToArray();

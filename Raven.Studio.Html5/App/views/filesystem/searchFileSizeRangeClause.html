@@ -5,12 +5,15 @@
             <button type="button" class="close" data-bind="click: close" aria-hidden="true">&times;</button>
             <h4 class="modal-title">Add search filter</h4>
         </div>
-        <div class="modal-body form-inline">
-            <div class="form-group">
+        <div class="modal-body">
+            <div class="form-group form-inline">
                 <label>File size between: </label>
                 <input type="text" class="form-control" data-bind="value: inputs[0]" />
                 <label> and: </label>
                 <input type="text" class="form-control" data-bind="value: inputs[1]" />
+            </div>
+            <div class="form-group help-block">
+                <p><b>Hint:</b> use <b>Kb</b>, <b>Mb</b> or <b>Gb</b> to specify unit (case insensitive). Default: Bytes</p>
             </div>
         </div>
         <div class="modal-footer">

@@ -1,7 +1,10 @@
-﻿namespace Raven.Tests.Server.Runner
+﻿using System.Collections.Generic;
+
+using Raven.Tests.Server.Runner.Data;
+
+namespace Raven.Tests.Server.Runner
 {
 	using System;
-	using System.Threading;
 
 	using NDesk.Options;
 
@@ -13,6 +16,9 @@
 
 		private Program()
 		{
+			Context.Clear();
+			AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => Context.Clear();
+
 			optionSet = new OptionSet
 				            {
 								{ "port:", "Change default port (8585).", s => port = int.Parse(s) },
@@ -33,7 +39,7 @@
 			}
 		}
 
-		private void Parse(string[] args)
+		private void Parse(IEnumerable<string> args)
 		{
 			// Do these arguments the traditional way to maintain compatibility
 			//if (args.Length < 3)
@@ -48,12 +54,10 @@
 				PrintUsageAndExit(e);
 			}
 
-			var runner = new ServerRunner(port);
-			runner.Start();
-
-			while (runner.IsRunning)
+			using (new ServerRunner(port))
 			{
-				Thread.Sleep(1000);
+				Console.WriteLine("Press Enter to Exit");
+				Console.ReadLine();
 			}
 		}
 

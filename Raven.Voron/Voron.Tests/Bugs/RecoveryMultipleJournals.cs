@@ -31,7 +31,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream(new byte[100]));
 				}
 				tx.Commit();
 			}
@@ -50,7 +50,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					var readResult = tx.Environment.State.GetTree(tx,"tree").Read(tx, "a" + i);
+					var readResult = tx.Environment.State.GetTree(tx,"tree").Read("a" + i);
 					Assert.NotNull(readResult);
 					{
 						Assert.Equal(100, readResult.Reader.Length);
@@ -76,7 +76,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream(new byte[100]));
 				}
 				//tx.Commit(); - not committing here
 			}
@@ -85,7 +85,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.Environment.State.GetTree(tx,"tree").Add(tx, "a", new MemoryStream(new byte[100]));
+				tx.Environment.State.GetTree(tx,"tree").Add("a", new MemoryStream(new byte[100]));
 				tx.Commit();
 			}
 
@@ -106,7 +106,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream(new byte[100]));
 				}
 				tx.Commit(); 
 			}
@@ -121,7 +121,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "b" + i, new MemoryStream(buffer));
+					tx.Environment.State.GetTree(tx,"tree").Add("b" + i, new MemoryStream(buffer));
 				}
 				//tx.Commit(); - not committing here
 			}
@@ -130,7 +130,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.Environment.State.GetTree(tx,"tree").Add(tx, "b", new MemoryStream(buffer));
+				tx.Environment.State.GetTree(tx,"tree").Add("b", new MemoryStream(buffer));
 				tx.Commit();
 			}
 
@@ -143,7 +143,7 @@ namespace Voron.Tests.Bugs
 		    RequireFileBasedPager();
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.CreateTree(tx, "tree").Add(tx, "exists", new MemoryStream(new byte[100]));
+				Env.CreateTree(tx, "tree").Add("exists", new MemoryStream(new byte[100]));
 
 				tx.Commit();
 			}
@@ -152,7 +152,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream(new byte[100]));
 				}
 				tx.Commit();
 			}
@@ -167,11 +167,11 @@ namespace Voron.Tests.Bugs
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 var tree = Env.CreateTree(tx, "tree");
-                Assert.NotNull(tree.Read(tx, "exists"));
-                Assert.Null(tree.Read(tx, "a1"));
-                Assert.Null(tree.Read(tx, "a100"));
-                Assert.Null(tree.Read(tx, "a500"));
-                Assert.Null(tree.Read(tx, "a1000"));
+                Assert.NotNull(tree.Read("exists"));
+                Assert.Null(tree.Read("a1"));
+                Assert.Null(tree.Read("a100"));
+                Assert.Null(tree.Read("a500"));
+                Assert.Null(tree.Read("a1000"));
                 
                 tx.Commit();
             }
@@ -192,7 +192,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream(new byte[100]));
 				}
 				tx.Commit();
 			}
@@ -203,7 +203,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "b" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("b" + i, new MemoryStream(new byte[100]));
 				}
 				tx.Commit();
 			}
@@ -235,7 +235,7 @@ namespace Voron.Tests.Bugs
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+					tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream(new byte[100]));
 					tx.Commit();
 				}
 			}
@@ -258,7 +258,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Null(tx.Environment.State.GetTree(tx,"tree").Read(tx, "a999"));
+				Assert.Null(tx.Environment.State.GetTree(tx,"tree").Read("a999"));
 			}
 
 		}

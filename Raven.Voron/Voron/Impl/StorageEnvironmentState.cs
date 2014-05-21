@@ -23,12 +23,12 @@ namespace Voron
             NextPageNumber = nextPageNumber;
         }
 
-        public StorageEnvironmentState Clone()
+        public StorageEnvironmentState Clone(Transaction tx)
         {
-            return new StorageEnvironmentState()
+            return new StorageEnvironmentState
                 {
-                    Root = Root != null ? Root.Clone() : null,
-                    FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
+					Root = Root != null ? Root.Clone(tx) : null,
+					FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone(tx) : null,
                     NextPageNumber = NextPageNumber
                 };
         }

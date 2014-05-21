@@ -24,7 +24,7 @@ namespace Voron.Tests.Bugs
 				var tree2 = Env.CreateTree(txw, "bar");
 				var tree3 = Env.CreateTree(txw, "baz");
 
-				tree1.Add(txw, "foos/1", new MemoryStream(bytes));
+				tree1.Add("foos/1", new MemoryStream(bytes));
 
 				txw.Commit();
 
@@ -35,7 +35,7 @@ namespace Voron.Tests.Bugs
 			{
 				var tree = Env.State.GetTree(txw, "bar");
 
-				tree.Add(txw, "bars/1", new MemoryStream(bytes));
+				tree.Add("bars/1", new MemoryStream(bytes));
 
 				txw.Commit();
 
@@ -52,7 +52,7 @@ namespace Voron.Tests.Bugs
 
 				// here we have to put a big value to be sure that in next transaction we will put the
 				// updated value into a new journal file - this is the key to expose the issue
-				tree.Add(txw, "bazs/1", new MemoryStream(bytesToFillFirstJournalCompletely));
+				tree.Add("bazs/1", new MemoryStream(bytesToFillFirstJournalCompletely));
 
 				txw.Commit();
 
@@ -65,7 +65,7 @@ namespace Voron.Tests.Bugs
 				{
 					var tree = Env.State.GetTree(txw, "foo");
 
-					tree.Add(txw, "foos/1", new MemoryStream());
+					tree.Add("foos/1", new MemoryStream());
 
 					txw.Commit();
 
@@ -74,7 +74,7 @@ namespace Voron.Tests.Bugs
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.State.GetTree(txr, "foo").Read(txr, "foos/1"));
+				Assert.NotNull(Env.State.GetTree(txr, "foo").Read("foos/1"));
 			}
 		}
 	}
