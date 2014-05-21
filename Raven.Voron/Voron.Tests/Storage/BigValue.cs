@@ -27,7 +27,7 @@ namespace Voron.Tests.Storage
 			random.NextBytes(buffer);
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+				tx.State.Root.Add(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
 				tx.Commit();
 			}
 
@@ -40,13 +40,13 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Delete(tx, new Slice(BitConverter.GetBytes(1203)));
+				tx.State.Root.Delete(new Slice(BitConverter.GetBytes(1203)));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.Null(readResult);
 			}
 
@@ -55,7 +55,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.Null(readResult);
 			}
 
@@ -63,13 +63,13 @@ namespace Voron.Tests.Storage
 			{
 				buffer = new byte[1024 * 1024 * 3 + 1238];
 				random.NextBytes(buffer);
-				tx.State.Root.Add(tx, new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+				tx.State.Root.Add(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
@@ -83,7 +83,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
@@ -96,7 +96,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
@@ -112,7 +112,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
@@ -137,13 +137,13 @@ namespace Voron.Tests.Storage
 			random.NextBytes(buffer);
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+				tx.State.Root.Add(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(1203)));
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
@@ -165,7 +165,7 @@ namespace Voron.Tests.Storage
 					var buffer = new byte[912];
 					random.NextBytes(buffer);
 					buffers.Add(buffer);
-					tx.State.Root.Add(tx, new Slice(BitConverter.GetBytes(i)), new MemoryStream(buffer));
+					tx.State.Root.Add(new Slice(BitConverter.GetBytes(i)), new MemoryStream(buffer));
 				}
 				tx.Commit();
 			}
@@ -174,7 +174,7 @@ namespace Voron.Tests.Storage
 			{
 				for (int i = 0; i < 1500; i++)
 				{
-					var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(i)));
+					var readResult = tx.State.Root.Read(new Slice(BitConverter.GetBytes(i)));
 					Assert.NotNull(readResult);
 
 					var memoryStream = new MemoryStream();

@@ -44,7 +44,7 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 100; i++)
 					{
-						tree.Add(tx, "key" + i, new MemoryStream());
+						tree.Add("key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -67,7 +67,7 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 100; i++)
 					{
-						Assert.NotNull(tree.Read(tx, "key" + i));
+						Assert.NotNull(tree.Read("key" + i));
 					}
 				}
 			}
@@ -95,7 +95,7 @@ namespace Voron.Tests.Bugs
 				{
 					for (var i = 0; i < 10000; i++)
 					{
-						tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream());
+						tx.Environment.State.GetTree(tx,"tree").Add("a" + i, new MemoryStream());
 					}
 				}
 			}
@@ -127,8 +127,8 @@ namespace Voron.Tests.Bugs
 				{
 					for (var i = 0; i < 10000; i++)
 					{
-						tx.Environment.State.GetTree(tx,"atree").Add(tx, "a" + i, new MemoryStream());
-						tx.Environment.State.GetTree(tx,"btree").MultiAdd(tx, "a" + i, "a" + i);
+						tx.Environment.State.GetTree(tx,"atree").Add("a" + i, new MemoryStream());
+						tx.Environment.State.GetTree(tx,"btree").MultiAdd("a" + i, "a" + i);
 					}
 				}
 			}
@@ -155,7 +155,7 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 1000; i++)
 					{
-						tree.Add(tx, "key" + i, new MemoryStream());
+						tree.Add("key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -167,7 +167,7 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 1; i++)
 					{
-						tree.Add(tx, "key" + i, new MemoryStream());
+						tree.Add("key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -191,12 +191,12 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 1000; i++)
 					{
-						Assert.NotNull(aTree.Read(tx, "key" + i));
+						Assert.NotNull(aTree.Read("key" + i));
 					}
 
 					for (var i = 0; i < 1; i++)
 					{
-						Assert.NotNull(bTree.Read(tx, "key" + i));
+						Assert.NotNull(bTree.Read("key" + i));
 					}
 				}
 			}
@@ -219,7 +219,7 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 1000; i++)
 					{
-						tree.Add(tx, "key" + i, new MemoryStream());
+						tree.Add("key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -231,7 +231,7 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 5; i++)
 					{
-						tree.Add(tx, "key" + i, new MemoryStream());
+						tree.Add("key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -255,12 +255,12 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < 1000; i++)
 					{
-						Assert.NotNull(aTree.Read(tx, "key" + i));
+						Assert.NotNull(aTree.Read("key" + i));
 					}
 
 					for (var i = 0; i < 5; i++)
 					{
-						Assert.NotNull(bTree.Read(tx, "key" + i));
+						Assert.NotNull(bTree.Read("key" + i));
 					}
 				}
 			}
@@ -298,8 +298,8 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < count; i++)
 					{
-						aTree.Add(tx, "a" + i, new MemoryStream(buffer));
-						bTree.MultiAdd(tx, "a", "a" + i);
+						aTree.Add("a" + i, new MemoryStream(buffer));
+						bTree.MultiAdd("a", "a" + i);
 					}
 
 					tx.Commit();
@@ -328,12 +328,12 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < count; i++)
 					{
-					    var read = aTree.Read(tx, "a" + i);
+					    var read = aTree.Read("a" + i);
 					    Assert.NotNull(read);
 					    Assert.Equal(expectedString, read.Reader.ToStringValue());
 					}
 
-				    using (var iterator = bTree.MultiRead(tx, "a"))
+				    using (var iterator = bTree.MultiRead("a"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 

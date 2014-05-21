@@ -16,8 +16,8 @@ namespace Voron.Tests.Bugs
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.ReadTree(treeName).MultiAdd(tx, "queue1", "queue1/07000000-0000-0000-0000-000000000001");
-					tx.ReadTree(treeName).MultiAdd(tx, "queue1", "queue1/07000000-0000-0000-0000-000000000002");
+					tx.ReadTree(treeName).MultiAdd("queue1", "queue1/07000000-0000-0000-0000-000000000001");
+					tx.ReadTree(treeName).MultiAdd("queue1", "queue1/07000000-0000-0000-0000-000000000002");
 
 					tx.Commit();
 				}

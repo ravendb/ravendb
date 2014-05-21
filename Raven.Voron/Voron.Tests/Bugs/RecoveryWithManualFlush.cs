@@ -21,8 +21,8 @@ namespace Voron.Tests.Bugs
         {
             using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx1.State.Root.Add(tx1, "item/1", new MemoryStream(new byte[4000]));
-                tx1.State.Root.Add(tx1, "item/2", new MemoryStream(new byte[4000]));
+                tx1.State.Root.Add("item/1", new MemoryStream(new byte[4000]));
+                tx1.State.Root.Add("item/2", new MemoryStream(new byte[4000]));
 
                 tx1.Commit();
             }
@@ -33,7 +33,7 @@ namespace Voron.Tests.Bugs
 
                 // this will also override the page translation table for the page where item/2 is placed
 
-                tx2.State.Root.Add(tx2, "item/2", new MemoryStream(new byte[3999]));
+                tx2.State.Root.Add("item/2", new MemoryStream(new byte[3999]));
 
                 tx2.Commit();
             }
@@ -57,12 +57,12 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var readResult = tx.State.Root.Read(tx, "item/1");
+                var readResult = tx.State.Root.Read("item/1");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(4000, readResult.Reader.Length);
 
-                readResult = tx.State.Root.Read(tx, "item/2");
+                readResult = tx.State.Root.Read("item/2");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(3999, readResult.Reader.Length);
@@ -74,15 +74,15 @@ namespace Voron.Tests.Bugs
         {
             using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx1.State.Root.Add(tx1, "item/1", new MemoryStream(new byte[4000]));
-                tx1.State.Root.Add(tx1, "item/2", new MemoryStream(new byte[4000]));
+                tx1.State.Root.Add("item/1", new MemoryStream(new byte[4000]));
+                tx1.State.Root.Add("item/2", new MemoryStream(new byte[4000]));
 
                 tx1.Commit();
             }
 
             using (var tx2 = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx2.State.Root.Add(tx2, "item/2", new MemoryStream(new byte[3999]));
+                tx2.State.Root.Add("item/2", new MemoryStream(new byte[3999]));
 
                 tx2.Commit();
             }
@@ -100,12 +100,12 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var readResult = tx.State.Root.Read(tx, "item/1");
+                var readResult = tx.State.Root.Read("item/1");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(4000, readResult.Reader.Length);
 
-                readResult = tx.State.Root.Read(tx, "item/2");
+                readResult = tx.State.Root.Read("item/2");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(3999, readResult.Reader.Length);
@@ -117,7 +117,7 @@ namespace Voron.Tests.Bugs
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "items/1", new MemoryStream(new byte[] { 1, 2, 3 }));
+				tx.State.Root.Add("items/1", new MemoryStream(new byte[] { 1, 2, 3 }));
 				tx.Commit();
 			}
 
@@ -127,7 +127,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.Root.Read(tx, "items/1");
+				var readResult = tx.State.Root.Read("items/1");
 
 				Assert.NotNull(readResult);
 				Assert.Equal(3, readResult.Reader.Length);

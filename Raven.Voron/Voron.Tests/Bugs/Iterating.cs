@@ -24,7 +24,7 @@ namespace Voron.Tests.Bugs
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.ReadTree("tree");
-					tree.Add(tx, @"Raven\Database\1", StreamFor("123"));
+					tree.Add(@"Raven\Database\1", StreamFor("123"));
 
 					tx.Commit();
 				}

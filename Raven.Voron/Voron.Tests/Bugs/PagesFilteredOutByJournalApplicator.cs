@@ -20,7 +20,7 @@ namespace Voron.Tests.Bugs
 			{
 				var tree = Env.CreateTree(txw, "foo");
 
-				tree.Add(txw, "bars/1", new MemoryStream(bytes));
+				tree.Add("bars/1", new MemoryStream(bytes));
 
 				txw.Commit();
 
@@ -47,7 +47,7 @@ namespace Voron.Tests.Bugs
 				{
 					var tree = Env.State.GetTree(txw, "foo");
 
-					tree.Add(txw, "bars/1", new MemoryStream());
+					tree.Add("bars/1", new MemoryStream());
 
 					txw.Commit();
 
@@ -56,7 +56,7 @@ namespace Voron.Tests.Bugs
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.State.GetTree(txr, "foo").Read(txr, "bars/1"));
+				Assert.NotNull(Env.State.GetTree(txr, "foo").Read("bars/1"));
 			}
 		} 
 
@@ -69,10 +69,10 @@ namespace Voron.Tests.Bugs
 			{
 				var tree = Env.CreateTree(txw, "foo");
 
-				tree.Add(txw, "bars/1", new MemoryStream(bytes));
-				tree.Add(txw, "bars/2", new MemoryStream(bytes));
-				tree.Add(txw, "bars/3", new MemoryStream(bytes));
-				tree.Add(txw, "bars/4", new MemoryStream(bytes));
+				tree.Add("bars/1", new MemoryStream(bytes));
+				tree.Add("bars/2", new MemoryStream(bytes));
+				tree.Add("bars/3", new MemoryStream(bytes));
+				tree.Add("bars/4", new MemoryStream(bytes));
 
 				txw.Commit();
 
@@ -83,8 +83,8 @@ namespace Voron.Tests.Bugs
 			{
 				var tree = Env.State.GetTree(txw, "foo");
 
-				tree.Add(txw, "bars/0", new MemoryStream());
-				tree.Add(txw, "bars/5", new MemoryStream());
+				tree.Add("bars/0", new MemoryStream());
+				tree.Add("bars/5", new MemoryStream());
 
 				txw.Commit();
 
@@ -111,7 +111,7 @@ namespace Voron.Tests.Bugs
 				{
 					var tree = Env.State.GetTree(txw, "foo");
 
-					tree.Add(txw, "bars/4", new MemoryStream());
+					tree.Add("bars/4", new MemoryStream());
 
 					txw.Commit();
 
@@ -120,7 +120,7 @@ namespace Voron.Tests.Bugs
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.State.GetTree(txr, "foo").Read(txr, "bars/5"));
+				Assert.NotNull(Env.State.GetTree(txr, "foo").Read("bars/5"));
 			}
 		}
 	}

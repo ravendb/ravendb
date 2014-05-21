@@ -28,7 +28,7 @@ namespace Voron.Tests.Bugs
 				{
 					var key = Write(env, 10);
 
-					using (var iterator = txr.ReadTree("tree0").MultiRead(txr, "key/1"))
+					using (var iterator = txr.ReadTree("tree0").MultiRead("key/1"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -68,7 +68,7 @@ namespace Voron.Tests.Bugs
 				{
 					var key = Delete(env, 10);
 
-					using (var iterator = txr.ReadTree("tree0").MultiRead(txr, "key/1"))
+					using (var iterator = txr.ReadTree("tree0").MultiRead("key/1"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -93,7 +93,7 @@ namespace Voron.Tests.Bugs
 			{
 				var key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + i.ToString("D2");
 
-				txw.ReadTree("tree0").MultiDelete(txw, "key/1", key);
+				txw.ReadTree("tree0").MultiDelete("key/1", key);
 				txw.Commit();
 
 				return key;
@@ -106,7 +106,7 @@ namespace Voron.Tests.Bugs
 			{
 				var key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + i.ToString("D2");
 
-				txw.ReadTree("tree0").MultiAdd(txw, "key/1", key);
+				txw.ReadTree("tree0").MultiAdd("key/1", key);
 				txw.Commit();
 
 				return key;
@@ -131,8 +131,8 @@ namespace Voron.Tests.Bugs
 				{
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						tx.Environment.State.GetTree(tx, "tree0").Add(tx, string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
-						tx.Environment.State.GetTree(tx, "tree0").Add(tx, string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
+						tx.Environment.State.GetTree(tx, "tree0").Add(string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
+						tx.Environment.State.GetTree(tx, "tree0").Add(string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
 
 						tx.Commit();
 					}
@@ -140,14 +140,14 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.Environment.State.GetTree(tx, "tree1").Add(tx, "yek/1", new MemoryStream());
+					tx.Environment.State.GetTree(tx, "tree1").Add("yek/1", new MemoryStream());
 
 					tx.Commit();
 				}
 
 				using (var txr = env.NewTransaction(TransactionFlags.Read))
 				{
-					using (var iterator = txr.Environment.State.GetTree(txr, "tree0").Iterate(txr))
+					using (var iterator = txr.Environment.State.GetTree(txr, "tree0").Iterate())
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys)); // all pages are from scratch (one from position 11)
 
@@ -158,7 +158,7 @@ namespace Voron.Tests.Bugs
 						using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 						{
 							var tree = txw.Environment.State.GetTree(txw, "tree1");
-							tree.Add(txw, string.Format("yek/{0}/0/0", new string('0', 1000)), new MemoryStream()); // allocates new page from scratch (position 11)
+							tree.Add(string.Format("yek/{0}/0/0", new string('0', 1000)), new MemoryStream()); // allocates new page from scratch (position 11)
 
 							txw.Commit();
 						}
@@ -168,7 +168,7 @@ namespace Voron.Tests.Bugs
 						using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 						{
 							var tree = txw.Environment.State.GetTree(txw, "tree1");
-							tree.Add(txw, "fake", new MemoryStream());
+							tree.Add("fake", new MemoryStream());
 
 							txw.Commit();
 						}
