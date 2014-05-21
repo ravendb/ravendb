@@ -79,7 +79,8 @@ namespace Raven.Tests.Issues
                 {
                     var pizzeriaDocCount = session.Query<Pizzeria, SpatialIndex>().Count();
                     var pizzerias = session.Query<Pizzeria, SpatialIndex>().ToList();
-                    var stats = store.DatabaseCommands.GetStatistics();
+
+                    Assert.NotEmpty(pizzerias);
                     Assert.Equal(3,pizzeriaDocCount);
                 }
             }
