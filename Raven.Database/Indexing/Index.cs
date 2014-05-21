@@ -432,7 +432,11 @@ namespace Raven.Database.Indexing
 						}
 						catch (Exception e)
 						{
-							context.AddError(indexId, indexDefinition.Name, null, e.ToString(), "Write");
+                            var invalidSpatialShapeException = e as InvalidSpatialShapeException;
+                            var invalidDocId = (invalidSpatialShapeException == null) ?
+                                                        null :
+                                                        invalidSpatialShapeException.InvalidDocumentId;
+                            context.AddError(indexId, indexDefinition.Name, invalidDocId, e.ToString(), "Write");
 							throw;
 						}
 
