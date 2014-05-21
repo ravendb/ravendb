@@ -160,7 +160,7 @@ namespace Voron.Trees
 			{
 				var node = page.GetNode(page.LastSearchPosition);
 
-				Debug.Assert(node->KeySize == key.Size && new Slice(node).Equals(key));
+				Debug.Assert(page.GetFullNodeKey(node).Equals(key));
 
 				shouldGoToOverflowPage = tx.DataPager.ShouldGoToOverflowPage(len);
 
@@ -197,8 +197,10 @@ namespace Voron.Trees
 				nodeType = NodeFlags.PageRef;
 			}
 
+			var prefixedKey = page.ConvertToPrefixedKey(key, lastSearchPosition); // TODO arek it can happen that there is no space to create a prefix
+
 			byte* dataPos;
-			if (page.HasSpaceFor(tx, key, len) == false)
+			if (page.HasSpaceFor(tx, prefixedKey, len) == false)
 			{
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
@@ -213,13 +215,13 @@ namespace Voron.Trees
 				switch (nodeType)
 				{
 					case NodeFlags.PageRef:
-						dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
+						dataPos = page.AddPageRefNode(lastSearchPosition, prefixedKey, pageNumber);
 						break;
 					case NodeFlags.Data:
-						dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
+						dataPos = page.AddDataNode(lastSearchPosition, prefixedKey, len, nodeVersion);
 						break;
 					case NodeFlags.MultiValuePageRef:
-						dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
+						dataPos = page.AddMultiValueNode(lastSearchPosition, prefixedKey, len, nodeVersion);
 						break;
 					default:
 						throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
@@ -378,8 +380,8 @@ namespace Voron.Trees
 	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
 	        {
 	            Number = p.PageNumber,
-	            FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
-	            LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
+	            FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetFullNodeKey(0),
+	            LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetFullNodeKey(p.NumberOfEntries - 1),
 	        };
 	        var cur = c.Pages.First;
 	        int pos = foundPage.CursorPath.Length - 1;
@@ -516,7 +518,7 @@ namespace Voron.Trees
 			var p = FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, _cmp);
 
-			if (node == null || new Slice(node).Compare(key, _cmp) != 0)
+			if (node == null || p.GetFullNodeKey(node).Compare(key, _cmp) != 0)
 				return -1;
 
 			return node->DataSize;
@@ -528,7 +530,7 @@ namespace Voron.Trees
 			var p = FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, _cmp);
 
-			if (node == null || new Slice(node).Compare(key, _cmp) != 0)
+			if (node == null || p.GetFullNodeKey(node).Compare(key, _cmp) != 0)
 				return 0;
 
 			return node->Version;
@@ -544,9 +546,9 @@ namespace Voron.Trees
 			if (node == null)
 				return null;
 
-			var item1 = new Slice(node);
+			var foundKey = p.GetFullNodeKey(node);
 
-			if (item1.Compare(key, _cmp) != 0)
+			if (foundKey.Compare(key, _cmp) != 0)
 				return null;
 
 			if (node->Flags == (NodeFlags.PageRef))

@@ -27,7 +27,7 @@ namespace Voron.Trees
 			if (current == null)
 				return false;
 			_currentKey.Set(current);
-			return this.ValidateCurrentKey(current, _cmp);
+			return this.ValidateCurrentKey(current, _cmp, _page);
 		}
 
 		public NodeHeader* Current
@@ -86,7 +86,7 @@ namespace Voron.Trees
 				return false;
 
 			var current = _page.GetNode(_page.LastSearchPosition);
-			if (this.ValidateCurrentKey(current, _cmp) == false)
+			if (this.ValidateCurrentKey(current, _cmp, _page) == false)
 			{
 				return false;
 			}

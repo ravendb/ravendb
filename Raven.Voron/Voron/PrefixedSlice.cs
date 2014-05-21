@@ -3,10 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using Voron.Impl;
+using Voron.Trees;
 
 namespace Voron
 {
@@ -25,19 +25,34 @@ namespace Voron
 
 	public unsafe class PrefixedSlice
 	{
+		public static PrefixedSlice AfterAllKeys = new PrefixedSlice(SliceOptions.AfterAllKeys);
+		public static PrefixedSlice BeforeAllKeys = new PrefixedSlice(SliceOptions.BeforeAllKeys);
+		public static PrefixedSlice Empty = new PrefixedSlice();
+
 		public const byte NonPrefixed = 0xff;
 
 		private readonly PrefixedSliceHeader* _header;
 		private readonly byte* _base;
-		private byte* _nonPrefixedData;
+
+		public readonly ushort Size;
+		public readonly byte* NonPrefixedData;
 
 		public SliceOptions Options;
 
-		public PrefixedSlice(byte* p)
+		public PrefixedSlice()
 		{
-			_base = p;
+			Options = SliceOptions.Key;
+			Size = 0;
+		}
+
+		public PrefixedSlice(NodeHeader* node)
+		{
+			_base = (byte*)node + Constants.NodeHeaderSize;
 			_header = (PrefixedSliceHeader*)_base;
-			_nonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
+			
+			NonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
+			Options = SliceOptions.Key;
+			Size = (ushort)(Constants.PrefixedSliceHeaderSize + _header->NonPrefixedDataSize);
 		}
 
 		public PrefixedSlice(Slice key)
@@ -49,10 +64,11 @@ namespace Voron
 			_header->PrefixUsage = 0;
 			_header->NonPrefixedDataSize = key.Size;
 
-			_nonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
-			key.CopyTo(_nonPrefixedData);
+			NonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
+			key.CopyTo(NonPrefixedData);
 
 			Options = key.Options;
+			Size = (ushort)(Constants.PrefixedSliceHeaderSize + _header->NonPrefixedDataSize);
 		}
 
 		public PrefixedSlice(byte prefixId, ushort prefixUsage, Slice key)
@@ -65,15 +81,20 @@ namespace Voron
 			_header->PrefixUsage = prefixUsage;
 			_header->NonPrefixedDataSize = nonPrefixedSize;
 
-			_nonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
-			key.CopyTo(prefixUsage, _nonPrefixedData, 0, _header->NonPrefixedDataSize);
+			NonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
+			key.CopyTo(prefixUsage, NonPrefixedData, 0, _header->NonPrefixedDataSize);
 
 			Options = key.Options;
+			Size = (ushort)(Constants.PrefixedSliceHeaderSize + _header->NonPrefixedDataSize);
 		}
 
-		public ushort Size
+		public PrefixedSlice(SliceOptions options)
 		{
-			get { return (ushort)(Constants.PrefixedNodeHeaderSize + _header->NonPrefixedDataSize); }
+			Options = options;
+
+			_header = null;
+			NonPrefixedData = null;
+			Size = 0;
 		}
 
 		public byte PrefixId
@@ -91,11 +112,6 @@ namespace Voron
 			get { return _header->NonPrefixedDataSize; }
 		}
 
-		public byte* NonPrefixedData
-		{
-			get { return _nonPrefixedData; }
-		}
-
 		public void CopyTo(byte* dest)
 		{
 			NativeMethods.memcpy(dest, _base, Size);
@@ -103,7 +119,7 @@ namespace Voron
 
 		public override string ToString()
 		{
-			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header->PrefixId, _header->PrefixUsage, new string((sbyte*) _nonPrefixedData, 0, _header->NonPrefixedDataSize, Encoding.UTF8));
+			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header->PrefixId, _header->PrefixUsage, new string((sbyte*) NonPrefixedData, 0, _header->NonPrefixedDataSize, Encoding.UTF8));
 		}
 	}
 }

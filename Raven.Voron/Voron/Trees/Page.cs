@@ -68,10 +68,10 @@ namespace Voron.Trees
 				return GetNode(LastSearchPosition);
 			}
 
-			var pageKey = new Slice(SliceOptions.Key);
+			Slice pageKey = null;
 			if (NumberOfEntries == 1)
 			{
-				pageKey.Set(GetNode(0));
+				pageKey = GetFullNodeKey(0);
 				LastMatch = key.Compare(pageKey, cmp);
 				LastSearchPosition = LastMatch > 0 ? 1 : 0;
 				return LastSearchPosition == 0 ? GetNode(0) : null;
@@ -85,8 +85,7 @@ namespace Voron.Trees
 			{
 				position = (low + high) >> 1;
 
-				var node = GetNode(position);
-				pageKey.Set(node);
+				pageKey = GetFullNodeKey(position);
 
 				LastMatch = key.Compare(pageKey, cmp);
 				if (LastMatch == 0)
@@ -123,7 +122,7 @@ namespace Voron.Trees
 
 	    private PrefixNode GetPrefixNode(byte n)
 	    {
-			Debug.Assert(n < PrefixCount);
+			Debug.Assert(n < PrefixCount, "Requested prefix number was: " + n);
 
 		    var prefixOffset = _header->PrefixOffsets[n];
 
@@ -169,7 +168,7 @@ namespace Voron.Trees
             Lower -= (ushort)Constants.NodeOffsetSize;
         }
 
-		public byte* AddPageRefNode(int index, Slice key, long pageNumber)
+		public byte* AddPageRefNode(int index, PrefixedSlice key, long pageNumber)
 		{
 			var node = CreateNode(index, key, NodeFlags.PageRef, -1, 0);
 			node->PageNumber = pageNumber;
@@ -177,7 +176,7 @@ namespace Voron.Trees
 			return null; // nothing to write into page ref node
 		}
 
-		public byte* AddDataNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+		public byte* AddDataNode(int index, PrefixedSlice key, int dataSize, ushort previousNodeVersion)
 		{
 			Debug.Assert(dataSize >= 0);
 			Debug.Assert(key.Options == SliceOptions.Key);
@@ -188,7 +187,7 @@ namespace Voron.Trees
 			return (byte*)node + Constants.NodeHeaderSize + key.Size;
 		}
 
-		public byte* AddMultiValueNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+		public byte* AddMultiValueNode(int index, PrefixedSlice key, int dataSize, ushort previousNodeVersion)
 		{
 			Debug.Assert(dataSize == sizeof(TreeRootHeader));
 			Debug.Assert(key.Options == SliceOptions.Key);
@@ -211,7 +210,7 @@ namespace Voron.Trees
 			node->PageNumber = implicitRefPageNumber;
 		}
 
-        private NodeHeader* CreateNode(int index, Slice key, NodeFlags flags, int len, ushort previousNodeVersion)
+        private NodeHeader* CreateNode(int index, PrefixedSlice key, NodeFlags flags, int len, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
@@ -224,15 +223,13 @@ namespace Voron.Trees
                 KeysOffsets[i] = KeysOffsets[i - 1];
             }
 
-			var prefixedKey = ConvertToPrefixedKey(key, index);
-
             var nodeSize = SizeOf.NodeEntry(PageMaxSpace, key, len);
             var node = AllocateNewNode(index, nodeSize, previousNodeVersion);
 
-	        node->KeySize = prefixedKey.Size;
+	        node->KeySize = key.Size;
 
             if (key.Options == SliceOptions.Key) // TODO arek - check this if statement
-                prefixedKey.CopyTo((byte*)node + Constants.NodeHeaderSize);
+                key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
 	        node->Flags = flags;
 
@@ -243,15 +240,14 @@ namespace Voron.Trees
         /// Internal method that is used when splitting pages
         /// No need to do any work here, we are always adding at the end
         /// </summary>
-        internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
+        internal void CopyNodeDataToEndOfPage(NodeHeader* other, PrefixedSlice key = null)
         {
-			var nodeKey = key ?? new Slice(other);
+			var index = NumberOfEntries;
+
+	        var nodeKey = key ?? ConvertToPrefixedKey(new Slice(other), index);
             Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize));
             
-            var index = NumberOfEntries;
-
             var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, nodeKey);
-
 
 			if (other->KeySize == 0 && key == null) // when copy first item from branch which is implicit ref
 			{
@@ -263,8 +259,6 @@ namespace Voron.Trees
 	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
-
-			var prefixedKey = ConvertToPrefixedKey(nodeKey, index);
 
             var newNode = AllocateNewNode(index, nodeSize, nodeVersion);
 
@@ -284,7 +278,7 @@ namespace Voron.Trees
                                  other->DataSize);
         }
 
-	    private PrefixedSlice ConvertToPrefixedKey(Slice key, int nodeIndex)
+	    public PrefixedSlice ConvertToPrefixedKey(Slice key, int nodeIndex)
 	    {
 		    PrefixedSlice prefixedSlice;
 
@@ -307,6 +301,8 @@ namespace Voron.Trees
 			    if (length == 0) 
 					continue;
 
+				// TODO arek  we need better prefix detection here, not only the first match
+
 			    prefixedSlice = new PrefixedSlice(prefixId, (ushort) length, key);
 			    return true;
 		    }
@@ -328,23 +324,17 @@ namespace Voron.Trees
 
 			if (nodeIndex > 0 && nodeIndex < NumberOfEntries) // middle
 			{
-				left = new Slice(SliceOptions.Key);
-				left.Set(GetNode(nodeIndex - 1));
-
-				right = new Slice(SliceOptions.Key);
-				right.Set(GetNode(nodeIndex));
+				left = GetFullNodeKey(nodeIndex - 1);
+				right = GetFullNodeKey(nodeIndex);
 			}
 			else if (nodeIndex == 0) // first
 			{
 				left = null;
-				right = new Slice(SliceOptions.Key);
-				right.Set(GetNode(0));
+				right = GetFullNodeKey(0);
 			}
 			else if (nodeIndex == NumberOfEntries) // last
 			{
-				left = new Slice(SliceOptions.Key);
-				left.Set(GetNode(nodeIndex - 1));
-
+				left = GetFullNodeKey(nodeIndex - 1);
 				right = null;
 			}
 			else
@@ -403,17 +393,18 @@ namespace Voron.Trees
 	    {
 			// TODO arek : ensure that we have enough space for that
 
-		    var prefixNodeSize = sizeof (PrefixNodeHeader) + prefix.Size;
+		    var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
 			var prefixNodeOffset = (ushort)(_header->Upper - prefixNodeSize);
+		    _header->Upper = prefixNodeOffset;
 
 		    var prefixId = _header->AvailablePrefixNode;
 		    _header->PrefixOffsets[prefixId] = prefixNodeOffset;
 
-			var header = (PrefixNodeHeader*) (_base + prefixNodeOffset);
+			var prefixNodeHeader = (PrefixNodeHeader*) (_base + prefixNodeOffset);
 
-		    header->PrefixLength = prefix.Size;
+		    prefixNodeHeader->PrefixLength = prefix.Size;
 
-			prefix.CopyTo((byte*)_header + sizeof(PrefixNodeHeader));
+			prefix.CopyTo((byte*)prefixNodeHeader + Constants.PrefixNodeHeaderSize);
 
 		    _header->AvailablePrefixNode++;
 
@@ -543,18 +534,18 @@ namespace Voron.Trees
             return len <= SizeLeft;
         }
 
-        public bool HasSpaceFor(Transaction tx, Slice key, int len)
+        public bool HasSpaceFor(Transaction tx, PrefixedSlice key, int len)
         {
             var requiredSpace = GetRequiredSpace(key, len);
             return HasSpaceFor(tx, requiredSpace);
         }
 
-        private bool HasSpaceFor(Slice key, int len)
+        private bool HasSpaceFor(PrefixedSlice key, int len)
         {
             return HasSpaceFor(GetRequiredSpace(key, len));
         }
 
-        public int GetRequiredSpace(Slice key, int len)
+        public int GetRequiredSpace(PrefixedSlice key, int len)
         {
 			return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
         }
@@ -569,37 +560,49 @@ namespace Voron.Trees
 
 	    public string this[int i]
         {
-            get { return new Slice(GetNode(i)).ToString(); }
+            get { return GetFullNodeKey(i).ToString(); }
         }
 
-		public Slice GetNodeKey(int nodeNumber)
-		{
-			var node = GetNode(nodeNumber);
-			var keySize = node->KeySize;
-			var key = new byte[keySize];
+		//public Slice GetNodeKey(int nodeNumber)
+		//{
+		//	var node = GetNode(nodeNumber);
+		//	var keySize = node->KeySize;
+		//	var key = new byte[keySize];
 
-			fixed (byte* ptr = key)
-				NativeMethods.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
+		//	fixed (byte* ptr = key)
+		//		NativeMethods.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
 
-			return new Slice(key);
-		}
+		//	return new Slice(key);
+		//}
+
+	    public Slice GetFullNodeKey(NodeHeader* node)
+	    {
+			var prefixedSlice = new PrefixedSlice(node);
+
+		    if (prefixedSlice.PrefixUsage > 0)
+		    {
+				Debug.Assert(prefixedSlice.PrefixId < PrefixCount);
+
+				var prefixNode = GetPrefixNode(prefixedSlice.PrefixId);
+
+				var key = new byte[prefixedSlice.PrefixUsage + prefixedSlice.NonPrefixedDataSize];
+
+				prefixNode.Value.CopyTo(0, key, 0, prefixedSlice.PrefixUsage);
+
+				fixed (byte* ptr1 = key)
+					NativeMethods.memcpy(ptr1 + prefixedSlice.PrefixUsage, prefixedSlice.NonPrefixedData, prefixedSlice.NonPrefixedDataSize);
+
+				return new Slice(key);
+		    }
+
+			return new Slice(prefixedSlice.NonPrefixedData, prefixedSlice.NonPrefixedDataSize);
+	    }
 
 		public Slice GetFullNodeKey(int nodeNumber)
 		{
 			var node = GetNode(nodeNumber);
 
-			var prefixedSlice = new PrefixedSlice((byte*)node + Constants.NodeHeaderSize);
-
-			var prefixNode = GetPrefixNode(prefixedSlice.PrefixId);
-
-			var key = new byte[prefixedSlice.PrefixUsage + prefixedSlice.NonPrefixedDataSize];
-
-			prefixNode.Value.CopyTo(0, key, 0, prefixedSlice.PrefixUsage);
-
-			fixed (byte* ptr1 = key)
-				NativeMethods.memcpy(ptr1 + prefixedSlice.PrefixUsage, prefixedSlice.NonPrefixedData, prefixedSlice.NonPrefixedDataSize);
-
-			return new Slice(key);
+			return GetFullNodeKey(node);
 		}
 
 	    public string DebugView()
@@ -607,12 +610,13 @@ namespace Voron.Trees
 		    var sb = new StringBuilder();
 		    for (int i = 0; i < NumberOfEntries; i++)
 		    {
-			    sb.Append(i)
-				    .Append(": ")
-				    .Append(new Slice((NodeHeader*)( _base + KeysOffsets[i])))
-				    .Append(" - ")
-				    .Append(KeysOffsets[i])
-				    .AppendLine();
+				// TODO arek
+				//sb.Append(i)
+				//	.Append(": ")
+				//	.Append(new Slice((NodeHeader*)( _base + KeysOffsets[i])))
+				//	.Append(" - ")
+				//	.Append(KeysOffsets[i])
+				//	.AppendLine();
 		    }
 		    return sb.ToString();
 	    }
@@ -623,12 +627,12 @@ namespace Voron.Trees
             if (NumberOfEntries == 0)
                 return;
 
-            var prev = new Slice(GetNode(0));
+            var prev = GetFullNodeKey(0);
             var pages = new HashSet<long>();
             for (int i = 1; i < NumberOfEntries; i++)
             {
                 var node = GetNode(i);
-                var current = new Slice(node);
+	            var current = GetFullNodeKey(i);
 
                 if (prev.Compare(current, comparer) >= 0)
                 {
@@ -677,7 +681,7 @@ namespace Voron.Trees
             return sl;
         }
 
-        public void EnsureHasSpaceFor(Transaction tx, Slice key, int len)
+        public void EnsureHasSpaceFor(Transaction tx, PrefixedSlice key, int len)
         {
             if (HasSpaceFor(tx, key, len) == false)
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");

@@ -72,7 +72,7 @@ namespace Voron
 		}
 
 		public Slice(NodeHeader* node)
-		{
+		{//TODO arek - consider removing this ctor
 			Options = SliceOptions.Key;
 			Set(node);
 		}
@@ -289,11 +289,11 @@ namespace Voron
 			fixed (byte* p = _array)
 				NativeMethods.memcpy(dest + offset, p + from, count);
 		}
+
 		public void Set(NodeHeader* node)
 		{
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
 		}
-
 
 		public Slice Clone()
 		{

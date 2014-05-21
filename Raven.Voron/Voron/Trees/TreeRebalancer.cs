@@ -252,19 +252,35 @@ namespace Voron.Trees
 			parentPage.AddPageRefNode(pos, newKey, pageNumber);
         }
 
-        private Slice GetActualKey(Page page, int pos)
+        private PrefixedSlice GetActualKey(Page page, int pos)
         {
             var node = page.GetNode(pos);
-            var key = new Slice(node);
-            while (key.Size == 0)
+	        var key = new PrefixedSlice(node);
+			while (key.Size == 0) // TODO check this after PrefixedSlice introduction
             {
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
-                key.Set(node);
+				key = new PrefixedSlice(node);
             }
+
             return key;
         }
+
+		// TODO arek old impl of GetActualKey - kept for reference
+		//private PrefixedSlice GetActualKey(Page page, int pos)
+		//{
+		//	var node = page.GetNode(pos);
+		//	var key = page.GetFullNodeKey(node);
+		//	while (key.Size == 0)
+		//	{
+		//		Debug.Assert(page.IsBranch);
+		//		page = _tx.GetReadOnlyPage(node->PageNumber);
+		//		node = page.GetNode(0);
+		//		key = page.GetFullNodeKey(pos);
+		//	}
+		//	return key;
+		//}
 
         private void RebalanceRoot(Cursor cursor, Page page)
         {
