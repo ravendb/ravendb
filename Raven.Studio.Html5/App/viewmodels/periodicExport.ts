@@ -1,14 +1,14 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupCommand");
+import getPeriodicExportSetupCommand = require("commands/getPeriodicExportSetupCommand");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import savePeriodicBackupSetupCommand = require("commands/savePeriodicBackupSetupCommand");
+import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetupCommand");
 import document = require("models/document");
-import periodicBackupSetup = require("models/periodicBackupSetup");
+import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
 
-class periodicBackup extends viewModelBase {
+class periodicExport extends viewModelBase {
 
-    backupSetup = ko.observable<periodicBackupSetup>().extend({ required: true });
+    backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
     backupStatusDirtyFlag = new ko.DirtyFlag([]);
     backupConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -16,11 +16,11 @@ class periodicBackup extends viewModelBase {
     canActivate(args: any): any {
         super.canActivate(args);
 
-        this.backupSetup(new periodicBackupSetup);
+        this.backupSetup(new periodicExportSetup);
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            $.when(this.fetchPeriodicBackupSetup(db), this.fetchPeriodicBackupAccountsSettings(db))
+            $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
         }
@@ -42,16 +42,16 @@ class periodicBackup extends viewModelBase {
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
-    fetchPeriodicBackupSetup(db): JQueryPromise<any> {
+    fetchPeriodicExportSetup(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getPeriodicBackupSetupCommand(db)
+        new getPeriodicExportSetupCommand(db)
             .execute()
-            .done((result: periodicBackupSetupDto) => this.backupSetup().fromDto(result) )
+            .done((result: periodicExportSetupDto) => this.backupSetup().fromDto(result) )
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
 
-    fetchPeriodicBackupAccountsSettings(db): JQueryPromise<any> {
+    fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getDatabaseSettingsCommand(db)
             .execute()
@@ -60,7 +60,7 @@ class periodicBackup extends viewModelBase {
         return deferred;
     }
 
-    activatePeriodicBackup() {
+    activatePeriodicExport() {
         var action: boolean = !this.backupSetup().disabled();
         this.backupSetup().disabled(action);
     }
@@ -68,7 +68,7 @@ class periodicBackup extends viewModelBase {
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-            var saveTask = new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
+            var saveTask = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
             saveTask.done((resultArray) => {
                 var newEtag = resultArray[0].ETag;
                 this.backupSetup().setEtag(newEtag);
@@ -79,4 +79,4 @@ class periodicBackup extends viewModelBase {
     }
 }
 
-export = periodicBackup; 
+export = periodicExport; 

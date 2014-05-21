@@ -67,7 +67,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			{
 				try
 				{
-					// Not having a setup doc means this DB isn't enabled for periodic backups
+					// Not having a setup doc means this DB isn't enabled for periodic exports
                     var document = Database.Documents.Get(PeriodicExportSetup.RavenDocumentKey, null);
 					if (document == null)
 					{
@@ -90,7 +90,7 @@ namespace Raven.Database.Bundles.PeriodicExports
                     if (exportConfigs.IntervalMilliseconds > 0)
                     {
 					var interval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds);
-                        logger.Info("Incremental periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
+                        logger.Info("Incremental periodic export started, will export every" + interval.TotalMinutes + "minutes");
 
                         var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
@@ -98,13 +98,13 @@ namespace Raven.Database.Bundles.PeriodicExports
                     }
                     else
                     {
-                        logger.Warn("Incremental periodic backup interval is set to zero or less, incremental periodic backup is now disabled");
+                        logger.Warn("Incremental periodic export interval is set to zero or less, incremental periodic export is now disabled");
                     }
 
                     if (exportConfigs.FullBackupIntervalMilliseconds > 0)
                     {
                         var interval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds);
-                        logger.Info("Full periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
+                        logger.Info("Full periodic export started, will export every" + interval.TotalMinutes + "minutes");
 
                         var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
 					var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
@@ -112,22 +112,22 @@ namespace Raven.Database.Bundles.PeriodicExports
                     }
                     else
                     {
-                        logger.Warn("Full periodic backup interval is set to zero or less, full periodic backup is now disabled");
+                        logger.Warn("Full periodic export interval is set to zero or less, full periodic export is now disabled");
                     }
 
 
 				}
 				catch (Exception ex)
 				{
-					logger.ErrorException("Could not read periodic backup config", ex);
+					logger.ErrorException("Could not read periodic export config", ex);
 					Database.AddAlert(new Alert
 					{
 						AlertLevel = AlertLevel.Error,
 						CreatedAt = SystemTime.UtcNow,
 						Message = ex.Message,
-						Title = "Could not read periodic backup config",
+						Title = "Could not read periodic export config",
 						Exception = ex.ToString(),
-						UniqueKey = "Periodic Backup Config Error"
+						UniqueKey = "Periodic Export Config Error"
 					});
 				}
 			}
@@ -216,7 +216,7 @@ namespace Raven.Database.Bundles.PeriodicExports
                                     exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 							{
                                     logger.Info(
-                                        "Periodic backup returned prematurely, nothing has changed since last backup");
+                                        "Periodic export returned prematurely, nothing has changed since last export");
 								return;
 							}
                             }
@@ -270,15 +270,15 @@ namespace Raven.Database.Bundles.PeriodicExports
 						}
 						catch (Exception e)
 						{
-							logger.ErrorException("Error when performing periodic backup", e);
+							logger.ErrorException("Error when performing periodic export", e);
 							Database.AddAlert(new Alert
 							{
 								AlertLevel = AlertLevel.Error,
 								CreatedAt = SystemTime.UtcNow,
 								Message = e.Message,
-								Title = "Error in Periodic Backup",
+								Title = "Error in Periodic Export",
 								Exception = e.ToString(),
-								UniqueKey = "Periodic Backup Error",
+								UniqueKey = "Periodic Export Error",
 							});
 						}
 					}
@@ -358,7 +358,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
         private string GetArchiveDescription(bool isFullBackup)
 		{
-            return (isFullBackup ? "Full" : "Incremental") + "periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
+            return (isFullBackup ? "Full" : "Incremental") + "periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
 		}
 
 		public void Dispose()

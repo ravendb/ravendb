@@ -13,7 +13,7 @@ class settings extends viewModelBase {
     isOnUserDatabase: KnockoutComputed<boolean>;
     appUrls: computedAppUrls;
 
-    bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicbackups: "Periodic Backup", scriptedindexresults: "Scripted Index", scriptedindex: "Scripted Index"};
+    bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "ScriptedIndexResults", scriptedindex: "Scripted Index"};
     userDatabasePages = ko.observableArray(["Database Settings"]);
     systemDatabasePages = ["API Keys", "Windows Authentication"];
 
@@ -32,7 +32,7 @@ class settings extends viewModelBase {
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
         //var versioningRoute = { route: 'settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
-        var periodicBackupRoute = { route: 'databases/settings/periodicBackups', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
+        var periodicExportRoute = { route: 'databases/settings/periodicExports', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
 
         this.router = durandalRouter.createChildRouter()
@@ -44,7 +44,7 @@ class settings extends viewModelBase {
                 replicationsRoute,
                 sqlReplicationsRoute,
                 //versioningRoute,
-                periodicBackupRoute,
+                periodicExportRoute,
                 scriptedIndexesRoute
             ])
             .buildNavigationModel();
@@ -109,7 +109,7 @@ class settings extends viewModelBase {
         var bundleTitle = route.title;
 
         if (this.isOnUserDatabase() && (this.userDatabasePages.indexOf(bundleTitle) !== -1)) {
-            // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Backup and Scripted Index are visible only when we're on a user database.
+            // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Export and Scripted Index are visible only when we're on a user database.
             return true;
         }
         if (this.isOnSystemDatabase() && (this.systemDatabasePages.indexOf(bundleTitle) !== -1)) {

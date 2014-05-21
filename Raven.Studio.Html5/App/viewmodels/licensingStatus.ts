@@ -5,7 +5,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 class licensingStatus extends dialogViewModelBase {
 
     bundles = ["SQL Replication", "Scripted Index"];
-    bundleMap = { compression: "Compression", encryption: "Encryption:", documentExpiration: "Expiration", quotas: "Quotas", replication: "Replication", versioning: "Versioning", periodicBackup: "Periodic Backup"};
+    bundleMap = { compression: "Compression", encryption: "Encryption:", documentExpiration: "Expiration", quotas: "Quotas", replication: "Replication", versioning: "Versioning", periodicExport: "Periodic Export"};
     bundleString = "";
 
     constructor(private licenseStatus: licenseStatusDto) {

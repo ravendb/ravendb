@@ -1,19 +1,19 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import periodicBackupSetup = require("models/periodicBackupSetup");
+import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
 
-class savePeriodicBackupSetupCommand extends commandBase {
+class savePeriodicExportSetupCommand extends commandBase {
 
-    constructor(private setupToPersist: periodicBackupSetup, private db: database) {
+    constructor(private setupToPersist: periodicExportSetup, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Saving Periodic Backup setup.");
+        this.reportInfo("Saving Periodic Export setup.");
         return jQuery.when(this.saveAccountInformation(), this.saveSetup())
-            .done(() => this.reportSuccess("Saved Periodic Backup setup."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save Periodic Backup setup.", response.responseText));
+            .done(() => this.reportSuccess("Saved Periodic Export setup."))
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Periodic Export setup.", response.responseText));
     }
 
     private saveAccountInformation(): JQueryPromise<any> {
@@ -33,4 +33,4 @@ class savePeriodicBackupSetupCommand extends commandBase {
         return this.put(url, putArgs, this.db);
     }
 }
-export = savePeriodicBackupSetupCommand;
+export = savePeriodicExportSetupCommand;

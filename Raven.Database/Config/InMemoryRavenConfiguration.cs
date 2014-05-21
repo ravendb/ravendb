@@ -292,17 +292,12 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? string.Empty;
 
-				return ProcessActiveBundles(activeBundles)
+				return BundlesHelper.ProcessActiveBundles(activeBundles)
 					.GetSemicolonSeparatedValues()
 					.Distinct();
 			}
-		}
-
-		private static string ProcessActiveBundles(string activeBundles)
-		{
-			return activeBundles.Replace("PeriodicBackup", "PeriodicExport");
 		}
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
