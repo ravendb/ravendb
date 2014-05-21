@@ -19,5 +19,11 @@ namespace Voron.Trees
 
 		[FieldOffset(13)]
 		public int OverflowSize;
+
+		[FieldOffset(17)]
+		public byte AvailablePrefixNode;
+
+		[FieldOffset(18)]
+		public unsafe fixed ushort PrefixOffsets[8];
 	}
 }

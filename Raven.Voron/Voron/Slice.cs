@@ -51,6 +51,17 @@ namespace Voron
 			
 		}
 
+		public Slice(Slice other, ushort size)
+		{
+			if (other._array != null)
+				_array = other._array;
+			else
+				_pointer = other._pointer;
+
+			Options = other.Options;
+			_size = size;
+		}
+
 		public Slice(byte[] key, ushort size)
 		{
 			if (key == null) throw new ArgumentNullException("key");
@@ -180,6 +191,45 @@ namespace Voron
 			return cmp(_pointer, other._pointer, size);
 		}
 
+		private class SlicePrefixMatcher
+		{
+			private readonly int _maxPrefixLength;
+
+			public SlicePrefixMatcher(int maxPrefixLength)
+			{
+				_maxPrefixLength = maxPrefixLength;
+			}
+
+			public int MatchedBytes { get; private set; }
+
+			public int MatchPrefix(byte* a, byte* b, int size)
+			{
+				MatchedBytes = 0;
+
+				for (var i = 0; i < _maxPrefixLength; i++)
+				{
+					if (*a == *b)
+						MatchedBytes++;
+					else
+						break;
+
+					a++;
+					b++;
+				}
+
+				return 0;
+			} 
+		}
+
+		public int FindPrefixSize(Slice other)
+		{
+			var slicePrefixMatcher = new SlicePrefixMatcher(Math.Min(Size, other.Size));
+
+			CompareData(other, slicePrefixMatcher.MatchPrefix, 0);
+
+			return slicePrefixMatcher.MatchedBytes;
+		}
+
 		public static implicit operator Slice(string s)
 		{
 			return new Slice(Encoding.UTF8.GetBytes(s));
@@ -219,13 +269,26 @@ namespace Voron
 			if (_array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p, _pointer + from, count);
+					NativeMethods.memcpy(p + offset, _pointer + from, count);
 				return;
 			}
 			Buffer.BlockCopy(_array, from, dest, offset, count);
 		}
 
+		public void CopyTo(int from, byte* dest, int offset, int count)
+		{
+			if (from + count > Size)
+				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the slice");
 
+			if (_array == null)
+			{
+				NativeMethods.memcpy(dest + offset, _pointer + from, count);
+				return;
+			}
+
+			fixed (byte* p = _array)
+				NativeMethods.memcpy(dest + offset, p + from, count);
+		}
 		public void Set(NodeHeader* node)
 		{
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
