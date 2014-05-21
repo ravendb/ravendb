@@ -449,6 +449,16 @@ namespace Raven.Database.Counters
                 return reader.GetCounter(name);
             }
 
+			public long GetLastEtagFor(string server)
+			{
+				return reader.GetLastEtagFor(server);
+			}
+
+			public int SourceIdFor(string serverName)
+			{
+				return reader.SourceIdFor(serverName);
+			}
+
 		    public void Store(string server, string counter, long delta)
 		    {
 		        Store(server, counter, result =>
@@ -501,14 +511,20 @@ namespace Raven.Database.Counters
 					throw new InvalidOperationException("Could not find group name in counter, no ; separator");
 
 				var groupKeySlice = new Slice(buffer, (ushort) endOfGroupPrefix);
-				if (countersGroups.Read(transaction, groupKeySlice) == null)
+				bool isGroupExists = countersGroups.Read(transaction, groupKeySlice) != null;
+				if (!isGroupExists)
 				{
-					countersGroups.Add(transaction, groupKeySlice, new byte[0]);
+					countersGroups.Add(transaction, groupKeySlice, EndianBitConverter.Little.GetBytes(1));
 				}
 
 				Debug.Assert(requiredBufferSize < ushort.MaxValue);
 				var slice = new Slice(buffer, (ushort) requiredBufferSize);
 				var result = counters.Read(transaction, slice);
+
+				if (isGroupExists && result == null)
+				{
+					countersGroups.Increment(transaction, groupKeySlice, 1);
+				}
 
 				setStoreBuffer(result);
 

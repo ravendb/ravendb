@@ -14,7 +14,7 @@ class getCounterGroupsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<counterGroup[]> {
-        var selector = (names: string[]) => names.map(n => new counterGroup(n));
+       var selector = (names: string[]) => names.map(n => new counterGroup(n));
        return this.query("/counters/test/groups", null, appUrl.getSystemDatabase(), selector);
     }
 }

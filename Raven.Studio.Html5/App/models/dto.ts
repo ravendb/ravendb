@@ -705,18 +705,15 @@ interface counterStorageDto {
     Name:string;
 }
 
-interface  counterDto {
-    Name: string;
+interface counterDto {
+    CounterName: string;
+    Group: string;
+    OverallTotal: number;
     Servers: counterServerValueDto[];
-    OverallTotal:number;
 }
 
 interface  counterServerValueDto {
-    /*this.name(dto.Name);
-        this.posCount(dto.Positive);
-        this.negCount(dto.Negative);*/
     ServerUrl: string;
     Positive: number;
-    Negative:number;
-
+    Negative: number;
 }

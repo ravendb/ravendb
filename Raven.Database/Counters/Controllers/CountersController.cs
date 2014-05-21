@@ -48,7 +48,8 @@ namespace Raven.Database.Counters.Controllers
 					let counter = reader.GetCounter(counterName)
 					select new CounterView
 					{
-						Name = counterName,
+						CounterName = counterName.Split(';')[1],
+						Group = counterName.Split(';')[0],
 						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
 						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
 						{
@@ -84,7 +85,8 @@ namespace Raven.Database.Counters.Controllers
 
 		public class CounterView
 		{
-			public string Name { get; set; }
+			public string CounterName { get; set; }
+			public string Group { get; set; }
 			public long OverallTotal { get; set; }
 			public List<ServerValue> Servers { get; set; }
 

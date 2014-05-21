@@ -34,16 +34,13 @@ namespace Raven.Database.Counters.Controllers
                         Counter.PerServerValue currentServerValue;
 		                if (currentCounter != null)
 		                {
-			                using (var reader = Storage.CreateReader())
-			                {
-				                currentServerValue = currentCounter.ServerValues
-									.FirstOrDefault(x => x.SourceId == reader.SourceIdFor(serverValue.ServerName)) ??
-				                                     new Counter.PerServerValue
-				                                     {
-					                                     Negative = 0,
-					                                     Positive = 0,
-				                                     };
-			                }
+				            currentServerValue = currentCounter.ServerValues
+								.FirstOrDefault(x => x.SourceId == writer.SourceIdFor(serverValue.ServerName)) ??
+				                                    new Counter.PerServerValue
+				                                    {
+					                                    Negative = 0,
+					                                    Positive = 0,
+				                                    };
 
 			                // old update, have updates after it already
 		                    if (serverValue.Positive <= currentServerValue.Positive &&
@@ -64,12 +61,12 @@ namespace Raven.Database.Counters.Controllers
 				            counter.CounterName,
 				            Math.Max(serverValue.Positive, currentServerValue.Positive),
 				            Math.Max(serverValue.Negative, currentServerValue.Negative)
-				            );
+				        );
 		            }
 	            }
 
 				var sendingServerName = replicationMessage.SendingServerName;
-				if (wroteCounter || Storage.CreateReader().GetLastEtagFor(sendingServerName) < lastEtag)
+				if (wroteCounter || writer.GetLastEtagFor(sendingServerName) < lastEtag)
                 {
 					writer.RecordLastEtagFor(sendingServerName, lastEtag);
                     writer.Commit(); 

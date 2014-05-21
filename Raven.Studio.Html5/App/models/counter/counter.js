@@ -1,11 +1,12 @@
 ﻿define(["require", "exports", 'models/counter/counterServerValue'], function(require, exports, server) {
     var counter = (function () {
-        //constructor(dto: counterDto) {
         function counter(dto) {
-            this.name = ko.observable('');
+            this.counterName = ko.observable('');
+            this.group = ko.observable('');
             this.overallTotal = ko.observable(0);
             this.servers = ko.observableArray([]);
-            this.name(dto.Name);
+            this.counterName(dto.CounterName);
+            this.group(dto.Group);
             this.overallTotal(dto.OverallTotal);
             this.servers(dto.Servers.map(function (s) {
                 return new server(s);

@@ -14,7 +14,7 @@
         <div class="panel panel-default">
             <div class="panel-heading">
                 <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" data-bind="text: name"></a>
+                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" data-bind="text: counterName"></a>
                 </h4>
             </div>
             <div id="collapseOne" class="panel-collapse collapse in">
@@ -31,3 +31,5 @@
         </div>
     </div>
 </div>
+1
+<div id="countersGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCountersPagedItems, selectedIndices: selectedCountersIndices, gridSelector: '#countersGrid' }"></div>

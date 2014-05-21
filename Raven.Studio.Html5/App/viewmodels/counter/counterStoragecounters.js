@@ -4,19 +4,65 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "viewmodels/viewModelBase"], function(require, exports, viewModelBase) {
-    var counterStoragecounters = (function (_super) {
-        __extends(counterStoragecounters, _super);
-        function counterStoragecounters() {
-            _super.apply(this, arguments);
+define(["require", "exports", "commands/counter/getCountersCommand", "commands/counter/getCounterGroupsCommand", "viewmodels/viewModelBase"], function(require, exports, getCountersCommand, getCounterGroupsCommand, viewModelBase) {
+    var counterStorageCounters = (function (_super) {
+        __extends(counterStorageCounters, _super);
+        function counterStorageCounters() {
+            var _this = this;
+            _super.call(this);
+            this.counterGroups = ko.observableArray([]);
+            this.selectedCounterGroup = ko.observable();
+            this.currentCountersPagedItems = ko.observable();
+            this.selectedCountersIndices = ko.observableArray();
+
+            new getCounterGroupsCommand().execute().done(function (results) {
+                return _this.groupsLoaded(results);
+            });
         }
-        counterStoragecounters.prototype.canActivate = function (args) {
+        counterStorageCounters.prototype.getCountersGrid = function () {
+            var gridContents = $(counterStorageCounters.gridSelector).children()[0];
+            if (gridContents) {
+                return ko.dataFor(gridContents);
+            }
+
+            return null;
+        };
+
+        // Skip the system database prompt from the base class.
+        counterStorageCounters.prototype.canActivate = function (args) {
             return true;
         };
-        return counterStoragecounters;
+
+        counterStorageCounters.prototype.activate = function (args) {
+            var _this = this;
+            _super.prototype.activate.call(this, args);
+            this.hasAnyCounterSelected = ko.computed(function () {
+                return _this.selectedCountersIndices().length > 0;
+            });
+            //this.loadCounters(false);
+        };
+
+        counterStorageCounters.prototype.selectGroup = function (group) {
+            this.selectedCounterGroup(group);
+
+            if (group.counters().length === 0) {
+                new getCountersCommand(0, 128, group.name()).execute().done(function (results) {
+                    return group.counters(results);
+                });
+            }
+        };
+
+        counterStorageCounters.prototype.groupsLoaded = function (groups) {
+            this.counterGroups(groups);
+            if (groups.length) {
+                this.selectedCounterGroup(groups[0]);
+            }
+        };
+        counterStorageCounters.gridSelector = "#countersGrid";
+        return counterStorageCounters;
     })(viewModelBase);
 
     
-    return counterStoragecounters;
+    return counterStorageCounters;
 });
-//# sourceMappingURL=counterStoragecounters.js.map
+//# sourceMappingURL=counterStorageCounters.js.map

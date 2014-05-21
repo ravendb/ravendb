@@ -24,7 +24,7 @@ define(["require", "exports", "commands/commandBase", "models/counter/counter", 
             };
 
             var url = "/counters/test/counters" + this.urlEncodeArgs(args);
-            var selector = function (dtos /*counterDto[]*/ ) {
+            var selector = function (dtos) {
                 return dtos.map(function (d) {
                     return new counter(d);
                 });
