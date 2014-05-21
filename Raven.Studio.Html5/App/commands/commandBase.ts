@@ -86,7 +86,7 @@ class commandBase {
                     for (var n = 0; n < headersArray.length; n++) {
                         var keyValue = headersArray[n].split(": ");
                         if (keyValue.length == 2) {
-                            keyValue[1] = keyValue[1].replaceAll("\"", "");
+                            //keyValue[1] = keyValue[1].replaceAll("\"", "");
                             headersObject[keyValue[0]] = keyValue[1];
                         }
                     }

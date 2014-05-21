@@ -22,6 +22,7 @@ class deleteConfigurationKeys extends dialogViewModelBase {
     }
 
     deleteKeys() {
+        this.deletionStarted = true;
         var deleteItemsIds = this.keys().map(i => i.key);
         var deletionTasks = [];
         for (var i = 0; i < deleteItemsIds.length; i++) {
@@ -29,14 +30,13 @@ class deleteConfigurationKeys extends dialogViewModelBase {
         }
 
         var combinedTask = $.when(deletionTasks)
-        var deleteCommandTask = combinedTask.done((x) => {
+
+        var deleteCommandTask = combinedTask.done(() => {
                 this.deletionTask.resolve(this.keys())
             })
             .fail(response => {
                 this.deletionTask.reject(response)
             });
-
-        this.deletionStarted = true;
         dialog.close(this);
     }
 

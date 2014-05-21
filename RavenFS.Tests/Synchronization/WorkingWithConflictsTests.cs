@@ -221,7 +221,7 @@ namespace RavenFS.Tests.Synchronization
 			destination.UploadAsync(fileName, new MemoryStream(new byte[] {1})).Wait();
 
 			var request =
-				(HttpWebRequest) WebRequest.Create(destination.ServerUrl + "/ravenfs/" + destination.FileSystemName + "/synchronization/updatemetadata/" + fileName);
+				(HttpWebRequest) WebRequest.Create(destination.ServerUrl + "/fs/" + destination.FileSystemName + "/synchronization/updatemetadata/" + fileName);
 
 			request.Method = "POST";
 			request.ContentLength = 0;
@@ -319,7 +319,7 @@ namespace RavenFS.Tests.Synchronization
             destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } },
 			                              new MemoryStream(new byte[] {1, 2, 3, 4})).Wait();
 
-			var webRequest = (HttpWebRequest) WebRequest.Create(destinationClient.ServerUrl + "/ravenfs/" + destinationClient.FileSystemName + "/synchronization/updatemetadata/test.bin");
+			var webRequest = (HttpWebRequest) WebRequest.Create(destinationClient.ServerUrl + "/fs/" + destinationClient.FileSystemName + "/synchronization/updatemetadata/test.bin");
 			webRequest.ContentLength = 0;
 			webRequest.Method = "POST";
 

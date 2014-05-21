@@ -16,8 +16,10 @@ class updateFileMetadataCommand extends commandBase {
 
         var customHeaders = {};
 
+        //We only want to stringify when the header's value is a json doc.
         for (var key in this.metadata) {
-            customHeaders[key] = JSON.stringify(this.metadata[key]);
+            if (typeof(this.metadata[key]) != "string" && typeof(this.metadata[key]) != "number")
+                customHeaders[key] = JSON.stringify(this.metadata[key]);
         }
 
         var jQueryOptions: JQueryAjaxSettings = {

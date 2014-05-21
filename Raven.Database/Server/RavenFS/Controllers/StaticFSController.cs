@@ -12,7 +12,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	public class StaticFSController : RavenFsApiController
 	{
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/static/clientAccessPolicy")]		
+        [Route("fs/{fileSystemName}/static/clientAccessPolicy")]		
 
 		public HttpResponseMessage ClientAccessPolicy()
 		{
@@ -51,7 +51,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/static/RavenStudioXap")]		
+        [Route("fs/{fileSystemName}/static/RavenStudioXap")]		
 		public HttpResponseMessage RavenStudioXap()
 		{
 			var ravenStudioStream = GetRavenStudioStream();
@@ -71,14 +71,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/static/FavIcon")]		
+        [Route("fs/{fileSystemName}/static/FavIcon")]		
 		public HttpResponseMessage FavIcon()
 		{
 			return new HttpResponseMessage(HttpStatusCode.NotFound);
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/static/Root")]		
+        [Route("fs/{fileSystemName}/static/Root")]		
 		public HttpResponseMessage Root()
 		{
 			var file = RavenStudioPotentialPaths.Any(File.Exists) ? "RavenFS.Studio.html" : "studio_not_found.html";
@@ -98,7 +98,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/staticfs/id")]
+        [Route("fs/{fileSystemName}/staticfs/id")]
 		public HttpResponseMessage Id()
 		{
 			return Request.CreateResponse(HttpStatusCode.OK, RavenFileSystem.Storage.Id);

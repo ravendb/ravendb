@@ -17,7 +17,6 @@ class filesystems extends viewModelBase {
 
     filesystems = ko.observableArray<filesystem>();    
     hasFilesystems = ko.computed(() => this.filesystems().length > 0);
-
     searchText = ko.observable("");
     selectedFilesystem = ko.observable<filesystem>();
     defaultFs: filesystem;
@@ -110,9 +109,6 @@ class filesystems extends viewModelBase {
             .done(() => { this.filesystems.unshift(new filesystem(filesystemName)); });
     }
 
-
-    // Federico: If we ever implement delete filesystems (which I believe it could be needed) uncomment and implement the deleteFilesystemConfig dialog.
-
     //deleteSelectedFilesystem() {
     //    var fs = this.selectedFilesystem();
     //    if (fs) {
@@ -130,7 +126,6 @@ class filesystems extends viewModelBase {
     //        this.selectedFilesystem(this.filesystems().first());
     //    }
     //}
-
 }
 
 export = filesystems; 

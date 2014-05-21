@@ -13,7 +13,7 @@ namespace RavenFS.Tests.Synchronization
 {
 	public class SynchronizationQueueTests : StorageTest
 	{
-        private string Destination = string.Format("{0}/ravenfs/{1}", "http://dest", "test");
+        private string Destination = string.Format("{0}/fs/{1}", "http://dest", "test");
 		private const string FileName = "test.txt";
 
         private static readonly RavenJObject EmptyETagMetadata = new RavenJObject().WithETag(Guid.Empty);

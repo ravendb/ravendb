@@ -15,6 +15,13 @@ class getFileCommand extends commandBase {
         var resultsSelector = metadata => {
             var fileHeaders = new file();
             fileHeaders.id = this.name;
+
+            for (var property in metadata) {
+                var value: string = metadata[property];
+                if (value[0] === "{" || value[0] === "[")
+                    metadata[property] = JSON.parse(value);
+            }
+
             fileHeaders.__metadata = new fileMetadata(metadata);
             return fileHeaders;
         };

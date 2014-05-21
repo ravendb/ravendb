@@ -35,7 +35,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
 
         [HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/ToDestinations")]
+        [Route("fs/{fileSystemName}/synchronization/ToDestinations")]
         public async Task<HttpResponseMessage> ToDestinations(bool forceSyncingAll)
         {
             var result = await SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
@@ -44,16 +44,16 @@ namespace Raven.Database.Server.RavenFS.Controllers
         }
 
         [HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/ToDestination")]
+        [Route("fs/{fileSystemName}/synchronization/ToDestination")]
         public async Task<HttpResponseMessage> ToDestination(string destination, bool forceSyncingAll)
         {
-            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/ravenfs/" + this.FileSystemName, forceSyncingAll);
+            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + this.FileSystemName, forceSyncingAll);
             
             return this.GetMessageWithObject(result, HttpStatusCode.OK);
         }
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/start/{*fileName}")]
+        [Route("fs/{fileSystemName}/synchronization/start/{*fileName}")]
         public async Task<HttpResponseMessage> Start(string fileName)
 		{
 		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>();
@@ -66,7 +66,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/MultipartProceed")]
+        [Route("fs/{fileSystemName}/synchronization/MultipartProceed")]
         public async Task<HttpResponseMessage> MultipartProceed()
 		{
 			if (!Request.Content.IsMimeMultipartContent())
@@ -255,7 +255,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/UpdateMetadata/{*fileName}")]
+        [Route("fs/{fileSystemName}/synchronization/UpdateMetadata/{*fileName}")]
 		public HttpResponseMessage UpdateMetadata(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
@@ -325,7 +325,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 
 		[HttpDelete]
-        [Route("ravenfs/{fileSystemName}/synchronization")]
+        [Route("fs/{fileSystemName}/synchronization")]
 		public HttpResponseMessage Delete(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
@@ -407,7 +407,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-        [Route("ravenfs/{fileSystemName}/synchronization/Rename")]
+        [Route("fs/{fileSystemName}/synchronization/Rename")]
 		public HttpResponseMessage Rename(string fileName, string rename)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
@@ -469,7 +469,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/Confirm")]
+        [Route("fs/{fileSystemName}/synchronization/Confirm")]
 		public async Task<IEnumerable<SynchronizationConfirmation>> Confirm()
 		{
 			var contentStream = await Request.Content.ReadAsStreamAsync();
@@ -486,14 +486,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/synchronization/Status")]
+        [Route("fs/{fileSystemName}/synchronization/Status")]
         public HttpResponseMessage Status(string fileName)
 		{
 			return Request.CreateResponse(HttpStatusCode.OK, GetSynchronizationReport(fileName));
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/synchronization/Finished")]
+        [Route("fs/{fileSystemName}/synchronization/Finished")]
 		public HttpResponseMessage Finished()
 		{
 			ListPage<SynchronizationReport> page = null;
@@ -514,7 +514,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/synchronization/Active")]
+        [Route("fs/{fileSystemName}/synchronization/Active")]
 		public HttpResponseMessage Active()
 		{
             var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Active
@@ -526,7 +526,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/synchronization/Pending")]
+        [Route("fs/{fileSystemName}/synchronization/Pending")]
 		public HttpResponseMessage Pending()
 		{
             var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Pending
@@ -538,7 +538,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/synchronization/Conflicts")]
+        [Route("fs/{fileSystemName}/synchronization/Conflicts")]
 		public HttpResponseMessage Conflicts()
 		{
 			ListPage<ConflictItem> page = null;
@@ -557,7 +557,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-        [Route("ravenfs/{fileSystemName}/synchronization/ResolveConflict/{*fileName}")]
+        [Route("fs/{fileSystemName}/synchronization/ResolveConflict/{*fileName}")]
 		public HttpResponseMessage ResolveConflict(string fileName, ConflictResolutionStrategy strategy)
 		{
 			Log.Debug("Resolving conflict of a file '{0}' by using {1} strategy", fileName, strategy);
@@ -575,7 +575,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-        [Route("ravenfs/{fileSystemName}/synchronization/applyConflict/{*fileName}")]
+        [Route("fs/{fileSystemName}/synchronization/applyConflict/{*fileName}")]
 		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId, string remoteServerUrl)
 		{
 			var localMetadata = GetLocalMetadata(filename);
@@ -626,7 +626,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/synchronization/LastSynchronization")]
+        [Route("fs/{fileSystemName}/synchronization/LastSynchronization")]
 		public HttpResponseMessage LastSynchronization(Guid from)
 		{
 			SourceSynchronizationInformation lastEtag = null;
@@ -638,7 +638,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/synchronization/IncrementLastETag")]
+        [Route("fs/{fileSystemName}/synchronization/IncrementLastETag")]
 		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag)
 		{
 			try
