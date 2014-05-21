@@ -1,29 +1,29 @@
 ﻿<section data-bind="with: backupSetup" >
     <div data-bind="visible: unsupported()">
-        <div class="alert alert-danger">Too many periodic backup types found. This isn't a supported scenario for the UI.</div>
+        <div class="alert alert-danger">Too many periodic export types found. This isn't a supported scenario for the UI.</div>
     </div>
     <div data-bind="visible: !unsupported()">
         <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse">
                     <div class="navbar-form navbar-right">
-                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: disabled()">
-                            <i class="fa fa-unlock"></i> Activate Periodic Backup
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: disabled()">
+                            <i class="fa fa-unlock"></i> Activate Periodic Export
                         </button>
-                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Deactivate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: !disabled()">
-                            <i class="fa fa-lock"></i> Deactivate Periodic Backup
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Deactivate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: !disabled()">
+                            <i class="fa fa-lock"></i> Deactivate Periodic Export
                         </button>
                         <button type="submit" class="btn btn-primary use-bootstrap-tooltip" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
                     </div>
                 </div>
             </nav>
             <div class="alert alert-warning" data-bind="slideVisible: disabled()">
-                There is no Periodic Backup set for this database.
+                There is no Periodic Export set for this database.
             </div>
-            <div data-bind="slideVisible: !disabled()" id="periodicBackupContainer">
+            <div data-bind="slideVisible: !disabled()" id="periodicExportContainer">
                 <div class="form-group">
                     <div class="col-sm-3">
-                        <select class="form-control" data-bind="options: availablePeriodicBackups, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                        <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                     </div>
                     <div class="col-sm-3">
                         <input required type="text" class="form-control" data-bind="value: mainValue, valueUpdate: 'afterkeydown'" />

@@ -3,18 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Threading;
+
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Raven.Tests.Common;
 
 using Xunit;
-using Raven.Abstractions.Extensions;
 
-namespace Raven.Tests.Bundles.PeriodicBackups
+namespace Raven.Tests.Bundles.PeriodicExports
 {
 	public class PeriodicBackupTests : RavenTest
 	{
@@ -36,17 +37,17 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
-					var periodicBackupSetup = new PeriodicBackupSetup
+					var periodicBackupSetup = new PeriodicExportSetup
 					{
 						LocalFolderName = backupPath,
 						IntervalMilliseconds = 25
 					};
-					session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+					session.Store(periodicBackupSetup, PeriodicExportSetup.RavenDocumentKey);
 
 					session.SaveChanges();
 
 				}
-				SpinWait.SpinUntil(() => store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
+				SpinWait.SpinUntil(() => store.DatabaseCommands.Get(PeriodicExportStatus.RavenDocumentKey) != null, 10000);
 
 			}
 
@@ -78,33 +79,33 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
-					var periodicBackupSetup = new PeriodicBackupSetup
+					var periodicBackupSetup = new PeriodicExportSetup
 					{
 						LocalFolderName = backupPath,
 						IntervalMilliseconds = 25
 					};
-					session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+					session.Store(periodicBackupSetup, PeriodicExportSetup.RavenDocumentKey);
 
 					session.SaveChanges();
 
 				}
 				SpinWait.SpinUntil(() =>
 				{
-					var jsonDocument = store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey);
+					var jsonDocument = store.DatabaseCommands.Get(PeriodicExportStatus.RavenDocumentKey);
 					if (jsonDocument == null)
 						return false;
-					var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+					var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
 					return periodicBackupStatus.LastDocsEtag != Etag.Empty && periodicBackupStatus.LastDocsEtag != null;
 				});
 
-				var etagForBackups= store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
+				var etagForBackups= store.DatabaseCommands.Get(PeriodicExportStatus.RavenDocumentKey).Etag;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "ayende" });
 					session.SaveChanges();
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag != etagForBackups);
+					 store.DatabaseCommands.Get(PeriodicExportStatus.RavenDocumentKey).Etag != etagForBackups);
 
 			}
 

@@ -277,12 +277,6 @@ namespace Raven.Database.Config
 
 		private void FilterActiveBundles()
 		{
-			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
-
-			var bundles = activeBundles.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(x => x.Trim())
-				.ToArray();
-
 			if (container != null)
 				container.Dispose();
 			container = null;
@@ -291,18 +285,20 @@ namespace Raven.Database.Config
 
 			Catalog.Catalogs.Clear();
 
-			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
+			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()));
 		}
 
-		public List<string> ActiveBundles
+		public IEnumerable<string> ActiveBundles
 		{
 			get
 			{
-				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? string.Empty;
 
-				return activeBundles.GetSemicolonSeparatedValues();
+				return BundlesHelper.ProcessActiveBundles(activeBundles)
+					.GetSemicolonSeparatedValues()
+					.Distinct();
 			}
-		} 
+		}
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{

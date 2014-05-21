@@ -2,15 +2,15 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import database = require("models/database");
 
 
-class getPeriodicBackupSetupCommand extends getDocumentWithMetadataCommand {
+class getPeriodicExportSetupCommand extends getDocumentWithMetadataCommand {
 
     constructor(db: database) {
         super("Raven/Backup/Periodic/Setup", db);
     }
 
-    execute(): JQueryPromise<periodicBackupSetupDto> {
+    execute(): JQueryPromise<periodicExportSetupDto> {
         return super.execute();
     }
 }
 
-export = getPeriodicBackupSetupCommand; 
+export = getPeriodicExportSetupCommand; 

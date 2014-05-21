@@ -1,4 +1,4 @@
-class periodicBackupSetup {
+class periodicExportSetup {
 
     unsupported = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>(true);
@@ -29,7 +29,7 @@ class periodicBackupSetup {
     private TU_HOURS = "hours";
     private TU_DAYS = "days";
 
-    availablePeriodicBackups = [
+    availablePeriodicExports = [
         { label: "File System Folder:", value: this.FILE_SYSTEM },
         { label: "Glacier Vault Name:", value: this.GLACIER_VAULT },
         { label: "S3 Bucket Name:", value: this.S3_BUCKET },
@@ -57,7 +57,7 @@ class periodicBackupSetup {
         return this.type() === this.AZURE_STORAGE;
     }, this);
 
-    fromDto(dto: periodicBackupSetupDto) {
+    fromDto(dto: periodicExportSetupDto) {
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
 
         this.setupTypeAndMainValue(dto);
@@ -73,7 +73,7 @@ class periodicBackupSetup {
         this.disabled(dto.Disabled);
     }
 
-    toDto(): periodicBackupSetupDto {
+    toDto(): periodicExportSetupDto {
         return {
             Disabled: this.disabled(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
@@ -128,7 +128,7 @@ class periodicBackupSetup {
         this.toDatabaseSettingsDto()['@metadata']['@etag'] = newEtag;
     }
 
-    private setupTypeAndMainValue(dto: periodicBackupSetupDto) {
+    private setupTypeAndMainValue(dto: periodicExportSetupDto) {
         var count = 0;
         if (dto.LocalFolderName) {
             count += 1;
@@ -175,4 +175,4 @@ class periodicBackupSetup {
     }
 }
 
-export = periodicBackupSetup;
+export = periodicExportSetup;

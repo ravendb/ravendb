@@ -126,7 +126,7 @@ interface licenseStatusDto {
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
-        periodicBackup: string;
+        periodicExport: string;
         encryption: string;
         compression: string;
         quotas: string;
@@ -258,7 +258,7 @@ interface spatialIndexSuggestionDto {
     Accuracy: number;
 }
 
-interface periodicBackupSetupDto {
+interface periodicExportSetupDto {
     Disabled: boolean;
     GlacierVaultName: string;
     S3BucketName: string;

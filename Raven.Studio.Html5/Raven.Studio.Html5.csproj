@@ -205,11 +205,11 @@
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
-    <TypeScriptCompile Include="App\commands\getPeriodicBackupSetupCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getPeriodicExportSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDatabaseSettingsCommand.ts" />
-    <TypeScriptCompile Include="App\models\periodicBackupSetup.ts" />
-    <TypeScriptCompile Include="App\commands\savePeriodicBackupSetupCommand.ts" />
-    <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
+    <TypeScriptCompile Include="App\models\periodicExportSetup.ts" />
+    <TypeScriptCompile Include="App\commands\savePeriodicExportSetupCommand.ts" />
+    <TypeScriptCompile Include="App\viewmodels\periodicExport.ts" />
     <TypeScriptCompile Include="App\viewmodels\replications.ts" />
     <TypeScriptCompile Include="App\models\replicationDestination.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationsCommand.ts" />
@@ -372,7 +372,7 @@
     <Content Include="App\views\indexesShell.html" />
     <Content Include="App\views\indexTerms.html" />
     <Content Include="App\views\logs.html" />
-    <Content Include="App\views\periodicBackup.html" />
+    <Content Include="App\views\periodicExport.html" />
     <Content Include="App\views\query.html" />
     <Content Include="App\views\replicationStats.html" />
     <Content Include="App\views\reporting.html" />

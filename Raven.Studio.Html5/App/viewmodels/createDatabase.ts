@@ -23,7 +23,7 @@ class createDatabase extends dialogViewModelBase {
     isReplicationBundleEnabled = ko.observable(false);
     isSqlReplicationBundleEnabled = ko.observable(false);
     isVersioningBundleEnabled = ko.observable(false);
-    isPeriodicBackupBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
+    isPeriodicExportBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
     private databases = ko.observableArray<database>();
@@ -163,8 +163,8 @@ class createDatabase extends dialogViewModelBase {
         this.isVersioningBundleEnabled.toggle();
     }
 
-    togglePeriodicBackupBundle() {
-        this.isPeriodicBackupBundleEnabled.toggle();
+    togglePeriodicExportBundle() {
+        this.isPeriodicExportBundleEnabled.toggle();
     }
 
     toggleScriptedIndexBundle() {
@@ -201,8 +201,8 @@ class createDatabase extends dialogViewModelBase {
             activeBundles.push("Versioning");
         }
 
-        if (this.isPeriodicBackupBundleEnabled()) {
-            activeBundles.push("PeriodicBackup");
+        if (this.isPeriodicExportBundleEnabled()) {
+            activeBundles.push("PeriodicExport");
         }
 
         if (this.isScriptedIndexBundleEnabled()) {
