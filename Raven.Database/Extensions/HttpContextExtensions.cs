@@ -119,6 +119,10 @@ namespace Raven.Database.Extensions
                 QueryInputs = context.ExtractQueryInputs()
                 };
 
+			var allowMultipleIndexEntriesForSameDocumentToResultTransformer = context.Request.QueryString["allowMultipleIndexEntriesForSameDocumentToResultTransformer"];
+			bool allowMultiple;
+			if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
+				query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
 	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			var queryShape = context.Request.QueryString["queryShape"];

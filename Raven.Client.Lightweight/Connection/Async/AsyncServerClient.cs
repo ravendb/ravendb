@@ -1208,6 +1208,8 @@ namespace Raven.Client.Connection.Async
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
 
+			path += "&allowMultipleIndexEntriesForSameDocumentToResultTransformer=" + query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", operationMetadata.Credentials, convention)
 				{
