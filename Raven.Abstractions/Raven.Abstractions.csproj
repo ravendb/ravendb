@@ -47,6 +47,9 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Spatial4n.Core.NTS">
+      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -175,6 +178,7 @@
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
