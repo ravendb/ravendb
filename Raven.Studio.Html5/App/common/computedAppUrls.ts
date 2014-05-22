@@ -21,6 +21,7 @@ interface computedAppUrls {
     replicationStats: KnockoutComputed<string>;
     userInfo: KnockoutComputed<string>;
     databaseSettings: KnockoutComputed<string>;
+    quotas: KnockoutComputed<string>;
     periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
