@@ -267,6 +267,11 @@ namespace Raven.Database.Server.Controllers
 				IsDistinct = IsDistinct()
 			};
 
+			var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
+			bool allowMultiple;
+			if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
+				query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
+
             if (query.WaitForNonStaleResultsAsOfNow)
                 query.Cutoff = SystemTime.UtcNow;
 
