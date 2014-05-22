@@ -27,7 +27,7 @@ namespace Raven.Client.RavenFS
 {
     public class RavenFileSystemClient : IDisposable, IHoldProfilingInformation
     {
-        private readonly ServerNotifications notifications;
+        private readonly RemoteFileSystemChanges notifications;
         private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
         private IDisposable failedUploadsObserver;
         private readonly IFileSystemClientReplicationInformer replicationInformer;
@@ -80,10 +80,11 @@ namespace Raven.Client.RavenFS
                 ApiKey = apiKey;
 
                 convention = new FileConvention();
-                notifications = new ServerNotifications(serverUrl, convention);
                 replicationInformer = new RavenFileSystemReplicationInformer(convention, jsonRequestFactory);
                 readStripingBase = replicationInformer.GetReadStripingBase();
-
+                
+                notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
+                               
                 InitializeSecurity();
             }
             catch (Exception)
@@ -91,7 +92,6 @@ namespace Raven.Client.RavenFS
                 Dispose();
                 throw;
             }
-
         }
 
         public string ServerUrl { get; private set; }
@@ -114,7 +114,8 @@ namespace Raven.Client.RavenFS
             {
                 if (value)
                 {
-                    failedUploadsObserver = notifications.FailedUploads().Subscribe(CancelFileUpload);
+                    failedUploadsObserver = notifications.ForCancellations()
+                                                         .Subscribe(CancelFileUpload);
                 }
                 else
                 {
@@ -562,7 +563,7 @@ namespace Raven.Client.RavenFS
             });
         }
 
-        private void CancelFileUpload(UploadFailed uploadFailed)
+        private void CancelFileUpload(CancellationNotification uploadFailed)
         {
             CancellationTokenSource cts;
             if (uploadCancellationTokens.TryGetValue(uploadFailed.UploadId, out cts))
@@ -615,14 +616,17 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        public IServerNotifications Notifications
-        {
-            get { return notifications; }
-        }
-
         public FileConvention Convention
         {
             get { return convention; }
+        }
+
+        /// <summary>
+        /// Subscribe to change notifications from the server
+        /// </summary>
+        public IFileSystemChanges Changes()
+        {
+            return this.notifications;
         }
 
         private static void AddHeaders(RavenJObject metadata, HttpJsonRequest request)

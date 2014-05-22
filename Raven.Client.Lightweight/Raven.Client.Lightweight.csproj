@@ -83,6 +83,11 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Changes\IConnectableChanges.cs" />
+    <Compile Include="Changes\IChangesConnectionState.cs" />
+    <Compile Include="Changes\IConnectableChanges`1.cs" />
+    <Compile Include="Changes\RemoteChangesClientBase.cs" />
+    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Connection\AdminRequestCreator.cs" />
     <Compile Include="Connection\AdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
@@ -110,11 +115,9 @@
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
     <Compile Include="RavenFS\AsyncExtensions.cs" />
-    <Compile Include="RavenFS\Changes\ImmutableList.cs" />
-    <Compile Include="RavenFS\Changes\IServerNotifications.cs" />
-    <Compile Include="RavenFS\Changes\NotificationSubject.cs" />
-    <Compile Include="RavenFS\Changes\ServerNotifications.cs" />
-    <Compile Include="RavenFS\Changes\TaskErrorExtensions.cs" />
+    <Compile Include="RavenFS\Changes\FileSystemConnectionState.cs" />
+    <Compile Include="RavenFS\Changes\IFileSystemChanges.cs" />
+    <Compile Include="RavenFS\Changes\RemoteFileSystemChanges.cs" />
     <Compile Include="RavenFS\Connections\FileConvention.cs" />
     <Compile Include="RavenFS\Connections\IFileSystemClientReplicationInformer.cs" />
     <Compile Include="RavenFS\Connections\RavenFileSystemReplicationInformer.cs" />
@@ -143,8 +146,7 @@
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
     <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
-    <Compile Include="Changes\LocalConnectionState.cs" />
-    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
+    <Compile Include="Changes\DatabaseConnectionState.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
     <Compile Include="Changes\TaskErrorExtensions.cs" />
     <Compile Include="Document\RavenLoadConfiguration.cs" />
