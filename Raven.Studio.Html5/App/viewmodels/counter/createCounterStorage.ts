@@ -27,7 +27,7 @@ class createCounterStorage extends dialogViewModelBase {
         this.counterStorageName.subscribe((newCounterStorageName) => {
             var errorMessage: string = '';
             
-            if (!!this.isCounterStorageNameExists(newCounterStorageName, this.counterStorages())) {
+            if (!this.isCounterStorageNameExists(newCounterStorageName, this.counterStorages())) {
                 errorMessage = "Database Name Already Exists!";
             }
             else if ((errorMessage = this.CheckName(newCounterStorageName)) != '') { }

@@ -23,7 +23,7 @@ define(["require", "exports", "plugins/dialog", "viewmodels/dialogViewModelBase"
             this.counterStorageName.subscribe(function (newCounterStorageName) {
                 var errorMessage = '';
 
-                if (!!_this.isCounterStorageNameExists(newCounterStorageName, _this.counterStorages())) {
+                if (!_this.isCounterStorageNameExists(newCounterStorageName, _this.counterStorages())) {
                     errorMessage = "Database Name Already Exists!";
                 } else if ((errorMessage = _this.CheckName(newCounterStorageName)) != '') {
                 }
