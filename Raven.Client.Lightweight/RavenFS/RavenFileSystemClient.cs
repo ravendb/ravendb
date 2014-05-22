@@ -1449,6 +1449,32 @@ namespace Raven.Client.RavenFS
                 {
                     await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));
                 }
+                catch (ErrorResponseException e)
+                {
+                    if (e.StatusCode == HttpStatusCode.Conflict)
+                        throw new InvalidOperationException("Cannot create file system with the name '" + newFileSystemName + "' because it already exists. Use CreateOrUpdateFileSystemAsync in case you want to update an existing file system", e).TryThrowBetterError();
+
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    throw e.TryThrowBetterError();
+                }
+            }
+
+            public async Task CreateOrUpdateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
+            {
+                var requestUriString = string.Format("{0}/fs/admin/{1}?update=true", ravenFileSystemClient.ServerUrl,
+                                                     newFileSystemName ?? ravenFileSystemClient.FileSystemName);
+
+                var request = ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(
+                                        new CreateHttpJsonRequestParams(this, requestUriString,
+                                                                        "PUT", ravenFileSystemClient.PrimaryCredentials, convention));
+
+                try
+                {
+                    await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));                    
+                }
                 catch (Exception e)
                 {
                     throw e.TryThrowBetterError();

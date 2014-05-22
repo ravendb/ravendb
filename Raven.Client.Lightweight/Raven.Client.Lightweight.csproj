@@ -126,7 +126,6 @@
     <Compile Include="RavenFS\Extensions\RavenFileSystemClientExtensions.cs" />
     <Compile Include="RavenFS\ListenableStream.cs" />
     <Compile Include="RavenFS\ListPage.cs" />
-    <Compile Include="RavenFS\NameValueCollectionJsonConverter.cs" />
     <Compile Include="RavenFS\RavenFileSystemClient.cs" />
     <Compile Include="RavenFS\Shard\DefaultShardResolutionStrategy.cs" />
     <Compile Include="RavenFS\Shard\IShardAccessStrategy.cs" />
