@@ -12,8 +12,8 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
             _super.call(this);
             this.counterGroups = ko.observableArray([]);
             this.selectedCounterGroup = ko.observable();
-            this.currentCountersPagedItems = ko.observable();
             this.selectedCountersIndices = ko.observableArray();
+            this.currentCountersPagedItems = ko.observable();
 
             new getCounterGroupsCommand().execute().done(function (results) {
                 return _this.groupsLoaded(results);
@@ -39,7 +39,7 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
             this.hasAnyCounterSelected = ko.computed(function () {
                 return _this.selectedCountersIndices().length > 0;
             });
-            //this.loadCounters(false);
+            //var x = router.activeInstruction();
         };
 
         counterStorageCounters.prototype.selectGroup = function (group) {
@@ -77,7 +77,7 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
 
             this.counterGroups.unshift(this.allCounterGroups);
 
-            this.selectedCounterGroup(groups[0]);
+            this.selectGroup(groups[0]);
         };
         counterStorageCounters.gridSelector = "#countersGrid";
         return counterStorageCounters;

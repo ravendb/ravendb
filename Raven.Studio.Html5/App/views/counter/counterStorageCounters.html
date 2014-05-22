@@ -17,13 +17,13 @@
                         <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" data-bind="text: id"></a>
                     </h4>
                 </div>
-                <div id="collapseOne" class="panel-collapse collapse in">
+                <div>
                     <div class="panel-body">
                         <ul data-bind="foreach: servers">
                             <li>
-                                <span data-bind="text: name"></span>
-                                <span data-bind="text: posCount"></span>
-                                <span data-bind="text: negCount"></span>
+                                <div data-bind="text: 'Server URL: ' + name()"></div>
+                                <div data-bind="text: 'Positive: ' + posCount()"></div>
+                                <div data-bind="text: 'Negative: ' + negCount()"></div>
                             </li>
                         </ul>
                     </div>

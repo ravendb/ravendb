@@ -1,10 +1,10 @@
 ﻿define(["require", "exports"], function(require, exports) {
     var counterServerValue = (function () {
         function counterServerValue(dto) {
-            this.serverUrl = ko.observable('');
+            this.name = ko.observable('');
             this.posCount = ko.observable(0);
             this.negCount = ko.observable(0);
-            this.serverUrl(dto.ServerUrl);
+            this.name(dto.Name);
             this.posCount(dto.Positive);
             this.negCount(dto.Negative);
         }

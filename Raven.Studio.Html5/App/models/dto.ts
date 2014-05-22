@@ -719,7 +719,7 @@ interface counterGroupDto {
 }
 
 interface  counterServerValueDto {
-    ServerUrl: string;
+    Name: string;
     Positive: number;
     Negative: number;
 }
@@ -729,4 +729,5 @@ enum ImportItemType {
     Indexes = 0x2,
     Attachments = 0x4,
     Transformers = 0x8,
-    RemoveAnalyzers = 0x8000}
+    RemoveAnalyzers = 0x8000
+}

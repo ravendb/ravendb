@@ -5,14 +5,15 @@ import getCounterGroupsCommand = require("commands/counter/getCounterGroupsComma
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import pagedList = require("common/pagedList");
+import appUrl = require("common/appUrl");
 
 class counterStorageCounters extends viewModelBase {
     counterGroups = ko.observableArray<counterGroup>([]);
     allCounterGroups: counterGroup;
     selectedCounterGroup = ko.observable<counterGroup>();
-    currentCountersPagedItems = ko.observable<pagedList>();
     selectedCountersIndices = ko.observableArray<number>();
     hasAnyCounterSelected: KnockoutComputed<boolean>;
+    currentCountersPagedItems = ko.observable<pagedList>();
 
     static gridSelector = "#countersGrid";
 
@@ -21,7 +22,7 @@ class counterStorageCounters extends viewModelBase {
 
         new getCounterGroupsCommand()
             .execute()
-            .done((results: counterGroup[])=> this.groupsLoaded(results));
+            .done((results: counterGroup[]) => this.groupsLoaded(results));
     }
 
     getCountersGrid(): virtualTable {
@@ -41,8 +42,8 @@ class counterStorageCounters extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.hasAnyCounterSelected = ko.computed(() => this.selectedCountersIndices().length > 0);
-
-        //this.loadCounters(false);
+        
+        //var x = router.activeInstruction();
     }
 
     selectGroup(group: counterGroup) {
@@ -75,7 +76,7 @@ class counterStorageCounters extends viewModelBase {
 
         this.counterGroups.unshift(this.allCounterGroups);
 
-        this.selectedCounterGroup(groups[0]);
+        this.selectGroup(groups[0]);
     }
 }
 

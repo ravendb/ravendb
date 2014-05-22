@@ -46,7 +46,7 @@ class viewModelBase {
         }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
-
+        
         return true;
     }
 
