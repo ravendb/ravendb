@@ -118,22 +118,7 @@
     <Compile Include="RavenFS\AsyncExtensions.cs" />
     <Compile Include="RavenFS\Changes\FileSystemConnectionState.cs" />
     <Compile Include="RavenFS\Changes\IFileSystemChanges.cs" />
-    <Compile Include="RavenFS\Changes\ImmutableList.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="RavenFS\Changes\IServerNotifications.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="RavenFS\Changes\NotificationSubject.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="RavenFS\Changes\RemoteFileSystemChanges.cs" />
-    <Compile Include="RavenFS\Changes\ServerNotifications.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="RavenFS\Changes\TaskErrorExtensions.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="RavenFS\Connections\FileConvention.cs" />
     <Compile Include="RavenFS\Connections\IFileSystemClientReplicationInformer.cs" />
     <Compile Include="RavenFS\Connections\RavenFileSystemReplicationInformer.cs" />

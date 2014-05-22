@@ -134,7 +134,7 @@ namespace RavenFS.Tests
 
 		public override void Dispose()
 		{
-			var serverNotifications = client.Notifications as ServerNotifications;
+            var serverNotifications = client.Notifications as RemoteFileSystemChanges;
 			if (serverNotifications != null)
 				serverNotifications.DisposeAsync().Wait();
 			base.Dispose();
