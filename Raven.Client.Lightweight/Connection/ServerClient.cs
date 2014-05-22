@@ -1234,6 +1234,9 @@ namespace Raven.Client.Connection
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
+
+			path += "&allowMultipleIndexEntriesForSameDocumentToResultTransformer=" + query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, path, "GET", operationMetadata.Credentials, convention)
 				{
