@@ -265,7 +265,21 @@ namespace Raven.Database.Counters
 					return result;
 				}
 			}
-            
+
+			public Group GetGroup(Slice name)
+			{
+				Slice slice = name;
+				var groupResult = countersGroups.Read(transaction, slice);
+				if (groupResult == null)
+					return null;
+				var numOfCounters = groupResult.Reader.ReadLittleEndianInt64();
+				return new Group
+				{
+					GroupName = name.ToString(),
+					NumOfCounters = numOfCounters
+				};				
+			}
+
             public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
 		    {
                 var buffer = new byte[sizeof(long)];
@@ -514,16 +528,16 @@ namespace Raven.Database.Counters
 				bool isGroupExists = countersGroups.Read(transaction, groupKeySlice) != null;
 				if (!isGroupExists)
 				{
-					countersGroups.Add(transaction, groupKeySlice, EndianBitConverter.Little.GetBytes(1));
+					countersGroups.Add(transaction, groupKeySlice, EndianBitConverter.Little.GetBytes(1L));
 				}
 
 				Debug.Assert(requiredBufferSize < ushort.MaxValue);
 				var slice = new Slice(buffer, (ushort) requiredBufferSize);
 				var result = counters.Read(transaction, slice);
 
-				if (isGroupExists && result == null)
+				if (isGroupExists && result == null) //if the group exists and it's a new counter
 				{
-					countersGroups.Increment(transaction, groupKeySlice, 1);
+					countersGroups.Increment(transaction, groupKeySlice, 1L);
 				}
 
 				setStoreBuffer(result);
@@ -555,7 +569,7 @@ namespace Raven.Database.Counters
 
 			private int GetOrAddServerId(string server)
 			{
-				int serverId = 0;
+				int serverId;
 				var result = serverNamesToIds.Read(transaction, server);
 
 				if (result != null && result.Version != 0)
@@ -564,7 +578,7 @@ namespace Raven.Database.Counters
 				}
 				else
 				{
-					serverId = (int)serverNamesToIds.State.EntriesCount; //todo: should we check for overflow?
+					serverId = (int)serverNamesToIds.State.EntriesCount; //todo: should we check for overflow or change the server id to long?
 					var serverIdBytes = EndianBitConverter.Big.GetBytes(serverId);
 					var serverIdSlice = new Slice(serverIdBytes);
 					serverNamesToIds.Add(transaction, server, serverIdSlice);

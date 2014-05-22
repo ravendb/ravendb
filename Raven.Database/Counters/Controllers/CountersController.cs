@@ -37,6 +37,31 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		/*[Route("counters/{counterName}/groups1")]
+		[HttpGet]
+		public HttpResponseMessage Groups1()
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				var results = (
+					from counterGroup in reader.GetCounterGroups()
+					let counter = reader.GetCounter(counterGroup)
+					select new CounterView
+					{
+						CounterName = counterName.Split(';')[1],
+						Group = counterName.Split(';')[0],
+						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
+						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
+						{
+							Negative = s.Negative,
+							Positive = s.Positive,
+							Name = reader.ServerNameFor(s.SourceId)
+						}).ToList()
+					}).ToList();
+				return Request.CreateResponse(HttpStatusCode.OK, results);
+			}
+		}*/
+
 		[Route("counters/{counterName}/counters")]
 		[HttpGet]
 		public HttpResponseMessage Counters()
