@@ -8,7 +8,7 @@ class getCountersCommand extends commandBase {
     /**
     * @param ownerDb The database the collections will belong to.
     */
-    constructor(private skip: number, private take: number, private counterGroupName: string) {
+    constructor(private skip: number, private take: number, private counterGroupName?: string) {
         super();
 
     }

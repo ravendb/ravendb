@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 
 
@@ -16,11 +18,12 @@ namespace Raven.Database.Counters.Controllers
 
 		[Route("counters/{counterName}/change")]
 		[HttpGet]
-		public HttpResponseMessage Change(string counter, long delta)
+		public HttpResponseMessage Change(string group, string counterName, long delta)
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-                writer.Store(Storage.CounterStorageUrl, counter, delta);
+				string counter = String.Join(Constants.GroupSeperatorString, new [] { group, counterName });
+				writer.Store(Storage.CounterStorageUrl, counter, delta);
 
 				writer.Commit();
 				return new HttpResponseMessage(HttpStatusCode.Accepted);
@@ -37,44 +40,20 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		/*[Route("counters/{counterName}/groups1")]
-		[HttpGet]
-		public HttpResponseMessage Groups1()
-		{
-			using (var reader = Storage.CreateReader())
-			{
-				var results = (
-					from counterGroup in reader.GetCounterGroups()
-					let counter = reader.GetCounter(counterGroup)
-					select new CounterView
-					{
-						CounterName = counterName.Split(';')[1],
-						Group = counterName.Split(';')[0],
-						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
-						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
-						{
-							Negative = s.Negative,
-							Positive = s.Positive,
-							Name = reader.ServerNameFor(s.SourceId)
-						}).ToList()
-					}).ToList();
-				return Request.CreateResponse(HttpStatusCode.OK, results);
-			}
-		}*/
-
 		[Route("counters/{counterName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage Counters()
+		public HttpResponseMessage Counters(int skip = 0, int take = 20, string counterGroupName = null)
 		{
 			using (var reader = Storage.CreateReader())
 			{
+				var prefix = (counterGroupName == null) ? string.Empty : (counterGroupName + Constants.GroupSeperatorString);
 				var results = (
-					from counterName in reader.GetCounterNames(string.Empty)
-					let counter = reader.GetCounter(counterName)
+					from counterFullName in reader.GetCounterNames(prefix)
+					let counter = reader.GetCounter(counterFullName)
 					select new CounterView
 					{
-						CounterName = counterName.Split(';')[1],
-						Group = counterName.Split(';')[0],
+						Name = counterFullName.Split(Constants.GroupSeperatorChar)[1],
+						Group = counterFullName.Split(Constants.GroupSeperatorChar)[0],
 						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
 
 						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
@@ -111,7 +90,7 @@ namespace Raven.Database.Counters.Controllers
 
 		public class CounterView
 		{
-			public string CounterName { get; set; }
+			public string Name { get; set; }
 			public string Group { get; set; }
 			public long OverallTotal { get; set; }
 			public List<ServerValue> Servers { get; set; }

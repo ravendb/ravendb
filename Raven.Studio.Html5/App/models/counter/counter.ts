@@ -1,16 +1,16 @@
-﻿import server = require('models/counter/counterServerValue');
+﻿import counterServerValue = require('models/counter/counterServerValue');
 
 class counter {
     id = ko.observable('');
     group = ko.observable('');
     overallTotal = ko.observable(0);
-    servers = ko.observableArray<server>([]);
+    servers = ko.observableArray<counterServerValue>([]);
 
     constructor(dto: counterDto) {
-        this.id(dto.CounterName);
+        this.id(dto.Name);
         this.group(dto.Group);
         this.overallTotal(dto.OverallTotal);
-        this.servers(dto.Servers.map(s => new server(s)));
+        this.servers(dto.Servers.map(s => new counterServerValue(s)));
     }
 } 
 

@@ -2,10 +2,12 @@
 
 class counterGroup {
     name = ko.observable('');
+    numOfCounters: any = ko.observable(0);
     counters = ko.observableArray<counter>([]);
 
-    constructor(name: string) {
-        this.name(name);
+    constructor(dto: counterGroupDto) {
+        this.name(dto.Name);
+        this.numOfCounters(dto.NumOfCounters);
     }
 } 
 

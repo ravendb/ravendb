@@ -222,7 +222,7 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public IEnumerable<string> GetCounterGroups()
+			public IEnumerable<Group> GetCounterGroups()
 			{
 				using (var it = countersGroups.Iterate())
 				{
@@ -230,7 +230,12 @@ namespace Raven.Database.Counters
 						yield break;
 					do
 					{
-						yield return it.CurrentKey.ToString();
+						yield return new Group
+						{
+							Name = it.CurrentKey.ToString(),
+							NumOfCounters = it.CreateReaderForCurrent().ReadLittleEndianInt64()
+						};
+						//yield return it.CurrentKey.ToString();
 					} while (it.MoveNext());
 				}
 			}
@@ -264,20 +269,6 @@ namespace Raven.Database.Counters
 					} while (it.MoveNext());
 					return result;
 				}
-			}
-
-			public Group GetGroup(Slice name)
-			{
-				Slice slice = name;
-				var groupResult = countersGroups.Read(slice);
-				if (groupResult == null)
-					return null;
-				var numOfCounters = groupResult.Reader.ReadLittleEndianInt64();
-				return new Group
-				{
-					GroupName = name.ToString(),
-					NumOfCounters = numOfCounters
-				};				
 			}
 
             public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
@@ -520,7 +511,7 @@ namespace Raven.Database.Counters
 				var end = Encoding.UTF8.GetBytes(counter, 0, counter.Length, buffer, 0);
 				EndianBitConverter.Big.CopyBytes(serverId, buffer, end);
 
-				var endOfGroupPrefix = Array.IndexOf(buffer, (byte) ';', 0, counterNameSize);
+				var endOfGroupPrefix = Array.IndexOf(buffer, Constants.GroupSeperator, 0, counterNameSize);
 				if (endOfGroupPrefix == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no ; separator");
 

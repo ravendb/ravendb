@@ -14,9 +14,9 @@ define(["require", "exports", "commands/commandBase", "models/counter/counterGro
             _super.call(this);
         }
         getCounterGroupsCommand.prototype.execute = function () {
-            var selector = function (names) {
-                return names.map(function (n) {
-                    return new counterGroup(n);
+            var selector = function (groups) {
+                return groups.map(function (g) {
+                    return new counterGroup(g);
                 });
             };
             return this.query("/counters/test/groups", null, appUrl.getSystemDatabase(), selector);

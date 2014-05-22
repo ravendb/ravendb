@@ -707,14 +707,19 @@ interface counterStorageDto {
 }
 
 interface counterDto {
-    CounterName: string;
+    Name: string;
     Group: string;
     OverallTotal: number;
     Servers: counterServerValueDto[];
 }
 
+interface counterGroupDto {
+    Name: string;
+    NumOfCounters?: number;
+}
+
 interface  counterServerValueDto {
-    ServerUrl: string;
+    Name: string;
     Positive: number;
     Negative: number;
 }
@@ -724,4 +729,5 @@ enum ImportItemType {
     Indexes = 0x2,
     Attachments = 0x4,
     Transformers = 0x8,
-    RemoveAnalyzers = 0x8000}
+    RemoveAnalyzers = 0x8000
+}

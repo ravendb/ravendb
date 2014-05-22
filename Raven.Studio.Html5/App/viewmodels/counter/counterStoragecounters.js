@@ -4,7 +4,7 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/counter/getCountersCommand", "commands/counter/getCounterGroupsCommand", "viewmodels/viewModelBase"], function(require, exports, getCountersCommand, getCounterGroupsCommand, viewModelBase) {
+define(["require", "exports", "models/counter/counterGroup", "commands/counter/getCountersCommand", "commands/counter/getCounterGroupsCommand", "viewmodels/viewModelBase"], function(require, exports, counterGroup, getCountersCommand, getCounterGroupsCommand, viewModelBase) {
     var counterStorageCounters = (function (_super) {
         __extends(counterStorageCounters, _super);
         function counterStorageCounters() {
@@ -12,8 +12,8 @@ define(["require", "exports", "commands/counter/getCountersCommand", "commands/c
             _super.call(this);
             this.counterGroups = ko.observableArray([]);
             this.selectedCounterGroup = ko.observable();
-            this.currentCountersPagedItems = ko.observable();
             this.selectedCountersIndices = ko.observableArray();
+            this.currentCountersPagedItems = ko.observable();
 
             new getCounterGroupsCommand().execute().done(function (results) {
                 return _this.groupsLoaded(results);
@@ -39,24 +39,45 @@ define(["require", "exports", "commands/counter/getCountersCommand", "commands/c
             this.hasAnyCounterSelected = ko.computed(function () {
                 return _this.selectedCountersIndices().length > 0;
             });
-            //this.loadCounters(false);
+            //var x = router.activeInstruction();
         };
 
         counterStorageCounters.prototype.selectGroup = function (group) {
             this.selectedCounterGroup(group);
 
             if (group.counters().length === 0) {
-                new getCountersCommand(0, 128, group.name()).execute().done(function (results) {
+                var groupName = group.name();
+                var command;
+
+                if (groupName == "All Groups") {
+                    command = new getCountersCommand(0, 128);
+                } else {
+                    command = new getCountersCommand(0, 128, groupName);
+                }
+                command.execute().done(function (results) {
                     return group.counters(results);
                 });
             }
         };
 
         counterStorageCounters.prototype.groupsLoaded = function (groups) {
+            var _this = this;
             this.counterGroups(groups);
-            if (groups.length) {
-                this.selectedCounterGroup(groups[0]);
-            }
+
+            this.allCounterGroups = new counterGroup({ Name: "All Groups" }); // Create the "All Groups" pseudo collection.
+            this.allCounterGroups.numOfCounters = ko.computed(function () {
+                return _this.counterGroups().filter(function (c) {
+                    return c !== _this.allCounterGroups;
+                }).map(function (c) {
+                    return c.numOfCounters();
+                }).reduce(function (first, second) {
+                    return first + second;
+                }, 0);
+            }); // And sum them up.
+
+            this.counterGroups.unshift(this.allCounterGroups);
+
+            this.selectGroup(groups[0]);
         };
         counterStorageCounters.gridSelector = "#countersGrid";
         return counterStorageCounters;
