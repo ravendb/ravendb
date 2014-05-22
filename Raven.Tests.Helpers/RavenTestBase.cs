@@ -464,7 +464,7 @@ namespace Raven.Tests.Helpers
 						var firstOrDefault =
 							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
-							Assert.False(true, firstOrDefault.Message);
+                            Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
 					}
 
 					return true;

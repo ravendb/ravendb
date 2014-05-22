@@ -20,13 +20,13 @@ namespace Raven.Database.Backup
 			TotalBytesWritten = 0;
 		}
 
-		public void UpdateProgress(long bytesWritten, Action<string, BackupStatus.BackupMessageSeverity> Notifier)
+		public void UpdateProgress(long bytesWritten, Action<string, string, BackupStatus.BackupMessageSeverity> notifier)
 		{
 			TotalBytesWritten += bytesWritten;
 			int percentage = (int)(((double)TotalBytesWritten / (double)TotalBytes) * 100.0);
 			if (percentage > lastPercentWritten)
 			{
-				Notifier("Overall progress " + percentage + "% done", BackupStatus.BackupMessageSeverity.Informational);
+				notifier("Overall progress " + percentage + "% done", null, BackupStatus.BackupMessageSeverity.Informational);
 				lastPercentWritten = percentage;
 			}
 		}

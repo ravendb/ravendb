@@ -32,6 +32,7 @@ namespace Raven.Abstractions.Data
         public class BackupMessage
         {
             public string Message { get; set; }
+            public string Details { get; set; }
             public DateTime Timestamp { get; set; }
             public BackupMessageSeverity Severity { get; set; }
 
@@ -46,12 +47,13 @@ namespace Raven.Abstractions.Data
 
                 return Message == item.Message &&
                        Timestamp == item.Timestamp &&
+                       Details == item.Details &&
                        Severity == item.Severity;
             }
 
             public override int GetHashCode()
             {
-                return (Message != null ? Message.GetHashCode() : 0) ^ Timestamp.GetHashCode() ^
+                return (Message != null ? Message.GetHashCode() : 0) ^ (Details != null ? Details.GetHashCode() : 1) ^ Timestamp.GetHashCode() ^
                        (Severity.GetHashCode() << 16);
             }
         }
