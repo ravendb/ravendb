@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -838,4 +838,15 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
-/*# sourceMappingURL=app.css.map */
+.quotas-settings-form .input-group-addon {
+  min-width: 65px;
+}
+.quotas-settings-form .row {
+  margin-bottom: 5px;
+}
+.quotas-settings-form .control-label {
+  text-align: left;
+}
+.quotas-settings-form input[type=number] {
+  text-align: right;
+}
