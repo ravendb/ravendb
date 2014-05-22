@@ -17,6 +17,7 @@ import ace = require("ace/ace");
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    public activeCounterStorage = ko.observable<filesystem>().subscribeTo("ActivateCounterStorage", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;

@@ -59,6 +59,7 @@ class shell extends viewModelBase {
     
     coutersLoadedTask:JQueryPromise<any>;
     currentRawUrl = ko.observable<string>("");
+    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
@@ -71,8 +72,7 @@ class shell extends viewModelBase {
     globalDocPrefixChangesSubscription: changeSubscription;
 
     modelPollingTimeoutFlag: boolean = true;
-
-
+    
     getCurrentActiveDBFeatureName() {
         if (this.appUrls.isAreaActive('filesystems')() === true) {
             return 'File Systems';
