@@ -1865,7 +1865,8 @@ If you really want to do in memory filtering on the data returned from the query
                 ResultsTransformer = this.resultsTransformer,
                 QueryInputs = queryInputs,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-				DisableCaching = disableCaching
+				DisableCaching = disableCaching,
+				ExplainScores = shouldExplainScores
 			};
 
 			if (pageSize != null)
