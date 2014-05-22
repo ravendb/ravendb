@@ -92,7 +92,6 @@ namespace Raven.Client.RavenFS
                 Dispose();
                 throw;
             }
-
         }
 
         public string ServerUrl { get; private set; }
@@ -617,14 +616,17 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        public IFileSystemChanges Notifications
-        {
-            get { return notifications; }
-        }
-
         public FileConvention Convention
         {
             get { return convention; }
+        }
+
+        /// <summary>
+        /// Subscribe to change notifications from the server
+        /// </summary>
+        public IFileSystemChanges Changes()
+        {
+            return this.notifications;
         }
 
         private static void AddHeaders(RavenJObject metadata, HttpJsonRequest request)

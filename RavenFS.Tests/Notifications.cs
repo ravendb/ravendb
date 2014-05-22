@@ -23,9 +23,9 @@ namespace RavenFS.Tests
 		[Fact]
         public async Task NotificationReceivedWhenFileAdded()
         {
-            var notificationTask = client.Notifications.ForFolder("/")
-                                                       .Timeout(TimeSpan.FromSeconds(2))
-                                                       .Take(1).ToTask();            
+            var notificationTask = client.Changes().ForFolder("/")
+                                                   .Timeout(TimeSpan.FromSeconds(2))
+                                                   .Take(1).ToTask();            
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
@@ -40,7 +40,7 @@ namespace RavenFS.Tests
         {
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = client.Notifications.ForFolder("/")
+            var notificationTask = client.Changes().ForFolder("/")
                                                .Timeout(TimeSpan.FromSeconds(2))
                                                .Take(1).ToTask();
 
@@ -57,7 +57,7 @@ namespace RavenFS.Tests
         {
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = client.Notifications.ForFolder("/")
+            var notificationTask = client.Changes().ForFolder("/")
                                                 .Timeout(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
 
@@ -74,7 +74,7 @@ namespace RavenFS.Tests
         {
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = client.Notifications.ForFolder("/")
+            var notificationTask = client.Changes().ForFolder("/")
                                                 .Buffer(TimeSpan.FromSeconds(5))
                                                 .Take(1).ToTask();           
             
@@ -91,7 +91,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsAreOnlyReceivedForFilesInGivenFolder()
         {
-            var notificationTask = client.Notifications.ForFolder("/Folder")
+            var notificationTask = client.Changes().ForFolder("/Folder")
                                                 .Buffer(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
 
@@ -105,7 +105,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsUpdated()
         {
-            var notificationTask = client.Notifications.ForConfiguration()
+            var notificationTask = client.Changes().ForConfiguration()
                                                .Timeout(TimeSpan.FromSeconds(2))
                                                .Take(1).ToTask();
 
@@ -120,7 +120,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
-            var notificationTask = client.Notifications.ForConfiguration()
+            var notificationTask = client.Changes().ForConfiguration()
                                                 .Timeout(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();           
 
@@ -134,9 +134,7 @@ namespace RavenFS.Tests
 
 		public override void Dispose()
 		{
-            var serverNotifications = client.Notifications as RemoteFileSystemChanges;
-			if (serverNotifications != null)
-				serverNotifications.DisposeAsync().Wait();
+            client.Dispose();
 			base.Dispose();
 		}
     }
