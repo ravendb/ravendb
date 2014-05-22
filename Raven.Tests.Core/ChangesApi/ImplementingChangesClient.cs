@@ -18,27 +18,9 @@ namespace Raven.Tests.Core.ChangesApi
         private interface IUntypedConnectable : IConnectableChanges
         { }
 
-        private class NoProperInheritanceChangesClientBase : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>
+        private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>
         {
-            public NoProperInheritanceChangesClientBase() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
-            {
-            }
-
-            protected override Task SubscribeOnServer()
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        class ProperInheritanceChangesClientBase : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>, IUntypedConnectable
-        {
-            public ProperInheritanceChangesClientBase() :
+            public NoInterfaceInheritanceChangesClient() :
                 base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
             {
             }
@@ -55,15 +37,70 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         [Fact]
-        public void RemoteChangesClientBaseWillFailWhenImproperlyImplemented()
+        public void ShouldFailWhenClientBaseDoesNotImplementConnectableTypeParameterInterface()
         {
-            Assert.Throws<InvalidCastException>(() => new NoProperInheritanceChangesClientBase());
+            Assert.Throws<InvalidCastException>(() => new NoInterfaceInheritanceChangesClient());
+        }
+
+
+
+        private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>, IUntypedConnectable
+        {
+            public UntypedInterfaceInheritanceChangesClient() :
+                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
+            {
+            }
+
+            protected override Task SubscribeOnServer()
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         [Fact]
-        public void RemoteChangesClientBaseShouldWork()
+        public void ClientImplementationShouldWorkWithUntypedInterface()
         {
-            new ProperInheritanceChangesClientBase();
+            new UntypedInterfaceInheritanceChangesClient();
+        }
+
+
+
+        private interface ITypedConnectable : IConnectableChanges<ITypedConnectable>
+        {
+        }
+
+        class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState>, ITypedConnectable
+        {
+            public TypedInterfaceInheritanceChangesClient() :
+                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
+            {
+            }
+
+            protected override Task SubscribeOnServer()
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            {
+                throw new NotImplementedException();
+            }
+
+            public new Task<ITypedConnectable> Task
+            {
+                get { throw new NotImplementedException(); }
+            }
+        }
+
+        [Fact]
+        public void ClientImplementationShouldWorkWithTypedInterface()
+        {
+            new TypedInterfaceInheritanceChangesClient();
         }
 
 
