@@ -5,7 +5,7 @@
             this.group = ko.observable('');
             this.overallTotal = ko.observable(0);
             this.servers = ko.observableArray([]);
-            this.id(dto.CounterName);
+            this.id(dto.Name);
             this.group(dto.Group);
             this.overallTotal(dto.OverallTotal);
             this.servers(dto.Servers.map(function (s) {

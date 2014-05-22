@@ -8,6 +8,7 @@ import pagedList = require("common/pagedList");
 
 class counterStorageCounters extends viewModelBase {
     counterGroups = ko.observableArray<counterGroup>([]);
+    allCounterGroups: counterGroup;
     selectedCounterGroup = ko.observable<counterGroup>();
     currentCountersPagedItems = ko.observable<pagedList>();
     selectedCountersIndices = ko.observableArray<number>();
@@ -20,7 +21,7 @@ class counterStorageCounters extends viewModelBase {
 
         new getCounterGroupsCommand()
             .execute()
-            .done((results: counterGroup[]) => this.groupsLoaded(results));
+            .done((results: counterGroup[])=> this.groupsLoaded(results));
     }
 
     getCountersGrid(): virtualTable {
@@ -48,7 +49,15 @@ class counterStorageCounters extends viewModelBase {
         this.selectedCounterGroup(group);
 
         if (group.counters().length === 0) {
-            new getCountersCommand(0, 128, group.name())
+            var groupName = group.name();
+            var command;
+
+            if (groupName == "All Groups") {
+                command = new getCountersCommand(0, 128);
+            } else {
+                command = new getCountersCommand(0, 128, groupName);
+            }
+            command
                 .execute()
                 .done((results: counter[]) => group.counters(results));
         }
@@ -56,9 +65,17 @@ class counterStorageCounters extends viewModelBase {
 
     groupsLoaded(groups: counterGroup[]) {
         this.counterGroups(groups);
-        if (groups.length) {
-            this.selectedCounterGroup(groups[0]);
-        }
+
+        this.allCounterGroups = new counterGroup({ Name: "All Groups" }); // Create the "All Groups" pseudo collection.
+        this.allCounterGroups.numOfCounters = ko.computed(() =>
+            this.counterGroups()
+                .filter(c => c !== this.allCounterGroups) // Don't include self, the all counter groups.
+                .map(c => c.numOfCounters()) // Grab the counter count of each.
+                .reduce((first: number, second: number) => first + second, 0)); // And sum them up.
+
+        this.counterGroups.unshift(this.allCounterGroups);
+
+        this.selectedCounterGroup(groups[0]);
     }
 }
 

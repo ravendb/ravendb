@@ -17,7 +17,7 @@ namespace Raven.Database.Counters
 
 	public class Group
 	{
-		public string GroupName { get; set; }
+		public string Name { get; set; }
 		public long NumOfCounters { get; set; }
 	}
 }

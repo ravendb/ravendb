@@ -707,10 +707,15 @@ interface counterStorageDto {
 }
 
 interface counterDto {
-    CounterName: string;
+    Name: string;
     Group: string;
     OverallTotal: number;
     Servers: counterServerValueDto[];
+}
+
+interface counterGroupDto {
+    Name: string;
+    NumOfCounters?: number;
 }
 
 interface  counterServerValueDto {
