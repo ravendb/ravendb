@@ -21,6 +21,12 @@ namespace Raven.Database.Counters.Controllers
         public async Task<HttpResponseMessage> Put(string id)
         {
             var docKey = "Raven/Counters/" + id;
+
+            if (IsCounterStorageNameExists(id))
+            {
+                return GetMessageWithString(string.Format("Counter Storage {0} already exists", id), HttpStatusCode.BadRequest);
+            }
+
             var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
             CountersLandlord.Protect(dbDoc);
             var json = RavenJObject.FromObject(dbDoc);
@@ -41,6 +47,12 @@ namespace Raven.Database.Counters.Controllers
 			if (configuration == null)
 				return GetEmptyMessage();
 
+
+            if (!IsCounterStorageNameExists(id))
+            {
+                return GetMessageWithString(string.Format("Counter Storage {0} was not found exists", id), HttpStatusCode.BadRequest);
+            }
+
 			Database.Documents.Delete(docKey, null, null);
 			bool result;
 
@@ -51,5 +63,14 @@ namespace Raven.Database.Counters.Controllers
 
 			return GetEmptyMessage();
 		}
+
+        private bool IsCounterStorageNameExists(string id)
+        {
+            string errorMessage = null;
+            var docKey = "Raven/Counters/" + id;
+            var database = Database.Documents.Get(docKey, null);
+            return database != null;
+
+        }
     }
 }

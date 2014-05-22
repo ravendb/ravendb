@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
@@ -108,5 +109,30 @@ namespace Raven.Database.Counters.Controllers
                 return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
             }
         }
+
+        [Route("counters/{counterName}/replicationdestinations")]
+        public async Task<HttpResponseMessage> GetReplicationDestinations()
+        {
+            using (var reader = Storage.CreateReader())
+            {
+                return Request.CreateResponse(HttpStatusCode.OK, reader.GetReplicationData().Destinations);
+            }
+        }
+
+//        [HttpPut]
+//        [Route("counters/{counterName}/replicationdestinations")]
+//        public async Task<HttpResponseMessage> SaveReplicationDestinations()
+//        {
+////            var replicationMessageJObject = await ReadJsonAsync();
+////            var replicationDocument = replicationMessageJObject.Deserialize<CounterStorageReplicationDocument>();
+////            ReplicationMessage replicationMessage = ReplicationMessage.GetReplicationMessage(replicationMessageJObject); 
+////            using (var writer = Storage.CreateWriter())
+////            {
+////                writer.UpdateReplications(new CounterStorageReplicationDocument());
+////                return Request.CreateResponse(HttpStatusCode.OK, reader.GetReplicationData().Destinations);
+////            }
+//        }
+
+//        [HttpGet]
     }
 }

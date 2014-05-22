@@ -19,11 +19,11 @@ define(["require", "exports", "plugins/dialog", "viewmodels/dialogViewModelBase"
         }
         createCounterStorage.prototype.attached = function () {
             var _this = this;
-            var inputElement = $("#databaseName")[0];
+            var inputElement = $("#counterStorageName")[0];
             this.counterStorageName.subscribe(function (newCounterStorageName) {
                 var errorMessage = '';
 
-                if (!_this.isCounterStorageNameExists(newCounterStorageName, _this.counterStorages())) {
+                if (_this.isCounterStorageNameExists(newCounterStorageName.toLowerCase(), _this.counterStorages())) {
                     errorMessage = "Database Name Already Exists!";
                 } else if ((errorMessage = _this.CheckName(newCounterStorageName)) != '') {
                 }
@@ -52,9 +52,9 @@ define(["require", "exports", "plugins/dialog", "viewmodels/dialogViewModelBase"
             dialog.close(this);
         };
 
-        createCounterStorage.prototype.isCounterStorageNameExists = function (databaseName, databases) {
-            for (var i = 0; i < databases.length; i++) {
-                if (databaseName == databases[i].name) {
+        createCounterStorage.prototype.isCounterStorageNameExists = function (databaseName, counterStorages) {
+            for (var i = 0; i < counterStorages.length; i++) {
+                if (databaseName == counterStorages[i].name.toLowerCase()) {
                     return true;
                 }
             }

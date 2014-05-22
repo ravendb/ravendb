@@ -242,8 +242,9 @@ namespace Raven.Database.Counters.Controllers
             NotReplicated = 2
 	    }
 
-		private bool ReplicateTo(ReplicationDestination destination)
+		private bool ReplicateTo(CounterStorageReplicationDestination destination)
 	    {
+            //todo: here, build url according to :destination.Url + '/counters/' + destination.
 	        try
 	        {
 	            string lastError;
@@ -252,14 +253,14 @@ namespace Raven.Database.Counters.Controllers
 				switch (TryReplicate(destination, out lastError))
 	            {
 	                case ReplicationResult.Success:
-						RecordSuccess(destination.Url);
+						RecordSuccess(destination.CounterStorageUrl);
                         result = true;
 	                    break;
                     case ReplicationResult.NotReplicated:
 						//TODO: Record not replicated
                         break;
                     default:
-						RecordFailure(destination.Url, lastError);
+                        RecordFailure(destination.CounterStorageUrl, lastError);
 	                    break;
 	            }
 
@@ -267,24 +268,24 @@ namespace Raven.Database.Counters.Controllers
 	        }
 	        catch (Exception ex)
 	        {
-				Log.ErrorException("Error occured replicating to: " + destination.Url, ex);
-				RecordFailure(destination.Url, ex.Message);
+                Log.ErrorException("Error occured replicating to: " + destination.ServerUrl, ex);
+                RecordFailure(destination.ServerUrl, ex.Message);
 	            return false;
 	        }
 	        finally
 	        {
-				var holder = activeReplicationTasks.GetOrAdd(destination.Url, s => new SemaphoreSlim(0, 1));
+                var holder = activeReplicationTasks.GetOrAdd(destination.ServerUrl, s => new SemaphoreSlim(0, 1));
                 holder.Release();
 	        }
 	    }
 
-		private RavenConnectionStringOptions GetConnectionOptionsSafe(ReplicationDestination destination, out string lastError)
+		private RavenConnectionStringOptions GetConnectionOptionsSafe(CounterStorageReplicationDestination destination, out string lastError)
 		{
 			try
 			{
 				var connectionStringOptions = new RavenConnectionStringOptions
 				{
-					Url = destination.Url,
+                    Url = destination.ServerUrl,
 					ApiKey = destination.ApiKey,
 				};
 				if (string.IsNullOrEmpty(destination.Username) == false)
@@ -299,13 +300,13 @@ namespace Raven.Database.Counters.Controllers
 			catch (Exception e)
 			{
 				lastError = e.Message;
-				Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}, ClientVisibleUrl: {2}]",
-					Environment.NewLine, destination.Url, destination.ClientVisibleUrl), e);
+				Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}]",
+                    Environment.NewLine, destination.ServerUrl), e);
 				return null;
 			}
 		}
 
-		private ReplicationResult TryReplicate(ReplicationDestination destination, out string lastError)
+		private ReplicationResult TryReplicate(CounterStorageReplicationDestination destination, out string lastError)
         {
             long etag = 0;
             var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
@@ -420,7 +421,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-					ReplicationDocument replicationData;
+                    CounterStorageReplicationDocument replicationData;
 					using (var reader = storage.CreateReader())
 						replicationData = reader.GetReplicationData();
 
@@ -429,9 +430,9 @@ namespace Raven.Database.Counters.Controllers
 				        var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
 						var destinationForReplication = replicationData.Destinations.Where(
-							destination => !runningBecauseOfDataModifications || IsNotFailing(destination.Url, currentReplicationAttempts));
+							destination => !runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts));
 						
-				        foreach (ReplicationDestination destination in destinationForReplication)
+				        foreach (CounterStorageReplicationDestination destination in destinationForReplication)
 				        {
 							ReplicateToDestination(destination);
 				        }
@@ -471,9 +472,9 @@ namespace Raven.Database.Counters.Controllers
             return e.Message;
 	    }
 
-		private void ReplicateToDestination(ReplicationDestination destination)
+		private void ReplicateToDestination(CounterStorageReplicationDestination destination)
 		{
-			var dest = destination.Url;
+			var dest = destination.CounterStorageUrl;
 			var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
 			if (holder.Wait(0) == false)
 				return;

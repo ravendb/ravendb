@@ -65,4 +65,4 @@ define(["require", "exports", "commands/counter/getCountersCommand", "commands/c
     
     return counterStorageCounters;
 });
-//# sourceMappingURL=counterStorageCounters.js.map
+//# sourceMappingURL=counterStoragecounters.js.map

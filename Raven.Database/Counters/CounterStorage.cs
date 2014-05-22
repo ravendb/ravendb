@@ -79,28 +79,28 @@ namespace Raven.Database.Counters
 					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageUrl));
 
 					//TODO: Remove this when UI is finished
-						ReplicationDestination replication1 = new ReplicationDestination();
-						ReplicationDestination replication2 = new ReplicationDestination();
+                    var replication1 = new CounterStorageReplicationDestination();
+                    var replication2 = new CounterStorageReplicationDestination();
 						if (CounterStorageUrl.Contains(":8080"))
 						{
-							replication1.Url = CounterStorageUrl.Replace(":8080", ":8081");
-							replication2.Url = CounterStorageUrl.Replace(":8080", ":8082");
+							replication1.ServerUrl = CounterStorageUrl.Replace(":8080", ":8081");
+                            replication2.ServerUrl = CounterStorageUrl.Replace(":8080", ":8082");
 						}
 						else if (CounterStorageUrl.Contains(":8081"))
 						{
-							replication1.Url = CounterStorageUrl.Replace(":8081", ":8080");
-							replication2.Url = CounterStorageUrl.Replace(":8081", ":8082");
+                            replication1.ServerUrl = CounterStorageUrl.Replace(":8081", ":8080");
+                            replication2.ServerUrl = CounterStorageUrl.Replace(":8081", ":8082");
 						}
 						else
 						{
-							replication1.Url = CounterStorageUrl.Replace(":8082", ":8080");
-							replication2.Url = CounterStorageUrl.Replace(":8082", ":8081");
+                            replication1.ServerUrl = CounterStorageUrl.Replace(":8082", ":8080");
+                            replication2.ServerUrl = CounterStorageUrl.Replace(":8082", ":8081");
 						}
 
 						replication1.Disabled = false;
 						replication2.Disabled = false;
 
-						ReplicationDocument document = new ReplicationDocument();
+                        var document = new CounterStorageReplicationDocument();
 						document.Destinations.Add(replication1);
 						document.Destinations.Add(replication2);
 						
@@ -378,7 +378,7 @@ namespace Raven.Database.Counters
 				return serverEtag;
 			}
 
-			public ReplicationDocument GetReplicationData()
+            public CounterStorageReplicationDocument GetReplicationData()
 			{
 				var readResult = metadata.Read("replication");
 				if (readResult != null)
@@ -388,7 +388,7 @@ namespace Raven.Database.Counters
 					using (var streamReader = new StreamReader(stream))
 					using (var jsonTextReader = new JsonTextReader(streamReader))
 					{
-						return new JsonSerializer().Deserialize<ReplicationDocument>(jsonTextReader);
+                        return new JsonSerializer().Deserialize<CounterStorageReplicationDocument>(jsonTextReader);
 					}
 				}
 				return null;
@@ -595,7 +595,7 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-			public void UpdateReplications(ReplicationDocument document)
+            public void UpdateReplications(CounterStorageReplicationDocument document)
 			{
 				using (var memoryStream = new MemoryStream())
 				using (var streamWriter = new StreamWriter(memoryStream))

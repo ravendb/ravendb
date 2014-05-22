@@ -23,11 +23,11 @@ class createCounterStorage extends dialogViewModelBase {
 
     attached() {
 
-        var inputElement: any = $("#databaseName")[0];
+        var inputElement: any = $("#counterStorageName")[0];
         this.counterStorageName.subscribe((newCounterStorageName) => {
             var errorMessage: string = '';
             
-            if (!this.isCounterStorageNameExists(newCounterStorageName, this.counterStorages())) {
+            if (this.isCounterStorageNameExists(newCounterStorageName.toLowerCase(), this.counterStorages())) {
                 errorMessage = "Database Name Already Exists!";
             }
             else if ((errorMessage = this.CheckName(newCounterStorageName)) != '') { }
@@ -58,9 +58,9 @@ class createCounterStorage extends dialogViewModelBase {
     }
     
 
-    private isCounterStorageNameExists(databaseName: string, databases: counterStorage[]): boolean {
-        for (var i = 0; i < databases.length; i++) {
-            if (databaseName == databases[i].name) {
+    private isCounterStorageNameExists(databaseName: string, counterStorages: counterStorage[]): boolean {
+        for (var i = 0; i < counterStorages.length; i++) {
+            if (databaseName == counterStorages[i].name.toLowerCase()) {
                 return true;
             }
         }

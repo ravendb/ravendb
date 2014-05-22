@@ -39,23 +39,6 @@ define(["require", "exports", "durandal/app", "viewmodels/viewModelBase", "model
             }
         };
 
-        /*
-        *
-        * deleteSelectedDatabase() {
-        var db = this.selectedDatabase();
-        if (db) {
-        require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
-        var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, this.systemDb);
-        confirmDeleteVm.deleteTask.done(()=> {
-        this.onDatabaseDeleted(db);
-        this.selectedDatabase(null);
-        });
-        app.showDialog(confirmDeleteVm);
-        });
-        }
-        }
-        
-        */
         counterStorages.prototype.deleteSelectedCounterStorage = function () {
             var _this = this;
             var counterStorage = this.selectedCounterStorage();

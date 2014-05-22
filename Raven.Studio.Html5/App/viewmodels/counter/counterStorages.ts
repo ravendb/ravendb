@@ -37,25 +37,7 @@ class counterStorages extends viewModelBase {
             this.selectedCounterStorage(null);
         }
     }
-
-
-    /*
-     * 
-     * deleteSelectedDatabase() {
-        var db = this.selectedDatabase();
-        if (db) {
-            require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
-                var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, this.systemDb);
-                confirmDeleteVm.deleteTask.done(()=> {
-                    this.onDatabaseDeleted(db);
-                    this.selectedDatabase(null);
-                });
-                app.showDialog(confirmDeleteVm);
-            });
-        }
-    }
-
-     */
+    
     deleteSelectedCounterStorage() {
         var counterStorage = this.selectedCounterStorage();
         if (!!counterStorage) {

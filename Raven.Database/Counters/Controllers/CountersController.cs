@@ -76,6 +76,7 @@ namespace Raven.Database.Counters.Controllers
 						CounterName = counterName.Split(';')[1],
 						Group = counterName.Split(';')[0],
 						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
+
 						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
 						{
 							Negative = s.Negative, Positive = s.Positive, Name = reader.ServerNameFor(s.SourceId)
@@ -89,10 +90,10 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPut]
 		public async Task<HttpResponseMessage> Replications()
 		{
-			ReplicationDocument jsonDeserialization;
+			CounterStorageReplicationDocument jsonDeserialization;
 			try
 			{
-				jsonDeserialization = await ReadJsonObjectAsync<ReplicationDocument>();
+                jsonDeserialization = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
 			}
 			catch (Exception e)
 			{
