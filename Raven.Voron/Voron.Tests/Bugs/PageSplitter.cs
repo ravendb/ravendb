@@ -50,7 +50,7 @@ namespace Voron.Tests.Bugs
                 for (int index = 0; index < inputData.Count; index++)
                 {
                     var keyString = inputData[index];
-                    Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 })));
+                    Assert.DoesNotThrow(() => tree.Add(keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 })));
                 }
 
                 tx.Commit();
@@ -79,7 +79,7 @@ namespace Voron.Tests.Bugs
                         {
                             var tree = tx.Environment.State.GetTree(tx, treeName);
 
-                            tree.Add(tx, id, new MemoryStream(testBuffer));
+                            tree.Add(id, new MemoryStream(testBuffer));
                         }
 
                         tx.Commit();
@@ -112,9 +112,9 @@ namespace Voron.Tests.Bugs
                     {
                         var tree = tx.Environment.State.GetTree(tx, treeName);
 
-                        tree.Add(tx, id, new MemoryStream(testBuffer));
+                        tree.Add(id, new MemoryStream(testBuffer));
 
-                        var readResult = tree.Read(tx, id);
+                        var readResult = tree.Read(id);
 
                         Assert.NotNull(readResult);
                     }
@@ -148,7 +148,7 @@ namespace Voron.Tests.Bugs
                         foreach (var treeName in trees)
                         {
                             var tree = tx.Environment.State.GetTree(tx, treeName);
-                            tree.Add(tx, id, new MemoryStream(testBuffer));
+                            tree.Add(id, new MemoryStream(testBuffer));
                         }
 
                         tx.Commit();

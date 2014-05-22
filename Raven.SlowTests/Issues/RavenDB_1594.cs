@@ -92,11 +92,11 @@ namespace Raven.SlowTests.Issues
 				Id = "DestDB",
 				Settings = {{"Raven/DataDir", "~\\Databases\\DestDB"}}
 			});
-			//setup periodic backup
+			//setup periodic export
 			using (var session = documentStore.OpenSession("SourceDB"))
 			{
-				session.Store(new PeriodicBackupSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
-					PeriodicBackupSetup.RavenDocumentKey);
+				session.Store(new PeriodicExportSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
+					PeriodicExportSetup.RavenDocumentKey);
 				session.SaveChanges();
 			}
 

@@ -201,6 +201,13 @@ namespace Raven.Client
 		/// <param name="postTag">Postfix tag.</param>
 		IDocumentQueryCustomization SetHighlighterTags(string preTag, string postTag);
 
+        /// <summary>
+        /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
+        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
+        /// called just once for each document in the result set
+        /// </summary>
+	    IDocumentQueryCustomization SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
+
 		/// <summary>
 		///   Sets the tags to highlight matches with.
 		/// </summary>

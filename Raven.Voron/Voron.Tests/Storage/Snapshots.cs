@@ -28,7 +28,7 @@ namespace Voron.Tests.Storage
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
+				tx.State.Root.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
 
 				tx.Commit();
 			}
@@ -36,7 +36,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-                var reader = tx.State.Root.Read(tx, "key/1").Reader;
+                var reader = tx.State.Root.Read("key/1").Reader;
 			    Assert.Equal("123", reader.ToStringValue());
 			    tx.Commit();
 			}

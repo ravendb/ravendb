@@ -11,6 +11,7 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
+                
                 <div data-bind="visible: appUrls.isAreaActive('databases')">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
@@ -100,7 +101,7 @@
                             </ul>
                         </li>
                     </ul>
-                    <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
+                    <form class="navbar-form pull-left hidden-xs col-sm-2">
                         <input id="goToDocInput" type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown'" autocomplete="off" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
                             <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
@@ -153,7 +154,8 @@
                         </li>
                     </ul>
                 </div>
-
+                
+                <!--Databases-->
                 <div >
                     <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases col-md-3">
                         <li class="navbar-right" style="padding-left: 5px;">
@@ -206,9 +208,6 @@
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a data-bind="attr: { href: appUrls.databases }">Databases</a>
-                                            </li>
-                                            <li>
                                                 <a data-bind="attr: { href: appUrls.filesystems }">File Systems</a>
                                             </li>
                                             <li>
@@ -218,7 +217,6 @@
                                     </li>
                                 </ul>
                             </div>
-
                         </li>
                         <li class="navbar-right" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)" title="Show errors" style="padding-left: 0;">
                             <a href="#"><i class="fa fa-warning text-danger"></i></a>

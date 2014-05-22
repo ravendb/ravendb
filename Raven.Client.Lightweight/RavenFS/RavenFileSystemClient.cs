@@ -100,7 +100,7 @@ namespace Raven.Client.RavenFS
 
         public string FileSystemUrl
         {
-            get { return string.Format("{0}/ravenfs/{1}", ServerUrl, FileSystemName); }
+            get { return string.Format("{0}/fs/{1}", ServerUrl, FileSystemName); }
         }
 
         public ICredentials Credentials { get; private set; }
@@ -1403,7 +1403,7 @@ namespace Raven.Client.RavenFS
 
             public async Task<string[]> GetFileSystemsNames()
             {
-                var requestUriString = string.Format("{0}/ravenfs/names", ravenFileSystemClient.ServerUrl);
+                var requestUriString = string.Format("{0}/fs/names", ravenFileSystemClient.ServerUrl);
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -1422,7 +1422,7 @@ namespace Raven.Client.RavenFS
 
             public async Task<List<FileSystemStats>> GetFileSystemsStats()
             {
-                var requestUriString = string.Format("{0}/ravenfs/stats", ravenFileSystemClient.ServerUrl);
+                var requestUriString = string.Format("{0}/fs/stats", ravenFileSystemClient.ServerUrl);
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -1441,7 +1441,7 @@ namespace Raven.Client.RavenFS
 
             public async Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
             {
-                var requestUriString = string.Format("{0}/ravenfs/admin/{1}", ravenFileSystemClient.ServerUrl,
+                var requestUriString = string.Format("{0}/fs/admin/{1}", ravenFileSystemClient.ServerUrl,
                                                      newFileSystemName ?? ravenFileSystemClient.FileSystemName);
 
                 var request = ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(
@@ -1460,7 +1460,7 @@ namespace Raven.Client.RavenFS
 
 			public async Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false)
 			{
-				var requestUriString = string.Format("{0}/ravenfs/admin/{1}?hard-delete={2}", ravenFileSystemClient.ServerUrl, fileSystemName ?? ravenFileSystemClient.FileSystemName, hardDelete);
+				var requestUriString = string.Format("{0}/fs/admin/{1}?hard-delete={2}", ravenFileSystemClient.ServerUrl, fileSystemName ?? ravenFileSystemClient.FileSystemName, hardDelete);
 
 				var request = ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(
 										new CreateHttpJsonRequestParams(this, requestUriString,

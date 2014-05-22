@@ -37,7 +37,7 @@ class appUrl {
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
-        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
+        periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
@@ -253,8 +253,8 @@ class appUrl {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forPeriodicBackup(db: database): string {
-        return "#databases/settings/periodicBackups?" + appUrl.getEncodedDbPart(db);
+    static forPeriodicExport(db: database): string {
+        return "#databases/settings/periodicExports?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {
@@ -342,7 +342,7 @@ class appUrl {
             return appUrl.baseUrl + "/databases/" + res.name;
         }
         else if (res && res instanceof filesystem) {
-            return appUrl.baseUrl + "/ravenfs/" + res.name;
+            return appUrl.baseUrl + "/fs/" + res.name;
         }
 
         return this.baseUrl;

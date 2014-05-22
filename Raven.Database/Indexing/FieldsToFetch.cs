@@ -14,8 +14,15 @@ namespace Raven.Database.Indexing
 		private HashSet<string > ensuredFieldNames;
 		public bool FetchAllStoredFields { get; set; }
 
-		public FieldsToFetch(string[] fieldsToFetch, bool isDistinct, string additionalField)
-		{
+	
+        public FieldsToFetch(IndexQuery query, string additionalField) 
+             :this(query.FieldsToFetch, query.IsDistinct, additionalField)
+        {
+            this.Query = query;
+        }
+
+	   public FieldsToFetch(string[] fieldsToFetch, bool isDistinct, string additionalField)
+	   {
 			this.isDistinct = isDistinct;
 			this.additionalField = additionalField;
 			if (fieldsToFetch != null)
@@ -25,6 +32,7 @@ namespace Raven.Database.Indexing
 			}
 
 			IsDistinctQuery = isDistinct && fieldsToFetch != null && fieldsToFetch.Length > 0;
+			
 			
 			IsProjection = this.fieldsToFetch != null && this.fieldsToFetch.Count > 0;
 		
@@ -56,6 +64,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 		}
+	    public IndexQuery Query { get; private set; }
 
 		private IEnumerable<string> GetFieldsToReturn()
 		{
@@ -70,6 +79,7 @@ namespace Raven.Database.Indexing
 
 		public FieldsToFetch CloneWith(string[] newFieldsToFetch)
 		{
+		
 			return new FieldsToFetch(newFieldsToFetch, isDistinct, additionalField);
 		}
 

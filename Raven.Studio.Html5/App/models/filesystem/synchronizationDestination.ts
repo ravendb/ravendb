@@ -7,7 +7,7 @@
     apiKey = ko.observable<string>().extend({ required: true });
     filesystem = ko.observable<string>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
-    
+
     name = ko.computed(() => {
         if (this.url() && this.filesystem()) {
             return this.filesystem() + " on " + this.url();

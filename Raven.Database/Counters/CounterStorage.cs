@@ -65,18 +65,18 @@ namespace Raven.Database.Counters
 				storageEnvironment.CreateTree(tx, "counters->etags");
 				
 				var metadata = tx.State.GetTree(tx, "$metadata");
-				var id = metadata.Read(tx, "id");
+				var id = metadata.Read("id");
 
 				if (id == null) // new counter db
 				{
 					var serverIdBytes = EndianBitConverter.Big.GetBytes(0); // local is always 0
 					var serverIdSlice = new Slice(serverIdBytes);
-					serverNamesToIds.Add(tx, CounterStorageUrl, serverIdSlice);
-					serverIdsToNames.Add(tx, serverIdSlice, CounterStorageUrl);
+					serverNamesToIds.Add(CounterStorageUrl, serverIdSlice);
+					serverIdsToNames.Add(serverIdSlice, CounterStorageUrl);
 
 					Id = Guid.NewGuid();
-					metadata.Add(tx, "id", Id.ToByteArray());
-					metadata.Add(tx, "name", Encoding.UTF8.GetBytes(CounterStorageUrl));
+					metadata.Add("id", Id.ToByteArray());
+					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageUrl));
 
 					//TODO: Remove this when UI is finished
 						ReplicationDestination replication1 = new ReplicationDestination();
@@ -111,7 +111,7 @@ namespace Raven.Database.Counters
 							new JsonSerializer().Serialize(jsonTextWriter, document);
 							streamWriter.Flush();
 							memoryStream.Position = 0;
-							metadata.Add(tx, "replication", memoryStream);
+							metadata.Add("replication", memoryStream);
 						}
 					//TODO: Remove this when UI is finished
 
@@ -121,7 +121,7 @@ namespace Raven.Database.Counters
 				{
 					int used;
 					Id = new Guid(id.Reader.ReadBytes(16, out used));
-					var nameResult = metadata.Read(tx, "name");
+					var nameResult = metadata.Read("name");
 					if (nameResult == null)
 						throw new InvalidOperationException("Could not read name from the store, something bad happened");
 					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
@@ -129,7 +129,7 @@ namespace Raven.Database.Counters
 					if (storedName != CounterStorageUrl)
 						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageUrl);
 
-					using (var it = etags.Iterate(tx))
+					using (var it = etags.Iterate())
 					{
 						if (it.Seek(Slice.AfterAllKeys))
 						{
@@ -210,7 +210,7 @@ namespace Raven.Database.Counters
 
 			public IEnumerable<string> GetCounterNames(string prefix)
 			{
-				using (var it = countersEtags.Iterate(transaction))
+				using (var it = countersEtags.Iterate())
 				{
 					it.RequiredPrefix = prefix;
 					if (it.Seek(it.RequiredPrefix) == false)
@@ -224,7 +224,7 @@ namespace Raven.Database.Counters
 
 			public IEnumerable<string> GetCounterGroups()
 			{
-				using (var it = countersGroups.Iterate(transaction))
+				using (var it = countersGroups.Iterate())
 				{
 					if (it.Seek(Slice.BeforeAllKeys) == false)
 						yield break;
@@ -238,11 +238,11 @@ namespace Raven.Database.Counters
             public Counter GetCounter(Slice name)
 			{
 				Slice slice = name;
-				var etagResult = countersEtags.Read(transaction, slice);
+				var etagResult = countersEtags.Read(slice);
 				if (etagResult == null)
 					return null;
                 var etag = etagResult.Reader.ReadBigEndianInt64();
-				using (var it = counters.Iterate(transaction))
+				using (var it = counters.Iterate())
 				{
 					it.RequiredPrefix = slice;
 					if (it.Seek(slice) == false)
@@ -269,7 +269,7 @@ namespace Raven.Database.Counters
 			public Group GetGroup(Slice name)
 			{
 				Slice slice = name;
-				var groupResult = countersGroups.Read(transaction, slice);
+				var groupResult = countersGroups.Read(slice);
 				if (groupResult == null)
 					return null;
 				var numOfCounters = groupResult.Reader.ReadLittleEndianInt64();
@@ -286,7 +286,7 @@ namespace Raven.Database.Counters
                 EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
 		        var slice = new Slice(buffer);
                 
-                using (var it = etagsCounters.Iterate(transaction))
+                using (var it = etagsCounters.Iterate())
                 {
 					if (it.Seek(slice) == false)
                         yield break;
@@ -322,7 +322,7 @@ namespace Raven.Database.Counters
 		    public IEnumerable<ServerEtag> GetServerEtags()
 		    {
                 var buffer = new byte[sizeof(long)];
-                using (var it = serversLastEtag.Iterate(transaction))
+                using (var it = serversLastEtag.Iterate())
                 {
                     if (it.Seek(Slice.BeforeAllKeys) == false)
                         yield break;
@@ -349,7 +349,7 @@ namespace Raven.Database.Counters
 			{
 				int serverId = -1;
 				var key = Encoding.UTF8.GetBytes(server);
-				var result = serverNamesToIds.Read(transaction, new Slice(key));
+				var result = serverNamesToIds.Read(new Slice(key));
 
 				if (result != null && result.Version != 0)
 				{
@@ -369,7 +369,7 @@ namespace Raven.Database.Counters
 				}
 
 				var key = EndianBitConverter.Big.GetBytes(serverId);
-				var result = serversLastEtag.Read(transaction, new Slice(key));
+				var result = serversLastEtag.Read(new Slice(key));
 				if (result != null && result.Version != 0)
 				{
 					serverEtag = result.Reader.ReadBigEndianInt64();
@@ -380,7 +380,7 @@ namespace Raven.Database.Counters
 
 			public ReplicationDocument GetReplicationData()
 			{
-				var readResult = metadata.Read(transaction, "replication");
+				var readResult = metadata.Read("replication");
 				if (readResult != null)
 				{
 					var stream = readResult.Reader.AsStream();
@@ -399,7 +399,7 @@ namespace Raven.Database.Counters
 				string serverName = string.Empty;
 
 				var key = EndianBitConverter.Big.GetBytes(serverId);
-				var result = serverIdsToNames.Read(transaction, new Slice(key));
+				var result = serverIdsToNames.Read(new Slice(key));
 
 				if (result != null && result.Version != 0)
 				{
@@ -413,7 +413,7 @@ namespace Raven.Database.Counters
 			{
 				int serverId = 0;
 				var key = Encoding.UTF8.GetBytes(serverName);
-				var result = serverNamesToIds.Read(transaction, new Slice(key));
+				var result = serverNamesToIds.Read(new Slice(key));
 
 				if (result != null && result.Version != 0)
 				{
@@ -525,40 +525,40 @@ namespace Raven.Database.Counters
 					throw new InvalidOperationException("Could not find group name in counter, no ; separator");
 
 				var groupKeySlice = new Slice(buffer, (ushort) endOfGroupPrefix);
-				bool isGroupExists = countersGroups.Read(transaction, groupKeySlice) != null;
+				bool isGroupExists = countersGroups.Read(groupKeySlice) != null;
 				if (!isGroupExists)
 				{
-					countersGroups.Add(transaction, groupKeySlice, EndianBitConverter.Little.GetBytes(1L));
+					countersGroups.Add(groupKeySlice, EndianBitConverter.Little.GetBytes(1L));
 				}
 
 				Debug.Assert(requiredBufferSize < ushort.MaxValue);
 				var slice = new Slice(buffer, (ushort) requiredBufferSize);
-				var result = counters.Read(transaction, slice);
+				var result = counters.Read(slice);
 
 				if (isGroupExists && result == null) //if the group exists and it's a new counter
 				{
-					countersGroups.Increment(transaction, groupKeySlice, 1L);
+					countersGroups.Increment(groupKeySlice, 1L);
 				}
 
 				setStoreBuffer(result);
 
-				counters.Add(transaction, slice, storeBuffer);
+				counters.Add(slice, storeBuffer);
 
 				slice = new Slice(buffer, (ushort) counterNameSize);
-				result = countersEtagIx.Read(transaction, slice);
+				result = countersEtagIx.Read(slice);
 				
                 
 				if (result != null) // remove old etag entry
 				{
 					result.Reader.Read(etagBuffer, 0, sizeof (long));
                     var oldEtagSlice = new Slice(etagBuffer);
-                    etagsCountersIx.Delete(transaction, oldEtagSlice);
+                    etagsCountersIx.Delete(oldEtagSlice);
 				}
                 
 				EndianBitConverter.Big.CopyBytes(parent.LastEtag, etagBuffer, 0);
                 var newEtagSlice = new Slice(etagBuffer);
-                etagsCountersIx.Add(transaction, newEtagSlice, slice);
-                countersEtagIx.Add(transaction, slice, newEtagSlice);
+                etagsCountersIx.Add(newEtagSlice, slice);
+                countersEtagIx.Add(slice, newEtagSlice);
 			}
 
 			private void EnsureBufferSize(int requiredBufferSize)
@@ -570,7 +570,7 @@ namespace Raven.Database.Counters
 			private int GetOrAddServerId(string server)
 			{
 				int serverId;
-				var result = serverNamesToIds.Read(transaction, server);
+				var result = serverNamesToIds.Read(server);
 
 				if (result != null && result.Version != 0)
 				{
@@ -581,8 +581,8 @@ namespace Raven.Database.Counters
 					serverId = (int)serverNamesToIds.State.EntriesCount; //todo: should we check for overflow or change the server id to long?
 					var serverIdBytes = EndianBitConverter.Big.GetBytes(serverId);
 					var serverIdSlice = new Slice(serverIdBytes);
-					serverNamesToIds.Add(transaction, server, serverIdSlice);
-					serverIdsToNames.Add(transaction, serverIdSlice, server);
+					serverNamesToIds.Add(server, serverIdSlice);
+					serverIdsToNames.Add(serverIdSlice, server);
 				}
 
 				return serverId;
@@ -592,7 +592,7 @@ namespace Raven.Database.Counters
 			{
 				var serverId = GetOrAddServerId(server);
 				var key = EndianBitConverter.Big.GetBytes(serverId);
-				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
+				serversLastEtag.Add(new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
 			public void UpdateReplications(ReplicationDocument document)
@@ -604,7 +604,7 @@ namespace Raven.Database.Counters
 					new JsonSerializer().Serialize(jsonTextWriter, document);
 					streamWriter.Flush();
 					memoryStream.Position = 0;
-					metadata.Add(transaction, "replication", memoryStream);
+					metadata.Add("replication", memoryStream);
 				}
 
 				parent.ReplicationTask.SignalCounterUpdate();

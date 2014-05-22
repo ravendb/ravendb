@@ -17,12 +17,12 @@ class searchLastModifiedBetweenClause extends searchDialogViewModel {
 
         this.inputs.push(<KnockoutComputed<string>> ko.computed(function () {
             $("#fromDate").focus();
-            return this.fromDate() != null ? this.fromDate().format("YYYY/MM/DD") : "";
+            return this.fromDate() != null ? this.fromDate().format("YYYY/MM/DD H:mm:ss") : "";
         }, this));
 
         this.inputs.push(<KnockoutComputed<string>> ko.computed(function () {
             $("#toDate").focus();
-            return this.toDate() != null ? this.toDate().format("YYYY/MM/DD") : "";
+            return this.toDate() != null ? this.toDate().format("YYYY/MM/DD H:mm:ss") : "";
         }, this));
 
         datePickerBindingHandler.install();
@@ -31,8 +31,8 @@ class searchLastModifiedBetweenClause extends searchDialogViewModel {
     applyFilter() {
         if (this.fromDate() == null || this.toDate() == null)
             return false;
-        var dates = "__modified:[" + this.fromDate().format("YYYY/MM/DD").replaceAll("/", "-")
-            + "_00-00-00" + " TO " + this.toDate().format("YYYY/MM/DD").replaceAll("/", "-") + "_23-59-59" + "]";
+        var dates = "__modified:[" + this.fromDate().format("YYYY/MM/DD_H:mm:ss").replaceAll("/", "-").replaceAll(":", "-")
+            + " TO " + this.toDate().format("YYYY/MM/DD_H:mm:ss").replaceAll("/", "-").replaceAll(":", "-") + "]";
         this.applyFilterTask.resolve(dates);
         
         this.close()

@@ -15,13 +15,13 @@ namespace Voron.Tests.Trees
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = tx.State.Root.Iterate(tx);
+				var iterator = tx.State.Root.Iterate();
 				Assert.False(iterator.Seek(Slice.BeforeAllKeys));
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = tx.State.Root.Iterate(tx);
+				var iterator = tx.State.Root.Iterate();
 				Assert.False(iterator.Seek(Slice.AfterAllKeys));
 			}
 		}
@@ -37,7 +37,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
+					tx.State.Root.Add(i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -45,7 +45,7 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = tx.State.Root.Iterate(tx);
+				var iterator = tx.State.Root.Iterate();
 				Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
 				var slice = new Slice(SliceOptions.Key);
