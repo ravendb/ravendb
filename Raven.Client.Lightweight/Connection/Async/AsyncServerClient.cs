@@ -1268,6 +1268,8 @@ namespace Raven.Client.Connection.Async
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 				}
 
+				path += "&allowMultipleIndexEntriesForSameDocumentToResultTransformer=" + query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
+
 				if (method == "POST")
 					path += "&postQuery=true";
 
