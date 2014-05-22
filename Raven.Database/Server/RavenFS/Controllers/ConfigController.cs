@@ -13,7 +13,6 @@ using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
-using NameValueCollectionJsonConverter = Raven.Client.RavenFS.NameValueCollectionJsonConverter;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using System.Web.Http.ModelBinding;

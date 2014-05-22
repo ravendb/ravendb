@@ -771,14 +771,7 @@ namespace Raven.Client.RavenFS
 
             public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
             {
-                jsonSerializer = new JsonSerializer
-                {
-                    Converters =
-						{
-							new NameValueCollectionJsonConverter()
-						}
-                };
-
+                this.jsonSerializer = new JsonSerializer();
                 this.ravenFileSystemClient = ravenFileSystemClient;
                 this.convention = convention;
             }
@@ -908,7 +901,7 @@ namespace Raven.Client.RavenFS
                         var response = await request.ReadResponseJsonAsync();
                         using (var jsonTextReader = new RavenJTokenReader(response))
                         {
-                            return new JsonSerializer().Deserialize<ConfigSearchResults>(jsonTextReader);
+                            return jsonSerializer.Deserialize<ConfigSearchResults>(jsonTextReader);
                         }
                     }
                     catch (Exception e)
