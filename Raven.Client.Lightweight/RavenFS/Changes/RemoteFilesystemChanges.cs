@@ -107,6 +107,9 @@ namespace Raven.Client.RavenFS.Changes
 
         public IObservableWithTask<FileChangeNotification> ForFolder(string folder)
         {
+            if (string.IsNullOrWhiteSpace(folder)) 
+                throw new ArgumentException("folder cannot be empty");
+
             if (!folder.StartsWith("/"))
                 throw new ArgumentException("folder must start with /");
 
@@ -114,8 +117,32 @@ namespace Raven.Client.RavenFS.Changes
 
             // watch-folder, unwatch-folder
 
+            var counter = Counters.GetOrAdd("fs-folder/" + canonicalisedFolder, s =>
+            {
+                var fileChangeSubscriptionTask = AfterConnection(() =>
+                {
+                    watchedFolders.TryAdd(folder);
+                    return Send("watch-folder", folder);
+                });
 
-            throw new NotImplementedException();
+                return new FileSystemConnectionState(
+                    () =>
+                    {
+                        watchedFolders.TryRemove(folder);
+                        Send("unwatch-folder", folder);
+                        Counters.Remove("fs-folder/" + canonicalisedFolder);
+                    },
+                    fileChangeSubscriptionTask);
+            });
+
+            var taskedObservable = new TaskedObservable<FileChangeNotification, FileSystemConnectionState>(
+                counter,
+                notification => notification.File.StartsWith(folder, StringComparison.InvariantCultureIgnoreCase));
+
+            counter.OnFileChangeNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
+
+            return taskedObservable;
         }
 
         public IObservableWithTask<CancellationNotification> ForCancellations()
@@ -214,13 +241,6 @@ namespace Raven.Client.RavenFS.Changes
                         counter.Value.Send(fileChangeNotification);
                     }
                     break;
-                case "ConflictNotification":
-                    var conflictNotification = value.JsonDeserialization<ConflictNotification>();
-                    foreach (var counter in connections)
-                    {
-                        counter.Value.Send(conflictNotification);
-                    }
-                    break;
                 case "SynchronizationUpdateNotification":
                     var synchronizationUpdateNotification = value.JsonDeserialization<SynchronizationUpdateNotification>();
                     foreach (var counter in connections)
@@ -235,26 +255,29 @@ namespace Raven.Client.RavenFS.Changes
                         counter.Value.Send(uploadFailedNotification);
                     }
                     break;
-                
-                // TODO: Check what to do with this two. 
-                //case "ConflictDetectedNotification":
-                //    var conflictDetectedNotification = value.JsonDeserialization<ConflictDetectedNotification>();
-                //    foreach (var counter in connections)
-                //    {
-                //        counter.Value.Send(conflictDetectedNotification);
-                //    }
-                //    break;
-                //case "ConflictResolvedNotification":
-                //     var conflictResolvedNotification = value.JsonDeserialization<ConflictResolvedNotification>();
-                //    foreach (var counter in connections)
-                //    {
-                //        counter.Value.Send(conflictResolvedNotification);
-                //    }
-                //    break;
-                
+
+                case "ConflictNotification":
+                    var conflictNotification = value.JsonDeserialization<ConflictNotification>();
+                    foreach (var counter in connections)
+                    {
+                        counter.Value.Send(conflictNotification);
+                    }
+                    break;
+                case "ConflictDetectedNotification":
+                    var conflictDetectedNotification = value.JsonDeserialization<ConflictDetectedNotification>();
+                    foreach (var counter in connections)
+                    {
+                        counter.Value.Send(conflictDetectedNotification);
+                    }
+                    break;
+                case "ConflictResolvedNotification":
+                     var conflictResolvedNotification = value.JsonDeserialization<ConflictResolvedNotification>();
+                    foreach (var counter in connections)
+                    {
+                        counter.Value.Send(conflictResolvedNotification);
+                    }
+                    break;                
                 default:
-                    // TODO: Notify something went wrong.
-                    Debugger.Break();
                     break;
             }
         }

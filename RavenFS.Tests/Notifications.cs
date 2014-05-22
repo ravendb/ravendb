@@ -23,11 +23,9 @@ namespace RavenFS.Tests
 		[Fact]
         public async Task NotificationReceivedWhenFileAdded()
         {
-            await client.Notifications.ConnectionTask;
-
-            var notificationTask =
-                client.Notifications.FolderChanges("/").Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
-            await client.Notifications.WhenSubscriptionsActive();
+            var notificationTask = client.Notifications.ForFolder("/")
+                                                       .Timeout(TimeSpan.FromSeconds(2))
+                                                       .Take(1).ToTask();            
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
@@ -42,9 +40,9 @@ namespace RavenFS.Tests
         {
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask =
-                client.Notifications.FolderChanges("/").Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
-            await client.Notifications.WhenSubscriptionsActive();
+            var notificationTask = client.Notifications.ForFolder("/")
+                                               .Timeout(TimeSpan.FromSeconds(2))
+                                               .Take(1).ToTask();
 
             await client.DeleteAsync("abc.txt");
 
@@ -59,9 +57,9 @@ namespace RavenFS.Tests
         {
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask =
-                client.Notifications.FolderChanges("/").Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
-            await client.Notifications.WhenSubscriptionsActive();
+            var notificationTask = client.Notifications.ForFolder("/")
+                                                .Timeout(TimeSpan.FromSeconds(2))
+                                                .Take(1).ToTask();
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject { { "MyMetadata", "MyValue" } });
 
@@ -76,10 +74,10 @@ namespace RavenFS.Tests
         {
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask =
-                client.Notifications.FolderChanges("/").Buffer(TimeSpan.FromSeconds(5)).Take(1).ToTask();
-            await client.Notifications.WhenSubscriptionsActive();
-
+            var notificationTask = client.Notifications.ForFolder("/")
+                                                .Buffer(TimeSpan.FromSeconds(5))
+                                                .Take(1).ToTask();           
+            
             await client.RenameAsync("abc.txt", "newName.txt");
 
             var fileChanges = await notificationTask;
@@ -93,9 +91,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsAreOnlyReceivedForFilesInGivenFolder()
         {
-            var notificationTask =
-                client.Notifications.FolderChanges("/Folder").Buffer(TimeSpan.FromSeconds(2)).Take(1).ToTask();
-            client.Notifications.WhenSubscriptionsActive().Wait();
+            var notificationTask = client.Notifications.ForFolder("/Folder")
+                                                .Buffer(TimeSpan.FromSeconds(2))
+                                                .Take(1).ToTask();
 
             client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream()).Wait();
 
@@ -107,9 +105,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsUpdated()
         {
-            var notificationTask =
-                client.Notifications.ConfigurationChanges().Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
-            await client.Notifications.WhenSubscriptionsActive();
+            var notificationTask = client.Notifications.ForConfiguration()
+                                               .Timeout(TimeSpan.FromSeconds(2))
+                                               .Take(1).ToTask();
 
             await client.Config.SetConfig("Test", new RavenJObject());
 
@@ -122,9 +120,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
-            var notificationTask =
-                client.Notifications.ConfigurationChanges().Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
-            await client.Notifications.WhenSubscriptionsActive();
+            var notificationTask = client.Notifications.ForConfiguration()
+                                                .Timeout(TimeSpan.FromSeconds(2))
+                                                .Take(1).ToTask();           
 
             await client.Config.DeleteConfig("Test");
 

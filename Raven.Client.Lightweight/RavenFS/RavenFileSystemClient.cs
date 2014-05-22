@@ -27,7 +27,7 @@ namespace Raven.Client.RavenFS
 {
     public class RavenFileSystemClient : IDisposable, IHoldProfilingInformation
     {
-        private readonly ServerNotifications notifications;
+        private readonly RemoteFileSystemChanges notifications;
         private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
         private IDisposable failedUploadsObserver;
         private readonly IFileSystemClientReplicationInformer replicationInformer;
@@ -82,9 +82,8 @@ namespace Raven.Client.RavenFS
                 convention = new FileConvention();
                 replicationInformer = new RavenFileSystemReplicationInformer(convention, jsonRequestFactory);
                 readStripingBase = replicationInformer.GetReadStripingBase();
-
-                notifications = new ServerNotifications(serverUrl, convention);
-                // notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
+                
+                notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
                                
                 InitializeSecurity();
             }
@@ -116,7 +115,8 @@ namespace Raven.Client.RavenFS
             {
                 if (value)
                 {
-                    failedUploadsObserver = notifications.FailedUploads().Subscribe(CancelFileUpload);
+                    failedUploadsObserver = notifications.ForCancellations()
+                                                         .Subscribe(CancelFileUpload);
                 }
                 else
                 {
@@ -617,7 +617,7 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        public IServerNotifications Notifications
+        public IFileSystemChanges Notifications
         {
             get { return notifications; }
         }

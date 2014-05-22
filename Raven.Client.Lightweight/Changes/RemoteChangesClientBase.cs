@@ -57,7 +57,7 @@ namespace Raven.Client.Changes
             // Precondition
             TChangesApi api = this as TChangesApi;
             if (api == null)
-                throw new InvalidCastException(string.Format("The concrete class does not implements the {0}. Make sure the {0} interface is implemented by this class.", typeof(TChangesApi).Name));
+                throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof(TChangesApi).Name));
 
             ConnectionStatusChanged = LogOnConnectionStatusChanged;
 
@@ -156,7 +156,7 @@ namespace Raven.Client.Changes
             {
                 Connected = false;
                 ConnectionStatusChanged(this, EventArgs.Empty);
-                throw new ObjectDisposedException("RemoteDatabaseChanges");
+                throw new ObjectDisposedException( this.GetType().Name );
             }
 
             Connected = true;
