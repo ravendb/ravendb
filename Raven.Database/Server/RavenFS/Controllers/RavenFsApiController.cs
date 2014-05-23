@@ -499,6 +499,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			"Upgrade",
 			"Via",
 			"Warning",
+            
+            // Azure specific
+            "X-LiveUpgrade",
+            "DISGUISED-HOST",
+            "X-SITE-DEPLOYMENT-ID",
 		};
 
         protected static readonly IList<string> ReadOnlyHeaders = new List<string> { "Last-Modified", "ETag" }.AsReadOnly();

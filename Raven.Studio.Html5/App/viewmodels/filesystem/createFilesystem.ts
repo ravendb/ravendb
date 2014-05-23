@@ -96,8 +96,9 @@ class createFilesystem extends dialogViewModelBase {
     }
 
     private isFilesystemNameExists(filesystemName: string, filesystems: filesystem[]): boolean {
+        filesystemName = filesystemName.toLowerCase();
         for (var i = 0; i < filesystems.length; i++) {
-            if (filesystemName == filesystems[i].name) {
+            if (filesystemName == filesystems[i].name.toLowerCase()) {
                 return true;
             }
         }
