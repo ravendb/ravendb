@@ -26,7 +26,7 @@ namespace Voron.Trees
 			var current = _page.Search(key, _cmp);
 			if (current == null)
 				return false;
-			_currentKey.Set(current);
+			_currentKey.Set(current); //TODO arek - multi tree - prefixed slice
 			return this.ValidateCurrentKey(current, _cmp, _page);
 		}
 
@@ -90,7 +90,7 @@ namespace Voron.Trees
 			{
 				return false;
 			}
-			_currentKey.Set(current);
+			_currentKey.Set(current); //TODO arek - multi tree - prefixed slice
 			return true;
 		}
 

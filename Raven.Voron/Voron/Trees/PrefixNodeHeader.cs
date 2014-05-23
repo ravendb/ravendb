@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Runtime.InteropServices;
+using Voron.Impl;
 
 namespace Voron.Trees
 {
@@ -17,11 +18,21 @@ namespace Voron.Trees
 	public unsafe class PrefixNode
 	{
 		private readonly PrefixNodeHeader* _header;
+		public readonly byte* Base;
+		public readonly int Size;
 
 		public PrefixNode(byte* p)
 		{
-			_header = (PrefixNodeHeader*) p;
-			Value = new Slice((byte*)_header + sizeof(PrefixNodeHeader), _header->PrefixLength);
+			_header = (PrefixNodeHeader*)p;
+
+			Base = p;
+			Value = new Slice((byte*)_header + Constants.PrefixNodeHeaderSize, _header->PrefixLength);
+			Size = Constants.PrefixNodeHeaderSize + _header->PrefixLength;
+		}
+
+		public ushort PrefixLength
+		{
+			get { return _header->PrefixLength; }
 		}
 
 		public Slice Value { get; private set; }

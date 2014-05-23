@@ -38,6 +38,7 @@ namespace Voron
 		public readonly byte* NonPrefixedData;
 
 		public SliceOptions Options;
+		public Slice NewPrefix = null;
 
 		public PrefixedSlice()
 		{

@@ -162,7 +162,7 @@ namespace Voron.Trees
             }
 
             NodeHeader* currentNode = _page.GetNode(splitIndex);
-            var currentKey = new Slice(currentNode);
+            var currentKey = _page.GetFullNodeKey(currentNode);
 
             // here we the current key is the separator key and can go either way, so 
             // use newPosition to decide if it stays on the left node or moves to the right
@@ -185,7 +185,7 @@ namespace Voron.Trees
                 NodeHeader* node = _page.GetNode(i);
                 if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                 {
-                    rightPage.CopyNodeDataToEndOfPage(node, PrefixedSlice.Empty);
+                    rightPage.CopyNodeDataToEndOfPage(node, PrefixedSlice.Empty); //TODO arek - i think it should be before all keys, consider removing PrefixedSlice.Empty
                 }
                 else
                 {

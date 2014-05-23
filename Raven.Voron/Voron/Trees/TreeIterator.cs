@@ -13,7 +13,7 @@ namespace Voron.Trees
 		private readonly SliceComparer _cmp;
 		private Cursor _cursor;
 		private Page _currentPage;
-		private readonly Slice _currentKey = new Slice(SliceOptions.Key);
+		private Slice _currentKey = new Slice(SliceOptions.Key);
 
 		public TreeIterator(Tree tree, Transaction tx, SliceComparer cmp)
 		{
@@ -38,7 +38,7 @@ namespace Voron.Trees
 			{
 				return false;
 			}
-			_currentKey.Set(node);
+			_currentKey = _currentPage.GetFullNodeKey(node);
 			return this.ValidateCurrentKey(Current, _cmp, _currentPage);
 		}
 
@@ -98,7 +98,7 @@ namespace Voron.Trees
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _cmp, _currentPage) == false)
 						return false;
-					_currentKey.Set(current);
+					_currentKey = _currentPage.GetFullNodeKey(current);
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -128,7 +128,7 @@ namespace Voron.Trees
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _cmp, _currentPage) == false)
 						return false;
-					_currentKey.Set(current);
+					_currentKey = _currentPage.GetFullNodeKey(current);
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)

@@ -40,6 +40,10 @@ namespace Voron.Trees
 
         public int OverflowSize { get { return _header->OverflowSize; } set { _header->OverflowSize = value; } }
 
+		private ushort* PrefixOffsets { get { return _header->PrefixOffsets; } }
+
+		private byte AvailablePrefixId { get { return _header->AvailablePrefixId; } }
+
         public ushort* KeysOffsets
         {
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
@@ -124,7 +128,7 @@ namespace Voron.Trees
 	    {
 			Debug.Assert(n < PrefixCount, "Requested prefix number was: " + n);
 
-		    var prefixOffset = _header->PrefixOffsets[n];
+		    var prefixOffset = PrefixOffsets[n];
 
 		    return new PrefixNode(_base + prefixOffset);
 	    }
@@ -217,6 +221,9 @@ namespace Voron.Trees
             if (HasSpaceFor(key, len) == false)
                 throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
 
+	        if (key.NewPrefix != null)
+		        WritePrefix(key.NewPrefix, key.PrefixId);
+
             // move higher pointers up one slot
             for (int i = NumberOfEntries; i > index; i--)
             {
@@ -244,11 +251,12 @@ namespace Voron.Trees
         {
 			var index = NumberOfEntries;
 
-	        var nodeKey = key ?? ConvertToPrefixedKey(new Slice(other), index);
+	        var nodeKey = key ?? new PrefixedSlice(other);
             Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize));
             
             var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, nodeKey);
 
+			// TODO arek other->keySize == 0? beforeallkeys or after all keys?
 			if (other->KeySize == 0 && key == null) // when copy first item from branch which is implicit ref
 			{
 				nodeSize += nodeKey.Size;
@@ -259,6 +267,9 @@ namespace Voron.Trees
 	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
+
+	        if (nodeKey.NewPrefix != null) // TODO arek - not sure if it's required here
+		        WritePrefix(nodeKey.NewPrefix, nodeKey.PrefixId);
 
             var newNode = AllocateNewNode(index, nodeSize, nodeVersion);
 
@@ -285,7 +296,7 @@ namespace Voron.Trees
 		    if (TryUseExistingPrefix(key, out prefixedSlice)) 
 				return prefixedSlice;
 
-		    if (TryCreatePrefix(key, nodeIndex, out prefixedSlice))
+		    if (TryCreateNewPrefix(key, nodeIndex, out prefixedSlice))
 			    return prefixedSlice;
 
 			return new PrefixedSlice(key);
@@ -293,7 +304,7 @@ namespace Voron.Trees
 
 	    private bool TryUseExistingPrefix(Slice key, out PrefixedSlice prefixedSlice)
 	    {
-		    for (byte prefixId = 0; prefixId < _header->AvailablePrefixNode; prefixId++)
+		    for (byte prefixId = 0; prefixId < AvailablePrefixId; prefixId++)
 		    {
 			    var prefix = GetPrefixNode(prefixId);
 
@@ -311,9 +322,9 @@ namespace Voron.Trees
 		    return false;
 	    }
 
-		private bool TryCreatePrefix(Slice key, int nodeIndex, out PrefixedSlice prefixedSlice)
+		private bool TryCreateNewPrefix(Slice key, int nodeIndex, out PrefixedSlice prefixedSlice)
 		{
-			if (_header->AvailablePrefixNode > PrefixCount || NumberOfEntries == 0)
+			if (AvailablePrefixId > PrefixCount || NumberOfEntries == 0)
 			{
 				prefixedSlice = null;
 				return false;
@@ -353,17 +364,21 @@ namespace Voron.Trees
 
 			if (leftLength > 0 && leftLength > rightLength)
 			{
-				var prefixId = WritePrefix(new Slice(left, leftLength));
+				prefixedSlice = new PrefixedSlice(AllocatePrefixId(), leftLength, key)
+				{
+					NewPrefix = new Slice(left, leftLength)
+				};
 
-				prefixedSlice = new PrefixedSlice(prefixId, leftLength, key);
 				return true;
 			}
 
 			if (rightLength > 0 && rightLength > leftLength)
 			{
-				var prefixId = WritePrefix(new Slice(right, rightLength));
+				prefixedSlice = new PrefixedSlice(AllocatePrefixId(), rightLength, key)
+				{
+					NewPrefix = new Slice(right, rightLength)
+				};
 
-				prefixedSlice = new PrefixedSlice(prefixId, rightLength, key);
 				return true;
 			}
 
@@ -389,26 +404,24 @@ namespace Voron.Trees
             return node;
         }
 
-	    private byte WritePrefix(Slice prefix)
-	    {
-			// TODO arek : ensure that we have enough space for that
+		private void WritePrefix(Slice prefix, int prefixId)
+		{
+			var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
+			var prefixNodeOffset = (ushort)(Upper - prefixNodeSize);
+			Upper = prefixNodeOffset;
 
-		    var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
-			var prefixNodeOffset = (ushort)(_header->Upper - prefixNodeSize);
-		    _header->Upper = prefixNodeOffset;
+			PrefixOffsets[prefixId] = prefixNodeOffset;
 
-		    var prefixId = _header->AvailablePrefixNode;
-		    _header->PrefixOffsets[prefixId] = prefixNodeOffset;
+			var prefixNodeHeader = (PrefixNodeHeader*)(_base + prefixNodeOffset);
 
-			var prefixNodeHeader = (PrefixNodeHeader*) (_base + prefixNodeOffset);
-
-		    prefixNodeHeader->PrefixLength = prefix.Size;
+			prefixNodeHeader->PrefixLength = prefix.Size;
 
 			prefix.CopyTo((byte*)prefixNodeHeader + Constants.PrefixNodeHeaderSize);
+		}
 
-		    _header->AvailablePrefixNode++;
-
-		    return prefixId;
+	    private byte AllocatePrefixId()
+	    {
+			return _header->AvailablePrefixId++;
 	    }
 
         public int SizeLeft
@@ -526,6 +539,16 @@ namespace Voron.Trees
 				    Upper -= (ushort) size;
 				    KeysOffsets[i] = Upper;
 			    }
+
+			    for (byte i = 0; i < AvailablePrefixId; i++)
+			    {
+				    var prefixNode = tempPage.GetPrefixNode(i);
+				    var prefixNodeSize = prefixNode.Size;
+
+					NativeMethods.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
+				    Upper -= (ushort) prefixNodeSize;
+				    PrefixOffsets[i] = Upper;
+			    }
 		    }
 	    }
 
@@ -547,7 +570,12 @@ namespace Voron.Trees
 
         public int GetRequiredSpace(PrefixedSlice key, int len)
         {
-			return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+			var requiredSpace = SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+
+	        if (key.NewPrefix != null) // also need to take into account the size of a new prefix that will be written to the page
+		        requiredSpace += Constants.PrefixNodeHeaderSize + key.NewPrefix.Size;
+
+	        return requiredSpace;
         }
 
 	    public int PageMaxSpace
@@ -670,6 +698,15 @@ namespace Voron.Trees
                 var nodeSize = node->GetNodeSize();
                 size += nodeSize + (nodeSize & 1);
             }
+
+			for (byte i = 0; i < AvailablePrefixId; i++)
+			{
+				var prefixNode = GetPrefixNode(i);
+				var prefixNodeSize = prefixNode.Size;
+
+				size += prefixNodeSize;
+			}
+
             Debug.Assert(SizeUsed >= size);
             return size;
         }
