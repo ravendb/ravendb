@@ -65,14 +65,24 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[Route("counters/{counterName}/replications")]
-		[HttpPut]
-		public async Task<HttpResponseMessage> Replications()
+		[Route("counters/{counterName}/replications-get")]
+		[HttpGet]
+		public async Task<HttpResponseMessage> ReplicationsGet()
 		{
-			CounterStorageReplicationDocument jsonDeserialization;
+			using (var reader = Storage.CreateReader())
+			{
+				return Request.CreateResponse(HttpStatusCode.OK, reader.GetReplicationData());
+			}
+		}
+
+		[Route("counters/{counterName}/replications-save")]
+		[HttpPut]
+		public async Task<HttpResponseMessage> ReplicationsSave()
+		{
+			CounterStorageReplicationDocument newReplicationDocument;
 			try
 			{
-                jsonDeserialization = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
+				newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
 			}
 			catch (Exception e)
 			{
@@ -81,10 +91,11 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.UpdateReplications(jsonDeserialization);
+				string updateResult = writer.UpdateReplications(newReplicationDocument);
 				writer.Commit();
 
-				return Request.CreateResponse(HttpStatusCode.OK);
+				HttpStatusCode response = (updateResult != null) ? HttpStatusCode.BadRequest : HttpStatusCode.OK;
+				return Request.CreateResponse(response, updateResult);
 			}
 		}
 

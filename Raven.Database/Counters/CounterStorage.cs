@@ -8,6 +8,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Replication;
+using Raven.Client.Linq;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Voron;
@@ -464,6 +465,11 @@ namespace Raven.Database.Counters
 				return reader.SourceIdFor(serverName);
 			}
 
+			public CounterStorageReplicationDocument GetReplicationData()
+			{
+				return reader.GetReplicationData();
+			}
+
 		    public void Store(string server, string counter, long delta)
 		    {
 		        Store(server, counter, result =>
@@ -586,19 +592,32 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-            public void UpdateReplications(CounterStorageReplicationDocument document)
+			public string UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
 			{
-				using (var memoryStream = new MemoryStream())
-				using (var streamWriter = new StreamWriter(memoryStream))
-				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-				{
-					new JsonSerializer().Serialize(jsonTextWriter, document);
-					streamWriter.Flush();
-					memoryStream.Position = 0;
-					metadata.Add("replication", memoryStream);
-				}
+				string result = null;
+				long savedEtag = GetReplicationData().Etag;
+				long newEtag = newReplicationDocument.Etag;
 
+				if (savedEtag != newEtag)
+				{
+					result = "Save attempted on replication using a non current etag";
+				}
+				else
+				{
+					newReplicationDocument.Etag++;
+					using (var memoryStream = new MemoryStream())
+					using (var streamWriter = new StreamWriter(memoryStream))
+					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+					{
+						new JsonSerializer().Serialize(jsonTextWriter, newReplicationDocument);
+						streamWriter.Flush();
+						memoryStream.Position = 0;
+						metadata.Add("replication", memoryStream);
+					}
+				}
 				parent.ReplicationTask.SignalCounterUpdate();
+
+				return result;
 			}
 
 			public void Commit()
