@@ -268,7 +268,7 @@ namespace Voron.Trees
 
 			var item = page.Search(key, _cmp);
 
-			var fetchedNodeKey = new Slice(item); // TODO arek - PrefixedSlice?
+			var fetchedNodeKey = page.GetFullNodeKey(item); // TODO arek - PrefixedSlice?
 			if (fetchedNodeKey.Compare(key, _cmp) != 0)
 			{
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");

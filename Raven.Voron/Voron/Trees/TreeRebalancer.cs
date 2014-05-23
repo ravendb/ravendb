@@ -101,7 +101,7 @@ namespace Voron.Trees
 			    right.LastSearchPosition = i;
 			    var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
 			    var node = right.GetNode(i);
-			    actualSpaceNeeded += (SizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize);
+				actualSpaceNeeded += (SizeOf.NodeEntryWithAnotherKey(node, new PrefixedSlice(key)) + Constants.NodeOffsetSize); //TODO arek - new PrefixedSlice(key) isn't correct here
 		    }
 
 		    right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
@@ -116,7 +116,7 @@ namespace Voron.Trees
                 var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
                 var node = right.GetNode(i);
 
-                left.CopyNodeDataToEndOfPage(node, key);
+                left.CopyNodeDataToEndOfPage(node, left.ConvertToPrefixedKey(key, left.NumberOfEntries));
             }
 
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
@@ -157,26 +157,28 @@ namespace Voron.Trees
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
+            byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + new PrefixedSlice(fromNode).Size;
 
 			var nodeVersion = fromNode->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
+	        var prefixedOriginalFromKey = to.ConvertToPrefixedKey(originalFromKeyStart, to.LastSearchPosition);
+
 	        byte* dataPos;
 	        switch (fromNode->Flags)
 	        {
 				case NodeFlags.PageRef:
-	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
-					dataPos = to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, fromNode->PageNumber);
+					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, -1);
+					dataPos = to.AddPageRefNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->PageNumber);
 					break;
 				case NodeFlags.Data:
-	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize);
-			        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
+					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromNode->DataSize);
+					dataPos = to.AddDataNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->DataSize, nodeVersion);
 					break;
 				case NodeFlags.MultiValuePageRef:
-                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize);
-                    dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
+					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromNode->DataSize);
+					dataPos = to.AddMultiValueNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->DataSize, nodeVersion);
 					break;
 				default:
 			        throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
@@ -197,16 +199,20 @@ namespace Voron.Trees
                 pageNumber = from.PageNumber;
                 newKey = GetActualKey(from, 0);
             }
-            parentPage.EnsureHasSpaceFor(_tx, newKey, -1);
-			parentPage.AddPageRefNode(pos, newKey, pageNumber);
+
+	        var prefixedNewKey = parentPage.ConvertToPrefixedKey(newKey, pos);
+
+			parentPage.EnsureHasSpaceFor(_tx, prefixedNewKey, -1);
+			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);
         }
 
         private void MoveBranchNode(Page parentPage, Page from, Page to)
         {
             Debug.Assert(from.IsBranch);
-            var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
-            to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
+	        var prefixedOriginalFromKey = to.ConvertToPrefixedKey(GetActualKey(from, from.LastSearchPositionOrLastEntry), to.LastSearchPosition);
+
+            to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, -1);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             long pageNum = fromNode->PageNumber;
@@ -218,13 +224,17 @@ namespace Voron.Trees
 
                 var implicitLeftKey = GetActualKey(to, 0);
                 var leftPageNumber = to.GetNode(0)->PageNumber;
-                to.AddPageRefNode(1, implicitLeftKey, leftPageNumber);
+
+	            var implicitLeftPrefixedKey = to.ConvertToPrefixedKey(implicitLeftKey, 1);
+
+				to.EnsureHasSpaceFor(_tx, implicitLeftPrefixedKey, -1);
+				to.AddPageRefNode(1, implicitLeftPrefixedKey, leftPageNumber);
 
 				to.ChangeImplicitRefPageNode(pageNum); // setup the new implicit node
             }
             else
             {
-				to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, pageNum);
+				to.AddPageRefNode(to.LastSearchPosition, prefixedOriginalFromKey, pageNum);
             }
 
             if (from.LastSearchPositionOrLastEntry == 0)
@@ -248,20 +258,23 @@ namespace Voron.Trees
                 pageNumber = from.PageNumber;
                 newKey = GetActualKey(from, 0);
             }
-            parentPage.EnsureHasSpaceFor(_tx, newKey, -1);
-			parentPage.AddPageRefNode(pos, newKey, pageNumber);
+
+	        var prefixedNewKey = parentPage.ConvertToPrefixedKey(newKey, pos);
+
+			parentPage.EnsureHasSpaceFor(_tx, prefixedNewKey, -1);
+			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);
         }
 
-        private PrefixedSlice GetActualKey(Page page, int pos)
+        private Slice GetActualKey(Page page, int pos)
         {
             var node = page.GetNode(pos);
-	        var key = new PrefixedSlice(node);
+			var key = page.GetFullNodeKey(node);
 			while (key.Size == 0) // TODO check this after PrefixedSlice introduction
             {
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
-				key = new PrefixedSlice(node);
+				key = page.GetFullNodeKey(node);
             }
 
             return key;

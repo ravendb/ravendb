@@ -101,6 +101,7 @@ namespace Voron
 		public byte PrefixId
 		{
 			get { return _header->PrefixId; }
+			set { _header->PrefixId = value; }
 		}
 
 		public ushort PrefixUsage

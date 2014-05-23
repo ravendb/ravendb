@@ -68,5 +68,13 @@ namespace Voron.Impl
 
             return sz;
         }
+
+		public static int NewPrefix(PrefixedSlice prefixedSeparatorKey)
+		{
+			if (prefixedSeparatorKey.NewPrefix != null) // also need to take into account the size of a new prefix that will be written to the page
+				return Constants.PrefixNodeHeaderSize + prefixedSeparatorKey.NewPrefix.Size;
+
+			return 0;
+		}
 	}
 }

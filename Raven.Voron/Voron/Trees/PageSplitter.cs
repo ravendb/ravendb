@@ -127,13 +127,13 @@ namespace Voron.Trees
                 _cursor.Push(rightPage);
                 return pos;
             }
-
+			//TODO arek check this path
             return SplitPageInHalf(rightPage);
         }
 
         private byte* AddNodeToPage(Page page, int index)
         {
-	        var prefixedKey = page.ConvertToPrefixedKey(_newKey, index); // TODO arek - it can be no space for prefix
+	        var prefixedKey = page.ConvertToPrefixedKey(_newKey, index);
 
             switch (_nodeType)
             {
@@ -213,7 +213,7 @@ namespace Voron.Trees
         {
 	        var prefixedSeparatorKey = _parentPage.ConvertToPrefixedKey(seperatorKey, _parentPage.LastSearchPosition);
 
-			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(prefixedSeparatorKey) + Constants.NodeOffsetSize) == false)
+			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(prefixedSeparatorKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedSeparatorKey)) == false)
             {
                 var pageSplitter = new PageSplitter(_tx, _tree, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);
