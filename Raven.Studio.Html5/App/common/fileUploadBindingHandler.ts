@@ -28,7 +28,8 @@ class fileUploadBindingHandler {
 
     update(element: HTMLInputElement, valueAccessor, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {
         var options: {
-            files: KnockoutObservable<File[]>;
+            files: KnockoutObservable<FileList>;
+            directory: KnockoutObservable<string>;
             uploads: KnockoutObservableArray<uploadItem>;
             success: (i: uploadItem) => void;
             fail: (i: uploadItem) => void;
@@ -37,17 +38,18 @@ class fileUploadBindingHandler {
         var filesystem = ko.utils.unwrapObservable<filesystem>(bindingContext.$data["activeFilesystem"]);
         
         if (options) {
-            // Access the files observable now so that .update is called whenever it changes.
             options.files();
+            // Access the files observable now so that .update is called whenever it changes.
             if (element.files.length) {
                 var files = element.files;
                 for (var i = 0; i < files.length; i++) {
                     var file = files[i];
                     var guid = system.guid();
-                    var item = new uploadItem(guid, file.name, "Queued", context.activeFilesystem());
+                    var directory = options.directory() ? options.directory() +"/" : ""
+                    var item = new uploadItem(guid, directory+file.name, "Queued", context.activeFilesystem());
                     options.uploads.push(item);
 
-                    new uploadFileToFilesystemCommand(file, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)
+                    new uploadFileToFilesystemCommand(file, directory, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)
                         .execute()
                         .done((x: uploadItem) => options.success(x))
                         .fail((x: uploadItem) => options.fail(x));

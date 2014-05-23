@@ -28,6 +28,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncIncomingActivitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncOutgoingActivitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resolveConflictCommand.ts" />
@@ -109,6 +110,7 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
@@ -145,6 +147,7 @@
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\createFolderInFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteConfigurationKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
@@ -280,6 +283,7 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugIdentities.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystem\createFolderInFilesystem.html" />
     <Content Include="App\views\filesystem\status.html" />
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
@@ -1048,14 +1052,22 @@
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
+    <Content Include="Scripts\jsTree3\jstree.js" />
+    <Content Include="Scripts\jsTree3\jstree.min.js" />
+    <Content Include="Scripts\jsTree3\themes\default\32px.png" />
+    <Content Include="Scripts\jsTree3\themes\default\40px.png" />
+    <Content Include="Scripts\jsTree3\themes\default\style.css" />
+    <Content Include="Scripts\jsTree3\themes\default\style.min.css" />
+    <Content Include="Scripts\jsTree3\themes\default\throbber.gif" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
-    <TypeScriptCompile Include="Scripts\typings\bootstrap.datetimepicker\bootstrap.datetimepicker.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jstree\jstree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.1.0.debug.js" />
     <Content Include="Scripts\knockout-3.1.0.js" />
@@ -1289,6 +1301,9 @@
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\jquery-2.1.0.min.map" />
+    <Content Include="Views\Shared\_jsTreeDemo.cshtml" />
+    <Content Include="Views\jsTree3\Demo.cshtml" />
+    <Content Include="Views\jsTree3\AJAXDemo.cshtml" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1369,7 +1384,12 @@
   <ItemGroup>
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Compile Include="Models\jsTree3Node.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

@@ -1,8 +1,11 @@
 ﻿import router = require("plugins/router");
 import appUrl = require("common/appUrl");
+import app = require("durandal/app");
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
+import createFolderInFilesystem = require("viewmodels/filesystem/createFolderInFilesystem");
+import treeBindingHandler = require("common/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
@@ -16,6 +19,8 @@ class filesystemFiles extends viewModelBase {
     selectedFilesIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
+    selectedFolder = ko.observable<string>();
+    selectedDirSubdirectories = ko.observableArray<string>();
     private activeFilesystemSubscription: any;
 
     static gridSelector = "#filesGrid";
@@ -30,6 +35,7 @@ class filesystemFiles extends viewModelBase {
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
         this.loadFiles(false);
+        treeBindingHandler.install();
     }
 
     deactivate() {
@@ -95,6 +101,16 @@ class filesystemFiles extends viewModelBase {
         return null;
     }
 
+    createFolder() {
+        var createFolderVm = new createFolderInFilesystem(this.selectedDirSubdirectories());
+        createFolderVm.creationTask.done((folderName : string) => {
+            this.selectedDirSubdirectories.push(folderName);
+            this.selectedFolder(folderName);
+        });
+
+        app.showDialog(createFolderVm);
+    }
+
     deleteSelectedFiles() {
         var grid = this.getFilesGrid();
         if (grid) {
@@ -112,7 +128,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     uploadFile() {
-        router.navigate(appUrl.forFilesystemUploadFile(this.activeFilesystem()));
+        router.navigate(appUrl.forFilesystemUploadFile(this.activeFilesystem(), this.selectedFolder()));
     }
 
     modelPolling() {
