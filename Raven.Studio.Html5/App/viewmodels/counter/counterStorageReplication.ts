@@ -2,31 +2,24 @@
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-
-import synchronizationReplicationSetup = require("models/filesystem/synchronizationReplicationSetup");
-import synchronizationDestination = require("models/filesystem/synchronizationDestination");
-import filesystem = require("models/filesystem/filesystem");
-
 import viewModelBase = require("viewmodels/viewModelBase");
-
-import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
-import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
-
+import counterStorageReplicationSetup = require("models/counter/counterStorageReplicationSetup");
+import counterStorageReplicationDestination = require("models/counter/counterStorageReplicationDestination");
+import getStorageCounterDestinationsCommand = require("commands/counter/getCounterStorageReplicationCommand");
+import saveStorageCounterDestinationCommand = require("commands/counter/saveCounterStorageReplicationCommand");
 
 class counterStorageReplication extends viewModelBase {
 
+    replicationsSetup = ko.observable<counterStorageReplicationSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
-    dirtyFlag = new ko.DirtyFlag([]);
-    replicationsSetup = ko.observable<synchronizationReplicationSetup>(new synchronizationReplicationSetup({ Destinations: [], Source: null }));
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
-        var fs = this.activeFilesystem();
-        if (fs) {
-            this.fetchDestinations()
+        var counterStorage = this.activeCounterStorage();
+        if (counterStorage) {
+            this.fetchCountersDestinations(counterStorage)
                 .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forFilesystem(this.activeFilesystem()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forCounterStorage(counterStorage) }));
         }
         return deferred;
     }
@@ -40,58 +33,33 @@ class counterStorageReplication extends viewModelBase {
         });
     }
 
-    deactivate() {
-        super.deactivate();
+    fetchCountersDestinations(counterStorage): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        if (counterStorage) {
+            new getStorageCounterDestinationsCommand(counterStorage)
+                .execute()
+                .done(data => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: data.Destinations })))
+                .fail(() => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: [] })))
+                .always(() => deferred.resolve({ can: true }));
+        }
+        return deferred;
     }
 
     saveChanges() {
-        if (this.replicationsSetup().source()) {
-            this.saveReplicationSetup();
-        } else {
-            var fs = this.activeFilesystem();
-            if (fs) {
-                new getFilesystemStatsCommand(fs)
-                    .execute()
-                    .done(result=> {
-                        this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                    });
-            }
-        }
-    }
-
-    private prepareAndSaveReplicationSetup(source: string) {
-        this.replicationsSetup().source(source);
-        this.saveReplicationSetup();
-    }
-
-    private saveReplicationSetup() {
-        var fs = this.activeFilesystem();
-        if (fs) {
-            var self = this;
-            new saveDestinationCommand(this.replicationsSetup().toDto(), fs)
+        var counter = this.activeCounterStorage();
+        if (counter) {
+            new saveStorageCounterDestinationCommand(this.replicationsSetup().toDto(), counter)
                 .execute()
-                .done(() => this.dirtyFlag().reset());
+                .done(()=> viewModelBase.dirtyFlag().reset());
         }
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(synchronizationDestination.empty());
+        this.replicationsSetup().destinations.unshift(counterStorageReplicationDestination.empty());
     }
 
-    removeDestination(repl: synchronizationDestination) {
-        this.replicationsSetup().destinations.remove(repl);
-    }
-
-    fetchDestinations(): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        var fs = this.activeFilesystem();
-        if (fs) {
-            new getDestinationsCommand(fs)
-                .execute()
-                .done(data => this.replicationsSetup(new synchronizationReplicationSetup({ Destinations: data.Destinations, Source: null })))
-                .always(() => deferred.resolve({ can: true }));
-        }
-        return deferred;
+    removeDestination(resplicationDestination: counterStorageReplicationDestination) {
+        this.replicationsSetup().destinations.remove(resplicationDestination);
     }
 }
 

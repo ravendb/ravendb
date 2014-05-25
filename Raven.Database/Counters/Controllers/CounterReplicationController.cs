@@ -110,29 +110,40 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [Route("counters/{counterName}/replicationdestinations")]
-        public async Task<HttpResponseMessage> GetReplicationDestinations()
-        {
-            using (var reader = Storage.CreateReader())
-            {
-                return Request.CreateResponse(HttpStatusCode.OK, reader.GetReplicationData().Destinations);
-            }
-        }
+		[Route("counters/{counterName}/replications-get")]
+		[HttpGet]
+		public async Task<HttpResponseMessage> ReplicationsGet()
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				var replicationData = reader.GetReplicationData();
+				var responseCode = (replicationData != null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
 
-//        [HttpPut]
-//        [Route("counters/{counterName}/replicationdestinations")]
-//        public async Task<HttpResponseMessage> SaveReplicationDestinations()
-//        {
-////            var replicationMessageJObject = await ReadJsonAsync();
-////            var replicationDocument = replicationMessageJObject.Deserialize<CounterStorageReplicationDocument>();
-////            ReplicationMessage replicationMessage = ReplicationMessage.GetReplicationMessage(replicationMessageJObject); 
-////            using (var writer = Storage.CreateWriter())
-////            {
-////                writer.UpdateReplications(new CounterStorageReplicationDocument());
-////                return Request.CreateResponse(HttpStatusCode.OK, reader.GetReplicationData().Destinations);
-////            }
-//        }
+				return Request.CreateResponse(responseCode, reader.GetReplicationData());
+			}
+		}
 
-//        [HttpGet]
+		[Route("counters/{counterName}/replications-save")]
+		[HttpPost]
+		public async Task<HttpResponseMessage> ReplicationsSave()
+		{
+			CounterStorageReplicationDocument newReplicationDocument;
+			try
+			{
+				newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
+			}
+			catch (Exception e)
+			{
+				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
+			}
+
+			using (var writer = Storage.CreateWriter())
+			{
+				writer.UpdateReplications(newReplicationDocument);
+				writer.Commit();
+
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}
+		}
     }
 }

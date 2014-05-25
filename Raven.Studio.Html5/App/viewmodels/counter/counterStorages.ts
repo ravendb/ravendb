@@ -64,7 +64,10 @@ class counterStorages extends viewModelBase {
             var createCounterStorageiewModel = new createCounterStorage(this.storages);
             createCounterStorageiewModel
                 .creationTask
-                .done((counterStorageName: string, counterStoragePath: string) => this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath));
+                .done((counterStorageName: string, counterStoragePath: string) => {
+                    counterStoragePath = !!counterStoragePath && counterStoragePath.length > 0 ? counterStoragePath : "~/Counters/" + counterStorageName;
+                    this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
+            });
             app.showDialog(createCounterStorageiewModel);
         });
     }

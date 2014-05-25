@@ -7,7 +7,6 @@
 define(["require", "exports", "models/resource"], function(require, exports, resource) {
     var counterStorage = (function (_super) {
         __extends(counterStorage, _super);
-        //constructor(dto: counterDto) {
         function counterStorage(name) {
             _super.call(this, name, 'counterstorage');
             this.name = name;

@@ -65,7 +65,8 @@ define(["require", "exports", "durandal/app", "viewmodels/viewModelBase", "model
             require(["viewmodels/counter/createCounterStorage"], function (createCounterStorage) {
                 var createCounterStorageiewModel = new createCounterStorage(_this.storages);
                 createCounterStorageiewModel.creationTask.done(function (counterStorageName, counterStoragePath) {
-                    return _this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
+                    counterStoragePath = !!counterStoragePath && counterStoragePath.length > 0 ? counterStoragePath : "~/Counters/" + counterStorageName;
+                    _this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
                 });
                 app.showDialog(createCounterStorageiewModel);
             });

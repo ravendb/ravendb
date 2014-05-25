@@ -80,7 +80,7 @@ namespace Raven.Database.Counters
 					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageUrl));
 
 					//TODO: Remove this when UI is finished
-                    var replication1 = new CounterStorageReplicationDestination();
+                    /*var replication1 = new CounterStorageReplicationDestination();
                     var replication2 = new CounterStorageReplicationDestination();
 						if (CounterStorageUrl.Contains(":8080"))
 						{
@@ -89,13 +89,13 @@ namespace Raven.Database.Counters
 						}
 						else if (CounterStorageUrl.Contains(":8081"))
 						{
-                            replication1.ServerUrl = CounterStorageUrl.Replace(":8081", ":8080");
-                            replication2.ServerUrl = CounterStorageUrl.Replace(":8081", ":8082");
+							replication1.ServerUrl = CounterStorageUrl.Replace(":8081", ":8080");
+							replication2.ServerUrl = CounterStorageUrl.Replace(":8081", ":8082");
 						}
 						else
 						{
-                            replication1.ServerUrl = CounterStorageUrl.Replace(":8082", ":8080");
-                            replication2.ServerUrl = CounterStorageUrl.Replace(":8082", ":8081");
+							replication1.ServerUrl = CounterStorageUrl.Replace(":8082", ":8080");
+							replication2.ServerUrl = CounterStorageUrl.Replace(":8082", ":8081");
 						}
 
 						replication1.Disabled = false;
@@ -113,7 +113,7 @@ namespace Raven.Database.Counters
 							streamWriter.Flush();
 							memoryStream.Position = 0;
 							metadata.Add("replication", memoryStream);
-						}
+						}*/
 					//TODO: Remove this when UI is finished
 
 					tx.Commit();
@@ -236,7 +236,6 @@ namespace Raven.Database.Counters
 							Name = it.CurrentKey.ToString(),
 							NumOfCounters = it.CreateReaderForCurrent().ReadLittleEndianInt64()
 						};
-						//yield return it.CurrentKey.ToString();
 					} while (it.MoveNext());
 				}
 			}
@@ -592,32 +591,21 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-			public string UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
+			public void UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
 			{
 				string result = null;
-				long savedEtag = GetReplicationData().Etag;
-				long newEtag = newReplicationDocument.Etag;
 
-				if (savedEtag != newEtag)
+				using (var memoryStream = new MemoryStream())
+				using (var streamWriter = new StreamWriter(memoryStream))
+				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
 				{
-					result = "Save attempted on replication using a non current etag";
+					new JsonSerializer().Serialize(jsonTextWriter, newReplicationDocument);
+					streamWriter.Flush();
+					memoryStream.Position = 0;
+					metadata.Add("replication", memoryStream);
 				}
-				else
-				{
-					newReplicationDocument.Etag++;
-					using (var memoryStream = new MemoryStream())
-					using (var streamWriter = new StreamWriter(memoryStream))
-					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-					{
-						new JsonSerializer().Serialize(jsonTextWriter, newReplicationDocument);
-						streamWriter.Flush();
-						memoryStream.Position = 0;
-						metadata.Add("replication", memoryStream);
-					}
-				}
+
 				parent.ReplicationTask.SignalCounterUpdate();
-
-				return result;
 			}
 
 			public void Commit()

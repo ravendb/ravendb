@@ -395,6 +395,11 @@ class appUrl {
         return "#filesystems?" + filesystemPart;
     }
 
+    static forCounterStorage(cs: counterStorage): string {
+        var counterStoragePart = appUrl.getEncodedCounterPart(cs);
+        return "#filesystems?" + counterStoragePart;
+    }
+
     static forIndexesRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
@@ -601,6 +606,10 @@ class appUrl {
 
     private static getEncodedFsPart(fs?: filesystem) {
         return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
+    }
+
+    private static getEncodedCounterPart(cs?: counterStorage) {
+        return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
 
     public static warnWhenUsingSystemDatabase: boolean = true;

@@ -1,19 +1,35 @@
 ﻿class counterStorageReplicationDestination {
+
+    disabled = ko.observable<boolean>().extend({ required: true });
     serverUrl = ko.observable<string>().extend({ required: true });
+    counterStorageName = ko.observable<string>().extend({ required: true });
     username = ko.observable<string>().extend({ required: true });
     password = ko.observable<string>().extend({ required: true });
     domain = ko.observable<string>().extend({ required: true });
     apiKey = ko.observable<string>().extend({ required: true });
-    counterStorage = ko.observable<string>().extend({ required: true });
-    disabled = ko.observable<boolean>().extend({ required: true });
+
+    constructor(dto: counterStorageReplicationDestinatinosDto) {
+        this.serverUrl(dto.ServerUrl);
+        this.counterStorageName(dto.CounterStorageName);
+        this.username(dto.Username);
+        this.password(dto.Password);
+        this.domain(dto.Domain);
+        this.apiKey(dto.ApiKey);
+
+        if (this.username()) {
+            this.isUserCredentials(true);
+        } else if (this.apiKey()) {
+            this.isApiKeyCredentials(true);
+        }
+    }
 
     name = ko.computed(() => {
-        if (this.serverUrl() && this.counterStorage()) {
-            return this.counterStorage() + " on " + this.serverUrl();
+        if (this.serverUrl() && this.counterStorageName()) {
+            return this.counterStorageName() + " on " + this.serverUrl();
         } else if (this.serverUrl()) {
             return this.serverUrl();
-        } else if (this.counterStorage()) {
-            return this.counterStorage();
+        } else if (this.counterStorageName()) {
+            return this.counterStorageName();
         }
 
         return "[empty]";
@@ -34,12 +50,59 @@
         }
     });
 
+    toggleUserCredentials() {
+        this.isUserCredentials.toggle();
+        if (this.isUserCredentials()) {
+            this.isApiKeyCredentials(false);
+        }
+    }
 
-//    constructor(dto: counterServerValueDto) {
-//        this.serverUrl(dto.ServerUrl);
-//        this.posCount(dto.Positive);
-//        this.negCount(dto.Negative);
-//    }
+    toggleApiKeyCredentials() {
+        this.isApiKeyCredentials.toggle();
+        if (this.isApiKeyCredentials()) {
+            this.isUserCredentials(false);
+        }
+    }
+
+    static empty(): counterStorageReplicationDestination {
+        return new counterStorageReplicationDestination({
+            Disabled: false,
+            ServerUrl: null,
+            CounterStorageName: null,
+            Username: null,
+            Password: null,
+            Domain: null,
+            ApiKey: null
+        });
+    }
+
+    enable() {
+        this.disabled(false);
+    }
+
+    disable() {
+        this.disabled(true);
+    }
+
+    toDto(): counterStorageReplicationDestinatinosDto {
+        return {
+            Disabled: this.disabled(),
+            ServerUrl: this.prepareUrl(),
+            CounterStorageName: this.counterStorageName(),
+            Username: this.username(),
+            Password: this.password(),
+            Domain: this.domain(),
+            ApiKey: this.apiKey(),
+        };
+    }
+
+    private prepareUrl() {
+        var url = this.serverUrl();
+        if (url && url.charAt(url.length - 1) === "/") {
+            url = url.substring(0, url.length - 1);
+        }
+        return url;
+    }
 }
 
 export = counterStorageReplicationDestination;
