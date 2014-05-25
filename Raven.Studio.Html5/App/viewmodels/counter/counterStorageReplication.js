@@ -4,7 +4,7 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "common/appUrl", "viewmodels/viewModelBase", "models/counter/counterStorageReplicationSetup", "models/counter/counterStorageReplicationDestination", "commands/counter/getCounterStorageReplicationCommand", "commands/counter/saveCounterStorageReplicationCommand"], function(require, exports, appUrl, viewModelBase, counterStorageReplicationSetup, counterStorageReplicationDestination, getStorageCounterDestinationsCommand, saveStorageCounterDestinationCommand) {
+define(["require", "exports", "durandal/app", "common/appUrl", "viewmodels/viewModelBase", "models/counter/counterStorageReplicationSetup", "models/counter/counterStorageReplicationDestination", "commands/counter/getCounterStorageReplicationCommand", "commands/counter/saveCounterStorageReplicationCommand"], function(require, exports, app, appUrl, viewModelBase, counterStorageReplicationSetup, counterStorageReplicationDestination, getCounterStorageReplicationCommand, saveCounterStorageReplicationCommand) {
     var counterStorageReplication = (function (_super) {
         __extends(counterStorageReplication, _super);
         function counterStorageReplication() {
@@ -33,11 +33,12 @@ define(["require", "exports", "common/appUrl", "viewmodels/viewModelBase", "mode
             });
         };
 
-        counterStorageReplication.prototype.fetchCountersDestinations = function (counterStorage) {
+        counterStorageReplication.prototype.fetchCountersDestinations = function (counterStorage, reportFetchProgress) {
             var _this = this;
+            if (typeof reportFetchProgress === "undefined") { reportFetchProgress = false; }
             var deferred = $.Deferred();
             if (counterStorage) {
-                new getStorageCounterDestinationsCommand(counterStorage).execute().done(function (data) {
+                new getCounterStorageReplicationCommand(counterStorage, reportFetchProgress).execute().done(function (data) {
                     return _this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: data.Destinations }));
                 }).fail(function () {
                     return _this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: [] }));
@@ -51,7 +52,7 @@ define(["require", "exports", "common/appUrl", "viewmodels/viewModelBase", "mode
         counterStorageReplication.prototype.saveChanges = function () {
             var counter = this.activeCounterStorage();
             if (counter) {
-                new saveStorageCounterDestinationCommand(this.replicationsSetup().toDto(), counter).execute().done(function () {
+                new saveCounterStorageReplicationCommand(this.replicationsSetup().toDto(), counter).execute().done(function () {
                     return viewModelBase.dirtyFlag().reset();
                 });
             }
@@ -63,6 +64,26 @@ define(["require", "exports", "common/appUrl", "viewmodels/viewModelBase", "mode
 
         counterStorageReplication.prototype.removeDestination = function (resplicationDestination) {
             this.replicationsSetup().destinations.remove(resplicationDestination);
+        };
+
+        counterStorageReplication.prototype.refreshFromServer = function () {
+            var _this = this;
+            this.showRefreshPrompt().done(function (answer) {
+                if (answer == "Yes") {
+                    _this.fetchCountersDestinations(_this.activeCounterStorage(), true).done(function () {
+                        return viewModelBase.dirtyFlag().reset();
+                    });
+                }
+            });
+        };
+
+        counterStorageReplication.prototype.showRefreshPrompt = function () {
+            var deferred = $.Deferred();
+            var isDirty = viewModelBase.dirtyFlag().isDirty();
+            if (isDirty) {
+                return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
+            }
+            return deferred.resolve("Yes");
         };
         return counterStorageReplication;
     })(viewModelBase);

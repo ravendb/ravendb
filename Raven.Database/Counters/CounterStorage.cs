@@ -79,43 +79,6 @@ namespace Raven.Database.Counters
 					metadata.Add("id", Id.ToByteArray());
 					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageUrl));
 
-					//TODO: Remove this when UI is finished
-                    /*var replication1 = new CounterStorageReplicationDestination();
-                    var replication2 = new CounterStorageReplicationDestination();
-						if (CounterStorageUrl.Contains(":8080"))
-						{
-							replication1.ServerUrl = CounterStorageUrl.Replace(":8080", ":8081");
-                            replication2.ServerUrl = CounterStorageUrl.Replace(":8080", ":8082");
-						}
-						else if (CounterStorageUrl.Contains(":8081"))
-						{
-							replication1.ServerUrl = CounterStorageUrl.Replace(":8081", ":8080");
-							replication2.ServerUrl = CounterStorageUrl.Replace(":8081", ":8082");
-						}
-						else
-						{
-							replication1.ServerUrl = CounterStorageUrl.Replace(":8082", ":8080");
-							replication2.ServerUrl = CounterStorageUrl.Replace(":8082", ":8081");
-						}
-
-						replication1.Disabled = false;
-						replication2.Disabled = false;
-
-                        var document = new CounterStorageReplicationDocument();
-						document.Destinations.Add(replication1);
-						document.Destinations.Add(replication2);
-						
-						using (var memoryStream = new MemoryStream())
-						using (var streamWriter = new StreamWriter(memoryStream))
-						using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-						{
-							new JsonSerializer().Serialize(jsonTextWriter, document);
-							streamWriter.Flush();
-							memoryStream.Position = 0;
-							metadata.Add("replication", memoryStream);
-						}*/
-					//TODO: Remove this when UI is finished
-
 					tx.Commit();
 				}
 				else // existing counter db

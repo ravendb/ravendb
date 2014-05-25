@@ -5,8 +5,8 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import counterStorageReplicationSetup = require("models/counter/counterStorageReplicationSetup");
 import counterStorageReplicationDestination = require("models/counter/counterStorageReplicationDestination");
-import getStorageCounterDestinationsCommand = require("commands/counter/getCounterStorageReplicationCommand");
-import saveStorageCounterDestinationCommand = require("commands/counter/saveCounterStorageReplicationCommand");
+import getCounterStorageReplicationCommand = require("commands/counter/getCounterStorageReplicationCommand");
+import saveCounterStorageReplicationCommand = require("commands/counter/saveCounterStorageReplicationCommand");
 
 class counterStorageReplication extends viewModelBase {
 
@@ -33,10 +33,10 @@ class counterStorageReplication extends viewModelBase {
         });
     }
 
-    fetchCountersDestinations(counterStorage): JQueryPromise<any> {
+    fetchCountersDestinations(counterStorage, reportFetchProgress: boolean = false): JQueryPromise<any> {
         var deferred = $.Deferred();
         if (counterStorage) {
-            new getStorageCounterDestinationsCommand(counterStorage)
+            new getCounterStorageReplicationCommand(counterStorage, reportFetchProgress)
                 .execute()
                 .done(data => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: data.Destinations })))
                 .fail(() => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: [] })))
@@ -48,7 +48,7 @@ class counterStorageReplication extends viewModelBase {
     saveChanges() {
         var counter = this.activeCounterStorage();
         if (counter) {
-            new saveStorageCounterDestinationCommand(this.replicationsSetup().toDto(), counter)
+            new saveCounterStorageReplicationCommand(this.replicationsSetup().toDto(), counter)
                 .execute()
                 .done(()=> viewModelBase.dirtyFlag().reset());
         }
@@ -60,6 +60,25 @@ class counterStorageReplication extends viewModelBase {
 
     removeDestination(resplicationDestination: counterStorageReplicationDestination) {
         this.replicationsSetup().destinations.remove(resplicationDestination);
+    }
+
+    refreshFromServer() {
+        this.showRefreshPrompt()
+            .done((answer) => {
+                if (answer == "Yes") {
+                    this.fetchCountersDestinations(this.activeCounterStorage(), true)
+                        .done(()=> viewModelBase.dirtyFlag().reset());
+                }
+            });
+    }
+
+    private showRefreshPrompt(): any {
+        var deferred = $.Deferred();
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
+        }
+        return deferred.resolve("Yes");
     }
 }
 

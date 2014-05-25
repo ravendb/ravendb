@@ -7,16 +7,29 @@
 define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
     var getCounterStorageReplicationCommand = (function (_super) {
         __extends(getCounterStorageReplicationCommand, _super);
-        function getCounterStorageReplicationCommand(counterStorage) {
+        function getCounterStorageReplicationCommand(counterStorage, reportRefreshProgress) {
+            if (typeof reportRefreshProgress === "undefined") { reportRefreshProgress = false; }
             _super.call(this);
             this.counterStorage = counterStorage;
+            this.reportRefreshProgress = reportRefreshProgress;
             if (!counterStorage) {
                 throw new Error("Must specify counter storage");
             }
         }
         getCounterStorageReplicationCommand.prototype.execute = function () {
+            var _this = this;
             var url = "/replications-get";
-            return this.query(url, null, this.counterStorage);
+            var getTask = this.query(url, null, this.counterStorage);
+
+            if (this.reportRefreshProgress) {
+                getTask.done(function () {
+                    return _this.reportSuccess("Replication Destionations of '" + _this.counterStorage.name + "' were successfully refreshed!");
+                });
+                getTask.fail(function (response) {
+                    return _this.reportError("Failed to refresh Replication Destionations!", response.responseText, response.statusText);
+                });
+            }
+            return getTask;
         };
         return getCounterStorageReplicationCommand;
     })(commandBase);
