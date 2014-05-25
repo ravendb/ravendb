@@ -31,10 +31,10 @@ namespace Raven.Database.Storage.Voron.Backup
 
             if (isIncrementalBackup)
                 BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
-					infoNotify: s => UpdateBackupStatus(s, BackupStatus.BackupMessageSeverity.Informational));
+					infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
             else
                 BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
-					infoNotify: s => UpdateBackupStatus(s, BackupStatus.BackupMessageSeverity.Informational));
+					infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
         }
 
         public void Dispose()
