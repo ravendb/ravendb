@@ -4,14 +4,15 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/counter/counter", "common/appUrl"], function(require, exports, commandBase, counter, appUrl) {
+define(["require", "exports", "commands/commandBase", "models/counter/counter"], function(require, exports, commandBase, counter) {
     var getCountersCommand = (function (_super) {
         __extends(getCountersCommand, _super);
         /**
         * @param ownerDb The database the collections will belong to.
         */
-        function getCountersCommand(skip, take, counterGroupName) {
+        function getCountersCommand(storage, skip, take, counterGroupName) {
             _super.call(this);
+            this.storage = storage;
             this.skip = skip;
             this.take = take;
             this.counterGroupName = counterGroupName;
@@ -23,13 +24,13 @@ define(["require", "exports", "commands/commandBase", "models/counter/counter", 
                 counterGroupName: this.counterGroupName
             };
 
-            var url = "/counters/test/counters" + this.urlEncodeArgs(args);
+            var url = "/counters";
             var selector = function (dtos) {
                 return dtos.map(function (d) {
                     return new counter(d);
                 });
             };
-            return this.query(url, null, appUrl.getSystemDatabase(), selector);
+            return this.query(url, args, this.storage, selector);
         };
         return getCountersCommand;
     })(commandBase);

@@ -15,7 +15,7 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
             this.selectedCountersIndices = ko.observableArray();
             this.currentCountersPagedItems = ko.observable();
 
-            new getCounterGroupsCommand().execute().done(function (results) {
+            new getCounterGroupsCommand(this.activeCounterStorage()).execute().done(function (results) {
                 return _this.groupsLoaded(results);
             });
         }
@@ -50,9 +50,9 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
                 var command;
 
                 if (groupName == "All Groups") {
-                    command = new getCountersCommand(0, 128);
+                    command = new getCountersCommand(this.activeCounterStorage(), 0, 128);
                 } else {
-                    command = new getCountersCommand(0, 128, groupName);
+                    command = new getCountersCommand(this.activeCounterStorage(), 0, 128, groupName);
                 }
                 command.execute().done(function (results) {
                     return group.counters(results);

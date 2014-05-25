@@ -4,14 +4,15 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/counter/counterGroup", "common/appUrl"], function(require, exports, commandBase, counterGroup, appUrl) {
+define(["require", "exports", "commands/commandBase", "models/counter/counterGroup"], function(require, exports, commandBase, counterGroup) {
     var getCounterGroupsCommand = (function (_super) {
         __extends(getCounterGroupsCommand, _super);
         /**
         * @param ownerDb The database the collections will belong to.
         */
-        function getCounterGroupsCommand() {
+        function getCounterGroupsCommand(storage) {
             _super.call(this);
+            this.storage = storage;
         }
         getCounterGroupsCommand.prototype.execute = function () {
             var selector = function (groups) {
@@ -19,7 +20,7 @@ define(["require", "exports", "commands/commandBase", "models/counter/counterGro
                     return new counterGroup(g);
                 });
             };
-            return this.query("/counters/test/groups", null, appUrl.getSystemDatabase(), selector);
+            return this.query("/groups", null, this.storage, selector);
         };
         return getCounterGroupsCommand;
     })(commandBase);

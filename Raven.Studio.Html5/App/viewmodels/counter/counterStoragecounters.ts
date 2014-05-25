@@ -20,7 +20,7 @@ class counterStorageCounters extends viewModelBase {
     constructor() {
         super();
 
-        new getCounterGroupsCommand()
+        new getCounterGroupsCommand(this.activeCounterStorage())
             .execute()
             .done((results: counterGroup[]) => this.groupsLoaded(results));
     }
@@ -54,9 +54,9 @@ class counterStorageCounters extends viewModelBase {
             var command;
 
             if (groupName == "All Groups") {
-                command = new getCountersCommand(0, 128);
+                command = new getCountersCommand(this.activeCounterStorage(), 0, 128);
             } else {
-                command = new getCountersCommand(0, 128, groupName);
+                command = new getCountersCommand(this.activeCounterStorage(), 0, 128, groupName);
             }
             command
                 .execute()
