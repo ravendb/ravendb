@@ -4,23 +4,21 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "common/appUrl", "models/filesystem/synchronizationReplicationSetup", "models/filesystem/synchronizationDestination", "viewmodels/viewModelBase", "commands/filesystem/getDestinationsCommand", "commands/filesystem/getFilesystemStatsCommand", "commands/filesystem/saveDestinationCommand"], function(require, exports, appUrl, synchronizationReplicationSetup, synchronizationDestination, viewModelBase, getDestinationsCommand, getFilesystemStatsCommand, saveDestinationCommand) {
+define(["require", "exports", "durandal/app", "common/appUrl", "viewmodels/viewModelBase", "models/counter/counterStorageReplicationSetup", "models/counter/counterStorageReplicationDestination", "commands/counter/getCounterStorageReplicationCommand", "commands/counter/saveCounterStorageReplicationCommand"], function(require, exports, app, appUrl, viewModelBase, counterStorageReplicationSetup, counterStorageReplicationDestination, getCounterStorageReplicationCommand, saveCounterStorageReplicationCommand) {
     var counterStorageReplication = (function (_super) {
         __extends(counterStorageReplication, _super);
         function counterStorageReplication() {
             _super.apply(this, arguments);
-            this.dirtyFlag = new ko.DirtyFlag([]);
-            this.replicationsSetup = ko.observable(new synchronizationReplicationSetup({ Destinations: [], Source: null }));
+            this.replicationsSetup = ko.observable().extend({ required: true });
         }
         counterStorageReplication.prototype.canActivate = function (args) {
-            var _this = this;
             var deferred = $.Deferred();
-            var fs = this.activeFilesystem();
-            if (fs) {
-                this.fetchDestinations().done(function () {
+            var counterStorage = this.activeCounterStorage();
+            if (counterStorage) {
+                this.fetchCountersDestinations(counterStorage).done(function () {
                     return deferred.resolve({ can: true });
                 }).fail(function () {
-                    return deferred.resolve({ redirect: appUrl.forFilesystem(_this.activeFilesystem()) });
+                    return deferred.resolve({ redirect: appUrl.forCounterStorage(counterStorage) });
                 });
             }
             return deferred;
@@ -35,60 +33,57 @@ define(["require", "exports", "common/appUrl", "models/filesystem/synchronizatio
             });
         };
 
-        counterStorageReplication.prototype.deactivate = function () {
-            _super.prototype.deactivate.call(this);
-        };
-
-        counterStorageReplication.prototype.saveChanges = function () {
+        counterStorageReplication.prototype.fetchCountersDestinations = function (counterStorage, reportFetchProgress) {
             var _this = this;
-            if (this.replicationsSetup().source()) {
-                this.saveReplicationSetup();
-            } else {
-                var fs = this.activeFilesystem();
-                if (fs) {
-                    new getFilesystemStatsCommand(fs).execute().done(function (result) {
-                        _this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                    });
-                }
-            }
-        };
-
-        counterStorageReplication.prototype.prepareAndSaveReplicationSetup = function (source) {
-            this.replicationsSetup().source(source);
-            this.saveReplicationSetup();
-        };
-
-        counterStorageReplication.prototype.saveReplicationSetup = function () {
-            var _this = this;
-            var fs = this.activeFilesystem();
-            if (fs) {
-                var self = this;
-                new saveDestinationCommand(this.replicationsSetup().toDto(), fs).execute().done(function () {
-                    return _this.dirtyFlag().reset();
-                });
-            }
-        };
-
-        counterStorageReplication.prototype.createNewDestination = function () {
-            this.replicationsSetup().destinations.unshift(synchronizationDestination.empty());
-        };
-
-        counterStorageReplication.prototype.removeDestination = function (repl) {
-            this.replicationsSetup().destinations.remove(repl);
-        };
-
-        counterStorageReplication.prototype.fetchDestinations = function () {
-            var _this = this;
+            if (typeof reportFetchProgress === "undefined") { reportFetchProgress = false; }
             var deferred = $.Deferred();
-            var fs = this.activeFilesystem();
-            if (fs) {
-                new getDestinationsCommand(fs).execute().done(function (data) {
-                    return _this.replicationsSetup(new synchronizationReplicationSetup({ Destinations: data.Destinations, Source: null }));
+            if (counterStorage) {
+                new getCounterStorageReplicationCommand(counterStorage, reportFetchProgress).execute().done(function (data) {
+                    return _this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: data.Destinations }));
+                }).fail(function () {
+                    return _this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: [] }));
                 }).always(function () {
                     return deferred.resolve({ can: true });
                 });
             }
             return deferred;
+        };
+
+        counterStorageReplication.prototype.saveChanges = function () {
+            var counter = this.activeCounterStorage();
+            if (counter) {
+                new saveCounterStorageReplicationCommand(this.replicationsSetup().toDto(), counter).execute().done(function () {
+                    return viewModelBase.dirtyFlag().reset();
+                });
+            }
+        };
+
+        counterStorageReplication.prototype.createNewDestination = function () {
+            this.replicationsSetup().destinations.unshift(counterStorageReplicationDestination.empty());
+        };
+
+        counterStorageReplication.prototype.removeDestination = function (resplicationDestination) {
+            this.replicationsSetup().destinations.remove(resplicationDestination);
+        };
+
+        counterStorageReplication.prototype.refreshFromServer = function () {
+            var _this = this;
+            this.showRefreshPrompt().done(function (answer) {
+                if (answer == "Yes") {
+                    _this.fetchCountersDestinations(_this.activeCounterStorage(), true).done(function () {
+                        return viewModelBase.dirtyFlag().reset();
+                    });
+                }
+            });
+        };
+
+        counterStorageReplication.prototype.showRefreshPrompt = function () {
+            var deferred = $.Deferred();
+            var isDirty = viewModelBase.dirtyFlag().isDirty();
+            if (isDirty) {
+                return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
+            }
+            return deferred.resolve("Yes");
         };
         return counterStorageReplication;
     })(viewModelBase);

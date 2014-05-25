@@ -718,10 +718,24 @@ interface counterGroupDto {
     NumOfCounters?: number;
 }
 
-interface  counterServerValueDto {
+interface counterServerValueDto {
     Name: string;
     Positive: number;
     Negative: number;
+}
+
+interface counterStorageReplicationDto {
+    Destinations: counterStorageReplicationDestinatinosDto[];
+}
+
+interface counterStorageReplicationDestinatinosDto {
+    Disabled: boolean;
+    ServerUrl: string;
+    CounterStorageName: string;
+    Username: string;
+    Password: string;
+    Domain: string;
+    ApiKey: string;
 }
 
 enum ImportItemType {

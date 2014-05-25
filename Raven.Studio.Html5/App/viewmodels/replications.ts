@@ -26,7 +26,7 @@ class replications extends viewModelBase {
         if (db) {
             $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
                 .done(() => deferred.resolve({ can: true }) )
-                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
         return deferred;
     }

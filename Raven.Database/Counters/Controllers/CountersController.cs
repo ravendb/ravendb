@@ -92,41 +92,6 @@ namespace Raven.Database.Counters.Controllers
                 return Request.CreateResponse(HttpStatusCode.OK, results);
             }
         }
-
-		[Route("counters/{counterName}/replications-get")]
-		[HttpGet]
-		public async Task<HttpResponseMessage> ReplicationsGet()
-		{
-			using (var reader = Storage.CreateReader())
-			{
-				return Request.CreateResponse(HttpStatusCode.OK, reader.GetReplicationData());
-			}
-		}
-
-		[Route("counters/{counterName}/replications-save")]
-		[HttpPut]
-		public async Task<HttpResponseMessage> ReplicationsSave()
-		{
-			CounterStorageReplicationDocument newReplicationDocument;
-			try
-			{
-				newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
-			}
-			catch (Exception e)
-			{
-				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
-			}
-
-			using (var writer = Storage.CreateWriter())
-			{
-				string updateResult = writer.UpdateReplications(newReplicationDocument);
-				writer.Commit();
-
-				HttpStatusCode response = (updateResult != null) ? HttpStatusCode.BadRequest : HttpStatusCode.OK;
-				return Request.CreateResponse(response, updateResult);
-			}
-		}
-
 		public class CounterView
 		{
 			public string Name { get; set; }

@@ -16,11 +16,6 @@ namespace Raven.Database.Counters
 	public class CounterStorageReplicationDocument
 	{
 		/// <summary>
-		/// Gets or sets the etag for last saved replication.
-		/// </summary>
-		public long Etag { get; set; }
-
-		/// <summary>
 		/// Gets or sets the list of replication destinations.
 		/// </summary>
 		public List<CounterStorageReplicationDestination> Destinations { get; set; }

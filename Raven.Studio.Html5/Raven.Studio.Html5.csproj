@@ -24,11 +24,11 @@
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\counter\createCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStoragesCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterValueCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
@@ -122,6 +122,7 @@
     <TypeScriptCompile Include="App\models\counter\counter.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
+    <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
     <TypeScriptCompile Include="App\models\filesystem\conflictHistory.ts" />
     <TypeScriptCompile Include="App\models\filesystem\conflictItem.ts" />
