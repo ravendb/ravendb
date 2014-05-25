@@ -22,6 +22,7 @@ using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -554,24 +555,36 @@ namespace Raven.Database.Indexing
 
 		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats)
 		{
+			Action<Exception, object> onError;
+			return RobustEnumerationIndex(input, funcs, stats, out onError);
+		}
+
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats,out Action<Exception, object> onError)
+		{
+			onError = (exception, o) =>
+			{
+				string docId = null;
+				var invalidSpatialException = exception as InvalidSpatialShapeException;
+				if (invalidSpatialException != null)
+					docId = invalidSpatialException.InvalidDocumentId;
+
+				context.AddError(name,
+					docId ?? TryGetDocKey(o),
+					exception.Message,
+					"Map"
+					);
+				logIndexing.WarnException(
+					String.Format("Failed to execute indexing function on {0} on {1}", name,
+						TryGetDocKey(o)),
+					exception);
+
+				stats.IndexingErrors++;
+			};
 			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
-				OnError = (exception, o) =>
-				{
-					context.AddError(name,
-									TryGetDocKey(o),
-									exception.Message,
-									"Map"
-						);
-					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", name,
-										TryGetDocKey(o)),
-						exception);
-
-					stats.IndexingErrors++;
-				}
+				OnError = onError
 			}.RobustEnumeration(input, funcs);
 		}
 
