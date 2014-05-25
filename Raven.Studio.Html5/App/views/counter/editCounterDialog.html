@@ -36,7 +36,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
+            <button type="submit" class="btn btn-primary" data-bind="text:(isNewCounter == true? 'Create ' : 'Update ' )"></button>
         </div>
     </form>
 </div>

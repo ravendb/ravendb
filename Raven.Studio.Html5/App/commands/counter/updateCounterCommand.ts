@@ -22,9 +22,8 @@ class updateCounterCommand extends commandBase {
             delta:this.delta
         };
 
-        var url = "/change";
-        var selector = (dtos: counterDto[]) => dtos.map(d => new counter(d));
-        return this.query(url, args, this.storage, selector);
+        var url = "/change" + this.urlEncodeArgs(args);
+        return this.post(url, null, this.storage, { dataType: undefined });
     }
 }
 

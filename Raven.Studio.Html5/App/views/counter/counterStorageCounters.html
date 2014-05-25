@@ -10,6 +10,9 @@
         </ul>
     </div>
     <div class="col-md-10" data-bind="with: selectedCounterGroup">
+        <div class="btn btn-group">
+            <button class="btn btn-primary" data-bind="click:function(){$root.addOrEditCounter();}">Add New Counter</button>
+        </div>
         <div class="panel-group" id="accordion" data-bind="foreach: counters">
             <div class="panel panel-default" style="padding-top: 0">
                 <div class="panel-heading">

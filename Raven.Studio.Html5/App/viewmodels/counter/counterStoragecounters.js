@@ -8,17 +8,19 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
     var counterStorageCounters = (function (_super) {
         __extends(counterStorageCounters, _super);
         function counterStorageCounters() {
-            var _this = this;
             _super.call(this);
             this.counterGroups = ko.observableArray([]);
             this.selectedCounterGroup = ko.observable();
             this.selectedCountersIndices = ko.observableArray();
             this.currentCountersPagedItems = ko.observable();
-
+            this.fetchGroups();
+        }
+        counterStorageCounters.prototype.fetchGroups = function () {
+            var _this = this;
             new getCounterGroupsCommand(this.activeCounterStorage()).execute().done(function (results) {
                 return _this.groupsLoaded(results);
             });
-        }
+        };
         counterStorageCounters.prototype.getCountersGrid = function () {
             var gridContents = $(counterStorageCounters.gridSelector).children()[0];
             if (gridContents) {
@@ -39,21 +41,19 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
             this.hasAnyCounterSelected = ko.computed(function () {
                 return _this.selectedCountersIndices().length > 0;
             });
-            //var x = router.activeInstruction();
         };
 
         counterStorageCounters.prototype.addOrEditCounter = function (counterToUpdate) {
             var _this = this;
-            if (!!counterToUpdate) {
-                require(["viewmodels/counter/editCounterDialog"], function (editCounterDialog) {
-                    var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
-                    editCounterDialogViewModel.updateTask.done(function (editedCounter, delta) {
-                        new updateCounterCommand(_this.activeCounterStorage(), editedCounter, delta).execute().done(function () {
-                        });
+            require(["viewmodels/counter/editCounterDialog"], function (editCounterDialog) {
+                var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
+                editCounterDialogViewModel.updateTask.done(function (editedCounter, delta) {
+                    new updateCounterCommand(_this.activeCounterStorage(), editedCounter, delta).execute().done(function () {
+                        _this.fetchGroups();
                     });
-                    app.showDialog(editCounterDialogViewModel);
                 });
-            }
+                app.showDialog(editCounterDialogViewModel);
+            });
         };
 
         counterStorageCounters.prototype.selectGroup = function (group) {

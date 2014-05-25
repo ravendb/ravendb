@@ -17,7 +17,7 @@ namespace Raven.Database.Counters.Controllers
 	{
 
 		[Route("counters/{counterName}/change")]
-		[HttpGet]
+		[HttpPost]
 		public HttpResponseMessage Change(string group, string counterName, long delta)
 		{
 			using (var writer = Storage.CreateWriter())
@@ -44,6 +44,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage Counters(int skip = 0, int take = 20, string counterGroupName = null)
 		{
+            // todo:change counterGroupName to "group"
 			using (var reader = Storage.CreateReader())
 			{
 				var prefix = (counterGroupName == null) ? string.Empty : (counterGroupName + Constants.GroupSeperatorString);
@@ -64,6 +65,33 @@ namespace Raven.Database.Counters.Controllers
 				return Request.CreateResponse(HttpStatusCode.OK, results);
 			}
 		}
+
+        [Route("counters/{counterName}/getCounterValue")]
+        [HttpGet]
+        public HttpResponseMessage GetCounterValue(string counterName, string group = null)
+        {
+            using (var reader = Storage.CreateReader())
+            {
+                var prefix = (group == null) ? string.Empty : (group + Constants.GroupSeperatorString) + counterName;
+                var results = (
+                    from counterFullName in reader.GetCounterNames(prefix)
+                    let counter = reader.GetCounter(counterFullName)
+                    select new CounterView
+                    {
+                        Name = counterFullName.Split(Constants.GroupSeperatorChar)[1],
+                        Group = counterFullName.Split(Constants.GroupSeperatorChar)[0],
+                        OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
+
+                        Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
+                        {
+                            Negative = s.Negative,
+                            Positive = s.Positive,
+                            Name = reader.ServerNameFor(s.SourceId)
+                        }).ToList()
+                    }).ToList();
+                return Request.CreateResponse(HttpStatusCode.OK, results);
+            }
+        }
 
 		[Route("counters/{counterName}/replications-get")]
 		[HttpGet]

@@ -26,6 +26,7 @@
     <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStoragesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\counter\getCounterValueCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />

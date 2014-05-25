@@ -3,6 +3,7 @@ import counter = require("models/counter/counter");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import getCounterGroupsCommand = require("commands/counter/getCounterGroupsCommand");
 import updateCounterCommand = require("commands/counter/updateCounterCommand");
+import getCounterValueCommand = require("commands/counter/getCounterValueCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import editCounterDialog = require("viewmodels/counter/editCounterDialog");
@@ -22,12 +23,15 @@ class counterStorageCounters extends viewModelBase {
 
     constructor() {
         super();
+        this.fetchGroups();
 
-        new getCounterGroupsCommand(this.activeCounterStorage())
-            .execute()
-            .done((results: counterGroup[]) => this.groupsLoaded(results));
     }
 
+    fetchGroups() {
+        new getCounterGroupsCommand(this.activeCounterStorage())
+            .execute()
+            .done((results: counterGroup[]) => this.groupsLoaded(results));        
+    }
     getCountersGrid(): virtualTable {
         var gridContents = $(counterStorageCounters.gridSelector).children()[0];
         if (gridContents) {
@@ -46,24 +50,22 @@ class counterStorageCounters extends viewModelBase {
         super.activate(args);
         this.hasAnyCounterSelected = ko.computed(() => this.selectedCountersIndices().length > 0);
         
-        //var x = router.activeInstruction();
     }
 
     addOrEditCounter(counterToUpdate: counter) {
-        if (!!counterToUpdate) {
-            
-            require(["viewmodels/counter/editCounterDialog"], editCounterDialog => {
-                var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
-                editCounterDialogViewModel.updateTask.done((editedCounter:counter, delta:number) => {
-                    new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
-                        .execute()
-                        .done(() => {
-
-                        });
+        require(["viewmodels/counter/editCounterDialog"], editCounterDialog => {
+            var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
+            editCounterDialogViewModel.updateTask
+                .done((editedCounter: counter, delta: number) => {
+                new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
+                    .execute()
+                    .done(() => {
+                        this.fetchGroups();
+                    });
                 });
-                app.showDialog(editCounterDialogViewModel);
-            });
-        }
+            app.showDialog(editCounterDialogViewModel);
+        });
+        
     }
 
     selectGroup(group: counterGroup) {

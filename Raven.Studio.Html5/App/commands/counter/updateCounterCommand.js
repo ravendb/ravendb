@@ -4,7 +4,7 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/counter/counter"], function(require, exports, commandBase, counter) {
+define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
     var updateCounterCommand = (function (_super) {
         __extends(updateCounterCommand, _super);
         /**
@@ -23,13 +23,8 @@ define(["require", "exports", "commands/commandBase", "models/counter/counter"],
                 delta: this.delta
             };
 
-            var url = "/change";
-            var selector = function (dtos) {
-                return dtos.map(function (d) {
-                    return new counter(d);
-                });
-            };
-            return this.query(url, args, this.storage, selector);
+            var url = "/change" + this.urlEncodeArgs(args);
+            return this.post(url, null, this.storage, { dataType: undefined });
         };
         return updateCounterCommand;
     })(commandBase);
