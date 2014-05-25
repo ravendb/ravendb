@@ -4,7 +4,7 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "models/counter/counterGroup", "commands/counter/getCountersCommand", "commands/counter/getCounterGroupsCommand", "viewmodels/viewModelBase"], function(require, exports, counterGroup, getCountersCommand, getCounterGroupsCommand, viewModelBase) {
+define(["require", "exports", "models/counter/counterGroup", "commands/counter/getCountersCommand", "commands/counter/getCounterGroupsCommand", "commands/counter/updateCounterCommand", "viewmodels/viewModelBase", "durandal/app"], function(require, exports, counterGroup, getCountersCommand, getCounterGroupsCommand, updateCounterCommand, viewModelBase, app) {
     var counterStorageCounters = (function (_super) {
         __extends(counterStorageCounters, _super);
         function counterStorageCounters() {
@@ -40,6 +40,20 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
                 return _this.selectedCountersIndices().length > 0;
             });
             //var x = router.activeInstruction();
+        };
+
+        counterStorageCounters.prototype.addOrEditCounter = function (counterToUpdate) {
+            var _this = this;
+            if (!!counterToUpdate) {
+                require(["viewmodels/counter/editCounterDialog"], function (editCounterDialog) {
+                    var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
+                    editCounterDialogViewModel.updateTask.done(function (editedCounter, delta) {
+                        new updateCounterCommand(_this.activeCounterStorage(), editedCounter, delta).execute().done(function () {
+                        });
+                    });
+                    app.showDialog(editCounterDialogViewModel);
+                });
+            }
         };
 
         counterStorageCounters.prototype.selectGroup = function (group) {

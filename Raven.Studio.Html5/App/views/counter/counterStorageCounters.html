@@ -11,21 +11,27 @@
     </div>
     <div class="col-md-10" data-bind="with: selectedCounterGroup">
         <div class="panel-group" id="accordion" data-bind="foreach: counters">
-            <div class="panel panel-default">
+            <div class="panel panel-default" style="padding-top: 0">
                 <div class="panel-heading">
-                    <h4 class="panel-title">
-                        <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" data-bind="text: id"></a>
+                    <h4 class="panel-title md-col-3" style="padding-top: 10px; display:inline-block">
+                        <a data-bind="text: id, attr: { href: '#counterCollapse' + $index() }"></a>
                     </h4>
+                    <button class="btn btn-primary md-col-3" data-bind="click:function(){$root.addOrEditCounter($data);}">Edit Counter</button>
                 </div>
-                <div>
-                    <div class="panel-body">
-                        <ul data-bind="foreach: servers">
-                            <li>
-                                <div data-bind="text: 'Server URL: ' + name()"></div>
-                                <div data-bind="text: 'Positive: ' + posCount()"></div>
-                                <div data-bind="text: 'Negative: ' + negCount()"></div>
-                            </li>
-                        </ul>
+                <div class="panel-collapse" data-bind="attr:{id:'counterCollapse' + $index()}">
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <div> <strong>Overall Total: </strong> <span data-bind="text:overallTotal"></span></div>
+                            <div> <strong>Group: </strong> <span data-bind="text:group"></span></div>
+                            <div> <strong>Servers: </strong></div>
+                            <ul class="list-inline" data-bind="foreach: servers">
+                                <li>
+                                    <span class="col-md-4"> <strong>Server URL: </strong><span data-bind="text:name()"></span></span>
+                                    <span class="col-md-4"> <strong>Positive: </strong><span data-bind="text:posCount()"></span></span>
+                                    <span class="col-md-4"> <strong>Negative: </strong><span data-bind="text:negCount()"></span></span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -2,10 +2,13 @@
 import counter = require("models/counter/counter");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import getCounterGroupsCommand = require("commands/counter/getCounterGroupsCommand");
+import updateCounterCommand = require("commands/counter/updateCounterCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
+import editCounterDialog = require("viewmodels/counter/editCounterDialog");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
+import app = require("durandal/app");
 
 class counterStorageCounters extends viewModelBase {
     counterGroups = ko.observableArray<counterGroup>([]);
@@ -44,6 +47,23 @@ class counterStorageCounters extends viewModelBase {
         this.hasAnyCounterSelected = ko.computed(() => this.selectedCountersIndices().length > 0);
         
         //var x = router.activeInstruction();
+    }
+
+    addOrEditCounter(counterToUpdate: counter) {
+        if (!!counterToUpdate) {
+            
+            require(["viewmodels/counter/editCounterDialog"], editCounterDialog => {
+                var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
+                editCounterDialogViewModel.updateTask.done((editedCounter:counter, delta:number) => {
+                    new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
+                        .execute()
+                        .done(() => {
+
+                        });
+                });
+                app.showDialog(editCounterDialogViewModel);
+            });
+        }
     }
 
     selectGroup(group: counterGroup) {
