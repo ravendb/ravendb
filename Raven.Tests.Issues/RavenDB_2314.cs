@@ -60,15 +60,21 @@ namespace Raven.Tests.Issues
                 Name = "Very evil pizza",
                 DeliveryArea = "POLYGON ((1 1,  3 3, 1 3,  3 1, 1 1))"
             };
-
+            
+            var invalidPizzeriaDoc2 = new Pizzeria
+            {
+                Name = "Very evil pizza2",
+                DeliveryArea = "POLYGON ((1 1,  3 3, 1 3,  3 1, 1 1))"
+            };
             using (var store = NewDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(validPizzeriaDoc);
                     session.Store(anotherValidPizzeriaDoc);
-                    session.Store(yetAnotherValidPizzeriaDoc);
                     session.Store(invalidPizzeriaDoc);
+                    session.Store(yetAnotherValidPizzeriaDoc);
+                    session.Store(invalidPizzeriaDoc2);
                     session.SaveChanges();
                 }
 
@@ -79,7 +85,11 @@ namespace Raven.Tests.Issues
                 {
                     var pizzeriaDocCount = session.Query<Pizzeria, SpatialIndex>().Count();
                     var pizzerias = session.Query<Pizzeria, SpatialIndex>().ToList();
+                    var stats = store.DatabaseCommands.GetStatistics();
 
+                    Assert.Equal(2, stats.Errors.Length);
+                    Assert.Equal("pizzerias/3", stats.Errors.First().Document);
+                    Assert.Equal("pizzerias/5", stats.Errors.Last().Document);
                     Assert.NotEmpty(pizzerias);
                     Assert.Equal(3,pizzeriaDocCount);
                 }
