@@ -68,8 +68,20 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 
 			var readingStream = StorageStream.Reading(Storage, name);
-			var result = StreamResult(name, readingStream);
+            var result = StreamResult(name, readingStream);
             AddHeaders(result, fileAndPages.Metadata);
+
+            // Ensure that files are not cached at the browser side.
+            // "Cache-Control": "no-cache, no-store, must-revalidate";
+            // "Expires": 0;
+            result.Headers.CacheControl = new CacheControlHeaderValue()
+            {
+                 MustRevalidate = true,
+                 NoCache = true,
+                 NoStore = true,
+                 MaxAge = new TimeSpan(0, 0, 0, 0)
+            };
+
 			return result;
 		}
 
