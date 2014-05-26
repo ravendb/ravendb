@@ -333,7 +333,7 @@ namespace Voron.Trees
 
 		private bool TryCreateNewPrefix(Slice key, int nodeIndex, out PrefixedSlice prefixedSlice)
 		{
-			if (AvailablePrefixId > PrefixCount || NumberOfEntries == 0)
+			if (AvailablePrefixId >= PrefixCount || NumberOfEntries == 0)
 			{
 				prefixedSlice = null;
 				return false;
