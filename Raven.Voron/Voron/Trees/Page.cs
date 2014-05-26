@@ -127,6 +127,7 @@ namespace Voron.Trees
 	    private PrefixNode GetPrefixNode(byte n)
 	    {
 			Debug.Assert(n < PrefixCount, "Requested prefix number was: " + n);
+			Debug.Assert(n <= (AvailablePrefixId - 1), "Requested prefix number was: " + n + ", while the available prefix id is " + (AvailablePrefixId - 1));
 
 		    var prefixOffset = PrefixOffsets[n];
 
@@ -250,17 +251,19 @@ namespace Voron.Trees
         /// Internal method that is used when splitting pages
         /// No need to do any work here, we are always adding at the end
         /// </summary>
-        internal void CopyNodeDataToEndOfPage(NodeHeader* other, PrefixedSlice key = null)
+        internal void CopyNodeDataToEndOfPage(NodeHeader* other, PrefixedSlice key)
         {
+			// TODO arek - go though all callers of this method and try to change the api to avoid such constiction: rightPage.CopyNodeDataToEndOfPage(node, rightPage.ConvertToPrefixedKey(_page.GetFullNodeKey(node), rightPage.NumberOfEntries));
+
 			var index = NumberOfEntries;
 
-	        var nodeKey = key ?? new PrefixedSlice(other);
-            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize));
+	        var nodeKey = key;
+            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(key)));
             
             var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, nodeKey);
 
 			// TODO arek other->keySize == 0? beforeallkeys or after all keys?
-			if (other->KeySize == 0 && key == null) // when copy first item from branch which is implicit ref
+			if (other->KeySize == 0/* TODO arek && key == null*/) // when copy first item from branch which is implicit ref
 			{
 				nodeSize += nodeKey.Size;
 			}
@@ -271,7 +274,7 @@ namespace Voron.Trees
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-	        if (nodeKey.NewPrefix != null) // TODO arek - not sure if it's required here
+	        if (nodeKey.NewPrefix != null)
 		        WritePrefix(nodeKey.NewPrefix, nodeKey.PrefixId);
 
             var newNode = AllocateNewNode(index, nodeSize, nodeVersion);
@@ -287,7 +290,7 @@ namespace Voron.Trees
                 return;
             }
             newNode->DataSize = other->DataSize;
-            NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + other->KeySize,
+            NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + nodeKey.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
@@ -301,6 +304,9 @@ namespace Voron.Trees
 
 		    if (TryCreateNewPrefix(key, nodeIndex, out prefixedSlice))
 			    return prefixedSlice;
+
+		    if (key.Size == 0)
+			    return PrefixedSlice.Empty;
 
 			return new PrefixedSlice(key);
 	    }
@@ -467,6 +473,13 @@ namespace Voron.Trees
 		        var copy = tmp.TempPage;
 				copy.Flags = Flags;
 
+				// clear existing prefixes
+				for (var prefixId = 0; prefixId < copy.AvailablePrefixId; prefixId++)
+				{
+					copy.PrefixOffsets[prefixId] = 0;
+				}
+				copy.AvailablePrefixId = 0;
+
 				for (int j = 0; j < i; j++)
 				{
 					var node = GetNode(j);
@@ -607,6 +620,9 @@ namespace Voron.Trees
 
 	    public Slice GetFullNodeKey(NodeHeader* node)
 	    {
+		    if (node->KeySize == 0)
+			    return Slice.Empty;
+
 			var prefixedSlice = new PrefixedSlice(node);
 
 		    if (prefixedSlice.PrefixUsage > 0)

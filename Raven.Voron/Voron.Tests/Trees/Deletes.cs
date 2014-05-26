@@ -98,7 +98,7 @@ namespace Voron.Tests.Trees
                     return results;
                 do
                 {
-                    results.Add(new Slice(it.Current));
+                    results.Add(it.CurrentKey);
                 } while (it.MoveNext());
             }
             return results;

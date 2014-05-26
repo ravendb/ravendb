@@ -189,7 +189,7 @@ namespace Voron.Trees
                 }
                 else
                 {
-                    rightPage.CopyNodeDataToEndOfPage(node);
+					rightPage.CopyNodeDataToEndOfPage(node, rightPage.ConvertToPrefixedKey(_page.GetFullNodeKey(node), rightPage.NumberOfEntries));
                 }
             }
             _page.Truncate(_tx, splitIndex);
