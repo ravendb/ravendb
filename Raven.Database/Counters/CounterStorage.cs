@@ -464,15 +464,19 @@ namespace Raven.Database.Counters
 
 			public void Reset(string server, string fullCounterName)
 			{
-				Store(server, fullCounterName, result =>
+				Counter counter = GetCounter(fullCounterName); //TODO: implement get counter without an etag
+				if (counter != null)
 				{
-					Counter counter = GetCounter(fullCounterName); //TODO: implement get counter without an etag
-					long overallTotalPositiveExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Positive);
-					long overallTotalNegativeExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Negative);
+					Store(server, fullCounterName, result =>
+					{
 
-					EndianBitConverter.Big.CopyBytes(overallTotalNegativeExceptCurrent, storeBuffer, 0);
-					EndianBitConverter.Big.CopyBytes(overallTotalPositiveExceptCurrent, storeBuffer, 8);
-				});
+						long overallTotalPositiveExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Positive);
+						long overallTotalNegativeExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Negative);
+
+						EndianBitConverter.Big.CopyBytes(overallTotalNegativeExceptCurrent, storeBuffer, 0);
+						EndianBitConverter.Big.CopyBytes(overallTotalPositiveExceptCurrent, storeBuffer, 8);
+					});
+				}
 			}
 
 			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
@@ -521,6 +525,28 @@ namespace Raven.Database.Counters
                 countersEtagIx.Add(slice, newEtagSlice);
 			}
 
+			public void RecordLastEtagFor(string server, long lastEtag)
+			{
+				var serverId = GetOrAddServerId(server);
+				var key = EndianBitConverter.Big.GetBytes(serverId);
+				serversLastEtag.Add(new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
+			}
+
+			public void UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
+			{
+				using (var memoryStream = new MemoryStream())
+				using (var streamWriter = new StreamWriter(memoryStream))
+				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+				{
+					new JsonSerializer().Serialize(jsonTextWriter, newReplicationDocument);
+					streamWriter.Flush();
+					memoryStream.Position = 0;
+					metadata.Add("replication", memoryStream);
+				}
+
+				parent.ReplicationTask.SignalCounterUpdate();
+			}
+
 			private void EnsureBufferSize(int requiredBufferSize)
 			{
 				if (buffer.Length < requiredBufferSize)
@@ -546,28 +572,6 @@ namespace Raven.Database.Counters
 				}
 
 				return serverId;
-			}
-
-			public void RecordLastEtagFor(string server, long lastEtag)
-			{
-				var serverId = GetOrAddServerId(server);
-				var key = EndianBitConverter.Big.GetBytes(serverId);
-				serversLastEtag.Add(new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
-			}
-
-			public void UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
-			{
-				using (var memoryStream = new MemoryStream())
-				using (var streamWriter = new StreamWriter(memoryStream))
-				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-				{
-					new JsonSerializer().Serialize(jsonTextWriter, newReplicationDocument);
-					streamWriter.Flush();
-					memoryStream.Position = 0;
-					metadata.Add("replication", memoryStream);
-				}
-
-				parent.ReplicationTask.SignalCounterUpdate();
 			}
 
 			private bool IsCounterAlreadyExists(Slice name)
