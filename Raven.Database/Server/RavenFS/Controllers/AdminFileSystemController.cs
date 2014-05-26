@@ -18,9 +18,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
     {
         [HttpPut]
         [Route("fs/admin/{*id}")]
-        public async Task<HttpResponseMessage> Put(string id)
+        public async Task<HttpResponseMessage> Put(string id, bool update = false)
         {
             var docKey = "Raven/FileSystems/" + id;
+           
+            // There are 2 possible ways to call this put. We either want to update a filesystem configuration or we want to create a new one.            
+            if (!update)
+            {
+                // As we are not updating, we should fail when the filesystem already exists.
+                var existingFilesystem = Database.Documents.Get(docKey, null);
+                if (existingFilesystem != null)                   
+                    return GetEmptyMessage(HttpStatusCode.Conflict);
+            }
+
             var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
             FileSystemsLandlord.Protect(dbDoc);
             var json = RavenJObject.FromObject(dbDoc);
@@ -36,8 +46,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Delete(string id)
 		{
 			var docKey = "Raven/FileSystems/" + id;
-			var configuration = FileSystemsLandlord.CreateTenantConfiguration(id);
 
+			var configuration = FileSystemsLandlord.CreateTenantConfiguration(id);
 			if (configuration == null)
 				return GetEmptyMessage();
 

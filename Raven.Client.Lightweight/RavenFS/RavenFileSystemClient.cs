@@ -27,7 +27,7 @@ namespace Raven.Client.RavenFS
 {
     public class RavenFileSystemClient : IDisposable, IHoldProfilingInformation
     {
-        private readonly ServerNotifications notifications;
+        private readonly RemoteFileSystemChanges notifications;
         private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
         private IDisposable failedUploadsObserver;
         private readonly IFileSystemClientReplicationInformer replicationInformer;
@@ -80,10 +80,11 @@ namespace Raven.Client.RavenFS
                 ApiKey = apiKey;
 
                 convention = new FileConvention();
-                notifications = new ServerNotifications(serverUrl, convention);
                 replicationInformer = new RavenFileSystemReplicationInformer(convention, jsonRequestFactory);
                 readStripingBase = replicationInformer.GetReadStripingBase();
-
+                
+                notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
+                               
                 InitializeSecurity();
             }
             catch (Exception)
@@ -91,7 +92,6 @@ namespace Raven.Client.RavenFS
                 Dispose();
                 throw;
             }
-
         }
 
         public string ServerUrl { get; private set; }
@@ -114,7 +114,8 @@ namespace Raven.Client.RavenFS
             {
                 if (value)
                 {
-                    failedUploadsObserver = notifications.FailedUploads().Subscribe(CancelFileUpload);
+                    failedUploadsObserver = notifications.ForCancellations()
+                                                         .Subscribe(CancelFileUpload);
                 }
                 else
                 {
@@ -562,7 +563,7 @@ namespace Raven.Client.RavenFS
             });
         }
 
-        private void CancelFileUpload(UploadFailed uploadFailed)
+        private void CancelFileUpload(CancellationNotification uploadFailed)
         {
             CancellationTokenSource cts;
             if (uploadCancellationTokens.TryGetValue(uploadFailed.UploadId, out cts))
@@ -615,14 +616,17 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        public IServerNotifications Notifications
-        {
-            get { return notifications; }
-        }
-
         public FileConvention Convention
         {
             get { return convention; }
+        }
+
+        /// <summary>
+        /// Subscribe to change notifications from the server
+        /// </summary>
+        public IFileSystemChanges Changes()
+        {
+            return this.notifications;
         }
 
         private static void AddHeaders(RavenJObject metadata, HttpJsonRequest request)
@@ -767,14 +771,7 @@ namespace Raven.Client.RavenFS
 
             public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
             {
-                jsonSerializer = new JsonSerializer
-                {
-                    Converters =
-						{
-							new NameValueCollectionJsonConverter()
-						}
-                };
-
+                this.jsonSerializer = new JsonSerializer();
                 this.ravenFileSystemClient = ravenFileSystemClient;
                 this.convention = convention;
             }
@@ -904,7 +901,7 @@ namespace Raven.Client.RavenFS
                         var response = await request.ReadResponseJsonAsync();
                         using (var jsonTextReader = new RavenJTokenReader(response))
                         {
-                            return new JsonSerializer().Deserialize<ConfigSearchResults>(jsonTextReader);
+                            return jsonSerializer.Deserialize<ConfigSearchResults>(jsonTextReader);
                         }
                     }
                     catch (Exception e)
@@ -1451,6 +1448,32 @@ namespace Raven.Client.RavenFS
                 try
                 {
                     await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));
+                }
+                catch (ErrorResponseException e)
+                {
+                    if (e.StatusCode == HttpStatusCode.Conflict)
+                        throw new InvalidOperationException("Cannot create file system with the name '" + newFileSystemName + "' because it already exists. Use CreateOrUpdateFileSystemAsync in case you want to update an existing file system", e).TryThrowBetterError();
+
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    throw e.TryThrowBetterError();
+                }
+            }
+
+            public async Task CreateOrUpdateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
+            {
+                var requestUriString = string.Format("{0}/fs/admin/{1}?update=true", ravenFileSystemClient.ServerUrl,
+                                                     newFileSystemName ?? ravenFileSystemClient.FileSystemName);
+
+                var request = ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(
+                                        new CreateHttpJsonRequestParams(this, requestUriString,
+                                                                        "PUT", ravenFileSystemClient.PrimaryCredentials, convention));
+
+                try
+                {
+                    await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));                    
                 }
                 catch (Exception e)
                 {
