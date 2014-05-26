@@ -245,6 +245,7 @@ namespace Voron.Impl
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Upper = AbstractPager.PageSize;
 			page.Dirty = true;
+			page.ClearPrefixInfo();
 
 			_dirtyPages.Add(page.PageNumber);
 			return page;

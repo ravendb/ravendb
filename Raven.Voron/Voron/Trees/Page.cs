@@ -11,7 +11,7 @@ namespace Voron.Trees
 {
     public unsafe class Page
     {
-	    private const byte PrefixCount = 8;
+	    public const byte PrefixCount = 8;
         private readonly byte* _base;
         private readonly PageHeader* _header;
 
@@ -477,9 +477,7 @@ namespace Voron.Trees
 		        var copy = tmp.TempPage;
 				copy.Flags = Flags;
 
-				// clear existing prefix offsets of temp page
-		        NativeMethods.memset((byte*) copy.PrefixOffsets, 0, sizeof (ushort) * PrefixCount);
-				copy.AvailablePrefixId = 0;
+		        copy.ClearPrefixInfo();
 
 				for (int j = 0; j < i; j++)
 				{
@@ -491,10 +489,8 @@ namespace Voron.Trees
 									 copy._base + Constants.PageHeaderSize,
 									 _pageSize - Constants.PageHeaderSize);
 
-		        AvailablePrefixId = copy.AvailablePrefixId;
-
-				// update prefix offsets
-				NativeMethods.memset((byte*)PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
+				ClearPrefixInfo();
+				AvailablePrefixId = copy.AvailablePrefixId;
 
 				for (var prefixId = 0; prefixId < AvailablePrefixId; prefixId++)
 		        {
@@ -509,7 +505,13 @@ namespace Voron.Trees
                 LastSearchPosition = i;
         }
 
-        public int NodePositionFor(Slice key, SliceComparer cmp)
+	    public void ClearPrefixInfo()
+	    {
+		    NativeMethods.memset((byte*) PrefixOffsets, 0, sizeof (ushort)*PrefixCount);
+			AvailablePrefixId = 0;
+	    }
+
+	    public int NodePositionFor(Slice key, SliceComparer cmp)
         {
             Search(key, cmp);
             return LastSearchPosition;
