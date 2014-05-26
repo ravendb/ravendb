@@ -232,6 +232,7 @@
     <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\RavenDB_2244.cs" />
     <Compile Include="Issues\RavenDB_2314.cs" />
+    <Compile Include="Issues\RavenDB_2334.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />

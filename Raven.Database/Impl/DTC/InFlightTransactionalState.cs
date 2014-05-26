@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Transactions;
 using Raven.Abstractions;
@@ -44,6 +45,8 @@ namespace Raven.Database.Impl.DTC
 		protected readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>();
 
 		protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>();
+
+		protected readonly HashSet<string> documentIdsToTouch = new HashSet<string>(); 
 
 		protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 		{
@@ -333,12 +336,20 @@ namespace Raven.Database.Impl.DTC
 						};
 
 						log.Debug("Commit of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
+						Trace.WriteLine(String.Format("RunOperationsInTransaction (Prepare Phase) of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key));
+
 						// doc.Etag - represent the _modified_ document etag, and we already
 						// checked etags on previous PUT/DELETE, so we don't pass it here
 						if (doc.Delete)
+						{
 							databaseDelete(doc.Key, doc.CommittedEtag, null);
+							documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
+						}
 						else
+						{
 							databasePut(doc.Key, doc.CommittedEtag, doc.Data, doc.Metadata, null);
+							documentIdsToTouch.Add(doc.Key);
+						}
 					}
 				}
 				finally
