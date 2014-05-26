@@ -688,10 +688,11 @@ namespace Raven.Database.Indexing
 			var dic = current as DynamicJsonObject;
 			if (dic == null)
 				return null;
-			object value = dic.GetValue(Constants.DocumentIdFieldName);
-			if (value == null)
-				return null;
-			return value.ToString();
+		    object value = dic.GetValue(Constants.DocumentIdFieldName) ??
+		                   dic.GetValue(Constants.ReduceKeyFieldName);
+		    if (value != null)
+		        return value.ToString();
+		    return null;
 		}
 
 		public abstract void Remove(string[] keys, WorkContext context);

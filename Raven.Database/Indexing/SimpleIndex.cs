@@ -108,7 +108,7 @@ namespace Raven.Database.Indexing
                                 {
                                     indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
                                 }
-                                catch (InvalidSpatialShapeException e)
+                                catch (Exception e)
                                 {
                                     onErrorFunc(e, doc);
                                     continue;
