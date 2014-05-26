@@ -37,9 +37,12 @@ namespace Raven.Database.Counters.Controllers
 			using (var writer = Storage.CreateWriter())
 			{
 				string counter = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
-				writer.Reset(Storage.CounterStorageUrl, counter);
+				bool changesWereMade = writer.Reset(Storage.CounterStorageUrl, counter);
 
-				writer.Commit();
+				if (changesWereMade)
+				{
+					writer.Commit();
+				}
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Web.Configuration;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Replication;
@@ -462,21 +463,32 @@ namespace Raven.Database.Counters
                 });
             }
 
-			public void Reset(string server, string fullCounterName)
+			public bool Reset(string server, string fullCounterName)
 			{
 				Counter counter = GetCounter(fullCounterName); //TODO: implement get counter without an etag
 				if (counter != null)
 				{
-					Store(server, fullCounterName, result =>
+					long overallTotalPositive = counter.ServerValues.Sum(x => x.Positive);
+					long overallTotalNegative = counter.ServerValues.Sum(x => x.Negative);
+					long currentPositive = counter.ServerValues.Where(x => x.SourceId == ServerId).Select(x => x.Positive).ToList()[0];
+					long currentNegative = counter.ServerValues.Where(x => x.SourceId == ServerId).Select(x => x.Negative).ToList()[0];
+
+					if (overallTotalPositive - overallTotalNegative != 0)
 					{
-
-						long overallTotalPositiveExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Positive);
-						long overallTotalNegativeExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Negative);
-
-						EndianBitConverter.Big.CopyBytes(overallTotalNegativeExceptCurrent, storeBuffer, 0);
-						EndianBitConverter.Big.CopyBytes(overallTotalPositiveExceptCurrent, storeBuffer, 8);
-					});
+						var difference = overallTotalPositive - overallTotalNegative;
+						if (difference > 0)
+						{
+							currentNegative += difference;
+						}
+						else
+						{
+							currentPositive += difference;
+						}
+						Store(server, fullCounterName, currentPositive, currentNegative);
+						return true;
+					}
 				}
+				return false;
 			}
 
 			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
@@ -492,7 +504,8 @@ namespace Raven.Database.Counters
 				EndianBitConverter.Big.CopyBytes(serverId, buffer, end);
 
 				var endOfGroupPrefix = Array.IndexOf(buffer, Constants.GroupSeperator, 0, counterNameSize);
-				Debug.Assert(endOfGroupPrefix == -1); //Could not find group name in counter, no separator
+				if (endOfGroupPrefix == -1)
+					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
 				var groupKeySlice = new Slice(buffer, (ushort) endOfGroupPrefix);
 
