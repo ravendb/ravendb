@@ -245,7 +245,10 @@ namespace Raven.Abstractions.Data
 
 			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
 				path.Append("&pageSize=").Append(PageSize);
-			
+
+
+            if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
+                path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
 
 			if(IsDistinct)
 				path.Append("&distinct=true");
