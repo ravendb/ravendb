@@ -210,7 +210,7 @@ namespace Raven.Database.Server.Controllers
                                 Key = metadata.Value<string>("@id"),
                             }).ToArray();
 
-            Database.Batch(commands);
+            Database.Batch(commands, CancellationToken.None);
         }
 
         private static RavenJToken SetValueInDocument(string value)
