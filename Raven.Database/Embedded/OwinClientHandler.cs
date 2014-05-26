@@ -141,7 +141,7 @@ namespace Raven.Database.Embedded
 
                 _responseStream = new ResponseStream(CompleteResponse);
                 OwinContext.Response.Body = _responseStream;
-                OwinContext.Response.StatusCode = 200;
+                OwinContext.Response.StatusCode = 500;
             }
 
             public IOwinContext OwinContext { get; private set; }

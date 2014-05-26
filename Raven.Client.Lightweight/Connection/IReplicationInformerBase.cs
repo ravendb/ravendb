@@ -11,7 +11,7 @@ using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Connection
 {
-    public interface IReplicationInformerBase<in TClient> : IDisposable
+    public interface IReplicationInformerBase : IDisposable
     {
         /// <summary>
         /// Notify when the failover status changed
@@ -31,17 +31,6 @@ namespace Raven.Client.Connection
         List<OperationMetadata> ReplicationDestinationsUrls { get; }
 
         /// <summary>
-        /// Updates the replication information if needed.
-        /// </summary>
-        Task UpdateReplicationInformationIfNeeded(TClient client);
-
-        /// <summary>
-        /// Refreshes the replication information.
-        /// Expert use only.
-        /// </summary>
-        void RefreshReplicationInformation(TClient client);
-
-        /// <summary>
         /// Get the current failure count for the url
         /// </summary>
         long GetFailureCount(string operationUrl);
@@ -57,8 +46,22 @@ namespace Raven.Client.Connection
 
         void ForceCheck(string primaryUrl, bool shouldForceCheck);
 
-		bool IsServerDown(Exception exception, out bool timeout);
+        bool IsServerDown(Exception exception, out bool timeout);
 
-	    bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode);
+        bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode);
+    }
+
+    public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase
+    {
+        /// <summary>
+        /// Updates the replication information if needed.
+        /// </summary>
+        Task UpdateReplicationInformationIfNeeded(TClient client);
+
+        /// <summary>
+        /// Refreshes the replication information.
+        /// Expert use only.
+        /// </summary>
+        void RefreshReplicationInformation(TClient client);
     }
 }

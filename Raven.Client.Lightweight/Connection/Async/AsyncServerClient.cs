@@ -377,7 +377,7 @@ namespace Raven.Client.Connection.Async
 					throw;
 				}
 
-				// Be compitable with the resopnse from v2.0 server
+				// Be compatible with the response from v2.0 server
 				var opId = ((RavenJObject)jsonResponse)["OperationId"];
 
 				if (opId == null || opId.Type != JTokenType.Integer)
