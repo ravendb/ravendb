@@ -371,9 +371,11 @@ namespace Voron.Trees
 			if (right != null)
 				rightLength = (ushort)key.FindPrefixSize(right);
 
+			// TODO arek - shouldn't we specify the min prefix length
+
 			if (leftLength > 0 && leftLength > rightLength)
 			{
-				prefixedSlice = new PrefixedSlice(AllocatePrefixId(), leftLength, key)
+				prefixedSlice = new PrefixedSlice(AvailablePrefixId, leftLength, key)
 				{
 					NewPrefix = new Slice(left, leftLength)
 				};
@@ -383,7 +385,7 @@ namespace Voron.Trees
 
 			if (rightLength > 0 && rightLength > leftLength)
 			{
-				prefixedSlice = new PrefixedSlice(AllocatePrefixId(), rightLength, key)
+				prefixedSlice = new PrefixedSlice(AvailablePrefixId, rightLength, key)
 				{
 					NewPrefix = new Slice(right, rightLength)
 				};
@@ -419,6 +421,9 @@ namespace Voron.Trees
 			var prefixNodeOffset = (ushort)(Upper - prefixNodeSize);
 			Upper = prefixNodeOffset;
 
+			Debug.Assert(AvailablePrefixId == prefixId);
+			Debug.Assert(PrefixOffsets[prefixId] == 0);
+
 			PrefixOffsets[prefixId] = prefixNodeOffset;
 
 			var prefixNodeHeader = (PrefixNodeHeader*)(_base + prefixNodeOffset);
@@ -426,12 +431,9 @@ namespace Voron.Trees
 			prefixNodeHeader->PrefixLength = prefix.Size;
 
 			prefix.CopyTo((byte*)prefixNodeHeader + Constants.PrefixNodeHeaderSize);
-		}
 
-	    private byte AllocatePrefixId()
-	    {
-			return _header->AvailablePrefixId++;
-	    }
+			AvailablePrefixId++;
+		}
 
         public int SizeLeft
         {
