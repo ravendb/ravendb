@@ -4,20 +4,19 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
+
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
-    using System.Linq;
-	using System.Net.Sockets;
-
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
@@ -201,7 +200,6 @@ namespace Raven.Smuggler
 			    var e = exception as WebException;
 			    if (e != null)
 			    {
-
 					if (e.Status == WebExceptionStatus.ConnectFailure)
 					{
 						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url + (action == SmugglerAction.Between ? " => " + connectionStringOptions2.Url : ""));
@@ -232,9 +230,17 @@ namespace Raven.Smuggler
 
 			        Environment.Exit((int) httpWebResponse.StatusCode);
 			    }
-			    else
+				else
 			    {
-			        Console.WriteLine(ex);
+				    if (exception is SmugglerException)
+				    {
+						Console.WriteLine(exception.Message);
+				    }
+				    else
+				    {
+						Console.WriteLine(exception);
+				    }
+					
 			        Environment.Exit(-1);
 			    }
 			}
