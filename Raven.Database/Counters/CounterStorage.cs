@@ -136,7 +136,7 @@ namespace Raven.Database.Counters
 			return new Writer(this, storageEnvironment);
 		}
 
-	    public void Notify()
+	    private void Notify()
 	    {
 	        CounterUpdated();
 	    }
@@ -466,6 +466,20 @@ namespace Raven.Database.Counters
                 });
             }
 
+			public void Reset(string server, string counter)
+			{
+				Store(server, counter, result =>
+				{
+					Counter c = GetCounter(counter);
+					const int serverId = 0;
+					long overallTotalPositiveExceptCurrent = c.ServerValues.Where(x => x.SourceId != serverId).Sum(x => x.Positive);
+					long overallTotalNegativeExceptCurrent = c.ServerValues.Where(x => x.SourceId != serverId).Sum(x => x.Negative);
+
+					EndianBitConverter.Big.CopyBytes(overallTotalNegativeExceptCurrent, storeBuffer, 0);
+					EndianBitConverter.Big.CopyBytes(overallTotalPositiveExceptCurrent, storeBuffer, 8);
+				});
+			}
+
 			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
 			{
 				
@@ -569,10 +583,13 @@ namespace Raven.Database.Counters
 				parent.ReplicationTask.SignalCounterUpdate();
 			}
 
-			public void Commit()
+			public void Commit(bool notifyParent = true)
 			{
 				transaction.Commit();
-                parent.Notify();
+				if (notifyParent)
+				{
+					parent.Notify();
+				}
 			}
 
 			public void Dispose()

@@ -18,15 +18,29 @@ namespace Raven.Database.Counters.Controllers
 
 		[Route("counters/{counterName}/change")]
 		[HttpPost]
-		public HttpResponseMessage Change(string group, string counterName, long delta)
+		public HttpResponseMessage CounterChange(string group, string counterName, long delta)
 		{
 			using (var writer = Storage.CreateWriter())
 			{
 				string counter = String.Join(Constants.GroupSeperatorString, new [] { group, counterName });
 				writer.Store(Storage.CounterStorageUrl, counter, delta);
 
-				writer.Commit();
+				writer.Commit(delta != 0);
 				return new HttpResponseMessage(HttpStatusCode.Accepted);
+			}
+		}
+
+		[Route("counters/{counterName}/reset")]
+		[HttpGet]
+		public HttpResponseMessage CounterReset(string counterName, string group)
+		{
+			using (var writer = Storage.CreateWriter())
+			{
+				string counter = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+				writer.Reset(Storage.CounterStorageUrl, counter);
+
+				writer.Commit();
+				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
 
@@ -92,6 +106,7 @@ namespace Raven.Database.Counters.Controllers
                 return Request.CreateResponse(HttpStatusCode.OK, results);
             }
         }
+
 		public class CounterView
 		{
 			public string Name { get; set; }
