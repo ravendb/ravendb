@@ -422,7 +422,9 @@ namespace Voron.Trees
 			Upper = prefixNodeOffset;
 
 			Debug.Assert(AvailablePrefixId == prefixId);
-			Debug.Assert(PrefixOffsets[prefixId] == 0);
+
+			if (PrefixOffsets[prefixId] != 0)
+				throw new InvalidOperationException(string.Format("Cannot write a prefix '{0}' at the following offset position: {1} because it's already taken by another prefix. The offset for the prefix {1} is {2}. ", prefix, prefixId, PrefixOffsets[prefixId]));
 
 			PrefixOffsets[prefixId] = prefixNodeOffset;
 
@@ -475,11 +477,8 @@ namespace Voron.Trees
 		        var copy = tmp.TempPage;
 				copy.Flags = Flags;
 
-				// clear existing prefixes
-				for (var prefixId = 0; prefixId < copy.AvailablePrefixId; prefixId++)
-				{
-					copy.PrefixOffsets[prefixId] = 0;
-				}
+				// clear existing prefix offsets of temp page
+		        NativeMethods.memset((byte*) copy.PrefixOffsets, 0, sizeof (ushort) * PrefixCount);
 				copy.AvailablePrefixId = 0;
 
 				for (int j = 0; j < i; j++)
@@ -494,12 +493,12 @@ namespace Voron.Trees
 
 		        AvailablePrefixId = copy.AvailablePrefixId;
 
-		        for (var prefixId = 0; prefixId < PrefixCount; prefixId++)
+				// update prefix offsets
+				NativeMethods.memset((byte*)PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
+
+				for (var prefixId = 0; prefixId < AvailablePrefixId; prefixId++)
 		        {
-			        if (prefixId < AvailablePrefixId)
-				        PrefixOffsets[prefixId] = copy.PrefixOffsets[prefixId];
-			        else
-				        PrefixOffsets[prefixId] = 0;
+					PrefixOffsets[prefixId] = copy.PrefixOffsets[prefixId];
 		        }
 
 				Upper = copy.Upper;
