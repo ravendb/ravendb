@@ -781,20 +781,23 @@ namespace Raven.Database
             if (TransactionalStorage.SupportsDtc == false)
                 throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
 
-            try
-            {
-                inFlightTransactionalState.Prepare(txId);
-                Log.Debug("Prepare of tx {0} completed", txId);
-            }
-            catch (Exception e)
-            {
-                if (TransactionalStorage.HandleException(e))
-                {
-                    return;
-                }
+	        using (DocumentLock.Lock())
+	        {
+		        try
+		        {
+			        inFlightTransactionalState.Prepare(txId);
+			        Log.Debug("Prepare of tx {0} completed", txId);
+		        }
+		        catch (Exception e)
+		        {
+			        if (TransactionalStorage.HandleException(e))
+			        {
+				        return;
+			        }
 
-                throw;
-            }
+			        throw;
+		        }
+	        }
         }
 
         public void Rollback(string txId)
@@ -1111,15 +1114,16 @@ namespace Raven.Database
 
             public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
             {
-                string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
-                        throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
-
-                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
-                    storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
-                }
+	            string storageEngineTypeName = "esent";
+//                string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+//                if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
+//                {
+//                    if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
+//                        throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
+//
+//                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
+//                    storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
+//                }
 
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
                 database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
