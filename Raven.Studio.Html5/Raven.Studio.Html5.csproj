@@ -285,6 +285,7 @@
     <TypeScriptCompile Include="App\viewmodels\savePatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\executePatchConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\quotas.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
@@ -308,6 +309,7 @@
     <Content Include="App\views\filesystem\status.html" />
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
+    <Content Include="App\views\quotas.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
     <Content Include="App\views\filesystem\createConfigurationKey.html" />
     <Content Include="App\views\filesystem\deleteConfigurationKeys.html" />

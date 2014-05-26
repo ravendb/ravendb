@@ -92,11 +92,12 @@ namespace Voron.Trees
 			long currentValue = 0;
 
 			var read = Read(key);
-			if (read != null)
-				currentValue = read.Reader.ReadLittleEndianInt64();
+		    if (read != null)
+		        currentValue = *(long*)read.Reader.Base;
 
 			var value = currentValue + delta;
-			Add(key, BitConverter.GetBytes(value), version);
+            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+		    *result = value;
 
 			return value;
 		}

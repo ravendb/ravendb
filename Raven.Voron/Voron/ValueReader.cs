@@ -17,6 +17,8 @@ namespace Voron
 		private readonly int _len;
 		private readonly byte* _val;
 
+        public byte* Base { get { return _val; } }
+
 		public ValueReader(Stream stream)
 		{
 			long position = stream.Position;

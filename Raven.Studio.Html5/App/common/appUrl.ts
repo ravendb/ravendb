@@ -37,6 +37,7 @@ class appUrl {
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
+        quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
@@ -251,6 +252,10 @@ class appUrl {
 
     static forDatabaseSettings(db: database): string {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forQuotas(db: database): string {
+        return "#databases/settings/quotas?" + appUrl.getEncodedDbPart(db);
     }
 
     static forPeriodicExport(db: database): string {
