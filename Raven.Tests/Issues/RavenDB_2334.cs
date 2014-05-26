@@ -6,16 +6,60 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Tests.Bundles.MoreLikeThis;
 using Raven.Tests.Helpers;
 using Xunit;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Issues
 {
 	public class RavenDB_2334 : RavenTestBase
 	{
+	    [Fact]
+	    public void ConcurrentDtcTransactions()
+	    {
+	        using (var store = NewDocumentStore(requestedStorage: "esent"))
+	        {
+	            var documentDatabase = store.DocumentDatabase;
+
+	            var tx1 = new TransactionInformation
+	            {
+	                Id = "tx1",
+	                Timeout =TimeSpan.FromHours(1)
+	            };
+	            var tx2 = new TransactionInformation
+	            {
+	                Id = "tx2",
+	                Timeout =TimeSpan.FromHours(1)
+	            };
+
+	            documentDatabase.Put("test/1", null, new RavenJObject(), new RavenJObject(), tx1);
+                documentDatabase.Put("test/2", null, new RavenJObject(), new RavenJObject(), tx1);
+
+                documentDatabase.Put("test/3", null, new RavenJObject(), new RavenJObject(), tx2);
+                documentDatabase.Put("test/4", null, new RavenJObject(), new RavenJObject(), tx2);
+                
+                documentDatabase.PrepareTransaction("tx1");
+                documentDatabase.PrepareTransaction("tx2");
+
+                documentDatabase.Commit("tx2");
+
+                WaitForIndexing(documentDatabase);
+
+                documentDatabase.Commit("tx1");
+
+                WaitForIndexing(documentDatabase);
+
+	            var queryResult = store.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery(), null);
+
+                Assert.Equal(4, queryResult.TotalResults);
+	        }
+	    }
+
 		[Fact]
 		public void Many_concurrent_inserts_from_different_DocumentStore_within_TransactionScope_should_not_result_in_missing_documents_in_index()
 		{
@@ -68,8 +112,6 @@ namespace Raven.Tests.Issues
 
 					WaitForIndexing(store);
 
-					Assert.Equal(DocumentStoreCount * ParallelThreadCount * DocsPerThread,
-						store.DatabaseCommands.GetStatistics().Indexes.First().IndexingSuccesses);
 					using (var session = store.OpenSession())
 						Assert.Equal(DocumentStoreCount * ParallelThreadCount * DocsPerThread, session.Query<dynamic>().Count());
 				}

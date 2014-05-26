@@ -13,6 +13,7 @@ namespace Raven.Database.Impl.DTC
 	public class EsentTransactionContext : IDisposable
 	{
 		private readonly IntPtr sessionContext;
+	    public HashSet<string> DocumentIdsToTouch; 
 
 		public EsentTransactionContext(Session session, IntPtr context, DateTime createdAt)
 		{

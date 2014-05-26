@@ -75,22 +75,23 @@ namespace Raven.Database.Impl.DTC
 				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
-					using (storage.SetTransactionContext(context))
-					{
-						storage.Batch(accessor =>
-						{
-							foreach (var docId in documentIdsToTouch)
-							{
-								Etag preTouchEtag;
-								Etag afterTouchEtag;
-								Trace.WriteLine("Commit("+ id +"): Touch document " + docId);
-								accessor.Documents.TouchDocument(docId,out preTouchEtag,out afterTouchEtag);
-							}
-						});
-					}
-					context.Transaction.Commit(txMode);
+				    if (context.DocumentIdsToTouch != null)
+				    {
+				        using (storage.SetTransactionContext(context))
+				        {
+				            storage.Batch(accessor =>
+				            {
+				                foreach (var docId in context.DocumentIdsToTouch)
+				                {
+				                    Etag preTouchEtag;
+				                    Etag afterTouchEtag;
+				                    accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+				                }
+				            });
+				        }
+				    }
+				    context.Transaction.Commit(txMode);
 					
-					documentIdsToTouch.Clear();
 					foreach (var afterCommit in context.ActionsAfterCommit)
 					{
 						afterCommit();
@@ -119,7 +120,11 @@ namespace Raven.Database.Impl.DTC
 			{
 				using (storage.SetTransactionContext(context))
 				{
-					storage.Batch(accessor => RunOperationsInTransaction(id));
+					storage.Batch(accessor =>
+					{
+					    var documentsToTouch = RunOperationsInTransaction(id);
+					    context.DocumentIdsToTouch = documentsToTouch;
+					});
 				}
 			}
 			catch (Exception)

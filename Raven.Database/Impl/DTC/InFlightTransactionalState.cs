@@ -46,8 +46,6 @@ namespace Raven.Database.Impl.DTC
 
 		protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>();
 
-		protected readonly HashSet<string> documentIdsToTouch = new HashSet<string>(); 
-
 		protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 		{
 			this.databasePut = databasePut;
@@ -311,17 +309,18 @@ namespace Raven.Database.Impl.DTC
 			return transactionStates.ContainsKey(txId);
 		}
 
-		protected void RunOperationsInTransaction(string id)
+        protected HashSet<string> RunOperationsInTransaction(string id)
 		{
 			TransactionState value;
 		    if (transactionStates.TryGetValue(id, out value) == false)
-		        return; // no transaction, cannot do anything to this
+		        return null; // no transaction, cannot do anything to this
 
 			lock (value)
 			{
 				currentlyCommittingTransaction.Value = id;
 				try
 				{
+				    var documentIdsToTouch = new HashSet<string>();
 					foreach (var change in value.changes)
 					{
 						var doc = new DocumentInTransactionData
@@ -351,6 +350,7 @@ namespace Raven.Database.Impl.DTC
 							documentIdsToTouch.Add(doc.Key);
 						}
 					}
+				    return documentIdsToTouch;
 				}
 				finally
 				{
