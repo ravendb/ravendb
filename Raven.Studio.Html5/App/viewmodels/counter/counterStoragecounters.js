@@ -100,4 +100,4 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
     
     return counterStorageCounters;
 });
-//# sourceMappingURL=counterStorageCounters.js.map
+//# sourceMappingURL=counterStoragecounters.js.map

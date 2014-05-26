@@ -35,6 +35,7 @@
                     return "none";
                 }
             });
+            this.disabled(dto.Disabled);
             this.serverUrl(dto.ServerUrl);
             this.counterStorageName(dto.CounterStorageName);
             this.username(dto.Username);

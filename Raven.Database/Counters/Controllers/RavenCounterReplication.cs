@@ -268,13 +268,13 @@ namespace Raven.Database.Counters.Controllers
 	        }
 	        catch (Exception ex)
 	        {
-                Log.ErrorException("Error occured replicating to: " + destination.ServerUrl, ex);
+				Log.ErrorException("Error occured replicating to: " + destination.CounterStorageUrl, ex);
                 RecordFailure(destination.ServerUrl, ex.Message);
 	            return false;
 	        }
 	        finally
 	        {
-                var holder = activeReplicationTasks.GetOrAdd(destination.ServerUrl, s => new SemaphoreSlim(0, 1));
+				var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
                 holder.Release();
 	        }
 	    }
@@ -311,13 +311,13 @@ namespace Raven.Database.Counters.Controllers
             long etag = 0;
             var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
 
-			if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, out etag, out lastError))
+			if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError))
             {
                 var replicationData = GetCountersDataSinceEtag(etag);
 
                 if (replicationData.Counters.Count > 0)
                 {
-                    return PerformReplicationToServer(connectionStringOptions, etag, replicationData, out lastError) ?
+					return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, etag, replicationData, out lastError) ?
                         ReplicationResult.Success : ReplicationResult.Failure;
                 }
 
@@ -327,13 +327,13 @@ namespace Raven.Database.Counters.Controllers
             return ReplicationResult.Failure;
         }
 
-	    private bool TryGetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, out long lastEtag, out string lastError)
+	    private bool TryGetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
 	    {
             lastEtag = 0;
             try
             {
                 long etag = 0;
-				var url = string.Format("{0}/lastEtag/{1}", connectionStringOptions.Url, GetServerNameForWire(storage.CounterStorageUrl));
+				var url = string.Format("{0}/lastEtag/{1}", counterStorageUrl, GetServerNameForWire(storage.CounterStorageUrl));
                 var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
                 request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
 
@@ -343,7 +343,7 @@ namespace Raven.Database.Counters.Controllers
             }
             catch (WebException e)
             {
-				lastError = HandleReplicationDistributionWebException(e, connectionStringOptions.Url);
+				lastError = HandleReplicationDistributionWebException(e, counterStorageUrl);
                 return false;
             }
             catch (Exception e)
@@ -352,14 +352,14 @@ namespace Raven.Database.Counters.Controllers
                 return false;
             }
 	    }
-        
-        private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, out long lastEtag, out string lastError)
+
+		private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
         {
-	        if (!TryGetLastReplicatedEtagFrom(connectionStringOptions, out lastEtag, out lastError))
+	        if (!TryGetLastReplicatedEtagFrom(connectionStringOptions, counterStorageUrl, out lastEtag, out lastError))
 	        {
 				if (IsFirstFailure(connectionStringOptions.Url))
 	            {
-	                return TryGetLastReplicatedEtagFrom(connectionStringOptions, out lastEtag, out lastError);
+	                return TryGetLastReplicatedEtagFrom(connectionStringOptions, counterStorageUrl, out lastEtag, out lastError);
 	            }
                 return false;
 	        }
@@ -367,11 +367,11 @@ namespace Raven.Database.Counters.Controllers
 	        return true;
 	    }
 
-		private bool TryPerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, ReplicationMessage message, out string lastError)
+		private bool TryPerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, ReplicationMessage message, out string lastError)
         {
             try
             {
-                var url = string.Format("{0}/replication", connectionStringOptions.Url);
+				var url = string.Format("{0}/replication", counterStorageUrl);
                 lastError = string.Empty;
                 var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
                 request.Write(message.GetRavenJObject());
@@ -381,26 +381,26 @@ namespace Raven.Database.Counters.Controllers
             }
             catch (WebException e)
             {
-                lastError = HandleReplicationDistributionWebException(e, connectionStringOptions.Url);
+				lastError = HandleReplicationDistributionWebException(e, counterStorageUrl);
                 return false;
             }
             catch (Exception e)
             {
-                Log.ErrorException("Error occured replicating to: " + connectionStringOptions.Url, e);
+				Log.ErrorException("Error occured replicating to: " + counterStorageUrl, e);
                 lastError = e.Message;
                 return false;
             }
         }
 
-		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, long etag, ReplicationMessage message, out string lastError)
+		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, long etag, ReplicationMessage message, out string lastError)
 		{
 			var destinationUrl = connectionStringOptions.Url;
 
-			if (!TryPerformReplicationToServer(connectionStringOptions, message, out lastError))
+			if (!TryPerformReplicationToServer(connectionStringOptions, counterStorageUrl, message, out lastError))
 	        {
 	            if (IsFirstFailure(destinationUrl))
 	            {
-					return TryPerformReplicationToServer(connectionStringOptions, message, out lastError);
+					return TryPerformReplicationToServer(connectionStringOptions, counterStorageUrl, message, out lastError);
 	            }
                 return false;
 	        }
@@ -430,7 +430,7 @@ namespace Raven.Database.Counters.Controllers
 				        var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
 						var destinationForReplication = replicationData.Destinations.Where(
-							destination => !runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts));
+							destination => (!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
 						
 				        foreach (CounterStorageReplicationDestination destination in destinationForReplication)
 				        {

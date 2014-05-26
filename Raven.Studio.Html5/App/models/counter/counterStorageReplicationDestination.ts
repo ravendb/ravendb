@@ -9,6 +9,7 @@
     apiKey = ko.observable<string>().extend({ required: true });
 
     constructor(dto: counterStorageReplicationDestinatinosDto) {
+        this.disabled(dto.Disabled);
         this.serverUrl(dto.ServerUrl);
         this.counterStorageName(dto.CounterStorageName);
         this.username(dto.Username);
