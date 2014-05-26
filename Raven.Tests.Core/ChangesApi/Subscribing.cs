@@ -82,8 +82,8 @@ namespace Raven.Tests.Core.ChangesApi
         {
             using (var store = GetDocumentStore())
             {
-                store.Changes()
-                    .ForAllIndexes()
+                store.Changes().Task.Result
+                    .ForAllIndexes().Task.Result
                     .Subscribe(change => 
                     {
                         if (change.Type == IndexChangeTypes.IndexAdded)
@@ -99,8 +99,8 @@ namespace Raven.Tests.Core.ChangesApi
                 var usersByName = new Users_ByName();
                 usersByName.Execute(store);
                 WaitForIndexing(store);
-                store.Changes()
-                    .ForIndex(usersByName.IndexName)
+                store.Changes().Task.Result
+                    .ForIndex(usersByName.IndexName).Task.Result
                     .Subscribe(change =>
                     {
                         if (change.Type == IndexChangeTypes.MapCompleted)
@@ -112,8 +112,8 @@ namespace Raven.Tests.Core.ChangesApi
                 var companiesSompanyByType = new Companies_CompanyByType();
                 companiesSompanyByType.Execute(store);
                 WaitForIndexing(store);
-                store.Changes()
-                    .ForIndex(companiesSompanyByType.IndexName)
+                store.Changes().Task.Result
+                    .ForIndex(companiesSompanyByType.IndexName).Task.Result
                     .Subscribe(change =>
                     {
                         if (change.Type == IndexChangeTypes.RemoveFromIndex)
@@ -145,8 +145,8 @@ namespace Raven.Tests.Core.ChangesApi
                 }
 
 
-                store.Changes()
-                    .ForAllIndexes()
+                store.Changes().Task.Result
+                    .ForAllIndexes().Task.Result
                     .Subscribe(change =>
                     {
                         if (change.Type == IndexChangeTypes.IndexRemoved)
@@ -171,8 +171,8 @@ namespace Raven.Tests.Core.ChangesApi
 
                 var eTag = source.DatabaseCommands.Get("docs/1").Etag;
 
-                destination.Changes()
-                    .ForAllReplicationConflicts()
+                destination.Changes().Task.Result
+                    .ForAllReplicationConflicts().Task.Result
                     .Subscribe(conflict =>
                     {
                         output = "conflict";
