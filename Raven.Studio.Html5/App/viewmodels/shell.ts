@@ -34,10 +34,14 @@ import changeSubscription = require("models/changeSubscription");
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 
+import counterStorage = require("models/counter/counterStorage");
+import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
+
 class shell extends viewModelBase {
     private router = router;
 
     databases = ko.observableArray<database>();
+    counterStorages = ko.observableArray<counterStorage>();
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
@@ -51,10 +55,11 @@ class shell extends viewModelBase {
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
-
     canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
-
+    
+    coutersLoadedTask:JQueryPromise<any>;
     currentRawUrl = ko.observable<string>("");
+    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
@@ -66,7 +71,26 @@ class shell extends viewModelBase {
 
     globalDocPrefixChangesSubscription: changeSubscription;
 
-    modelPollingTimeoutFlag:boolean=true;
+    modelPollingTimeoutFlag: boolean = true;
+    
+    getCurrentActiveDBFeatureName() {
+        if (this.appUrls.isAreaActive('filesystems')() === true) {
+            return 'File Systems';
+        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+            return 'Counter Storages';
+        } else {
+            return 'Databases';
+        }
+    }
+    getCurrentActiveDBFeatureHref () {
+        if (this.appUrls.isAreaActive('filesystems')() === true) {
+            return this.appUrls.filesystems();
+        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+            return this.appUrls.counterStorageManagement();
+        } else {
+            return this.appUrls.databases();
+        }
+    }
     
     constructor() {
         super();
@@ -78,6 +102,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
+        
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -108,6 +133,11 @@ class shell extends viewModelBase {
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+            { route: ['', 'counterstorages'], title: 'File Systems', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages},
+            { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
+            { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
+            { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -221,6 +251,26 @@ class shell extends viewModelBase {
         this.filesystemsLoadedTask = new getFilesystemsCommand()
             .execute()
             .done(results => this.filesystemsLoaded(results));
+
+
+        this.coutersLoadedTask = new getCounterStoragesCommand()
+            .execute()
+            .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+    }
+
+    counterStoragesLoaded(results: counterStorage[]) {
+        /*
+         * 
+         * this.filesystems(filesystems);
+        if (this.filesystems().length != 0) {
+            this.filesystems.first(x=> x.isVisible()).activate();
+        }
+         */
+        
+        this.counterStorages(results);
+        if (this.counterStorages().length != 0) {
+            this.counterStorages.first(x => x.isVisible()).activate();
+        }
     }
 
     fetchStudioConfig() {

@@ -1,5 +1,6 @@
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
+import counterStorage = require("models/counter/counterStorage");
 import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
@@ -11,6 +12,7 @@ class appUrl {
     private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
 
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
@@ -67,6 +69,13 @@ class appUrl {
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+        couterStorages: ko.computed(() => appUrl.forCounterStorages()),
+        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?counterstorage=" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
+        counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
+        counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
+        counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
+        counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
+
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -77,8 +86,32 @@ class appUrl {
         return isThereAny;
     }
 
-    static forCounters(): string {
-        return "#databases/counters";
+    static getEncodedCounterStoragePart(counterStorage:counterStorage): string {
+        return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
+    }
+
+    static forCounterStorages(): string {
+        return "#counterstorages";
+    }
+
+    static forCounterStorageCounters(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/counters?" + counterStroragePart;
+    }
+
+    static forCounterStorageReplication(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/replication?" + counterStroragePart;
+    }
+
+    static forCounterStorageStats(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/stats?" + counterStroragePart;
+    }
+
+    static forCounterStorageConfiguration(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/configuration?" + counterStroragePart;
     }
 
     static forDatabases(): string {
@@ -310,6 +343,8 @@ class appUrl {
         }
         else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
+        } else if (res && res instanceof counterStorage) {
+            return appUrl.baseUrl + "/counters/" + res.name;
         }
 
         return this.baseUrl;
@@ -358,6 +393,11 @@ class appUrl {
     static forFilesystem(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems?" + filesystemPart;
+    }
+
+    static forCounterStorage(cs: counterStorage): string {
+        var counterStoragePart = appUrl.getEncodedCounterPart(cs);
+        return "#filesystems?" + counterStoragePart;
     }
 
     static forIndexesRawData(db: database): string {
@@ -566,6 +606,10 @@ class appUrl {
 
     private static getEncodedFsPart(fs?: filesystem) {
         return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
+    }
+
+    private static getEncodedCounterPart(cs?: counterStorage) {
+        return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
 
     public static warnWhenUsingSystemDatabase: boolean = true;

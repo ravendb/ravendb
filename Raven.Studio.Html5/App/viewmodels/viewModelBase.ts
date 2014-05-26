@@ -1,6 +1,7 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
+import counterStorage = require("models/counter/counterStorage");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import changesApi = require("common/changesApi");
@@ -17,6 +18,7 @@ import ace = require("ace/ace");
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
@@ -45,7 +47,7 @@ class viewModelBase {
         }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
-
+        
         return true;
     }
 
