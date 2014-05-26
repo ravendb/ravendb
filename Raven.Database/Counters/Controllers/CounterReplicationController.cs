@@ -117,9 +117,12 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = Storage.CreateReader())
 			{
 				var replicationData = reader.GetReplicationData();
-				var responseCode = (replicationData != null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
 
-				return Request.CreateResponse(responseCode, reader.GetReplicationData());
+				if (replicationData == null || replicationData.Destinations.Count == 0)
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound);
+				}
+				return Request.CreateResponse(HttpStatusCode.OK, replicationData);
 			}
 		}
 

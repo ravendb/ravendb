@@ -26,7 +26,7 @@ define(["require", "exports", "commands/commandBase"], function(require, exports
                     return _this.reportSuccess("Replication Destionations of '" + _this.counterStorage.name + "' were successfully refreshed!");
                 });
                 getTask.fail(function (response) {
-                    return _this.reportError("Failed to refresh Replication Destionations!", response.responseText, response.statusText);
+                    return _this.reportWarning("There are no saved replication destionations on the server!", response.responseText, response.statusText);
                 });
             }
             return getTask;

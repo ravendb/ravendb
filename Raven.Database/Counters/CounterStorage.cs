@@ -556,8 +556,6 @@ namespace Raven.Database.Counters
 
 			public void UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
 			{
-				string result = null;
-
 				using (var memoryStream = new MemoryStream())
 				using (var streamWriter = new StreamWriter(memoryStream))
 				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
