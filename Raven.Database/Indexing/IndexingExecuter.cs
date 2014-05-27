@@ -68,7 +68,12 @@ namespace Raven.Database.Indexing
 			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Id + ": " + indexesStat.Priority);
 		}
 
-		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+	    protected override void UpdateStalenessMetrics(int staleCount)
+	    {
+	        context.MetricsCounters.StaleIndexMaps.Update(staleCount);
+	    }
+
+	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
             return (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
 		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
