@@ -157,19 +157,21 @@ namespace Voron.Trees
 				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 				{
 					var nodeHeader = nestedPage.GetNode(i);
-					nodeKey = new PrefixedSlice(nodeHeader);
+					nodeKey = newNestedPage.ConvertToPrefixedKey(nestedPage.GetFullNodeKey(nodeHeader), i);
 					newNestedPage.AddDataNode(i, nodeKey, 0,
 						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
 
 				newNestedPage.Search(value, _cmp);
-				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, new PrefixedSlice(value), 0, 0);
+				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, newNestedPage.ConvertToPrefixedKey(value, newNestedPage.LastSearchPosition), 0, 0);
 			}
 		}
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
-			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, new PrefixedSlice(value), 0) + Constants.NodeOffsetSize;
+			var prefixedValue = new PrefixedSlice(value); // first item is never prefixed
+
+			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, prefixedValue, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
 			{
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
@@ -197,7 +199,7 @@ namespace Voron.Trees
 
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
-			nestedPage.AddDataNode(0, new PrefixedSlice(value), 0, 0);
+			nestedPage.AddDataNode(0, prefixedValue, 0, 0);
 		}
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
@@ -268,7 +270,7 @@ namespace Voron.Trees
 
 			var item = page.Search(key, _cmp);
 
-			var fetchedNodeKey = page.GetFullNodeKey(item); // TODO arek - PrefixedSlice?
+			var fetchedNodeKey = page.GetFullNodeKey(item);
 			if (fetchedNodeKey.Compare(key, _cmp) != 0)
 			{
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");

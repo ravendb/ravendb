@@ -42,7 +42,7 @@ namespace Voron.Trees
 
 		private ushort* PrefixOffsets { get { return _header->PrefixOffsets; } }
 
-		private byte AvailablePrefixId { get { return _header->AvailablePrefixId; } set { _header->AvailablePrefixId = value; }}
+		private byte NextPrefixId { get { return _header->NextPrefixId; } set { _header->NextPrefixId = value; }}
 
         public ushort* KeysOffsets
         {
@@ -127,7 +127,7 @@ namespace Voron.Trees
 	    private PrefixNode GetPrefixNode(byte n)
 	    {
 			Debug.Assert(n < PrefixCount, "Requested prefix number was: " + n);
-			Debug.Assert(n <= (AvailablePrefixId - 1), "Requested prefix number was: " + n + ", while the available prefix id is " + (AvailablePrefixId - 1));
+			Debug.Assert(n <= (NextPrefixId - 1), "Requested prefix number was: " + n + ", while the max available prefix id is " + (NextPrefixId - 1));
 
 		    var prefixOffset = PrefixOffsets[n];
 
@@ -313,7 +313,7 @@ namespace Voron.Trees
 
 	    private bool TryUseExistingPrefix(Slice key, out PrefixedSlice prefixedSlice)
 	    {
-		    for (byte prefixId = 0; prefixId < AvailablePrefixId; prefixId++)
+		    for (byte prefixId = 0; prefixId < NextPrefixId; prefixId++)
 		    {
 			    var prefix = GetPrefixNode(prefixId);
 
@@ -333,7 +333,7 @@ namespace Voron.Trees
 
 		private bool TryCreateNewPrefix(Slice key, int nodeIndex, out PrefixedSlice prefixedSlice)
 		{
-			if (AvailablePrefixId >= PrefixCount || NumberOfEntries == 0)
+			if (NextPrefixId >= PrefixCount || NumberOfEntries == 0)
 			{
 				prefixedSlice = null;
 				return false;
@@ -375,7 +375,7 @@ namespace Voron.Trees
 
 			if (leftLength > 0 && leftLength > rightLength)
 			{
-				prefixedSlice = new PrefixedSlice(AvailablePrefixId, leftLength, key)
+				prefixedSlice = new PrefixedSlice(NextPrefixId, leftLength, key)
 				{
 					NewPrefix = new Slice(left, leftLength)
 				};
@@ -385,7 +385,7 @@ namespace Voron.Trees
 
 			if (rightLength > 0 && rightLength > leftLength)
 			{
-				prefixedSlice = new PrefixedSlice(AvailablePrefixId, rightLength, key)
+				prefixedSlice = new PrefixedSlice(NextPrefixId, rightLength, key)
 				{
 					NewPrefix = new Slice(right, rightLength)
 				};
@@ -421,7 +421,7 @@ namespace Voron.Trees
 			var prefixNodeOffset = (ushort)(Upper - prefixNodeSize);
 			Upper = prefixNodeOffset;
 
-			Debug.Assert(AvailablePrefixId == prefixId);
+			Debug.Assert(NextPrefixId == prefixId);
 
 			if (PrefixOffsets[prefixId] != 0)
 				throw new InvalidOperationException(string.Format("Cannot write a prefix '{0}' at the following offset position: {1} because it's already taken by another prefix. The offset for the prefix {1} is {2}. ", prefix, prefixId, PrefixOffsets[prefixId]));
@@ -434,7 +434,7 @@ namespace Voron.Trees
 
 			prefix.CopyTo((byte*)prefixNodeHeader + Constants.PrefixNodeHeaderSize);
 
-			AvailablePrefixId++;
+			NextPrefixId++;
 		}
 
         public int SizeLeft
@@ -490,9 +490,9 @@ namespace Voron.Trees
 									 _pageSize - Constants.PageHeaderSize);
 
 				ClearPrefixInfo();
-				AvailablePrefixId = copy.AvailablePrefixId;
+				NextPrefixId = copy.NextPrefixId;
 
-				for (var prefixId = 0; prefixId < AvailablePrefixId; prefixId++)
+				for (var prefixId = 0; prefixId < NextPrefixId; prefixId++)
 		        {
 					PrefixOffsets[prefixId] = copy.PrefixOffsets[prefixId];
 		        }
@@ -508,7 +508,7 @@ namespace Voron.Trees
 	    public void ClearPrefixInfo()
 	    {
 		    NativeMethods.memset((byte*) PrefixOffsets, 0, sizeof (ushort)*PrefixCount);
-			AvailablePrefixId = 0;
+			NextPrefixId = 0;
 	    }
 
 	    public int NodePositionFor(Slice key, SliceComparer cmp)
@@ -571,7 +571,7 @@ namespace Voron.Trees
 				    KeysOffsets[i] = Upper;
 			    }
 
-			    for (byte i = 0; i < AvailablePrefixId; i++)
+			    for (byte i = 0; i < NextPrefixId; i++)
 			    {
 				    var prefixNode = tempPage.GetPrefixNode(i);
 
@@ -720,7 +720,7 @@ namespace Voron.Trees
                 size += nodeSize + (nodeSize & 1);
             }
 
-			for (byte i = 0; i < AvailablePrefixId; i++)
+			for (byte i = 0; i < NextPrefixId; i++)
 			{
 				var prefixNode = GetPrefixNode(i);
 
