@@ -32,12 +32,18 @@ namespace Voron.Trees
 			_cursor = lazy.Value;
 			_cursor.Pop();
 			var node = _currentPage.Search(key);
-			if (node == null)
-			{
-				return false;
-			}
-			_currentKey.Set(node);
-			return this.ValidateCurrentKey(Current);
+		    if (node != null)
+		    {
+                _currentKey.Set(node);
+                return this.ValidateCurrentKey(Current);
+		    }
+		    
+            // The key is not found in the db, but we are Seek()ing for equals or starts with.
+		    // We know that the exact value isn't there, but it is possible that the next page has values 
+		    // that is actually greater than the key, so we need to check it as well.
+
+		    _currentPage.LastSearchPosition = _currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
+		    return MoveNext();
 		}
 
 		public Slice CurrentKey
