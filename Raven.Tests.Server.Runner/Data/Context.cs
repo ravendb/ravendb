@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Server;
 
@@ -56,7 +57,10 @@ namespace Raven.Tests.Server.Runner.Data
 		public static void DeleteDirectory(string directory)
 		{
 			IOExtensions.DeleteDirectory(directory);
-			SpinWait.SpinUntil(() => Directory.Exists(directory) == false, TimeSpan.FromSeconds(5));
+			if (SpinWait.SpinUntil(() => Directory.Exists(directory) == false, TimeSpan.FromSeconds(5)) == false)
+			{
+			    throw new Exception("Unable to delete directory:" + directory);
+			}
 		}
 	}
 }
