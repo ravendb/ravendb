@@ -95,6 +95,9 @@ namespace Raven.Tests.Server.Runner.Controllers
 		public void DeleteServer([FromUri]int port)
 		{
 			MaybeRemoveServer(port);
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
 		}
 
 		private static RavenDbServer CreateNewServer(InMemoryRavenConfiguration configuration, bool deleteData)
