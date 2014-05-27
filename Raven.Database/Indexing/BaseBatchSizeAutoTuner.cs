@@ -19,13 +19,27 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<Guid, long> currentlyUsedBatchSizes;
 		private readonly long memoryLimitForIndexingInBytes;
 
+		private readonly object batchTimingSyncObject = new object();
+
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
+// ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 			currentlyUsedBatchSizes = new ConcurrentDictionary<Guid, long>();
 			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
+			batchTimingsSumInMs = 0;
+			batchCount = 0;
+		}
+
+		public void ReportBatchTiming(long batchTimingInMs)
+		{
+			lock (batchTimingSyncObject)
+			{
+				batchCount++;
+				batchTimingsSumInMs += (ulong)batchTimingInMs;
+			}
 		}
 
 		public void HandleLowMemory()
@@ -248,5 +262,17 @@ namespace Raven.Database.Indexing
 		protected abstract int LastAmountOfItemsToRemember { get; set; }
 		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
+
+		private ulong batchCount;
+
+		private ulong batchTimingsSumInMs;
+		public ulong BatchLoadFromDiskAverageTiming
+		{
+			get
+			{
+				lock(batchTimingSyncObject)
+					return (batchCount == 0) ? 0 : batchTimingsSumInMs / batchCount;
+			}
+		}
 	}
 }

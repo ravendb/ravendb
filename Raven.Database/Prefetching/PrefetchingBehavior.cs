@@ -90,6 +90,7 @@ namespace Raven.Database.Prefetching
 		{
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
+			var sw = Stopwatch.StartNew();
 			do
 			{
 				var nextEtagToIndex = GetNextDocEtag(etag);
@@ -105,12 +106,13 @@ namespace Raven.Database.Prefetching
 
 				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, ref result);
 
-				if (docsLoaded)
+				if (docsLoaded) 
 					etag = result[result.Count - 1].Etag;
 
 			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
 					 (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) +
-						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
+						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB &&
+					  (autoTuner.BatchLoadFromDiskAverageTiming == 0 || (ulong)sw.ElapsedMilliseconds < autoTuner.BatchLoadFromDiskAverageTiming));
 			
 
 			return result;
@@ -118,8 +120,11 @@ namespace Raven.Database.Prefetching
 
 		private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
 		{
+			var sw = Stopwatch.StartNew();
 			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
-			
+			sw.Stop();
+			autoTuner.ReportBatchTiming(sw.ElapsedMilliseconds);
+
 			foreach (var jsonDocument in jsonDocs)
 			{
 				prefetchingQueue.Add(jsonDocument);
