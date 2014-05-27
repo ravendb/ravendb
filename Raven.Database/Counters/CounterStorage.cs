@@ -78,7 +78,7 @@ namespace Raven.Database.Counters
 
 					Id = Guid.NewGuid();
 					metadata.Add("id", Id.ToByteArray());
-					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageUrl));
+					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageName));
 
 					tx.Commit();
 				}
@@ -91,8 +91,8 @@ namespace Raven.Database.Counters
 						throw new InvalidOperationException("Could not read name from the store, something bad happened");
 					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
 
-					if (storedName != CounterStorageUrl)
-						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageUrl);
+					if (storedName != CounterStorageName)
+						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageName);
 
 					using (var it = etags.Iterate())
 					{
@@ -446,7 +446,7 @@ namespace Raven.Database.Counters
 		            }
 		            else
 		            {
-		                result.Reader.Read(storeBuffer, 0, buffer.Length);
+						result.Reader.Read(storeBuffer, 0, storeBuffer.Length);
 		                delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
 		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
 		            }
@@ -473,19 +473,8 @@ namespace Raven.Database.Counters
 
 					if (difference != 0)
 					{
-						Counter.PerServerValue currentServerValue = counter.ServerValues.Where(x => x.SourceId == ServerId).ToList()[0];
-						long currentPositive = currentServerValue.Positive;
-						long currentNegative = currentServerValue.Negative;
-
-						if (difference > 0)
-						{
-							currentNegative += difference;
-						}
-						else
-						{
-							currentPositive += -difference;
-						}
-						Store(server, fullCounterName, currentPositive, currentNegative);
+						difference = -difference;
+						Store(server, fullCounterName, difference);
 						return true;
 					}
 				}
