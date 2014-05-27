@@ -26,11 +26,11 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 			var ms = new MemoryStream();
-            client.UploadAsync("test/c.txt", ms).Wait();
-            client.UploadAsync("test/ab/c.txt", ms).Wait();
-            client.UploadAsync("test/ce/d.txt", ms).Wait();
-            client.UploadAsync("test/ce/a/d.txt", ms).Wait();
-			client.UploadAsync("why/abc.txt", ms).Wait();
+            await client.UploadAsync("test/c.txt", ms);
+            await client.UploadAsync("test/ab/c.txt", ms);
+            await client.UploadAsync("test/ce/d.txt", ms);
+            await client.UploadAsync("test/ce/a/d.txt", ms);
+			await client.UploadAsync("why/abc.txt", ms);
 
 			var strings = await client.GetFoldersAsync();
             Assert.Equal(new[] { "/test", "/why" }, strings);
@@ -61,9 +61,10 @@ namespace RavenFS.Tests
             var expected = new string('a', 1024);
             streamWriter.Write(expected);
             streamWriter.Flush();
+            
             ms.Position = 0;
-
             await client.UploadAsync("test/something.txt", ms);
+            ms.Position = 0;
             await client.UploadAsync("test/ab/c.txt", ms);
 
             var downloadStream = new MemoryStream();
@@ -81,9 +82,10 @@ namespace RavenFS.Tests
             var expected = new string('a', 1024);
             streamWriter.Write(expected);
             streamWriter.Flush();
-            ms.Position = 0;
 
+            ms.Position = 0;
             await client.UploadAsync("test/ab/c.txt", ms);
+            ms.Position = 0;
             await client.UploadAsync("test/something.txt", ms);
 
             var downloadStream = new MemoryStream();
@@ -281,16 +283,16 @@ namespace RavenFS.Tests
         }
 
 		[Fact]
-		public void CanPage()
+		public async void CanPage()
 		{
 			var client = NewClient();
 			var ms = new MemoryStream();
-			client.UploadAsync("test/abc.txt", ms).Wait();
-			client.UploadAsync("test/ced.txt", ms).Wait();
-			client.UploadAsync("why/abc.txt", ms).Wait();
-			client.UploadAsync("why1/abc.txt", ms).Wait();
+			await client.UploadAsync("test/abc.txt", ms);
+			await client.UploadAsync("test/ced.txt", ms);
+			await client.UploadAsync("why/abc.txt", ms);
+			await client.UploadAsync("why1/abc.txt", ms);
 
-			var strings = client.GetFoldersAsync(start: 1).Result;
+			var strings = await client.GetFoldersAsync(start: 1);
 			Assert.Equal(new[] { "/why", "/why1" }, strings);
 		}
 
