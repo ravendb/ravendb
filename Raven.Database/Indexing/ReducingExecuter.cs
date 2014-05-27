@@ -81,7 +81,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
+	    protected override void UpdateStalenessMetrics(int staleCount)
+	    {
+	        context.MetricsCounters.StaleIndexReduces.Update(staleCount);
+	    }
+
+	    private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();
 			transactionalStorage.Batch(actions =>

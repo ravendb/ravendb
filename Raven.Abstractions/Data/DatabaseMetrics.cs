@@ -16,6 +16,10 @@ namespace Raven.Abstractions.Data
 
         public HistogramData RequestsDuration { get; set; }
 
+        public HistogramData StaleIndexMaps { get; set; }
+
+        public HistogramData StaleIndexReduces { get; set; }
+
         public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
 
         public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }

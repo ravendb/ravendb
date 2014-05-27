@@ -20,6 +20,10 @@ namespace Raven.Database.Util
     {
         readonly Metrics dbMetrics = new Metrics();
 
+        public HistogramMetric StaleIndexMaps { get; private set; }
+
+        public HistogramMetric StaleIndexReduces { get; private set; }
+
         public HistogramMetric RequestDuationMetric { get; private set; }
         public PerSecondCounterMetric DocsPerSecond { get; private set; }
         public PerSecondCounterMetric FilesPerSecond { get; private set; }
@@ -43,6 +47,10 @@ namespace Raven.Database.Util
 
         public MetricsCountersManager()
         {
+            StaleIndexMaps = dbMetrics.Histogram("metrics", "stale index maps");
+
+            StaleIndexReduces = dbMetrics.Histogram("metrics", "stale index reduces");
+
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
 
             RequestDuationMetric = dbMetrics.Histogram("metrics", "req duration");

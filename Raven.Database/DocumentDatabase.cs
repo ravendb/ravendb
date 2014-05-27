@@ -545,6 +545,8 @@ namespace Raven.Database
                 RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
                 Requests = CreateMeterData(metrics.ConcurrentRequests),
                 Gauges = metrics.Gauges,
+                StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
+                StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
                 ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
                 ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
                 ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
