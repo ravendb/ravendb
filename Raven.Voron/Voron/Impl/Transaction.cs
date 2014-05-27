@@ -144,7 +144,7 @@ namespace Voron.Impl
             var header = (TreeRootHeader*)State.Root.DirectRead(treeName);
 		    if (header != null)
 		    {
-		        tree = Tree.Open(this, _env.SliceComparer, header);
+		        tree = Tree.Open(this, header);
 		        tree.Name = treeName;
 		        _trees.Add(treeName, tree);
 		        return tree;
@@ -393,7 +393,7 @@ namespace Voron.Impl
 		internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
 		{
 			if (_multiValueTrees == null)
-				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
+				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
 			mvTree.IsMultiValueTree = true;
 			_multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
 		}

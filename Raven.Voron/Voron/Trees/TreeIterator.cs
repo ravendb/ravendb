@@ -10,16 +10,14 @@ namespace Voron.Trees
 	{
 		private readonly Tree _tree;
 		private readonly Transaction _tx;
-		private readonly SliceComparer _cmp;
 		private Cursor _cursor;
 		private Page _currentPage;
 		private readonly Slice _currentKey = new Slice(SliceOptions.Key);
 
-		public TreeIterator(Tree tree, Transaction tx, SliceComparer cmp)
+		public TreeIterator(Tree tree, Transaction tx)
 		{
 			_tree = tree;
 			_tx = tx;
-			_cmp = cmp;
 		}
 
 		public int GetCurrentDataSize()
@@ -33,13 +31,13 @@ namespace Voron.Trees
 			_currentPage = _tree.FindPageFor(key, out lazy);
 			_cursor = lazy.Value;
 			_cursor.Pop();
-			var node = _currentPage.Search(key, _cmp);
+			var node = _currentPage.Search(key);
 			if (node == null)
 			{
 				return false;
 			}
 			_currentKey.Set(node);
-			return this.ValidateCurrentKey(Current, _cmp);
+			return this.ValidateCurrentKey(Current);
 		}
 
 		public Slice CurrentKey
@@ -96,7 +94,7 @@ namespace Voron.Trees
 						_currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
-					if (this.ValidateCurrentKey(current, _cmp) == false)
+					if (this.ValidateCurrentKey(current) == false)
 						return false;
 					_currentKey.Set(current);
 					return true;// there is another entry in this page
@@ -126,7 +124,7 @@ namespace Voron.Trees
 						_currentPage.LastSearchPosition = 0;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
-					if (this.ValidateCurrentKey(current, _cmp) == false)
+					if (this.ValidateCurrentKey(current) == false)
 						return false;
 					_currentKey.Set(current);
 					return true;// there is another entry in this page
@@ -151,7 +149,7 @@ namespace Voron.Trees
 				}
 			}
 
-			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp);
+			return _currentPage != null && this.ValidateCurrentKey(Current);
 		}
 
 		public ValueReader CreateReaderForCurrent()
@@ -186,18 +184,18 @@ namespace Voron.Trees
 			} while (self.MoveNext());
 		}
 
-		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, SliceComparer cmp)
+		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node)
 		{
 			if (self.RequiredPrefix != null)
 			{
 				var currentKey = new Slice(node);
-				if (currentKey.StartsWith(self.RequiredPrefix, cmp) == false)
+				if (currentKey.StartsWith(self.RequiredPrefix) == false)
 					return false;
 			}
 			if (self.MaxKey != null)
 			{
 				var currentKey = new Slice(node);
-				if (currentKey.Compare(self.MaxKey, cmp) >= 0)
+				if (currentKey.Compare(self.MaxKey) >= 0)
 					return false;
 			}
 			return true;
