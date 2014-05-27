@@ -215,11 +215,6 @@ namespace Raven.Database.Actions
             RemoveReservedProperties(metadata);
             metadata.Remove("Raven-Last-Modified");
             metadata.Remove("Last-Modified");
-
-			foreach (var propertyName in metadata.Keys.Where(propertyName => propertyName.Equals("etag", StringComparison.OrdinalIgnoreCase)))
-			{
-				metadata.Remove(propertyName);
-			}
         }
 
         private static void RemoveReservedProperties(RavenJObject document)
