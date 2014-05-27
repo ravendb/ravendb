@@ -24,7 +24,6 @@ class counterStorageCounters extends viewModelBase {
     constructor() {
         super();
         this.fetchGroups();
-
     }
 
     fetchGroups() {
@@ -49,7 +48,6 @@ class counterStorageCounters extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.hasAnyCounterSelected = ko.computed(() => this.selectedCountersIndices().length > 0);
-        
     }
 
     addOrEditCounter(counterToUpdate: counter) {

@@ -36,6 +36,7 @@ namespace Raven.Database.Counters
 	    public readonly string CounterStorageName;
 
 		private const int ServerId = 0; // local is always 0
+
 		public CounterStorage(string serverUrl, string counterStorageStorageName, InMemoryRavenConfiguration configuration)
 		{
             CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, counterStorageStorageName);
@@ -46,7 +47,8 @@ namespace Raven.Database.Counters
 
 			storageEnvironment = new StorageEnvironment(options);
             ReplicationTask = new RavenCounterReplication(this);
-		   
+
+			//TODO: add an option to create a ReplicationRequestTimeout when creating a new counter storage
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
             Initialize();
