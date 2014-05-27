@@ -5,11 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Web.Configuration;
 using Newtonsoft.Json;
 using Raven.Abstractions;
-using Raven.Abstractions.Replication;
-using Raven.Client.Linq;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Voron;
@@ -470,19 +467,21 @@ namespace Raven.Database.Counters
 				{
 					long overallTotalPositive = counter.ServerValues.Sum(x => x.Positive);
 					long overallTotalNegative = counter.ServerValues.Sum(x => x.Negative);
-					long currentPositive = counter.ServerValues.Where(x => x.SourceId == ServerId).Select(x => x.Positive).ToList()[0];
-					long currentNegative = counter.ServerValues.Where(x => x.SourceId == ServerId).Select(x => x.Negative).ToList()[0];
+					long difference = overallTotalPositive - overallTotalNegative;
 
-					if (overallTotalPositive - overallTotalNegative != 0)
+					if (difference != 0)
 					{
-						var difference = overallTotalPositive - overallTotalNegative;
+						Counter.PerServerValue currentServerValue = counter.ServerValues.Where(x => x.SourceId == ServerId).ToList()[0];
+						long currentPositive = currentServerValue.Positive;
+						long currentNegative = currentServerValue.Negative;
+
 						if (difference > 0)
 						{
 							currentNegative += difference;
 						}
 						else
 						{
-							currentPositive += difference;
+							currentPositive += -difference;
 						}
 						Store(server, fullCounterName, currentPositive, currentNegative);
 						return true;
