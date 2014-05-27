@@ -26,7 +26,7 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[Route("counters/{counterName}/reset")]
-		[HttpGet]
+		[HttpPost]
 		public HttpResponseMessage CounterReset(string counterName, string group)
 		{
 			using (var writer = Storage.CreateWriter())

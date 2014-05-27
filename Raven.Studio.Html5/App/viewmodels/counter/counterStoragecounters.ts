@@ -57,15 +57,29 @@ class counterStorageCounters extends viewModelBase {
             var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
             editCounterDialogViewModel.updateTask
                 .done((editedCounter: counter, delta: number) => {
-                new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
-                    .execute()
-                    .done(() => {
-                        this.fetchGroups();
-                    });
+                    new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
+                        .execute()
+                        .done(() => {
+                            this.fetchGroups(); //TODO: remove this after changes api is implemented
+                        });
                 });
             app.showDialog(editCounterDialogViewModel);
         });
-        
+    }
+
+    resetCounter(counterToReset: counter) {
+        app.showMessage('Are you sure you want to reset the counter?', 'Reset Counter', ['Yes', 'No'])
+            .done(answer=> {
+                if (answer == "Yes") {
+                    require(["commands/counter/resetCounterCommand"], resetCounterCommand => {
+                        new resetCounterCommand(this.activeCounterStorage(), counterToReset)
+                            .execute()
+                            .done(() => {
+                                this.fetchGroups(); //TODO: remove this after changes api is implemented
+                            });
+                    });
+                }
+            });
     }
 
     selectGroup(group: counterGroup) {
