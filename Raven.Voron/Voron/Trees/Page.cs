@@ -44,6 +44,8 @@ namespace Voron.Trees
 
 		private byte NextPrefixId { get { return _header->NextPrefixId; } set { _header->NextPrefixId = value; }}
 
+		public ushort PageSize { get { return _pageSize; } }
+
         public ushort* KeysOffsets
         {
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
@@ -257,31 +259,24 @@ namespace Voron.Trees
 
 			var index = NumberOfEntries;
 
-	        var nodeKey = key;
-            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(key)));
-            
-            var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, nodeKey);
+			Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize + SizeOf.NewPrefix(key)));
 
-			// TODO arek other->keySize == 0? beforeallkeys or after all keys?
-			if (other->KeySize == 0/* TODO arek && key == null*/) // when copy first item from branch which is implicit ref
-			{
-				nodeSize += nodeKey.Size;
-			}
+			var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
 
-            Debug.Assert(IsBranch == false || index != 0 || nodeKey.Size == 0);// branch page's first item must be the implicit ref
+			Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
 
 	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-	        if (nodeKey.NewPrefix != null)
-		        WritePrefix(nodeKey.NewPrefix, nodeKey.PrefixId);
+			if (key.NewPrefix != null)
+				WritePrefix(key.NewPrefix, key.PrefixId);
 
             var newNode = AllocateNewNode(index, nodeSize, nodeVersion);
 
-			newNode->KeySize = nodeKey.Size;
+			newNode->KeySize = key.Size;
             newNode->Flags = other->Flags;
-            nodeKey.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
+			key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
             if (IsBranch || other->Flags==(NodeFlags.PageRef))
             {
@@ -290,7 +285,7 @@ namespace Voron.Trees
                 return;
             }
             newNode->DataSize = other->DataSize;
-            NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + nodeKey.Size,
+			NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
@@ -359,7 +354,7 @@ namespace Voron.Trees
 			}
 			else
 			{
-				throw new InvalidOperationException();
+				throw new InvalidOperationException("Invalid node index prefix: " + nodeIndex + ". Number of entries: " + NumberOfEntries);
 			}
 
 			ushort leftLength = 0;

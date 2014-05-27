@@ -65,63 +65,66 @@ namespace Voron.Trees
             {	         
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
 	            if (page.IsBranch)
-	            {
 		            MoveBranchNode(parentPage, sibling, page);
-	            }
 	            else
 		            MoveLeafNode(parentPage, sibling, page);
+
 	            cursor.Pop();
 
                 return parentPage;
             }
 
 			if (page.LastSearchPosition == 0) // this is the right page, merge left
-            {
-				if (!HasEnoughSpaceToCopyNodes(sibling, page))
+			{
+				if (TryMergePages(parentPage, sibling, page) == false)
 					return null;
-				MergePages(parentPage, sibling, page);
             }
             else // this is the left page, merge right
             {
-				if (!HasEnoughSpaceToCopyNodes(page, sibling))
+	            if (TryMergePages(parentPage, page, sibling) == false)
 					return null;
-				MergePages(parentPage, page, sibling);
             }
+
             cursor.Pop();			
 
             return parentPage;
         }
 
-	    private bool HasEnoughSpaceToCopyNodes(Page left, Page right)
-	    {
-		    var actualSpaceNeeded = 0;
-		    var previousSearchPosition = right.LastSearchPosition;
-		    for (int i = 0; i < right.NumberOfEntries; i++)
-		    {
-			    right.LastSearchPosition = i;
-			    var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
-			    var node = right.GetNode(i);
-				actualSpaceNeeded += (SizeOf.NodeEntryWithAnotherKey(node, new PrefixedSlice(key)) + Constants.NodeOffsetSize); //TODO arek - new PrefixedSlice(key) isn't correct here
-		    }
+		private bool TryMergePages(Page parentPage, Page left, Page right)
+		{
+			TemporaryPage tmp;
+			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
+			{
+				var mergedPage = tmp.TempPage;
+				NativeMethods.memcpy(mergedPage.Base, left.Base, left.PageSize);
 
-		    right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
-	        return left.HasSpaceFor(_tx, actualSpaceNeeded);
-	    }
+				var previousSearchPosition = right.LastSearchPosition;
 
-        private void MergePages(Page parentPage, Page left, Page right)
-        {
-            for (int i = 0; i < right.NumberOfEntries; i++)
-            {
-                right.LastSearchPosition = i;
-                var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
-                var node = right.GetNode(i);
+				for (int i = 0; i < right.NumberOfEntries; i++)
+				{
+					right.LastSearchPosition = i;
+					var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
+					var node = right.GetNode(i);
 
-                left.CopyNodeDataToEndOfPage(node, left.ConvertToPrefixedKey(key, left.NumberOfEntries));
-            }
+					var prefixedKey = mergedPage.ConvertToPrefixedKey(key, mergedPage.NumberOfEntries);
 
-            parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
-            _tx.FreePage(right.PageNumber);
-        }
+					if (mergedPage.HasSpaceFor(_tx, SizeOf.NodeEntryWithAnotherKey(node, prefixedKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedKey)) == false)
+					{
+						right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
+						return false;
+					}
+
+					mergedPage.CopyNodeDataToEndOfPage(node, prefixedKey);
+				}
+
+				NativeMethods.memcpy(left.Base, mergedPage.Base, left.PageSize);
+			}
+
+			parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
+			_tx.FreePage(right.PageNumber);
+
+			return true;
+		}
 
         private Page SetupMoveOrMerge(Cursor c, Page page, Page parentPage)
         {
@@ -279,21 +282,6 @@ namespace Voron.Trees
 
             return key;
         }
-
-		// TODO arek old impl of GetActualKey - kept for reference
-		//private PrefixedSlice GetActualKey(Page page, int pos)
-		//{
-		//	var node = page.GetNode(pos);
-		//	var key = page.GetFullNodeKey(node);
-		//	while (key.Size == 0)
-		//	{
-		//		Debug.Assert(page.IsBranch);
-		//		page = _tx.GetReadOnlyPage(node->PageNumber);
-		//		node = page.GetNode(0);
-		//		key = page.GetFullNodeKey(pos);
-		//	}
-		//	return key;
-		//}
 
         private void RebalanceRoot(Cursor cursor, Page page)
         {
