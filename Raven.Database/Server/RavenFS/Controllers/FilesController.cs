@@ -1,30 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web.Http;
-using Raven.Abstractions.Exceptions;
+﻿using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Util;
-using Raven.Database.Util.Streams;
-using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -42,7 +38,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
-            return this.GetMessageWithObject(list, HttpStatusCode.OK);
+            return this.GetMessageWithObject(list, HttpStatusCode.OK)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
@@ -71,18 +68,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var result = StreamResult(name, readingStream);
             AddHeaders(result, fileAndPages.Metadata);
 
-            // Ensure that files are not cached at the browser side.
-            // "Cache-Control": "no-cache, no-store, must-revalidate";
-            // "Expires": 0;
-            result.Headers.CacheControl = new CacheControlHeaderValue()
-            {
-                 MustRevalidate = true,
-                 NoCache = true,
-                 NoStore = true,
-                 MaxAge = new TimeSpan(0, 0, 0, 0)
-            };
-
-			return result;
+            return result.WithNoCache();
 		}
 
 		[HttpDelete]

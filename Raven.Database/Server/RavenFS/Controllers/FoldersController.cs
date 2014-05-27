@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -35,7 +36,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			                                .Skip(Paging.Start)
 			                                .Take(Paging.PageSize);
 
-            return this.GetMessageWithObject(result);
+            return this.GetMessageWithObject(result)
+                       .WithNoCache();
 		}
 	}
 }
