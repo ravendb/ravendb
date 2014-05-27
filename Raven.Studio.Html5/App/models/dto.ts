@@ -701,11 +701,47 @@ interface filterSettingDto {
     ShouldMatch: boolean;
 }
 
+interface counterStorageDto {
+    Name: string;
+    Path?: string;
+}
+
+interface counterDto {
+    Name: string;
+    Group: string;
+    OverallTotal: number;
+    Servers: counterServerValueDto[];
+}
+
+interface counterGroupDto {
+    Name: string;
+    NumOfCounters?: number;
+}
+
+interface counterServerValueDto {
+    Name: string;
+    Positive: number;
+    Negative: number;
+}
+
+interface counterStorageReplicationDto {
+    Destinations: counterStorageReplicationDestinatinosDto[];
+}
+
+interface counterStorageReplicationDestinatinosDto {
+    Disabled: boolean;
+    ServerUrl: string;
+    CounterStorageName: string;
+    Username: string;
+    Password: string;
+    Domain: string;
+    ApiKey: string;
+}
+
 enum ImportItemType {
     Documents = 0x1,
     Indexes = 0x2,
     Attachments = 0x4,
     Transformers = 0x8,
-
     RemoveAnalyzers = 0x8000
 }

@@ -476,7 +476,7 @@ namespace Raven.Database
             get { return workContext; }
         }
 
-        public BatchResult[] Batch(IList<ICommandData> commands)
+        public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {
             using (DocumentLock.Lock())
             {
@@ -484,14 +484,14 @@ namespace Raven.Database
                 if (shouldRetryIfGotConcurrencyError)
                 {
                     Stopwatch sp = Stopwatch.StartNew();
-                    BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
+                    BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
                     Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
                 }
 
                 BatchResult[] results = null;
                 TransactionalStorage.Batch(
-                    actions => { results = ProcessBatch(commands); });
+                    actions => { results = ProcessBatch(commands, token); });
 
                 return results;
             }
@@ -909,16 +909,18 @@ namespace Raven.Database
             return fileVersionInfo.FileBuildPart;
         }
 
-        private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
+        private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
         {
             int retries = 128;
             Random rand = null;
             while (true)
             {
+				token.ThrowIfCancellationRequested();
+
                 try
                 {
                     BatchResult[] results = null;
-                    TransactionalStorage.Batch(_ => results = ProcessBatch(commands));
+                    TransactionalStorage.Batch(_ => results = ProcessBatch(commands, token));
                     return results;
                 }
                 catch (ConcurrencyException)
@@ -1005,11 +1007,13 @@ namespace Raven.Database
             return scriptedPatchCommandData != null && scriptedPatchCommandData.Patch.Script.Replace(" ", string.Empty).Contains(ScriptEtagKey) == false && scriptedPatchCommandData.Patch.Values.ContainsKey(EtagKey) == false;
         }
 
-        private BatchResult[] ProcessBatch(IList<ICommandData> commands)
+        private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
         {
             var results = new BatchResult[commands.Count];
             for (int index = 0; index < commands.Count; index++)
             {
+				token.ThrowIfCancellationRequested();
+
                 ICommandData command = commands[index];
                 results[index] = command.ExecuteBatch(this);
             }

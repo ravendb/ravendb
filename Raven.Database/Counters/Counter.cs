@@ -14,4 +14,10 @@ namespace Raven.Database.Counters
 			public long Negative { get; set; }
 		}
 	}
+
+	public class Group
+	{
+		public string Name { get; set; }
+		public long NumOfCounters { get; set; }
+	}
 }
