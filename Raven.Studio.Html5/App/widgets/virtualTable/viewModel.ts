@@ -544,8 +544,8 @@ class ctor {
             self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
             self.items.invalidateCache(); // Causes the cache of items to be discarded.
             self.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            self.onWindowHeightChanged(); // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
         });
-
         app.showDialog(deleteDocsVm);
     }
 

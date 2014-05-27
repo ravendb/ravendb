@@ -15,15 +15,19 @@
         </li>
         <!-- /ko -->
         <li class="active">
-            <span data-bind="visible: !isCreatingNewDocument(), text: editedDocId"></span>
-            <span data-bind="visible: isCreatingNewDocument">New Document</span>
+            <div data-bind="visible: isCreatingNewDocument() === false" style="display: inline-block">
+                <span data-bind="visible: isCreatingNewDocument() === false, text: editedDocId"></span>
+            </div>
+            <div data-bind="visible: isCreatingNewDocument() === true" style="display: inline-block">
+                <span data-bind="visible: isCreatingNewDocument() === true">New Document</span>
+            </div>
         </li>
     </ul>
 
     <div class="btn-toolbar">
         <div class="btn-group">
             <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: saveDocument, enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
+            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
             <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
             <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
         </div>
