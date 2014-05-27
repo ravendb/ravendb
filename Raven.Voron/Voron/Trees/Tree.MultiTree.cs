@@ -153,6 +153,8 @@ namespace Voron.Trees
 					PageNumber = -1L // mark as invalid page number
 				};
 
+				newNestedPage.ClearPrefixInfo();
+
 				PrefixedSlice nodeKey = null;
 				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 				{
