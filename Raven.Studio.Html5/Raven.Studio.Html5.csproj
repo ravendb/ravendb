@@ -250,6 +250,7 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocumentsStartingWithCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -269,6 +270,10 @@
     <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\executePatchConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\quotas.ts" />
+    <TypeScriptCompile Include="App\viewmodels\versioning.ts" />
+    <TypeScriptCompile Include="App\commands\getVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\models\versioningEntry.ts" />
+    <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\executePatchConfirm.html" />
@@ -389,6 +394,7 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
+    <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="Content\app.min.css">

@@ -24,6 +24,7 @@ interface computedAppUrls {
     quotas: KnockoutComputed<string>;
     periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
+    versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
