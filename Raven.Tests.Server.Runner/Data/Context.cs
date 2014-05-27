@@ -39,7 +39,7 @@ namespace Raven.Tests.Server.Runner.Data
 			{
 				try
 				{
-					DeleteDirectory(DataDir);
+                    DeleteDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDir).ToFullPath());
 					break;
 				}
 				catch (Exception)

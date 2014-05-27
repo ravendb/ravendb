@@ -110,7 +110,7 @@ namespace Raven.Tests.Server.Runner.Controllers
 
 			if (configuration.RunInMemory == false && deleteData)
 			{
-				var pathToDelete = Path.Combine(Context.DataDir, port);
+                var pathToDelete = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Context.DataDir, port);
 				Context.DeleteDirectory(pathToDelete);
 			}
 
