@@ -13,7 +13,6 @@ using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
-using NameValueCollectionJsonConverter = Raven.Client.RavenFS.NameValueCollectionJsonConverter;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using System.Web.Http.ModelBinding;
@@ -96,7 +95,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, json)), ConcurrencyResponseException);
 
-            Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Set });
+            Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
 
             Log.Debug("Config '{0}' was inserted", name);
 
@@ -110,7 +109,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.DeleteConfig(name)),
 											 ConcurrencyResponseException);
 
-			Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Delete });
+			Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Delete });
 
 			Log.Debug("Config '{0}' was deleted", name);
             return GetEmptyMessage(HttpStatusCode.NoContent);

@@ -6,7 +6,7 @@ using Raven.Database.Util;
 
 namespace Raven.Client.Changes
 {
-	internal class LocalConnectionState
+    public class DatabaseConnectionState : IChangesConnectionState
 	{
 		private readonly Action onZero;
 		private readonly Task task;
@@ -16,7 +16,7 @@ namespace Raven.Client.Changes
 			get { return task; }
 		}
 
-		public LocalConnectionState(Action onZero, Task task)
+		public DatabaseConnectionState(Action onZero, Task task)
 		{
 			value = 0;
 			this.onZero = onZero;

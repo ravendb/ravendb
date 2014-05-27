@@ -56,7 +56,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		public void RenameFile(RenameFileOperation operation)
 		{
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
-			notificationPublisher.Publish(new FileChange
+			notificationPublisher.Publish(new FileChangeNotification
 			{
 				File = FilePathTools.Cannoicalise(operation.Name),
 				Action = FileChangeAction.Renaming
@@ -87,8 +87,8 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
                 search.Index(operation.Rename, operation.MetadataAfterOperation);
 			});
 
-			notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
-			notificationPublisher.Publish(new FileChange
+			notificationPublisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
+			notificationPublisher.Publish(new FileChangeNotification
 			{
 				File = FilePathTools.Cannoicalise(operation.Rename),
 				Action = FileChangeAction.Renamed
@@ -159,7 +159,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
                     var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
                     accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
 
-                    notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
+                    notificationPublisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
                 }
                 else
                 {
@@ -223,10 +223,10 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 					storage.Batch(accessor => accessor.DeleteConfig(configName));
 
-					notificationPublisher.Publish(new ConfigChange
+					notificationPublisher.Publish(new ConfigurationChangeNotification
 					{
 						Name = configName,
-						Action = ConfigChangeAction.Delete
+						Action = ConfigurationChangeAction.Delete
 					});
 
 					Log.Debug("File '{0}' was deleted from storage", deletingFileName);

@@ -98,10 +98,22 @@ namespace Raven.Database.Indexing
                         {
                             string currentDocId = null;
                             int outputPerDocId = 0;
-                            foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
+                            Action<Exception, object> onErrorFunc;
+                            foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats,out onErrorFunc))
                             {
                                 float boost;
-                                var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+                                IndexingResult indexingResult;
+
+                                try
+                                {
+                                    indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+                                }
+                                catch (Exception e)
+                                {
+                                    onErrorFunc(e, doc);
+                                    continue;
+                                }
+
                                 if (indexingResult.NewDocId == null || indexingResult.ShouldSkip != false)
                                 {
                                     continue;
