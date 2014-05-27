@@ -30,7 +30,8 @@ class searchFileSizeRangeClause extends searchDialogViewModel {
 
         var match = regex.exec(input);
         var value = parseInt(match[1]);
-        var multiplier = this.getMultiplier(match[2]);
+        var loweredCaseMultiplier = match[2].toLowerCase();
+        var multiplier = this.getMultiplier(loweredCaseMultiplier);
 
         value *= multiplier;
 

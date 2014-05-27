@@ -18,5 +18,4 @@
             <frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework=".NETFramework4.0" />
         </frameworkAssemblies>
     </metadata>
-    <files />
 </package>

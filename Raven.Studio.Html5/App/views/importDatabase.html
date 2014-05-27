@@ -29,21 +29,21 @@
             <li data-bind="click: selectAdvancedOptions, css: { active: showAdvancedOptions }"><a href="#">Advanced</a></li>
         </ul>
         <br />
-        <div class="btn-group-vertical" data-toggle="buttons" data-bind="visible: !showAdvancedOptions()">
-            <label class="btn btn-primary active">
-                <input type="checkbox"> Include documents
+        <div class="btn-group-vertical" data-bind="visible: !showAdvancedOptions()">
+            <label class="btn btn-primary" data-bind="click: includeDocuments.toggle.bind(includeDocuments), css: { active: includeDocuments }">
+                Include documents
             </label>
-            <label class="btn btn-primary active">
-                <input type="checkbox"> Include indexes
+            <label class="btn btn-primary" data-bind="click: includeIndexes.toggle.bind(includeIndexes), css: { active: includeIndexes }">
+                Include indexes
             </label>
-            <label class="btn btn-primary">
-                <input type="checkbox"> Include attachments
+            <label class="btn btn-primary" data-bind="click: includeAttachments.toggle.bind(includeAttachments), css: { active: includeAttachments }">
+                Include attachments
             </label>
-            <label class="btn btn-primary active">
-                <input type="checkbox"> Include transformers
+            <label class="btn btn-primary" data-bind="click: includeTransformers.toggle.bind(includeTransformers), css: { active: includeTransformers }">
+                Include transformers
             </label>
-            <label class="btn btn-primary">
-                <input type="checkbox"> Remove analyzers
+            <label class="btn btn-primary" data-bind="click: removeAnalyzers.toggle.bind(removeAnalyzers), css: { active: removeAnalyzers }">
+                Remove analyzers
             </label>
         </div>
         <div data-bind="visible: showAdvancedOptions">
@@ -67,7 +67,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <!--This doesn'tappear to be supported in Raven 3.-->
+                <!--<div class="form-group">
                     <label class="col-sm-2 control-label">Collections</label>
                     <div class="col-sm-10">
                         <div class="btn-group">
@@ -85,7 +86,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>-->
                 <div class="form-group">
                     <label class="col-sm-2 control-label">Filters <a title="External link: RavenDB filter settings documentation" target="_blank" href="http://ravendb.net/docs/server/administration/export-import"><i class="fa fa-question-circle"></i></a></label>
                     <div class="col-sm-10">

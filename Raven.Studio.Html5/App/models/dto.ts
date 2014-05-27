@@ -29,9 +29,14 @@ interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
 }
 
 interface indexChangeNotificationDto {
-    Type: string;
+    Type: indexChangeType;
     Name: string;
     Etag: string;
+}
+
+interface transformerChangeNotificationDto {
+    Type: transformerChangeType;
+    Name: string;
 }
 
 interface documentMetadataDto {
@@ -105,8 +110,12 @@ interface apiKeyDto extends documentDto {
     Databases: Array<databaseAccessDto>;
 }
 
-interface buildVersionDto {
+interface serverBuildVersionDto {
     ProductVersion: string;
+    BuildVersion: string;
+}
+
+interface clientBuildVersionDto {
     BuildVersion: string;
 }
 
@@ -117,7 +126,7 @@ interface licenseStatusDto {
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
-        periodicBackup: string;
+        periodicExport: string;
         encryption: string;
         compression: string;
         quotas: string;
@@ -249,7 +258,7 @@ interface spatialIndexSuggestionDto {
     Accuracy: number;
 }
 
-interface periodicBackupSetupDto {
+interface periodicExportSetupDto {
     Disabled: boolean;
     GlacierVaultName: string;
     S3BucketName: string;
@@ -514,12 +523,142 @@ interface patchValueDto {
     Value: string;
 }
 
-interface patchDto {
+interface patchDto extends documentDto {
     PatchOnOption: string;
     Query: string;
     Script: string;
     SelectedItem: string;
     Values: Array<patchValueDto>;
+}
+
+interface statusDebugChangesDto {
+    Id: string;
+    Connected: boolean;
+    WatchAllDocuments: boolean;
+    WatchAllIndexes: boolean;
+    WatchConfig: boolean;
+    WatchConflicts: boolean;
+    WatchSync: boolean;
+    WatchCancellations: boolean;
+    WatchDocumentPrefixes: Array<string>;
+    WatchDocumentsInCollection: Array<string>;
+    WatchIndexes: Array<string>;
+    WatchDocuments: Array<string>;
+    WatchedFolders: Array<string>;
+}
+
+interface statusDebugMetricsDto {
+    DocsWritesPerSecond: number;
+    IndexedPerSecond: number;
+    ReducedPerSecond: number;
+    RequestsPerSecond: number;
+    Requests: statusDebugMetricsRequestsDto;
+    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+}
+
+interface statusDebugMetricsRequestsDto {
+    Count: number;
+    MeanRate: number;
+    OneMinuteRate: number;
+    FiveMinuteRate: number;
+    FifteenMinuteRate: number;
+}
+
+interface statusDebugMetricsRequestsDurationDto {
+    Counter: number;
+    Max: number;
+    Min: number;
+    Mean: number;
+    Stdev: number;
+    Percentiles: any;
+}
+
+interface statusDebugDocrefsDto {
+    TotalCount: number;
+    Results: Array<string>;
+}
+
+interface statusDebugIdentitiesDto {
+    TotalCount: number;
+    Identities: Array<{ Key: string; Value: string}>;
+}
+
+interface statusDebugCurrentlyIndexingDto {
+    NumberOfCurrentlyWorkingIndexes: number;
+    Indexes: Array<statusDebugIndexDto>;
+}
+
+interface statusDebugIndexDto {
+    IndexName: string;
+    IsMapReduce: boolean;
+    CurrentOperations: Array<statusDebugIndexOperationDto>;
+    Priority: string;
+    OverallIndexingRate: Array<statusDebugIndexRateDto>;
+}
+
+interface statusDebugIndexOperationDto {
+    Operation: string;
+    NumberOfProcessingItems: number;
+}
+
+interface statusDebugIndexRateDto {
+    Operation: string;
+    Rate: string;
+}
+
+interface statusDebugQueriesGroupDto {
+    IndexName: string;
+    Queries: Array<statusDebugQueriesQueryDto>;
+}
+
+interface statusDebugQueriesQueryDto {
+    StartTime: string;
+    QueryInfo: KnockoutObservable<any>;
+}
+
+interface taskMetadataDto {
+    Id: any;
+    IndexId: number;
+    IndexName: string;
+    AddedTime: string;
+    Type: string;
+}
+
+interface requestTracingDto {
+    Uri: string;
+    Method: string;
+    StatusCode: number;
+    RequestHeaders: requestHeaderDto[];
+    ExecutionTime: string;
+    AdditionalInfo: string;
+}
+
+interface requestHeaderDto {
+    Name: string;
+    Values: string[];
+}
+
+interface sqlReplicationStatisticsDto {
+    Name: string;
+    LastErrorTime: string;
+    ScriptErrorCount: number;
+    ScriptSuccessCount: number;
+    WriteErrorCount: number;
+    SuccessCount: number;
+    LastAlert: alertDto;
+}
+
+interface statusDebugIndexFieldsDto {
+    FieldNames: string[];
+}
+
+interface debugDocumentStatsDto {
+    Total: number;
+    Tombstones: number;
+    System: number;
+    NoCollection: number;
+    Collections: dictionary<number>;
+    TimeToGenerate: string;
 }
 
 enum documentChangeType {
@@ -532,8 +671,77 @@ enum documentChangeType {
     BulkInsertError = 16
 }
 
+enum indexChangeType {
+    None = 0,
+
+    MapCompleted = 1,
+    ReduceCompleted = 2,
+    RemoveFromIndex = 4,
+
+    IndexAdded = 8,
+    IndexRemoved = 16,
+
+    IndexDemotedToIdle = 32,
+    IndexPromotedFromIdle = 64,
+
+    IndexDemotedToAbandoned = 128,
+    IndexDemotedToDisabled = 256,
+    IndexMarkedAsErrored =  512
+}
+
+enum transformerChangeType {
+    None = 0,
+    TransformerAdded = 1,
+    TransformerRemoved = 2
+}
+
 interface filterSettingDto {
     Path: string;
     Values: string[];
     ShouldMatch: boolean;
+}
+
+interface counterStorageDto {
+    Name: string;
+    Path?: string;
+}
+
+interface counterDto {
+    Name: string;
+    Group: string;
+    OverallTotal: number;
+    Servers: counterServerValueDto[];
+}
+
+interface counterGroupDto {
+    Name: string;
+    NumOfCounters?: number;
+}
+
+interface counterServerValueDto {
+    Name: string;
+    Positive: number;
+    Negative: number;
+}
+
+interface counterStorageReplicationDto {
+    Destinations: counterStorageReplicationDestinatinosDto[];
+}
+
+interface counterStorageReplicationDestinatinosDto {
+    Disabled: boolean;
+    ServerUrl: string;
+    CounterStorageName: string;
+    Username: string;
+    Password: string;
+    Domain: string;
+    ApiKey: string;
+}
+
+enum ImportItemType {
+    Documents = 0x1,
+    Indexes = 0x2,
+    Attachments = 0x4,
+    Transformers = 0x8,
+    RemoveAnalyzers = 0x8000
 }

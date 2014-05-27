@@ -44,7 +44,7 @@ namespace Voron.Tests.Bugs
 			    var t1 = tx.Environment.State.GetTree(tx,"tree1");
 				for (var i = 0; i < DocumentCount; i++)
 				{
-					t1.Add(tx, "docs/" + i, new MemoryStream(testBuffer));
+					t1.Add("docs/" + i, new MemoryStream(testBuffer));
 				}
 
 				tx.Commit();
@@ -57,7 +57,7 @@ namespace Voron.Tests.Bugs
 				    var t1 = tx.Environment.State.GetTree(tx,"tree1");
 					for (var i = 0; i < DocumentCount; i++)
 					{
-						t1.Delete(tx, "docs/" + i);
+						t1.Delete("docs/" + i);
 					}
 
 					tx.Commit();
@@ -98,7 +98,7 @@ namespace Voron.Tests.Bugs
 				var t1 = tx.Environment.State.GetTree(tx, "tree1");
 				for (var i = 0; i < DocumentCount; i++)
 				{
-					t1.Add(tx, "docs/" + i, new MemoryStream(testBuffer));
+					t1.Add("docs/" + i, new MemoryStream(testBuffer));
 				}
 
 				tx.Commit();
@@ -113,7 +113,7 @@ namespace Voron.Tests.Bugs
 					var t1 = tx.Environment.State.GetTree(tx, "tree1");
 					for (var i = 0; i < DocumentCount; i++)
 					{
-						t1.Delete(tx, "docs/" + i);
+						t1.Delete("docs/" + i);
 					}
 
 					tx.Commit();

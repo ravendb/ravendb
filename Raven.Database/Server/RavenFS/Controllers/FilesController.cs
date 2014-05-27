@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
@@ -32,7 +33,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/files")]
+        [Route("fs/{fileSystemName}/files")]
         public HttpResponseMessage Get()
 		{
             int results;
@@ -45,7 +46,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
         public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -73,7 +74,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpDelete]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Delete(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -125,7 +126,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
-			Publisher.Publish(new FileChange { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
+			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
 			StartSynchronizeDestinationsInBackground();
@@ -134,7 +135,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpHead]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -161,7 +162,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -188,7 +189,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             Search.Index(name, headers);
 
-            Publisher.Publish(new FileChange { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+            Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
             StartSynchronizeDestinationsInBackground();
 
@@ -199,7 +200,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -255,7 +256,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPut]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
 		{
 			try
@@ -313,7 +314,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
                     headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
                     Search.Index(name, headers);
-                    Publisher.Publish(new FileChange { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+                    Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
                     log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
 
@@ -327,7 +328,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					Guid uploadIdentifier;
 					if (Guid.TryParse(uploadId, out uploadIdentifier))
 					{
-						Publisher.Publish(new UploadFailed { UploadId = uploadIdentifier, File = name });
+						Publisher.Publish(new CancellationNotification { UploadId = uploadIdentifier, File = name });
 					}
 				}
 
@@ -396,8 +397,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			private readonly BufferPool bufferPool;
 			private readonly string filename;
 			private readonly Stream inputStream;
-			private readonly MD5 md5Hasher;
 			private readonly ITransactionalStorage storage;
+			private readonly IHashEncryptor md5Hasher;
 			public int TotalSizeRead;
 			private int pos;
 
@@ -408,7 +409,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				this.storage = storage;
 				this.filename = filename;
 				buffer = bufferPool.TakeBuffer(StorageConstants.MaxPageSize);
-				md5Hasher = new MD5CryptoServiceProvider();
+			    md5Hasher = Encryptor.Current.CreateHash();
 			}
 
 			public string FileHash { get; private set; }
@@ -416,7 +417,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			public void Dispose()
 			{
 				bufferPool.ReturnBuffer(buffer);
-				md5Hasher.Dispose();
 			}
 
 			public async Task Execute()
@@ -430,10 +430,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					if (totalSizeRead == 0) // nothing left to read
 					{
 						storage.Batch(accessor => accessor.CompleteFileUpload(filename));
-						md5Hasher.TransformFinalBlock(new byte[0], 0, 0);
-
-						FileHash = md5Hasher.Hash.ToStringHash();
-
+					    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
 						return; // task is done
 					}
 
@@ -443,7 +440,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 						accessor.AssociatePage(filename, hashKey, pos, totalSizeRead);
 					}));
 
-					md5Hasher.TransformBlock(buffer, 0, totalSizeRead, null, 0);
+					md5Hasher.TransformBlock(buffer, 0, totalSizeRead);
 
 					pos++;
 				}

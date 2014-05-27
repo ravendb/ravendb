@@ -84,7 +84,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
 		/// </summary>
-		protected readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata =
+		protected readonly Dictionary<object, InMemoryDocumentSessionOperations.DocumentMetadata> entitiesAndMetadata =
 			new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparer<object>.Default);
 
         protected readonly Dictionary<string, JsonDocument> includedDocumentsByKey = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
@@ -285,7 +285,6 @@ namespace Raven.Client.Document
 		{
 			return knownMissingIds.Contains(id);
 		}
-
 
 		/// <summary>
 		/// Gets the document id.
@@ -717,7 +716,7 @@ more responsive application.
 			AssertNoNonUniqueInstance(entity, id);
 
 			var metadata = new RavenJObject();
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var tag = documentStore.Conventions.GetDynamicTagName(entity);
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 			if (id != null)
@@ -965,10 +964,27 @@ more responsive application.
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
         {
-            foreach (var pair in entitiesAndMetadata)
-            {
-                EntityChanged(pair.Key, pair.Value, changes);
-            }
+            
+
+                foreach (var pair in entitiesAndMetadata)
+                {
+                    if (pair.Value.OriginalValue.Count == 0)
+                    {
+                        var docChanges = new List<DocumentsChanges>() { };
+                        var change = new DocumentsChanges()
+                        {
+
+                            Change = DocumentsChanges.ChangeType.DocumentAdded
+                        };
+
+                        docChanges.Add(change);
+                        changes[pair.Value.Key] = docChanges.ToArray();
+                        continue;
+
+                    }
+                    EntityChanged(pair.Key, pair.Value, changes);
+                }
+            
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
@@ -1427,6 +1443,34 @@ more responsive application.
                 indexName += "/" + Conventions.GetTypeTagName(typeof(T));
             }
             return indexName;
+        }
+
+        public bool CheckIfIdAlreadyIncluded(string[] ids,  KeyValuePair<string, Type>[] includes )
+        {
+            foreach (var id in ids)
+            {
+                if(knownMissingIds.Contains(id))
+                    continue;
+
+                object data;
+                if (entitiesByKey.TryGetValue(id, out data) == false)
+                    return false;
+                DocumentMetadata value;
+                if (entitiesAndMetadata.TryGetValue(data, out value) == false)
+                    return false;
+                foreach (var include in includes)
+                {
+                    var hasAll = true;
+                    IncludesUtil.Include(value.OriginalValue, include.Key, s =>
+                    {
+                        hasAll &= IsLoaded(s);
+                        return true;
+                    });
+                    if (hasAll == false)
+                        return false;
+                }
+            }
+            return true;
         }
 	}
 }

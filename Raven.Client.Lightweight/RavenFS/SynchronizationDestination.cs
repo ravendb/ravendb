@@ -23,7 +23,7 @@ namespace Raven.Client.RavenFS
 
         public string FileSystemUrl
         {
-            get { return string.Format("{0}/ravenfs/{1}", ServerUrl, FileSystem); }
+            get { return string.Format("{0}/fs/{1}", ServerUrl, FileSystem); }
         }
 
         public string Username { get; set; }

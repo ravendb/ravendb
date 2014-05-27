@@ -5,7 +5,7 @@ class getFilesystemCommand extends commandBase {
 
     execute(): JQueryPromise<filesystem[]> {
         var resultsSelector = (filesystemNames: any) => filesystemNames.map(n => new filesystem(n));
-        return this.query("/ravenfs/names", { pageSize: 1024 }, null, resultsSelector);
+        return this.query("/fs/names", { pageSize: 1024 }, null, resultsSelector);
     }
 }
 

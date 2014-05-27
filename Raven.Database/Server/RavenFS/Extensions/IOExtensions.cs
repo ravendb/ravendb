@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
@@ -81,18 +82,23 @@ namespace Raven.Database.Server.RavenFS.Extensions
 		}
 
 
+        public static string GetMD5Hex(byte[] input)
+        {
+            var sb = new StringBuilder();
+            for (var i = 0; i < input.Length; i++)
+            {
+                sb.Append(input[i].ToString("x2"));
+            }
+
+            return sb.ToString();
+        }
+
 		public static string GetMD5Hash(this Stream stream)
 		{
-			MD5 md5 = new MD5CryptoServiceProvider();
-			var retVal = md5.ComputeHash(stream);
-
-			var sb = new StringBuilder();
-			for (var i = 0; i < retVal.Length; i++)
+			using (var md5 = Encryptor.Current.CreateHash())
 			{
-				sb.Append(retVal[i].ToString("x2"));
+			    return GetMD5Hex(md5.Compute16(stream));
 			}
-
-			return sb.ToString();
 		}
 	}
 }

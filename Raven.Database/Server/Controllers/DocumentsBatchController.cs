@@ -29,6 +29,8 @@ namespace Raven.Database.Server.Controllers
             {
                 var jsonCommandArray = await ReadJsonArrayAsync();
 
+				cts.Token.ThrowIfCancellationRequested();
+
                 var transactionInformation = GetRequestTransaction();
                 var commands =
                     (from RavenJObject jsonCommand in jsonCommandArray select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation)).ToArray();
@@ -51,7 +53,7 @@ namespace Raven.Database.Server.Controllers
                         return sb.ToString();
                     });
 
-                var batchResult = Database.Batch(commands);
+                var batchResult = Database.Batch(commands, cts.Token);
                 return GetMessageWithObject(batchResult);
             }
 		}

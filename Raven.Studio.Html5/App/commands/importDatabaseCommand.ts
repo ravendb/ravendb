@@ -4,20 +4,28 @@ import database = require("models/database");
 
 class importDatabaseCommand extends commandBase {
 
-    constructor(private fileData: FormData, private db: database) {
+    constructor(private fileData: FormData, private batchSize: number, private includeExpiredDocuments: boolean, private operateOnTypes: ImportItemType[], private filters: filterSettingDto[], private transformScript: string, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<any> {
         this.reportInfo("Importing...");
 
-        var url = "/studio-tasks/import";
+        var args = {
+            batchSize: this.batchSize,
+            includeExpiredDocuments: this.includeExpiredDocuments,
+            operateOnTypes: this.operateOnTypes.reduce((first: ImportItemType, second: ImportItemType) => first | second, 0),
+            filtersPipeDelimited: this.filters.map(f => f.Path + ";;;" + f.Values[0] + ";;;" + f.ShouldMatch).join("|||") || "",
+            transformScript: this.transformScript || ""
+        }
+
+        var url = "/studio-tasks/import" + this.urlEncodeArgs(args);
         var ajaxOptions: JQueryAjaxSettings = {
             processData: false, // Prevents JQuery from automatically transforming the data into a query string. http://api.jquery.com/jQuery.ajax/
             contentType: false,
             dataType: "text" // The server sends back an empty string, which is invalid JSON. So we must specify the return type as plain text, rather than JSON.
         }
-        var importTask = this.post(url, this.fileData, this.db, ajaxOptions);
+        var importTask = this.post(url, this.fileData, this.db, ajaxOptions); 
         importTask.done(() => this.reportSuccess("Database imported"));
         importTask.fail((response: JQueryXHR) => this.reportError("Failed to import database", response.responseText, response.statusText));
         return importTask;

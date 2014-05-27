@@ -36,14 +36,14 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+                tx.State.Root.Add("foo/0", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
+                tx.State.Root.Add("foo/1", new MemoryStream(value1));
 
                 tx.Commit();
             }
@@ -60,7 +60,7 @@ namespace Voron.Tests.Bugs
 
                 for (var i = 0; i < 2; i++)
                 {
-                    var readResult = tx.State.Root.Read(tx, "foo/" + i);
+                    var readResult = tx.State.Root.Read("foo/" + i);
 
                     Assert.NotNull(readResult);
                     Assert.Equal(value1.Length, readResult.Reader.Length);
@@ -88,29 +88,29 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
-                tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
+                tx.State.Root.Add("foo/0", new MemoryStream(value1));
+                tx.State.Root.Add("foo/1", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+                tx.State.Root.Add("foo/0", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx, "foo/4", new MemoryStream(value1));
+                tx.State.Root.Add("foo/4", new MemoryStream(value1));
                 tx.Commit();
             }
 
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var readResult = tx.State.Root.Read(tx, "foo/0");
+                var readResult = tx.State.Root.Read("foo/0");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(value1.Length, readResult.Reader.Length);
@@ -126,7 +126,7 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var readResult = tx.State.Root.Read(tx, "foo/0");
+                var readResult = tx.State.Root.Read("foo/0");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(value1.Length, readResult.Reader.Length);
@@ -164,7 +164,7 @@ namespace Voron.Tests.Bugs
                         {
                             foreach (var tree in trees)
                             {
-                                tx.Environment.State.GetTree(tx,tree).Add(tx, string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
+                                tx.Environment.State.GetTree(tx,tree).Add(string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
                             }
 
                         }
@@ -183,7 +183,7 @@ namespace Voron.Tests.Bugs
                 {
                     foreach (var tree in trees)
                     {
-                        using (var iterator = tx.Environment.State.GetTree(tx,tree).Iterate(tx))
+                        using (var iterator = tx.Environment.State.GetTree(tx,tree).Iterate())
                         {
                             if (!iterator.Seek(Slice.BeforeAllKeys))
                                 continue;

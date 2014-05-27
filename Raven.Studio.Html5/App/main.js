@@ -6,14 +6,7 @@
         transitions: '../Scripts/durandal/transitions',
         ace: '../Scripts/ace',        
         moment: '../Scripts/moment'
-    },
-    shim: {
-        "typeahead": ["jquery"],
-         'handlebars': {
-            exports: 'Handlebars'
-         }
-    },
-    urlArgs: "bust=" + (new Date()).getTime()
+    }
 });
 
 define('jquery', function() { return jQuery; });

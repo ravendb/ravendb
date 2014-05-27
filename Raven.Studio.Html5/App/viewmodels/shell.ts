@@ -9,6 +9,7 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
+import uploadQueueHelper = require("common/uploadQueueHelper");
 import collection = require("models/collection");
 import uploadItem = require("models/uploadItem");
 import deleteDocuments = require("viewmodels/deleteDocuments");
@@ -19,7 +20,8 @@ import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 
-import getBuildVersionCommand = require("commands/getBuildVersionCommand");
+import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
+import getClientBuildVersionCommand = require("commands/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
@@ -27,21 +29,24 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import changesApi = require("common/changesApi");
+import changeSubscription = require("models/changeSubscription");
 
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 
-import changeSubscription = require('models/changeSubscription');
-
+import counterStorage = require("models/counter/counterStorage");
+import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 
 class shell extends viewModelBase {
     private router = router;
 
     databases = ko.observableArray<database>();
+    counterStorages = ko.observableArray<counterStorage>();
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
-    buildVersion = ko.observable<buildVersionDto>();
+    serverBuildVersion = ko.observable<serverBuildVersionDto>();
+    clientBuildVersion = ko.observable<clientBuildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
@@ -50,10 +55,11 @@ class shell extends viewModelBase {
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
-
     canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
-
+    
+    coutersLoadedTask:JQueryPromise<any>;
     currentRawUrl = ko.observable<string>("");
+    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
@@ -65,7 +71,26 @@ class shell extends viewModelBase {
 
     globalDocPrefixChangesSubscription: changeSubscription;
 
-    modelPollingTimeoutFlag:boolean=true;
+    modelPollingTimeoutFlag: boolean = true;
+    
+    getCurrentActiveDBFeatureName() {
+        if (this.appUrls.isAreaActive('filesystems')() === true) {
+            return 'File Systems';
+        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+            return 'Counter Storages';
+        } else {
+            return 'Databases';
+        }
+    }
+    getCurrentActiveDBFeatureHref () {
+        if (this.appUrls.isAreaActive('filesystems')() === true) {
+            return this.appUrls.filesystems();
+        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+            return this.appUrls.counterStorageManagement();
+        } else {
+            return this.appUrls.databases();
+        }
+    }
     
     constructor() {
         super();
@@ -73,13 +98,15 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
+        
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()); 
     }
 
     activate(args: any) {
@@ -101,10 +128,16 @@ class shell extends viewModelBase {
             { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
             { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
             { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
-            { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+            { route: ['', 'counterstorages'], title: 'File Systems', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages},
+            { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
+            { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
+            { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -131,9 +164,6 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-
 
         shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
             if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
@@ -172,6 +202,12 @@ class shell extends viewModelBase {
         }
     }
 
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases()),
+        ];
+    }
+
     databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
@@ -203,7 +239,8 @@ class shell extends viewModelBase {
             .done(results => {
                 this.databasesLoaded(results);
                 this.fetchStudioConfig();
-                this.fetchBuildVersion();
+                this.fetchServerBuildVersion();
+                this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
             });
@@ -211,6 +248,26 @@ class shell extends viewModelBase {
         this.filesystemsLoadedTask = new getFilesystemsCommand()
             .execute()
             .done(results => this.filesystemsLoaded(results));
+
+
+        this.coutersLoadedTask = new getCounterStoragesCommand()
+            .execute()
+            .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+    }
+
+    counterStoragesLoaded(results: counterStorage[]) {
+        /*
+         * 
+         * this.filesystems(filesystems);
+        if (this.filesystems().length != 0) {
+            this.filesystems.first(x=> x.isVisible()).activate();
+        }
+         */
+        
+        this.counterStorages(results);
+        if (this.counterStorages().length != 0) {
+            this.counterStorages.first(x => x.isVisible()).activate();
+        }
     }
 
     fetchStudioConfig() {
@@ -326,7 +383,7 @@ class shell extends viewModelBase {
         });
     }
 
-    modelPolling() {
+    reloadDatabases() {
         new getDatabasesCommand()
             .execute()
             .done(results => {
@@ -352,8 +409,9 @@ class shell extends viewModelBase {
                     }
                 });
         });
+    }
 
-        var db = this.activeDatabase();
+    fetchDbStats(db: database) {
         if (db) {
             new getDatabaseStatsCommand(db)
                 .execute()
@@ -393,10 +451,16 @@ class shell extends viewModelBase {
         return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name']);
     }
 
-    fetchBuildVersion() {
-        new getBuildVersionCommand()
+    fetchServerBuildVersion() {
+        new getServerBuildVersionCommand()
             .execute()
-            .done((result: buildVersionDto) => this.buildVersion(result));
+            .done((result: serverBuildVersionDto) => { this.serverBuildVersion(result); });
+    }
+
+    fetchClientBuildVersion() {
+        new getClientBuildVersionCommand()
+            .execute()
+            .done((result: clientBuildVersionDto) => { this.clientBuildVersion(result); });
     }
 
     fetchLicenseStatus() {
@@ -427,9 +491,9 @@ class shell extends viewModelBase {
     }
 
     uploadStatusChanged(item: uploadItem) {
-        var queue: uploadItem[] = this.parseUploadQueue(window.localStorage[this.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
-        this.updateQueueStatus(item.id(), item.status(), queue);
-        this.updateLocalStorage(queue, item.filesystem);
+        var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
+        uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
+        uploadQueueHelper.updateLocalStorage(queue, item.filesystem);
     }
 
     showLicenseStatusDialog() {
@@ -438,6 +502,8 @@ class shell extends viewModelBase {
             app.showDialog(dialog);
         });
     }
+
+    
 }
 
 export = shell;

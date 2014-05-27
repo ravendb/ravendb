@@ -27,7 +27,7 @@ namespace Voron.Tests.Storage
 				{
 					for (int i = 0; i < 1024; i++)
 					{
-						tx.State.Root.Add(tx, "items/" + i, new MemoryStream(new byte[1024]));
+						tx.State.Root.Add("items/" + i, new MemoryStream(new byte[1024]));
 					}
 
 					tx.Commit();

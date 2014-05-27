@@ -110,26 +110,6 @@ namespace Raven.Database.Server.Security.OAuth
 
 		}
 
-		static string GetToken(IHttpContext ctx)
-		{
-			const string bearerPrefix = "Bearer ";
-
-			var auth = ctx.Request.Headers["Authorization"];
-			if (auth == null)
-			{
-				auth = ctx.Request.GetCookie("OAuth-Token");
-				if (auth != null)
-					auth = Uri.UnescapeDataString(auth);
-			}
-			if (auth == null || auth.Length <= bearerPrefix.Length ||
-				!auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-				return null;
-
-			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
-
-			return token;
-		}
-
         static string GetToken(RavenBaseApiController controller)
 		{
 			const string bearerPrefix = "Bearer ";
@@ -164,7 +144,7 @@ namespace Raven.Database.Server.Security.OAuth
 				{
 					controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
 					{
-                        Scheme = controller.Request.RequestUri.Scheme,
+                        Scheme = controller.InnerRequest.RequestUri.Scheme,
                         Host = controller.InnerRequest.RequestUri.Host,
 						Port = controller.InnerRequest.RequestUri.Port,
 					}.Uri.ToString(), msg);

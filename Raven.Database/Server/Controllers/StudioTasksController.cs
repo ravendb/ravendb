@@ -6,18 +6,27 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Security.Permissions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
+using Raven.Database.Extensions;
+using System.Text.RegularExpressions;
+using System.Reflection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -28,50 +37,102 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("studio-tasks/import")]
 		[Route("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase()
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
-            if (!this.Request.Content.IsMimeMultipartContent()) 
-            { 
-                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType); 
+            if (!this.Request.Content.IsMimeMultipartContent())
+            {
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
             var streamProvider = new MultipartMemoryStreamProvider();
             await Request.Content.ReadAsMultipartAsync(streamProvider);
-            var fileStream = await streamProvider.Contents.First().ReadAsStreamAsync();
-			var dataDumper = new DataDumper(Database);
+            var fileStream = await streamProvider.Contents
+                .First(c => c.Headers.ContentDisposition.Name == "\"file\"")
+                .ReadAsStreamAsync();
+
+            var dataDumper = new DataDumper(Database);
             var importOptions = new SmugglerImportOptions
-			{
+            {
                 FromStream = fileStream
-			};
-            var options = new SmugglerOptions();
-			await dataDumper.ImportData(importOptions, options);
+            };
+            var options = new SmugglerOptions
+            {
+                BatchSize = batchSize,
+                ShouldExcludeExpired = includeExpiredDocuments,
+                OperateOnTypes = operateOnTypes,
+                TransformScript = transformScript
+            };
+
+            // Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
+            // Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
+            if (filtersPipeDelimited != null)
+            {
+                options.Filters.AddRange(filtersPipeDelimited
+                    .Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+                    .Select(o => new FilterSetting
+                    {
+                        Path = o[0],
+                        Values = new List<string> { o[1] },
+                        ShouldMatch = bool.Parse(o[2])
+                    }));
+            }
+
+            await dataDumper.ImportData(importOptions, options);
             return GetEmptyMessage();
 		}
 
-
+	    public class ExportData
+	    {
+            public string SmugglerOptions { get; set; }
+	    }
+        
 		[HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
-		public async Task<HttpResponseMessage> ExportDatabase(SmugglerOptionsDto dto)
+        public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
-			var smugglerOptions = new SmugglerOptions();
-			// smugglerOptions.OperateOnTypes = ;
+            var requestString = smugglerOptionsJson.SmugglerOptions;
+	        SmugglerOptions smugglerOptions;
+      
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+			{
+				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (SmugglerOptions)serializer.Deserialize(jsonReader, typeof(SmugglerOptions));
+			}
 
-			var result = GetEmptyMessage();
+
+            var result = GetEmptyMessage();
+            
+            // create PushStreamContent object that will be called when the output stream will be ready.
 			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
 			{
-				{
-					
-				};
-				await new DataDumper(Database).ExportData(new SmugglerExportOptions
-				{
-					ToStream = outputStream
-				}, smugglerOptions);
+			    try
+			    {
+			        await new DataDumper(Database).ExportData(new SmugglerExportOptions
+			        {
+			            ToStream = outputStream
+			        }, smugglerOptions).ConfigureAwait(false);
+			    }
+                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
+			    finally
+			    {
+			        outputStream.Close();
+			    }
+
+				
 			});
+
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "Dump of " + this.DatabaseName + ", " + DateTime.Now.ToString("dd MMM yyyy HH-mm")
+            };
 			
 			return result;
-		}
 
+
+		}
+        
 		[HttpPost]
 		[Route("studio-tasks/createSampleData")]
 		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
@@ -149,7 +210,7 @@ namespace Raven.Database.Server.Controllers
                                 Key = metadata.Value<string>("@id"),
                             }).ToArray();
 
-            Database.Batch(commands);
+            Database.Batch(commands, CancellationToken.None);
         }
 
         private static RavenJToken SetValueInDocument(string value)
@@ -285,13 +346,5 @@ namespace Raven.Database.Server.Controllers
 
 	    }
 	}
-
-	public class SmugglerOptionsDto
-	{
-		public bool IncludeDocuments { get; set; }
-		public bool IncludeIndexes { get; set; }
-		public bool IncludeTransformers { get; set; }
-		public bool IncludeAttachments { get; set; }
-		public bool RemoveAnalyzers { get; set; }
-	}
 }
+

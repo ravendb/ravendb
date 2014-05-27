@@ -1,0 +1,38 @@
+﻿<div class="synchronization-group panel panel-default" data-bind="visible: isConflictsVisible()">
+
+    <div class="panel-heading">
+        <h4 class="panel-title">
+            <a class="pull-right" data-toggle="collapse" data-bind="attr: { href: '#conflictsCollapse' }">
+                <span>Conflicts</span>
+                <span class="text-muted" data-bind="text: '(' + conflicts().length + ')'"></span>
+            </a>
+            <span class="btn-group">
+                <button type="button" class="btn btn-default" data-bind="click: toggleSelectAll" title="Select all or none">
+                    <img style="height: 18px;" data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                </button>
+                <button class="btn btn-primary" data-bind="click: resolveWithLocalVersion">Resolve with Local</button>
+                <button class="btn btn-primary" data-bind="click: resolveWithRemoteVersion">Resolve with Remote</button>
+            </span>
+        </h4>
+        <div class="clearfix"></div>
+    </div>
+
+    <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'conflictsCollapse' }">
+        <div class="panel-body">
+            <table class="table-no-borders">
+                <tbody data-bind="foreach: conflicts">
+                    <tr>
+                        <td style="padding:0px">
+                            <h5 class="pull-left">
+                                <a class="use-bootstrap-tooltip">
+                                    <input type="checkbox" data-bind="attr: { value: fileName }, checked: $root.selectedConflicts" />
+                                    <span data-bind="text: fileName"></span>
+                                </a>
+                            </h5>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

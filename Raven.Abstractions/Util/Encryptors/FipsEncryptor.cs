@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace Raven.Abstractions.Util.Encryptors
@@ -19,7 +20,82 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		public class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
 		{
-			public int StorageHashSize
+		    public void Dispose()
+		    {
+		        //no-op
+		    }
+
+            ABCDStruct abcdStruct = MD5Core.GetInitialStruct();
+            private byte[] remainingBuffer = new byte[bufferSize];
+		    private int remainingCount = 0;
+		    private int totalLength = 0;
+
+		    private const int bufferSize = 64;
+
+		    public byte[] Compute16(Stream stream)
+		    {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                do
+                {
+                    bytesRead = stream.Read(buffer, 0, 4096);
+                    if (bytesRead > 0)
+                    {
+                        TransformBlock(buffer, 0, bytesRead);
+                    }
+                } while (bytesRead > 0);
+
+		        return TransformFinalBlock();
+		    }
+
+		    public byte[] TransformFinalBlock()
+		    {
+		        totalLength += remainingCount;
+		        return MD5Core.GetHashFinalBlock(remainingBuffer, 0, remainingCount, abcdStruct, (Int64) totalLength*8);
+		    }
+
+		    public void TransformBlock(byte[] bytes, int offset, int length)
+		    {
+		        int start = offset;
+                if (remainingCount > 0)
+                {
+                    if (remainingCount + length < bufferSize)
+                    {
+                        // just append to remaining buffer
+                        Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, length);
+                        remainingCount += length;
+                        return;
+                    }
+                    else
+                    {
+                        // fill up buffer
+                        Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount,  bufferSize - remainingCount);
+                        start += bufferSize - remainingCount;
+                        // now we have 64 bytes in buffer
+                        MD5Core.GetHashBlock(remainingBuffer, ref abcdStruct, 0);
+                        totalLength += bufferSize;
+                        remainingCount = 0;
+                    }
+                }
+
+                // while has 64 bytes blocks
+                while (start <= length - bufferSize)
+                {
+                    MD5Core.GetHashBlock(bytes, ref abcdStruct, start);
+                    totalLength += bufferSize;
+                    start += bufferSize;
+                }
+
+                // save rest (if any)
+                if (start != length)
+                {
+                    remainingCount = length - start;
+                    Buffer.BlockCopy(bytes, start, remainingBuffer, 0, remainingCount);
+                }
+
+		    }
+
+		    public int StorageHashSize
 			{
 				get
 				{
@@ -35,9 +111,16 @@ namespace Raven.Abstractions.Util.Encryptors
 				return Compute16(bytes);
 			}
 
+            public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
+            {
+                if (StorageHashSize == 20)
+                    return Compute20(bytes, offset, length);
+                return Compute16(bytes, offset, length);
+            }
+
 			public byte[] ComputeForOAuth(byte[] bytes)
 			{
-				return Compute16(bytes);
+				return Compute20(bytes);
 			}
 
 			public byte[] Compute16(byte[] bytes)
@@ -45,10 +128,20 @@ namespace Raven.Abstractions.Util.Encryptors
 				return MD5Core.GetHash(bytes);
 			}
 
+            public byte[] Compute16(byte[] bytes, int offset, int length)
+            {
+                return MD5Core.GetHash(bytes, offset, length);
+            }
+
 			public byte[] Compute20(byte[] bytes)
 			{
 				return ComputeHash(SHA1.Create(), bytes, 20);
 			}
+
+            public byte[] Compute20(byte[] bytes, int offset, int length)
+            {
+                return ComputeHash(SHA1.Create(), bytes, offset, length, 20);
+            }
 		}
 
 		public class FipsSymmetricalEncryptor : ISymmetricalEncryptor

@@ -23,7 +23,11 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
-		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
+			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
+				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
+				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
+
+			EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
 		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -85,6 +89,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
 			FileSystemDataDir =
 				new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
+			CountersDataDir =
+				new StringSetting(settings["Raven/Counters/DataDir"], @"~\Data\Counters");
 			FileSystemIndexStoragePath =
 				new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
 			
@@ -149,7 +155,10 @@ namespace Raven.Database.Config
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
             VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 		}
+
+		public IntegerSetting MemoryLimitForIndexing { get;private set; }
 
 		private string GetDefaultWebDir()
 		{
@@ -214,6 +223,8 @@ namespace Raven.Database.Config
 		public StringSetting IndexStoragePath { get; private set; }
 
 		public StringSetting FileSystemDataDir { get; private set; }
+
+		public StringSetting CountersDataDir { get; private set; }
 		
 		public StringSetting FileSystemIndexStoragePath { get; private set; }
 
@@ -282,5 +293,6 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
         public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
+		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
 	}
 }

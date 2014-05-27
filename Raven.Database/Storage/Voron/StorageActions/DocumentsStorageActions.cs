@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Threading;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -97,7 +98,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null)
 		{
 			if (take < 0)
 				throw new ArgumentException("must have zero or positive value", "take");
@@ -119,6 +120,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
 						yield break;
 

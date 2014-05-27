@@ -93,39 +93,11 @@ namespace Raven.Client
         void Delete(string id);
 
 		/// <summary>
-		/// Begins the a load that will use the specified results transformer against the specified id
-		/// </summary>
-		Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new();
-
-
-		/// <summary>
-		/// Begins the a load that will use the specified results transformer against the specified id
-		/// </summary>
-		Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
-
-		/// <summary>
-		/// Begins the a load that will use the specified results transformer against the specified id
-		/// </summary>
-		Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
-
-		/// <summary>
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
 		Task<T> LoadAsync<T>(string id);
-
-		/// <summary>
-		/// Begins the async multi-load operation
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <returns></returns>
-		Task<T[]> LoadAsync<T>(params string[] ids);
-
-		/// <summary>
-		/// Begins the async load operation
-		/// </summary>
-		Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Begins the async multi-load operation
@@ -175,6 +147,61 @@ namespace Raven.Client
 		/// Or whatever your conventions specify.
 		/// </remarks>
 		Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids);
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
+		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="id"></param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		Task<TResult> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="id"></param>
+		/// <param name="transformer">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null);
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified ids
+		/// </summary>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="ids"></param>
+		/// <param name="transformer">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null);
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="id"></param>
+		/// <param name="transformerType">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null);
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified ids
+		/// </summary>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="ids"></param>
+		/// <param name="transformerType">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null);
 
 		/// <summary>
 		/// Begins the async save changes operation

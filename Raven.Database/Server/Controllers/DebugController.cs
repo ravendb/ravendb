@@ -405,6 +405,25 @@ namespace Raven.Database.Server.Controllers
 				AdditionalInfo = x.CustomInfo ?? string.Empty
 			}));
 		}
+
+		[HttpGet]
+		[Route("debug/identities")]
+		[Route("databases/{databaseName}/debug/identities")]
+		public HttpResponseMessage Identities()
+		{
+			var start = GetStart();
+			var pageSize = GetPageSize(1024);
+
+			long totalCount = 0;
+			IEnumerable<KeyValuePair<string, long>> identities = null;
+			Database.TransactionalStorage.Batch(accessor => identities = accessor.General.GetIdentities(start, pageSize, out totalCount));
+
+			return GetMessageWithObject(new
+			                            {
+				                            TotalCount = totalCount,
+											Identities = identities
+			                            });
+		}
 	}
 
 	public class RouteInfo

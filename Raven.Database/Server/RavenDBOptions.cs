@@ -14,8 +14,9 @@ namespace Raven.Database.Server
 		private readonly DocumentDatabase systemDatabase;
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
+		private CountersLandlord countersLandlord;
 
-	    public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
+		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
 			if (configuration == null)
 				throw new ArgumentNullException("configuration");
@@ -35,6 +36,7 @@ namespace Raven.Database.Server
 				var transportState = systemDatabase.TransportState;
 			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase, transportState);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
+				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
@@ -66,6 +68,11 @@ namespace Raven.Database.Server
 	        get { return fileSystemLandlord; }
 	    }
 
+		public CountersLandlord CountersLandlord
+		{
+			get { return countersLandlord; }
+		}
+
 	    public RequestManager RequestManager
 		{
 			get { return requestManager; }
@@ -79,7 +86,8 @@ namespace Raven.Database.Server
                                 databasesLandlord, 
                                 fileSystemLandlord,
                                 systemDatabase, 
-                                requestManager
+                                requestManager,
+                                countersLandlord
 		                    };
 
             var errors = new List<Exception>();

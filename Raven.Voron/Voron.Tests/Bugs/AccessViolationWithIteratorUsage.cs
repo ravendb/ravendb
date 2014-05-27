@@ -22,8 +22,8 @@ namespace Voron.Tests.Bugs
 			{
 				var tree = Env.CreateTree(tx, "test");
 
-				tree.Add(tx, "items/1", new MemoryStream());
-				tree.Add(tx, "items/2", new MemoryStream());
+				tree.Add("items/1", new MemoryStream());
+				tree.Add("items/2", new MemoryStream());
 
 				tx.Commit();
 			}
@@ -35,7 +35,7 @@ namespace Voron.Tests.Bugs
 				{
 					for (int i = 0; i < 10; i++)
 					{
-						Env.State.GetTree(tx, "test").Add(tx, "items/" + i, new MemoryStream(new byte[2048]));
+						Env.State.GetTree(tx, "test").Add("items/" + i, new MemoryStream(new byte[2048]));
 					}
 
 					tx.Commit();
@@ -47,7 +47,7 @@ namespace Voron.Tests.Bugs
 				{
 					for (int i = 10; i < 40; i++)
 					{
-						Env.State.GetTree(tx, "test").Add(tx, "items/" + i, new MemoryStream(new byte[2048]));
+						Env.State.GetTree(tx, "test").Add("items/" + i, new MemoryStream(new byte[2048]));
 					}
 
 					tx.Commit();

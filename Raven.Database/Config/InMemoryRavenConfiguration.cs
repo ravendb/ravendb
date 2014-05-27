@@ -82,6 +82,8 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
+
+			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 			
 			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
@@ -183,6 +185,8 @@ namespace Raven.Database.Config
 			DataDirectory = ravenSettings.DataDir.Value;
 
 			FileSystemDataDirectory = ravenSettings.FileSystemDataDir.Value;
+			
+			CountersDataDirectory = ravenSettings.CountersDataDir.Value;
 
 			FileSystemIndexStoragePath = ravenSettings.FileSystemIndexStoragePath.Value;
 
@@ -241,6 +245,7 @@ namespace Raven.Database.Config
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
 		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
+			VoronInitialFileSize = ravenSettings.VoronInitialFileSize.Value;
 
 			PostInit();
 		}
@@ -272,12 +277,6 @@ namespace Raven.Database.Config
 
 		private void FilterActiveBundles()
 		{
-			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
-
-			var bundles = activeBundles.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(x => x.Trim())
-				.ToArray();
-
 			if (container != null)
 				container.Dispose();
 			container = null;
@@ -286,18 +285,20 @@ namespace Raven.Database.Config
 
 			Catalog.Catalogs.Clear();
 
-			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
+			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()));
 		}
 
-		public List<string> ActiveBundles
+		public IEnumerable<string> ActiveBundles
 		{
 			get
 			{
-				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? string.Empty;
 
-				return activeBundles.GetSemicolonSeparatedValues();
+				return BundlesHelper.ProcessActiveBundles(activeBundles)
+					.GetSemicolonSeparatedValues()
+					.Distinct();
 			}
-		} 
+		}
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
@@ -640,12 +641,21 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// The directory for the RavenDB file system. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// Default: ~\Data
 		/// </summary>
 		public string FileSystemDataDirectory
 		{
 			get { return fileSystemDataDirectory; }
 			set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+		}
+
+		/// <summary>
+		/// The directory for the RavenDB counters. 
+		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+		/// </summary>
+		public string CountersDataDirectory
+		{
+			get { return countersDataDirectory; }
+			set { countersDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
@@ -787,6 +797,7 @@ namespace Raven.Database.Config
 
 		private string indexStoragePath, journalStoragePath;
 		private string fileSystemIndexStoragePath;
+		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
 		private AnonymousUserAccessMode anonymousUserAccessMode;
@@ -819,6 +830,11 @@ namespace Raven.Database.Config
 		/// Default: 5
 		/// </summary>
 		public int MaxNumberOfStoredCommitPoints { get; set; }
+
+		/// <summary>
+		/// Limit of how much indexing process can take memory (in MBytes)
+		/// </summary>
+		public int MemoryLimitForIndexingInMB { get; set; }
 
 		public string IndexStoragePath
 		{
@@ -917,6 +933,11 @@ namespace Raven.Database.Config
         /// Minimum value is 2.
         /// </summary>
         public int VoronMaxBufferPoolSize { get; set; }
+
+		/// <summary>
+		/// You can use this setting to specify an initial file size for data file (in bytes).
+		/// </summary>
+		public int? VoronInitialFileSize { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

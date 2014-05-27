@@ -19,13 +19,14 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_752 : NoDisposalNeeded
 	{
+	    private const int MaxNumber = 2048;
 		[Fact]
 		public void ReplicationInformerShouldThrowAfterSecondTimeout()
 		{
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-            })
+            }, new HttpJsonRequestFactory(MaxNumber))
             {
                 ReplicationDestinations =
 					{
@@ -62,7 +63,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.ReadFromAllServers
-            })
+            }, new HttpJsonRequestFactory(MaxNumber))
             {
                 ReplicationDestinations =
 					{
@@ -99,7 +100,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-            })
+            }, new HttpJsonRequestFactory(MaxNumber))
             {
                 ReplicationDestinations =
 					{
@@ -136,7 +137,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.ReadFromAllServers
-            })
+            }, new HttpJsonRequestFactory(MaxNumber))
             {
                 ReplicationDestinations =
 					{

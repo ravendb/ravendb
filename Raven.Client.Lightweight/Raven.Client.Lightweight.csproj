@@ -59,13 +59,12 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.WebRequest" />
-    <Reference Include="System.Reactive.Core, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Rx-Core.2.2.2\lib\net45\System.Reactive.Core.dll</HintPath>
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.2.4\lib\net45\System.Reactive.Core.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive.Interfaces, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="System.Reactive.Interfaces, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Rx-Interfaces.2.2.2\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+      <HintPath>..\packages\Rx-Interfaces.2.2.4\lib\net45\System.Reactive.Interfaces.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
@@ -84,6 +83,11 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Changes\IConnectableChanges.cs" />
+    <Compile Include="Changes\IChangesConnectionState.cs" />
+    <Compile Include="Changes\IConnectableChanges`1.cs" />
+    <Compile Include="Changes\RemoteChangesClientBase.cs" />
+    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Connection\AdminRequestCreator.cs" />
     <Compile Include="Connection\AdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
@@ -93,7 +97,6 @@
     <Compile Include="Connection\IDocumentStoreReplicationInformer.cs" />
     <Compile Include="Connection\IReplicationInformerBase.cs" />
     <Compile Include="Connection\Operation.cs" />
-    <Compile Include="Connection\NameValueCollectionExtensions.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
@@ -112,11 +115,9 @@
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
     <Compile Include="RavenFS\AsyncExtensions.cs" />
-    <Compile Include="RavenFS\Changes\ImmutableList.cs" />
-    <Compile Include="RavenFS\Changes\IServerNotifications.cs" />
-    <Compile Include="RavenFS\Changes\NotificationSubject.cs" />
-    <Compile Include="RavenFS\Changes\ServerNotifications.cs" />
-    <Compile Include="RavenFS\Changes\TaskErrorExtensions.cs" />
+    <Compile Include="RavenFS\Changes\FileSystemConnectionState.cs" />
+    <Compile Include="RavenFS\Changes\IFileSystemChanges.cs" />
+    <Compile Include="RavenFS\Changes\RemoteFileSystemChanges.cs" />
     <Compile Include="RavenFS\Connections\FileConvention.cs" />
     <Compile Include="RavenFS\Connections\IFileSystemClientReplicationInformer.cs" />
     <Compile Include="RavenFS\Connections\RavenFileSystemReplicationInformer.cs" />
@@ -125,8 +126,6 @@
     <Compile Include="RavenFS\Extensions\RavenFileSystemClientExtensions.cs" />
     <Compile Include="RavenFS\ListenableStream.cs" />
     <Compile Include="RavenFS\ListPage.cs" />
-    <Compile Include="RavenFS\NameValueCollectionJsonConverter.cs" />
-    <Compile Include="RavenFS\NotificationJSonUtilities.cs" />
     <Compile Include="RavenFS\RavenFileSystemClient.cs" />
     <Compile Include="RavenFS\Shard\DefaultShardResolutionStrategy.cs" />
     <Compile Include="RavenFS\Shard\IShardAccessStrategy.cs" />
@@ -146,8 +145,7 @@
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
     <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
-    <Compile Include="Changes\LocalConnectionState.cs" />
-    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
+    <Compile Include="Changes\DatabaseConnectionState.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
     <Compile Include="Changes\TaskErrorExtensions.cs" />
     <Compile Include="Document\RavenLoadConfiguration.cs" />
@@ -243,7 +241,6 @@
     <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
-    <Compile Include="Extensions\DatabaseCommandsExtensions.cs" />
     <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
@@ -309,10 +306,8 @@
     <Compile Include="Shard\ShardedObservableWithTask.cs" />
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
-    <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\GlobalLastEtagHolder.cs" />
     <Compile Include="Util\JSBeautify.cs" />
-    <Compile Include="Util\ConcatObservable.cs" />
     <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\LastEtagHolder.cs" />
@@ -326,6 +321,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

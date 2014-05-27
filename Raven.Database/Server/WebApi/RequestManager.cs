@@ -184,7 +184,8 @@ namespace Raven.Database.Server.WebApi
 				controller.AddHeader("Access-Control-Allow-Origin", originHeader, msg);
 			}
 
-	        if (controller.Request.Method.Method != "OPTIONS")
+            
+	        if (controller.InnerRequest.Method.Method != "OPTIONS")
 		        return;
 
 			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
@@ -405,7 +406,7 @@ namespace Raven.Database.Server.WebApi
 			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				landlord.Cleanup(db, skipIfActive: true);
+				landlord.Cleanup(db, skipIfActive: true, shouldSkip: database => database.Configuration.RunInMemory);
 			}
 		}
 	}

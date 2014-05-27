@@ -27,7 +27,7 @@ class createFilesystemCommand extends commandBase {
             "Disabled": false
         };
 
-        var url = "/ravenfs/admin/" + this.filesystemName;
+        var url = "/fs/admin/" + this.filesystemName;
         var createTask = this.put(url, JSON.stringify(filesystemDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.filesystemName + " created"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to create file system", response.responseText, response.statusText));

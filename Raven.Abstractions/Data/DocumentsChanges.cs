@@ -13,6 +13,7 @@ namespace Raven.Abstractions.Data
 	    public enum ChangeType
 	    {
 			DocumentDeleted,
+            DocumentAdded,
 		    FieldChanged,
 		    NewField,
 		    RemovedField,

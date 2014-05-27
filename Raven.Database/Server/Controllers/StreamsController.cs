@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
 			{
 				var msg = GetEmptyMessage();
 
@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
 					queryOp.Init();
-					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor,
+					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
 						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
 
 					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
@@ -167,14 +167,16 @@ namespace Raven.Database.Server.Controllers
 			private readonly HttpRequestMessage req;
 			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
-			private readonly Action<string> outputContentTypeSetter;
+		    private readonly CancellationTokenSourceExtensions.CancellationTimeout _timeout;
+		    private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTokenSourceExtensions.CancellationTimeout timeout, Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;
 				this.accessor = accessor;
-				outputContentTypeSetter = contentTypeSetter;
+			    _timeout = timeout;
+			    outputContentTypeSetter = contentTypeSetter;
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -183,9 +185,21 @@ namespace Raven.Database.Server.Controllers
 				using (accessor)
 				using (var writer = GetOutputWriter(req, stream))
 				{
-					writer.WriteHeader();
-					queryOp.Execute(writer.Write);
-					outputContentTypeSetter(writer.ContentType);
+                    outputContentTypeSetter(writer.ContentType);
+
+                    writer.WriteHeader();
+				    try
+				    {
+				        queryOp.Execute(o =>
+				        {
+				            _timeout.Delay();
+				            writer.Write(o);
+				        });
+				    }
+				    catch (Exception e)
+				    {
+				        writer.WriteError(e);
+				    }
 				}
 
 				return Task.FromResult(true);
@@ -210,6 +224,7 @@ namespace Raven.Database.Server.Controllers
 
 			void WriteHeader();
 			void Write(RavenJObject result);
+		    void WriteError(Exception exception);
 		}
 
 		private class ExcelOutputWriter : IOutputWriter
@@ -278,7 +293,14 @@ namespace Raven.Database.Server.Controllers
 				writer.WriteLine();
 			}
 
-			private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
+		    public void WriteError(Exception exception)
+		    {
+		        writer.WriteLine();
+                writer.WriteLine();
+		        writer.WriteLine(exception.ToString());
+		    }
+
+		    private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
 			{
 				properties = DocumentHelpers.GetPropertiesFromJObject(result,
 					parentPropertyPath: "",
@@ -315,6 +337,7 @@ namespace Raven.Database.Server.Controllers
 			private const string JsonContentType = "application/json";
 			private readonly Stream stream;
 			private JsonWriter writer;
+		    private bool closedArray = false;
 
 			public JsonOutputWriter(Stream stream)
 			{
@@ -338,8 +361,8 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (writer == null)
 					return;
-
-				writer.WriteEndArray();
+			    if (closedArray == false)
+			        writer.WriteEndArray();
 				writer.WriteEndObject();
 
 				writer.Flush();
@@ -350,6 +373,14 @@ namespace Raven.Database.Server.Controllers
 			{
 				result.WriteTo(writer, Default.Converters);
 			}
+
+		    public void WriteError(Exception exception)
+		    {
+		        closedArray = true;
+		        writer.WriteEndArray();
+                writer.WritePropertyName("Error");
+                writer.WriteValue(exception.ToString());
+		    }
 		}
 	}
 }

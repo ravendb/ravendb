@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 
@@ -265,7 +266,7 @@ namespace Raven.Json.Linq
                     {
                         changes.FieldNewValue = token.ToString();
                         changes.FieldNewType = token.Type.ToString();
-                        changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
+                        changes.Change = DocumentsChanges.ChangeType.NewField;
 
                         changes.FieldName = kvp.Key;
                     }
@@ -291,13 +292,13 @@ namespace Raven.Json.Linq
 
 	            if (selfObj.Count < otherObj.Count)
                 {
-                    changes.Change = DocumentsChanges.ChangeType.ArrayValueRemoved;
+                    changes.Change = DocumentsChanges.ChangeType.RemovedField;
 
                     changes.FieldOldValue = diffData[key];
                 }
                 else
                 {
-                    changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
+                    changes.Change = DocumentsChanges.ChangeType.NewField;
                     changes.FieldNewValue = diffData[key];
                 }
                 docChanges.Add(changes);
@@ -308,13 +309,11 @@ namespace Raven.Json.Linq
 
         private static  void FillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
         {
+            Debug.Assert(diffData != null,"Precaution --> parameter should not be null");
+
             string[] diffNames;
             DictionaryWithParentSnapshot bigObj ;
 
-            if (diffData == null)
-            {
-                diffData = new Dictionary<string, string>();
-            }
             if (selfObj.Keys.Count < otherObj.Keys.Count)
             {
                 diffNames = otherObj.Keys.Except(selfObj.Keys).ToArray();
@@ -342,7 +341,7 @@ namespace Raven.Json.Linq
             });
             
         }
-        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token)
+        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token,string fieldName)
         {
             var changes = new DocumentsChanges
             {
@@ -351,10 +350,10 @@ namespace Raven.Json.Linq
                 FieldNewValue = kvp.Value.ToString(),
                 FieldOldValue = token.ToString(),
                 Change = DocumentsChanges.ChangeType.FieldChanged,
-                FieldName = kvp.Key
+                FieldName = fieldName
             };
             docChanges.Add(changes);
-          
+
         }
         public static void AddChanges(this ICollection<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, string fieldName)
         {

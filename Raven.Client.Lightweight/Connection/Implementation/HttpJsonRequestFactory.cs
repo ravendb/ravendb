@@ -214,9 +214,10 @@ namespace Raven.Client.Connection
 			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
 			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
 
+            httpJsonRequest.ResponseHeaders.Remove(Constants.RavenForcePrimaryServerCheck);
 			if (additionalHeaders != null && additionalHeaders[Constants.RavenForcePrimaryServerCheck] != null)
 			{
-				httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
+				httpJsonRequest.ResponseHeaders.Set(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
 			}
 
 			IncrementCachedRequests();

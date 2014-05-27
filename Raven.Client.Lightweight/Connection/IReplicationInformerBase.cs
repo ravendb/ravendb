@@ -11,12 +11,17 @@ using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Connection
 {
-    public interface IReplicationInformerBase<in TClient> : IDisposable
+    public interface IReplicationInformerBase : IDisposable
     {
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
         event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+        /// <summary>
+        /// Set how long we will wait between pinging failed servers
+        /// Is set to 0, will not ping failed servers
+        /// </summary>
+        int DelayTimeInMiliSec { get; set; }
 
         List<OperationMetadata> ReplicationDestinations { get; }
         /// <summary>
@@ -24,17 +29,6 @@ namespace Raven.Client.Connection
         /// </summary>
         /// <value>The replication destinations.</value>
         List<OperationMetadata> ReplicationDestinationsUrls { get; }
-
-        /// <summary>
-        /// Updates the replication information if needed.
-        /// </summary>
-        Task UpdateReplicationInformationIfNeeded(TClient client);
-
-        /// <summary>
-        /// Refreshes the replication information.
-        /// Expert use only.
-        /// </summary>
-        void RefreshReplicationInformation(TClient client);
 
         /// <summary>
         /// Get the current failure count for the url
@@ -52,8 +46,22 @@ namespace Raven.Client.Connection
 
         void ForceCheck(string primaryUrl, bool shouldForceCheck);
 
-		bool IsServerDown(Exception exception, out bool timeout);
+        bool IsServerDown(Exception exception, out bool timeout);
 
-	    bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode);
+        bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode);
+    }
+
+    public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase
+    {
+        /// <summary>
+        /// Updates the replication information if needed.
+        /// </summary>
+        Task UpdateReplicationInformationIfNeeded(TClient client);
+
+        /// <summary>
+        /// Refreshes the replication information.
+        /// Expert use only.
+        /// </summary>
+        void RefreshReplicationInformation(TClient client);
     }
 }

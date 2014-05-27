@@ -148,20 +148,14 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-            var bundles = config.Settings["Raven/ActiveBundles"];
-            if (string.IsNullOrWhiteSpace(bundles) == false)
+            foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
             {
-                var bundlesList = bundles.Split(';').ToList();
-
-                foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
+                string value;
+                if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
                 {
-                    string value;
-                    if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
-                    {
-                        bool active;
-                        if (bool.TryParse(value, out active) && active == false)
-                            throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
-                    }
+                    bool active;
+                    if (bool.TryParse(value, out active) && active == false)
+                        throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
                 }
             }
         }

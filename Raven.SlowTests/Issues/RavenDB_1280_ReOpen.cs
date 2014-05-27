@@ -13,6 +13,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.Issues
 {
@@ -24,9 +25,8 @@ namespace Raven.SlowTests.Issues
             configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
         }
 
-        //[Theory]
-        //[PropertyData("Storages")]
-        [TimeBombedFact(2014, 4, 30, "Performance issue, Pawel investigating this")]
+        [Theory]
+        [PropertyData("Storages")]
 		public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
         {
             const int iterations = 8000;

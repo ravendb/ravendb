@@ -60,8 +60,8 @@ namespace Raven.Database.Smuggler
 	        database.TransactionalStorage.Batch(accessor =>
 	        {
                 // since remove all before is inclusive, but we want last etag for function FetchCurrentMaxEtags we modify ranges
-	            accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
-                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
+	            accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
+                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
 	        });
 	    }
 
@@ -76,12 +76,12 @@ namespace Raven.Database.Smuggler
                              LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag()
                          };
 
-                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicBackupsDocsTombstones);
+                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicExportsDocsTombstones);
                 if (lastDocumentTombstone != null)
                     result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
 
                 var attachmentTombstones = 
-                    accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
+                    accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
                             .OrderBy(x => x.Etag).ToArray();
                 if (attachmentTombstones.Any())
                 {
@@ -153,7 +153,7 @@ namespace Raven.Database.Smuggler
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
-                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
                 {
                     var o = new RavenJObject
                     {
@@ -215,7 +215,7 @@ namespace Raven.Database.Smuggler
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
-                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
                 {
                     var o = new RavenJObject
                     {

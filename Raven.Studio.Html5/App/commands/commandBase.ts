@@ -58,6 +58,10 @@ class commandBase {
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
+                //if we fetched a database document, save the etag from the header
+                if (results.hasOwnProperty('SecuredSettings')) {
+                    results['__metadata'] = { '@etag': xhr.getResponseHeader('Etag') };
+                }
                 var transformedResults = resultsSelector(results);
                 task.resolve(transformedResults);
             });
@@ -82,7 +86,7 @@ class commandBase {
                     for (var n = 0; n < headersArray.length; n++) {
                         var keyValue = headersArray[n].split(": ");
                         if (keyValue.length == 2) {
-                            keyValue[1] = keyValue[1].replaceAll("\"", "");
+                            //keyValue[1] = keyValue[1].replaceAll("\"", "");
                             headersObject[keyValue[0]] = keyValue[1];
                         }
                     }

@@ -151,15 +151,15 @@ namespace Voron.Tests
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
 			Lazy<Cursor> lazy;
-			var p = tx.State.Root.FindPageFor(tx, key, out lazy);
-			var node = p.Search(key, Env.SliceComparer);
+			var p = tx.State.Root.FindPageFor(key, out lazy);
+			var node = p.Search(key);
 
 			if (node == null)
 				return null;
 
 			var item1 = new Slice(node);
 
-			if (item1.Compare(key, Env.SliceComparer) != 0)
+			if (item1.Compare(key) != 0)
 				return null;
 			return Tuple.Create(item1,
 				new Slice((byte*) node + node->KeySize + Constants.NodeHeaderSize,

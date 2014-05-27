@@ -10,8 +10,9 @@ import createDatabase = require("viewmodels/createDatabase");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
-import changeSubscription = require('models/changeSubscription');
+import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
+import changeSubscription = require('models/changeSubscription');
 
 class databases extends viewModelBase {
 
@@ -217,7 +218,10 @@ class databases extends viewModelBase {
         if (db) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, this.systemDb);
-                confirmDeleteVm.deleteTask.done(() => this.onDatabaseDeleted(db));
+                confirmDeleteVm.deleteTask.done(()=> {
+                    this.onDatabaseDeleted(db);
+                    this.selectedDatabase(null);
+                });
                 app.showDialog(confirmDeleteVm);
             });
         }

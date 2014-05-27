@@ -7,6 +7,8 @@ using System.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Xunit;
+using Raven.Tests.Core.Utils.Transformers;
+using System.Collections.Generic;
 
 namespace Raven.Tests.Core.Indexing
 {
@@ -19,6 +21,12 @@ namespace Raven.Tests.Core.Indexing
 			{
 				var postsByContent = new Posts_ByContent();
 				postsByContent.Execute(store);
+
+                var companiesWithEmployees = new Companies_WithReferencedEmployees();
+                companiesWithEmployees.Execute(store);
+
+                var companiesWithEmployeesTransformer = new CompanyEmployeesTransformer();
+                companiesWithEmployeesTransformer.Execute(store);
 
 				using (var session = store.OpenSession())
 				{
@@ -34,8 +42,15 @@ namespace Raven.Tests.Core.Indexing
 							Id = "posts/" + i + "/content",
 							Text = i % 2 == 0 ? "HTML 5" : "Javascript"
 						});
+
+                        session.Store(new Employee
+                        {
+                            Id = "employees/" + i,
+                            LastName = "Last Name " + i
+                        });
 					}
 
+                    session.Store(new Company { EmployeesIds = new List<string>() { "employees/1", "employees/2", "employees/3" } });
 					session.SaveChanges();
 					WaitForIndexing(store);
 
@@ -44,6 +59,16 @@ namespace Raven.Tests.Core.Indexing
 
 					Assert.Equal(5, html5PostsQuery.ToList().Count);
 					Assert.Equal(5, javascriptPostsQuery.ToList().Count);
+
+
+                    var companies = session.Advanced.DocumentQuery<Companies_WithReferencedEmployees.CompanyEmployees>(companiesWithEmployees.IndexName)
+                        .SetResultTransformer(companiesWithEmployeesTransformer.TransformerName)
+                        .ToArray();
+
+                    Assert.Equal(1, companies.Length);
+                    Assert.Equal("Last Name 1", companies[0].Employees[0]);
+                    Assert.Equal("Last Name 2", companies[0].Employees[1]);
+                    Assert.Equal("Last Name 3", companies[0].Employees[2]);
 				}
 			}
 		}

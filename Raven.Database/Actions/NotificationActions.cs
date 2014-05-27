@@ -36,6 +36,11 @@ namespace Raven.Database.Actions
             Database.TransportState.Send(obj);
         }
 
+        public void RaiseNotifications(TransformerChangeNotification obj)
+        {
+            Database.TransportState.Send(obj);
+        }
+
         public void RaiseNotifications(ReplicationConflictNotification obj)
         {
             Database.TransportState.Send(obj);

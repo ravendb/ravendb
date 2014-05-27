@@ -43,9 +43,10 @@ namespace Raven.Database.Indexing
 	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<int, ConcurrentSet<string>>();
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
             MetricsCounters = new MetricsCountersManager();
-        }
+	        InstallGauges();
+	    }
 
-		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+	    public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
         public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
 		public string DatabaseName { get; set; }
@@ -96,6 +97,11 @@ namespace Raven.Database.Indexing
 		{
 			return WaitForWork(timeout, ref workerWorkCounter, null, name);
 		}
+
+        private void InstallGauges()
+        {
+            this.MetricsCounters.AddGauge(this.GetType(), "RunningQueriesCount", () => this.CurrentlyRunningQueries.Count);
+        }
 
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
 		{

@@ -1,11 +1,11 @@
 ﻿import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
-import scriptedIndexMap = require("models/scriptedIndexMap");
+import scriptedIndex = require("models/scriptedIndex");
 import database = require("models/database");
 
 class saveScriptedIndexesCommand extends executeBulkDocsCommand {
 
-    constructor(private scriptedIndexes: scriptedIndexMap, db: database) {
-        super(scriptedIndexes.getIndexes().map(idx => (idx.isMarkedToDelete()) ? idx.toBulkDoc("DELETE") : idx.toBulkDoc("PUT")), db);
+    constructor(private scriptedIndexes: Array<scriptedIndex>, db: database) {
+        super(scriptedIndexes.map(idx => (idx.isMarkedToDelete()) ? idx.toBulkDoc("DELETE") : idx.toBulkDoc("PUT")), db);
     }
 
     execute(): JQueryPromise<bulkDocumentDto[]> {
