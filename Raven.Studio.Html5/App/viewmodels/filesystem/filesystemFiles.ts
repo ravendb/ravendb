@@ -20,7 +20,8 @@ class filesystemFiles extends viewModelBase {
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
     selectedFolder = ko.observable<string>();
-    selectedDirSubdirectories = ko.observableArray<string>();
+    addedFolder = ko.observable<string>();
+    currentLevelSubdirectories = ko.observableArray<string>();
     private activeFilesystemSubscription: any;
 
     static gridSelector = "#filesGrid";
@@ -35,6 +36,7 @@ class filesystemFiles extends viewModelBase {
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
         this.loadFiles(false);
+        this.selectedFolder.subscribe((newValue: string) => this.loadFiles(true));
         treeBindingHandler.install();
     }
 
@@ -45,22 +47,19 @@ class filesystemFiles extends viewModelBase {
     }
 
     loadFiles(force: boolean) {
-        if (!this.allFilesPagedItems() || force ) {
-            this.allFilesPagedItems(this.createPagedList());
-        }
+        this.allFilesPagedItems(this.createPagedList(this.selectedFolder()));
 
         return this.allFilesPagedItems;
     }
 
-    createPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.fetchFiles(skip, take);
+    createPagedList(directory): pagedList {
+        var fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
         var list = new pagedList(fetcher);
         return list;
     }
 
-    fetchFiles(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getFilesystemFilesCommand(appUrl.getFilesystem(), skip, take).execute();
-        //task.done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
+    fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
+        var task = new getFilesystemFilesCommand(appUrl.getFilesystem(), directory, skip, take).execute();
 
         return task;
     }
@@ -102,10 +101,9 @@ class filesystemFiles extends viewModelBase {
     }
 
     createFolder() {
-        var createFolderVm = new createFolderInFilesystem(this.selectedDirSubdirectories());
+        var createFolderVm = new createFolderInFilesystem(this.currentLevelSubdirectories());
         createFolderVm.creationTask.done((folderName : string) => {
-            this.selectedDirSubdirectories.push(folderName);
-            this.selectedFolder(folderName);
+            this.addedFolder(folderName);
         });
 
         app.showDialog(createFolderVm);

@@ -20,7 +20,7 @@
     </ul>
 
     <div class="documents-page">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="btn-toolbar" role="toolbar">
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary use-bootstrap-tooltip" accesskey="n" data-bind="click: createFolder" title="Create folder">
@@ -28,9 +28,9 @@
                     </button>
                 </div>
             </div>
-            <div id="filesTree" data-bind="tree: selectedFolder" />
+            <div id="filesTree" style="border: none" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" />
         </div>
-        <div class="col-md-9">
+        <div class="col-md-10">
             <div class="row">
                 <div class="btn-toolbar" role="toolbar">
                     <div class="btn-group">

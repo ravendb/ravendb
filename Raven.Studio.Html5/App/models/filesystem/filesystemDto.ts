@@ -124,3 +124,9 @@ interface synchronizationDestinationDto {
     ApiKey: string;
     FileSystem: string;
 }
+
+interface folderNodeDto {
+    key: string;
+    title: string;
+    isLazy: boolean
+}

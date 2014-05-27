@@ -4,11 +4,18 @@ class file implements documentBase {
     id: string;
     Size: string;
     LastModified: string;
+    directory: string;
     __metadata: fileMetadata;
 
-    constructor(dto?: filesystemFileHeaderDto) {
+    constructor(dto?: filesystemFileHeaderDto, excludeDirectoryInId?: boolean) {
         if (dto) {
-            this.id = dto.Name;
+            if (excludeDirectoryInId) {
+                this.id = dto.Name.substring(dto.Name.lastIndexOf("/") + 1);
+            }
+            else {
+                this.id = dto.Name;
+            }
+            this.directory = dto.Name.substring(0, dto.Name.lastIndexOf("/"))
             this.Size = dto.HumaneTotalSize;
             this.LastModified = dto.Metadata["Last-Modified"];
 

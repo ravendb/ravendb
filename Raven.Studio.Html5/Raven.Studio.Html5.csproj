@@ -420,7 +420,16 @@
     <Content Include="Content\images\ui-icons_888888_256x240.png" />
     <Content Include="Content\images\ui-icons_cd0a0a_256x240.png" />
     <Content Include="Content\jquery-ui-1.10.4.custom.min.css" />
+    <Content Include="Content\jquery.dynatree\skin\icons-rtl.gif" />
+    <Content Include="Content\jquery.dynatree\skin\icons.gif" />
+    <Content Include="Content\jquery.dynatree\skin\loading.gif" />
+    <Content Include="Content\jquery.dynatree\skin\ui.dynatree.css" />
+    <Content Include="Content\jquery.dynatree\skin\vline-rtl.gif" />
+    <Content Include="Content\jquery.dynatree\skin\vline.gif" />
     <Content Include="Content\nprogress.css" />
+    <Content Include="Content\jquery.dynatree\skin-vista\icons.gif" />
+    <Content Include="Content\jquery.dynatree\skin-vista\loading.gif" />
+    <Content Include="Content\jquery.dynatree\skin-vista\ui.dynatree.css" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
@@ -1052,6 +1061,8 @@
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
+    <Content Include="Scripts\jquery.dynatree.js" />
+    <Content Include="Scripts\jquery.dynatree.min.js" />
     <Content Include="Scripts\jsTree3\jstree.js" />
     <Content Include="Scripts\jsTree3\jstree.min.js" />
     <Content Include="Scripts\jsTree3\themes\default\32px.png" />
@@ -1065,6 +1076,7 @@
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jstree\jstree.d.ts" />

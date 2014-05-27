@@ -5,7 +5,7 @@ import pagedResultSet = require("common/pagedResultSet");
 
 class getFilesystemFilesCommand extends commandBase {
 
-    constructor(private fs: filesystem, private skip: number, private take: number) {
+    constructor(private fs: filesystem, private directory: string, private skip: number, private take: number) {
         super();
     }
 
@@ -25,13 +25,21 @@ class getFilesystemFilesCommand extends commandBase {
     }
 
     private fetchFiles(): JQueryPromise<file[]> {
+        var level = 2;
+        if (this.directory) {
+            var slashMatches = new Array(this.directory).count(x => x === "/");
+            if (slashMatches) {
+                level = level + slashMatches;
+            }
+        }
         var args = {
+            query: this.directory? "__directory:/"+this.directory+" AND __level:"+level: null,
             start: this.skip,
             pageSize: this.take
         };
 
-        var url = "/files";
-        var filesSelector = (files: filesystemFileHeaderDto[]) => files.map(d => new file(d));
+        var url = "/search";
+        var filesSelector = (results: searchResults) => results.Files.map(d => new file(d, true));
         var task = this.query(url, args, this.fs, filesSelector);
 
         return task;

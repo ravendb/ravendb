@@ -7,7 +7,7 @@ class getFoldersStatsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string[]> {
+    execute(): JQueryPromise<folderNodeDto[]> {
 
         var url = "/folders/Subdirectories";
         if (this.directory) {
@@ -18,7 +18,14 @@ class getFoldersStatsCommand extends commandBase {
             pageSize: this.take
         }
         
-        return this.query<string[]>(url, args, this.fs, (result : string[]) => result.map( (x: string) => x.replace("/", "")));
+        return this.query<folderNodeDto[]>(url, args, this.fs, (result: string[]) => result.map((x: string) =>
+        { 
+            return {
+                key: x.replace("/", ""),
+                title: x.substring(x.lastIndexOf("/")+1),
+                isLazy: true
+            }
+        }));
     }
 }
 
