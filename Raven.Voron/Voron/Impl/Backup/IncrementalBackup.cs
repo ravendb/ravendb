@@ -274,8 +274,8 @@ namespace Voron.Impl.Backup
 
                             env.Options.DataPager.Sync();
 
-                            txw.State.Root = Tree.Open(txw, env._sliceComparer, &lastTxHeader->Root);
-                            txw.State.FreeSpaceRoot = Tree.Open(txw, env._sliceComparer, &lastTxHeader->FreeSpace);
+                            txw.State.Root = Tree.Open(txw, &lastTxHeader->Root);
+                            txw.State.FreeSpaceRoot = Tree.Open(txw, &lastTxHeader->FreeSpace);
 
                             txw.State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
                             txw.State.Root.Name = Constants.RootTreeName;

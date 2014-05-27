@@ -83,9 +83,9 @@ namespace Voron.Trees
                             return page;
                         break;
                     case SliceOptions.Key:
-                        if ((first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, NativeMethods.memcmp) < 0))
+                        if ((first.Options != SliceOptions.BeforeAllKeys && key.Compare(first) < 0))
                             continue;
-                        if (last.Options != SliceOptions.AfterAllKeys && key.Compare(last, NativeMethods.memcmp) > 0)
+                        if (last.Options != SliceOptions.AfterAllKeys && key.Compare(last) > 0)
                             continue;
                         return page;
                     default:
