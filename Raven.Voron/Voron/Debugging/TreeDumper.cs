@@ -27,11 +27,12 @@ namespace Voron.Debugging
 						if(currentPage.NumberOfEntries <= 0)
 							writer.WriteLine("Empty page (tree corrupted?)");
 					    
-						var key = new Slice(SliceOptions.Key);
+						
 					    for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries;nodeIndex++)
 					    {
 						    var node = currentPage.GetNode(nodeIndex);
-							key.Set(node);
+						    var key = currentPage.GetFullNodeKey(node);
+
 							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page",
                                 SizeOf.NodeEntry(node));
 					    }
@@ -107,7 +108,7 @@ digraph structs {
                                 writer.WriteLine(" ... {0:#,#} keys redacted ...", showNodesEvery - 1);
                             }
                             var node = p.GetNode(i);
-                            key.Set(node);
+                            key = p.GetFullNodeKey(node);
                             writer.WriteLine("{0} - {2} {1:#,#}", MaxString(key.ToString(), 25),
                                 node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
                         }
@@ -163,17 +164,17 @@ digraph structs {
             return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
-        private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
+        private static string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
         {
             string keyStr;
             if (i == 0 && key.Size == 0)
             {
-                key.Set(p.GetNode(1));
+                key = p.GetFullNodeKey(1);
                 keyStr = "(lt " + key + ")";
             }
             else
             {
-                key.Set(node);
+                key = p.GetFullNodeKey(node);
                 keyStr = key.ToString();
             }
             return MaxString(keyStr, 25);

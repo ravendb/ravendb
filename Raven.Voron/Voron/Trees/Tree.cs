@@ -197,7 +197,7 @@ namespace Voron.Trees
 				nodeType = NodeFlags.PageRef;
 			}
 
-			var prefixedKey = page.ConvertToPrefixedKey(key, lastSearchPosition); // TODO arek it can happen that there is no space to create a prefix
+			var prefixedKey = page.ConvertToPrefixedKey(key, lastSearchPosition);
 
 			byte* dataPos;
 			if (page.HasSpaceFor(tx, prefixedKey, len) == false)
@@ -598,7 +598,7 @@ namespace Voron.Trees
 						results.Add(childTreeHeader->RootPageNumber);
 
 						// this is a multi value
-						var tree = OpenOrCreateMultiValueTree(tx, new Slice(node), node);
+						var tree = OpenOrCreateMultiValueTree(tx, p.GetFullNodeKey(node), node);
 						results.AddRange(tree.AllPages(tx));
 					}
 				}

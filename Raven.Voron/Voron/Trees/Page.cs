@@ -241,7 +241,7 @@ namespace Voron.Trees
 
 	        node->KeySize = key.Size;
 
-            if (key.Options == SliceOptions.Key) // TODO arek - check this if statement
+            if (key.Options == SliceOptions.Key)
                 key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
 	        node->Flags = flags;
@@ -520,12 +520,10 @@ namespace Voron.Trees
         public string Dump()
         {
             var sb = new StringBuilder();
-            var slice = new Slice(SliceOptions.Key);
+
             for (var i = 0; i < NumberOfEntries; i++)
             {
-                var n = GetNode(i);
-                slice.Set(n);
-                sb.Append(slice).Append(", ");
+                sb.Append(GetFullNodeKey(i)).Append(", ");
             }
             return sb.ToString();
         }
@@ -654,13 +652,12 @@ namespace Voron.Trees
 		    var sb = new StringBuilder();
 		    for (int i = 0; i < NumberOfEntries; i++)
 		    {
-				// TODO arek
-				//sb.Append(i)
-				//	.Append(": ")
-				//	.Append(new Slice((NodeHeader*)( _base + KeysOffsets[i])))
-				//	.Append(" - ")
-				//	.Append(KeysOffsets[i])
-				//	.AppendLine();
+				sb.Append(i)
+					.Append(": ")
+					.Append(GetFullNodeKey(i))
+					.Append(" - ")
+					.Append(KeysOffsets[i])
+					.AppendLine();
 		    }
 		    return sb.ToString();
 	    }

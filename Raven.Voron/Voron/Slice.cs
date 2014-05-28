@@ -24,12 +24,6 @@ namespace Voron
 			get { return _size; }
 		}
 
-		public void Set(byte* p, ushort size)
-		{
-			_pointer = p;
-			_size = size;
-		}
-
 		public Slice(SliceOptions options)
 		{
 			Options = options;
@@ -69,12 +63,6 @@ namespace Voron
 			Options = SliceOptions.Key;
 			_pointer = null;
 			_array = key;
-		}
-
-		public Slice(NodeHeader* node)
-		{//TODO arek - consider removing this ctor
-			Options = SliceOptions.Key;
-			Set(node);
 		}
 
 		public bool Equals(Slice other)
@@ -288,11 +276,6 @@ namespace Voron
 
 			fixed (byte* p = _array)
 				NativeMethods.memcpy(dest + offset, p + from, count);
-		}
-
-		public void Set(NodeHeader* node)
-		{
-			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
 		}
 
 		public Slice Clone()

@@ -288,7 +288,7 @@ namespace Voron.Trees
         {
             node = page.GetNode(pos);
 			var key = page.GetFullNodeKey(node);
-			while (key.Size == 0) // TODO check this after PrefixedSlice introduction
+			while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);

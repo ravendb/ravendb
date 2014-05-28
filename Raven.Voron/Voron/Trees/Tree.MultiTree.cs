@@ -35,8 +35,6 @@ namespace Voron.Trees
 	 */
 	public unsafe partial class Tree
 	{
-		//TODO arek check all 'new PrefixedSlice(...)' calls
-
 		public bool IsMultiValueTree { get; set; }
 
 		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
