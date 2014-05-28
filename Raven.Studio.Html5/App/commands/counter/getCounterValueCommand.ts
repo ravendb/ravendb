@@ -26,7 +26,4 @@ class getCounterValueCommand extends commandBase {
     }
 }
 
-export = getCounterValueCommand;  
-
-
-//getCounterValue 
+export = getCounterValueCommand;

@@ -10,7 +10,6 @@ namespace Raven.Database.Counters.Controllers
 {
 	public class CountersController : RavenCountersApiController
 	{
-
 		[Route("counters/{counterName}/change")]
 		[HttpPost]
 		public HttpResponseMessage CounterChange(string group, string counterName, long delta)
@@ -27,7 +26,7 @@ namespace Raven.Database.Counters.Controllers
 
 		[Route("counters/{counterName}/reset")]
 		[HttpPost]
-		public HttpResponseMessage CounterReset(string counterName, string group)
+		public HttpResponseMessage CounterReset(string group, string counterName)
 		{
 			using (var writer = Storage.CreateWriter())
 			{
@@ -54,12 +53,11 @@ namespace Raven.Database.Counters.Controllers
 
 		[Route("counters/{counterName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage Counters(int skip = 0, int take = 20, string counterGroupName = null)
+		public HttpResponseMessage Counters(int skip = 0, int take = 20, string group = null)
 		{
-            // todo:change counterGroupName to "group"
 			using (var reader = Storage.CreateReader())
 			{
-				var prefix = (counterGroupName == null) ? string.Empty : (counterGroupName + Constants.GroupSeperatorString);
+				var prefix = (group == null) ? string.Empty : (group + Constants.GroupSeperatorString);
 				var results = (
 					from counterFullName in reader.GetCounterNames(prefix)
 					let counter = reader.GetCounter(counterFullName)

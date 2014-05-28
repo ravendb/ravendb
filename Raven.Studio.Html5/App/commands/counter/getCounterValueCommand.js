@@ -33,5 +33,4 @@ define(["require", "exports", "commands/commandBase", "models/counter/counter"],
     
     return getCounterValueCommand;
 });
-//getCounterValue
 //# sourceMappingURL=getCounterValueCommand.js.map
