@@ -205,6 +205,8 @@ namespace Raven.Database.Indexing
 
         protected abstract void FlushAllIndexes();
 
+        protected abstract void UpdateStalenessMetrics(int staleCount);
+
         protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
         {
             var indexesToWorkOn = new List<IndexToWorkOn>();
@@ -232,6 +234,9 @@ namespace Raven.Database.Indexing
                     indexesToWorkOn.Add(indexToWorkOn);
                 }
             });
+
+            UpdateStalenessMetrics(indexesToWorkOn.Count);
+
             onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
             if (indexesToWorkOn.Count == 0)
                 return false;

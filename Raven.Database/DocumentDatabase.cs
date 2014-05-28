@@ -40,6 +40,8 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
+using metrics.Core;
+
 namespace Raven.Database
 {
     public class DocumentDatabase : IDisposable
@@ -534,22 +536,35 @@ namespace Raven.Database
         public DatabaseMetrics CreateMetrics()
         {
             MetricsCountersManager metrics = WorkContext.MetricsCounters;
-
-            double[] percentiles = metrics.RequestDuationMetric.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
-
             return new DatabaseMetrics
             {
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
                 IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
                 ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-                RequestsDuration = new HistogramData
+                RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
+                Requests = CreateMeterData(metrics.ConcurrentRequests),
+                Gauges = metrics.Gauges,
+                StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
+                StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
+                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+            };
+        }
+
+        private static HistogramData CreateHistogramData(HistogramMetric histogram)
+        {
+            double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
+
+            return new HistogramData
                 {
-                    Counter = metrics.RequestDuationMetric.Count,
-                    Max = metrics.RequestDuationMetric.Max,
-                    Mean = metrics.RequestDuationMetric.Mean,
-                    Min = metrics.RequestDuationMetric.Min,
-                    Stdev = metrics.RequestDuationMetric.StdDev,
+                    Counter = histogram.Count,
+                    Max = histogram.Max,
+                    Mean = histogram.Mean,
+                    Min = histogram.Min,
+                    Stdev = histogram.StdDev,
                     Percentiles = new Dictionary<string, double>
                     {
                         {"50%", percentiles[0]},
@@ -559,16 +574,19 @@ namespace Raven.Database
                         {"99.9%", percentiles[4]},
                         {"99.99%", percentiles[5]},
                     }
-                },
-                Requests = new MeterData
-                {
-                    Count = metrics.ConcurrentRequests.Count,
-                    FifteenMinuteRate = Math.Round(metrics.ConcurrentRequests.FifteenMinuteRate, 3),
-                    FiveMinuteRate = Math.Round(metrics.ConcurrentRequests.FiveMinuteRate, 3),
-                    MeanRate = Math.Round(metrics.ConcurrentRequests.MeanRate, 3),
-                    OneMinuteRate = Math.Round(metrics.ConcurrentRequests.OneMinuteRate, 3),
-                }
-            };
+                };
+        }
+
+        private static MeterData CreateMeterData(MeterMetric metric)
+        {
+            return new MeterData
+                   {
+                       Count = metric.Count,
+                       FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, 3),
+                       FiveMinuteRate = Math.Round(metric.FiveMinuteRate, 3),
+                       MeanRate = Math.Round(metric.MeanRate, 3),
+                       OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
+                   };
         }
 
         /// <summary>
@@ -781,20 +799,23 @@ namespace Raven.Database
             if (TransactionalStorage.SupportsDtc == false)
                 throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
 
-            try
-            {
-                inFlightTransactionalState.Prepare(txId);
-                Log.Debug("Prepare of tx {0} completed", txId);
-            }
-            catch (Exception e)
-            {
-                if (TransactionalStorage.HandleException(e))
-                {
-                    return;
-                }
+	        using (DocumentLock.Lock())
+	        {
+		        try
+		        {
+			        inFlightTransactionalState.Prepare(txId);
+			        Log.Debug("Prepare of tx {0} completed", txId);
+		        }
+		        catch (Exception e)
+		        {
+			        if (TransactionalStorage.HandleException(e))
+			        {
+				        return;
+			        }
 
-                throw;
-            }
+			        throw;
+		        }
+	        }
         }
 
         public void Rollback(string txId)
@@ -1112,15 +1133,6 @@ namespace Raven.Database
             public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
             {
                 string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
-                        throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
-
-                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
-                    storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
-                }
-
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
                 database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
             }

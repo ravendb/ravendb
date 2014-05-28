@@ -42,7 +42,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void HandleLowMemory()
+	    public void HandleLowMemory()
 		{
 			ReduceBatchSizeIfCloseToMemoryCeiling(true);
 		}

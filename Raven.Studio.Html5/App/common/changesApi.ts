@@ -10,7 +10,7 @@ import commandBase = require('commands/commandBase');
 class changesApi {
 
     private eventsId: string;
-    source: EventSource;
+    private source: EventSource;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
@@ -18,20 +18,54 @@ class changesApi {
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private commandBase = new commandBase();
+    private sharedConnection = this.loadSharedConnection();
+    private sharedConnectionLastPingMs = new Date().getTime();
+    private sharedConnectionLiveHeartbeatHandle: number;
+    
+    private static sharedConnectionPingInterval = 5000;
+    private static sharedConnectionName = "Raven/Studio/ChangesApiConnection";
 
     constructor(private db: database) {
-        this.eventsId = this.makeid();
+        this.eventsId = this.makeId();
+        this.connectOrReuseExistingConnection();
+    }
+
+    private connectOrReuseExistingConnection() {
+        // If we already have the Studio opened in another tab, we must re-use that connection.
+        // Why? Because some browsers, such as Chrome, limit the number of connections.
+        // When this happens, Chrome suspends all HTTP requests, which stops the Studio from working.
+        //
+        // To fix this, we "share" a connection with the first opened tab.
+        // How? By using local storage, shared between tabs on the same host, to notify of events.
+        // Only the first tab has a real connection, while the other tabs will get notifications via local storage polling.
+        var connectionForDb = this.getSharedConnectionForDb();
+        if (this.isConnectionOwnedByOtherTab(connectionForDb) && this.isConnectionLive(connectionForDb)) {
+            this.reuseExistingConnection();
+        } else {
+            this.createNewConnection();
+        }
+    }
+
+    private createNewConnection() {
         this.connect();
+        this.recordHeartbeatInSharedConnection();
+    }
+
+    private recordHeartbeatInSharedConnection() {
+        var connection = this.getSharedConnectionForDb();
+        connection.lastHeartbeatMs = new Date().getTime();
+        this.storeSharedConnection();
+        this.sharedConnectionLiveHeartbeatHandle = setTimeout(() => this.recordHeartbeatInSharedConnection(), 3000);
     }
 
     private connect() {
         if (!!window.EventSource) {
             var dbUrl = appUrl.forResourceQuery(this.db);
 
-            //console.log("Connecting to changes API (db = " + this.db.name + ")");
+            console.log("Connecting to changes API (db = " + this.db.name + ")");
 
             this.source = new EventSource(dbUrl + '/changes/events?id=' + this.eventsId);
-            this.source.onmessage = (e) => this.onEvent(e);
+            this.source.onmessage = (e) => this.onMessage(e);
             this.source.onerror = (e) => this.onError(e);
 
         } else {
@@ -51,6 +85,11 @@ class changesApi {
         this.commandBase.query('/changes/config', args, this.db);
     }
 
+    private onMessage(e: any) {
+        this.recordChangeOnSharedConnection(e.data);
+        this.processEvent(e.data);
+    }
+
     private onError(e: any) {
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
@@ -63,8 +102,8 @@ class changesApi {
         }
     }
 
-    private onEvent(e) {
-        var json = JSON.parse(e.data);
+    private processEvent(eventJson: string) {
+        var json = JSON.parse(eventJson);
         var type = json.Type;
         if (type === "Heartbeat") {
             // ignore 
@@ -80,7 +119,7 @@ class changesApi {
         } else if (type === "TransformerChangeNotification") {
             this.fireEvents(this.allTransformersHandlers(), json.Value, (e) => true);
         } else {
-            console.log("Unhandled notification type: " + type);
+            console.log("Unhandled Changes API notification type: " + type);
         }
     }
 
@@ -176,10 +215,11 @@ class changesApi {
             //console.log("Disconnecting from changes API");
             this.send('disconnect');
             this.source.close();
+            clearTimeout(this.sharedConnectionLiveHeartbeatHandle);
         }
     }
 
-    private makeid() {
+    private makeId() {
         var text = "";
         var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -189,6 +229,118 @@ class changesApi {
         return text;
     }
 
+    private loadSharedConnection(): sharedChangesConnection {
+        var connectionJson: string = window.localStorage.getItem(changesApi.sharedConnectionName);
+
+        if (!connectionJson) {
+            return this.createAndStoreNewConnection();
+        } else {
+            try {
+                return JSON.parse(connectionJson);
+            }
+            catch (error) {
+                this.createAndStoreNewConnection();
+            }
+        }
+    }
+
+    private createAndStoreNewConnection(): sharedChangesConnection {
+        var connection: sharedChangesConnection = {
+            databases: [this.createSharedConnectionForDatabase()]
+        };
+        localStorage.setItem(changesApi.sharedConnectionName, JSON.stringify(connection));
+        return connection;
+    }
+
+    private createSharedConnectionForDatabase(): sharedChangesConnectionDatabase {
+        return {
+            id: this.eventsId,
+            name: this.db.name,
+            lastHeartbeatMs: new Date().getTime(),
+            events: []
+        };
+    }
+
+    private getSharedConnectionForDb(): sharedChangesConnectionDatabase {
+        var sharedConnectionForDb = this.sharedConnection.databases.first(db => db.name === this.db.name);
+        if (sharedConnectionForDb) {
+            return sharedConnectionForDb;
+        } else {
+            sharedConnectionForDb = this.createSharedConnectionForDatabase();
+            this.sharedConnection.databases.push(sharedConnectionForDb);
+            this.storeSharedConnection();
+            return sharedConnectionForDb;
+        }
+    }
+
+    private storeSharedConnection() {
+        window.localStorage.setItem(changesApi.sharedConnectionName, JSON.stringify(this.sharedConnection));
+    }
+
+    private reuseExistingConnection() {
+        setTimeout(() => this.pingSharedConnectionForUpdates(), changesApi.sharedConnectionPingInterval);
+    }
+
+    private pingSharedConnectionForUpdates() {
+        this.sharedConnection = this.loadSharedConnection();
+        var connectionForDb = this.getSharedConnectionForDb();
+        if (this.isConnectionOwnedByOtherTab(connectionForDb) && this.isConnectionLive(connectionForDb)) {
+            try {
+                this.processSharedConnectionEvents(connectionForDb);
+            } finally {
+                setTimeout(() => this.pingSharedConnectionForUpdates(), changesApi.sharedConnectionPingInterval);
+            }
+        } else {
+            // The other tab has been closed or disconnected.
+            this.takeoverAsPrimaryConnection();
+        }
+    }
+
+    private takeoverAsPrimaryConnection() {
+        var connection = this.getSharedConnectionForDb();
+        if (connection.id !== this.eventsId) {
+            connection.id = this.eventsId;
+            connection.lastHeartbeatMs = new Date().getTime();
+            this.storeSharedConnection();
+            this.connect();
+        }
+    }
+
+    private processSharedConnectionEvents(connection: sharedChangesConnectionDatabase) {
+        var eventsAfterLastPing = connection
+            .events
+            .filter(e => e.time >= this.sharedConnectionLastPingMs);
+        try {
+            eventsAfterLastPing.forEach(e => this.processEvent(e.eventJson));
+        } finally {
+            this.sharedConnectionLastPingMs = new Date().getTime();
+        }
+    }
+
+    private isConnectionOwnedByOtherTab(connection: sharedChangesConnectionDatabase) {
+        return connection.id !== this.eventsId;
+    }
+
+    private isConnectionLive(connection: sharedChangesConnectionDatabase) {
+        var consideredAliveMs = 10000;
+        var timeSinceLastHeartbeat = new Date().getTime() - connection.lastHeartbeatMs;
+        return timeSinceLastHeartbeat < consideredAliveMs;
+    }
+
+    private recordChangeOnSharedConnection(eventJson: string) {
+        var sharedConnectionForDb = this.getSharedConnectionForDb();
+        sharedConnectionForDb.events.push({
+            time: new Date().getTime(),
+            eventJson: eventJson
+        });
+
+        // For performance's sake, don't keep more than 100 events.
+        if (sharedConnectionForDb.events.length > 100) {
+            sharedConnectionForDb.events.splice(0, 1);
+        }
+
+        this.storeSharedConnection();
+    }
 }
 
 export = changesApi;

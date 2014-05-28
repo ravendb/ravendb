@@ -18,7 +18,7 @@ define(["require", "exports", "commands/commandBase"], function(require, exports
         }
         getCounterStorageReplicationCommand.prototype.execute = function () {
             var _this = this;
-            var url = "/replications-get";
+            var url = "/replications/get";
             var getTask = this.query(url, null, this.counterStorage);
 
             if (this.reportRefreshProgress) {

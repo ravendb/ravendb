@@ -470,7 +470,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpPost]
         [Route("fs/{fileSystemName}/synchronization/Confirm")]
-		public async Task<IEnumerable<SynchronizationConfirmation>> Confirm()
+        public async Task<HttpResponseMessage> Confirm()
 		{
 			var contentStream = await Request.Content.ReadAsStreamAsync();
 
@@ -478,18 +478,24 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				new JsonSerializer().Deserialize<IEnumerable<Tuple<string, Guid>>>(
 					new JsonTextReader(new StreamReader(contentStream)));
 
-			return confirmingFiles.Select(file => new SynchronizationConfirmation
+			var result = confirmingFiles.Select(file => new SynchronizationConfirmation
 			{
 				FileName = file.Item1,
 				Status = CheckSynchronizedFileStatus(file)
 			});
+
+            return this.GetMessageWithObject(result)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/synchronization/Status")]
         public HttpResponseMessage Status(string fileName)
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, GetSynchronizationReport(fileName));
+            var report = GetSynchronizationReport(fileName);
+
+            return this.GetMessageWithObject(report)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
@@ -510,7 +516,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 page = new ListPage<SynchronizationReport>(reports, totalCount);
 			});
 
-            return this.GetMessageWithObject(page, HttpStatusCode.OK);
+            return this.GetMessageWithObject(page, HttpStatusCode.OK)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
@@ -522,7 +529,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                                        .Take(Paging.PageSize), 
                                                               SynchronizationTask.Queue.GetTotalActiveTasks());
 
-            return this.GetMessageWithObject(result, HttpStatusCode.OK);
+            return this.GetMessageWithObject(result, HttpStatusCode.OK)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
@@ -534,7 +542,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                                        .Take(Paging.PageSize),
 											                  SynchronizationTask.Queue.GetTotalPendingTasks());
 
-            return this.GetMessageWithObject(result, HttpStatusCode.OK);
+            return this.GetMessageWithObject(result, HttpStatusCode.OK)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
@@ -553,7 +562,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				page = new ListPage<ConflictItem>(conflicts, conflicts.Count);
 			});
 
-            return this.GetMessageWithObject(page, HttpStatusCode.OK);			
+            return this.GetMessageWithObject(page, HttpStatusCode.OK)
+                       .WithNoCache();		
 		}
 
 		[HttpPatch]
@@ -634,7 +644,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			Log.Debug("Got synchronization last ETag request from {0}: [{1}]", from, lastEtag);
 
-            return this.GetMessageWithObject(lastEtag, HttpStatusCode.OK);
+            return this.GetMessageWithObject(lastEtag, HttpStatusCode.OK)
+                       .WithNoCache();
 		}
 
 		[HttpPost]

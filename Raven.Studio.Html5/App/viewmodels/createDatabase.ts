@@ -115,13 +115,13 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private isPathLegal(name: string, pathName: string): string {
-        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
         var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var errorMessage = null;
 
         if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
-            if (name.length > 30) {
-                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 30 + " characters!";
+            if (name.length > 248) {
+                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 248 + " characters!";
             } else if (!rg1.test(name)) {
                 errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
             } else if (rg2.test(name)) {
@@ -156,8 +156,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
-        if (this.isVersioningBundleEnabled() === false)
-            app.showMessage("Versioning Bundle configuration window is not implemented yet.", "Not implemented");
         this.isVersioningBundleEnabled.toggle();
     }
 

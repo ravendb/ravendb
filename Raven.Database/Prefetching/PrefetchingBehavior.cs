@@ -104,7 +104,7 @@ namespace Raven.Database.Prefetching
 					}
 				}
 
-				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, ref result);
+				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result);
 
 				if (docsLoaded) 
 					etag = result[result.Count - 1].Etag;
@@ -131,7 +131,7 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, ref List<JsonDocument> items)
+		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items)
 		{
 			JsonDocument result;
 

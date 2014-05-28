@@ -1,10 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
-using Mono.CSharp;
-using Newtonsoft.Json;
-using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Counters
 {
@@ -13,23 +7,10 @@ namespace Raven.Database.Counters
         public string SendingServerName { get; set; }
         public List<ReplicationCounter> Counters { get; set; }
 
-
         public ReplicationMessage()
         {
             Counters = new List<ReplicationCounter>();
         }
-
-        public RavenJObject GetRavenJObject()
-        {
-            return RavenJObject.FromObject(this);
-        }
-
-        public static ReplicationMessage GetReplicationMessage(RavenJObject obj)
-        {
-            return obj.JsonDeserialization<ReplicationMessage>();
-        }
-
-        
     }
 
     public class ReplicationCounter

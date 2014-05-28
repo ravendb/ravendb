@@ -73,7 +73,7 @@ class commandBase {
             return ajax;
         }
     }
-
+    
     head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
         if (resultsSelector) {
