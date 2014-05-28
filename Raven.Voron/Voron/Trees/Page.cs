@@ -308,22 +308,42 @@ namespace Voron.Trees
 
 	    private bool TryUseExistingPrefix(Slice key, out PrefixedSlice prefixedSlice)
 	    {
-		    for (byte prefixId = 0; prefixId < NextPrefixId; prefixId++)
-		    {
-			    var prefix = GetPrefixNode(prefixId);
+		    PrefixedSlice bestPartialPrefix = null;
 
-			    var length = key.FindPrefixSize(prefix.Value);
-			    if (length == 0) 
+			for (byte prefixId = 0; prefixId < NextPrefixId; prefixId++)
+			{
+				var prefix = GetPrefixNode(prefixId);
+
+				var length = key.FindPrefixSize(prefix.Value);
+				if (length == 0)
 					continue;
 
-				// TODO arek  we need better prefix detection here, not only the first match
+				if (length == prefix.PrefixLength) // full prefix usage
+				{
+					prefixedSlice = new PrefixedSlice(prefixId, (ushort)length, key);
+					return true;
+				}
 
-			    prefixedSlice = new PrefixedSlice(prefixId, (ushort) length, key);
+				// keep on looking for a better prefix
+
+				if (bestPartialPrefix == null)
+				{
+					bestPartialPrefix = new PrefixedSlice(prefixId, (ushort)length, key);
+					continue;
+				}
+
+				if (length > bestPartialPrefix.PrefixUsage)
+					bestPartialPrefix = new PrefixedSlice(prefixId, (ushort)length, key);
+			}
+
+		    if (bestPartialPrefix != null && bestPartialPrefix.PrefixUsage > MinPrefixLength(key))
+		    {
+			    prefixedSlice = bestPartialPrefix;
 			    return true;
 		    }
 
-		    prefixedSlice = null;
-		    return false;
+			prefixedSlice = null;
+			return false;
 	    }
 
 		private bool TryCreateNewPrefix(Slice key, int nodeIndex, out PrefixedSlice prefixedSlice)
@@ -353,9 +373,7 @@ namespace Voron.Trees
 				right = null;
 			}
 			else
-			{
-				throw new InvalidOperationException("Invalid node index prefix: " + nodeIndex + ". Number of entries: " + NumberOfEntries);
-			}
+				throw new NotSupportedException("Invalid node index prefix: " + nodeIndex + ". Number of entries: " + NumberOfEntries);
 
 			ushort leftLength = 0;
 			ushort rightLength = 0;
@@ -366,7 +384,7 @@ namespace Voron.Trees
 			if (right != null)
 				rightLength = (ushort)key.FindPrefixSize(right);
 
-			var minPrefixLength = key.Size * 0.2;
+			var minPrefixLength = MinPrefixLength(key);
 
 			if (leftLength > minPrefixLength && leftLength > rightLength)
 			{
@@ -392,7 +410,7 @@ namespace Voron.Trees
 			return false;
 		}
 
-        private NodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
+	    private NodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
         {
 	        int newSize = previousNodeVersion + 1;
 	        if (newSize > ushort.MaxValue)
@@ -739,5 +757,10 @@ namespace Voron.Trees
             if (HasSpaceFor(tx, key, len) == false)
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
+
+		private static double MinPrefixLength(Slice key)
+		{
+			return Math.Max(key.Size * 0.2, 2);
+		}
     }
 }
