@@ -240,9 +240,13 @@
     <Compile Include="Client\Aws\RavenAwsS3Client.cs" />
     <Compile Include="Client\Azure\RavenAzureClient.cs" />
     <Compile Include="Client\RavenStorageClient.cs" />
+    <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
     <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
+    <Compile Include="Counters\Controllers\CounterStorageController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\Counter.cs" />
     <Compile Include="Counters\CounterStorage.cs" />

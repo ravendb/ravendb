@@ -109,7 +109,7 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public void EnsureSnapshot()
 		{
-			foreach (var result in Results)
+			foreach (var result in Results.Where(x => x != null))
 			{
 				result.EnsureCannotBeChangeAndEnableSnapshotting();
 			}
@@ -126,7 +126,7 @@ namespace Raven.Abstractions.Data
 		{
 			return new QueryResult
 			{
-				Results = new List<RavenJObject>(this.Results.Select(x => (RavenJObject)x.CreateSnapshot())),
+				Results = new List<RavenJObject>(this.Results.Select(x => x != null ? (RavenJObject)x.CreateSnapshot() : null)),
 				Includes = new List<RavenJObject>(this.Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
 				IndexEtag = this.IndexEtag,
 				IndexName = this.IndexName,

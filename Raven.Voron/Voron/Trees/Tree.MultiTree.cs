@@ -82,7 +82,7 @@ namespace Voron.Trees
 
 			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
 
-			var existingItem = nestedPage.Search(value, NativeMethods.memcmp);
+			var existingItem = nestedPage.Search(value);
 			if (nestedPage.LastMatch != 0)
 				existingItem = null;// not an actual match, just greater than
 
@@ -93,7 +93,7 @@ namespace Voron.Trees
 			{
 				// maybe same value added twice?
 				var tmpKey = new Slice(item);
-				if (tmpKey.Compare(value, _cmp) == 0)
+				if (tmpKey.Compare(value) == 0)
 					return; // already there, turning into a no-op
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
 			}
@@ -116,7 +116,7 @@ namespace Voron.Trees
 				return;
 			}
 			// we now have to convert this into a tree instance, instead of just a nested page
-			var tree = Create(_tx, _cmp, TreeFlags.MultiValue);
+			var tree = Create(_tx, TreeFlags.MultiValue);
 			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 			{
 				var existingValue = nestedPage.GetNodeKey(i);
@@ -158,7 +158,7 @@ namespace Voron.Trees
 						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
 
-				newNestedPage.Search(value, _cmp);
+				newNestedPage.Search(value);
 				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
 			}
 		}
@@ -171,7 +171,7 @@ namespace Voron.Trees
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
 				// otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
-				var tree = Create(tx, _cmp, TreeFlags.MultiValue);
+				var tree = Create(tx, TreeFlags.MultiValue);
 				tree.DirectAdd(value, 0);
 				tx.AddMultiValueTree(this, key, tree);
 
@@ -228,7 +228,7 @@ namespace Voron.Trees
 			else // we use a nested page here
 			{
 				var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
-				var nestedItem = nestedPage.Search(value, NativeMethods.memcmp);
+				var nestedItem = nestedPage.Search(value);
 				if (nestedItem == null) // value not found
 					return;
 
@@ -265,10 +265,10 @@ namespace Voron.Trees
 				return new EmptyIterator();
 			}
 
-			var item = page.Search(key, _cmp);
+			var item = page.Search(key);
 
 			var fetchedNodeKey = new Slice(item);
-			if (fetchedNodeKey.Compare(key, _cmp) != 0)
+			if (fetchedNodeKey.Compare(key) != 0)
 			{
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
 			}
@@ -282,7 +282,7 @@ namespace Voron.Trees
 
 			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
 				
-			return new PageIterator(_cmp, nestedPage);
+			return new PageIterator(nestedPage);
 		}
 
 		private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
@@ -295,8 +295,8 @@ namespace Voron.Trees
 				(TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
 			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
 			tree = childTreeHeader != null ?
-				Open(tx, _cmp, childTreeHeader) :
-				Create(tx, _cmp);
+				Open(tx, childTreeHeader) :
+				Create(tx);
 
 			tx.AddMultiValueTree(this, key, tree);
 			return tree;

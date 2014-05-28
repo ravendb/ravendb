@@ -24,25 +24,21 @@ namespace Voron.Trees
 
 		private readonly Transaction _tx;
 
-		private readonly SliceComparer _cmp;
-
-		private Tree(Transaction tx, SliceComparer cmp, long root)
+		private Tree(Transaction tx, long root)
 		{
 			_tx = tx;
-			_cmp = cmp;
 			_state.RootPageNumber = root;
 		}
 
-		private Tree(Transaction tx, SliceComparer cmp, TreeMutableState state)
+		private Tree(Transaction tx, TreeMutableState state)
 		{
 			_tx = tx;
-			_cmp = cmp;
 			_state = state;
 		}
 
-		public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
+		public static Tree Open(Transaction tx, TreeRootHeader* header)
 		{
-			return new Tree(tx, cmp, header->RootPageNumber)
+			return new Tree(tx, header->RootPageNumber)
 			{
 				_state =
 				{
@@ -58,10 +54,10 @@ namespace Voron.Trees
 			};
 		}
 
-		public static Tree Create(Transaction tx, SliceComparer cmp, TreeFlags flags = TreeFlags.None)
+		public static Tree Create(Transaction tx, TreeFlags flags = TreeFlags.None)
 		{
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
-			var tree = new Tree(tx, cmp, newRootPage.PageNumber)
+			var tree = new Tree(tx, newRootPage.PageNumber)
 			{
 				_state =
 				{
@@ -92,11 +88,12 @@ namespace Voron.Trees
 			long currentValue = 0;
 
 			var read = Read(key);
-			if (read != null)
-				currentValue = read.Reader.ReadLittleEndianInt64();
+		    if (read != null)
+		        currentValue = *(long*)read.Reader.Base;
 
 			var value = currentValue + delta;
-			Add(key, BitConverter.GetBytes(value), version);
+            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+		    *result = value;
 
 			return value;
 		}
@@ -207,7 +204,7 @@ namespace Voron.Trees
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
 
-				var pageSplitter = new PageSplitter(_tx, this, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+				var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 			    dataPos = pageSplitter.Execute();
 
 				DebugValidateTree(State.RootPageNumber);
@@ -228,7 +225,7 @@ namespace Voron.Trees
 					default:
 						throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
 				}
-				page.DebugValidate(_tx, _cmp, State.RootPageNumber);
+				page.DebugValidate(_tx, State.RootPageNumber);
 			}
 			if (overFlowPos != null)
 				return overFlowPos;
@@ -283,7 +280,7 @@ namespace Voron.Trees
 					throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
 				}
-				p.DebugValidate(_tx, _cmp, rootPageNumber);
+				p.DebugValidate(_tx, rootPageNumber);
 				if (p.IsBranch == false)
 					continue;
 				for (int i = 0; i < p.NumberOfEntries; i++)
@@ -335,7 +332,7 @@ namespace Voron.Trees
 	            }
 	            else
 	            {
-	                if (p.Search(key, _cmp) != null)
+	                if (p.Search(key) != null)
 	                {
 	                    nodePos = p.LastSearchPosition;
 	                    if (p.LastMatch != 0)
@@ -368,7 +365,7 @@ namespace Voron.Trees
 	        if (p.IsLeaf == false)
 	            throw new DataException("Index points to a non leaf page");
 
-	        p.Search(key, _cmp); // will set the LastSearchPosition
+	        p.Search(key); // will set the LastSearchPosition
 
 	        AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
 
@@ -416,7 +413,7 @@ namespace Voron.Trees
 			if (page.IsLeaf == false)
 				throw new DataException("Index points to a non leaf page");
 
-			page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
+			page.NodePositionFor(key); // will set the LastSearchPosition
 
 			var cursorPath = foundPage.CursorPath;
 			var pageCopy = page;
@@ -438,7 +435,7 @@ namespace Voron.Trees
 						{
 							cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
 						}
-						else if (cursorPage.Search(key, _cmp) != null)
+						else if (cursorPage.Search(key) != null)
 						{
 							if (cursorPage.LastMatch != 0)
 							{
@@ -473,7 +470,7 @@ namespace Voron.Trees
 			Lazy<Cursor> lazy;
 			var page = FindPageFor(key, out lazy);
 
-			page.NodePositionFor(key, _cmp);
+			page.NodePositionFor(key);
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
 
@@ -492,12 +489,12 @@ namespace Voron.Trees
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
 
-			page.DebugValidate(_tx, _cmp, State.RootPageNumber);
+			page.DebugValidate(_tx, State.RootPageNumber);
 		}
 
 		public TreeIterator Iterate(WriteBatch writeBatch = null)
 		{
-			return new TreeIterator(this, _tx, _cmp);
+			return new TreeIterator(this, _tx);
 		}
 
 		public ReadResult Read(Slice key)
@@ -517,9 +514,9 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var p = FindPageFor(key, out lazy);
-			var node = p.Search(key, _cmp);
+			var node = p.Search(key);
 
-			if (node == null || new Slice(node).Compare(key, _cmp) != 0)
+			if (node == null || new Slice(node).Compare(key) != 0)
 				return -1;
 
 			return node->DataSize;
@@ -529,9 +526,9 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var p = FindPageFor(key, out lazy);
-			var node = p.Search(key, _cmp);
+			var node = p.Search(key);
 
-			if (node == null || new Slice(node).Compare(key, _cmp) != 0)
+			if (node == null || new Slice(node).Compare(key) != 0)
 				return 0;
 
 			return node->Version;
@@ -541,14 +538,14 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var p = FindPageFor(key, out lazy);
-			var node = p.Search(key, _cmp);
+			var node = p.Search(key);
 
 			if (node == null)
 				return null;
 
 			var item1 = new Slice(node);
 
-			if (item1.Compare(key, _cmp) != 0)
+			if (item1.Compare(key) != 0)
 				return null;
 
 			if (node->Flags == (NodeFlags.PageRef))
@@ -627,7 +624,7 @@ namespace Voron.Trees
 
 		internal Tree Clone(Transaction tx)
 		{
-			return new Tree(tx, _cmp, _state.Clone()) { Name = Name };
+			return new Tree(tx, _state.Clone()) { Name = Name };
 		}
 
 		private bool TryOverwriteOverflowPages(TreeMutableState treeState, NodeHeader* updatedNode,

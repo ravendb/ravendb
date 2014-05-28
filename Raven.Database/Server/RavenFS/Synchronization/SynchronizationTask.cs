@@ -380,7 +380,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			string fileName = work.FileName;
 			synchronizationQueue.SynchronizationStarted(work, destination.FileSystemUrl);
-			publisher.Publish(new SynchronizationUpdate
+			publisher.Publish(new SynchronizationUpdateNotification
 			{
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,
@@ -440,7 +440,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			if (!synchronizationCancelled)
 				CreateSyncingConfiguration(fileName, work.FileETag, destination.FileSystemUrl, work.SynchronizationType);
 
-			publisher.Publish(new SynchronizationUpdate
+			publisher.Publish(new SynchronizationUpdateNotification
 			{
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,

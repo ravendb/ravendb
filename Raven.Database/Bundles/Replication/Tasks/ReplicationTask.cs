@@ -395,6 +395,8 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 					}
 
+                    docDb.WorkContext.MetricsCounters.GetReplicationDurationMetric(destination).Mark((long)stats.ElapsedTime.TotalMilliseconds);
+                    docDb.WorkContext.MetricsCounters.GetReplicationDurationHistogram(destination).Update((long)stats.ElapsedTime.TotalMilliseconds);
 					return replicated ?? false;
 				}
 			}
@@ -799,6 +801,9 @@ namespace Raven.Bundles.Replication.Tasks
 									 {"FilteredCount", filteredDocsToReplicate.Count}
 					             });
 
+				    docDb.WorkContext.MetricsCounters.GetReplicationBatchSizeMetric(destination).Mark(docsSinceLastReplEtag);
+				    docDb.WorkContext.MetricsCounters.GetReplicationBatchSizeHistogram(destination).Update(docsSinceLastReplEtag);
+
 					result.Documents = new RavenJArray(filteredDocsToReplicate
 														.Select(x =>
 														{
@@ -1162,6 +1167,14 @@ namespace Raven.Bundles.Replication.Tasks
 						 { "Records", records }
 			         };
 		}
+
+	    public TimeSpan ElapsedTime
+	    {
+	        get
+	        {
+	            return watch.Elapsed;
+	        }
+	    }
 
 		public void Dispose()
 		{

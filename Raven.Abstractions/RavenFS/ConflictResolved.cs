@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.RavenFS
 {
-	public class ConflictResolved : ConflictNotification
+	public class ConflictResolvedNotification : ConflictNotification
 	{
 	}
 }

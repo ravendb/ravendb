@@ -156,7 +156,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictResolved { FileName = fileName });
+                    Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
                 }
 			}
 			catch (Exception ex)
@@ -231,7 +231,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				ConflictArtifactManager.Create(fileName, conflict);
 
-				Publisher.Publish(new ConflictDetected
+				Publisher.Publish(new ConflictDetectedNotification
 				{
 					FileName = fileName,
 					SourceServerUrl = sourceServer.FileSystemUrl
@@ -295,7 +295,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictResolved { FileName = fileName });
+                    Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
                 }
 
                 PublishFileNotification(fileName, FileChangeAction.Update);
@@ -440,7 +440,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				if (isConflictResolved)
 				{
 					ConflictArtifactManager.Delete(fileName);
-					Publisher.Publish(new ConflictResolved { FileName = fileName });
+					Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
 				}
 
                 StorageOperationsTask.RenameFile(new RenameFileOperation
@@ -614,7 +614,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			ConflictArtifactManager.Create(filename, conflict);
 
-			Publisher.Publish(new ConflictDetected
+			Publisher.Publish(new ConflictDetectedNotification
 			{
 				FileName = filename,
 				SourceServerUrl = remoteServerUrl
@@ -667,7 +667,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		private void PublishFileNotification(string fileName, FileChangeAction action)
 		{
-			Publisher.Publish(new FileChange
+			Publisher.Publish(new FileChangeNotification
 			{
 				File = FilePathTools.Cannoicalise(fileName),
 				Action = action
@@ -676,7 +676,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		private void PublishSynchronizationNotification(string fileName, ServerInfo sourceServer, SynchronizationType type, SynchronizationAction action)
 		{
-			Publisher.Publish(new SynchronizationUpdate
+			Publisher.Publish(new SynchronizationUpdateNotification
 			{
 				FileName = fileName,
 				SourceFileSystemUrl = sourceServer.FileSystemUrl,
@@ -707,7 +707,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 accessor.UpdateFileMetadata(fileName, localMetadata);
 
                 ConflictArtifactManager.Delete(fileName, accessor);
-                Publisher.Publish(new ConflictResolved { FileName = fileName });
+                Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
 			});
 		}
 

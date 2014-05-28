@@ -41,13 +41,11 @@ namespace RavenFS.Tests.Synchronization
 			await destinationClient.UploadAsync("abc.txt", destinationMetadata, destinationContent);
 			await sourceClient.UploadAsync("abc.txt", sourceMetadata, sourceContent);
 
-			var notificationTask =
-				destinationClient.Notifications.Conflicts()
-				                 .OfType<ConflictDetected>()
-				                 .Timeout(TimeSpan.FromSeconds(5))
-				                 .Take(1)
-				                 .ToTask();
-			await destinationClient.Notifications.WhenSubscriptionsActive();
+            var notificationTask = destinationClient.Changes().ForConflicts()
+                                                         .OfType<ConflictDetectedNotification>()
+				                                         .Timeout(TimeSpan.FromSeconds(5))
+				                                         .Take(1)
+				                                         .ToTask();
 
 			await sourceClient.Synchronization.StartAsync("abc.txt", destinationClient);
 
@@ -59,12 +57,8 @@ namespace RavenFS.Tests.Synchronization
 
 		public override void Dispose()
 		{
-			var serverNotifications = destinationClient.Notifications as ServerNotifications;
-			if (serverNotifications != null)
-				serverNotifications.DisposeAsync().Wait();
-			var notifications = sourceClient.Notifications as ServerNotifications;
-			if (notifications != null)
-				notifications.DisposeAsync().Wait();
+            destinationClient.Dispose();
+            sourceClient.Dispose();
 			base.Dispose();
 		}
 	}

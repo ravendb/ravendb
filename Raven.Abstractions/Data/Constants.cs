@@ -141,5 +141,10 @@ namespace Raven.Abstractions.Data
 		
 		// Indexing
 		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
+
+		// counters
+		public const byte GroupSeperator = 29;
+		public const char GroupSeperatorChar = (char)GroupSeperator;
+		public const string GroupSeperatorString = "\u001D";
 	}
 }

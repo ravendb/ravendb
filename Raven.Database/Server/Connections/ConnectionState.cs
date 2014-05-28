@@ -269,14 +269,14 @@ namespace Raven.Database.Server.Connections
 
 		private bool ShouldSend(Notification notification)
 		{
-			if (notification is FileChange &&
+			if (notification is FileChangeNotification &&
 				matchingFolders.Any(
-					f => ((FileChange)notification).File.StartsWith(f, StringComparison.InvariantCultureIgnoreCase)))
+					f => ((FileChangeNotification)notification).File.StartsWith(f, StringComparison.InvariantCultureIgnoreCase)))
 			{
 				return true;
 			}
 
-			if (notification is ConfigChange && watchConfig > 0)
+			if (notification is ConfigurationChangeNotification && watchConfig > 0)
 			{
 				return true;
 			}
@@ -286,12 +286,12 @@ namespace Raven.Database.Server.Connections
 				return true;
 			}
 
-			if (notification is SynchronizationUpdate && watchSync > 0)
+			if (notification is SynchronizationUpdateNotification && watchSync > 0)
 			{
 				return true;
 			}
 
-			if (notification is UploadFailed && watchCancellations > 0)
+			if (notification is CancellationNotification && watchCancellations > 0)
 			{
 				return true;
 			}
