@@ -20,6 +20,7 @@
                         <a data-bind="text: id, attr: { href: '#counterCollapse' + $index() }"></a>
                     </h4>
                     <button class="btn btn-primary md-col-3" data-bind="click:function(){$root.addOrEditCounter($data);}">Edit Counter</button>
+                    <button class="btn btn-primary md-col-3" data-bind="click:function(){$root.resetCounter($data);}">Reset Counter</button>
                 </div>
                 <div class="panel-collapse" data-bind="attr:{id:'counterCollapse' + $index()}">
                     <div class="panel panel-default">
