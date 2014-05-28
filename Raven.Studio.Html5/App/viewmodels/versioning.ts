@@ -58,7 +58,6 @@ class versioning extends viewModelBase {
 
     fetchVersioningEntries() {
         var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(this.activeDatabase()).execute();
-        // var task: JQueryPromise<document[]> = new getDocumentsStartingWithCommand("Raven/Versioning", this.activeDatabase()).execute();
         task.done((versionings: versioningEntry[]) => {
             this.versioningsLoaded(versionings);
         });
