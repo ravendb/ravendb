@@ -72,7 +72,12 @@ namespace Voron.Impl
 		public static int NewPrefix(PrefixedSlice prefixedSeparatorKey)
 		{
 			if (prefixedSeparatorKey.NewPrefix != null) // also need to take into account the size of a new prefix that will be written to the page
-				return Constants.PrefixNodeHeaderSize + prefixedSeparatorKey.NewPrefix.Size;
+			{
+				var size = Constants.PrefixNodeHeaderSize + prefixedSeparatorKey.NewPrefix.Size;
+				size += size & 1;
+				
+				return size;
+			}
 
 			return 0;
 		}

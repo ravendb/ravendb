@@ -431,6 +431,8 @@ namespace Voron.Trees
 		private void WritePrefix(Slice prefix, int prefixId)
 		{
 			var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
+			prefixNodeSize += prefixNodeSize & 1;
+
 			var prefixNodeOffset = (ushort)(Upper - prefixNodeSize);
 			Upper = prefixNodeOffset;
 
@@ -590,6 +592,7 @@ namespace Voron.Trees
 						continue;
 
 				    var prefixNodeSize = prefixNode.Size;
+				    prefixNodeSize += prefixNodeSize & 1;
 
 					NativeMethods.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
 				    Upper -= (ushort) prefixNodeSize;
@@ -737,7 +740,7 @@ namespace Voron.Trees
 				if (prefixNode == null) // allocated but not written yet
 					continue;
 
-				size += prefixNode.Size;
+				size += prefixNode.Size + (prefixNode.Size & 1);
 			}
  
 			Debug.Assert(size <= _pageSize);

@@ -250,7 +250,7 @@ namespace Voron.Trees
                 return splitIndex;
             }
 
-			int pageSize = nodeSize + Constants.PrefixNodeHeaderSize; // let's assume that prefix will be created to ensure the destination page will have enough space
+			int pageSize = nodeSize + (Constants.PrefixNodeHeaderSize + 1); // let's assume that prefix will be created to ensure the destination page will have enough space
             if (currentIndex <= splitIndex)
             {
                 newPosition = false;
