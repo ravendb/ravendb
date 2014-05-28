@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -11,9 +12,18 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]
         public HttpResponseMessage Subdirectories(string directory = null)
 		{
-			var add = directory == null ? 0 : 1;
-			directory = "/" + directory;
-			var nesting = directory.Count(ch => ch == '/') + add;
+            int nesting = 1;
+            if (directory != null)
+            {
+                directory = directory.Trim('/');
+
+                directory = "/" + directory;
+                nesting = directory.Count(ch => ch == '/') + 1;
+            }
+            else
+            {
+                directory = "/";
+            }
 
             IEnumerable<string> result = Search.GetTermsFor("__directory", directory)
 			                                .Where(subDir =>
@@ -26,7 +36,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			                                .Skip(Paging.Start)
 			                                .Take(Paging.PageSize);
 
-            return this.GetMessageWithObject(result);
+            return this.GetMessageWithObject(result)
+                       .WithNoCache();
 		}
 	}
 }

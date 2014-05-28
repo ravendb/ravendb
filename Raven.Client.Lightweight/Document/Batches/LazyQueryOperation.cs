@@ -105,17 +105,7 @@ namespace Raven.Client.Document.Batches
 			return queryOperation.EnterQueryContext();
 		}
 
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			return commands.Query(queryOperation.IndexName, queryOperation.IndexQuery, includes.ToArray());
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			HandleResponse((QueryResult)result);
-		}
-
-		public void SetHeaders(IDictionary<string,string> theHeaders)
+	    public void SetHeaders(IDictionary<string,string> theHeaders)
 		{
 			headers = theHeaders;
 		}
