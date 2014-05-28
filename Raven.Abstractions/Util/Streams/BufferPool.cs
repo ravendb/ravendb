@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Util.Streams
     public class BufferPool : IBufferPool
     {
         private readonly BufferManager bufferManager;
-#if DEBUG
+#if VALIDATE
         public class BufferTracker
         {
             private StackTrace stackTrace;
@@ -49,7 +49,7 @@ namespace Raven.Abstractions.Util.Streams
         public byte[] TakeBuffer(int size)
         {
             var buffer = bufferManager.TakeBuffer(size);
-#if DEBUG
+#if VALIDATE
             trackLeakedBuffers.GetOrCreateValue(buffer).TrackAllocation();
 #endif
             return buffer;
@@ -57,7 +57,7 @@ namespace Raven.Abstractions.Util.Streams
 
         public void ReturnBuffer(byte[] buffer)
         {
-#if DEBUG
+#if VALIDATE
             BufferTracker value;
             if (trackLeakedBuffers.TryGetValue(buffer, out value))
             {

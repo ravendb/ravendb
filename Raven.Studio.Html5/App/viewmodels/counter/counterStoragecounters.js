@@ -49,10 +49,23 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
                 var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
                 editCounterDialogViewModel.updateTask.done(function (editedCounter, delta) {
                     new updateCounterCommand(_this.activeCounterStorage(), editedCounter, delta).execute().done(function () {
-                        _this.fetchGroups();
+                        _this.fetchGroups(); //TODO: remove this after changes api is implemented
                     });
                 });
                 app.showDialog(editCounterDialogViewModel);
+            });
+        };
+
+        counterStorageCounters.prototype.resetCounter = function (counterToReset) {
+            var _this = this;
+            app.showMessage('Are you sure you want to reset the counter?', 'Reset Counter', ['Yes', 'No']).done(function (answer) {
+                if (answer == "Yes") {
+                    require(["commands/counter/resetCounterCommand"], function (resetCounterCommand) {
+                        new resetCounterCommand(_this.activeCounterStorage(), counterToReset).execute().done(function () {
+                            _this.fetchGroups(); //TODO: remove this after changes api is implemented
+                        });
+                    });
+                }
             });
         };
 
@@ -100,4 +113,4 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
     
     return counterStorageCounters;
 });
-//# sourceMappingURL=counterStoragecounters.js.map
+//# sourceMappingURL=counterStorageCounters.js.map

@@ -7,8 +7,6 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
-using Raven.Abstractions.Replication;
-using Raven.Client.Linq;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Voron;
@@ -38,6 +36,7 @@ namespace Raven.Database.Counters
 	    public readonly string CounterStorageName;
 
 		private const int ServerId = 0; // local is always 0
+
 		public CounterStorage(string serverUrl, string counterStorageStorageName, InMemoryRavenConfiguration configuration)
 		{
             CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, counterStorageStorageName);
@@ -48,7 +47,8 @@ namespace Raven.Database.Counters
 
 			storageEnvironment = new StorageEnvironment(options);
             ReplicationTask = new RavenCounterReplication(this);
-		   
+
+			//TODO: add an option to create a ReplicationRequestTimeout when creating a new counter storage
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
             Initialize();
@@ -78,7 +78,7 @@ namespace Raven.Database.Counters
 
 					Id = Guid.NewGuid();
 					metadata.Add("id", Id.ToByteArray());
-					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageUrl));
+					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageName));
 
 					tx.Commit();
 				}
@@ -91,8 +91,8 @@ namespace Raven.Database.Counters
 						throw new InvalidOperationException("Could not read name from the store, something bad happened");
 					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
 
-					if (storedName != CounterStorageUrl)
-						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageUrl);
+					if (storedName != CounterStorageName)
+						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageName);
 
 					using (var it = etags.Iterate())
 					{
@@ -446,7 +446,7 @@ namespace Raven.Database.Counters
 		            }
 		            else
 		            {
-		                result.Reader.Read(storeBuffer, 0, buffer.Length);
+						result.Reader.Read(storeBuffer, 0, storeBuffer.Length);
 		                delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
 		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
 		            }
@@ -462,21 +462,23 @@ namespace Raven.Database.Counters
                 });
             }
 
-			public void Reset(string server, string fullCounterName)
+			public bool Reset(string server, string fullCounterName)
 			{
 				Counter counter = GetCounter(fullCounterName); //TODO: implement get counter without an etag
 				if (counter != null)
 				{
-					Store(server, fullCounterName, result =>
+					long overallTotalPositive = counter.ServerValues.Sum(x => x.Positive);
+					long overallTotalNegative = counter.ServerValues.Sum(x => x.Negative);
+					long difference = overallTotalPositive - overallTotalNegative;
+
+					if (difference != 0)
 					{
-
-						long overallTotalPositiveExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Positive);
-						long overallTotalNegativeExceptCurrent = counter.ServerValues.Where(x => x.SourceId != ServerId).Sum(x => x.Negative);
-
-						EndianBitConverter.Big.CopyBytes(overallTotalNegativeExceptCurrent, storeBuffer, 0);
-						EndianBitConverter.Big.CopyBytes(overallTotalPositiveExceptCurrent, storeBuffer, 8);
-					});
+						difference = -difference;
+						Store(server, fullCounterName, difference);
+						return true;
+					}
 				}
+				return false;
 			}
 
 			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
@@ -492,7 +494,8 @@ namespace Raven.Database.Counters
 				EndianBitConverter.Big.CopyBytes(serverId, buffer, end);
 
 				var endOfGroupPrefix = Array.IndexOf(buffer, Constants.GroupSeperator, 0, counterNameSize);
-				Debug.Assert(endOfGroupPrefix == -1); //Could not find group name in counter, no separator
+				if (endOfGroupPrefix == -1)
+					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
 				var groupKeySlice = new Slice(buffer, (ushort) endOfGroupPrefix);
 

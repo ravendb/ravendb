@@ -88,6 +88,7 @@
     <Compile Include="AssertAsync.cs" />
     <Compile Include="Dto\Address.cs" />
     <Compile Include="Dto\Person.cs" />
+    <Compile Include="Dto\PersonWithAddress.cs" />
     <Compile Include="Util\CommonInitializationUtil.cs" />
     <Compile Include="Attributes\CriticalCulturesAttribute.cs" />
     <Compile Include="Dto\Faceted\Currency.cs" />

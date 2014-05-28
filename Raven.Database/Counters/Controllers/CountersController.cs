@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-
-
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -31,15 +26,18 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[Route("counters/{counterName}/reset")]
-		[HttpGet]
+		[HttpPost]
 		public HttpResponseMessage CounterReset(string counterName, string group)
 		{
 			using (var writer = Storage.CreateWriter())
 			{
 				string counter = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
-				writer.Reset(Storage.CounterStorageUrl, counter);
+				bool changesWereMade = writer.Reset(Storage.CounterStorageUrl, counter);
 
-				writer.Commit();
+				if (changesWereMade)
+				{
+					writer.Commit();
+				}
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}

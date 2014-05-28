@@ -30,7 +30,7 @@ namespace Raven.Database.Prefetching
 				if (prefetchingBehaviors.TryGetValue(user, out value))
 					return value;
 
-				value = new PrefetchingBehavior(workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext));
+			    value = new PrefetchingBehavior(workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user));
 
 				prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>(prefetchingBehaviors)
 				{

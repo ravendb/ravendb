@@ -5,33 +5,30 @@
     d.prototype = new __();
 };
 define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
-    var updateCounterCommand = (function (_super) {
-        __extends(updateCounterCommand, _super);
+    var resetCounterCommand = (function (_super) {
+        __extends(resetCounterCommand, _super);
         /**
         * @param counterStorage - the counter storage that is being used
         * @param editedCounter - the edited counter
-        * @param delta - the change to apply to the counter
         */
-        function updateCounterCommand(storage, editedCounter, delta) {
+        function resetCounterCommand(storage, counterToReset) {
             _super.call(this);
             this.storage = storage;
-            this.editedCounter = editedCounter;
-            this.delta = delta;
+            this.counterToReset = counterToReset;
         }
-        updateCounterCommand.prototype.execute = function () {
+        resetCounterCommand.prototype.execute = function () {
             var args = {
-                counterName: this.editedCounter.id(),
-                group: this.editedCounter.group(),
-                delta: this.delta
+                counterName: this.counterToReset.id(),
+                group: this.counterToReset.group()
             };
 
-            var url = "/change" + this.urlEncodeArgs(args);
+            var url = "/reset" + this.urlEncodeArgs(args);
             return this.post(url, null, this.storage, { dataType: undefined });
         };
-        return updateCounterCommand;
+        return resetCounterCommand;
     })(commandBase);
 
     
-    return updateCounterCommand;
+    return resetCounterCommand;
 });
-//# sourceMappingURL=updateCounterCommand.js.map
+//# sourceMappingURL=resetCounterCommand.js.map

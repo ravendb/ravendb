@@ -6,13 +6,6 @@ namespace Voron.Impl
 {
     internal unsafe class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
     {
-        private readonly SliceComparer _comparer;
-
-        public TreeAndSliceComparer(SliceComparer comparer)
-        {
-            _comparer = comparer;
-        }
-
         public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
         {
             if (x == null && y == null)
@@ -23,7 +16,7 @@ namespace Voron.Impl
             if (x.Item1 != y.Item1)
                 return false;
 
-            return x.Item2.Compare(y.Item2, _comparer) == 0;
+            return x.Item2.Compare(y.Item2) == 0;
         }
 
         public int GetHashCode(Tuple<Tree, Slice> obj)
