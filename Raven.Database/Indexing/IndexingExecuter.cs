@@ -129,11 +129,6 @@ namespace Raven.Database.Indexing
 
 		        if (jsonDocs.Count <= 0)
 		        {
-			        //even if nothing to index --> go over indexes and update last indexed
-			        indexesToWorkOn.ForEach(index =>
-				        transactionalStorage.Batch(actions =>
-					        actions.Indexing.UpdateLastIndexed(index.IndexId, lastEtag, DateTime.UtcNow)));
-
 			        return;
 		        }
 
