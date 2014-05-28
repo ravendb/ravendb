@@ -90,9 +90,10 @@ namespace Raven.Database.Prefetching
 		{
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
+			int prefetchingQueueSize;
 			do
 			{
-				var nextEtagToIndex = GetNextDocEtag(etag);
+				var nextEtagToIndex = GetNextDocEtag(etag);				
 				var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
 				if (nextEtagToIndex != firstEtagInQueue)
@@ -108,9 +109,9 @@ namespace Raven.Database.Prefetching
 				if (docsLoaded)
 					etag = result[result.Count - 1].Etag;
 
+				prefetchingQueueSize = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
 			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
-					 (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) +
-						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
+					 (prefetchingQueueSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
 			
 
 			return result;
@@ -119,11 +120,9 @@ namespace Raven.Database.Prefetching
 		private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
 		{
 			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
-			
+
 			foreach (var jsonDocument in jsonDocs)
-			{
 				prefetchingQueue.Add(jsonDocument);
-			}
 		}
 
 		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, ref List<JsonDocument> items)
@@ -192,20 +191,37 @@ namespace Raven.Database.Prefetching
 
 			context.TransactionalStorage.Batch(actions =>
 			{
-				jsonDocs = actions.Documents
-					.GetDocumentsAfter(
-						etag,
-						autoTuner.NumberOfItemsToIndexInSingleBatch,
-						context.CancellationToken,
-						autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: untilEtag)
-					.Where(x => x != null)
-					.Select(doc =>
-					{
-						DocumentRetriever.EnsureIdInMetadata(doc);
-						return doc;
-					})
-					.ToList();
+				//limit how much data we load from disk --> better adhere to memory limits
+				var totalSizeAllowedToLoadInBytes =
+					(context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024) -
+					(prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
+
+				if (totalSizeAllowedToLoadInBytes <= 0) //if we are at memory limit, load only one document
+					jsonDocs = actions.Documents
+						.GetDocumentsAfter(etag, 1, context.CancellationToken,untilEtag: untilEtag)
+						.Select(doc =>
+						{
+							DocumentRetriever.EnsureIdInMetadata(doc);
+							return doc;
+						})
+						.ToList();
+				else
+				{
+					jsonDocs = actions.Documents
+						.GetDocumentsAfter(
+							etag,
+							autoTuner.NumberOfItemsToIndexInSingleBatch,
+							context.CancellationToken,
+							Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
+							untilEtag)
+						.Where(x => x != null)
+						.Select(doc =>
+						{
+							DocumentRetriever.EnsureIdInMetadata(doc);
+							return doc;
+						})
+						.ToList();
+				}
 			});
 
 			if (untilEtag == null)
