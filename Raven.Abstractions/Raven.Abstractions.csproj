@@ -107,6 +107,7 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Counters\CountersMetrics.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\AggregationData.cs" />

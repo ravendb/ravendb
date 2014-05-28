@@ -115,7 +115,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private isPathLegal(name: string, pathName: string): string {
-        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
         var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var errorMessage = null;
 

@@ -106,7 +106,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()); 
     }
 
     activate(args: any) {
@@ -164,9 +164,6 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-
 
         shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
             if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 

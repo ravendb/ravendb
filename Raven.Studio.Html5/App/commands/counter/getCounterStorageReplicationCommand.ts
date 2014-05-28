@@ -11,7 +11,7 @@ class getCounterStorageReplicationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<counterStorageReplicationDestinatinosDto> {
-        var url = "/replications-get";
+        var url = "/replications/get";
         var getTask = this.query(url, null, this.counterStorage);
 
         if (this.reportRefreshProgress) {

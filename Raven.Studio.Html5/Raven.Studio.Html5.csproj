@@ -27,6 +27,7 @@
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStoragesCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterValueCommand.ts" />
+    <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
@@ -114,6 +115,7 @@
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
