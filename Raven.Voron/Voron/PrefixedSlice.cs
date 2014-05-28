@@ -48,12 +48,21 @@ namespace Voron
 
 		public PrefixedSlice(NodeHeader* node)
 		{
-			_base = (byte*)node + Constants.NodeHeaderSize;
-			_header = (PrefixedSliceHeader*)_base;
-			
-			NonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
+			if (node->KeySize > 0)
+			{
+				_base = (byte*)node + Constants.NodeHeaderSize;
+				_header = (PrefixedSliceHeader*)_base;
+
+				NonPrefixedData = _base + Constants.PrefixedSliceHeaderSize;
+
+				Size = node->KeySize;
+			}
+			else
+			{
+				Size = 0;
+			}
+
 			Options = SliceOptions.Key;
-			Size = (ushort)(Constants.PrefixedSliceHeaderSize + _header->NonPrefixedDataSize);
 		}
 
 		public PrefixedSlice(Slice key)
@@ -74,7 +83,7 @@ namespace Voron
 
 		public PrefixedSlice(byte prefixId, ushort prefixUsage, Slice key)
 		{
-			var nonPrefixedSize = (ushort) (key.Size - prefixUsage);
+			var nonPrefixedSize = (ushort)(key.Size - prefixUsage);
 			_base = (byte*)Marshal.AllocHGlobal(Constants.PrefixedSliceHeaderSize + nonPrefixedSize).ToPointer();
 			_header = (PrefixedSliceHeader*)_base;
 
@@ -121,7 +130,7 @@ namespace Voron
 
 		public override string ToString()
 		{
-			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header->PrefixId, _header->PrefixUsage, new string((sbyte*) NonPrefixedData, 0, _header->NonPrefixedDataSize, Encoding.UTF8));
+			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header->PrefixId, _header->PrefixUsage, new string((sbyte*)NonPrefixedData, 0, _header->NonPrefixedDataSize, Encoding.UTF8));
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -225,11 +226,18 @@ namespace Voron.Trees
                 // cannot add to left implicit side, adjust by moving the left node
                 // to the right by one, then adding the new one as the left
 
-                var implicitLeftKey = GetActualKey(to, 0);
-                var leftPageNumber = to.GetNode(0)->PageNumber;
+	            NodeHeader* actualKeyNode;
+                var implicitLeftKey = GetActualKey(to, 0, out actualKeyNode);
+	            var implicitLeftNode = to.GetNode(0);
+				var leftPageNumber = implicitLeftNode->PageNumber;
 
-	            var implicitLeftPrefixedKey = to.ConvertToPrefixedKey(implicitLeftKey, 1);
+	            PrefixedSlice implicitLeftPrefixedKey;
 
+	            if (implicitLeftNode == actualKeyNode) // no need to create a prefix, just use the existing prefixed key from the node
+					implicitLeftPrefixedKey = new PrefixedSlice(actualKeyNode);
+				else
+					implicitLeftPrefixedKey = to.ConvertToPrefixedKey(implicitLeftKey, 1);
+	            
 				to.EnsureHasSpaceFor(_tx, implicitLeftPrefixedKey, -1);
 				to.AddPageRefNode(1, implicitLeftPrefixedKey, leftPageNumber);
 
@@ -268,9 +276,17 @@ namespace Voron.Trees
 			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);
         }
 
-        private Slice GetActualKey(Page page, int pos)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    private Slice GetActualKey(Page page, int pos)
+	    {
+		    NodeHeader* _;
+		    return GetActualKey(page, pos, out _);
+	    }
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Slice GetActualKey(Page page, int pos, out NodeHeader* node)
         {
-            var node = page.GetNode(pos);
+            node = page.GetNode(pos);
 			var key = page.GetFullNodeKey(node);
 			while (key.Size == 0) // TODO check this after PrefixedSlice introduction
             {
