@@ -37,7 +37,7 @@ namespace Voron.Tests
 				{
 					fetchedDataIterator.Seek(Slice.BeforeAllKeys);
 
-					Assert.True(fetchedDataIterator.CurrentKey.Compare(new Slice(buffer), Env.SliceComparer) == 0);
+					Assert.True(fetchedDataIterator.CurrentKey.Compare(new Slice(buffer)) == 0);
 				}
 			}
 		}

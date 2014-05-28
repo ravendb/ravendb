@@ -594,31 +594,44 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-        protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats)
-		{
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+	    protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats)
+	    {
+	        Action<Exception, object> onErrorFunc;
+	        return RobustEnumerationIndex(input, funcs, stats, out onErrorFunc);
+	    }
+
+	    protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats,out Action<Exception,object> onErrorFunc)
+	    {
+            onErrorFunc = (exception, o) =>
+	        {
+                string docId = null;
+                var invalidSpatialException = exception as InvalidSpatialShapeException;
+                if (invalidSpatialException != null)
+                    docId = invalidSpatialException.InvalidDocumentId;
+
+	            context.AddError(indexId,
+	                indexDefinition.Name,
+                    docId ?? TryGetDocKey(o),
+	                exception.Message,
+	                "Map"
+	                );
+                
+	            logIndexing.WarnException(
+	                String.Format("Failed to execute indexing function on {0} on {1}", indexId,
+	                    TryGetDocKey(o)),
+	                exception);
+
+	            stats.IndexingErrors++;
+	        };
+	        return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
-				OnError = (exception, o) =>
-				{
-					context.AddError(indexId,
-                                     indexDefinition.Name,
-									TryGetDocKey(o),
-									exception.Message,
-									"Map"
-						);
-					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
-										TryGetDocKey(o)),
-						exception);
-
-					stats.IndexingErrors++;
-				}
+                OnError = onErrorFunc
 			}.RobustEnumeration(input, funcs);
-		}
+	    }
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
+	    protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
 															IStorageActionsAccessor actions,
 			IndexingWorkStats stats)
 		{
@@ -675,10 +688,11 @@ namespace Raven.Database.Indexing
 			var dic = current as DynamicJsonObject;
 			if (dic == null)
 				return null;
-			object value = dic.GetValue(Constants.DocumentIdFieldName);
-			if (value == null)
-				return null;
-			return value.ToString();
+		    object value = dic.GetValue(Constants.DocumentIdFieldName) ??
+		                   dic.GetValue(Constants.ReduceKeyFieldName);
+		    if (value != null)
+		        return value.ToString();
+		    return null;
 		}
 
 		public abstract void Remove(string[] keys, WorkContext context);

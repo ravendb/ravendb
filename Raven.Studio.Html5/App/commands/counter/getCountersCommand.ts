@@ -1,6 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import counter = require("models/counter");
+import counter = require("models/counter/counter");
+import counterStorage = require("models/counter/counterStorage");
 import appUrl = require("common/appUrl");
 
 class getCountersCommand extends commandBase {
@@ -8,7 +9,7 @@ class getCountersCommand extends commandBase {
     /**
     * @param ownerDb The database the collections will belong to.
     */
-    constructor(private skip: number, private take: number, private counterGroupName: string) {
+    constructor(private storage: counterStorage,private skip: number, private take: number, private counterGroupName?: string) {
         super();
 
     }
@@ -20,9 +21,9 @@ class getCountersCommand extends commandBase {
             counterGroupName: this.counterGroupName
         };
 
-        var url = "/counters/test/counters" + this.urlEncodeArgs(args);
-        var selector = (dtos: any/*counterDto[]*/) => dtos.map(d => new counter(d));
-        return this.query(url, null, appUrl.getSystemDatabase(), selector);
+        var url = "/counters";
+        var selector = (dtos: counterDto[]) => dtos.map(d => new counter(d));
+        return this.query(url, args, this.storage, selector);
     }
 }
 
