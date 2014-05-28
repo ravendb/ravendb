@@ -565,9 +565,24 @@ namespace Raven.Database.Indexing
 			private void WriteDocumentToIndex(object doc, RavenIndexWriter indexWriter, Analyzer analyzer)
 			{
 				float boost;
-				var fields = GetFields(doc, out boost).ToList();
+				List<AbstractField> fields;
+			    try
+			    {
+			        fields = GetFields(doc, out boost).ToList();
+			    }
+			    catch (Exception e)
+			    {
+                    Context.AddError(indexId,
+                        parent.PublicName,
+                        TryGetDocKey(doc),
+                        e.Message,
+                        "Reduce"
+                        );
+			        logIndexing.WarnException("Could not get fields to during reduce for " + parent.PublicName, e);
+			        return;
+			    }
 
-				string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
+			    string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
 				reduceKeyField.SetValue(reduceKeyAsString);
 				reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
 				luceneDoc.GetFields().Clear();

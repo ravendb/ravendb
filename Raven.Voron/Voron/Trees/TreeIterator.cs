@@ -10,16 +10,14 @@ namespace Voron.Trees
 	{
 		private readonly Tree _tree;
 		private readonly Transaction _tx;
-		private readonly SliceComparer _cmp;
 		private Cursor _cursor;
 		private Page _currentPage;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
 
-		public TreeIterator(Tree tree, Transaction tx, SliceComparer cmp)
+		public TreeIterator(Tree tree, Transaction tx)
 		{
 			_tree = tree;
 			_tx = tx;
-			_cmp = cmp;
 		}
 
 		public int GetCurrentDataSize()
@@ -30,16 +28,23 @@ namespace Voron.Trees
 		public bool Seek(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			_currentPage = _tree.FindPageFor(_tx, key, out lazy);
+			_currentPage = _tree.FindPageFor(key, out lazy);
 			_cursor = lazy.Value;
 			_cursor.Pop();
-			var node = _currentPage.Search(key, _cmp);
-			if (node == null)
+
+			var node = _currentPage.Search(key);
+			if (node != null)
 			{
-				return false;
+				_currentKey = _currentPage.GetFullNodeKey(node);
+				return this.ValidateCurrentKey(Current, _currentPage);
 			}
-			_currentKey = _currentPage.GetFullNodeKey(node);
-			return this.ValidateCurrentKey(Current, _cmp, _currentPage);
+
+			// The key is not found in the db, but we are Seek()ing for equals or starts with.
+			// We know that the exact value isn't there, but it is possible that the next page has values 
+			// that is actually greater than the key, so we need to check it as well.
+
+			_currentPage.LastSearchPosition = _currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
+			return MoveNext();
 		}
 
 		public Slice CurrentKey
@@ -62,7 +67,7 @@ namespace Voron.Trees
 		/// </summary>
 		public bool DeleteCurrentAndMoveNext()
 		{
-			_tree.Delete(_tx, CurrentKey);
+			_tree.Delete(CurrentKey);
 			return MovePrev() && MoveNext();
 		}
 
@@ -96,7 +101,7 @@ namespace Voron.Trees
 						_currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
-					if (this.ValidateCurrentKey(current, _cmp, _currentPage) == false)
+					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
 					_currentKey = _currentPage.GetFullNodeKey(current);
 					return true;// there is another entry in this page
@@ -126,7 +131,7 @@ namespace Voron.Trees
 						_currentPage.LastSearchPosition = 0;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
-					if (this.ValidateCurrentKey(current, _cmp, _currentPage) == false)
+					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
 					_currentKey = _currentPage.GetFullNodeKey(current);
 					return true;// there is another entry in this page
@@ -151,7 +156,7 @@ namespace Voron.Trees
 				}
 			}
 
-			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp, _currentPage);
+			return _currentPage != null && this.ValidateCurrentKey(Current, _currentPage);
 		}
 
 		public ValueReader CreateReaderForCurrent()
@@ -186,18 +191,18 @@ namespace Voron.Trees
 			} while (self.MoveNext());
 		}
 
-		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, SliceComparer cmp, Page page)
+		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, Page page)
 		{
 			if (self.RequiredPrefix != null)
 			{
 				var currentKey = page.GetFullNodeKey(node);
-				if (currentKey.StartsWith(self.RequiredPrefix, cmp) == false)
+				if (currentKey.StartsWith(self.RequiredPrefix) == false)
 					return false;
 			}
 			if (self.MaxKey != null)
 			{
 				var currentKey = page.GetFullNodeKey(node);
-				if (currentKey.Compare(self.MaxKey, cmp) >= 0)
+				if (currentKey.Compare(self.MaxKey) >= 0)
 					return false;
 			}
 			return true;

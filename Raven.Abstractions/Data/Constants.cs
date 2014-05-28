@@ -101,9 +101,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
-        //Periodic backup
-        public const string RavenPeriodicBackupsDocsTombstones = "Raven/PeriodicBackups/Docs/Tombstones";
-        public const string RavenPeriodicBackupsAttachmentsTombstones = "Raven/PeriodicBackups/Attachments/Tombstones";
+        //Periodic export
+		public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
+		public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
 
@@ -138,5 +138,13 @@ namespace Raven.Abstractions.Data
 	    public const string AssembliesDirectoryName = "Assemblies";
 
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
+		
+		// Indexing
+		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
+
+		// counters
+		public const byte GroupSeperator = 29;
+		public const char GroupSeperatorChar = (char)GroupSeperator;
+		public const string GroupSeperatorString = "\u001D";
 	}
 }

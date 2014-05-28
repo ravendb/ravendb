@@ -6,13 +6,11 @@ namespace Voron.Trees
 {
 	public unsafe class PageIterator : IIterator
 	{
-		private readonly SliceComparer _cmp;
 		private readonly Page _page;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
 
-		public PageIterator(SliceComparer cmp, Page page)
+		public PageIterator(Page page)
 		{
-			this._cmp = cmp;
 			this._page = page;
 		}
 
@@ -23,11 +21,11 @@ namespace Voron.Trees
 
 		public bool Seek(Slice key)
 		{
-			var current = _page.Search(key, _cmp);
+			var current = _page.Search(key);
 			if (current == null)
 				return false;
 			_currentKey = _page.GetFullNodeKey(current);
-			return this.ValidateCurrentKey(current, _cmp, _page);
+			return this.ValidateCurrentKey(current, _page);
 		}
 
 		public NodeHeader* Current
@@ -86,7 +84,7 @@ namespace Voron.Trees
 				return false;
 
 			var current = _page.GetNode(_page.LastSearchPosition);
-			if (this.ValidateCurrentKey(current, _cmp, _page) == false)
+			if (this.ValidateCurrentKey(current, _page) == false)
 			{
 				return false;
 			}

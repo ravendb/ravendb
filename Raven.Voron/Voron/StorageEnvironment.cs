@@ -26,7 +26,6 @@ namespace Voron
         private readonly ConcurrentSet<Transaction> _activeTransactions = new ConcurrentSet<Transaction>();
 
         private readonly IVirtualPager _dataPager;
-        internal readonly SliceComparer _sliceComparer;
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
@@ -75,7 +74,6 @@ namespace Voron
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
-                _sliceComparer = NativeMethods.memcmp;
                 _headerAccessor = new HeaderAccessor(this);
                 var isNew = _headerAccessor.Initialize();
 
@@ -131,8 +129,8 @@ namespace Voron
 
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.Root : &header->Root);
-                var freeSpace = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
+                var root = Tree.Open(tx, header->TransactionId == 0 ? &entry.Root : &header->Root);
+                var freeSpace = Tree.Open(tx, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
 
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
@@ -145,8 +143,8 @@ namespace Voron
             State = new StorageEnvironmentState(null, null, initialNextPageNumber);
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Create(tx, _sliceComparer);
-                var freeSpace = Tree.Create(tx, _sliceComparer);
+                var root = Tree.Create(tx);
+                var freeSpace = Tree.Create(tx);
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);
@@ -158,11 +156,6 @@ namespace Voron
         public IFreeSpaceHandling FreeSpaceHandling
         {
             get { return _freeSpaceHandling; }
-        }
-
-        public unsafe SliceComparer SliceComparer
-        {
-            get { return _sliceComparer; }
         }
 
         public HeaderAccessor HeaderAccessor
@@ -233,12 +226,12 @@ namespace Voron
 	        if (tree == null)
 	            return;
 
-            foreach (var page in tree.AllPages(tx))
+            foreach (var page in tree.AllPages())
             {
                 tx.FreePage(page);
             }
 
-            tx.State.Root.Delete(tx, name);
+            tx.State.Root.Delete(name);
 
             tx.RemoveTree(name);
         }
@@ -255,18 +248,18 @@ namespace Voron
             Slice key = name;
 
             // we are in a write transaction, no need to handle locks
-            var header = (TreeRootHeader*)tx.State.Root.DirectRead(tx, key);
+            var header = (TreeRootHeader*)tx.State.Root.DirectRead(key);
             if (header != null)
             {
-                tree = Tree.Open(tx, _sliceComparer, header);
+                tree = Tree.Open(tx, header);
                 tree.Name = name;
                 tx.AddTree(name, tree);
                 return tree;
             }
 
-            tree = Tree.Create(tx, _sliceComparer);
+            tree = Tree.Create(tx);
             tree.Name = name;
-            var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+            var space = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
 
             tree.State.CopyTo((TreeRootHeader*)space);
             tree.State.IsModified = true;
@@ -438,14 +431,14 @@ namespace Voron
         {
             var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{
-					{"Root", State.Root.AllPages(tx)},
-					{"Free Space Overhead", State.FreeSpaceRoot.AllPages(tx)},
+					{"Root", State.Root.AllPages()},
+					{"Free Space Overhead", State.FreeSpaceRoot.AllPages()},
 					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
             foreach (var tree in tx.Trees)
             {
-                results.Add(tree.Name, tree.AllPages(tx));
+                results.Add(tree.Name, tree.AllPages());
             }
 
             return results;

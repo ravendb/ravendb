@@ -1,37 +1,30 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data.Services.Client;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
 	public class RavenCounterReplication:IDisposable
 	{
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly object waitForCounterUpdate = new object();
         private int actualWorkCounter = 0; // represents the number of changes in 
         private int replicatedWorkCounter = 0; // represents the last actualWorkCounter value that was checked in the last replication iteration
         private bool shouldPause = false;
         public bool IsRunning { get; private set; }
-		private readonly ConcurrentDictionary<string, DestinationStats> destinationsFailureCount = 
-			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, CounterDestinationStats> destinationsStats =
+            new ConcurrentDictionary<string, CounterDestinationStats>(StringComparer.OrdinalIgnoreCase);
         private int replicationAttempts;
         private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
         public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
@@ -102,7 +95,7 @@ namespace Raven.Database.Counters.Controllers
                     return true;
                 }
 
-                log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.Name);
+                Log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
                 return Monitor.Wait(waitForCounterUpdate, timeout);
 	        }
 	    }
@@ -119,7 +112,7 @@ namespace Raven.Database.Counters.Controllers
 
 		private void RecordFailure(string url, string lastError)
 		{
-			var stats = destinationsFailureCount.GetOrAdd(url, new DestinationStats { Url = url });
+			var stats = destinationsStats.GetOrAdd(url, new CounterDestinationStats { Url = url });
 			Interlocked.Increment(ref stats.FailureCountInternal);
 			stats.LastFailureTimestamp = SystemTime.UtcNow;
 			/*var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
@@ -156,74 +149,270 @@ namespace Raven.Database.Counters.Controllers
             log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
         }*/
 	    }
+
+
+	    public void HandleHeartbeat(string src)
+	    {
+	        ResetFailureForHeartbeat(src);
+	    }
+
+
+        private void ResetFailureForHeartbeat(string src)
+		{
+			RecordSuccess(src, lastHeartbeatReceived: SystemTime.UtcNow);
+			SignalCounterUpdate();
+		}
+
+        private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
+        {
+           // using (LogContext.WithDatabase(docDb.Name)) todo:implement log context
+                while (true)
+                {
+                    RavenConnectionStringOptions connectionStringOptions;
+                    try
+                    {
+                        collection.TryTake(out connectionStringOptions, 15 * 1000, cancellation.Token);
+                        if (connectionStringOptions == null)
+                            return;
+                    }
+                    catch (Exception e)
+                    {
+                        Log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
+                        return;
+                    }
+                    try
+                    {
+                        var url = connectionStringOptions.Url + "/counters/" + storage.CounterStorageName + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
+                        var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+                        request.WebRequest.ContentLength = 0;
+                        request.ExecuteRequest();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
+                    }
+                }
+        }
 		
 		private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
         {
-	        DestinationStats destinationStats;
-			if (destinationsFailureCount.TryGetValue(destServerName, out destinationStats))
+            CounterDestinationStats destinationStats;
+            if (destinationsStats.TryGetValue(destServerName, out destinationStats) && destinationStats.FailureCount > 10)
 			{
 				bool shouldReplicateTo = false;
 				var failureCount = destinationStats.FailureCount;
-				if (failureCount > 1000)
-				{
-					shouldReplicateTo = currentReplicationAttempts % 10 == 0;
-				}
-				if (failureCount > 100)
-				{
-					shouldReplicateTo = currentReplicationAttempts % 5 == 0;
-				}
-				if (failureCount > 10)
-				{
-					shouldReplicateTo = currentReplicationAttempts % 2 == 0;
-				}
-				log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-							destServerName, failureCount, shouldReplicateTo == false);
-				return shouldReplicateTo;
+
+			    if (failureCount > 1000)
+			    {
+			        shouldReplicateTo = currentReplicationAttempts%10 == 0;
+			    }
+			    if (failureCount > 100)
+			    {
+			        shouldReplicateTo = currentReplicationAttempts%5 == 0;
+			    }
+			    if (failureCount > 10)
+			    {
+			        shouldReplicateTo = currentReplicationAttempts%2 == 0;
+			    }
+			    Log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
+			        destServerName, failureCount, shouldReplicateTo == false);
+			    return shouldReplicateTo;
 	        }
 			return true;
         }
 
-	    private bool ReplicateTo(string destinationUrl)
+      
+
+	    private ReplicationMessage GetCountersDataSinceEtag(long etag)
 	    {
+            var message = new ReplicationMessage { SendingServerName = storage.CounterStorageUrl };
+
+            using (var reader = storage.CreateReader())
+            {
+                message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
+            }
+
+	        return message;
+	    }
+
+	    enum ReplicationResult
+	    {
+	        Success = 0,
+            Failure = 1,
+            NotReplicated = 2
+	    }
+
+		private bool ReplicateTo(CounterStorageReplicationDestination destination)
+	    {
+            //todo: here, build url according to :destination.Url + '/counters/' + destination.
 	        try
 	        {
-                var connectionStringOptions = new RavenConnectionStringOptions(); //todo: get connection string from counter storage for the server 'destinationUrl'
-	            var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name));
-	            var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
-	            long etag = 0;
-	            request.ExecuteRequest((TextReader etagString) => etag = long.Parse(etagString.ReadToEnd()));
+	            string lastError;
+	            bool result = false;
 
-	            var message = new ReplicationMessage {SendingServerName = storage.Name};
-	            using (var reader = storage.CreateReader())
+				switch (TryReplicate(destination, out lastError))
 	            {
-	                message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
+	                case ReplicationResult.Success:
+						RecordSuccess(destination.CounterStorageUrl);
+                        result = true;
+	                    break;
+                    case ReplicationResult.NotReplicated:
+						//TODO: Record not replicated
+                        break;
+                    default:
+                        RecordFailure(destination.CounterStorageUrl, lastError);
+	                    break;
 	            }
-	            url = string.Format("{0}/replication", destinationUrl);
 
-	            if (message.Counters.Count > 0)
-	            {
-	                request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
-                    request.Write(message.GetRavenJObject());
-	                request.ExecuteRequest();
-		            using (var writer = storage.CreateWriter())
-		            {
-						writer.RecordLastEtagFor(storage.Name, etag + 1);
-		            }
-		            return true;
-	            }
-	            return false;
+	            return result;
 	        }
 	        catch (Exception ex)
 	        {
-	            log.ErrorException("Error occured replicating to: " + destinationUrl, ex);
+				Log.ErrorException("Error occured replicating to: " + destination.CounterStorageUrl, ex);
+                RecordFailure(destination.ServerUrl, ex.Message);
 	            return false;
 	        }
 	        finally
 	        {
-                var holder = activeReplicationTasks.GetOrAdd(destinationUrl, s => new SemaphoreSlim(0, 1));
+				var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
                 holder.Release();
 	        }
 	    }
+
+		private RavenConnectionStringOptions GetConnectionOptionsSafe(CounterStorageReplicationDestination destination, out string lastError)
+		{
+			try
+			{
+				var connectionStringOptions = new RavenConnectionStringOptions
+				{
+                    Url = destination.ServerUrl,
+					ApiKey = destination.ApiKey,
+				};
+				if (string.IsNullOrEmpty(destination.Username) == false)
+				{
+					connectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
+						? new NetworkCredential(destination.Username, destination.Password)
+						: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+				}
+				lastError = string.Empty;
+				return connectionStringOptions;
+			}
+			catch (Exception e)
+			{
+				lastError = e.Message;
+				Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}]",
+                    Environment.NewLine, destination.ServerUrl), e);
+				return null;
+			}
+		}
+
+		private ReplicationResult TryReplicate(CounterStorageReplicationDestination destination, out string lastError)
+        {
+            long etag = 0;
+            var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
+
+			if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError))
+            {
+                var replicationData = GetCountersDataSinceEtag(etag);
+
+                if (replicationData.Counters.Count > 0)
+                {
+					return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, etag, replicationData, out lastError) ?
+                        ReplicationResult.Success : ReplicationResult.Failure;
+                }
+
+                return ReplicationResult.NotReplicated;
+            }
+
+            return ReplicationResult.Failure;
+        }
+
+	    private bool TryGetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
+	    {
+            lastEtag = 0;
+            try
+            {
+                long etag = 0;
+				var url = string.Format("{0}/lastEtag/{1}", counterStorageUrl, GetServerNameForWire(storage.CounterStorageUrl));
+                var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
+                request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
+
+                lastEtag = etag;
+                lastError = string.Empty;
+                return true;
+            }
+            catch (WebException e)
+            {
+				lastError = HandleReplicationDistributionWebException(e, counterStorageUrl);
+                return false;
+            }
+            catch (Exception e)
+            {
+                lastError = e.Message;
+                return false;
+            }
+	    }
+
+		private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
+        {
+	        if (!TryGetLastReplicatedEtagFrom(connectionStringOptions, counterStorageUrl, out lastEtag, out lastError))
+	        {
+				if (IsFirstFailure(connectionStringOptions.Url))
+	            {
+	                return TryGetLastReplicatedEtagFrom(connectionStringOptions, counterStorageUrl, out lastEtag, out lastError);
+	            }
+                return false;
+	        }
+
+	        return true;
+	    }
+
+		private bool TryPerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, ReplicationMessage message, out string lastError)
+        {
+            try
+            {
+				var url = string.Format("{0}/replication", counterStorageUrl);
+                lastError = string.Empty;
+                var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+                request.Write(message.GetRavenJObject());
+                request.ExecuteRequest();
+                return true;
+
+            }
+            catch (WebException e)
+            {
+				lastError = HandleReplicationDistributionWebException(e, counterStorageUrl);
+                return false;
+            }
+            catch (Exception e)
+            {
+				Log.ErrorException("Error occured replicating to: " + counterStorageUrl, e);
+                lastError = e.Message;
+                return false;
+            }
+        }
+
+		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, long etag, ReplicationMessage message, out string lastError)
+		{
+			var destinationUrl = connectionStringOptions.Url;
+
+			if (!TryPerformReplicationToServer(connectionStringOptions, counterStorageUrl, message, out lastError))
+	        {
+	            if (IsFirstFailure(destinationUrl))
+	            {
+					return TryPerformReplicationToServer(connectionStringOptions, counterStorageUrl, message, out lastError);
+	            }
+                return false;
+	        }
+
+	        return true;
+	    }
+
+        private bool IsFirstFailure(string destinationUrl)
+        {
+            var destStats = destinationsStats.GetOrAdd(destinationUrl, new CounterDestinationStats { Url = destinationUrl });
+            return destStats.FailureCount == 0;
+        }
 
 		private void SendReplicationToAllServers(bool runningBecauseOfDataModifications)
 		{
@@ -232,31 +421,60 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-				    var destinations = storage.Servers.Where(serverName => serverName != storage.Name).ToList();
+                    CounterStorageReplicationDocument replicationData;
+					using (var reader = storage.CreateReader())
+						replicationData = reader.GetReplicationData();
 
-				    if (destinations.Count > 0)
+					if (replicationData != null && replicationData.Destinations.Count > 0)
 				    {
 				        var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-				        var destinationForReplication = destinations.Where(
-				            serverName => !runningBecauseOfDataModifications || IsNotFailing(serverName, currentReplicationAttempts));
+						var destinationForReplication = replicationData.Destinations.Where(
+							destination => (!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
 						
-				        foreach (var destinationUrl in destinationForReplication)
+				        foreach (CounterStorageReplicationDestination destination in destinationForReplication)
 				        {
-				            ReplicateToDestination(destinationUrl);
+							ReplicateToDestination(destination);
 				        }
 				    }
 				}
 				catch (Exception e)
 				{
-				    log.ErrorException("Failed to perform replication", e);
+					Log.ErrorException("Failed to perform replication", e);
 				}
 			}
 		}
+        
+        private string HandleReplicationDistributionWebException(WebException e, string destinationUrl)
+	    {
+            var response = e.Response as HttpWebResponse;
+            if (response != null)
+            {
+                Stream responseStream = response.GetResponseStream();
+                if (responseStream != null)
+                {
+                    using (var streamReader = new StreamReader(responseStream))
+                    {
+                        var error = streamReader.ReadToEnd();
+						Log.WarnException("Replication to " + destinationUrl + " had failed\r\n" + error, e);
+                    }
+                }
+                else
+                {
+					Log.WarnException("Replication to " + destinationUrl + " had failed", e);
+                }
+            }
+            else
+            {
+				Log.WarnException("Replication to " + destinationUrl + " had failed", e);
+            }
 
-		private void ReplicateToDestination(string destinationUrl)
+            return e.Message;
+	    }
+
+		private void ReplicateToDestination(CounterStorageReplicationDestination destination)
 		{
-			var dest = destinationUrl;
+			var dest = destination.CounterStorageUrl;
 			var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
 			if (holder.Wait(0) == false)
 				return;
@@ -267,11 +485,11 @@ namespace Raven.Database.Counters.Controllers
 					//{
 					try
 					{
-						if (ReplicateTo(dest)) SignalCounterUpdate();
+						if (ReplicateTo(destination)) SignalCounterUpdate();
 					}
 					catch (Exception e)
 					{
-						log.ErrorException("Could not replicate to " + dest, e);
+						Log.ErrorException("Could not replicate to " + dest, e);
 					}
 					//}
 				});
@@ -289,6 +507,42 @@ namespace Raven.Database.Counters.Controllers
 					}
 				});
 		}
+        
+        private void RecordSuccess(string url,
+            DateTime? lastSuccessTimestamp = null, 
+            long? lastReplicatedEtag = null,
+            DateTime? lastReplicatedLastModified = null,
+            DateTime? lastHeartbeatReceived = null, string lastError = null)
+        {
+            var stats = destinationsStats.GetOrAdd(url, new CounterDestinationStats { Url = url });
+            Interlocked.Exchange(ref stats.FailureCountInternal, 0);
+
+            if (lastSuccessTimestamp.HasValue)
+            {
+                stats.LastSuccessTimestamp = lastSuccessTimestamp.Value;
+            }
+
+            if (lastReplicatedEtag.HasValue)
+            {
+                stats.LastReplicatedEtag = stats.LastEtagCheckedForReplication = lastReplicatedEtag.Value;
+            }
+
+            if (lastReplicatedLastModified.HasValue)
+                stats.LastReplicatedLastModified = lastReplicatedLastModified;
+
+            if (lastHeartbeatReceived.HasValue)
+            {
+                stats.LastHeartbeatReceived = lastHeartbeatReceived;
+            }
+            else
+            {
+                stats.LastHeartbeatReceived = SystemTime.UtcNow;
+            }
+
+            if (!string.IsNullOrWhiteSpace(lastError))
+                stats.LastError = lastError;
+            
+        }
 
 		public void Dispose()
         {
@@ -301,5 +555,20 @@ namespace Raven.Database.Counters.Controllers
                 task.Wait();
             }
         }
+    }
+
+
+    public class CounterDestinationStats
+    {
+        public int FailureCountInternal = 0;
+        public string Url { get; set; }
+        public DateTime? LastHeartbeatReceived { get; set; }
+        public long LastEtagCheckedForReplication { get; set; }
+        public long LastReplicatedEtag { get; set; }
+        public DateTime? LastReplicatedLastModified { get; set; }
+        public DateTime? LastSuccessTimestamp { get; set; }
+        public DateTime? LastFailureTimestamp { get; set; }
+        public int FailureCount { get { return FailureCountInternal; } }
+        public string LastError { get; set; }
     }
 }

@@ -126,7 +126,6 @@
     <Compile Include="Trees\PageHeader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Slice.cs" />
-    <Compile Include="Impl\SliceComparer.cs" />
     <Compile Include="SliceOptions.cs" />
     <Compile Include="StorageEnvironment.cs" />
     <Compile Include="Impl\Transaction.cs" />

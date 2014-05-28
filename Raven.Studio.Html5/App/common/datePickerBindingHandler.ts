@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Scripts/typings/bootstrap.datepicker/bootstrap.datepicker.d.ts" />
+﻿/// <reference path="../../Scripts/typings/bootstrap.datetimepicker/bootstrap.datetimepicker.d.ts" />
 
 import composition = require("durandal/composition");
 import moment = require("moment");
@@ -24,13 +24,21 @@ class datePickerBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options = allBindings().datepickerOptions || {};
-        var dpicker = $(element).datepicker(options).on('changeDate',function(ev){
+        var dpicker = $(element).datetimepicker(options);
+
+
+
+        $(element).data("DateTimePicker").setMaxDate(moment(new Date()));
+        dpicker.on('dp.change', function (ev) {
+            if (options.endDateElement) {
+                $("#" + options.endDateElement).data("DateTimePicker").setMinDate(ev.date);
+            }
+            if (options.startDateElement) {
+                $("#" + options.startDateElement).data("DateTimePicker").setMaxDate(ev.date);
+            }
+
             var newDate = moment(ev.date);
             var value = valueAccessor();
-            var currentDate = moment(value() || new Date);
-            newDate.hours(currentDate.hours());
-            newDate.minutes(currentDate.minutes());
-            newDate.seconds(currentDate.seconds());
             value(newDate);
         });
     }
@@ -38,8 +46,9 @@ class datePickerBindingHandler {
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var date : Moment =  ko.unwrap(valueAccessor());
-        if(date){
-            $(element).datepicker('setDate', date.toDate());
+        if (date) {
+
+            $(element).data("DateTimePicker").setDate(date);
         }
     }
 }

@@ -539,13 +539,13 @@ class ctor {
     deleteSelectedItems() {
         var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
-        var self = this;
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => self.items.indexOf(d));
-            deletedDocIndices.forEach(i => self.settings.selectedIndices.remove(i));
-            self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-            self.items.invalidateCache(); // Causes the cache of items to be discarded.
-            self.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
+            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
+            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
+            this.items.invalidateCache(); // Causes the cache of items to be discarded.
+            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
         });
 
         app.showDialog(deleteDocsVm);

@@ -17,6 +17,7 @@ import alertType = require("common/alertType");
 
 class configuration extends viewModelBase {
 
+    static configSelector = "#settingsContainer";
     private router = router;
 
     keys = ko.observableArray<configurationKey>();
@@ -56,7 +57,9 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
-        //this.loadedConfiguration(this.selectedKey().key);
+        if (this.currentKey()) {
+            this.loadedConfiguration(this.currentKey().key);
+        }
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
 
@@ -77,6 +80,18 @@ class configuration extends viewModelBase {
         this.loadKeys(this.activeFilesystem());
         this.initializeDocEditor();
         this.configurationEditor.focus();
+        this.setupKeyboardShortcuts();
+    }
+
+    setupKeyboardShortcuts() {
+        //this.createKeyboardShortcut("alt+shift+d", () => this.currentKey(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteConfiguration(), configuration.configSelector);
     }
 
     initializeDocEditor() {
@@ -85,19 +100,7 @@ class configuration extends viewModelBase {
         this.configurationEditor.setTheme("ace/theme/github");
         this.configurationEditor.setFontSize("16px");
         this.configurationEditor.getSession().setMode("ace/mode/json");
-        //$("#configurationEditor").on('keyup', ".ace_text-input", () => this.storeEditorTextIntoObservable());
-        //this.updateConfigurationText();
     }
-
-    //storeEditorTextIntoObservable() {
-    //    if (this.configurationEditor) {
-    //        var text = this.configurationEditor.getSession().getValue();
-
-    //        this.subscription.dispose();
-    //        this.configurationKeyText(text);
-    //        this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
-    //    }
-    //}
 
     updateConfigurationText() {
         if (this.configurationEditor) {
@@ -111,7 +114,7 @@ class configuration extends viewModelBase {
             .done( (x: configurationKey[]) => {
                 this.keys(x);
                 if (x.length > 0) {
-                    this.selectedKey(x[0]);
+                    this.selectKey(x[0]);
                 }
             });
     }
@@ -126,7 +129,7 @@ class configuration extends viewModelBase {
             this.isBusy(true);
             selected.getValues().done(data => {
                 this.configurationKeyText(data);
-                //this.loadedConfiguration(this.selectedKey().key);
+                this.loadedConfiguration(this.selectedKey().key);
             }).always(() => {
                 viewModelBase.dirtyFlag().reset();
                 this.isBusy(false);
@@ -167,7 +170,9 @@ class configuration extends viewModelBase {
                     }
 
                     this.keys.remove(this.currentKey());
-                    this.selectKey(this.keys[newIndex]);
+                    if (this.keys()[newIndex]) {
+                        this.selectKey(this.keys()[newIndex]);
+                    }
                 });
             app.showDialog(deleteConfigurationKeyViewModel);
         });
@@ -191,6 +196,9 @@ class configuration extends viewModelBase {
                 });
             app.showDialog(createConfigurationKeyViewModel);
         });
+    }
+
+    modelPolling() {
     }
 } 
 

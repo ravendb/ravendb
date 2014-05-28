@@ -20,7 +20,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
     public class FileSystemsController : RavenDbApiController
     {
         [HttpGet]
-        [Route("ravenfs/names")]
+        [Route("fs/names")]
         public HttpResponseMessage Names()
         {
             var names = GetFileSystemNames();
@@ -28,7 +28,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         }
 
         [HttpGet]
-        [Route("ravenfs/stats")]
+        [Route("fs/stats")]
         public async Task<HttpResponseMessage> Stats()
         {
             var stats = new List<FileSystemStats>();

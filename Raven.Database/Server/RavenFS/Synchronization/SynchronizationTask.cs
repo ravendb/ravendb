@@ -58,7 +58,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public string FileSystemUrl
 		{
-			get { return string.Format("{0}/ravenfs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
+			get { return string.Format("{0}/fs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
 		}
 
 		public SynchronizationQueue Queue
@@ -380,7 +380,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			string fileName = work.FileName;
 			synchronizationQueue.SynchronizationStarted(work, destination.FileSystemUrl);
-			publisher.Publish(new SynchronizationUpdate
+			publisher.Publish(new SynchronizationUpdateNotification
 			{
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,
@@ -440,7 +440,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			if (!synchronizationCancelled)
 				CreateSyncingConfiguration(fileName, work.FileETag, destination.FileSystemUrl, work.SynchronizationType);
 
-			publisher.Publish(new SynchronizationUpdate
+			publisher.Publish(new SynchronizationUpdateNotification
 			{
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,

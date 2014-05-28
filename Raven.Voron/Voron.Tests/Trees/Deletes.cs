@@ -19,7 +19,7 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
+				tx.State.Root.Add("a", new MemoryStream(buffer));
 
 				tx.Commit();
 			}
@@ -32,7 +32,7 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Delete(tx, "a");
+				tx.State.Root.Delete("a");
 
 				tx.Commit();
 			}
@@ -46,7 +46,7 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Null(tx.State.Root.Read(tx, "a"));
+				Assert.Null(tx.State.Root.Read("a"));
 
 				tx.Commit();
 			}
@@ -61,7 +61,7 @@ namespace Voron.Tests.Trees
 			 {
 				 for (int i = 0; i < 1000; i++)
 				 {
-					 tx.State.Root.Add(tx, string.Format("{0,5}",i), StreamFor("abcdefg"));
+					 tx.State.Root.Add(string.Format("{0,5}",i), StreamFor("abcdefg"));
 				 }
 				 tx.Commit();
 			 }
@@ -76,7 +76,7 @@ namespace Voron.Tests.Trees
 			 {
 				 for (int i = 0; i < 15; i++)
 				 {
-					 tx.State.Root.Delete(tx, string.Format("{0,5}", i));
+					 tx.State.Root.Delete(string.Format("{0,5}", i));
 				 }
 				 tx.Commit();
 			 }
@@ -92,7 +92,7 @@ namespace Voron.Tests.Trees
         public unsafe List<Slice> Keys(Tree t, Transaction tx)
         {
             var results = new List<Slice>();
-            using (var it = t.Iterate(tx))
+            using (var it = t.Iterate())
             {
                 if (it.Seek(Slice.BeforeAllKeys) == false)
                     return results;

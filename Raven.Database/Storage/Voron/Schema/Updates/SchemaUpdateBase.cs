@@ -24,7 +24,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 		{
 			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.ReadTree(Tables.Details.TableName).Add(tx, "schema_version", ToSchemaVersion);
+				tx.ReadTree(Tables.Details.TableName).Add("schema_version", ToSchemaVersion);
 				tx.Commit();
 			}
 

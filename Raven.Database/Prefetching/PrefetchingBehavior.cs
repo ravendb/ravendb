@@ -108,7 +108,9 @@ namespace Raven.Database.Prefetching
 				if (docsLoaded)
 					etag = result[result.Count - 1].Etag;
 
-			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded);
+			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
+					 (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) +
+						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
 			
 
 			return result;
@@ -514,6 +516,6 @@ namespace Raven.Database.Prefetching
 				jsonDocs.Count + futureLen, 
 				futureSize + jsonDocs.Sum(x => (long)x.SerializedSizeOnDisk),
 			    indexingDuration);
-		}
+		}		
 	}
 }

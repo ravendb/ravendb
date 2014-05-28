@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers.Admin
@@ -33,6 +35,11 @@ namespace Raven.Database.Server.Controllers.Admin
 			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
 			dbDoc.Id = id;
 			DatabasesLandlord.Unprotect(dbDoc);
+
+		    string activeBundles;
+		    if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out activeBundles))
+		        dbDoc.Settings[Constants.ActiveBundles] = BundlesHelper.ProcessActiveBundles(activeBundles);
+
 			return GetMessageWithObject(dbDoc, HttpStatusCode.OK, document.Etag);
 		}
 

@@ -172,20 +172,22 @@
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
-    <Reference Include="System.Reactive.Core, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="System.Reactive.Core, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Rx-Core.2.2.2\lib\net45\System.Reactive.Core.dll</HintPath>
+      <HintPath>..\packages\Rx-Core.2.2.4\lib\net45\System.Reactive.Core.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive.Interfaces, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Rx-Interfaces.2.2.2\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+      <HintPath>..\packages\Rx-Interfaces.2.2.4\lib\net45\System.Reactive.Interfaces.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive.Linq, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="System.Reactive.Linq, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Rx-Linq.2.2.2\lib\net45\System.Reactive.Linq.dll</HintPath>
+      <HintPath>..\packages\Rx-Linq.2.2.4\lib\net45\System.Reactive.Linq.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive.PlatformServices">
-      <HintPath>..\packages\Rx-PlatformServices.2.2.3\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
+    <Reference Include="System.Reactive.PlatformServices, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-PlatformServices.2.2.4\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
@@ -220,16 +222,16 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
-    <Compile Include="Bundles\PeriodicBackups\Triggers\AttachmentAncestryPutTrigger.cs" />
-    <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Plugins\LatestDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
-    <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
-    <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Bundles\PeriodicExports\Controllers\AdminPeriodicBackupController.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Client\Aws\RavenAwsClient.cs" />
     <Compile Include="Client\Aws\RavenAwsHelper.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
@@ -238,14 +240,19 @@
     <Compile Include="Client\Aws\RavenAwsS3Client.cs" />
     <Compile Include="Client\Azure\RavenAzureClient.cs" />
     <Compile Include="Client\RavenStorageClient.cs" />
+    <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
     <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
+    <Compile Include="Counters\Controllers\CounterStorageController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\Counter.cs" />
     <Compile Include="Counters\CounterStorage.cs" />
     <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
+    <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
     <Compile Include="Indexing\IndexMerging\IndexData.cs" />
@@ -266,7 +273,7 @@
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
-    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
+    <Compile Include="Bundles\PeriodicExports\PeriodicBackupTask.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
     <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />
@@ -363,7 +370,6 @@
     <Compile Include="Server\Controllers\TransactionController.cs" />
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
-    <Compile Include="Server\RavenFS\Config\ServerUrlUtil.cs" />
     <Compile Include="Server\RavenFS\Controllers\AdminFileSystemController.cs" />
     <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
@@ -376,18 +382,11 @@
     <Compile Include="Server\RavenFS\Controllers\StorageController.cs" />
     <Compile Include="Server\RavenFS\Controllers\SynchronizationController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FileSystemsController.cs" />
-    <Compile Include="Server\RavenFS\Extensions\ByteExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
     <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\IOExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\MetadataExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\StreamExtensions.cs" />
-    <Compile Include="Server\RavenFS\Infrastructure\CachePreventingHandler.cs" />
-    <Compile Include="Server\RavenFS\Infrastructure\Connections\ConnectionState.cs" />
-    <Compile Include="Server\RavenFS\Infrastructure\Connections\EventsTransport.cs" />
-    <Compile Include="Server\RavenFS\Infrastructure\Connections\TimeSensitiveStore.cs" />
-    <Compile Include="Server\RavenFS\Infrastructure\Connections\TransportState.cs" />
-    <Compile Include="Server\RavenFS\Infrastructure\DelegateDependencyResolver.cs" />
     <Compile Include="Server\RavenFS\Infrastructure\Historian.cs" />
     <Compile Include="Server\RavenFS\Infrastructure\LimitedStream.cs" />
     <Compile Include="Server\RavenFS\Infrastructure\NoBufferPolicySelector.cs" />
@@ -495,7 +494,6 @@
     <Compile Include="Server\RavenFS\Util\ConcurrencyAwareExecutor.cs" />
     <Compile Include="Server\RavenFS\Util\FilePathTools.cs" />
     <Compile Include="Server\RavenFS\Util\HashKey.cs" />
-    <Compile Include="Server\RavenFS\Util\NameValueCollectionJsonConverter.cs" />
     <Compile Include="Server\RavenFS\Util\NarrowedStream.cs" />
     <Compile Include="Server\RavenFS\Util\NaveValueCollectionJsonConverterOnlyForConfigFormatters.cs" />
     <Compile Include="Server\RavenFS\Util\RabinKarpHasher.cs" />
@@ -507,9 +505,7 @@
     <Compile Include="Data\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
-    <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
-    <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="Impl\DTC\InFlightTransactionalState.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
@@ -580,17 +576,13 @@
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\AbstractTransformer.cs" />
-    <Compile Include="Linq\Ast\TransformGroupByExtensionMethodTransformer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\DynamicCompilerBase.cs" />
     <Compile Include="Linq\DynamicTransofrmerCompiler.cs" />
-    <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
     <Compile Include="Linq\Mono.Reflection\Disassembler.cs" />
-    <Compile Include="Linq\Mono.Reflection\ILPattern.cs" />
-    <Compile Include="Linq\Mono.Reflection\Image.cs" />
     <Compile Include="Linq\Mono.Reflection\Instruction.cs" />
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
@@ -603,7 +595,6 @@
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
     <Compile Include="Server\BeforeRequestEventArgs.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
-    <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\LogContext.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -633,7 +624,6 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
-    <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
     <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
@@ -689,19 +679,9 @@
     <Compile Include="Linq\Ast\DynamicExtensionMethodsTranslator.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicExtensionMethods.cs" />
     <Compile Include="Plugins\AbstractIndexQueryTrigger.cs" />
-    <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerResponseAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpRequestAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpResponseAdapter.cs" />
-    <Compile Include="Server\Abstractions\IHttpContext.cs" />
-    <Compile Include="Server\Abstractions\IHttpRequest.cs" />
-    <Compile Include="Server\Abstractions\IHttpResponse.cs" />
     <Compile Include="Server\Abstractions\UrlExtension.cs" />
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
-    <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
@@ -745,7 +725,6 @@
     <Compile Include="Queries\DynamicQueryRunner.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
-    <Compile Include="Extensions\HttpContextExtensions.cs" />
     <Compile Include="Extensions\IndexingExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
@@ -894,7 +873,6 @@
     <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
     <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
-    <Compile Include="Data\LinearQuery.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
@@ -911,7 +889,6 @@
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
-    <Compile Include="Data\QueryResults.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
@@ -966,7 +943,6 @@
     <Compile Include="Storage\Esent\EsentExtension.cs" />
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From42To43.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From41To42.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />
@@ -1042,15 +1018,11 @@
     <Compile Include="Tasks\TaskMetadata.cs" />
     <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
-    <Compile Include="Util\CompositeDisposable.cs" />
+    <Compile Include="Util\BundlesHelper.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
-    <Compile Include="Util\IPerformanceCounter.cs" />
     <Compile Include="Util\MetricsCountersManager.cs" />
-    <Compile Include="Util\NoOpPerformanceCounter.cs" />
     <Compile Include="Util\OutputTicker.cs" />
-    <Compile Include="Util\PerformanceCounterAttribute.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
-    <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\SizeHelper.cs" />

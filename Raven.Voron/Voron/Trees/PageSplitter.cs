@@ -7,7 +7,6 @@ namespace Voron.Trees
 {
     public unsafe class PageSplitter
     {
-        private readonly SliceComparer _cmp;
         private readonly Cursor _cursor;
         private readonly int _len;
         private readonly Slice _newKey;
@@ -22,7 +21,6 @@ namespace Voron.Trees
 
         public PageSplitter(Transaction tx,
             Tree tree,
-            SliceComparer cmp,
             Slice newKey,
             int len,
             long pageNumber,
@@ -33,7 +31,6 @@ namespace Voron.Trees
         {
             _tx = tx;
             _tree = tree;
-            _cmp = cmp;
             _newKey = newKey;
             _len = len;
             _pageNumber = pageNumber;
@@ -97,7 +94,7 @@ namespace Voron.Trees
 				// because the allocation of a new page called above could remove some sections
 				// from the page that is being split
 
-		        _page.NodePositionFor(_newKey, _cmp);
+		        _page.NodePositionFor(_newKey);
 	        }
 
 	        if (_page.LastSearchPosition >= _page.NumberOfEntries)
@@ -127,7 +124,7 @@ namespace Voron.Trees
                 _cursor.Push(rightPage);
                 return pos;
             }
-			
+
             return SplitPageInHalf(rightPage);
         }
 
@@ -169,7 +166,7 @@ namespace Voron.Trees
             Slice seperatorKey;
             if (currentIndex == splitIndex && newPosition)
             {
-                seperatorKey = currentKey.Compare(_newKey, NativeMethods.memcmp) < 0 ? currentKey : _newKey;
+                seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
             }
             else
             {
@@ -202,7 +199,7 @@ namespace Voron.Trees
 
         private byte* InsertNewKey(Page p)
         {
-            int pos = p.NodePositionFor(_newKey, _cmp);
+            int pos = p.NodePositionFor(_newKey);
 
             byte* dataPos = AddNodeToPage(p, pos);
             _cursor.Push(p);
@@ -215,13 +212,13 @@ namespace Voron.Trees
 
 			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(prefixedSeparatorKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedSeparatorKey)) == false)
             {
-                var pageSplitter = new PageSplitter(_tx, _tree, _cmp, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);
                 pageSplitter.Execute();
             }
             else
             {
-                _parentPage.NodePositionFor(seperatorKey, _cmp); // select the appropriate place for this
+                _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
 				_parentPage.AddPageRefNode(_parentPage.LastSearchPosition, prefixedSeparatorKey, pageNumber);
             }
         }

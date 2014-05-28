@@ -16,9 +16,9 @@ namespace Voron.Tests.Trees
 			{
 				var tree = Env.CreateTree(tx, "prefixed-tree");
 
-				tree.Add(tx, "users/11", StreamFor("abc"));
-				tree.Add(tx, "users/12", StreamFor("def"));
-				tree.Add(tx, "users/20", StreamFor("ghi"));
+				tree.Add("users/11", StreamFor("abc"));
+				tree.Add("users/12", StreamFor("def"));
+				tree.Add("users/20", StreamFor("ghi"));
 
 				tx.Commit();
 			}
@@ -27,9 +27,9 @@ namespace Voron.Tests.Trees
 			{
 				var tree = tx.ReadTree("prefixed-tree");
 
-				Assert.Equal("abc", tree.Read(tx, "users/11").Reader.AsSlice());
-				Assert.Equal("def", tree.Read(tx, "users/12").Reader.AsSlice());
-				Assert.Equal("ghi", tree.Read(tx, "users/20").Reader.AsSlice());
+				Assert.Equal("abc", tree.Read("users/11").Reader.AsSlice());
+				Assert.Equal("def", tree.Read("users/12").Reader.AsSlice());
+				Assert.Equal("ghi", tree.Read("users/20").Reader.AsSlice());
 
 				tx.Commit();
 			}

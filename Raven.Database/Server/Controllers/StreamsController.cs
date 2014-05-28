@@ -188,11 +188,18 @@ namespace Raven.Database.Server.Controllers
                     outputContentTypeSetter(writer.ContentType);
 
                     writer.WriteHeader();
-					queryOp.Execute(o =>
-					{
-					    _timeout.Delay();
-					    writer.Write(o);
-					});
+				    try
+				    {
+				        queryOp.Execute(o =>
+				        {
+				            _timeout.Delay();
+				            writer.Write(o);
+				        });
+				    }
+				    catch (Exception e)
+				    {
+				        writer.WriteError(e);
+				    }
 				}
 
 				return Task.FromResult(true);
@@ -217,6 +224,7 @@ namespace Raven.Database.Server.Controllers
 
 			void WriteHeader();
 			void Write(RavenJObject result);
+		    void WriteError(Exception exception);
 		}
 
 		private class ExcelOutputWriter : IOutputWriter
@@ -285,7 +293,14 @@ namespace Raven.Database.Server.Controllers
 				writer.WriteLine();
 			}
 
-			private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
+		    public void WriteError(Exception exception)
+		    {
+		        writer.WriteLine();
+                writer.WriteLine();
+		        writer.WriteLine(exception.ToString());
+		    }
+
+		    private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
 			{
 				properties = DocumentHelpers.GetPropertiesFromJObject(result,
 					parentPropertyPath: "",
@@ -322,6 +337,7 @@ namespace Raven.Database.Server.Controllers
 			private const string JsonContentType = "application/json";
 			private readonly Stream stream;
 			private JsonWriter writer;
+		    private bool closedArray = false;
 
 			public JsonOutputWriter(Stream stream)
 			{
@@ -345,8 +361,8 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (writer == null)
 					return;
-
-				writer.WriteEndArray();
+			    if (closedArray == false)
+			        writer.WriteEndArray();
 				writer.WriteEndObject();
 
 				writer.Flush();
@@ -357,6 +373,14 @@ namespace Raven.Database.Server.Controllers
 			{
 				result.WriteTo(writer, Default.Converters);
 			}
+
+		    public void WriteError(Exception exception)
+		    {
+		        closedArray = true;
+		        writer.WriteEndArray();
+                writer.WritePropertyName("Error");
+                writer.WriteValue(exception.ToString());
+		    }
 		}
 	}
 }

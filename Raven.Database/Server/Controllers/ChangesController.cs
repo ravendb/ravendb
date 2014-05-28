@@ -24,7 +24,6 @@ namespace Raven.Database.Server.Controllers
 					Error = "id query string parameter is mandatory when using changes/config endpoint"
 				}, HttpStatusCode.BadRequest);
 			}
-
 			
 			var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
 

@@ -707,6 +707,7 @@ namespace Raven.Client.Document
 											sortByHints = sortByHints,
 											orderByFields = orderByFields,
 											isDistinct = isDistinct,
+                                            allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 											negate = negate,
 											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
@@ -955,6 +956,13 @@ namespace Raven.Client.Document
 		{
 			shouldExplainScores = true;
 			return this;
+
+        }
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
+	    {
+            base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+	        return this;
 		}
 	}
 }

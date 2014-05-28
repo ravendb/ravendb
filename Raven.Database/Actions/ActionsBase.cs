@@ -20,6 +20,7 @@ namespace Raven.Database.Actions
     {
         protected static readonly HashSet<string> HeadersToIgnoreServer = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
+            "Etag",
 			Constants.RavenLastModified
 		};
 

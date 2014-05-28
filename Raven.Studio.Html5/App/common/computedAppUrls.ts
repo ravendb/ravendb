@@ -21,7 +21,8 @@ interface computedAppUrls {
     replicationStats: KnockoutComputed<string>;
     userInfo: KnockoutComputed<string>;
     databaseSettings: KnockoutComputed<string>;
-    periodicBackup: KnockoutComputed<string>;
+    quotas: KnockoutComputed<string>;
+    periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
@@ -53,4 +54,10 @@ interface computedAppUrls {
     filesystemStatus: KnockoutComputed<string>;
     filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
+    couterStorages:KnockoutComputed<string>;
+    counterStorageManagement: KnockoutComputed<string>;
+    counterStorageCounters: KnockoutComputed<string>;
+    counterStorageReplication: KnockoutComputed<string>;
+    counterStorageStats: KnockoutComputed<string>;
+    counterStorageConfiguration: KnockoutComputed<string>;
 }

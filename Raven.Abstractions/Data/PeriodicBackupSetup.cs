@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class PeriodicBackupSetup
+	public class PeriodicExportSetup
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Setup";
 
@@ -24,7 +24,7 @@ namespace Raven.Abstractions.Data
 
         public int FullBackupIntervalMilliseconds { get; set; }
 
-		protected bool Equals(PeriodicBackupSetup other)
+		protected bool Equals(PeriodicExportSetup other)
 		{
 			return string.Equals(Disabled, other.Disabled) &&
 				   string.Equals(GlacierVaultName, other.GlacierVaultName) && string.Equals(S3BucketName, other.S3BucketName) &&
@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Data
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != this.GetType()) return false;
-			return Equals((PeriodicBackupSetup) obj);
+			return Equals((PeriodicExportSetup) obj);
 		}
 
 		public override int GetHashCode()
@@ -59,7 +59,7 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class PeriodicBackupStatus
+	public class PeriodicExportStatus
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
 		public DateTime LastBackup { get; set; }
@@ -69,7 +69,7 @@ namespace Raven.Abstractions.Data
         public Etag LastDocsDeletionEtag { get; set; }
         public Etag LastAttachmentDeletionEtag { get; set; }
 
-		public PeriodicBackupStatus()
+		public PeriodicExportStatus()
 		{
 			LastDocsEtag = Etag.Empty;
 			LastAttachmentsEtag = Etag.Empty;

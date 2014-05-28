@@ -108,7 +108,7 @@ namespace Voron.Tests.Storage
 		    {
 		        var tree = tx.ReadTree(TestTreeName);
 		        foreach (var dataPair in testData)
-		            tree.Add(tx, dataPair.Key, StreamFor(dataPair.Value));
+		            tree.Add(dataPair.Key, StreamFor(dataPair.Value));
 
 		        tx.Commit();
 		    }

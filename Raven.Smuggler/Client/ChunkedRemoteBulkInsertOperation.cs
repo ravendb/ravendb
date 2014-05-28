@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -33,14 +34,22 @@ namespace Raven.Smuggler.Client
 
 		private readonly IList<Task> tasks = new List<Task>();
 
+		private readonly long? documentSizeInChunkLimit;
+
+		private long documentSizeInChunk;
+
 		private bool disposed;
 
-		public ChunkedRemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, int chunkSize)
+		public ChunkedRemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, int chunkSize,long? documentSizeInChunkLimit = null)
 		{
 			this.options = options;
 			this.client = client;
 			this.changes = changes;
 			this.chunkSize = chunkSize;
+			this.documentSizeInChunkLimit = documentSizeInChunkLimit;
+			documentSizeInChunk = 0;
+			if(documentSizeInChunkLimit.HasValue)
+				Console.WriteLine("Limit of document size in chunk = " + documentSizeInChunkLimit.Value);
 		}
 
 		public Guid OperationId
@@ -56,6 +65,10 @@ namespace Raven.Smuggler.Client
 			current = GetBulkInsertOperation();
 
 			current.Write(id, metadata, data);
+
+			if(documentSizeInChunkLimit.HasValue)
+				documentSizeInChunk += DocumentHelpers.GetRoughSize(data);
+
 			processedItemsInCurrentOperation++;
 		}
 
@@ -64,9 +77,12 @@ namespace Raven.Smuggler.Client
 			if (current == null)
 				return current = CreateBulkInsertOperation();
 
-			if (processedItemsInCurrentOperation < chunkSize) 
-				return current;
+			//
+			if (processedItemsInCurrentOperation < chunkSize)
+				if (!documentSizeInChunkLimit.HasValue || documentSizeInChunk < documentSizeInChunkLimit.Value)
+					return current;
 
+			documentSizeInChunk = 0;
 			processedItemsInCurrentOperation = 0;
 			tasks.Add(current.DisposeAsync());
 			return current = CreateBulkInsertOperation();

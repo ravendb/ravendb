@@ -415,51 +415,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing);
         }
 
-		protected class ExecuteWithReplicationState<T>
-		{
-			public ExecuteWithReplicationState(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int readStripingBase, Func<OperationMetadata, Task<T>> operation)
-			{
-				Method = method;
-				PrimaryUrl = primaryUrl;
-				CurrentRequest = currentRequest;
-				ReadStripingBase = readStripingBase;
-				Operation = operation;
-				PrimaryCredentials = primaryCredentials;
-
-				State = ExecuteWithReplicationStates.Start;
-			}
-
-			public readonly string Method;
-			public readonly Func<OperationMetadata, Task<T>> Operation;
-			public readonly string PrimaryUrl;
-			public readonly int CurrentRequest;
-			public readonly int ReadStripingBase;
-			public readonly OperationCredentials PrimaryCredentials;
-
-			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
-			public int LastAttempt = -1;
-			public List<OperationMetadata> ReplicationDestinations;
-			public bool TimeoutThrown;
-
-			public ExecuteWithReplicationState<T> With(ExecuteWithReplicationStates state)
-			{
-				State = state;
-				return this;
-			}
-		}
-
-		protected enum ExecuteWithReplicationStates
-		{
-			Start,
-			AfterTryingWithStripedServer,
-			AfterTryingWithDefaultUrl,
-			TryAllServers,
-			AfterTryingAllServers,
-			TryAllServersSecondAttempt,
-			TryAllServersFailedTwice,
-			AfterTryingWithDefaultUrlTwice
-		}
-
 		public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
 		{
 			var aggregateException = e as AggregateException;

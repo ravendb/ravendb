@@ -25,7 +25,7 @@ namespace Voron.Tests.Storage
 					var tree = tx.Environment.State.GetTree(tx,"test");
 					for (int j = 0; j < 12; j++)
 					{
-						tree.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+						tree.Add(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
 					}
 					tx.Commit();
 				}
@@ -44,7 +44,7 @@ namespace Voron.Tests.Storage
 				{
 					for (int j = 0; j < 12; j++)
 					{
-						tx.State.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+						tx.State.Root.Add(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
 					}
 					tx.Commit();
 				}
@@ -68,7 +68,7 @@ namespace Voron.Tests.Storage
 
 					for (int j = 0; j < 12; j++)
 					{
-						tx.State.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+						tx.State.Root.Add(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
 					}
 					tx.Commit();
 				}

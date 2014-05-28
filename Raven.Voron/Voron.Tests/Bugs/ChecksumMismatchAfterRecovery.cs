@@ -45,7 +45,7 @@ namespace Voron.Tests.Bugs
 				{
 					for (int i = 0; i < 50; i++)
 					{
-						tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+						tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 					}
 
 					tx.Commit();
@@ -55,7 +55,7 @@ namespace Voron.Tests.Bugs
 				{
 					for (int i = 50; i < 100; i++)
 					{
-						tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+						tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 					}
 
 					tx.Commit();
@@ -71,7 +71,7 @@ namespace Voron.Tests.Bugs
 
 					for (int i = 0; i < 100; i++)
 					{
-						var readResult = tx.State.Root.Read(tx, "items/" + i);
+						var readResult = tx.State.Root.Read("items/" + i);
 						Assert.NotNull(readResult);
 						var memoryStream = new MemoryStream();
 						readResult.Reader.CopyTo(memoryStream);

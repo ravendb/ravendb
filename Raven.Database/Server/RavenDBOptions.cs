@@ -86,7 +86,8 @@ namespace Raven.Database.Server
                                 databasesLandlord, 
                                 fileSystemLandlord,
                                 systemDatabase, 
-                                requestManager
+                                requestManager,
+                                countersLandlord
 		                    };
 
             var errors = new List<Exception>();

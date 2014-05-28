@@ -57,7 +57,7 @@ namespace Voron.Tests.Bugs
 					var tree = tx.Environment.State.GetTree(tx,"foo");
 					foreach (var buffer in inputData)
 					{						
-						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
+						Assert.DoesNotThrow(() => tree.MultiAdd("ChildTreeKey", new Slice(buffer)));
 					}
 					tx.Commit();
 				}
@@ -68,7 +68,7 @@ namespace Voron.Tests.Bugs
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
+						Assert.DoesNotThrow(() => tree.MultiDelete("ChildTreeKey", new Slice(buffer)));
 					}
 
 					tx.Commit();
@@ -125,7 +125,7 @@ namespace Voron.Tests.Bugs
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
 					var tree = tx.Environment.State.GetTree(tx,"multi");
-					using (var iterator = tree.MultiRead(tx, "0"))
+					using (var iterator = tree.MultiRead("0"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -153,7 +153,7 @@ namespace Voron.Tests.Bugs
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
 					var tree = tx.Environment.State.GetTree(tx,"multi");
-					using (var iterator = tree.MultiRead(tx, "0"))
+					using (var iterator = tree.MultiRead("0"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -190,7 +190,7 @@ namespace Voron.Tests.Bugs
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
 					var tree = tx.Environment.State.GetTree(tx,"multitree0");
-					using (var it = tree.MultiRead(tx, "key"))
+					using (var it = tree.MultiRead("key"))
 					{
 						Assert.True(it.Seek(Slice.BeforeAllKeys));
 
@@ -209,7 +209,7 @@ namespace Voron.Tests.Bugs
 			{
 				foreach (var tree in trees)
 				{
-					using (var iterator = tree.Iterate(tx))
+					using (var iterator = tree.Iterate())
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -237,7 +237,7 @@ namespace Voron.Tests.Bugs
 					foreach (var treeName in trees)
 					{
 					    var tree = tx.Environment.State.GetTree(tx,treeName);
-						using (var iterator = tree.MultiRead(tx, (j % 10).ToString()))
+						using (var iterator = tree.MultiRead((j % 10).ToString()))
 						{
 							Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 

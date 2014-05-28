@@ -32,7 +32,7 @@
                         {
                             enumerator.MoveNext();
 
-                            tx.State.Root.Add(tx, enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
+                            tx.State.Root.Add(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                         }
 
                         tx.Commit();

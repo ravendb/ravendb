@@ -7,6 +7,8 @@ using Voron.Trees;
 
 namespace Voron
 {
+	public unsafe delegate int SliceComparer(byte* a, byte* b, int size);
+
 	public unsafe class Slice
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
@@ -67,7 +69,7 @@ namespace Voron
 
 		public bool Equals(Slice other)
 		{
-			return Compare(other, NativeMethods.memcmp) == 0;
+			return Compare(other) == 0;
 		}
 
 		public override bool Equals(object obj)
@@ -135,22 +137,22 @@ namespace Voron
 			return new string((sbyte*)_pointer, 0, _size, Encoding.UTF8);
 		}
 
-		public int Compare(Slice other, SliceComparer cmp)
+		public int Compare(Slice other)
 		{
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, cmp, Math.Min(Size, other.Size));
+			var r = CompareData(other, NativeMethods.memcmp, Math.Min(Size, other.Size));
 			if (r != 0)
 				return r;
 			return Size - other.Size;
 		}
 
-		public bool StartsWith(Slice other, SliceComparer cmp)
+		public bool StartsWith(Slice other)
 		{
 			if (Size < other.Size)
 				return false;
-			return CompareData(other, cmp, other.Size) == 0;
+			return CompareData(other, NativeMethods.memcmp, other.Size) == 0;
 		}
 
 		private int CompareData(Slice other, SliceComparer cmp, ushort size)
@@ -166,17 +168,17 @@ namespace Voron
 							return cmp(a, b, size);
 						}
 					}
-					return cmp(a, other._pointer, size);
+                    return cmp(a, other._pointer, size);
 				}
 			}
 			if (other._array != null)
 			{
 				fixed (byte* b = other._array)
 				{
-					return cmp(_pointer, b, size);
+                    return cmp(_pointer, b, size);
 				}
 			}
-			return cmp(_pointer, other._pointer, size);
+            return cmp(_pointer, other._pointer, size);
 		}
 
 		private class SlicePrefixMatcher

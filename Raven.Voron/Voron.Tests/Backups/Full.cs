@@ -45,7 +45,7 @@ namespace Voron.Tests.Backups
 			{
 				for (int i = 0; i < 500; i++)
 				{
-					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -60,7 +60,7 @@ namespace Voron.Tests.Backups
 			{
 				for (int i = 500; i < 1000; i++)
 				{
-					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -79,7 +79,7 @@ namespace Voron.Tests.Backups
 				{
 					for (int i = 0; i < 1000; i++)
 					{
-						var readResult = tx.State.Root.Read(tx, "items/" + i);
+						var readResult = tx.State.Root.Read("items/" + i);
 						Assert.NotNull(readResult);
 						var memoryStream = new MemoryStream();
 						readResult.Reader.CopyTo(memoryStream);

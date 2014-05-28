@@ -3,12 +3,12 @@
     standardProps = ["RavenFs-Size","Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag"];
 
     ravenFSSize: string;
-    ravenSynchronizationHistory: string;
+    ravenSynchronizationHistory: any;
     ravenSynchronizationVersion: string;
     ravenSynchronizationSource: string;
     lastModified: string;
     etag: string;
-    nonStandardProps: Array<string>;
+    nonStandardProps: Array<any>;
 
     constructor(dto?: any) {
         if (dto) {
@@ -22,7 +22,10 @@
             for (var property in dto) {
                 if (!this.standardProps.contains(property)) {
                     this.nonStandardProps = this.nonStandardProps || [];
-                    this[property] = dto[property];
+                    var value = dto[property];
+                    //if (typeof(value) != "string" && typeof(value) != "number")
+                    //    value = JSON.parse(value);
+                    this[property] = value;
                     this.nonStandardProps.push(property);
                 }
             }
@@ -40,7 +43,9 @@
         };
 
         if (this.nonStandardProps) {
-            this.nonStandardProps.forEach(p => dto[p] = this[p]);
+            this.nonStandardProps.forEach(p => {
+                dto[p] = this[p]
+            });
         }
 
         return dto;

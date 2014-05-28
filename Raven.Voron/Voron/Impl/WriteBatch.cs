@@ -367,7 +367,7 @@ namespace Voron.Impl
 				{
 					if (other.valSlice == null)
 						return -1;
-					return valSlice.Compare(other.valSlice, NativeMethods.memcmp);
+					return valSlice.Compare(other.valSlice);
 				}
 				else if (other.valSlice != null)
 				{
