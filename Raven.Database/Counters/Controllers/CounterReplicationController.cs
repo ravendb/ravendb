@@ -18,6 +18,8 @@ namespace Raven.Database.Counters.Controllers
              *Store last ETag for servers we've successfully rpelicated to
              */
 			ReplicationMessage replicationMessage;
+            Storage.MetricsCounters.IncomingReplications.Mark();
+
 			try
 			{
 				replicationMessage = await ReadJsonObjectAsync<ReplicationMessage>();

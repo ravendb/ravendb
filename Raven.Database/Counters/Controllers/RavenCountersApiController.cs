@@ -243,14 +243,19 @@ namespace Raven.Database.Counters.Controllers
 			get { return "counters/" + CountersName; }
 		}
 
-		public override void MarkRequestDuration(long duration)
-		{
-		}
+        public override void MarkRequestDuration(long duration)
+        {
+            if (Storage == null)
+                return;
+            Storage.MetricsCounters.RequestDuationMetric.Update(duration);
+        }
 
 		public override InMemoryRavenConfiguration SystemConfiguration
 		{
 			get { return CountersLandlord.SystemConfiguration; }
 		}
+
+       
 
 		public CounterStorage Storage
 		{

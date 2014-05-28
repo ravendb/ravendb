@@ -2,13 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Diagnostics.PerformanceData;
 using System.IO;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
+using Raven.Database.Extensions;
+using Raven.Database.Util;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -37,6 +42,8 @@ namespace Raven.Database.Counters
 
 		private const int ServerId = 0; // local is always 0
 
+        private readonly CountersMetricsManager metricsCounters;
+
 		public CounterStorage(string serverUrl, string counterStorageStorageName, InMemoryRavenConfiguration configuration)
 		{
             CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, counterStorageStorageName);
@@ -51,8 +58,41 @@ namespace Raven.Database.Counters
 			//TODO: add an option to create a ReplicationRequestTimeout when creating a new counter storage
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
+            metricsCounters = new CountersMetricsManager();
             Initialize();
 		}
+
+        public CountersMetricsManager MetricsCounters
+        {
+            get { return metricsCounters; }
+        }
+
+        //todo: consider implementing metricses for each counter, not only for each counter storage
+	    public CountersMetrics CreateMetrics()
+	    {
+            var metrics = metricsCounters;
+            var percentiles = new double[]{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999};
+
+            return new CountersMetrics
+            {
+                RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+                Resets = metrics.Resets.GetMeterData(3),
+                Increments = metrics.Increments.GetMeterData(3),
+                Decrements = metrics.Decrements.GetMeterData(3),
+                ClientRuqeusts = metrics.ClientRuqeusts.GetMeterData(3),
+                IncomingReplications =  metrics.IncomingReplications.GetMeterData(3),
+                OutgoingReplications = metrics.OutgoingReplications.GetMeterData(3),
+
+                RequestsDuration = metrics.RequestDuationMetric.GetHistogramData(percentiles),
+                IncSizes = metrics.IncSizeMetrics.GetHistogramData(percentiles),
+                DecSizes = metrics.DecSizeMetrics.GetHistogramData(percentiles),
+                
+                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
+                ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
+                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles)),
+                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles))
+            };
+	    }
 
 		private void Initialize()
 		{
@@ -147,6 +187,7 @@ namespace Raven.Database.Counters
             ReplicationTask.Dispose();
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
+            metricsCounters.Dispose();
 		}
 
 		public class Reader : IDisposable
@@ -432,11 +473,19 @@ namespace Raven.Database.Counters
 		    {
 		        Store(server, counter, result =>
 		        {
+                    
 		            int valPos = 0;
 		            if (delta < 0)
 		            {
 		                valPos = 8;
 		                delta = -delta;
+                        parent.MetricsCounters.DecSizeMetrics.Update(delta);
+                        parent.MetricsCounters.Increments.Mark();
+		            }
+		            else
+		            {
+                        parent.MetricsCounters.IncSizeMetrics.Update(delta);
+                        parent.MetricsCounters.Decrements.Mark();
 		            }
 
 		            if (result == null)
@@ -475,6 +524,7 @@ namespace Raven.Database.Counters
 					{
 						difference = -difference;
 						Store(server, fullCounterName, difference);
+                        parent.MetricsCounters.Resets.Mark();
 						return true;
 					}
 				}

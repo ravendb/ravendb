@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -189,6 +190,7 @@ namespace Raven.Database.Counters.Controllers
 
 		private bool ReplicateTo(CounterStorageReplicationDestination destination)
 		{
+            var replicationStopwatch = Stopwatch.StartNew();
 			//todo: here, build url according to :destination.Url + '/counters/' + destination.
 			try
 			{
@@ -199,6 +201,7 @@ namespace Raven.Database.Counters.Controllers
 				{
 					case ReplicationResult.Success:
 						RecordSuccess(destination.CounterStorageUrl);
+                        storage.MetricsCounters.OutgoingReplications.Mark();
 						result = true;
 						break;
 					case ReplicationResult.NotReplicated:
@@ -206,6 +209,7 @@ namespace Raven.Database.Counters.Controllers
 						break;
 					default:
 						RecordFailure(destination.CounterStorageUrl, lastError);
+                        storage.MetricsCounters.OutgoingReplications.Mark();
 						break;
 				}
 
@@ -219,6 +223,9 @@ namespace Raven.Database.Counters.Controllers
 			}
 			finally
 			{
+                replicationStopwatch.Stop();
+                storage.MetricsCounters.GetReplicationDurationHistogram(destination.CounterStorageUrl).Update((long)replicationStopwatch.Elapsed.TotalMilliseconds);
+                storage.MetricsCounters.GetReplicationDurationMetric(destination.CounterStorageUrl).Mark((long)replicationStopwatch.Elapsed.TotalMilliseconds);
 				var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
 				holder.Release();
 			}
@@ -232,6 +239,9 @@ namespace Raven.Database.Counters.Controllers
 			if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError))
 			{
 				var replicationData = GetCountersDataSinceEtag(etag);
+
+                storage.MetricsCounters.GetReplicationBatchSizeMetric(destination.CounterStorageUrl).Mark(replicationData.Counters.Count);
+                storage.MetricsCounters.GetReplicationBatchSizeHistogram(destination.CounterStorageUrl).Update(replicationData.Counters.Count);
 
 				if (replicationData.Counters.Count > 0)
 				{
@@ -310,7 +320,8 @@ namespace Raven.Database.Counters.Controllers
 				var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
 				request.Write(RavenJObject.FromObject(message));
 				request.ExecuteRequest();
-				return true;
+                
+                return true;
 
 			}
 			catch (WebException e)

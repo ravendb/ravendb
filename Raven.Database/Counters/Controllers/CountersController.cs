@@ -21,6 +21,8 @@ namespace Raven.Database.Counters.Controllers
 				writer.Store(Storage.CounterStorageUrl, counter, delta);
 
 				writer.Commit(delta != 0);
+
+                Storage.MetricsCounters.ClientRuqeusts.Mark();
 				return new HttpResponseMessage(HttpStatusCode.Accepted);
 			}
 		}
