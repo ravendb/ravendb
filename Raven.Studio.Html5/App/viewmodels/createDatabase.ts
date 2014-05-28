@@ -156,8 +156,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
-        if (this.isVersioningBundleEnabled() === false)
-            app.showMessage("Versioning Bundle configuration window is not implemented yet.", "Not implemented");
         this.isVersioningBundleEnabled.toggle();
     }
 
