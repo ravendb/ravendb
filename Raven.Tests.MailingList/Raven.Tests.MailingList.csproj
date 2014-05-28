@@ -168,7 +168,6 @@
     <Compile Include="DayOfWeekTest.cs" />
     <Compile Include="DeanWard.cs" />
     <Compile Include="DecimalQueries.cs" />
-    <Compile Include="DerekReplication.cs" />
     <Compile Include="DeserializationToObjectTests.cs" />
     <Compile Include="DictionaryOfEnum.cs" />
     <Compile Include="DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />

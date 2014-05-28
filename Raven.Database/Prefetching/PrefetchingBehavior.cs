@@ -191,37 +191,30 @@ namespace Raven.Database.Prefetching
 
 			context.TransactionalStorage.Batch(actions =>
 			{
-				//limit how much data we load from disk --> better adhere to memory limits
-				var totalSizeAllowedToLoadInBytes =
-					(context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024) -
-					(prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
+			    //limit how much data we load from disk --> better adhere to memory limits
+			    var totalSizeAllowedToLoadInBytes =
+			        (context.Configuration.MemoryLimitForIndexingInMB*1024*1024) -
+			        (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
 
-				if (totalSizeAllowedToLoadInBytes <= 0) //if we are at memory limit, load only one document
-					jsonDocs = actions.Documents
-						.GetDocumentsAfter(etag, 1, context.CancellationToken,untilEtag: untilEtag)
-						.Select(doc =>
-						{
-							DocumentRetriever.EnsureIdInMetadata(doc);
-							return doc;
-						})
-						.ToList();
-				else
-				{
-					jsonDocs = actions.Documents
-						.GetDocumentsAfter(
-							etag,
-							autoTuner.NumberOfItemsToIndexInSingleBatch,
-							context.CancellationToken,
-							Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
-							untilEtag)
-						.Where(x => x != null)
-						.Select(doc =>
-						{
-							DocumentRetriever.EnsureIdInMetadata(doc);
-							return doc;
-						})
-						.ToList();
-				}
+                // at any rate, we will load a min of 512Kb docs
+			    var maxSize = Math.Max(
+			        Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
+			        1024*512);
+
+			    jsonDocs = actions.Documents
+			        .GetDocumentsAfter(
+			            etag,
+			            autoTuner.NumberOfItemsToIndexInSingleBatch,
+			            context.CancellationToken,
+                        maxSize,
+			            untilEtag)
+			        .Where(x => x != null)
+			        .Select(doc =>
+			        {
+			            DocumentRetriever.EnsureIdInMetadata(doc);
+			            return doc;
+			        })
+			        .ToList();
 			});
 
 			if (untilEtag == null)
