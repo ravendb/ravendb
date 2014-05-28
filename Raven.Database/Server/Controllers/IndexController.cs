@@ -293,7 +293,7 @@ namespace Raven.Database.Server.Controllers
 			var includes = GetQueryStringValues("include") ?? new string[0];
 			var loadedIds = new HashSet<string>(
 				queryResult.Results
-					.Where(x => x["@metadata"] != null)
+					.Where(x => x != null && x["@metadata"] != null)
 					.Select(x => x["@metadata"].Value<string>("@id"))
 					.Where(x => x != null)
 				);
