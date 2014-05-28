@@ -91,10 +91,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					catch (Exception e)
 					{
-						if(e is InvalidDataException)
-							log.ErrorException("Fatal failure when replicating to SQL. Data corruption in RavenDB seems to be the issue here. All SQL Replication activity STOPPED", e);
-						else
-							log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
+						log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
 					}
 				}
 			}, TaskCreationOptions.LongRunning);

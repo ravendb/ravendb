@@ -813,13 +813,7 @@ namespace Raven.Bundles.Replication.Tasks
 						.Select(x => x.ToJson()));
 				});
 			}
-			catch (InvalidDataException e)
-			{
-				RecordFailure(String.Empty,"Data is corrupted, could not proceed with document replication. Exception : " + e);
-				scope.RecordError(e);
-				log.ErrorException("Data is corrupted, could not proceed with replication", e);
-			}
-			catch (Exception e)
+            catch (Exception e)
 			{
 				scope.RecordError(e);
 				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
