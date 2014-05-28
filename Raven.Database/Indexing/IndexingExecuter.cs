@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -112,29 +113,42 @@ namespace Raven.Database.Indexing
 
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
 
-			try
-			{
-                jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedEtagForAllIndexes);
-					
-				if (Log.IsDebugEnabled)
-				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                              jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
-				}
+	        try
+	        {
+		        jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedEtagForAllIndexes);
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Count);
+		        if (Log.IsDebugEnabled)
+		        {
+			        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+				        jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+		        }
 
-				context.CancellationToken.ThrowIfCancellationRequested();
+		        context.ReportIndexingActualBatchSize(jsonDocs.Count);
 
-				if (jsonDocs.Count <= 0)
-					return;
+		        context.CancellationToken.ThrowIfCancellationRequested();
 
-				var sw = Stopwatch.StartNew();
+		        if (jsonDocs.Count <= 0)
+		        {
+			        //even if nothing to index --> go over indexes and update last indexed
+			        indexesToWorkOn.ForEach(index =>
+				        transactionalStorage.Batch(actions =>
+					        actions.Indexing.UpdateLastIndexed(index.IndexId, lastEtag, DateTime.UtcNow)));
 
-				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+			        return;
+		        }
 
-				indexingDuration = sw.Elapsed;
-			}
+		        var sw = Stopwatch.StartNew();
+
+		        lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+
+		        indexingDuration = sw.Elapsed;
+	        }
+	        catch (InvalidDataException e)
+	        {
+		        Log.ErrorException("Failed to index because of data corruption. ", e);
+				indexesToWorkOn.ForEach(index =>
+					context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+	        }
 			catch (OperationCanceledException)
 			{
 				operationCancelled = true;

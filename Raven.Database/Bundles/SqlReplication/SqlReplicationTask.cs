@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Configuration;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -90,7 +91,10 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					catch (Exception e)
 					{
-						log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
+						if(e is InvalidDataException)
+							log.ErrorException("Fatal failure when replicating to SQL. Data corruption in RavenDB seems to be the issue here. All SQL Replication activity STOPPED", e);
+						else
+							log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
 					}
 				}
 			}, TaskCreationOptions.LongRunning);
