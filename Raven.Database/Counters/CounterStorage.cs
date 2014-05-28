@@ -67,6 +67,43 @@ namespace Raven.Database.Counters
             get { return metricsCounters; }
         }
 
+        /// <summary>
+        ///     Get the total size taken by the counters storage on the disk.
+        ///     This explicitly does NOT include in memory data.
+        /// </summary>
+        /// <remarks>
+        ///     This is a potentially a very expensive call, avoid making it if possible.
+        /// </remarks>
+        public long GetCounterStorageSizeOnDisk()
+        {
+            if (storageEnvironment.Options is Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+            {
+                Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions directoryStorageOptions = storageEnvironment.Options as Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
+                string[] counters = Directory.GetFiles(directoryStorageOptions.BasePath, "*.*", SearchOption.AllDirectories);
+                long totalCountersSize = counters.Sum(file =>
+                {
+                    try
+                    {
+                        return new FileInfo(file).Length;
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        return 0;
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        return 0;
+                    }
+                });
+
+                return totalCountersSize;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
         //todo: consider implementing metricses for each counter, not only for each counter storage
 	    public CountersMetrics CreateMetrics()
 	    {
@@ -480,12 +517,12 @@ namespace Raven.Database.Counters
 		                valPos = 8;
 		                delta = -delta;
                         parent.MetricsCounters.DecSizeMetrics.Update(delta);
-                        parent.MetricsCounters.Increments.Mark();
+                        parent.MetricsCounters.Decrements.Mark();
 		            }
 		            else
 		            {
                         parent.MetricsCounters.IncSizeMetrics.Update(delta);
-                        parent.MetricsCounters.Decrements.Mark();
+                        parent.MetricsCounters.Increments.Mark();                        
 		            }
 
 		            if (result == null)

@@ -107,6 +107,14 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
+
+        [Route("counters/{counterName}/stats")]
+        [HttpGet]
+        public HttpResponseMessage CounterStats()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateMetrics());            
+        }
+
 		public class CounterView
 		{
 			public string Name { get; set; }
