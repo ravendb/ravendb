@@ -21,7 +21,7 @@ class versioningEntry {
             };
             this.__metadata = new documentMetadata();
         } else {
-            this.__metadata = new documentMetadata(dto['__metadata']);
+            this.__metadata = new documentMetadata(dto["@metadata"]);
         }
 
         this.fromDatabase = ko.observable<boolean>(fromDatabse);
@@ -59,7 +59,7 @@ class versioningEntry {
         };
 
         if (includeMetadata && this.__metadata) {
-            dto['@metadata'] = this.__metadata;
+            dto['@metadata'] = this.__metadata.toDto();
         }
 
         return dto;

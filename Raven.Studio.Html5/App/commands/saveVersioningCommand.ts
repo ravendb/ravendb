@@ -18,8 +18,8 @@ class saveVersioningCommand extends commandBase {
                 Key: "Raven/Versioning/" + entry["Id"],
                 Method: "PUT",
                 Document: entry.toDto(false),
-                Metadata: entry["__metadata"],
-                Etag: entry["__metadata"]["etag"]
+                Metadata: entry.__metadata.toDto(),
+                Etag: entry.__metadata.etag
             });
         }
 
@@ -28,7 +28,7 @@ class saveVersioningCommand extends commandBase {
             commands.push({
                 Key: "Raven/Versioning/" + entry["Id"],
                 Method: "DELETE",
-                Etag: entry["__metadata"]["etag"]
+                Etag: entry.__metadata.etag
             });
         }
 

@@ -4,7 +4,7 @@ import collection = require("models/collection");
 import database = require("models/database");
 import versioningEntry = require("models/versioningEntry");
 import appUrl = require("common/appUrl");
-import getDocumentsStartingWithCommand = require("commands/getDocumentsStartingWithCommand");
+import getVersioningsCommand = require("commands/getVersioningsCommand");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
 
 class versioning extends viewModelBase {
@@ -57,17 +57,15 @@ class versioning extends viewModelBase {
     }
 
     fetchVersioningEntries() {
-        var task: JQueryPromise<versioningEntryDto[]> = new getDocumentsStartingWithCommand("Raven/Versioning", this.activeDatabase()).execute();
-        task.done((versionings: versioningEntryDto[]) => {
+        var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(this.activeDatabase()).execute();
+        // var task: JQueryPromise<document[]> = new getDocumentsStartingWithCommand("Raven/Versioning", this.activeDatabase()).execute();
+        task.done((versionings: versioningEntry[]) => {
             this.versioningsLoaded(versionings);
         });
     }
 
-    versioningsLoaded(data: versioningEntryDto[]) {
-        this.versionings.removeAll(); 
-        for (var idx = 0; idx < data.length; idx++) {
-            this.versionings.push(new versioningEntry(data[idx], true));
-        }
+    versioningsLoaded(data: versioningEntry[]) {
+        this.versionings(data);
         viewModelBase.dirtyFlag().reset();
     }
 

@@ -289,7 +289,7 @@ interface indexQueryResultsDto extends indexResultsDto<documentDto> {
 
 }
 
-interface versioningEntryDto {
+interface versioningEntryDto extends documentDto {
   Id: string;
   MaxRevisions: number;
   Exclude: boolean;
