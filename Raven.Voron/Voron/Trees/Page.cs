@@ -366,9 +366,9 @@ namespace Voron.Trees
 			if (right != null)
 				rightLength = (ushort)key.FindPrefixSize(right);
 
-			// TODO arek - shouldn't we specify the min prefix length
+			var minPrefixLength = key.Size * 0.2;
 
-			if (leftLength > 0 && leftLength > rightLength)
+			if (leftLength > minPrefixLength && leftLength > rightLength)
 			{
 				prefixedSlice = new PrefixedSlice(NextPrefixId, leftLength, key)
 				{
@@ -378,7 +378,7 @@ namespace Voron.Trees
 				return true;
 			}
 
-			if (rightLength > 0 && rightLength > leftLength)
+			if (rightLength > minPrefixLength && rightLength > leftLength)
 			{
 				prefixedSlice = new PrefixedSlice(NextPrefixId, rightLength, key)
 				{
