@@ -21,6 +21,9 @@ namespace Raven.Database.Indexing
 
 		private readonly object batchTimingSyncObject = new object();
 
+		private ulong batchCount;
+		private ulong batchTimingsSumInMs;
+
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
@@ -263,9 +266,6 @@ namespace Raven.Database.Indexing
 		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
 
-		private ulong batchCount;
-
-		private ulong batchTimingsSumInMs;
 		public ulong BatchLoadFromDiskAverageTiming
 		{
 			get

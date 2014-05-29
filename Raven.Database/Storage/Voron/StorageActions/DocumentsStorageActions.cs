@@ -1,34 +1,28 @@
-﻿using System.Diagnostics;
+﻿using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Streams;
+using Raven.Database.Impl;
+using Raven.Database.Plugins;
+using Raven.Database.Storage.Voron.Impl;
+using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
+using Voron;
+using Voron.Impl;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
-	using System.Linq;
-
-	using Raven.Abstractions.Logging;
-	using Raven.Abstractions.Util;
-
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
-	using System.Text;
-
-	using Raven.Abstractions;
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Exceptions;
-	using Raven.Abstractions.MEF;
-    using Raven.Abstractions.Util.Streams;
-	using Raven.Database.Impl;
-	using Raven.Database.Plugins;
-	using Raven.Database.Storage.Voron.Impl;
-	using Raven.Json.Linq;
-	using Raven.Abstractions.Extensions;
-
-	using global::Voron;
-	using global::Voron.Impl;
-
-	using Constants = Raven.Abstractions.Data.Constants;
-
 	public class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
 	{
 		private readonly Reference<WriteBatch> writeBatch;
@@ -38,7 +32,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly IDocumentCacher documentCacher;
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-        private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
+		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
 		private readonly TableStorage tableStorage;
 
 		private readonly Index metadataIndex;
@@ -48,8 +42,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			IDocumentCacher documentCacher,
 			Reference<WriteBatch> writeBatch,
 			Reference<SnapshotReader> snapshot,
-            TableStorage tableStorage, 
-            IBufferPool bufferPool)
+			TableStorage tableStorage,
+			IBufferPool bufferPool)
 			: base(snapshot, bufferPool)
 		{
 			this.uuidGenerator = uuidGenerator;
@@ -88,7 +82,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var document = DocumentByKey(key, null);
 					if (document == null) //precaution - should never be true
 					{
-						throw new ApplicationException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found.", key));
+						throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found.", key));
 					}
 
 					yield return document;
@@ -140,7 +134,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var document = DocumentByKey(key, null);
 					if (document == null) //precaution - should never be true
 					{
-						throw new ApplicationException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+						throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+					}
+
+					if (!document.Etag.Equals(docEtag))
+					{
+						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its indice", key));
 					}
 
 					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
@@ -266,8 +265,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("key");
 
 			var loweredKey = CreateKey(key);
-			
-			if(etag != null)
+
+			if (etag != null)
 				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
 
 			ushort? existingVersion;
@@ -282,7 +281,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
 			{
 				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
-				throw new ApplicationException(errorString);
+				throw new InvalidDataException(errorString);
 			}
 
 			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
@@ -396,7 +395,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (etag == null) throw new ArgumentNullException("etag");
 
 			using (var iter = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(Snapshot, writeBatch.Value))
+													.Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iter.Seek(etag.ToString()) &&
 					!iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag
@@ -425,11 +424,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
            
 			if (etag != null)
 			{
-                Etag next;
-                while (etagTouches.TryGetValue(etag, out next))
-                {
-                    etag = next;
-                }
+				Etag next;
+				while (etagTouches.TryGetValue(etag, out next))
+				{
+					etag = next;
+				}
 
 				if (existingEtag != etag)
 				{
@@ -498,7 +497,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
+				var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
 
 				return new JsonDocumentMetadata
 				{
