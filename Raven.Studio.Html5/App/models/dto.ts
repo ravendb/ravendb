@@ -562,11 +562,13 @@ interface statusDebugMetricsDto {
     IndexedPerSecond: number;
     ReducedPerSecond: number;
     RequestsPerSecond: number;
-    Requests: statusDebugMetricsRequestsDto;
-    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+    Requests: meterDataDto;
+    RequestsDuration: histogramDataDto;
+    StaleIndexMaps: histogramDataDto;
+    StaleIndexReduces: histogramDataDto;
 }
 
-interface statusDebugMetricsRequestsDto {
+interface meterDataDto {
     Count: number;
     MeanRate: number;
     OneMinuteRate: number;
@@ -574,7 +576,7 @@ interface statusDebugMetricsRequestsDto {
     FifteenMinuteRate: number;
 }
 
-interface statusDebugMetricsRequestsDurationDto {
+interface histogramDataDto {
     Counter: number;
     Max: number;
     Min: number;
