@@ -1057,19 +1057,13 @@
     <Content Include="Content\app.css.map">
       <DependentUpon>app.css</DependentUpon>
     </Content>
+    <Content Include="Scripts\bootstrap-filestyle.js" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
     <Content Include="Scripts\jquery.dynatree.js" />
     <Content Include="Scripts\jquery.dynatree.min.js" />
-    <Content Include="Scripts\jsTree3\jstree.js" />
-    <Content Include="Scripts\jsTree3\jstree.min.js" />
-    <Content Include="Scripts\jsTree3\themes\default\32px.png" />
-    <Content Include="Scripts\jsTree3\themes\default\40px.png" />
-    <Content Include="Scripts\jsTree3\themes\default\style.css" />
-    <Content Include="Scripts\jsTree3\themes\default\style.min.css" />
-    <Content Include="Scripts\jsTree3\themes\default\throbber.gif" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
@@ -1079,7 +1073,6 @@
     <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\jstree\jstree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.1.0.debug.js" />
     <Content Include="Scripts\knockout-3.1.0.js" />
@@ -1313,9 +1306,6 @@
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\jquery-2.1.0.min.map" />
-    <Content Include="Views\Shared\_jsTreeDemo.cshtml" />
-    <Content Include="Views\jsTree3\Demo.cshtml" />
-    <Content Include="Views\jsTree3\AJAXDemo.cshtml" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1396,12 +1386,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Models\jsTree3Node.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

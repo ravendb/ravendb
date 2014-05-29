@@ -10,6 +10,9 @@ import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import file = require("models/filesystem/file");
+import uploadItem = require("models/uploadItem");
+import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
+import uploadQueueHelper = require("common/uploadQueueHelper");
 
 class filesystemFiles extends viewModelBase {
 
@@ -22,9 +25,23 @@ class filesystemFiles extends viewModelBase {
     selectedFolder = ko.observable<string>();
     addedFolder = ko.observable<string>();
     currentLevelSubdirectories = ko.observableArray<string>();
+    uploadFiles = ko.observable<FileList>();
+    uploadQueue = ko.observableArray<uploadItem>();
     private activeFilesystemSubscription: any;
 
+
     static gridSelector = "#filesGrid";
+    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle"
+    static uploadQueueSelector = "#uploadQueue";
+    static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
+
+    constructor() {
+        super();
+
+        this.uploadQueue.subscribe(x => uploadQueueHelper.updateLocalStorage(x, this.activeFilesystem()));
+        fileUploadBindingHandler.install();
+        treeBindingHandler.install();
+    }
 
     canActivate(args: any) {
         return true;
@@ -37,7 +54,17 @@ class filesystemFiles extends viewModelBase {
 
         this.loadFiles(false);
         this.selectedFolder.subscribe((newValue: string) => this.loadFiles(true));
-        treeBindingHandler.install();
+
+        var storageKeyForFs = uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name;
+        if (window.localStorage.getItem(storageKeyForFs)) {
+            this.uploadQueue(
+                uploadQueueHelper.parseUploadQueue(
+                    window.localStorage.getItem(storageKeyForFs), this.activeFilesystem()));
+        }
+    }
+
+    attached(view, parent) {
+        this.collapseUploadQueuePanel();
     }
 
     deactivate() {
@@ -125,12 +152,51 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    uploadFile() {
-        router.navigate(appUrl.forFilesystemUploadFile(this.activeFilesystem(), this.selectedFolder()));
-    }
-
     modelPolling() {
     }
+
+    clearUploadQueue() {
+        window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);
+        this.uploadQueue.removeAll();
+    }
+
+    navigateToFiles() {
+        router.navigate(appUrl.forFilesystemFiles(this.activeFilesystem()));
+    }
+
+    uploadSuccess(x: uploadItem) {
+        ko.postbox.publish("UploadFileStatusChanged", x);
+        uploadQueueHelper.updateQueueStatus(x.id(), "Uploaded", this.uploadQueue());
+        this.loadFiles(true);
+    }
+
+    uploadFailed(x: uploadItem) {
+        ko.postbox.publish("UploadFileStatusChanged", x);
+        uploadQueueHelper.updateQueueStatus(x.id(), "Failed", this.uploadQueue());
+    }
+
+    toggleCollapseUploadQueue() {
+        if ($(filesystemFiles.uploadQueuePanelToggleSelector).hasClass('opened')) {
+            this.collapseUploadQueuePanel();
+        } else {
+            this.expandUploadQueuePanel();
+        }
+    }
+
+    expandUploadQueuePanel() {
+        $(filesystemFiles.uploadQueuePanelToggleSelector).addClass("opened").find('i').removeClass('fa-angle-double-up').addClass('fa-angle-double-down');
+        $(filesystemFiles.uploadQueueSelector).removeClass("hidden");
+        $(filesystemFiles.uploadQueuePanelCollapsedSelector).addClass("hidden");
+        $(".upload-queue").removeClass("upload-queue-min");
+    }
+
+    collapseUploadQueuePanel() {
+        $(filesystemFiles.uploadQueuePanelToggleSelector).removeClass('opened').find('i').removeClass('fa-angle-double-down').addClass('fa-angle-double-up');
+        $(filesystemFiles.uploadQueueSelector).addClass("hidden");
+        $(filesystemFiles.uploadQueuePanelCollapsedSelector).removeClass("hidden");
+        $(".upload-queue").addClass("upload-queue-min");
+    }
+
 }
 
 export = filesystemFiles;

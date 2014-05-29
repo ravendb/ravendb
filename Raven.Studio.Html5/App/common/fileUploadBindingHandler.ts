@@ -31,6 +31,7 @@ class fileUploadBindingHandler {
             files: KnockoutObservable<FileList>;
             directory: KnockoutObservable<string>;
             uploads: KnockoutObservableArray<uploadItem>;
+            before?: () => void; 
             success: (i: uploadItem) => void;
             fail: (i: uploadItem) => void;
         } = <any>ko.utils.unwrapObservable(valueAccessor());
@@ -41,6 +42,9 @@ class fileUploadBindingHandler {
             options.files();
             // Access the files observable now so that .update is called whenever it changes.
             if (element.files.length) {
+                if (options.before) {
+                    options.before();
+                }
                 var files = element.files;
                 for (var i = 0; i < files.length; i++) {
                     var file = files[i];

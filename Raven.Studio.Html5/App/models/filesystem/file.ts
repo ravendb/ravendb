@@ -16,6 +16,9 @@ class file implements documentBase {
                 this.id = dto.Name;
             }
             this.directory = dto.Name.substring(0, dto.Name.lastIndexOf("/"))
+            if (dto.HumaneTotalSize === " Bytes") {
+                dto.HumaneTotalSize = "0 Bytes";
+            }
             this.Size = dto.HumaneTotalSize;
             this.LastModified = dto.Metadata["Last-Modified"];
 

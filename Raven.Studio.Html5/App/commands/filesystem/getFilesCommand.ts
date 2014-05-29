@@ -11,15 +11,14 @@ class getFilesystemFilesCommand extends commandBase {
 
     execute(): JQueryPromise<pagedResultSet> {
         var filesTask = this.fetchFiles();
-        var totalResultsTask = this.fetchTotalResultCount();
-
         var doneTask = $.Deferred();
-        var combinedTask = $.when(filesTask, totalResultsTask);
 
-        combinedTask.done((filesResult: file[], resultsCount: number) => {
-            doneTask.resolve(new pagedResultSet(filesResult, resultsCount));
+        filesTask.done((results: searchResults) => {
+            var files = results.Files.map(d => new file(d, true));
+            var totalCount = results.FileCount;
+            doneTask.resolve(new pagedResultSet(files, totalCount));
         });
-        combinedTask.fail(xhr => doneTask.reject(xhr));
+        filesTask.fail(xhr => doneTask.reject(xhr));
 
         return doneTask;
     }
@@ -27,7 +26,7 @@ class getFilesystemFilesCommand extends commandBase {
     private fetchFiles(): JQueryPromise<file[]> {
         var level = 2;
         if (this.directory) {
-            var slashMatches = new Array(this.directory).count(x => x === "/");
+            var slashMatches = this.directory.count("/");
             if (slashMatches) {
                 level = level + slashMatches;
             }
@@ -39,16 +38,9 @@ class getFilesystemFilesCommand extends commandBase {
         };
 
         var url = "/search";
-        var filesSelector = (results: searchResults) => results.Files.map(d => new file(d, true));
-        var task = this.query(url, args, this.fs, filesSelector);
+        var task = this.query(url, args, this.fs, null);
 
         return task;
-    }
-
-    private fetchTotalResultCount(): JQueryPromise<number> {
-        var url = "/stats";
-        var countSelector = (dto: filesystemStatisticsDto) => dto.FileCount;
-        return this.query<number>(url, null, this.fs, countSelector);
     }
 }
 
