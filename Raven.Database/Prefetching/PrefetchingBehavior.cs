@@ -91,10 +91,11 @@ namespace Raven.Database.Prefetching
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
 			var sw = Stopwatch.StartNew();
+			int prefetchingQueueSize;
 			var prefetchDocumentsTimingLimit = autoTuner.BatchLoadFromDiskAverageTiming * 2;
 			do
 			{
-				var nextEtagToIndex = GetNextDocEtag(etag);
+				var nextEtagToIndex = GetNextDocEtag(etag);				
 				var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
 				if (nextEtagToIndex != firstEtagInQueue)
@@ -110,11 +111,13 @@ namespace Raven.Database.Prefetching
 				if (docsLoaded) 
 					etag = result[result.Count - 1].Etag;
 
+				prefetchingQueueSize = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
 			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
-					 (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) +
-						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB
+						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB)
 						//&& (ulong)sw.ElapsedMilliseconds < prefetchDocumentsTimingLimit
 				);
+			
+					 (prefetchingQueueSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
 			
 			return result;
 		}
@@ -127,10 +130,8 @@ namespace Raven.Database.Prefetching
 			autoTuner.ReportBatchTiming(sw.ElapsedMilliseconds);
 
 			foreach (var jsonDocument in jsonDocs)
-			{
 				prefetchingQueue.Add(jsonDocument);
 			}
-		}
 
 		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items)
 		{
@@ -198,13 +199,23 @@ namespace Raven.Database.Prefetching
 
 			context.TransactionalStorage.Batch(actions =>
 			{
+			    //limit how much data we load from disk --> better adhere to memory limits
+			    var totalSizeAllowedToLoadInBytes =
+			        (context.Configuration.MemoryLimitForIndexingInMB*1024*1024) -
+			        (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
+
+                // at any rate, we will load a min of 512Kb docs
+			    var maxSize = Math.Max(
+			        Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
+			        1024*512);
+
 				jsonDocs = actions.Documents
 					.GetDocumentsAfter(
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
 						context.CancellationToken,
-						autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: untilEtag)
+                        maxSize,
+			            untilEtag)
 					.Where(x => x != null)
 					.Select(doc =>
 					{

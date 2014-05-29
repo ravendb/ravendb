@@ -32,7 +32,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly IDocumentCacher documentCacher;
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
+        private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
 		private readonly TableStorage tableStorage;
 
 		private readonly Index metadataIndex;
@@ -42,8 +42,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			IDocumentCacher documentCacher,
 			Reference<WriteBatch> writeBatch,
 			Reference<SnapshotReader> snapshot,
-			TableStorage tableStorage,
-			IBufferPool bufferPool)
+            TableStorage tableStorage, 
+            IBufferPool bufferPool)
 			: base(snapshot, bufferPool)
 		{
 			this.uuidGenerator = uuidGenerator;
@@ -139,7 +139,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					if (!document.Etag.Equals(docEtag))
 					{
-						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its indice", key));
+						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its indice",key));
 					}
 
 					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
@@ -265,8 +265,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("key");
 
 			var loweredKey = CreateKey(key);
-
-			if (etag != null)
+			
+			if(etag != null)
 				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
 
 			ushort? existingVersion;
@@ -404,6 +404,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var docEtag = Etag.Parse(iter.CurrentKey.ToString());
+					
 					if (EtagUtil.IsGreaterThan(docEtag, etag))
 						return docEtag;
 				} while (iter.MoveNext());
@@ -424,11 +425,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
            
 			if (etag != null)
 			{
-				Etag next;
-				while (etagTouches.TryGetValue(etag, out next))
-				{
-					etag = next;
-				}
+                Etag next;
+                while (etagTouches.TryGetValue(etag, out next))
+                {
+                    etag = next;
+                }
 
 				if (existingEtag != etag)
 				{
@@ -497,7 +498,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-				var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
+			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
 
 				return new JsonDocumentMetadata
 				{

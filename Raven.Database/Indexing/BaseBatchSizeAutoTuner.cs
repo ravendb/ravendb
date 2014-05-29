@@ -16,7 +16,7 @@ namespace Raven.Database.Indexing
 		private int currentNumber;
 
 		private DateTime lastIncrease;
-		private readonly ConcurrentDictionary<Guid, long> currentlyUsedBatchSizes;
+		private readonly ConcurrentDictionary<Guid, long> _currentlyUsedBatchSizesInBytes;
 		private readonly long memoryLimitForIndexingInBytes;
 
 		private readonly object batchTimingSyncObject = new object();
@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
-			currentlyUsedBatchSizes = new ConcurrentDictionary<Guid, long>();
+			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
 			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
 			batchTimingsSumInMs = 0;
 			batchCount = 0;
@@ -78,7 +78,7 @@ namespace Raven.Database.Indexing
 
 		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
-			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch || CurrentlyUsedBatchSizes.Values.Sum() > memoryLimitForIndexingInBytes)
+			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > memoryLimitForIndexingInBytes)
 			{
 				return false;
 			}
@@ -122,7 +122,7 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		public long MaximumSizeAllowedToFetchFromStorage
+		public long MaximumSizeAllowedToFetchFromStorageInBytes
 		{
 			get
 			{
@@ -140,7 +140,7 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				return CurrentlyUsedBatchSizes.Values.Sum() * 4 > memoryLimitForIndexingInBytes;
+				return CurrentlyUsedBatchSizesInBytes.Values.Sum() * 4 > memoryLimitForIndexingInBytes;
 			}
 		}
 
@@ -263,7 +263,8 @@ namespace Raven.Database.Indexing
 		protected abstract int MaxNumberOfItems { get; }
 		protected abstract int CurrentNumberOfItems { get; set; }
 		protected abstract int LastAmountOfItemsToRemember { get; set; }
-		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }		protected abstract void RecordAmountOfItems(int numberOfItems);
+		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
+		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
 
 		public ulong BatchLoadFromDiskAverageTiming
