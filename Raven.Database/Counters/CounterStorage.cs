@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.Counters;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Voron;

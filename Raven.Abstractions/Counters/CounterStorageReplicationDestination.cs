@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.Database.Counters
+namespace Raven.Abstractions.Counters
 {
     public class CounterStorageReplicationDestination
     {

@@ -18,8 +18,8 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-				string counter = String.Join(Constants.GroupSeperatorString, new [] { group, counterName });
-				writer.Store(Storage.CounterStorageUrl, counter, delta);
+				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+				writer.Store(Storage.CounterStorageUrl, counterFullName, delta);
 
 				writer.Commit(delta != 0);
 				return new HttpResponseMessage(HttpStatusCode.OK);
@@ -55,8 +55,8 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-				string counter = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
-				bool changesWereMade = writer.Reset(Storage.CounterStorageUrl, counter);
+				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+				bool changesWereMade = writer.Reset(Storage.CounterStorageUrl, counterFullName);
 
 				if (changesWereMade)
 				{

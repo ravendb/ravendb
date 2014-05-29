@@ -108,6 +108,8 @@
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Counters\CounterChanges.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AdminStatistics.cs" />

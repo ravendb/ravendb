@@ -244,6 +244,45 @@ namespace Raven.Client.Counters
 
 			public ProfilingInformation ProfilingInformation { get; private set; }
 
+			public async Task<CounterStorageReplicationDocument> GetReplications()
+			{
+				var requestUriString = String.Format("{0}/replications/get", counterStorageUrl);
+
+				var request =
+					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"GET", credentials, convention));
+
+				try
+				{
+					var response = await request.ReadResponseJsonAsync();
+					return response.Value<CounterStorageReplicationDocument>();
+				}
+				catch (Exception e)
+				{
+					throw e;
+					//throw e.TryThrowBetterError();
+				}
+			}
+
+			public async void SaveReplications(CounterStorageReplicationDocument newReplicationDocument)
+			{
+				var requestUriString = String.Format("{0}/replications/save", counterStorageUrl);
+
+				var request =
+					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"POST", credentials, convention));
+
+				try
+				{
+					await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument));
+					var response = await request.ReadResponseJsonAsync();
+				}
+				catch (Exception e)
+				{
+					throw e;
+					//throw e.TryThrowBetterError();
+				}
+			}
 			//TODO: implement
         }
 
@@ -251,8 +290,7 @@ namespace Raven.Client.Counters
 	    {
 			private readonly OperationCredentials credentials;
 			private readonly HttpJsonRequestFactory jsonRequestFactory;
-		    private readonly string counterStorageUrl;
-			private readonly string serverUrl;
+			private readonly string counterStorageUrl;
 			private readonly RavenCountersClient countersClient;
 			private readonly CounterConvention convention;
 
@@ -261,7 +299,6 @@ namespace Raven.Client.Counters
 				credentials = countersClient.PrimaryCredentials;
 				jsonRequestFactory = countersClient.JsonRequestFactory;
 				counterStorageUrl = countersClient.CounterStorageUrl;
-				serverUrl = countersClient.ServerUrl;
 				this.countersClient = countersClient;
 				this.convention = convention;
             }
@@ -270,12 +307,12 @@ namespace Raven.Client.Counters
 
 			public async void Change(string group, string counterName, long delta)
 		    {
-				var requestUriString = String.Format("{0}/counters/{1}/change?group={2}&counterName={3}&delta={4}",
-					serverUrl, counterStorageUrl, group, counterName, delta);
+				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}&delta={3}",
+					counterStorageUrl, group, counterName, delta);
 
 				var request =
 					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"GET", credentials, convention));
+						"POST", credentials, convention));
 
 				try
 				{
@@ -290,8 +327,8 @@ namespace Raven.Client.Counters
 
 			public async void Reset(string group, string counterName)
 		    {
-				var requestUriString = String.Format("{0}/counters/{1}/change?group={2}&counterName={3}",
-					serverUrl, counterStorageUrl, group, counterName);
+				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}",
+					counterStorageUrl, group, counterName);
 
 				var request =
 					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -320,8 +357,8 @@ namespace Raven.Client.Counters
 
 			public async Task<long> GetOverallTotal(string group, string counterName)
 		    {
-				var requestUriString = String.Format("{0}/counters/{1}/getCounterOverallTotal?group={2}&counterName={3}",
-					serverUrl, counterStorageUrl, group, counterName);
+				var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}",
+					counterStorageUrl, group, counterName);
 
 				var request =
 					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -341,8 +378,8 @@ namespace Raven.Client.Counters
 
 			public async Task<List<CounterView.ServerValue>> GetServersValues(string group, string counterName)
 		    {
-				var requestUriString = String.Format("{0}/counters/{1}/getCounterServersValues?group={2}&counterName={3}",
-					serverUrl, counterStorageUrl, group, counterName);
+				var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}",
+					counterStorageUrl, group, counterName);
 
 				var request =
 					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -369,8 +406,7 @@ namespace Raven.Client.Counters
 		    {
 			    private readonly OperationCredentials credentials;
 			    private readonly HttpJsonRequestFactory jsonRequestFactory;
-			    private readonly string counterStorageUrl;
-			    private readonly string serverUrl;
+				private readonly string counterStorageUrl;
 			    private readonly CounterConvention convention;
 
 			    private readonly ConcurrentDictionary<string, long> counterData = new ConcurrentDictionary<string, long>();
@@ -379,8 +415,7 @@ namespace Raven.Client.Counters
 			    {
 				    credentials = countersClient.PrimaryCredentials;
 				    jsonRequestFactory = countersClient.JsonRequestFactory;
-				    counterStorageUrl = countersClient.CounterStorageUrl;
-				    serverUrl = countersClient.ServerUrl;
+					counterStorageUrl = countersClient.CounterStorageUrl;
 				    this.convention = convention;
 			    }
 
@@ -417,11 +452,11 @@ namespace Raven.Client.Counters
 						counterChanges.Add(newCounterChange);
 				    });
 
-				    var requestUriString = String.Format("{0}/counters/{1}/batch", serverUrl, counterStorageUrl);
+					var requestUriString = String.Format("{0}/batch", counterStorageUrl);
 
 				    var request =
 					    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						    "GET", credentials, convention));
+						    "POST", credentials, convention));
 
 				    try
 				    {
