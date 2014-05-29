@@ -33,4 +33,4 @@ define(["require", "exports", "commands/commandBase", "models/counter/counter"],
     
     return getCounterOverallTotalCommand;
 });
-//# sourceMappingURL=getCounterValueCommand.js.map
+//# sourceMappingURL=getCounterOverallTotalCommand.js.map
