@@ -105,7 +105,8 @@ namespace Raven.Database.Storage
             {
                 try
                 {
-	                RemoveIndexAndCleanup(indexDefinition.Name);
+					if (Contains(indexDefinition.Name)) // checking if there are no older indexes with the same name
+						RemoveIndexAndCleanup(indexDefinition.Name);
 
                     ResolveAnalyzers(indexDefinition);
                     AddAndCompileIndex(indexDefinition);
