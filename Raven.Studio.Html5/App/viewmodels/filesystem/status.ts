@@ -28,7 +28,7 @@ class status extends viewModelBase {
     isIncomingActivityVisible = ko.computed(() => true);
     isFsSyncUpToDate: boolean = true;
 
-    outgoingActivitiesSubscription: changeSubscription;
+    activitiesSubscription: changeSubscription;
 
     static outgoingGridSelector = "#outgoingGrid";
     static incomingGridSelector = "#incomingGrid";
@@ -45,10 +45,11 @@ class status extends viewModelBase {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
 
-        // treat outgoing notifications events
-        this.outgoingActivitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
+        // treat notifications events
+        this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
-            console.log("notification");
+
+            //outgoing
             if (e.SynchronizationDirection == synchronizationDirection.Outgoing) {
                 this.outgoingActivity.push(new synchronizationDetail({
                     FileName: e.FileName,
@@ -56,6 +57,12 @@ class status extends viewModelBase {
                     FileETag: "",
                     Type: e.Type
                 }));
+            }
+            else {
+                var incomingGrid = this.getIncomingActivityTable();
+                if (incomingGrid) {
+                    incomingGrid.loadRowData();
+                }
             }
         });
 
@@ -65,7 +72,6 @@ class status extends viewModelBase {
     }
 
     deactivate() {
-
         super.deactivate();
         this.activeFilesystemSubscription.dispose();
     }

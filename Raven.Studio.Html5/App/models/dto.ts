@@ -504,7 +504,6 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
-
 }
 
 interface customColumnParamsDto {
