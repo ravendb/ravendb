@@ -137,7 +137,6 @@ namespace Raven.Client.Connection
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
                 IndexEtag = Etag.Parse(json.Value<string>("IndexEtag")),
-				Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
 				Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 				IndexName = json.Value<string>("IndexName"),
@@ -147,6 +146,14 @@ namespace Raven.Client.Connection
 				ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
 				.JsonDeserialization<Dictionary<string, string>>()
 			};
+
+			foreach (var r in ((RavenJArray)json["Results"]))
+			{
+				if (r.Type == JTokenType.Null)
+					result.Results.Add(null);
+				else
+					result.Results.Add((RavenJObject)r);
+			}
 
 			if (json.ContainsKey("NonAuthoritativeInformation"))
 				result.NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString());

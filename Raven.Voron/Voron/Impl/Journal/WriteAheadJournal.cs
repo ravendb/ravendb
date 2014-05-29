@@ -101,6 +101,7 @@ namespace Voron.Impl.Journal
 
 			if (logInfo.JournalFilesCount == 0)
 			{
+				_journalIndex = logInfo.LastSyncedJournal;
 				return false;
 			}
 

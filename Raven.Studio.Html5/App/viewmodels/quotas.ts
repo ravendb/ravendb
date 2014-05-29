@@ -13,7 +13,6 @@ class quotas extends viewModelBase {
     maxNumberOfDocs = ko.observable<string>();
     warningThresholdForDocs = ko.observable<string>();
  
-    dirtyCheck = new ko.DirtyFlag([]);
     isSaveEnabled: KnockoutComputed<boolean>;
 
     activate(args) {

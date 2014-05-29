@@ -58,7 +58,7 @@ namespace Raven.Database.Counters.Controllers
 
 			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
 			{
-				IOExtensions.DeleteDirectory(configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(configuration.CountersDataDirectory);
 			}
 
 			return GetEmptyMessage();

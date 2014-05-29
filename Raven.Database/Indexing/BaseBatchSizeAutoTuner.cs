@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
 		}
 
-		public void HandleLowMemory()
+	    public void HandleLowMemory()
 		{
 			ReduceBatchSizeIfCloseToMemoryCeiling(true);
 		}

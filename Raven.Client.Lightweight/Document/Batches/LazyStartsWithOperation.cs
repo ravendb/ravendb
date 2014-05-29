@@ -122,17 +122,5 @@ namespace Raven.Client.Document.Batches
 		{
 			return null;
 		}
-
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			return commands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation, exclude: exclude)
-				.Select(sessionOperations.TrackEntity<T>)
-				.ToArray();
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			Result = result;
-		}
 	}
 }

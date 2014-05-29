@@ -289,6 +289,16 @@ interface indexQueryResultsDto extends indexResultsDto<documentDto> {
 
 }
 
+interface versioningEntryDto extends documentDto {
+  Id: string;
+  MaxRevisions: number;
+  Exclude: boolean;
+}
+
+interface versioningDto {
+  Entries: versioningEntryDto[]
+}
+
 interface replicationDestinationDto {
     Url: string;
     Username: string;

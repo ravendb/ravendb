@@ -42,23 +42,22 @@ namespace Raven.Database.Indexing
 			if (indexingPriority == IndexingPriority.None)
 				return true;
 
-			if (indexingPriority.HasFlag(IndexingPriority.Normal))
+            if ((indexingPriority & IndexingPriority.Normal) == IndexingPriority.Normal)
 			{
 				onlyFoundIdleWork.Value = false;
 				return true;
 			}
 
-			if (indexingPriority.HasFlag(IndexingPriority.Disabled) || 
-                indexingPriority.HasFlag(IndexingPriority.Error))
+			if ((indexingPriority & (IndexingPriority.Disabled | IndexingPriority.Error)) != IndexingPriority.None)
 				return false;
 
 			if (isIdle == false)
 				return false; // everything else is only valid on idle runs
 
-			if (indexingPriority.HasFlag(IndexingPriority.Idle))
+			if ((indexingPriority & IndexingPriority.Idle) == IndexingPriority.Idle)
 				return true;
 
-			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
+			if ((indexingPriority & IndexingPriority.Abandoned) == IndexingPriority.Abandoned)
 			{
 				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
@@ -68,7 +67,12 @@ namespace Raven.Database.Indexing
 			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Id + ": " + indexesStat.Priority);
 		}
 
-		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+	    protected override void UpdateStalenessMetrics(int staleCount)
+	    {
+	        context.MetricsCounters.StaleIndexMaps.Update(staleCount);
+	    }
+
+	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
             return (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
 		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
@@ -217,7 +221,7 @@ namespace Raven.Database.Indexing
 				transactionalStorage.Batch(actions =>
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
-										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
+					actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
 
 				Index _;
 				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);

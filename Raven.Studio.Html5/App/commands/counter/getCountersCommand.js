@@ -8,7 +8,10 @@ define(["require", "exports", "commands/commandBase", "models/counter/counter"],
     var getCountersCommand = (function (_super) {
         __extends(getCountersCommand, _super);
         /**
-        * @param ownerDb The database the collections will belong to.
+        * @param counterStorage - the counter storage that is being used
+        * @param skip - number of entries to skip
+        * @param take - number of entries to take
+        * @param counterGroupName - the counter group to take the entries from
         */
         function getCountersCommand(storage, skip, take, counterGroupName) {
             _super.call(this);
