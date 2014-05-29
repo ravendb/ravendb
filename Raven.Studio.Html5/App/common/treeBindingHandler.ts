@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 import getFoldersCommand = require("commands/filesystem/getFoldersCommand");
 
 /*
- * A custom Knockout binding handler transforms the target element (a <div>) into a tree, powered by jsTree
+ * A custom Knockout binding handler transforms the target element (a <div>) into a tree, powered by jquery-dynatree
  * Usage: data-bind="tree: { value: someObservableTreeObject }"
  */
 class treeBindingHandler {
@@ -30,7 +30,7 @@ class treeBindingHandler {
         } = <any>ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
-            children: [{ title: appUrl.getFilesystem().name, key: "#", isLazy: true }],
+            children: [{ title: appUrl.getFilesystem().name, key: "#", isLazy: true, isFolder: true }],
             onLazyRead: function (node) {
                 var dir;
                 if (node.data && node.data.key) {
@@ -90,7 +90,8 @@ class treeBindingHandler {
                 var newNode = {
                     key: parentDirectory + "/" + options.addedNode(),
                     title: options.addedNode(),
-                    isLazy: true, children: []
+                    isLazy: true,
+                    isFolder: true
                 };
                 activeNode.addChild(newNode);
                 options.addedNode(null);

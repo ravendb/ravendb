@@ -420,6 +420,7 @@
     <Content Include="Content\images\ui-icons_888888_256x240.png" />
     <Content Include="Content\images\ui-icons_cd0a0a_256x240.png" />
     <Content Include="Content\jquery-ui-1.10.4.custom.min.css" />
+    <Content Include="Content\jquery.dynatree\custom-skin\custom.css" />
     <Content Include="Content\jquery.dynatree\skin\icons-rtl.gif" />
     <Content Include="Content\jquery.dynatree\skin\icons.gif" />
     <Content Include="Content\jquery.dynatree\skin\loading.gif" />

@@ -23,7 +23,8 @@ class getFoldersStatsCommand extends commandBase {
             return {
                 key: x.replace("/", ""),
                 title: x.substring(x.lastIndexOf("/")+1),
-                isLazy: true
+                isLazy: true,
+                isFolder: true
             }
         }));
     }

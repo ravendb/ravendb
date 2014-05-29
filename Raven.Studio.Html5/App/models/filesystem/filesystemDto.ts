@@ -128,5 +128,6 @@ interface synchronizationDestinationDto {
 interface folderNodeDto {
     key: string;
     title: string;
-    isLazy: boolean
+    isLazy: boolean;
+    isFolder: boolean
 }
