@@ -124,3 +124,31 @@ interface synchronizationDestinationDto {
     ApiKey: string;
     FileSystem: string;
 }
+
+interface synchronizationUpdateNotification {
+    FileName: string;
+    DestinationFileSystemUrl: string;
+    SourceServerId: string;
+    SourceFileSystemUrl: string;
+    Type: filesystemSynchronizationType;
+    Action: synchronizationAction;
+    SynchronizationDirection: synchronizationDirection
+}
+
+enum synchronizationType {
+    Unknown,
+    ContentUpdate,
+	MetadataUpdate,
+	Rename,
+    Delete
+}
+
+enum synchronizationAction {
+    Start,
+    Finish
+}
+
+enum synchronizationDirection {
+    Outgoing,
+    Incoming
+}

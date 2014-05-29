@@ -33,6 +33,7 @@ import changeSubscription = require("models/changeSubscription");
 
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import resource = require("models/resource");
 
 import counterStorage = require("models/counter/counterStorage");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
@@ -68,6 +69,7 @@ class shell extends viewModelBase {
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
+    static currentFsChangesApi = ko.observable<changesApi>(null);
 
     globalDocPrefixChangesSubscription: changeSubscription;
 
@@ -98,7 +100,8 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { console.log("ActivateDatabase"); this.updateDbChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { console.log("ActivateFilesystem"); this.updateFsChangesApi(fs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
@@ -359,11 +362,11 @@ class shell extends viewModelBase {
         }
     }
 
-    updateChangesApi(newDb: database) {
+    updateDbChangesApi(newResource: resource) {
         if (shell.currentDbChangesApi()) {
             shell.currentDbChangesApi().dispose();
         }
-        shell.currentDbChangesApi(new changesApi(newDb));
+        shell.currentDbChangesApi(new changesApi(newResource));
 
         shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
             if (this.modelPollingTimeoutFlag === true) {
@@ -381,6 +384,13 @@ class shell extends viewModelBase {
                 setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
             }
         });
+    }
+
+    updateFsChangesApi(newResource: resource) {
+        if (shell.currentFsChangesApi()) {
+            shell.currentFsChangesApi().dispose();
+        }
+        shell.currentFsChangesApi(new changesApi(newResource));
     }
 
     reloadDatabases() {

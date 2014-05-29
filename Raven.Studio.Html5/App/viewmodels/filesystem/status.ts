@@ -5,6 +5,7 @@ import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import virtualTable = require("widgets/virtualTable/viewModel");
+import shell = require("viewmodels/shell");
 
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
@@ -15,6 +16,9 @@ import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOu
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 
+import changeSubscription = require('models/changeSubscription');
+import changesApi = require("common/changesApi");
+
 class status extends viewModelBase {
 
     outgoingActivity = ko.observableArray<synchronizationDetail>();
@@ -22,6 +26,9 @@ class status extends viewModelBase {
 
     incomingActivityPagedList = ko.observable<pagedList>();
     isIncomingActivityVisible = ko.computed(() => true);
+    isFsSyncUpToDate: boolean = true;
+
+    outgoingActivitiesSubscription: changeSubscription;
 
     static outgoingGridSelector = "#outgoingGrid";
     static incomingGridSelector = "#incomingGrid";
@@ -37,6 +44,20 @@ class status extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        // treat outgoing notifications events
+        this.outgoingActivitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
+            this.isFsSyncUpToDate = false;
+            console.log("notification");
+            if (e.SynchronizationDirection == synchronizationDirection.Outgoing) {
+                this.outgoingActivity.push(new synchronizationDetail({
+                    FileName: e.FileName,
+                    DestinationUrl: e.DestinationFileSystemUrl,
+                    FileETag: "",
+                    Type: e.Type
+                }));
+            }
+        });
 
         if (this.outgoingActivity().length == 0) {
             $("#outgoingActivityCollapse").collapse();
@@ -54,21 +75,21 @@ class status extends viewModelBase {
         var fs = this.activeFilesystem();
         if (fs) {
 
-            var incomingGrid = this.getIncomingActivityTable();
-            if (incomingGrid) {
-                incomingGrid.loadRowData();
-            }
+            //var incomingGrid = this.getIncomingActivityTable();
+            //if (incomingGrid) {
+            //    incomingGrid.loadRowData();
+            //}
 
-            new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-                .done(x => {
-                    this.outgoingActivity(x);
-                    if (this.outgoingActivity().length > 0) {
-                        $("#outgoingActivityCollapse").collapse('show');
-                    }
-                    else {
-                        $("#outgoingActivityCollapse").collapse();
-                    }
-                });
+            //new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+            //    .done(x => {
+            //        this.outgoingActivity(x);
+            //        if (this.outgoingActivity().length > 0) {
+            //            $("#outgoingActivityCollapse").collapse('show');
+            //        }
+            //        else {
+            //            $("#outgoingActivityCollapse").collapse();
+            //        }
+            //    });
         }
     }
 
