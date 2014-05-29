@@ -12,13 +12,9 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
-using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Counters.Connections;
-using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Changes;
-using Raven.Client.RavenFS.Connections;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -26,11 +22,13 @@ namespace Raven.Client.Counters
 {
     public class RavenCountersClient : IDisposable, IHoldProfilingInformation
     {
-        private readonly RemoteFileSystemChanges notifications;
         private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
-        private readonly IFileSystemClientReplicationInformer replicationInformer;
 		private readonly CounterConvention convention;
-        private int readStripingBase;
+
+		//private readonly RemoteFileSystemChanges notifications;
+		//private readonly IFileSystemClientReplicationInformer replicationInformer; //todo: implement replication and failover management on the client side
+		//private int readStripingBase;
+		
         private HttpJsonRequestFactory JsonRequestFactory =
 #if !NETFX_CORE
               new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
@@ -40,27 +38,25 @@ namespace Raven.Client.Counters
 
         private const int DefaultNumberOfCachedRequests = 2048;
 
-        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens =
-            new ConcurrentDictionary<Guid, CancellationTokenSource>();
-
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
-        public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
-        {
-            add { replicationInformer.FailoverStatusChanged += value; }
-            remove { replicationInformer.FailoverStatusChanged -= value; }
-        }
+		/*public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		{
+			add { replicationInformer.FailoverStatusChanged += value; }
+			remove { replicationInformer.FailoverStatusChanged -= value; }
+		}
+		
+		/// <summary>
+		/// Allow access to the replication informer used to determine how we replicate requests
+		/// </summary>
+		public IFileSystemClientReplicationInformer ReplicationInformer
+		{
+			get { return replicationInformer; }
+		}
+		 */
 
 		public ProfilingInformation ProfilingInformation { get; private set; }
-
-        /// <summary>
-        /// Allow access to the replication informer used to determine how we replicate requests
-        /// </summary>
-        public IFileSystemClientReplicationInformer ReplicationInformer
-        {
-            get { return replicationInformer; }
-        }
 
         public OperationCredentials PrimaryCredentials
         {
@@ -80,10 +76,9 @@ namespace Raven.Client.Counters
                 ApiKey = apiKey;
 
 				convention = new CounterConvention();
-                replicationInformer = new RavenFileSystemReplicationInformer(convention, JsonRequestFactory);
-                readStripingBase = replicationInformer.GetReadStripingBase();
-
-	            notifications = null;
+                //replicationInformer = new RavenFileSystemReplicationInformer(convention, JsonRequestFactory);
+                //readStripingBase = replicationInformer.GetReadStripingBase();
+	            //todo: implement remote counter changes
                 //notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
                                
                 InitializeSecurity();
@@ -202,6 +197,40 @@ namespace Raven.Client.Counters
                     "If you are running inside IIS, make sure to enable Windows authentication.");
             }
         }
+
+		public StatsClient Stats
+		{
+			get
+			{
+				return new StatsClient(this, Convention);
+			}
+		}
+
+		public ReplicationClient Replication
+		{
+			get { return new ReplicationClient(this, Convention); }
+		}
+
+		public CounterClient Counter
+		{
+			get
+			{
+				return new CounterClient(this, Convention);
+			}
+		}
+
+		public AdminClient Admin
+		{
+			get
+			{
+				return new AdminClient(this, Convention);
+			}
+		}
+
+		public CounterConvention Convention
+		{
+			get { return Convention; }
+		}
 
         public class StatsClient : IHoldProfilingInformation
         {
@@ -339,7 +368,6 @@ namespace Raven.Client.Counters
 					//throw e.TryThrowBetterError();
 				}
 			}
-			//TODO: implement
         }
 
 	    public class CounterClient: IHoldProfilingInformation
@@ -567,7 +595,7 @@ namespace Raven.Client.Counters
                 }
             }
 
-            public async Task<List<CounterStorageStats>> GetCounterStoragesStats() //TODO: change to CounterStoragesStats after it's implemented
+            public async Task<List<CounterStorageStats>> GetCounterStoragesStats()
             {
 				var requestUriString = string.Format("{0}/counterStorage/stats", serverUrl);
 
@@ -602,10 +630,11 @@ namespace Raven.Client.Counters
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode == HttpStatusCode.Conflict)
-						throw new InvalidOperationException("Cannot create counter storage with the name '" + newCounterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e).TryThrowBetterError();
+					//if (e.StatusCode == HttpStatusCode.Conflict)
+					//	throw new InvalidOperationException("Cannot create counter storage with the name '" + newCounterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e)
+					//		.TryThrowBetterError();
 
-					throw;
+					throw e;
 				}
 				catch (Exception e)
 				{
@@ -657,8 +686,8 @@ namespace Raven.Client.Counters
 
         public void Dispose()
         {
-            if (notifications != null)
-                notifications.Dispose();
+            //if (notifications != null)
+            //    notifications.Dispose();
         }
     }
 }
