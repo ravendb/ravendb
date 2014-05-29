@@ -67,6 +67,31 @@ namespace Raven.Database.Counters
             get { return metricsCounters; }
         }
 
+	    public CounterStorageStats CreateStats()
+	    {
+	        using (var reader = CreateReader())
+	        {
+	            var stats = new CounterStorageStats()
+	            {
+	                Name = CounterStorageName,
+                    Url = CounterStorageUrl,
+	                CountersCount = reader.GetCountersCount(),
+                    LastCounterEtag = LastEtag,
+                    ApproximateTaskCount = ReplicationTask.GetActiveTasksCount(),
+                    CounterStorageSizeOnDiskInMB = ConvertBytesToMBs(GetCounterStorageSizeOnDisk()),
+                    GroupsCount =  reader.GetGroupsCount(),
+                    ServersCount = reader.GetServersCount()
+	            };
+	            return stats;
+	        }
+	    }
+
+
+        private static decimal ConvertBytesToMBs(long bytes)
+        {
+            return Math.Round(bytes / 1024.0m / 1024.0m, 2);
+        }
+
         /// <summary>
         ///     Get the total size taken by the counters storage on the disk.
         ///     This explicitly does NOT include in memory data.
@@ -78,7 +103,7 @@ namespace Raven.Database.Counters
         {
             if (storageEnvironment.Options is Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
             {
-                Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions directoryStorageOptions = storageEnvironment.Options as Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
+                var directoryStorageOptions = storageEnvironment.Options as Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
                 string[] counters = Directory.GetFiles(directoryStorageOptions.BasePath, "*.*", SearchOption.AllDirectories);
                 long totalCountersSize = counters.Sum(file =>
                 {
@@ -98,19 +123,16 @@ namespace Raven.Database.Counters
 
                 return totalCountersSize;
             }
-            else
-            {
                 return 0;
-            }
         }
 
         //todo: consider implementing metricses for each counter, not only for each counter storage
-	    public CountersMetrics CreateMetrics()
+	    public CountersStorageMetrics CreateMetrics()
 	    {
             var metrics = metricsCounters;
             var percentiles = new double[]{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999};
 
-            return new CountersMetrics
+            return new CountersStorageMetrics
             {
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 Resets = metrics.Resets.GetMeterData(3),
@@ -251,6 +273,21 @@ namespace Raven.Database.Counters
 				metadata = transaction.State.GetTree(transaction, "$metadata");
             }
 
+		    public long GetCountersCount()
+		    {
+		        return countersEtags.State.EntriesCount;
+		    }
+
+            public long GetGroupsCount()
+            {
+                return countersGroups.State.EntriesCount;
+            }
+
+            public long GetServersCount()
+            {
+                return serverNamesToIds.State.EntriesCount;
+            }
+
 			public IEnumerable<string> GetCounterNames(string prefix)
 			{
 				using (var it = countersEtags.Iterate())
@@ -276,7 +313,7 @@ namespace Raven.Database.Counters
 						yield return new Group
 						{
 							Name = it.CurrentKey.ToString(),
-							NumOfCounters = it.CreateReaderForCurrent().ReadLittleEndianInt64()
+							NumOfCounters = it.CreateReaderForCurrent().ReadBigEndianInt64()
 						};
 					} while (it.MoveNext());
 				}
@@ -312,7 +349,7 @@ namespace Raven.Database.Counters
 					return result;
 				}
 			}
-
+            
             public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
 		    {
                 var buffer = new byte[sizeof(long)];
@@ -592,7 +629,20 @@ namespace Raven.Database.Counters
 
 				if (result == null && !IsCounterAlreadyExists(counter)) //if it's a new counter
 				{
-					countersGroups.Increment(groupKeySlice, 1);
+				    var curGroupReadResult = countersGroups.Read(groupKeySlice);
+                    long currentValue = 0;
+				    if (curGroupReadResult != null)
+				    {
+                        
+                        currentValue = curGroupReadResult.Reader.ReadBigEndianInt64();
+                        countersGroups.Add(groupKeySlice, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
+				    }
+				    else
+				    {
+                        countersGroups.Add(groupKeySlice, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
+				    }
+
+					//countersGroups.Increment(groupKeySlice, 1); todo: consider return that after pavel's fix will be added
 				}
 
 				setStoreBuffer(result);

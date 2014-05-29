@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Counters;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -151,5 +153,16 @@ namespace Raven.Database.Counters.Controllers
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
+
+        [Route("counters/{counterName}/replications/stats")]
+        [HttpGet]
+        public HttpResponseMessage ReplicationStats()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK,
+                new CounterStorageReplicationStats()
+                {
+                    Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
+                });
+        }
     }
 }
