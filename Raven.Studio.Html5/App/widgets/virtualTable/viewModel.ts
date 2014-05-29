@@ -546,8 +546,8 @@ class ctor {
             this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
             this.items.invalidateCache(); // Causes the cache of items to be discarded.
             this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            this.onWindowHeightChanged(); // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
         });
-
         app.showDialog(deleteDocsVm);
     }
 

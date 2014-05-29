@@ -76,11 +76,11 @@ class documents extends viewModelBase {
                 if (!!curCollection) {
                     if (curCollection.documentCount() == 1) {
                         this.collections.remove(curCollection);
+                        this.selectCollection(this.allDocumentsCollection);
                     } else {
                         curCollection.documentCount(curCollection.documentCount() - 1);
+                       
                     }
-
-                    this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() - 1);
                 }
             }
         });

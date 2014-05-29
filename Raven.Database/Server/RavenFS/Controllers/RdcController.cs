@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
@@ -50,7 +51,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     MinimumCompatibleAppVersion = rdcVersion.MinimumCompatibleAppVersion
                 };
 
-                return this.GetMessageWithObject(stats, HttpStatusCode.OK);
+                return this.GetMessageWithObject(stats, HttpStatusCode.OK)
+                           .WithNoCache();
 			}
 		}
 
@@ -86,7 +88,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", filename, signatureManifest.Signatures.Count);
 
-                return this.GetMessageWithObject(signatureManifest, HttpStatusCode.OK);
+                return this.GetMessageWithObject(signatureManifest, HttpStatusCode.OK)
+                           .WithNoCache();
 			}
 		}
 	}
