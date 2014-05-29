@@ -91,7 +91,7 @@ namespace Raven.Database.Prefetching
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
 			var sw = Stopwatch.StartNew();
-			int prefetchingQueueSize;
+			int prefetchingQueueSizeInBytes;
 			var prefetchDocumentsTimingLimit = autoTuner.BatchLoadFromDiskAverageTiming * 2;
 			do
 			{
@@ -111,13 +111,11 @@ namespace Raven.Database.Prefetching
 				if (docsLoaded) 
 					etag = result[result.Count - 1].Etag;
 
-				prefetchingQueueSize = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
-			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
-						autoTuner.CurrentlyUsedBatchSizes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB)
+				prefetchingQueueSizeInBytes = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
+			 } while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
+						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024))
 						//&& (ulong)sw.ElapsedMilliseconds < prefetchDocumentsTimingLimit
-				);
-			
-					 (prefetchingQueueSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
+				      );
 			
 			return result;
 		}
