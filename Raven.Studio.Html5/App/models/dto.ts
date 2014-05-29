@@ -745,3 +745,8 @@ enum ImportItemType {
     Transformers = 0x8,
     RemoveAnalyzers = 0x8000
 }
+
+interface changesApiEventDto {
+    Type: string;
+    Value: any;
+}
