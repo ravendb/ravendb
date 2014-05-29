@@ -307,9 +307,9 @@ class changesApi {
         var isOwner = this.isOwner(queue);
         if (this.isOwnerDead(queue)) {
             // Owner is dead! Taking ownership.
-            this.connect();
             this.takeOwnership(queue);
             this.storeEventQueue(queue);
+            this.connect();
         }
         else if (isExpectedToBeOwner && isOwner) {
             // We're the owner. Record a heartbeat and move on.
