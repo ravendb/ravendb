@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,15 +8,11 @@ using System.Text;
 
 namespace Raven.Client.FileSystem
 {
-    public class IRemoteObject
+    public class FileHeader
     {
+        public RavenJObject Metadata { get; private set; }
 
-    }
-
-    public class RemoteFile : IRemoteObject
-    {
-        public RemoteDirectory Directory { get; private set; }
-
+        public string Path { get; private set; }
         public string FullName { get; private set; }
         public string Extension { get; private set; }
 
@@ -23,7 +20,7 @@ namespace Raven.Client.FileSystem
 
         public DateTimeOffset LastModified { get; private set; }
 
-        public Etag Etag { get; private set; }
-
+        public Etag Etag { get; private set; }       
     }
+
 }

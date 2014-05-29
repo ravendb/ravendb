@@ -12,8 +12,15 @@ namespace Raven.Client.FileSystem.Listeners
         /// <summary>
         /// Invoked before the delete request is sent to the server.
         /// </summary>
-        /// <param name="instance">The object to delete</param>
-        /// <param name="metadata">The object metadata</param>
-        void BeforeDelete(IRemoteObject instance, RavenJObject metadata);
+        /// <param name="instance">The file to delete</param>
+        /// <param name="metadata">The metadata</param>
+        void BeforeDelete(FileHeader instance, RavenJObject metadata);
+
+        /// <summary>
+        /// Invoked before the delete request is sent to the server.
+        /// </summary>
+        /// <param name="instance">The directory to delete</param>
+        /// <param name="metadata">The metadata</param>
+        void BeforeDelete(DirectoryHeader instance, RavenJObject metadata);
     }
 }

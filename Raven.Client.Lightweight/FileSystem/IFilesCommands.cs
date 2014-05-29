@@ -18,12 +18,10 @@ namespace Raven.Client.FileSystem
         /// <value>The operations headers.</value>
         NameValueCollection OperationsHeaders { get; set; }
 
-
         /// <summary>
         /// Primary credentials for access. Will be used also in replication context - for failovers
         /// </summary>
         OperationCredentials PrimaryCredentials { get; }
-
 
         /// <summary>
         /// Admin operations for current filesystem
@@ -60,22 +58,17 @@ namespace Raven.Client.FileSystem
 
         
 
-        IEnumerable<RemoteDirectory> GetDirectories(string path);
-        IEnumerable<RemoteDirectory> GetDirectories(RemoteDirectory path);
+        IEnumerable<DirectoryHeader> GetDirectories(string path);
+        IEnumerable<DirectoryHeader> GetDirectories(DirectoryHeader path);
 
-        IEnumerable<RemoteFile> GetFiles(string path);
-        IEnumerable<RemoteFile> GetFiles(RemoteDirectory path);
+        IEnumerable<FileHeader> GetFiles(string path);
+        IEnumerable<FileHeader> GetFiles(DirectoryHeader path);
 
 
         /// <summary>
         /// Retrieve the statistics for the filesystem
         /// </summary>
         FileSystemStats GetStatistics();
-
-        /// <summary>
-        /// Disable all caching within the given scope
-        /// </summary>
-        IDisposable DisableAllCaching();
 
         /// <summary>
         /// Force the database commands to read directly from the master, unless there has been a failover.

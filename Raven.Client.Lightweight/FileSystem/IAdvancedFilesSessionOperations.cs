@@ -33,43 +33,5 @@ namespace Raven.Client.FileSystem
         /// Gets the number of requests for this session
         /// </summary>
         int NumberOfRequests { get; }
-
-
-        /// <summary>
-        /// Evicts the specified remote object from the session.
-        /// Remove the object from the delete queue and stops tracking changes for this object.
-        /// </summary>
-        /// <param name="entity">The remote object.</param>
-        void Evict(IRemoteObject entity);
-
-        /// <summary>
-        /// Clears this instance.
-        /// Remove all remote objects from the delete queue and stops tracking changes for all objects.
-        /// </summary>
-        void Clear();
-
-        /// <summary>
-        /// Gets the metadata for the specified entity.
-        /// If the entity is transient, it will load the metadata from the store
-        /// and associate the current state of the entity with the metadata from the server.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        /// <returns></returns>
-        RavenJObject GetMetadataFor(IRemoteObject instance);
-
-        /// <summary>
-        /// Gets the ETag for the specified entity.
-        /// If the entity is transient, it will load the etag from the store
-        /// and associate the current state of the entity with the etag from the server.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        /// <returns></returns>
-        Etag GetEtagFor(IRemoteObject instance);
-
-        /// <summary>
-        /// Gets a value indicating whether any of the entities tracked by the session has changes.
-        /// </summary>
-        bool HasChanges { get; }
-
     }
 }

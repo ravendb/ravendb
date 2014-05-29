@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,42 +21,31 @@ namespace Raven.Client.FileSystem
         IAsyncAdvancedFilesSessionOperations Advanced { get; }
 
 
-        Task<T> LoadAsync<T>(string path) where T : IRemoteObject;
-        Task<T[]> LoadAsync<T>(IEnumerable<string> paths) where T : IRemoteObject;
-        Task<T[]> LoadAsync<T>(params string[] paths) where T : IRemoteObject;
+        Task<FileHeader> LoadFileAsync(string path);
+        Task<FileHeader> LoadFileAsync(DirectoryHeader directory, string filename);
 
-        /// <summary>
-        /// This version of the create will use the conventions for creation specified for each T type.
-        /// </summary>
-        /// <typeparam name="T">Either a file or a directory</typeparam>
-        /// <param name="directory">The container</param>
-        /// <param name="name">The name of the object</param>
-        /// <returns>The object itself</returns>
-        Task<T> CreateAsync<T>(RemoteDirectory directory, string name) where T : IRemoteObject;
+        Task<FileHeader> LoadFilesAsync(IEnumerable<string> path);
 
-        Task<RemoteFile> CreateAsync(RemoteDirectory directory, string name, CreateFileOptions options, Stream data = null, Etag etag = null);
-        Task<RemoteFile> CreateAsync(string name, CreateFileOptions options, Stream data = null, Etag etag = null);
+        Task<DirectoryHeader> LoadDirectoryAsync(string path);
 
-        /// <summary>
-        /// Marks the specified file for deletion. The file will be deleted when <see cref="IFilesSession.SaveChanges"/> is called.
-        /// </summary>
-        /// <param name="file">The file.</param>
-        void DeleteAsync(RemoteFile file, DeleteFileOptions options);
-
-        /// <summary>
-        /// Marks the specified directory for deletion. The directory will be deleted when <see cref="IFilesSession.SaveChanges"/> is called.
-        /// </summary>
-        /// <param name="file">The file.</param>
-        void DeleteAsync(RemoteDirectory file, DeleteDirectoryOptions options);
+        Task<Stream> DownloadAsync(string path);
+        Task<Stream> DownloadAsync(FileHeader path);
 
 
-        Task WriteAsync(RemoteFile file, Action<Stream> writeAction);
+        Task RegisterUploadAsync(string path, Stream stream, RavenJObject metadata = null, Etag etag = null);
+        Task RegisterUploadAsync(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null);
+        Task RegisterUploadAsync(string path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
+        Task RegisterUploadAsync(FileHeader path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
 
-        Task<Stream> ReadAsync(RemoteFile file);
+        Task RegisterFileDeletionAsync(string path, Etag etag = null);
+        Task RegisterFileDeletionAsync(FileHeader path, Etag etag = null);
 
-        Task<T> RenameAsync<T>(T file, string name) where T : IRemoteObject;
-        Task<T> MoveAsync<T>(T file, RemoteDirectory destination) where T : IRemoteObject;
+        Task RegisterDirectoryDeletionAsync(string path, bool recurse = false);
+        Task RegisterDirectoryDeletionAsync(DirectoryHeader path, bool recurse = false);
 
+        Task RegisterRenameAsync(string sourceFile, string destinationFile);
+        Task RegisterRenameAsync(FileHeader sourceFile, string destinationFile);
+        Task RegisterRenameAsync(FileHeader sourceFile, DirectoryHeader destinationPath, string destinationName);
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>

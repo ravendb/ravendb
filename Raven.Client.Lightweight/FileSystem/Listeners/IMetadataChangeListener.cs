@@ -12,7 +12,7 @@ namespace Raven.Client.FileSystem.Listeners
         /// <summary>
         /// Invoked before the written data is sent to the server.
         /// </summary>
-        /// <param name="instance">The remote object to affect</param>
+        /// <param name="instance">The file to affect</param>
         /// <param name="metadata">The new metadata</param>
         /// <param name="original">The original remote object metadata</param>
         /// <returns>
@@ -20,13 +20,13 @@ namespace Raven.Client.FileSystem.Listeners
         /// Returning false would mean that any request of write to the file would be 
         /// ignored in the current SaveChanges call.
         /// </returns>
-        bool BeforeChange(IRemoteObject instance, RavenJObject metadata, RavenJObject original);
+        bool BeforeChange(FileHeader instance, RavenJObject metadata, RavenJObject original);
 
         /// <summary>
         /// Invoked after the metadata is sent to the server.
         /// </summary>
-        /// <param name="instance">The updated remote object information.</param>
+        /// <param name="instance">The updated file information.</param>
         /// <param name="metadata">The current metadata as stored in the server.</param>
-        void AfterChange(IRemoteObject instance, RavenJObject metadata);
+        void AfterChange(FileHeader instance, RavenJObject metadata);
     }
 }

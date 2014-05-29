@@ -21,13 +21,13 @@ namespace Raven.Client.FileSystem.Listeners
         /// The returning stream will be the data sent to the server, returning null would 
         /// mean that any request of write to the file would be ignored in the current SaveChanges call.
         /// </returns>
-        Stream BeforeWrite(RemoteFile file, Stream data, RavenJObject metadata);
+        Stream BeforeWrite(FileHeader file, Stream data, RavenJObject metadata);
 
         /// <summary>
         /// Invoked after the data was sent to the server.
         /// </summary>
         /// <param name="file">The updated file information.</param>
         /// <param name="metadata">The current metadata as stored in the server.</param>
-        void AfterWrite(RemoteFile file, RavenJObject metadata);
+        void AfterWrite(FileHeader file, RavenJObject metadata);
     }
 }
