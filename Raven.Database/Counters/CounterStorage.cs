@@ -394,6 +394,7 @@ namespace Raven.Database.Counters
 			private byte[] buffer = new byte[0];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
 		    private readonly Reader reader;
+			private readonly int storeBufferLength;
 
 			public Writer(CounterStorage parent, StorageEnvironment storageEnvironment)
 			{
@@ -411,6 +412,8 @@ namespace Raven.Database.Counters
 
 				storeBuffer = new byte[sizeof(long) + //positive
 									   sizeof(long)]; // negative
+
+				storeBufferLength = storeBuffer.Length;
 			}
 
             public Counter GetCounter(string name)
@@ -446,7 +449,7 @@ namespace Raven.Database.Counters
 		            }
 		            else
 		            {
-						result.Reader.Read(storeBuffer, 0, storeBuffer.Length);
+						result.Reader.Read(storeBuffer, 0, storeBufferLength);
 		                delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
 		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
 		            }
