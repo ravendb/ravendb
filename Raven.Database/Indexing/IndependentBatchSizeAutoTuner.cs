@@ -1,13 +1,28 @@
 using System;
 using System.Collections.Generic;
 
+using Raven.Database.Prefetching;
+
 namespace Raven.Database.Indexing
 {
 	public class IndependentBatchSizeAutoTuner : BaseBatchSizeAutoTuner
 	{
-		public IndependentBatchSizeAutoTuner(WorkContext context) : base(context)
+        public IndependentBatchSizeAutoTuner(WorkContext context, PrefetchingUser user)
+            : base(context)
 		{
+		    this.User = user;
+            InstallGauges();
 		}
+
+        public PrefetchingUser User { get; set; }
+
+        private void InstallGauges()
+        {
+            var metricCounters = this.context.MetricsCounters;
+            metricCounters.AddGauge(typeof(IndependentBatchSizeAutoTuner), User + ".InitialNumberOfItems", () => InitialNumberOfItems);
+            metricCounters.AddGauge(typeof(IndependentBatchSizeAutoTuner), User + ".MaxNumberOfItems", () => MaxNumberOfItems);
+            metricCounters.AddGauge(typeof(IndependentBatchSizeAutoTuner), User + ".CurrentNumberOfItems", () => CurrentNumberOfItems);
+        }
 
 		protected override int InitialNumberOfItems
 		{

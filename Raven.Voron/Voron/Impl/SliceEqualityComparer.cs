@@ -8,7 +8,7 @@
 		
 		public unsafe bool Equals(Slice x, Slice y)
 		{
-			return x.Compare(y, NativeMethods.memcmp) == 0;
+			return x.Compare(y) == 0;
 		}
 
 		public int GetHashCode(Slice obj)
@@ -18,7 +18,7 @@
 
 		public unsafe int Compare(Slice x, Slice y)
 		{
-			return x.Compare(y, NativeMethods.memcmp);
+			return x.Compare(y);
 		}
 	}
 }

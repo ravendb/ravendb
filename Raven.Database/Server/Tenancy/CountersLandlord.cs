@@ -113,12 +113,12 @@ namespace Raven.Database.Server.Tenancy
 
 			counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var fs = new CounterStorage(systemDatabase.ServerUrl + "counters/" + tenantId, config);
+				var cs = new CounterStorage(systemDatabase.ServerUrl,tenantId, config);
 				AssertLicenseParameters();
 
 				// if we have a very long init process, make sure that we reset the last idle time for this db.
 				LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-				return fs;
+				return cs;
 			}).ContinueWith(task =>
 			{
 				if (task.Status == TaskStatus.Faulted) // this observes the task exception

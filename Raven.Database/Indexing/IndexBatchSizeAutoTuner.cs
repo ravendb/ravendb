@@ -10,7 +10,16 @@ namespace Raven.Database.Indexing
 		public IndexBatchSizeAutoTuner(WorkContext context)
 			: base(context)
 		{
+            this.InstallGauges();
 		}
+
+        private void InstallGauges()
+        {
+            var metricCounters = this.context.MetricsCounters;
+            metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "InitialNumberOfItems", () => InitialNumberOfItems);
+            metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "MaxNumberOfItems", () => MaxNumberOfItems);
+            metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "CurrentNumberOfItems", () => CurrentNumberOfItems);
+        }
 
 		protected override int InitialNumberOfItems
 		{

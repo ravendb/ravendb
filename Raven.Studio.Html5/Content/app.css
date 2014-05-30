@@ -871,4 +871,16 @@ footer ul {
   cursor: inherit;
   display: block;
 }
+.quotas-settings-form .input-group-addon {
+  min-width: 65px;
+}
+.quotas-settings-form .row {
+  margin-bottom: 5px;
+}
+.quotas-settings-form .control-label {
+  text-align: left;
+}
+.quotas-settings-form input[type=number] {
+  text-align: right;
+}
 /*# sourceMappingURL=app.css.map */

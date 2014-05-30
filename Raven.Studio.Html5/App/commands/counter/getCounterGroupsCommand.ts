@@ -1,6 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import counterGroup = require("models/counterGroup");
+import counterGroup = require("models/counter/counterGroup");
+import counterStorage = require("models/counter/counterStorage");
 import appUrl = require("common/appUrl");
 
 class getCounterGroupsCommand extends commandBase {
@@ -8,14 +9,14 @@ class getCounterGroupsCommand extends commandBase {
     /**
     * @param ownerDb The database the collections will belong to.
     */
-    constructor() {
+    constructor(private storage: counterStorage) {
         super();
 
     }
 
     execute(): JQueryPromise<counterGroup[]> {
-        var selector = (names: string[]) => names.map(n => new counterGroup(n));
-       return this.query("/counters/test/groups", null, appUrl.getSystemDatabase(), selector);
+        var selector = (groups: counterGroupDto[]) => groups.map(g => new counterGroup(g));
+        return this.query("/groups", null, this.storage, selector);
     }
 }
 
