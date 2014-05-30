@@ -15,6 +15,7 @@ namespace Raven.Client.RavenFS
 
 	public enum SynchronizationAction
 	{
+        Enqueue,
 		Start,
 		Finish
 	}
