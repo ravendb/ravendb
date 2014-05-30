@@ -65,7 +65,7 @@ class status extends viewModelBase {
                             FileETag: "",
                             Type: e.Type,
                             Direction: e.SynchronizationDirection
-                        }));
+                        }, this.getActionDescription(e.Action)));
                     }
                     else {
                         console.log(e.FileName + " has been modified");
@@ -166,6 +166,19 @@ class status extends viewModelBase {
         });
 
         return match;
+    }
+
+    private getActionDescription(action: synchronizationAction) {
+        switch (action) {
+            case synchronizationAction.Enqueue:
+                return "Pending";
+            case synchronizationAction.Start:
+                return "Active";
+            case synchronizationAction.Finish:
+                return "Finished";
+            default:
+                return "Unknown";
+        }
     }
 }
 

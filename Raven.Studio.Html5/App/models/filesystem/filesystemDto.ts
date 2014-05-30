@@ -152,6 +152,7 @@ enum synchronizationType {
 }
 
 enum synchronizationAction {
+    Enqueue,
     Start,
     Finish
 }
