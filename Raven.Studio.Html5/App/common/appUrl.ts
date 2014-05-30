@@ -460,9 +460,14 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
-    static forFilesystemUploadFile(fs: filesystem): string {
+    static forFilesystemUploadFile(fs: filesystem, folderName: string): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
-        return "#filesystems/upload?" + filesystemPart;
+        var url = "#filesystems/upload?" + filesystemPart;
+        if (folderName) {
+            url += "&folderName=" + encodeURIComponent(folderName);
+        }
+
+        return url;
     }
 
     /**

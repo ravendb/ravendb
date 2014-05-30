@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -548,15 +548,13 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
+  /*# sourceMappingURL=app.css.map */
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
 #shellHeader .container-fluid {
   padding-right: 15px;
   padding-left: 5px;
-}
-#shellHeader #goToDocInput {
-  width: 10em;
 }
 @media (max-width: 1150px) {
   #shellHeader .nav li a {
@@ -838,6 +836,41 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
+.upload-queue {
+  position: fixed;
+  width: 100%;
+  bottom: 50px;
+  left: 0;
+  height: 300px;
+  z-index: 9999;
+  margin-bottom: 0;
+  background-color: #f5f5f5;
+}
+.upload-queue-min {
+  height: 40px !important;
+}
+.upload-queue-collapsed {
+  padding: 0 0 0 10px;
+}
+.btn-file {
+  position: relative;
+  overflow: hidden;
+}
+.btn-file input[type=file] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 100%;
+  min-height: 100%;
+  font-size: 999px;
+  text-align: right;
+  filter: alpha(opacity=0);
+  opacity: 0;
+  outline: none;
+  background: white;
+  cursor: inherit;
+  display: block;
+}
 .quotas-settings-form .input-group-addon {
   min-width: 65px;
 }
@@ -850,3 +883,4 @@ footer ul {
 .quotas-settings-form input[type=number] {
   text-align: right;
 }
+/*# sourceMappingURL=app.css.map */

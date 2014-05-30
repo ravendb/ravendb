@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Scripts/typings/bootstrap.datetimepicker/bootstrap.datetimepicker.d.ts" />
+﻿/// <reference path="../../Scripts/typings/bootstrap.v3.datetimepicker/bootstrap.v3.datetimepicker.d.ts" />
 
 import composition = require("durandal/composition");
 import moment = require("moment");
@@ -24,9 +24,7 @@ class datePickerBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options = allBindings().datepickerOptions || {};
-        var dpicker = $(element).datetimepicker(options);
-
-
+        var dpicker = $(element).datetimepicker();
 
         $(element).data("DateTimePicker").setMaxDate(moment(new Date()));
         dpicker.on('dp.change', function (ev) {

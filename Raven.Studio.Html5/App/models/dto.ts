@@ -495,6 +495,7 @@ interface conflictVersionsDto {
 
 interface documentBase {
     getId(): string;
+    getUrl(): string;
     getDocumentPropertyNames(): Array<string>;
 }
 

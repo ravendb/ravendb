@@ -125,6 +125,13 @@ interface synchronizationDestinationDto {
     FileSystem: string;
 }
 
+interface folderNodeDto {
+    key: string;
+    title: string;
+    isLazy: boolean;
+    isFolder: boolean
+}
+
 interface synchronizationUpdateNotification {
     FileName: string;
     DestinationFileSystemUrl: string;

@@ -232,6 +232,7 @@ interface String {
     hashCode: () => number;
     replaceAll: (find, replace) => string;
     reverse: (input) => string;
+    count: (input) => number;
 }
 
 String.prototype.hashCode = function () {
@@ -256,6 +257,14 @@ String.prototype.reverse = (input: string) => {
     }
     return chars.reverse().join('');
 };
+
+String.prototype.count = function (regex: string) {
+    var re = new RegExp(regex, 'g');
+    var results = this.match(re);
+
+    return results ? results.length : 0;
+}
+
 
 // TODO: this should really be in its own file, similiar to common/aceEditorBindingHandler
 ko.bindingHandlers['slideVisible'] = {
