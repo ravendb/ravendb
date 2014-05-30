@@ -5,10 +5,15 @@ class file implements documentBase {
     Size: string;
     LastModified: string;
     directory: string;
+
     __metadata: fileMetadata;
 
     constructor(dto?: filesystemFileHeaderDto, excludeDirectoryInId?: boolean) {
         if (dto) {
+            if (dto.Name && dto.Name[0] === "/") {
+                dto.Name = dto.Name.replace("/", "");
+            }
+
             if (excludeDirectoryInId) {
                 this.id = dto.Name.substring(dto.Name.lastIndexOf("/") + 1);
             }
@@ -28,6 +33,10 @@ class file implements documentBase {
 
     getId() {
         return this.id;
+    }
+
+    getUrl() {
+        return this.directory ? this.directory + "/" +this.id : this.id;
     }
 
     getDocumentPropertyNames(): Array<string> {

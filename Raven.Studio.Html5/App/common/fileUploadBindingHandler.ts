@@ -49,8 +49,8 @@ class fileUploadBindingHandler {
                 for (var i = 0; i < files.length; i++) {
                     var file = files[i];
                     var guid = system.guid();
-                    var directory = options.directory() ? options.directory() +"/" : ""
-                    var item = new uploadItem(guid, directory+file.name, "Queued", context.activeFilesystem());
+                    var directory = options.directory() ? options.directory() : ""
+                    var item = new uploadItem(guid, directory+"/"+file.name, "Queued", context.activeFilesystem());
                     options.uploads.push(item);
 
                     new uploadFileToFilesystemCommand(file, directory, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)

@@ -17,7 +17,7 @@ class uploadFileToFilesystemCommand extends commandBase {
             this.reportInfo("File " + this.source.name + "queued for upload...");
         }
 
-        var fileName = encodeURIComponent(this.directory + "/" + this.source.name);
+        var fileName = this.directory +"/"+ this.source.name;
         var url = '/files?name=' + fileName + '&uploadId=' + this.uploadId;
 
         var customHeaders = {

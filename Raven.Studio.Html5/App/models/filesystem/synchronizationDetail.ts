@@ -18,6 +18,10 @@
         return this.fileName;
     }
 
+    getUrl() {
+        return this.getId();
+    }
+
     getDocumentPropertyNames(): Array<string> {
         return ["Id", "DestinationUrl", "Type", "Status"];
     }
