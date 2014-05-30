@@ -21,7 +21,14 @@ import changesApi = require("common/changesApi");
 
 class status extends viewModelBase {
 
-    outgoingActivity = ko.observableArray<synchronizationDetail>();
+    activity = ko.observableArray<synchronizationDetail>();
+    outgoingActivity = ko.computed(() => {
+        return ko.utils.arrayFilter(this.activity(), (item) => { return item.Direction === synchronizationDirection.Outgoing; });
+    });
+    incomingActivity = ko.computed(() => {
+        return ko.utils.arrayFilter(this.activity(), (item) => { return item.Direction === synchronizationDirection.Incoming; });
+    });
+
     isOutgoingActivityVisible = ko.computed(() => true);
 
     incomingActivityPagedList = ko.observable<pagedList>();
@@ -49,35 +56,27 @@ class status extends viewModelBase {
         this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
 
-            switch (e.SynchronizationDirection) {
-                case synchronizationDirection.Outgoing:
-                    switch (e.Action) {
-                        case synchronizationAction.Start:
-                            if (!this.outgoingContains(e)) {
-                                this.outgoingActivity.push(new synchronizationDetail({
-                                    FileName: e.FileName,
-                                    DestinationUrl: e.DestinationFileSystemUrl,
-                                    FileETag: "",
-                                    Type: e.Type
-                                }));
-                            }
-                            else {
-                                console.log(e.FileName + " has been modified");
-                            }
-                            break;
-                        case synchronizationAction.Finish:
-                            console.log(e.FileName + " sync has finished");
-                            setTimeout(() => this.outgoingActivity.remove(item => { return item.fileName === e.FileName; }), 1000);
-                            break;
-                        default:
-                            console.error("unknown notification action");
+            switch (e.Action) {
+                case synchronizationAction.Start:
+                    if (!this.activityContains(e)) {
+                        this.activity.push(new synchronizationDetail({
+                            FileName: e.FileName,
+                            DestinationUrl: e.DestinationFileSystemUrl,
+                            FileETag: "",
+                            Type: e.Type,
+                            Direction: e.SynchronizationDirection
+                        }));
+                    }
+                    else {
+                        console.log(e.FileName + " has been modified");
                     }
                     break;
-                case synchronizationDirection.Incoming:
-                    console.log("incomming notification");
+                case synchronizationAction.Finish:
+                    console.log(e.FileName + " sync has finished");
+                    setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 1000);
                     break;
                 default:
-                    console.error("unknown notification direction");
+                    console.error("unknown notification action");
             }
         });
 
@@ -161,14 +160,13 @@ class status extends viewModelBase {
         }
     }
 
-    private outgoingContains(e: synchronizationUpdateNotification) {
-        var match = ko.utils.arrayFirst(this.outgoingActivity(), (item) =>  {
+    private activityContains(e: synchronizationUpdateNotification) {
+        var match = ko.utils.arrayFirst(this.activity(), (item) =>  {
             return item.fileName === e.FileName;
         });
 
         return match;
     }
-
 }
 
 export = status;

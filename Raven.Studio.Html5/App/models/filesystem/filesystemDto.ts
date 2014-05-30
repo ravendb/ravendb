@@ -11,6 +11,7 @@ interface filesystemSynchronizationDetailsDto {
     FileETag: string;
     DestinationUrl: string;
     Type: filesystemSynchronizationType;
+    Direction: synchronizationDirection;
 }
 
 interface filesystemMetricsHistogramDataDto {
@@ -139,7 +140,7 @@ interface synchronizationUpdateNotification {
     SourceFileSystemUrl: string;
     Type: filesystemSynchronizationType;
     Action: synchronizationAction;
-    SynchronizationDirection: synchronizationDirection
+    SynchronizationDirection: synchronizationDirection;
 }
 
 enum synchronizationType {

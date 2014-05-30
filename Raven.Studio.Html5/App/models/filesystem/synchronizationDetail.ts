@@ -5,7 +5,8 @@
     DestinationUrl: string;
     Type: filesystemSynchronizationType;
     TypeDescription: string;
-    Status: string;   
+    Status: string;
+    Direction: synchronizationDirection;   
 
     constructor(dto: filesystemSynchronizationDetailsDto, status?: string) {
         this.fileName = dto.FileName;
@@ -14,6 +15,7 @@
         this.Type = dto.Type;
         this.TypeDescription = synchronizationDetail.getTypeDescription(dto.Type);
         this.Status = status;
+        this.Direction = dto.Direction;
     }
 
     getId() {
