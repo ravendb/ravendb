@@ -21,7 +21,7 @@ span.dynatree-active a {
 .dynatree-ico-ef span.dynatree-icon {
     background-image:none;
     height: 35px;
-    width: 20px
+    width: 25px
 }
 
 /* Expanded Folder */
@@ -39,8 +39,7 @@ span.dynatree-active a {
 .dynatree-ico-cf span.dynatree-icon {
     background-image:none;
     height: 35px;
-    width: 20px;
-    text-align:center;
+    width: 25px;
 }
 /* Expanded Folder */
 .dynatree-ico-cf span.dynatree-icon:before
