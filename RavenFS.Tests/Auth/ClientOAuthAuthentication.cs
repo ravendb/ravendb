@@ -126,7 +126,7 @@ namespace RavenFS.Tests.Auth
 
 			Assert.Equal(0, stats.Count); // 0 because our fs aren't active
 
-			using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, "testName"))
+            using (var createdFsClient = new RavenFileSystemClient(client.Url, "testName"))
 			{
 				await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
 			}

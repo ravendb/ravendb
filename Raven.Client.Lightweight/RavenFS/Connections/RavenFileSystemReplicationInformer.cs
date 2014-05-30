@@ -122,7 +122,7 @@ namespace Raven.Client.RavenFS.Connections
 			{
 				if (firstTime)
 				{
-					var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
+                    var serverHash = ServerHash.GetServerHash(serverClient.Url);
 
 					var destinations = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (destinations != null)

@@ -56,13 +56,6 @@ namespace Raven.Client.FileSystem
         /// </summary>
         IFilesCommands ForFileSystem(string filesystem);
 
-        
-
-        IEnumerable<DirectoryHeader> GetDirectories(string path);
-        IEnumerable<DirectoryHeader> GetDirectories(DirectoryHeader path);
-
-        IEnumerable<FileHeader> GetFiles(string path);
-        IEnumerable<FileHeader> GetFiles(DirectoryHeader path);
 
 
         /// <summary>
@@ -79,20 +72,7 @@ namespace Raven.Client.FileSystem
 
     public interface IFilesAdminCommands
     {
-        /// <summary>
-        /// Disables all replication
-        /// </summary>
-        void StopReplication();
 
-        /// <summary>
-        /// Enables replication
-        /// </summary>
-        void StartReplication();
-
-        /// <summary>
-        /// Get the replication status
-        /// </summary>
-        string GetReplicationStatus();
     }
 
     public interface IFilesConfigurationCommands

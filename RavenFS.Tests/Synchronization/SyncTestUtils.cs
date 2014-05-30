@@ -27,7 +27,7 @@ namespace RavenFS.Tests.Synchronization
             source.Config.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
             {
                 FileSystem = x.FileSystemName,
-                ServerUrl = x.ServerUrl
+                ServerUrl = x.Url
             }).ToArray()).Wait();
 		}
 

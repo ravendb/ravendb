@@ -215,7 +215,7 @@ namespace RavenFS.Tests.Synchronization
 			// start synchronization again to force confirmation by source
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 
-			var shouldBeNull = await sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.ServerUrl));
+            var shouldBeNull = await sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.Url));
 
 			Assert.Null(shouldBeNull);
 		}
@@ -239,7 +239,7 @@ namespace RavenFS.Tests.Synchronization
 			var pendingSynchronizations = await sourceClient.Synchronization.GetPendingAsync();
 
 			Assert.Equal(1, pendingSynchronizations.TotalCount);
-			Assert.Contains(destinationClient.ServerUrl, pendingSynchronizations.Items[0].DestinationUrl);
+            Assert.Contains(destinationClient.Url, pendingSynchronizations.Items[0].DestinationUrl);
 		}
 
 		[Fact]

@@ -15,13 +15,13 @@ namespace Raven.Client.RavenFS.Extensions
              var result = new SynchronizationDestination()
              {
                  FileSystem = self.FileSystemName,
-                 ServerUrl = self.ServerUrl,
+                 ServerUrl = self.Url,
                  ApiKey = self.ApiKey
              };
 
-             if (self.Credentials != null)
+             if (self.PrimaryCredentials != null)
              {
-                var networkCredential = self.Credentials as NetworkCredential;
+                 var networkCredential = self.PrimaryCredentials.Credentials as NetworkCredential;
 
                  if (networkCredential != null)
                  {
@@ -31,7 +31,7 @@ namespace Raven.Client.RavenFS.Extensions
                  }
                  else
                  {
-                     throw new InvalidOperationException("Expected NetworkCredential object while get: " + self.Credentials);
+                     throw new InvalidOperationException("Expected NetworkCredential object while get: " + self.PrimaryCredentials.Credentials);
                  }
              }
 

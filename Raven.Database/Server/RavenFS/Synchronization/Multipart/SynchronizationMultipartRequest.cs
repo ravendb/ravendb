@@ -52,7 +52,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			if (sourceStream.CanRead == false)
 				throw new Exception("Stream does not support reading");
 
-			request = destination.JsonRequestFactory.CreateHttpJsonRequest(
+			request = destination.RequestFactory.CreateHttpJsonRequest(
                                     new CreateHttpJsonRequestParams(this, destination.FileSystemUrl + "/synchronization/MultipartProceed",
 					                                                "POST", destination.Credentials, destination.Convention));
 
