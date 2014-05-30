@@ -22,12 +22,10 @@ namespace Voron.Tests.Trees
 					tx.State.Root.Add(string.Format("{0}8", i), new MemoryStream(new byte[1228]));
 					tx.State.Root.Add(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
 
-					var rootPageNumber = tx.State.Root.State.RootPageNumber;
-					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
-					Assert.Equal(rootPage.NumberOfEntries, 9 * (i + 1));
+					Assert.Equal(tx.State.Root.State.EntriesCount, 9 * (i + 1));
 				}
 
-				RenderAndShow(tx, 1);
+				//RenderAndShow(tx, 1);
 
 				for (int i = 79; i >= 0; --i)
 				{
@@ -41,9 +39,7 @@ namespace Voron.Tests.Trees
 					tx.State.Root.Delete(string.Format("{0}8", i));
 					tx.State.Root.Delete(string.Format("{0}9", i));
 
-					var rootPageNumber = tx.State.Root.State.RootPageNumber;
-					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
-					Assert.Equal(rootPage.NumberOfEntries, 9 * i);
+					Assert.Equal(tx.State.Root.State.EntriesCount, 9 * i);
 				}
 
 				tx.Commit();
@@ -67,12 +63,10 @@ namespace Voron.Tests.Trees
 					tx.State.Root.Add(string.Format("{0}8", i), new MemoryStream(new byte[1228]));
 					tx.State.Root.Add(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
 
-					var rootPageNumber = tx.ReadTree(tx.State.Root.Name).State.RootPageNumber;
-					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
-					Assert.Equal(rootPage.NumberOfEntries, 9 * (i + 1));
+					Assert.Equal(tx.State.Root.State.EntriesCount, 9 * (i + 1));
 				}
 
-				RenderAndShow(tx, 1);
+				//RenderAndShow(tx, 1);
 
 				for (int i = 0; i < 80; ++i)
 				{
@@ -86,9 +80,7 @@ namespace Voron.Tests.Trees
 					tx.State.Root.Add(string.Format("{0}2", i), new MemoryStream(new byte[1228]));
 					tx.State.Root.Add(string.Format("{0}1", i), new MemoryStream(new byte[8192]));
 
-					var rootPageNumber = tx.ReadTree(tx.State.Root.Name).State.RootPageNumber;
-					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
-					Assert.Equal(rootPage.NumberOfEntries, 9 * 80);
+					Assert.Equal(tx.State.Root.State.EntriesCount, 9 * 80);
 				}
 
 				tx.Commit();
