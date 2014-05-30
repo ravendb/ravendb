@@ -49,20 +49,35 @@ class status extends viewModelBase {
         this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
 
-            //outgoing
-            if (e.SynchronizationDirection == synchronizationDirection.Outgoing) {
-                this.outgoingActivity.push(new synchronizationDetail({
-                    FileName: e.FileName,
-                    DestinationUrl: e.DestinationFileSystemUrl,
-                    FileETag: "",
-                    Type: e.Type
-                }));
-            }
-            else {
-                var incomingGrid = this.getIncomingActivityTable();
-                if (incomingGrid) {
-                    incomingGrid.loadRowData();
-                }
+            switch (e.SynchronizationDirection) {
+                case synchronizationDirection.Outgoing:
+                    switch (e.Action) {
+                        case synchronizationAction.Start:
+                            if (!this.outgoingContains(e)) {
+                                this.outgoingActivity.push(new synchronizationDetail({
+                                    FileName: e.FileName,
+                                    DestinationUrl: e.DestinationFileSystemUrl,
+                                    FileETag: "",
+                                    Type: e.Type
+                                }));
+                            }
+                            else {
+                                console.log(e.FileName + " has been modified");
+                            }
+                            break;
+                        case synchronizationAction.Finish:
+                            console.log(e.FileName + " sync has finished");
+                            setTimeout(() => this.outgoingActivity.remove(item => { return item.fileName === e.FileName; }), 1000);
+                            break;
+                        default:
+                            console.error("unknown notification action");
+                    }
+                    break;
+                case synchronizationDirection.Incoming:
+                    console.log("incomming notification");
+                    break;
+                default:
+                    console.error("unknown notification direction");
             }
         });
 
@@ -145,6 +160,15 @@ class status extends viewModelBase {
             this.modelPollingStart();
         }
     }
+
+    private outgoingContains(e: synchronizationUpdateNotification) {
+        var match = ko.utils.arrayFirst(this.outgoingActivity(), (item) =>  {
+            return item.fileName === e.FileName;
+        });
+
+        return match;
+    }
+
 }
 
 export = status;
