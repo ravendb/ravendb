@@ -14,12 +14,12 @@ namespace Raven.Client.Connection.Async
         where TConvention : Convention
         where TReplicationInformer : IReplicationInformerBase
     {
-        public AsyncServerClientBase(string url, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
+        public AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
                                      Guid? sessionId, NameValueCollection operationsHeaders)
         {
             this.WasDisposed = false;
 
-            this.Url = url;
+            this.ServerUrl = serverUrl.TrimEnd('/'); 
             this.Convention = convention;
             this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             this.RequestFactory = jsonRequestFactory;
@@ -37,9 +37,14 @@ namespace Raven.Client.Connection.Async
             set;
         }
 
-        public virtual string Url
+        public virtual string ServerUrl
         {
             get; protected set;
+        }
+
+        public abstract string BaseUrl
+        {
+            get;
         }
 
         public TConvention Convention
@@ -73,15 +78,10 @@ namespace Raven.Client.Connection.Async
         protected virtual NameValueCollection OperationsHeaders
         {
             get;
-            set;
+            private set;
         }
 
         #region Execute with replication
-
-        protected virtual string GetOperationUrl()
-        {
-            return this.Url;
-        }
 
         protected abstract TReplicationInformer GetReplicationInformer();
 
@@ -97,7 +97,7 @@ namespace Raven.Client.Connection.Async
         private int requestCount;
         private volatile bool currentlyExecuting;
 
-        internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
+        internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation, Func<string> baseUrlGetter = null)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
             if (currentlyExecuting && Convention.AllowMultipuleAsyncOperations == false)
@@ -106,10 +106,14 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return await ReplicationInformer.ExecuteWithReplicationAsync(method, GetOperationUrl(), this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStrippingBase.Value, operation)
+                string operationUrl = this.BaseUrl;
+                if (baseUrlGetter != null)
+                    operationUrl = baseUrlGetter();
+
+                return await ReplicationInformer.ExecuteWithReplicationAsync(method, operationUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStrippingBase.Value, operation)
                                                 .ConfigureAwait(false);
             }
-            catch( AggregateException e)
+            catch (AggregateException e)
             {
                 var singleException = e.ExtractSingleInnerException();
                 if (singleException != null)
@@ -123,14 +127,15 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation)
+
+        internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation, Func<string> baseUrlGetter = null)
         {
             // Convert the Func<string, Task> to a Func<string, Task<object>>
             return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
             {
                 t.AssertNotFailed();
                 return null;
-            }));
+            }), baseUrlGetter);
         }
 
         #endregion

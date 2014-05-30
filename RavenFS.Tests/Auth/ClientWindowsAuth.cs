@@ -120,7 +120,7 @@ namespace RavenFS.Tests.Auth
                  }
             }, "testName");
 
-            using (var createdFsClient = new RavenFileSystemClient(client.Url, "testName", new NetworkCredential(username, password, domain)))
+            using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, "testName", new NetworkCredential(username, password, domain)))
 	        {
 		        await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
 	        }

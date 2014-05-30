@@ -594,7 +594,7 @@ namespace RavenFS.Tests
                  }
             }, newFileSystemName);
 
-            using (var createdFsClient = new RavenFileSystemClient(client.Url, newFileSystemName))
+            using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, newFileSystemName))
             {
                 await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
             }

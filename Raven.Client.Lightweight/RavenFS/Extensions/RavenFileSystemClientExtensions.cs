@@ -15,7 +15,7 @@ namespace Raven.Client.RavenFS.Extensions
              var result = new SynchronizationDestination()
              {
                  FileSystem = self.FileSystemName,
-                 ServerUrl = self.Url,
+                 ServerUrl = self.ServerUrl,
                  ApiKey = self.ApiKey
              };
 

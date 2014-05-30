@@ -35,14 +35,14 @@ namespace Raven.Client.RavenFS.Connections
         {
             lock (this)
             {
-                var serverHash = ServerHash.GetServerHash(serverClient.FileSystemUrl);
+                var serverHash = ServerHash.GetServerHash(serverClient.BaseUrl);
 
                 JsonDocument document = null;
 
                 try
                 {
                     var config = serverClient.Config.GetConfig<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
-                    failureCounts[serverClient.FileSystemUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+                    failureCounts[serverClient.BaseUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)
                     {
@@ -122,7 +122,7 @@ namespace Raven.Client.RavenFS.Connections
 			{
 				if (firstTime)
 				{
-                    var serverHash = ServerHash.GetServerHash(serverClient.Url);
+                    var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
 
 					var destinations = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (destinations != null)

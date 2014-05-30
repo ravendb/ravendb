@@ -19,7 +19,7 @@ namespace RavenFS.Tests.Synchronization
 		    var destination = new SynchronizationDestination()
 		    {
 		        FileSystem = destinationClient.FileSystemName,
-                ServerUrl = destinationClient.Url
+                ServerUrl = destinationClient.ServerUrl
 		    };
 
 		    await sourceClient.Config.SetDestinationsConfig(destination);

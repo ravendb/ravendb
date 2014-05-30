@@ -53,7 +53,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 				throw new Exception("Stream does not support reading");
 
 			request = destination.RequestFactory.CreateHttpJsonRequest(
-                                    new CreateHttpJsonRequestParams(this, destination.FileSystemUrl + "/synchronization/MultipartProceed",
+                                    new CreateHttpJsonRequestParams(this, destination.BaseUrl + "/synchronization/MultipartProceed",
 					                                                "POST", destination.Credentials, destination.Convention));
 
             // REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 

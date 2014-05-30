@@ -18,7 +18,7 @@ namespace RavenFS.Tests
 
             WebClient = new WebClient()
             {
-                BaseAddress = GetServerUrl(false, ravenFsClient.Url)
+                BaseAddress = GetServerUrl(false, ravenFsClient.ServerUrl)
             };
         }
 

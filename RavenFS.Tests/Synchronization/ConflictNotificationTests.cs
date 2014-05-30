@@ -52,7 +52,7 @@ namespace RavenFS.Tests.Synchronization
 			var conflictDetected = await notificationTask;
 
 			Assert.Equal("abc.txt", conflictDetected.FileName);
-            Assert.Equal(new Uri(sourceClient.Url).Port, new Uri(conflictDetected.SourceServerUrl).Port);
+            Assert.Equal(new Uri(sourceClient.ServerUrl).Port, new Uri(conflictDetected.SourceServerUrl).Port);
 		}
 
 		public override void Dispose()
