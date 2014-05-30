@@ -327,6 +327,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				}
 
 				synchronizationQueue.EnqueueSynchronization(destination.FileSystemUrl, work);
+                publisher.Publish(new SynchronizationUpdateNotification
+                {
+                    FileName = work.FileName,
+                    DestinationFileSystemUrl = destination.FileSystemUrl,
+                    SourceServerId = storage.Id,
+                    SourceFileSystemUrl = FileSystemUrl,
+                    Type = work.SynchronizationType,
+                    Action = SynchronizationAction.Enqueue,
+                    SynchronizationDirection = SynchronizationDirection.Outgoing
+                });
 			}
 		}
 
@@ -343,6 +353,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					Log.Debug("There was an already being performed synchronization of a file '{0}' to {1}", work.FileName,
 							  destination);
 					synchronizationQueue.EnqueueSynchronization(destination.FileSystemUrl, work); // add it again at the end of the queue
+                    publisher.Publish(new SynchronizationUpdateNotification
+                    {
+                        FileName = work.FileName,
+                        DestinationFileSystemUrl = destination.FileSystemUrl,
+                        SourceServerId = storage.Id,
+                        SourceFileSystemUrl = FileSystemUrl,
+                        Type = work.SynchronizationType,
+                        Action = SynchronizationAction.Enqueue,
+                        SynchronizationDirection = SynchronizationDirection.Outgoing
+                    });
 				}
 				else
 				{
@@ -369,6 +389,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 						  destination.FileSystemUrl, work.FileName);
 
 				synchronizationQueue.EnqueueSynchronization(destination.FileSystemUrl, work);
+                publisher.Publish(new SynchronizationUpdateNotification
+                {
+                    FileName = work.FileName,
+                    DestinationFileSystemUrl = destination.FileSystemUrl,
+                    SourceServerId = storage.Id,
+                    SourceFileSystemUrl = FileSystemUrl,
+                    Type = work.SynchronizationType,
+                    Action = SynchronizationAction.Enqueue,
+                    SynchronizationDirection = SynchronizationDirection.Outgoing
+                });
 
 				return new SynchronizationReport(work.FileName, work.FileETag, work.SynchronizationType)
 				{
