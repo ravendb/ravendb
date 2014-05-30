@@ -15,7 +15,11 @@ namespace Raven.Client.RavenFS
             get { return serverUrl; }
             set
             {
-                serverUrl = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+                string canonicalUrl = value.TrimEnd('/');
+
+                serverUrl = canonicalUrl;
+                if (canonicalUrl.EndsWith("/fs"))
+                    serverUrl = canonicalUrl.Substring(0, value.Length - 3);                                    
             }
         }
 
