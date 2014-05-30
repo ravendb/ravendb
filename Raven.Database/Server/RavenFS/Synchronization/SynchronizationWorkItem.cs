@@ -8,12 +8,12 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -22,7 +22,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly ConflictDetector conflictDetector;
 		private readonly ConflictResolver conflictResolver;
 		protected readonly CancellationTokenSource Cts = new CancellationTokenSource();
-		protected FileConvention Convention = new FileConvention();
+        protected FilesConvention Convention = new FilesConvention();
 		protected SynchronizationWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
 		{
 			Storage = storage;

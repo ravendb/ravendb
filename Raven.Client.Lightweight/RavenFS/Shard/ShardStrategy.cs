@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Raven.Client.FileSystem;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS.Connections;
 
 namespace Raven.Client.RavenFS.Shard
 {
@@ -14,7 +14,7 @@ namespace Raven.Client.RavenFS.Shard
 	{
 		private readonly IDictionary<string, RavenFileSystemClient> shards;
 
-		public delegate string ModifyFileNameFunc(FileConvention convention, string shardId, string filename);
+        public delegate string ModifyFileNameFunc(FilesConvention convention, string shardId, string filename);
 
 		public ShardStrategy(IDictionary<string, RavenFileSystemClient> shards)
 		{
@@ -32,7 +32,7 @@ namespace Raven.Client.RavenFS.Shard
 			ModifyFileName = (convention, shardId, documentId) => convention.IdentityPartsSeparator + shardId + convention.IdentityPartsSeparator + documentId;
 		}
 
-		public FileConvention Conventions { get; set; }
+        public FilesConvention Conventions { get; set; }
 
 		/// <summary>
 		/// Gets or sets the shard resolution strategy.

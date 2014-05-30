@@ -2,6 +2,7 @@
 using Raven.Client.RavenFS;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Abstractions.RavenFS;
 
 namespace RavenFS.Tests.Synchronization
 {

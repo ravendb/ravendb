@@ -1,13 +1,14 @@
 ﻿using Raven.Client.Changes;
+using Raven.Client.RavenFS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS.Changes
+namespace Raven.Client.FileSystem.Changes
 {
-    public class FileSystemConnectionState : IChangesConnectionState
+    public class FilesConnectionState : IChangesConnectionState
     {
         private readonly Action onZero;
         private readonly Task task;
@@ -17,7 +18,7 @@ namespace Raven.Client.RavenFS.Changes
             get { return task; }
         }
 
-        public FileSystemConnectionState(Action onZero, Task task)
+        public FilesConnectionState(Action onZero, Task task)
         {
             value = 0;
             this.onZero = onZero;

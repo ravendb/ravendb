@@ -1,4 +1,18 @@
-﻿using System;
+﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.OAuth;
+using Raven.Abstractions.RavenFS;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Changes;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,26 +24,13 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.OAuth;
-using Raven.Abstractions.RavenFS;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
-using Raven.Client.RavenFS.Changes;
-using Raven.Client.RavenFS.Connections;
-using Raven.Client.RavenFS.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Raven.Client.Connection.Async;
 
 namespace Raven.Client.RavenFS
-{   
+{
 
-    public class RavenFileSystemClient : AsyncServerClientBase<FileConvention, IFileSystemClientReplicationInformer>, IDisposable, IHoldProfilingInformation
+    public class RavenFileSystemClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IDisposable, IHoldProfilingInformation
     {
-        private readonly RemoteFileSystemChanges notifications;
+        private readonly FilesChangesClient notifications;
 
         private IDisposable failedUploadsObserver;
 
@@ -56,14 +57,14 @@ namespace Raven.Client.RavenFS
 
 
         public RavenFileSystemClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-            : base(serverUrl, new FileConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, new NameValueCollection())
+            : base(serverUrl, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, new NameValueCollection())
         {
             try
             {
                 FileSystemName = fileSystemName;
                 ApiKey = apiKey;
-                
-                notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, RequestFactory, this.Convention, this.ReplicationInformer, () => { });
+
+                notifications = new FilesChangesClient(serverUrl, apiKey, credentials, RequestFactory, this.Convention, this.ReplicationInformer, () => { });
                                
                 InitializeSecurity();
             }
@@ -74,9 +75,9 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        protected override IFileSystemClientReplicationInformer GetReplicationInformer()
+        protected override IFilesReplicationInformer GetReplicationInformer()
         {
-            return new RavenFileSystemReplicationInformer(this.Convention, this.RequestFactory);
+            return new FilesReplicationInformer(this.Convention, this.RequestFactory);
         }
 
         public override string BaseUrl
@@ -555,7 +556,7 @@ namespace Raven.Client.RavenFS
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
-        public IFileSystemChanges Changes()
+        public IFilesChanges Changes()
         {
             return this.notifications;
         }
@@ -697,11 +698,11 @@ namespace Raven.Client.RavenFS
         public class ConfigurationClient : IHoldProfilingInformation
         {
             private readonly RavenFileSystemClient ravenFileSystemClient;
-            private readonly FileConvention convention;
+            private readonly FilesConvention convention;
             private readonly JsonSerializer jsonSerializer;
             private readonly string filesystemName;
 
-            public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
+            public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient, FilesConvention convention)
             {
                 this.jsonSerializer = new JsonSerializer();
                 this.ravenFileSystemClient = ravenFileSystemClient;
@@ -850,11 +851,11 @@ namespace Raven.Client.RavenFS
         public class SynchronizationClient : IHoldProfilingInformation
         {
             private readonly OperationCredentials credentials;
-            private readonly FileConvention convention;
+            private readonly FilesConvention convention;
             private readonly HttpJsonRequestFactory jsonRequestFactory;
             private readonly RavenFileSystemClient fullClient;
 
-            public SynchronizationClient(RavenFileSystemClient client, FileConvention convention)
+            public SynchronizationClient(RavenFileSystemClient client, FilesConvention convention)
             {
                 this.credentials = client.PrimaryCredentials;
                 this.jsonRequestFactory = client.RequestFactory;
@@ -865,7 +866,7 @@ namespace Raven.Client.RavenFS
 
             public string BaseUrl { get; private set; }
 
-            public FileConvention Convention
+            public FilesConvention Convention
             {
                 get { return convention; }
             }
@@ -1266,10 +1267,10 @@ namespace Raven.Client.RavenFS
         public class StorageClient : IHoldProfilingInformation
         {
             private readonly RavenFileSystemClient ravenFileSystemClient;
-            private readonly FileConvention convention;
+            private readonly FilesConvention convention;
             private readonly string filesystemName;
 
-            public StorageClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
+            public StorageClient(RavenFileSystemClient ravenFileSystemClient, FilesConvention convention)
             {
                 this.ravenFileSystemClient = ravenFileSystemClient;
                 this.convention = convention;
@@ -1324,10 +1325,10 @@ namespace Raven.Client.RavenFS
         public class AdminClient : IHoldProfilingInformation
         {
             private readonly RavenFileSystemClient ravenFileSystemClient;
-            private readonly FileConvention convention;
+            private readonly FilesConvention convention;
             private readonly string filesystemName;
 
-            public AdminClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
+            public AdminClient(RavenFileSystemClient ravenFileSystemClient, FilesConvention convention)
             {
                 this.ravenFileSystemClient = ravenFileSystemClient;
                 this.convention = convention;

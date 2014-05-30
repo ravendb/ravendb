@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Xunit;
+using Raven.Abstractions.RavenFS;
 
 namespace RavenFS.Tests.Synchronization
 {

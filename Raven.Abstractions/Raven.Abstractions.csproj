@@ -282,14 +282,17 @@
     <Compile Include="RavenFS\FileStatus.cs" />
     <Compile Include="RavenFS\FileSystemMetrics.cs" />
     <Compile Include="RavenFS\HistoryItem.cs" />
+    <Compile Include="RavenFS\ListPage.cs" />
     <Compile Include="RavenFS\Notification.cs" />
     <Compile Include="RavenFS\RdcStats.cs" />
     <Compile Include="RavenFS\ServerInfo.cs" />
     <Compile Include="RavenFS\FileSystemStats.cs" />
     <Compile Include="RavenFS\Signature.cs" />
     <Compile Include="RavenFS\SignatureManifest.cs" />
+    <Compile Include="RavenFS\SourceSynchronizationInformation.cs" />
     <Compile Include="RavenFS\SynchronizationConfirmation.cs" />
     <Compile Include="RavenFS\SynchronizationConstants.cs" />
+    <Compile Include="RavenFS\SynchronizationDestination.cs" />
     <Compile Include="RavenFS\SynchronizationDetails.cs" />
     <Compile Include="RavenFS\SynchronizationException.cs" />
     <Compile Include="RavenFS\SynchronizationReport.cs" />

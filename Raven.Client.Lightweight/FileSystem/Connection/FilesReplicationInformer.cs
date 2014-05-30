@@ -1,27 +1,29 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using System.Web;
-using Raven.Abstractions;
+﻿using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.RavenFS;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.RavenFS;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using System.Collections.Specialized;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS.Connections
+namespace Raven.Client.FileSystem.Connection
 {
     /// <summary>
     /// Replication and failover management on the client side
     /// </summary>
-    public class RavenFileSystemReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>, IFileSystemClientReplicationInformer
+    public class FilesReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>, IFilesReplicationInformer
     {
-        public RavenFileSystemReplicationInformer(Convention conventions, HttpJsonRequestFactory requestFactory)
+        public FilesReplicationInformer(Convention conventions, HttpJsonRequestFactory requestFactory)
             : base(conventions, requestFactory)
         {
         }
@@ -52,7 +54,7 @@ namespace Raven.Client.RavenFS.Connections
                         {
                             document = new JsonDocument();
                             document.DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } };
-                        }                       
+                        }
                     }
                 }
                 catch (Exception e)
@@ -111,46 +113,45 @@ namespace Raven.Client.RavenFS.Connections
         }
 
         public override Task UpdateReplicationInformationIfNeeded(RavenFileSystemClient serverClient)
-		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-				return new CompletedTask();
+        {
+            if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+                return new CompletedTask();
 
-			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-				return new CompletedTask();
+            if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+                return new CompletedTask();
 
-			lock (replicationLock)
-			{
-				if (firstTime)
-				{
+            lock (replicationLock)
+            {
+                if (firstTime)
+                {
                     var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
 
-					var destinations = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-					if (destinations != null)
-					{
-						UpdateReplicationInformationFromDocument(destinations);
-					}
-				}
+                    var destinations = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+                    if (destinations != null)
+                    {
+                        UpdateReplicationInformationFromDocument(destinations);
+                    }
+                }
 
-				firstTime = false;
+                firstTime = false;
 
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-					return new CompletedTask();
+                if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+                    return new CompletedTask();
 
-				var taskCopy = refreshReplicationInformationTask;
-				if (taskCopy != null)
-					return taskCopy;
+                var taskCopy = refreshReplicationInformationTask;
+                if (taskCopy != null)
+                    return taskCopy;
 
                 return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
-					.ContinueWith(task =>
-					{
-						if (task.Exception != null)
-						{
-							log.ErrorException("Failed to refresh replication information", task.Exception);
-						}
-						refreshReplicationInformationTask = null;
-					});
-			}
-		}
+                    .ContinueWith(task =>
+                    {
+                        if (task.Exception != null)
+                        {
+                            log.ErrorException("Failed to refresh replication information", task.Exception);
+                        }
+                        refreshReplicationInformationTask = null;
+                    });
+            }
+        }
     }
 }
-	

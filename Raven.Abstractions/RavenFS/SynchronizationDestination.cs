@@ -1,10 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="SynchronizationDestination.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS
+namespace Raven.Abstractions.RavenFS
 {
     public class SynchronizationDestination
     {
@@ -19,7 +19,7 @@ namespace Raven.Client.RavenFS
 
                 serverUrl = canonicalUrl;
                 if (canonicalUrl.EndsWith("/fs"))
-                    serverUrl = canonicalUrl.Substring(0, value.Length - 3);                                    
+                    serverUrl = canonicalUrl.Substring(0, value.Length - 3);
             }
         }
 
@@ -40,7 +40,7 @@ namespace Raven.Client.RavenFS
 
         protected bool Equals(SynchronizationDestination other)
         {
-            return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) && 
+            return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(FileSystem, other.FileSystem);
         }
 

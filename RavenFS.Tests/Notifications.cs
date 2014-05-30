@@ -5,7 +5,6 @@ using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Changes;
 using Xunit;
 using Raven.Json.Linq;
 

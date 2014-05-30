@@ -1,35 +1,28 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Security.Policy;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
+﻿using Raven.Abstractions.Extensions;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Changes;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.RavenFS;
+using Raven.Database.Util;
+using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
+
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
-using Raven.Database.Util;
-using Raven.Json.Linq;
 
-namespace Raven.Client.RavenFS.Changes
+namespace Raven.Client.FileSystem.Changes
 {
-    using Raven.Abstractions.Connection;
-    using Raven.Client.Changes;
-    using Raven.Client.RavenFS.Connections;
-    using System.Collections.Generic;
-    using Raven.Client.Connection.Profiling;
-    using System.Diagnostics;
 
-    public class RemoteFileSystemChanges : RemoteChangesClientBase<IFileSystemChanges, FileSystemConnectionState>, 
-                                           IFileSystemChanges,
-                                           IHoldProfilingInformation
+    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>,
+                                        IFilesChanges,
+                                        IHoldProfilingInformation
     {
         private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>();
 
@@ -40,9 +33,9 @@ namespace Raven.Client.RavenFS.Changes
 
         public ProfilingInformation ProfilingInformation { get; private set; }
 
-        public RemoteFileSystemChanges(string url, string apiKey,
+        public FilesChangesClient(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, FileConvention conventions,
+                                       HttpJsonRequestFactory jsonRequestFactory, FilesConvention conventions,
                                        IReplicationInformerBase replicationInformer,
                                        Action onDispose)
             : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
@@ -58,7 +51,7 @@ namespace Raven.Client.RavenFS.Changes
                     watchAllConfigurations = true;
                     return Send("watch-config", null);
                 });
-                return new FileSystemConnectionState(
+                return new FilesConnectionState(
                     () =>
                     {
                         watchAllConfigurations = false;
@@ -67,7 +60,7 @@ namespace Raven.Client.RavenFS.Changes
                     },
                     configurationSubscriptionTask);
             });
-            var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FileSystemConnectionState>(
+            var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -86,7 +79,7 @@ namespace Raven.Client.RavenFS.Changes
                     watchAllConflicts = true;
                     return Send("watch-conflicts", null);
                 });
-                return new FileSystemConnectionState(
+                return new FilesConnectionState(
                     () =>
                     {
                         watchAllConflicts = false;
@@ -95,7 +88,7 @@ namespace Raven.Client.RavenFS.Changes
                     },
                     conflictsSubscriptionTask);
             });
-            var taskedObservable = new TaskedObservable<ConflictNotification, FileSystemConnectionState>(
+            var taskedObservable = new TaskedObservable<ConflictNotification, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -107,7 +100,7 @@ namespace Raven.Client.RavenFS.Changes
 
         public IObservableWithTask<FileChangeNotification> ForFolder(string folder)
         {
-            if (string.IsNullOrWhiteSpace(folder)) 
+            if (string.IsNullOrWhiteSpace(folder))
                 throw new ArgumentException("folder cannot be empty");
 
             if (!folder.StartsWith("/"))
@@ -125,7 +118,7 @@ namespace Raven.Client.RavenFS.Changes
                     return Send("watch-folder", folder);
                 });
 
-                return new FileSystemConnectionState(
+                return new FilesConnectionState(
                     () =>
                     {
                         watchedFolders.TryRemove(folder);
@@ -135,7 +128,7 @@ namespace Raven.Client.RavenFS.Changes
                     fileChangeSubscriptionTask);
             });
 
-            var taskedObservable = new TaskedObservable<FileChangeNotification, FileSystemConnectionState>(
+            var taskedObservable = new TaskedObservable<FileChangeNotification, FilesConnectionState>(
                 counter,
                 notification => notification.File.StartsWith(folder, StringComparison.InvariantCultureIgnoreCase));
 
@@ -155,7 +148,7 @@ namespace Raven.Client.RavenFS.Changes
                     watchAllCancellations = true;
                     return Send("watch-cancellations", null);
                 });
-                return new FileSystemConnectionState(
+                return new FilesConnectionState(
                     () =>
                     {
                         watchAllCancellations = false;
@@ -164,7 +157,7 @@ namespace Raven.Client.RavenFS.Changes
                     },
                     cancellationsSubscriptionTask);
             });
-            var taskedObservable = new TaskedObservable<CancellationNotification, FileSystemConnectionState>(
+            var taskedObservable = new TaskedObservable<CancellationNotification, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -184,7 +177,7 @@ namespace Raven.Client.RavenFS.Changes
                     watchAllSynchronizations = true;
                     return Send("watch-sync", null);
                 });
-                return new FileSystemConnectionState(
+                return new FilesConnectionState(
                     () =>
                     {
                         watchAllSynchronizations = false;
@@ -193,7 +186,7 @@ namespace Raven.Client.RavenFS.Changes
                     },
                     conflictsSubscriptionTask);
             });
-            var taskedObservable = new TaskedObservable<SynchronizationUpdateNotification, FileSystemConnectionState>(
+            var taskedObservable = new TaskedObservable<SynchronizationUpdateNotification, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -223,9 +216,9 @@ namespace Raven.Client.RavenFS.Changes
             }
         }
 
-        protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, FileSystemConnectionState>> connections)
+        protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, FilesConnectionState>> connections)
         {
-            switch( type )
+            switch (type)
             {
                 case "ConfigurationChangeNotification":
                     var configChangeNotification = value.JsonDeserialization<ConfigurationChangeNotification>();
@@ -271,12 +264,12 @@ namespace Raven.Client.RavenFS.Changes
                     }
                     break;
                 case "ConflictResolvedNotification":
-                     var conflictResolvedNotification = value.JsonDeserialization<ConflictResolvedNotification>();
+                    var conflictResolvedNotification = value.JsonDeserialization<ConflictResolvedNotification>();
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(conflictResolvedNotification);
                     }
-                    break;                
+                    break;
                 default:
                     break;
             }

@@ -19,6 +19,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Abstractions.RavenFS;
 
 namespace RavenFS.Tests.Auth
 {
