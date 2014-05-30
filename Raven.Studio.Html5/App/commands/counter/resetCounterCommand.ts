@@ -14,8 +14,8 @@ class resetCounterCommand extends commandBase {
 
     execute(): JQueryPromise<counter[]> {
         var args = {
-            counterName: this.counterToReset.id(),
             group: this.counterToReset.group(),
+            counterName: this.counterToReset.id()
         };
 
         var url = "/reset" + this.urlEncodeArgs(args);

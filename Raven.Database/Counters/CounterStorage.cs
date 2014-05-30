@@ -7,8 +7,10 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.Counters;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
+using Raven.Database.Extensions;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -37,6 +39,8 @@ namespace Raven.Database.Counters
 
 		private const int ServerId = 0; // local is always 0
 
+        private readonly CountersMetricsManager metricsCounters;
+
 		public CounterStorage(string serverUrl, string counterStorageStorageName, InMemoryRavenConfiguration configuration)
 		{
             CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, counterStorageStorageName);
@@ -51,8 +55,100 @@ namespace Raven.Database.Counters
 			//TODO: add an option to create a ReplicationRequestTimeout when creating a new counter storage
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
+            metricsCounters = new CountersMetricsManager();
             Initialize();
 		}
+
+        public CountersMetricsManager MetricsCounters
+        {
+            get { return metricsCounters; }
+        }
+
+	    public CounterStorageStats CreateStats()
+	    {
+	        using (var reader = CreateReader())
+	        {
+	            var stats = new CounterStorageStats()
+	            {
+	                Name = CounterStorageName,
+                    Url = CounterStorageUrl,
+	                CountersCount = reader.GetCountersCount(),
+                    LastCounterEtag = LastEtag,
+                    ApproximateTaskCount = ReplicationTask.GetActiveTasksCount(),
+                    CounterStorageSizeOnDiskInMB = ConvertBytesToMBs(GetCounterStorageSizeOnDisk()),
+                    GroupsCount =  reader.GetGroupsCount(),
+                    ServersCount = reader.GetServersCount()
+	            };
+	            return stats;
+	        }
+	    }
+
+
+        private static decimal ConvertBytesToMBs(long bytes)
+        {
+            return Math.Round(bytes / 1024.0m / 1024.0m, 2);
+        }
+
+        /// <summary>
+        ///     Get the total size taken by the counters storage on the disk.
+        ///     This explicitly does NOT include in memory data.
+        /// </summary>
+        /// <remarks>
+        ///     This is a potentially a very expensive call, avoid making it if possible.
+        /// </remarks>
+        public long GetCounterStorageSizeOnDisk()
+        {
+            if (storageEnvironment.Options is Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+            {
+                var directoryStorageOptions = storageEnvironment.Options as Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
+                string[] counters = Directory.GetFiles(directoryStorageOptions.BasePath, "*.*", SearchOption.AllDirectories);
+                long totalCountersSize = counters.Sum(file =>
+                {
+                    try
+                    {
+                        return new FileInfo(file).Length;
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        return 0;
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        return 0;
+                    }
+                });
+
+                return totalCountersSize;
+            }
+                return 0;
+        }
+
+        //todo: consider implementing metricses for each counter, not only for each counter storage
+	    public CountersStorageMetrics CreateMetrics()
+	    {
+            var metrics = metricsCounters;
+            var percentiles = new double[]{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999};
+
+            return new CountersStorageMetrics
+            {
+                RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+                Resets = metrics.Resets.GetMeterData(3),
+                Increments = metrics.Increments.GetMeterData(3),
+                Decrements = metrics.Decrements.GetMeterData(3),
+                ClientRuqeusts = metrics.ClientRuqeusts.GetMeterData(3),
+                IncomingReplications =  metrics.IncomingReplications.GetMeterData(3),
+                OutgoingReplications = metrics.OutgoingReplications.GetMeterData(3),
+
+                RequestsDuration = metrics.RequestDuationMetric.GetHistogramData(percentiles),
+                IncSizes = metrics.IncSizeMetrics.GetHistogramData(percentiles),
+                DecSizes = metrics.DecSizeMetrics.GetHistogramData(percentiles),
+                
+                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
+                ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
+                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles)),
+                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles))
+            };
+	    }
 
 		private void Initialize()
 		{
@@ -147,6 +243,7 @@ namespace Raven.Database.Counters
             ReplicationTask.Dispose();
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
+            metricsCounters.Dispose();
 		}
 
 		public class Reader : IDisposable
@@ -171,6 +268,21 @@ namespace Raven.Database.Counters
                 countersEtags = transaction.State.GetTree(transaction, "counters->etags");
                 etagsCounters = transaction.State.GetTree(transaction, "etags->counters");
 				metadata = transaction.State.GetTree(transaction, "$metadata");
+            }
+
+		    public long GetCountersCount()
+		    {
+		        return countersEtags.State.EntriesCount;
+		    }
+
+            public long GetGroupsCount()
+            {
+                return countersGroups.State.EntriesCount;
+            }
+
+            public long GetServersCount()
+            {
+                return serverNamesToIds.State.EntriesCount;
             }
 
 			public IEnumerable<string> GetCounterNames(string prefix)
@@ -198,7 +310,7 @@ namespace Raven.Database.Counters
 						yield return new Group
 						{
 							Name = it.CurrentKey.ToString(),
-							NumOfCounters = it.CreateReaderForCurrent().ReadLittleEndianInt64()
+							NumOfCounters = it.CreateReaderForCurrent().ReadBigEndianInt64()
 						};
 					} while (it.MoveNext());
 				}
@@ -234,7 +346,7 @@ namespace Raven.Database.Counters
 					return result;
 				}
 			}
-
+            
             public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
 		    {
                 var buffer = new byte[sizeof(long)];
@@ -394,6 +506,7 @@ namespace Raven.Database.Counters
 			private byte[] buffer = new byte[0];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
 		    private readonly Reader reader;
+			private readonly int storeBufferLength;
 
 			public Writer(CounterStorage parent, StorageEnvironment storageEnvironment)
 			{
@@ -411,6 +524,8 @@ namespace Raven.Database.Counters
 
 				storeBuffer = new byte[sizeof(long) + //positive
 									   sizeof(long)]; // negative
+
+				storeBufferLength = storeBuffer.Length;
 			}
 
             public Counter GetCounter(string name)
@@ -432,11 +547,19 @@ namespace Raven.Database.Counters
 		    {
 		        Store(server, counter, result =>
 		        {
+                    
 		            int valPos = 0;
 		            if (delta < 0)
 		            {
 		                valPos = 8;
 		                delta = -delta;
+                        parent.MetricsCounters.DecSizeMetrics.Update(delta);
+                        parent.MetricsCounters.Decrements.Mark();
+		            }
+		            else
+		            {
+                        parent.MetricsCounters.IncSizeMetrics.Update(delta);
+                        parent.MetricsCounters.Increments.Mark();                        
 		            }
 
 		            if (result == null)
@@ -446,7 +569,7 @@ namespace Raven.Database.Counters
 		            }
 		            else
 		            {
-						result.Reader.Read(storeBuffer, 0, storeBuffer.Length);
+						result.Reader.Read(storeBuffer, 0, storeBufferLength);
 		                delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
 		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
 		            }
@@ -475,6 +598,7 @@ namespace Raven.Database.Counters
 					{
 						difference = -difference;
 						Store(server, fullCounterName, difference);
+                        parent.MetricsCounters.Resets.Mark();
 						return true;
 					}
 				}
@@ -505,7 +629,20 @@ namespace Raven.Database.Counters
 
 				if (result == null && !IsCounterAlreadyExists(counter)) //if it's a new counter
 				{
-					countersGroups.Increment(groupKeySlice, 1);
+				    var curGroupReadResult = countersGroups.Read(groupKeySlice);
+                    long currentValue = 0;
+				    if (curGroupReadResult != null)
+				    {
+                        
+                        currentValue = curGroupReadResult.Reader.ReadBigEndianInt64();
+                        countersGroups.Add(groupKeySlice, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
+				    }
+				    else
+				    {
+                        countersGroups.Add(groupKeySlice, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
+				    }
+
+					//countersGroups.Increment(groupKeySlice, 1); todo: consider return that after pavel's fix will be added
 				}
 
 				setStoreBuffer(result);

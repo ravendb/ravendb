@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
@@ -32,6 +34,8 @@ namespace Raven.Database.Counters.Controllers
 
 		private readonly CounterStorage storage;
 		private readonly CancellationTokenSource cancellation;
+
+        
 
 		enum ReplicationResult
 		{
@@ -189,23 +193,29 @@ namespace Raven.Database.Counters.Controllers
 
 		private bool ReplicateTo(CounterStorageReplicationDestination destination)
 		{
+            var replicationStopwatch = Stopwatch.StartNew();
 			//todo: here, build url according to :destination.Url + '/counters/' + destination.
 			try
 			{
 				string lastError;
+			    long lastEtag;
 				bool result = false;
 
-				switch (TryReplicate(destination, out lastError))
+				switch (TryReplicate(destination, out lastEtag, out lastError))
 				{
 					case ReplicationResult.Success:
-						RecordSuccess(destination.CounterStorageUrl);
+                        DateTime replicationTime = SystemTime.UtcNow;
+                        RecordSuccess(destination.CounterStorageUrl, lastReplicatedEtag: lastEtag, lastReplicatedLastModified: replicationTime);
+                        storage.MetricsCounters.OutgoingReplications.Mark();
 						result = true;
 						break;
 					case ReplicationResult.NotReplicated:
 						//TODO: Record not replicated
+                        RecordSuccess(destination.CounterStorageUrl, SystemTime.UtcNow);
 						break;
 					default:
 						RecordFailure(destination.CounterStorageUrl, lastError);
+                        storage.MetricsCounters.OutgoingReplications.Mark();
 						break;
 				}
 
@@ -214,28 +224,35 @@ namespace Raven.Database.Counters.Controllers
 			catch (Exception ex)
 			{
 				Log.ErrorException("Error occured replicating to: " + destination.CounterStorageUrl, ex);
-				RecordFailure(destination.ServerUrl, ex.Message);
+				RecordFailure(destination.CounterStorageUrl, ex.Message);
 				return false;
 			}
 			finally
 			{
+                replicationStopwatch.Stop();
+                storage.MetricsCounters.GetReplicationDurationHistogram(destination.CounterStorageUrl).Update((long)replicationStopwatch.Elapsed.TotalMilliseconds);
+                storage.MetricsCounters.GetReplicationDurationMetric(destination.CounterStorageUrl).Mark((long)replicationStopwatch.Elapsed.TotalMilliseconds);
 				var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
 				holder.Release();
 			}
 		}
 
-		private ReplicationResult TryReplicate(CounterStorageReplicationDestination destination, out string lastError)
+		private ReplicationResult TryReplicate(CounterStorageReplicationDestination destination, out long lastEtagSent, out string lastError)
 		{
-			long etag = 0;
+            long etag = 0;
+		    lastEtagSent = 0;
 			var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
-
-			if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError))
+            
+            if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError))
 			{
-				var replicationData = GetCountersDataSinceEtag(etag);
+                var replicationData = GetCountersDataSinceEtag(etag, out lastEtagSent);
+                
+                storage.MetricsCounters.GetReplicationBatchSizeMetric(destination.CounterStorageUrl).Mark(replicationData.Counters.Count);
+                storage.MetricsCounters.GetReplicationBatchSizeHistogram(destination.CounterStorageUrl).Update(replicationData.Counters.Count);
 
 				if (replicationData.Counters.Count > 0)
 				{
-					return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, etag, replicationData, out lastError) ?
+                    return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, etag, replicationData, out lastError) ?
 						ReplicationResult.Success : ReplicationResult.Failure;
 				}
 
@@ -310,7 +327,8 @@ namespace Raven.Database.Counters.Controllers
 				var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
 				request.Write(RavenJObject.FromObject(message));
 				request.ExecuteRequest();
-				return true;
+                
+                return true;
 
 			}
 			catch (WebException e)
@@ -361,13 +379,14 @@ namespace Raven.Database.Counters.Controllers
 			return true;
         }
 
-	    private ReplicationMessage GetCountersDataSinceEtag(long etag)
+	    private ReplicationMessage GetCountersDataSinceEtag(long etag, out long lastEtagSent)
 	    {
             var message = new ReplicationMessage { SendingServerName = storage.CounterStorageUrl };
 
             using (var reader = storage.CreateReader())
             {
                 message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
+                lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x=>x.Etag):etag; // change this once changed this function do a reall paging
             }
 
 	        return message;
@@ -471,11 +490,11 @@ namespace Raven.Database.Counters.Controllers
 
             if (lastReplicatedEtag.HasValue)
             {
-                stats.LastReplicatedEtag = stats.LastEtagCheckedForReplication = lastReplicatedEtag.Value;
+                stats.LastReplicatedEtag = lastReplicatedEtag.Value;
             }
 
             if (lastReplicatedLastModified.HasValue)
-                stats.LastReplicatedLastModified = lastReplicatedLastModified;
+                stats.LastSuccessTimestamp = stats.LastReplicatedLastModified = lastReplicatedLastModified;
 
             if (lastHeartbeatReceived.HasValue)
             {
@@ -528,6 +547,16 @@ namespace Raven.Database.Counters.Controllers
 			return e.Message;
 		}
 
+	    public int GetActiveTasksCount()
+	    {
+	        return activeTasks.Count;
+	    }
+
+        public ConcurrentDictionary<string, CounterDestinationStats> DestinationStats
+        {
+            get { return destinationsStats; }
+        }
+
 		public void Dispose()
         {
             Task task;
@@ -540,18 +569,5 @@ namespace Raven.Database.Counters.Controllers
             }
         }
     }
-
-    public class CounterDestinationStats
-    {
-        public int FailureCountInternal = 0;
-        public string Url { get; set; }
-        public DateTime? LastHeartbeatReceived { get; set; }
-        public long LastEtagCheckedForReplication { get; set; }
-        public long LastReplicatedEtag { get; set; }
-        public DateTime? LastReplicatedLastModified { get; set; }
-        public DateTime? LastSuccessTimestamp { get; set; }
-        public DateTime? LastFailureTimestamp { get; set; }
-        public int FailureCount { get { return FailureCountInternal; } }
-        public string LastError { get; set; }
-    }
+    
 }

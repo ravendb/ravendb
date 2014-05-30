@@ -18,8 +18,8 @@ define(["require", "exports", "commands/commandBase"], function(require, exports
         }
         resetCounterCommand.prototype.execute = function () {
             var args = {
-                counterName: this.counterToReset.id(),
-                group: this.counterToReset.group()
+                group: this.counterToReset.group(),
+                counterName: this.counterToReset.id()
             };
 
             var url = "/reset" + this.urlEncodeArgs(args);
