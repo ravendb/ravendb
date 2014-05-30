@@ -109,7 +109,7 @@ namespace Raven.Client.FileSystem.Connection
 
         protected override string GetServerCheckUrl(string baseUrl)
         {
-            return baseUrl + "/config?name=" + StringUtils.UrlEncode(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
+            return baseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
         }
 
         public override Task UpdateReplicationInformationIfNeeded(RavenFileSystemClient serverClient)

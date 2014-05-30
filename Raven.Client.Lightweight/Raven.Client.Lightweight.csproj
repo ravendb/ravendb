@@ -152,7 +152,6 @@
     <Compile Include="FileSystem\Shard\ShardPagingInfo.cs" />
     <Compile Include="FileSystem\Shard\ShardRequestData.cs" />
     <Compile Include="FileSystem\Shard\ShardStrategy.cs" />
-    <Compile Include="RavenFS\StringUtils.cs" />
     <Compile Include="RavenPagingInformation.cs" />
     <Compile Include="Shard\ShardedRavenQueryInspector.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />

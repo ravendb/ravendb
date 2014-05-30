@@ -736,7 +736,7 @@ namespace Raven.Client.RavenFS
             {
                 return ravenFileSystemClient.ExecuteWithReplication("PUT", async operation =>
                 {
-                    var requestUriString = operation.Url + "/config?name=" + StringUtils.UrlEncode(name);
+                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(name);
                     var request = ravenFileSystemClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention));
 
                     var jsonData = data as RavenJObject;
@@ -759,7 +759,7 @@ namespace Raven.Client.RavenFS
             {
                 return ravenFileSystemClient.ExecuteWithReplication("PUT", async operation =>
                 {
-                    var requestUriString = operation.Url + "/config?name=" + StringUtils.UrlEncode(SynchronizationConstants.RavenSynchronizationDestinations);
+                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
                     var request = ravenFileSystemClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention));
 
                     var data = new { Destinations = destinations };
@@ -779,7 +779,7 @@ namespace Raven.Client.RavenFS
             {
                 return ravenFileSystemClient.ExecuteWithReplication("DELETE", operation =>
                 {
-                    var requestUriString = operation.Url + "/config?name=" + StringUtils.UrlEncode(name);
+                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(name);
 
                     var request = ravenFileSystemClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", operation.Credentials, convention));
 
@@ -791,7 +791,7 @@ namespace Raven.Client.RavenFS
             {
                 return ravenFileSystemClient.ExecuteWithReplication("GET", async operation =>
                 {
-                    var requestUriString = operation.Url + "/config?name=" + StringUtils.UrlEncode(name);
+                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(name);
 
                     var request = ravenFileSystemClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", operation.Credentials, convention));
 
@@ -893,7 +893,7 @@ namespace Raven.Client.RavenFS
 
             public async Task<SignatureManifest> GetRdcManifestAsync(string path)
             {
-                var requestUriString = BaseUrl + "/rdc/manifest/" + StringUtils.UrlEncode(path);
+                var requestUriString = BaseUrl + "/rdc/manifest/" + Uri.EscapeDataString(path);
                 var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
                                                                                                        "GET", credentials, convention));
 
