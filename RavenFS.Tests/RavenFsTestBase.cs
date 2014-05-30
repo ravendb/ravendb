@@ -16,7 +16,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;

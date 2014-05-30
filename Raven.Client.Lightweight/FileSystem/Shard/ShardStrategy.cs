@@ -1,11 +1,12 @@
 ﻿using Raven.Client.FileSystem;
+using Raven.Client.RavenFS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS.Shard
+namespace Raven.Client.FileSystem.Shard
 {
 	/// <summary>
 	/// Default shard strategy for the sharding document store

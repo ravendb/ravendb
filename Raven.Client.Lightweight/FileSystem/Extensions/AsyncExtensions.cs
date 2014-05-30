@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS
+namespace Raven.Client.FileSystem.Extensions
 {
 	public static class AsyncExtensions
 	{
@@ -22,6 +22,7 @@ namespace Raven.Client.RavenFS
 		{
 			var listenableStream = new ListenableStream(source);
 			listenableStream.ReadingProgress += (_, progress) => progressReport(progress.Processed);
+
 			return listenableStream.CopyToAsync(destination, bufferSize, token);
 		}
 	}

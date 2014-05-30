@@ -6,13 +6,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
-namespace Raven.Client.RavenFS.Shard
+namespace Raven.Client.FileSystem.Shard
 {
     public class ShardResolutionResult
     {
         public string ShardId { get; set; }
         public string NewFileName { get; set; }
     }
+
     public class DefaultShardResolutionStrategy : IShardResolutionStrategy
     {
         private readonly ShardStrategy shardStrategy;

@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;

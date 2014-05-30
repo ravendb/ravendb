@@ -8,6 +8,7 @@ using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Shard;
 using Xunit;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem.Shard;
 
 namespace RavenFS.Tests.Shard
 {
@@ -69,7 +70,7 @@ namespace RavenFS.Tests.Shard
             await shardedClient.UploadAsync("d.txt", ms);
             await shardedClient.UploadAsync("e.txt", ms);
 
-	        var pagingInfo = new PagingInfo(shardedClient.NumberOfShards);
+            var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards);
 	        var result = await shardedClient.BrowseAsync(2, pagingInfo);
             Assert.Equal(2, result.Length);
 
@@ -102,7 +103,7 @@ namespace RavenFS.Tests.Shard
             await shardedClient.UploadAsync("d.txt", ms);
             await shardedClient.UploadAsync("e.txt", ms);
 
-            var pagingInfo = new PagingInfo(shardedClient.NumberOfShards){CurrentPage = 2};
+            var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards) { CurrentPage = 2 };
             var result = await shardedClient.BrowseAsync(2, pagingInfo);
             Assert.Equal(1, result.Length);
 
@@ -128,7 +129,7 @@ namespace RavenFS.Tests.Shard
             await shardedClient.UploadAsync("d.txt", ms);
             await shardedClient.UploadAsync("e.txt", ms);
 
-            var pagingInfo = new PagingInfo(shardedClient.NumberOfShards) { CurrentPage = 20 };
+            var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards) { CurrentPage = 20 };
             try
             {
                 await shardedClient.BrowseAsync(2, pagingInfo);

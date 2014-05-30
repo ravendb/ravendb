@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.RavenFS;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem.Shard;
 
 namespace Raven.Client.RavenFS.Shard
 {
@@ -135,10 +136,10 @@ namespace Raven.Client.RavenFS.Shard
 			return client.RenameAsync(filename, rename);
 		}
 
-		public async Task<FileInfo[]> BrowseAsync(int pageSize = 25, PagingInfo pagingInfo = null)
+		public async Task<FileInfo[]> BrowseAsync(int pageSize = 25, ShardPagingInfo pagingInfo = null)
 		{
 			if (pagingInfo == null)
-				pagingInfo = new PagingInfo(ShardClients.Count);
+				pagingInfo = new ShardPagingInfo(ShardClients.Count);
 
 			var indexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			if (indexes == null)
@@ -178,10 +179,10 @@ namespace Raven.Client.RavenFS.Shard
 			return results.ToArray();
 		}
 
-		public async Task<string[]> GetSearchFieldsAsync(int pageSize = 25, PagingInfo pagingInfo = null)
+		public async Task<string[]> GetSearchFieldsAsync(int pageSize = 25, ShardPagingInfo pagingInfo = null)
 		{
 			if (pagingInfo == null)
-				pagingInfo = new PagingInfo(ShardClients.Count);
+				pagingInfo = new ShardPagingInfo(ShardClients.Count);
 
 			var indexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			if (indexes == null)
@@ -223,10 +224,10 @@ namespace Raven.Client.RavenFS.Shard
 			return results.ToArray();
 		}
 
-		public async Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int pageSize = 25, PagingInfo pagingInfo = null)
+		public async Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int pageSize = 25, ShardPagingInfo pagingInfo = null)
 		{
 			if (pagingInfo == null)
-				pagingInfo = new PagingInfo(ShardClients.Count);
+				pagingInfo = new ShardPagingInfo(ShardClients.Count);
 
 			var indexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			if (indexes == null)
@@ -318,10 +319,10 @@ namespace Raven.Client.RavenFS.Shard
 			return resolutionResult.NewFileName;
 		}
 
-		public async Task<string[]> GetFoldersAsync(string @from = null, int pageSize = 25, PagingInfo pagingInfo = null)
+		public async Task<string[]> GetFoldersAsync(string @from = null, int pageSize = 25, ShardPagingInfo pagingInfo = null)
 		{
 			if (pagingInfo == null)
-				pagingInfo = new PagingInfo(ShardClients.Count);
+				pagingInfo = new ShardPagingInfo(ShardClients.Count);
 
 			var indexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			if (indexes == null)
@@ -363,7 +364,7 @@ namespace Raven.Client.RavenFS.Shard
 			return results.ToArray();
 		}
 
-		public Task<SearchResults> GetFilesAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int pageSize = 25, PagingInfo pagingInfo = null)
+		public Task<SearchResults> GetFilesAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int pageSize = 25, ShardPagingInfo pagingInfo = null)
 		{
 			var folderQueryPart = GetFolderQueryPart(folder);
 

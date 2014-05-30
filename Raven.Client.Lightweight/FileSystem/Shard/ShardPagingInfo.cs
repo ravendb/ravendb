@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.Client.RavenFS.Shard
+namespace Raven.Client.FileSystem.Shard
 {
-    public class PagingInfo
+    public class ShardPagingInfo
     {
         private readonly Dictionary<int, int[]> positions = new Dictionary<int, int[]>();
 
-        public PagingInfo(int size)
+        public ShardPagingInfo(int size)
         {
             positions.Add(0, new int[size]);
         }

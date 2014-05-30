@@ -31,9 +31,9 @@ namespace Raven.Client.RavenFS
 					return task;
 
 				throw webException.BetterWebExceptionError();
-			})
-					   .Unwrap();
+			}).Unwrap();
 		}
+
 		public static Exception BetterWebExceptionError(this ErrorResponseException webException)
 		{
 			if (webException.StatusCode == (HttpStatusCode)420)
@@ -105,8 +105,7 @@ namespace Raven.Client.RavenFS
 					return task;
 
 				throw webException.BetterWebExceptionError();
-			})
-					   .Unwrap();
+			}).Unwrap();
 		}
 
 		///<summary>

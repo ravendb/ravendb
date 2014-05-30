@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Client.RavenFS.Shard
+namespace Raven.Client.FileSystem.Shard
 {
 	/// <summary>
 	/// Information required to resolve the appropriate shard for an entity / entity and key

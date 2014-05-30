@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Util;
 using RavenFS.Tests.Synchronization.IO;

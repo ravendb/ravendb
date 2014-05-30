@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;

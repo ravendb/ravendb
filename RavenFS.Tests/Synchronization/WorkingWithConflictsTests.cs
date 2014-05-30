@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;

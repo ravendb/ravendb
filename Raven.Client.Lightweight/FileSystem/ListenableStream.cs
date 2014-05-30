@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS
+namespace Raven.Client.FileSystem
 {
 	internal class ListenableStream : Stream
 	{
@@ -62,11 +62,11 @@ namespace Raven.Client.RavenFS
 				handler(this, e);
 		}
 
-		public event EventHandler<ProgressEventArgs> WrittingProgress;
+		public event EventHandler<ProgressEventArgs> WritingProgress;
 
-		public void InvokeWrittingProgress(ProgressEventArgs e)
+		public void InvokeWritingProgress(ProgressEventArgs e)
 		{
-			var handler = WrittingProgress;
+			var handler = WritingProgress;
 			if (handler != null)
 				handler(this, e);
 		}
@@ -118,7 +118,7 @@ namespace Raven.Client.RavenFS
 					alreadyWritten > Gb && (alreadyWritten - lastNotifiedWritten) >= GbPrecision ||
 					(allBytesToProcess - alreadyRead < Mb))
 				{
-					InvokeWrittingProgress(new ProgressEventArgs(alreadyWritten));
+					InvokeWritingProgress(new ProgressEventArgs(alreadyWritten));
 					lastNotifiedWritten = alreadyWritten;
 				}
 			});
