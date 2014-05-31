@@ -43,6 +43,7 @@ class editDocument extends viewModelBase {
     lodaedDocumentName = ko.observable('');
     isSaveEnabled: KnockoutComputed<Boolean>;
     textarea: any;
+    documentSize: KnockoutComputed<string>;
 
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -58,6 +59,16 @@ class editDocument extends viewModelBase {
                 var docText = this.stringify(doc.toDto());
                 this.documentText(docText);
             }
+        });
+
+        this.documentSize = ko.computed(() => {
+            try {
+                var size: Number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
+                return this.formatAsCommaSeperatedString(size,2);    
+            } catch (e) {
+                return "cannot compute";
+            } 
+            
         });
 
         this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
@@ -81,6 +92,16 @@ class editDocument extends viewModelBase {
             },
             owner: this
         });
+    }
+
+    formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
+        var parts = input.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+        if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
+            parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
+        }
+        return parts.join(".");
     }
 
     // Called by Durandal when seeing if we can activate this view.
@@ -470,7 +491,7 @@ class editDocument extends viewModelBase {
                 "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
                 "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
                 "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
-                "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL"];
+                "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL","Size-In-Kb"];
 
             for (var property in metaDto) {
                 if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {

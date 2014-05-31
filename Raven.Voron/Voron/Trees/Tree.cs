@@ -519,7 +519,7 @@ namespace Voron.Trees
 			if (node == null || new Slice(node).Compare(key) != 0)
 				return -1;
 
-			return node->DataSize;
+		    return NodeHeader.GetDataSize(_tx, node);
 		}
 
 		public ushort ReadVersion(Slice key)
