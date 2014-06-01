@@ -85,6 +85,8 @@ namespace Voron.Trees
 
 		public long Increment(Slice key, long delta, ushort? version = null)
 		{
+			State.IsModified = true;
+
 			long currentValue = 0;
 
 			var read = Read(key);
