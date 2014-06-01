@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -16,7 +15,8 @@ namespace Raven.Database.Server.Controllers.Admin
 	[RoutePrefix("")]
 	public class AdminDatabasesController : BaseAdminController
 	{
-		[HttpGet][Route("admin/databases/{*id}")]
+		[HttpGet]
+		[Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesGet(string id)
 		{
 			if (IsSystemDatabase(id))
@@ -27,7 +27,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			var docKey = "Raven/Databases/" + id;
-
 			var document = Database.Documents.Get(docKey, null);
 			if (document == null)
 				return GetMessageWithString("Database " + id + " not found", HttpStatusCode.NotFound);
@@ -47,16 +46,13 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
-			Etag etag = GetEtag();
-			if (etag == null)
+			MessageWithStatusCode databaseNameFormat = CheckDatabaseNameFormat(id);
+			if (databaseNameFormat.Message != null)
 			{
-				Tuple<string, HttpStatusCode> databaseNameFormat = CheckDatabaseNameFormat(id);
-				if (databaseNameFormat.Item1 != null)
-					return GetMessageWithString(databaseNameFormat.Item1, databaseNameFormat.Item2);
+				return GetMessageWithString(databaseNameFormat.Message, databaseNameFormat.ErrorCode);
 			}
 
-			var docKey = "Raven/Databases/" + id;
-
+			Etag etag = GetEtag();
 			string error = CheckDatbaseName(id, etag);
 			if (error != null)
 			{
@@ -78,28 +74,29 @@ namespace Raven.Database.Server.Controllers.Admin
 			json.Remove("Id");
 
 			var metadata = (etag != null) ? InnerHeaders.FilterHeadersToObject() : new RavenJObject();
+			var docKey = "Raven/Databases/" + id;
 			var putResult = Database.Documents.Put(docKey, etag, json, metadata, null);
 
 			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
 		}
 
 
-		[HttpDelete][Route("admin/databases/{*id}")]
+		[HttpDelete]
+		[Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesDelete(string id)
 		{
 			if (IsSystemDatabase(id))
 				return GetMessageWithString("System Database document cannot be deleted", HttpStatusCode.Forbidden);
 
-			var docKey = "Raven/Databases/" + id;
 			var configuration = DatabasesLandlord.CreateTenantConfiguration(id);
-			var databasedocument = Database.Documents.Get(docKey, null);
 
 			if (configuration == null)
 				return GetEmptyMessage();
 
+			var docKey = "Raven/Databases/" + id;
 			Database.Documents.Delete(docKey, null, null);
+			
 			bool result;
-
 			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
 			{
 				IOExtensions.DeleteDirectory(configuration.DataDirectory);
@@ -112,11 +109,41 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetEmptyMessage();
 		}
 
-		private Tuple<string, HttpStatusCode> CheckDatabaseNameFormat(string databaseName)
+		[HttpPost]
+		[Route("admin/databases/{*id}")]
+		public HttpResponseMessage DatabasesDisable(string id)
 		{
+			if (IsSystemDatabase(id))
+				return GetMessageWithString("System Database document cannot be disabled", HttpStatusCode.Forbidden);
 
+			var docKey = "Raven/Databases/" + id;
+			var document = Database.Documents.Get(docKey, null);
+			if (document == null)
+				return GetMessageWithString("Database " + id + " not found", HttpStatusCode.NotFound);
+
+			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			if (dbDoc.Disabled)
+				return GetMessageWithString("Database " + id + " already disabled");
+
+			DatabasesLandlord.Unprotect(dbDoc);
+			dbDoc.Disabled = true;
+			var json = RavenJObject.FromObject(dbDoc);
+			json.Remove("Id");
+			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+
+			return GetEmptyMessage();
+		}
+
+		private class MessageWithStatusCode
+		{
+			public string Message;
+			public HttpStatusCode ErrorCode;
+		}
+
+		private MessageWithStatusCode CheckDatabaseNameFormat(string databaseName)
+		{
 			string errorMessage = null;
-			HttpStatusCode errorCode = HttpStatusCode.BadRequest;
+			var errorCode = HttpStatusCode.BadRequest;
 
 			if (databaseName == null)
 			{
@@ -146,9 +173,8 @@ namespace Raven.Database.Server.Controllers.Admin
 				errorMessage = "System Database document cannot be changed";
 				errorCode = HttpStatusCode.Forbidden;
 			}
-			return new Tuple<string, HttpStatusCode>(errorMessage, errorCode);
+			return new MessageWithStatusCode { Message = errorMessage, ErrorCode = errorCode };
 		}
-
 
 		private string CheckDatbaseName(string id, Etag etag)
 		{
