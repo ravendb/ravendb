@@ -58,45 +58,47 @@ namespace Raven.Database.Config
 			new Thread(() =>
 			{
 				const UInt32 INFINITE = 0xFFFFFFFF;
-				const UInt32 WAIT_OBJECT_0 = 0x00000000;
 				const UInt32 WAIT_FAILED = 0xFFFFFFFF;
 
 				while (true)
 				{
-                    var waitForResult = WaitForMultipleObjects(2, new[]{appDomainUnloadEvent, lowMemoryNotificationHandle}, false, INFINITE);
+                    var waitForResult = WaitForMultipleObjects(2, new[] { lowMemoryNotificationHandle, appDomainUnloadEvent }, false, INFINITE);
 
-					if (waitForResult == WAIT_OBJECT_0)
+					switch (waitForResult)
 					{
-						log.Warn("Low memory detected, will try to reduce memory usage...");
+					    case 0:
+					        log.Warn("Low memory detected, will try to reduce memory usage...");
 
-						var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+					        var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
 
-						foreach (var lowMemoryHandler in LowMemoryHandlers)
-						{
-							ILowMemoryHandler handler;
-							if (lowMemoryHandler.TryGetTarget(out handler))
-							{
-								try
-								{
-									handler.HandleLowMemory();
-								}
-								catch (Exception e)
-								{
-									log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
-								}
-							}
-							else
-								inactiveHandlers.Add(lowMemoryHandler);
-						}
+					        foreach (var lowMemoryHandler in LowMemoryHandlers)
+					        {
+					            ILowMemoryHandler handler;
+					            if (lowMemoryHandler.TryGetTarget(out handler))
+					            {
+					                try
+					                {
+					                    handler.HandleLowMemory();
+					                }
+					                catch (Exception e)
+					                {
+					                    log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+					                }
+					            }
+					            else
+					                inactiveHandlers.Add(lowMemoryHandler);
+					        }
 
-						inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+					        inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+					        break;
+                        case 1:
+                            // app domain unload
+					        return;
+					    case WAIT_FAILED:
+					        log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+					        break;
 					}
-					else if (waitForResult == WAIT_FAILED)
-					{
-						log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
-						break;
-					}
-					Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+				    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
 				}
 			})
 			{
