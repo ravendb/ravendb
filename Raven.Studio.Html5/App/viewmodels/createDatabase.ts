@@ -46,6 +46,10 @@ class createDatabase extends dialogViewModelBase {
             else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
             inputElement.setCustomValidity(errorMessage);
         });
+    
+        inputElement.setCustomValidity("An empty database name is forbidden for use!");
+        
+
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
@@ -89,7 +93,7 @@ class createDatabase extends dialogViewModelBase {
 
         var message = '';
         if (!$.trim(name)) {
-            message = "An empty databse name is forbidden for use!";
+            message = "An empty database name is forbidden for use!";
         }
         else if (name.length > this.maxNameLength) {
             message = "The database length can't exceed " + this.maxNameLength + " characters!";
