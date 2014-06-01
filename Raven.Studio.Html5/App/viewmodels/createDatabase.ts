@@ -35,6 +35,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     attached() {
+        super.attached();
         this.databaseNameFocus(true);
         
         var inputElement: any = $("#databaseName")[0];
@@ -53,6 +54,7 @@ class createDatabase extends dialogViewModelBase {
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
+
     }
 
     deactivate() {
@@ -62,8 +64,7 @@ class createDatabase extends dialogViewModelBase {
             this.creationTask.reject();
         }
     }
-
-    cancel() {
+     cancel() {
         dialog.close(this);
     }
 
@@ -73,8 +74,9 @@ class createDatabase extends dialogViewModelBase {
         // creating the database.
 
         this.creationTaskStarted = true;
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
         dialog.close(this);
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
+        
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
