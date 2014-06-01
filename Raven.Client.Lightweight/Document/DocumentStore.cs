@@ -662,12 +662,12 @@ namespace Raven.Client.Document
 			{
 				if (!replicationInformers.TryGetValue(key, out result))
 				{
-					result = Conventions.ReplicationInformerFactory(key);
+					result = Conventions.ReplicationInformerFactory(key, jsonRequestFactory);
 					replicationInformers.Add(key, result);
 				}
 			}
 #else
-			result = replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
+			result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory));
 
 #endif
 

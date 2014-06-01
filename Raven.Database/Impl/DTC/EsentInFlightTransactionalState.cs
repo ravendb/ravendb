@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
@@ -51,7 +52,14 @@ namespace Raven.Database.Impl.DTC
 				if (age.TotalMinutes >= 5)
 				{
 					log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
-					Rollback(ctx.Key);
+					try
+					{
+						Rollback(ctx.Key);
+					}
+					catch (Exception e)
+					{
+						log.WarnException("Could not properly rollback transaction", e);
+					}
 				}
 			}
 		}
@@ -67,6 +75,22 @@ namespace Raven.Database.Impl.DTC
 				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
+					if (context.DocumentIdsToTouch != null)
+					{
+						using (storage.SetTransactionContext(context))
+						{
+							storage.Batch(accessor =>
+							{
+								foreach (var docId in context.DocumentIdsToTouch)
+								{
+									Etag preTouchEtag;
+									Etag afterTouchEtag;
+									accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+								}
+							});
+						}
+					}
+
 					context.Transaction.Commit(txMode);
 
 					foreach (var afterCommit in context.ActionsAfterCommit)
@@ -93,11 +117,17 @@ namespace Raven.Database.Impl.DTC
 						myContext.Dispose();
 				}
 			}
+
 			try
 			{
 				using (storage.SetTransactionContext(context))
 				{
-					storage.Batch(accessor => RunOperationsInTransaction(id));
+					storage.Batch(accessor =>
+					{
+						var documentIdsToTouch = RunOperationsInTransaction(id);
+						context.DocumentIdsToTouch = documentIdsToTouch;
+					});
+					
 				}
 			}
 			catch (Exception)

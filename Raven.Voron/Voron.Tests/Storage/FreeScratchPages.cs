@@ -27,7 +27,7 @@ namespace Voron.Tests.Storage
 			{
 				for (int i = 0; i < 10; i++)
 				{
-					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 				}
 
 				scratchPagesOfUncommittedTransaction = tx.GetTransactionPages();
@@ -42,7 +42,7 @@ namespace Voron.Tests.Storage
 				// let's do exactly the same, it should reuse the same scratch pages
 				for (int i = 0; i < 10; i++)
 				{
-					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 				}
 
 				scratchPagesOfCommittedTransaction = tx.GetTransactionPages();

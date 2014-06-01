@@ -6,7 +6,7 @@ class row {
     top = ko.observable(0);
     rowIndex = ko.observable(0);
     isInUse = ko.observable(false);
-    cellMap = {};
+    cellMap: { Id: any } = { Id: null };
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
@@ -74,6 +74,12 @@ class row {
             return cellVal.templateName;
         }
 
+        // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002
+        // Calling .data() registers it as a Knockout dependency; updating this 
+        // observable later will cause the cell to redraw, thus fixing the bug.
+        if (this.cellMap && this.cellMap.Id) {
+            this.cellMap["Id"].data();
+        }
         return null;
     }
 
@@ -92,8 +98,9 @@ class row {
                     //this handy REGEX for testing URLs was taken from http://stackoverflow.com/questions/8188645/javascript-regex-to-match-a-url-in-a-field-of-text
                     /(http|ftp|https):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/.test(cleanData))
                     return cell.defaultTemplate;
-                if (/\w+\/\w+/ig.test(data))
+                if (/^\w+\/\w+/ig.test(data)) {
                     return cell.externalIdTemplate;
+                }
             }
             else if (!!data[propertyName] &&
                 typeof data[propertyName] == "string" &&

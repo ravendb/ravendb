@@ -14,6 +14,7 @@ import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 
 class editIndex extends viewModelBase { 
 
@@ -26,15 +27,16 @@ class editIndex extends viewModelBase {
     hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
-    statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
     editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
     indexErrorsList = ko.observableArray<string>();
+    
 
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+        autoCompleteBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
@@ -42,12 +44,7 @@ class editIndex extends viewModelBase {
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
-
-
-    indexCompleter(editor: any, session: any, pos: number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {      
-        callback(null, [{ name: "indexa", value: "indexa", score: 10, meta: "trash" }, { name: "indexb", value: "indexb", score: 10, meta: "smashindex" }, { name: "indexc", value: "indexc", score: 10, meta: "indextrash" }]);
-    }
-
+    
     canActivate(indexToEditName: string) {
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
@@ -87,22 +84,10 @@ class editIndex extends viewModelBase {
         this.addTransformHelpPopover();
     }
 
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        super.compositionComplete();
-    }
-
-    /*saveInObservable() {
-        var docEditor = ace.edit("docEditor");
-        var docEditorText = docEditor.getSession().getValue();
-        this.editedTransformer().transformResults(docEditorText);
-    }*/
-
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
-        this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
@@ -257,14 +242,21 @@ class editIndex extends viewModelBase {
 
     addField() {
         var field = new luceneField("");
+        field.indexFieldNames = this.editedIndex().fields();
+        field.calculateFieldNamesAutocomplete();
         this.editedIndex().luceneFields.push(field);
+    }
+
+    removeMaxIndexOutputs() {
+        this.editedIndex().maxIndexOutputsPerDocument(0);
+        this.editMaxIndexOutputsPerDocument(false);
     }
 
     addSpatialField() {
         var field = spatialIndexField.empty();
         this.editedIndex().spatialFields.push(field);
     }
-
+    
     removeMap(mapIndex: number) {
         this.editedIndex().maps.splice(mapIndex, 1);
     }

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -42,23 +43,22 @@ namespace Raven.Database.Indexing
 			if (indexingPriority == IndexingPriority.None)
 				return true;
 
-			if (indexingPriority.HasFlag(IndexingPriority.Normal))
+            if ((indexingPriority & IndexingPriority.Normal) == IndexingPriority.Normal)
 			{
 				onlyFoundIdleWork.Value = false;
 				return true;
 			}
 
-			if (indexingPriority.HasFlag(IndexingPriority.Disabled) || 
-                indexingPriority.HasFlag(IndexingPriority.Error))
+			if ((indexingPriority & (IndexingPriority.Disabled | IndexingPriority.Error)) != IndexingPriority.None)
 				return false;
 
 			if (isIdle == false)
 				return false; // everything else is only valid on idle runs
 
-			if (indexingPriority.HasFlag(IndexingPriority.Idle))
+			if ((indexingPriority & IndexingPriority.Idle) == IndexingPriority.Idle)
 				return true;
 
-			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
+			if ((indexingPriority & IndexingPriority.Abandoned) == IndexingPriority.Abandoned)
 			{
 				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
@@ -68,7 +68,12 @@ namespace Raven.Database.Indexing
 			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Id + ": " + indexesStat.Priority);
 		}
 
-		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+	    protected override void UpdateStalenessMetrics(int staleCount)
+	    {
+	        context.MetricsCounters.StaleIndexMaps.Update(staleCount);
+	    }
+
+	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
             return (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
 		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
@@ -108,29 +113,37 @@ namespace Raven.Database.Indexing
 
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
 
-			try
-			{
-                jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedEtagForAllIndexes);
-					
-				if (Log.IsDebugEnabled)
-				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                              jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
-				}
+	        try
+	        {
+		        jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedEtagForAllIndexes);
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Count);
+		        if (Log.IsDebugEnabled)
+		        {
+			        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+				        jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+		        }
 
-				context.CancellationToken.ThrowIfCancellationRequested();
+		        context.ReportIndexingActualBatchSize(jsonDocs.Count);
 
-				if (jsonDocs.Count <= 0)
-					return;
+		        context.CancellationToken.ThrowIfCancellationRequested();
 
-				var sw = Stopwatch.StartNew();
+		        if (jsonDocs.Count <= 0)
+		        {
+			        return;
+		        }
 
-				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+		        var sw = Stopwatch.StartNew();
 
-				indexingDuration = sw.Elapsed;
-			}
+		        lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+
+		        indexingDuration = sw.Elapsed;
+	        }
+	        catch (InvalidDataException e)
+	        {
+		        Log.ErrorException("Failed to index because of data corruption. ", e);
+				indexesToWorkOn.ForEach(index =>
+					context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+	        }
 			catch (OperationCanceledException)
 			{
 				operationCancelled = true;
@@ -217,7 +230,7 @@ namespace Raven.Database.Indexing
 				transactionalStorage.Batch(actions =>
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
-										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
+					actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
 
 				Index _;
 				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);

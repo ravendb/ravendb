@@ -4,20 +4,19 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
+
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
-    using System.Linq;
-	using System.Net.Sockets;
-
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
@@ -99,6 +98,7 @@ namespace Raven.Smuggler
 			    },
 			    {"timeout:", "The timeout to use for requests", s => options.Timeout = TimeSpan.FromMilliseconds(int.Parse(s))},
 			    {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
+				{"chunk-size:", "The number of documents to import before new connection will be opened", s => options.ChunkSize = int.Parse(s)},
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => connectionStringOptions2.DefaultDatabase = value},
 			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
@@ -200,7 +200,6 @@ namespace Raven.Smuggler
 			    var e = exception as WebException;
 			    if (e != null)
 			    {
-
 					if (e.Status == WebExceptionStatus.ConnectFailure)
 					{
 						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url + (action == SmugglerAction.Between ? " => " + connectionStringOptions2.Url : ""));
@@ -231,9 +230,17 @@ namespace Raven.Smuggler
 
 			        Environment.Exit((int) httpWebResponse.StatusCode);
 			    }
-			    else
+				else
 			    {
-			        Console.WriteLine(ex);
+				    if (exception is SmugglerException)
+				    {
+						Console.WriteLine(exception.Message);
+				    }
+				    else
+				    {
+						Console.WriteLine(exception);
+				    }
+					
 			        Environment.Exit(-1);
 			    }
 			}

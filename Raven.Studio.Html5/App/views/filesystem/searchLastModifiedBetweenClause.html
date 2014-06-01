@@ -8,11 +8,14 @@
         <div class="modal-body form-inline">
             <div class="form-group">
                 <label>Between: </label>
+
                 <input id="fromDate" type="text" class="form-control" data-bind="value: inputs[0]" />
-                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: fromDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
+                <button class="btn btn-default" id="fromDateButton" data-bind="clickBubble: false, datePicker: fromDate, datepickerOptions: {endDateElement: 'toDateButton'}"><i class="fa fa-calendar"></i></button>
+
                 <label> and: </label>
+
                 <input id="toDate" type="text" class="form-control" data-bind="value: inputs[1]" />
-                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: toDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
+                <button class="btn btn-default" id="toDateButton" data-bind="clickBubble: false, datePicker: toDate, datepickerOptions: {startDateElement: 'fromDateButton'}"><i class="fa fa-calendar"></i></button>
             </div>
         </div>
         <div class="modal-footer">
@@ -20,5 +23,4 @@
             <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
         </div>
     </form>
-
 </div>

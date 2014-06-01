@@ -940,6 +940,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				if (options.HasFlag(SearchOptions.Not))
 				{
+					documentQuery.OpenSubclause();
 					documentQuery.NegateNext();
 				}
 
@@ -949,6 +950,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				var queryOptions = (EscapeQueryOptions)value;
 				documentQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
+				if (options.HasFlag(SearchOptions.Not))
+				{
+					documentQuery.AndAlso();
+					documentQuery.Search(expressionInfo.Path, "*");
+					documentQuery.CloseSubclause();
+				}
+
 				documentQuery.Boost(boost);
 
 				if (options.HasFlag(SearchOptions.And))
@@ -1605,8 +1613,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}).ToArray();
 
 			var finalQuery = ((IDocumentQuery<T>)documentQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
-
-			finalQuery.SetResultTransformer(resultsTransformer);
+            
+            //no reason to override a value that may or may not exist there
+            if(!String.IsNullOrEmpty(resultsTransformer))
+			    finalQuery.SetResultTransformer(resultsTransformer);
 			finalQuery.SetQueryInputs(queryInputs);
 
 			if (FieldsToRename.Count > 0)

@@ -46,7 +46,9 @@ namespace Raven.Tests.Helpers
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
-		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
+	    protected readonly HashSet<string> pathsToDelete = new HashSet<string>();
+
+		protected readonly HashSet<string> DatabaseNames = new HashSet<string> { Constants.SystemDatabase };
 
 		private static int pathCount;
 
@@ -174,7 +176,7 @@ namespace Raven.Tests.Helpers
 				Action<DocumentStore> configureStore = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName);
-
+            
 		    checkPorts = true;
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
 			ModifyServer(ravenDbServer);
@@ -183,6 +185,7 @@ namespace Raven.Tests.Helpers
 				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
 				DefaultDatabase = databaseName				
 			};
+		    pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 
@@ -360,9 +363,9 @@ namespace Raven.Tests.Helpers
 		}
 
 
-		public void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus, Func<PeriodicBackupStatus, Etag> compareSelector)
+		public void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus, Func<PeriodicExportStatus, Etag> compareSelector)
 		{
-			PeriodicBackupStatus currentStatus = null;
+			PeriodicExportStatus currentStatus = null;
 			var done = SpinWait.SpinUntil(() =>
 			{
 				currentStatus = GetPerodicBackupStatus(db);
@@ -386,38 +389,38 @@ namespace Raven.Tests.Helpers
 			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
-        protected PeriodicBackupStatus GetPerodicBackupStatus(DocumentDatabase db)
+        protected PeriodicExportStatus GetPerodicBackupStatus(DocumentDatabase db)
 	    {
             return GetPerodicBackupStatus(key => db.Documents.Get(key, null));
 	    }
 
-        protected PeriodicBackupStatus GetPerodicBackupStatus(IDatabaseCommands commands)
+        protected PeriodicExportStatus GetPerodicBackupStatus(IDatabaseCommands commands)
         {
             return GetPerodicBackupStatus(commands.Get);
         }
 
-        private PeriodicBackupStatus GetPerodicBackupStatus(Func<string, JsonDocument> getDocument)
+        private PeriodicExportStatus GetPerodicBackupStatus(Func<string, JsonDocument> getDocument)
         {
-            var jsonDocument = getDocument(PeriodicBackupStatus.RavenDocumentKey);
+            var jsonDocument = getDocument(PeriodicExportStatus.RavenDocumentKey);
             if (jsonDocument == null)
-                return new PeriodicBackupStatus();
+                return new PeriodicExportStatus();
 
-            return jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+            return jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
         }
 
-        protected void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus)
+        protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus)
         {
-            WaitForPeriodicBackup(key => db.Documents.Get(key, null), previousStatus);
+            WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus);
         }
 
-        protected void WaitForPeriodicBackup(IDatabaseCommands commands, PeriodicBackupStatus previousStatus)
+        protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus)
         {
-            WaitForPeriodicBackup(commands.Get, previousStatus);
+            WaitForPeriodicExport(commands.Get, previousStatus);
         }
 
-        private void WaitForPeriodicBackup(Func<string, JsonDocument> getDocument, PeriodicBackupStatus previousStatus)
+        private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus)
         {
-            PeriodicBackupStatus currentStatus = null;
+            PeriodicExportStatus currentStatus = null;
             var done = SpinWait.SpinUntil(() =>
             {
                 currentStatus = GetPerodicBackupStatus(getDocument);
@@ -461,7 +464,7 @@ namespace Raven.Tests.Helpers
 						var firstOrDefault =
 							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
-							Assert.False(true, firstOrDefault.Message);
+                            Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
 					}
 
 					return true;
@@ -473,22 +476,35 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForRestore(IDatabaseCommands databaseCommands)
 		{
+			var systemDatabaseCommands = databaseCommands.ForSystemDatabase(); // need to be sure that we are checking system database
+
+			var failureMessages = new[]
+			                      {
+				                      "Esent Restore: Failure! Could not restore database!", 
+									  "Error: Restore Canceled", 
+									  "Restore Operation: Failure! Could not restore database!"
+			                      };
+
+			var restoreFinishMessages = new[]
+			                            {
+				                            "The new database was created", 
+											"Esent Restore: Restore Complete", 
+											"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
+			                            };
+
 			var done = SpinWait.SpinUntil(() =>
 			{
 				// We expect to get the doc from the <system> database
-				var doc = databaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
+				var doc = systemDatabaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
 
 				if (doc == null)
 					return false;
 
 				var status = doc.DataAsJson.Deserialize<RestoreStatus>(new DocumentConvention());
 
-				var restoreFinishMessages = new[]
-				{
-					"The new database was created",
-					"Esent Restore: Restore Complete", 
-					"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
-				};
+				if (failureMessages.Any(status.Messages.Contains))
+					throw new InvalidOperationException("Restore failure: " + status.Messages.Aggregate(string.Empty, (output, message) => output + (message + Environment.NewLine)));
+				
 				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 
@@ -722,14 +738,21 @@ namespace Raven.Tests.Helpers
             if (string.IsNullOrEmpty(databaseName)) 
                 return null;
 
-            if (databaseName.Length < 50)
-                return databaseName;
+	        if (databaseName.Length < 50)
+	        {
+				DatabaseNames.Add(databaseName);
+		        return databaseName;
+	        }
 
-            var prefix = databaseName.Substring(0, 30);
+	        var prefix = databaseName.Substring(0, 30);
             var suffix = databaseName.Substring(databaseName.Length - 10, 10);
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
-            return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+            var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+
+	        DatabaseNames.Add(name);
+
+	        return name;
         }
 	}
 }

@@ -12,6 +12,8 @@ using Raven.Imports.Newtonsoft.Json;
 
 using Xunit;
 using Xunit.Extensions;
+using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace RavenFS.Tests.Storage
 {
@@ -103,10 +105,7 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.AssociatePage("file1", 10, 10, 10)));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(Guid.NewGuid()))); 
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 10, 10, 999));
 
@@ -126,15 +125,9 @@ namespace RavenFS.Tests.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(Guid.NewGuid())));
 
-                storage.Batch(accessor => accessor.PutFile("file2", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
+                storage.Batch(accessor => accessor.PutFile("file2", null, new RavenJObject().WithETag(Guid.NewGuid())));
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 1, 10, 3));
                 storage.Batch(accessor => accessor.AssociatePage("file1", 2, 8, 4));

@@ -45,7 +45,7 @@ namespace Voron.Trees
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
         }
 
-		public NodeHeader* Search(Slice key, SliceComparer cmp)
+		public NodeHeader* Search(Slice key)
 		{
 			if (NumberOfEntries == 0)
 			{
@@ -72,9 +72,9 @@ namespace Voron.Trees
 			if (NumberOfEntries == 1)
 			{
 				pageKey.Set(GetNode(0));
-				LastMatch = key.Compare(pageKey, cmp);
+				LastMatch = key.Compare(pageKey);
 				LastSearchPosition = LastMatch > 0 ? 1 : 0;
-				return LastSearchPosition > NumberOfEntries ? null : GetNode(0);
+				return LastSearchPosition == 0 ? GetNode(0) : null;
 			}
 
 			int low = IsLeaf ? 0 : 1;
@@ -88,7 +88,7 @@ namespace Voron.Trees
 				var node = GetNode(position);
 				pageKey.Set(node);
 
-				LastMatch = key.Compare(pageKey, cmp);
+				LastMatch = key.Compare(pageKey);
 				if (LastMatch == 0)
 					break;
 
@@ -189,6 +189,18 @@ namespace Voron.Trees
 			node->DataSize = dataSize;
 
 			return (byte*)node + Constants.NodeHeaderSize + key.Size;
+		}
+
+		public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
+		{
+			const int implicitRefIndex = 0;
+
+			var node = GetNode(implicitRefIndex);
+
+			node->KeySize = 0;
+			node->Flags = NodeFlags.PageRef;
+			node->Version = 1;
+			node->PageNumber = implicitRefPageNumber;
 		}
 
         private NodeHeader* CreateNode(int index, Slice key, NodeFlags flags, int len, ushort previousNodeVersion)
@@ -332,9 +344,9 @@ namespace Voron.Trees
                 LastSearchPosition = i;
         }
 
-        public int NodePositionFor(Slice key, SliceComparer cmp)
+        public int NodePositionFor(Slice key)
         {
-            Search(key, cmp);
+            Search(key);
             return LastSearchPosition;
         }
 
@@ -351,7 +363,7 @@ namespace Voron.Trees
             {
                 var n = GetNode(i);
                 slice.Set(n);
-                sb.Append(slice).Append(", ");
+                sb.Append(slice).AppendLine();
             }
             return sb.ToString();
         }
@@ -456,7 +468,7 @@ namespace Voron.Trees
 	    }
 
         [Conditional("VALIDATE")]
-        public void DebugValidate(Transaction tx, SliceComparer comparer, long root)
+        public void DebugValidate(Transaction tx, long root)
         {
             if (NumberOfEntries == 0)
                 return;
@@ -468,7 +480,7 @@ namespace Voron.Trees
                 var node = GetNode(i);
                 var current = new Slice(node);
 
-                if (prev.Compare(current, comparer) >= 0)
+                if (prev.Compare(current) >= 0)
                 {
                     DebugStuff.RenderAndShow(tx, root, 1);
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");

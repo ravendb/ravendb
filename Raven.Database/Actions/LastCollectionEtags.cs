@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -11,15 +12,18 @@ namespace Raven.Database.Actions
 {
     public class LastCollectionEtags
     {
-        public ITransactionalStorage TransactionalStorage { get; private set; }
+	    private readonly WorkContext context;
+
+	    public ITransactionalStorage TransactionalStorage { get; private set; }
         private readonly ConcurrentDictionary<string, Etag> lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
 
-        public LastCollectionEtags(ITransactionalStorage storage)
+        public LastCollectionEtags(ITransactionalStorage storage, WorkContext context)
         {
-            this.TransactionalStorage = storage;
+	        this.context = context;
+	        this.TransactionalStorage = storage;
         }
 
-        public void Initialize()
+	    public void Initialize()
         {
             TransactionalStorage.Batch(accessor =>
                 accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
@@ -40,7 +44,7 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(accessor =>
             {
                 lastKnownEtag = UpdatePerCollectionEtags(
-                    accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000));
+                    accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000, context.CancellationToken));
             });
 
             if(lastKnownEtag != null)

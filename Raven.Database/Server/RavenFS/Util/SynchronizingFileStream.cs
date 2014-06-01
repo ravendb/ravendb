@@ -1,23 +1,25 @@
 ﻿using System.Collections.Specialized;
 using System.Security.Cryptography;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
 	public class SynchronizingFileStream : StorageStream
 	{
-		private readonly MD5 md5Hasher;
+		private readonly IHashEncryptor md5Hasher;
 
 		private SynchronizingFileStream(ITransactionalStorage transactionalStorage, string fileName,
-										StorageStreamAccess storageStreamAccess, NameValueCollection metadata,
+										StorageStreamAccess storageStreamAccess, RavenJObject metadata,
 										IndexStorage indexStorage, StorageOperationsTask operations)
 			: base(transactionalStorage, fileName, storageStreamAccess, metadata, indexStorage, operations)
 		{
-			md5Hasher = new MD5CryptoServiceProvider();
+		    md5Hasher = Encryptor.Current.CreateHash();
 		}
 
 		public bool PreventUploadComplete { get; set; }
@@ -28,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Util
 		{
 			if (InnerBuffer != null && InnerBufferOffset > 0)
 			{
-				md5Hasher.TransformBlock(InnerBuffer, 0, InnerBufferOffset, null, 0);
+				md5Hasher.TransformBlock(InnerBuffer, 0, InnerBufferOffset);
 				base.Flush();
 			}
 		}
@@ -39,18 +41,16 @@ namespace Raven.Database.Server.RavenFS.Util
 			{
 				base.Dispose(disposing);
 
-				md5Hasher.TransformFinalBlock(new byte[0], 0, 0);
-				FileHash = md5Hasher.Hash.ToStringHash();
+			    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
 				md5Hasher.Dispose();
 			}
 		}
 
 		public static SynchronizingFileStream CreatingOrOpeningAndWritting(ITransactionalStorage storage, IndexStorage search,
 																		   StorageOperationsTask operationsTask,
-																		   string fileName, NameValueCollection metadata)
+																		   string fileName, RavenJObject metadata)
 		{
-			return new SynchronizingFileStream(storage, fileName, StorageStreamAccess.CreateAndWrite, metadata, search,
-											   operationsTask) { PreventUploadComplete = true };
+			return new SynchronizingFileStream(storage, fileName, StorageStreamAccess.CreateAndWrite, metadata, search, operationsTask) { PreventUploadComplete = true };
 		}
 	}
 }

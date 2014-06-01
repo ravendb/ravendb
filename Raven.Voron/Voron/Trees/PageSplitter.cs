@@ -7,7 +7,6 @@ namespace Voron.Trees
 {
     public unsafe class PageSplitter
     {
-        private readonly SliceComparer _cmp;
         private readonly Cursor _cursor;
         private readonly int _len;
         private readonly Slice _newKey;
@@ -22,7 +21,6 @@ namespace Voron.Trees
 
         public PageSplitter(Transaction tx,
             Tree tree,
-            SliceComparer cmp,
             Slice newKey,
             int len,
             long pageNumber,
@@ -33,7 +31,6 @@ namespace Voron.Trees
         {
             _tx = tx;
             _tree = tree;
-            _cmp = cmp;
             _newKey = newKey;
             _len = len;
             _pageNumber = pageNumber;
@@ -66,8 +63,23 @@ namespace Voron.Trees
             }
             else
             {
-                // we already popped the page, so the current one on the stack is what the parent of the page
-                _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+                // we already popped the page, so the current one on the stack is the parent of the page
+
+	            if (_tree.Name == Constants.FreeSpaceTreeName)
+	            {
+					// a special case for FreeSpaceTree because the allocation of a new page called above
+					// can cause a delete of a free space section resulting in a run of the tree rebalancer
+					// and here the parent page that exists in cursor can be outdated
+
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, null); // pass _null_ to make sure we'll get the most updated parent page
+					_parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
+					_parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
+	            }
+	            else
+	            {
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+	            }
+
                 _cursor.Update(_cursor.Pages.First, _parentPage);
             }
 
@@ -76,7 +88,16 @@ namespace Voron.Trees
                 _tx.ClearRecentFoundPages(_tree);
             }
 
-            if (_page.LastSearchPosition >= _page.NumberOfEntries)
+	        if (_tree.Name == Constants.FreeSpaceTreeName)
+	        {
+				// we need to refresh the LastSearchPosition of the split page which is used by the free space handling
+				// because the allocation of a new page called above could remove some sections
+				// from the page that is being split
+
+		        _page.NodePositionFor(_newKey);
+	        }
+
+	        if (_page.LastSearchPosition >= _page.NumberOfEntries)
             {
                 // when we get a split at the end of the page, we take that as a hint that the user is doing 
                 // sequential inserts, at that point, we are going to keep the current page as is and create a new 
@@ -143,7 +164,7 @@ namespace Voron.Trees
             Slice seperatorKey;
             if (currentIndex == splitIndex && newPosition)
             {
-                seperatorKey = currentKey.Compare(_newKey, NativeMethods.memcmp) < 0 ? currentKey : _newKey;
+                seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
             }
             else
             {
@@ -176,7 +197,7 @@ namespace Voron.Trees
 
         private byte* InsertNewKey(Page p)
         {
-            int pos = p.NodePositionFor(_newKey, _cmp);
+            int pos = p.NodePositionFor(_newKey);
 
             byte* dataPos = AddNodeToPage(p, pos);
             _cursor.Push(p);
@@ -187,13 +208,13 @@ namespace Voron.Trees
         {
             if (_parentPage.HasSpaceFor(_tx ,SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize) == false)
             {
-                var pageSplitter = new PageSplitter(_tx, _tree, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef,
+                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);
                 pageSplitter.Execute();
             }
             else
             {
-                _parentPage.NodePositionFor(seperatorKey, _cmp); // select the appropriate place for this
+                _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
                 _parentPage.AddPageRefNode(_parentPage.LastSearchPosition, seperatorKey, rightPage.PageNumber);
             }
         }

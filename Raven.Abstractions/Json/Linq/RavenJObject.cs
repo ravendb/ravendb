@@ -56,8 +56,9 @@ namespace Raven.Json.Linq
 		{
 			get { return Properties.IsSnapshot; }
 		}
+	    public object Tag { get; set; }
 
-		public RavenJObject WithCaseInsensitivePropertyNames()
+	    public RavenJObject WithCaseInsensitivePropertyNames()
 		{
 			var props = new DictionaryWithParentSnapshot(StringComparer.OrdinalIgnoreCase);
 			foreach (var property in Properties)

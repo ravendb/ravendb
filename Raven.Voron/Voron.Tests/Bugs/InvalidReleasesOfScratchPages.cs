@@ -22,12 +22,12 @@ namespace Voron.Tests.Bugs
 
 				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					txw.Environment.State.GetTree(txw, "tree0").Add(txw, "key/1", new MemoryStream());
+					txw.Environment.State.GetTree(txw, "tree0").Add("key/1", new MemoryStream());
 					txw.Commit();
 
 					using (var txr = env.NewTransaction(TransactionFlags.Read))
 					{
-						Assert.NotNull(txr.Environment.State.GetTree(txr, "tree0").Read(txr, "key/1"));
+						Assert.NotNull(txr.Environment.State.GetTree(txr, "tree0").Read("key/1"));
 					}
 				}
 			}

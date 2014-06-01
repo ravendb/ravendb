@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Raven.Abstractions;
@@ -15,7 +14,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Backup;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
-using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage
 {
@@ -61,7 +59,7 @@ namespace Raven.Database.Storage
                 log.Info("Starting backup of '{0}' to '{1}'", backupSourceDirectory, backupDestinationDirectory);
                 UpdateBackupStatus(
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
-                                  backupDestinationDirectory), BackupStatus.BackupMessageSeverity.Informational);
+                                  backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
                 if (BackupAlreadyExists) // trying to backup to an existing backup folder
                 {
@@ -83,7 +81,7 @@ namespace Raven.Database.Storage
                     incrementalBackup = false; // destination wasn't detected as a backup folder, automatically revert to a full backup if incremental was specified
                 }
 
-                UpdateBackupStatus(string.Format("Backing up indexes.."), BackupStatus.BackupMessageSeverity.Informational);
+                UpdateBackupStatus(string.Format("Backing up indexes.."), null, BackupStatus.BackupMessageSeverity.Informational);
 
                 // Make sure we have an Indexes folder in the backup location
                 if (!Directory.Exists(Path.Combine(backupDestinationDirectory, "Indexes")))
@@ -111,7 +109,7 @@ namespace Raven.Database.Storage
                     directoryBackup.Execute(progressNotifier);
                 }
 
-                UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), BackupStatus.BackupMessageSeverity.Informational);
+                UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), null, BackupStatus.BackupMessageSeverity.Informational);
 
                 ExecuteBackup(backupDestinationDirectory, incrementalBackup);
 
@@ -125,12 +123,12 @@ namespace Raven.Database.Storage
             {
                 var ne = e.ExtractSingleInnerException();
                 log.ErrorException("Failed to complete backup", ne);
-                UpdateBackupStatus("Failed to complete backup because: " + ne.Message, BackupStatus.BackupMessageSeverity.Error);
+                UpdateBackupStatus("Failed to complete backup because: " + ne.Message, ne.ExceptionToString(null), BackupStatus.BackupMessageSeverity.Error);
             }
             catch (Exception e)
             {
                 log.ErrorException("Failed to complete backup", e);
-                UpdateBackupStatus("Failed to complete backup because: " + e.Message, BackupStatus.BackupMessageSeverity.Error);
+                UpdateBackupStatus("Failed to complete backup because: " + e.Message, e.ExceptionToString(null), BackupStatus.BackupMessageSeverity.Error);
             }
             finally
             {
@@ -168,7 +166,7 @@ namespace Raven.Database.Storage
             }
         }
 
-        protected void UpdateBackupStatus(string newMsg, BackupStatus.BackupMessageSeverity severity)
+        protected void UpdateBackupStatus(string newMsg, string details, BackupStatus.BackupMessageSeverity severity)
         {
             try
             {
@@ -181,7 +179,8 @@ namespace Raven.Database.Storage
                 {
                     Message = newMsg,
                     Timestamp = SystemTime.UtcNow,
-                    Severity = severity
+                    Severity = severity,
+                    Details = details
                 });
                 database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,

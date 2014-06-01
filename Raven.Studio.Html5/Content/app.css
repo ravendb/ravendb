@@ -49,6 +49,28 @@ body {
 .loader.active {
   visibility: visible;
 }
+.replicationError {
+  color: red;
+}
+.query-stats {
+  width: 600px;
+  margin: -250px 0 0 -450px;
+}
+.query-stats ul li {
+  padding: 0 10px 0 10px;
+  border-bottom: 0!important;
+  border-top: 0!important;
+  border-left: 0!important;
+  border-right: 0!important;
+}
+.query-stats ul li strong {
+  padding: 0 10px 0 10px;
+  display: inline-block;
+}
+.query-stats ul li span {
+  padding: 0 10px 0 10px;
+  display: inline-block;
+}
 .side-panel li {
   max-width: 20%;
   margin-top: 5%;
@@ -61,9 +83,44 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+/*
+.ace_editor {
+		border: 1px solid lightgray;
+		margin: auto;
+		height: 200px;
+		width: 80%;
+		position: relative !important
+	}*/
+.fullScreen .fullScreen-editor {
+  height: auto!important;
+  width: auto!important;
+  border: 0;
+  margin: 0;
+  position: fixed !important;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+}
+.fullScreen {
+  overflow: hidden;
+}
 .dropdown-menu .selected {
   color: #555;
   background-color: #e7e7e7;
+}
+.vertical-bottom-container {
+  width: 10%!important;
+  padding: 0 40% 0 40% !important;
+}
+.vertical-navbar-menu-item {
+  float: none!important;
+  display: block;
+  padding: 0 0 0 0;
+}
+.vertical-navbar-menu-item a {
+  padding: 0 0 0 0;
 }
 .panel span {
   overflow: hidden;
@@ -296,6 +353,16 @@ body {
     white-space: nowrap;
   }
 }
+.fieldControl {
+  text-align: left!important;
+}
+@media (max-device-height: 1024px) {
+  .fieldControl {
+    padding-left: 1%;
+    padding-right: 1%;
+    font-size: 95%;
+  }
+}
 .control-label-additional-link {
   display: block;
   font-size: 80%;
@@ -308,6 +375,12 @@ body {
 }
 #editIndex .map {
   height: 120px;
+}
+@media (max-device-height: 1024px) {
+  .innerWindowsStyle .popover {
+    width: 45% !important;
+    max-width: 45% !important;
+  }
 }
 .popover {
   max-width: 30%;
@@ -475,15 +548,15 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
+  /*#goToDocInput {
+        width: 10em;
+    }*/
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
 #shellHeader .container-fluid {
   padding-right: 15px;
   padding-left: 5px;
-}
-#shellHeader #goToDocInput {
-  width: 10em;
 }
 @media (max-width: 1150px) {
   #shellHeader .nav li a {
@@ -560,6 +633,9 @@ body {
   #shellFooter .server-build-link {
     display: none;
   }
+  #shellFooter .client-build-link {
+    display: none;
+  }
 }
 #editTransformerContainer .transformer {
   height: 600px;
@@ -567,32 +643,46 @@ body {
 .auto-complete {
   background-color: white;
 }
+@media (max-device-height: 1024px) {
+  #logsContainer button,
+  #alertsContainer button,
+  #indexErrorsContainer button,
+  #requestTracingContainer button {
+    max-height: 50% !important;
+  }
+}
 #logsContainer table,
 #alertsContainer table,
-#indexErrorsContainer table {
+#indexErrorsContainer table,
+#requestTracingContainer table {
   outline: none;
 }
 #logsContainer table .selected td,
 #alertsContainer table .selected td,
-#indexErrorsContainer table .selected td {
+#indexErrorsContainer table .selected td,
+#requestTracingContainer table .selected td {
   background-color: #ffffcc;
 }
 #logsContainer .log-details,
 #alertsContainer .log-details,
 #indexErrorsContainer .log-details,
+#requestTracingContainer .log-details,
 #logsContainer .alerts-details,
 #alertsContainer .alerts-details,
 #indexErrorsContainer .alerts-details,
+#requestTracingContainer .alerts-details,
 #logsContainer .index-errors-details,
 #alertsContainer .index-errors-details,
-#indexErrorsContainer .index-errors-details {
+#indexErrorsContainer .index-errors-details,
+#requestTracingContainer .index-errors-details {
   padding: 10px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 #logsContainer .unread td,
 #alertsContainer .unread td,
-#indexErrorsContainer .unread td {
+#indexErrorsContainer .unread td,
+#requestTracingContainer .unread td {
   font-weight: bold;
 }
 #databaseSettingsContainer #dbDocEditor {
@@ -658,9 +748,32 @@ footer ul {
 .advanced-replication-settings {
   cursor: pointer;
 }
+#status-debug > ul.nav {
+  margin-bottom: 15px;
+}
 .popover-lg {
   max-width: 800px;
   width: 600px;
+}
+.license-error {
+  color: #d2322d;
+}
+:invalid {
+  box-shadow: none;
+  /* FF */
+  outline: 0;
+  /* IE 10 */
+}
+.remove-icon {
+  color: #d2322d;
+  border-color: #ac2925;
+  cursor: pointer;
+}
+.remove-icon:hover {
+  color: #d2322d;
+}
+.fa-plus {
+  color: #58cc46;
 }
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
@@ -725,15 +838,20 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
-.remove-icon {
-  color: #d2322d;
-  border-color: #ac2925;
-  cursor: pointer;
+.quotas-settings-form .input-group-addon {
+  min-width: 65px;
 }
-.remove-icon:hover {
-  color: #d2322d;
+.quotas-settings-form .row {
+  margin-bottom: 5px;
 }
-.fa-plus {
-  color: #58cc46;
+.quotas-settings-form .control-label {
+  text-align: left;
 }
-/*# sourceMappingURL=app.css.map */
+.quotas-settings-form input[type=number] {
+  text-align: right;
+}
+.versioning-settings-form .versioning-card {
+  display: inline-table;
+  width: 500px;
+  margin-right: 20px;
+}

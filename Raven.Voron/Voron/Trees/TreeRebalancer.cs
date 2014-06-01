@@ -31,14 +31,13 @@ namespace Voron.Trees
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
-				// need to delete the implicit left page, shift right 
-                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
-                {
+				// need to change the implicit left page
+				if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
+				{
 					var newImplicit = parentPage.GetNode(1)->PageNumber;
-                    parentPage.RemoveNode(0);
-                    parentPage.RemoveNode(0);
-                    parentPage.AddPageRefNode(0, Slice.Empty, newImplicit);
-                }
+					parentPage.RemoveNode(0);
+					parentPage.ChangeImplicitRefPageNode(newImplicit);
+				}
                 else // will be set to rights by the next rebalance call
                 {
                     parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
@@ -220,10 +219,8 @@ namespace Voron.Trees
                 var implicitLeftKey = GetActualKey(to, 0);
                 var leftPageNumber = to.GetNode(0)->PageNumber;
                 to.AddPageRefNode(1, implicitLeftKey, leftPageNumber);
-				
-				to.RemoveNode(0);
-				to.EnsureHasSpaceFor(_tx, Slice.BeforeAllKeys, -1);
-                to.AddPageRefNode(0, Slice.BeforeAllKeys, pageNum);
+
+				to.ChangeImplicitRefPageNode(pageNum); // setup the new implicit node
             }
             else
             {
@@ -232,12 +229,9 @@ namespace Voron.Trees
 
             if (from.LastSearchPositionOrLastEntry == 0)
             {
-                // cannot just remove the left node, need to adjust those
                 var rightPageNumber = from.GetNode(1)->PageNumber;
                 from.RemoveNode(0); // remove the original implicit node
-                from.RemoveNode(0); // remove the next node that we now turned into implicit
-                from.EnsureHasSpaceFor(_tx, Slice.BeforeAllKeys, -1);
-                from.AddPageRefNode(0, Slice.BeforeAllKeys, rightPageNumber);
+                from.ChangeImplicitRefPageNode(rightPageNumber); // setup the new implicit node
                 Debug.Assert(from.NumberOfEntries >= 2);
             }
             else

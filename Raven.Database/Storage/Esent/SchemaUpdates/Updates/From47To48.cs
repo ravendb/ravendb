@@ -13,6 +13,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -307,16 +308,13 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
             if (path.Length + index.Length > 230 ||
                 Encoding.Unicode.GetByteCount(index) >= 255)
             {
-                using (var md5 = MD5.Create())
-                {
-                    var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-                    var result = prefix + Convert.ToBase64String(bytes);
+                var bytes =  Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(index));
+                var result = prefix + Convert.ToBase64String(bytes);
 
-                    if (path.Length + result.Length > 230)
-                        throw new InvalidDataException("index name with the given path is too long even after encoding: " + index);
+                if (path.Length + result.Length > 230)
+                    throw new InvalidDataException("index name with the given path is too long even after encoding: " + index);
 
-                    return result;
-                }
+                return result;
             }
             return index;
         }

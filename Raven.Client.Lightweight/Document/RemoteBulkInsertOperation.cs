@@ -42,26 +42,28 @@ namespace Raven.Client.Document
 		///     Report on the progress of the operation
 		/// </summary>
 		event Action<string> Report;
+	    void Abort();
 	}
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 	{
 		private CancellationTokenSource cancellationTokenSource;
 		private readonly AsyncServerClient operationClient;
-		private readonly IDatabaseChanges operationChanges;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly BlockingCollection<RavenJObject> queue;
-
+        private static readonly RavenJObject AbortMarker = new RavenJObject();
 		private HttpJsonRequest operationRequest;
 		private readonly Task operationTask;
 		private int total;
+	    private bool aborted;
+
+
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
 			using (NoSynchronizationContext.Scope())
 			{
 				OperationId = Guid.NewGuid();
 				operationClient = client;
-				operationChanges = changes;
 				queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
 				operationTask = StartBulkInsertAsync(options);
@@ -85,10 +87,10 @@ namespace Raven.Client.Document
 			using (ConnectionOptions.Expect100Continue(operationClient.Url))
 			{
 				var operationUrl = CreateOperationUrl(options);
-				var token = await GetToken();
+				var token = await GetToken().ConfigureAwait(false);
 				try
 				{
-					token = await ValidateThatWeCanUseAuthenticateTokens(token);
+					token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -109,19 +111,19 @@ namespace Raven.Client.Document
 					{
 						source.TrySetException(e);
 					}
-				}, TaskCreationOptions.LongRunning));
+				}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
 				long operationId;
 
 				using (response)
-				using (var stream = await response.Content.ReadAsStreamAsync())
+				using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
 				using (var streamReader = new StreamReader(stream))
 				{
 					var result = RavenJObject.Load(new JsonTextReader(streamReader));
 					operationId = result.Value<long>("OperationId");
 				}
 
-				if (await IsOperationCompleted(operationId))
+				if (await IsOperationCompleted(operationId).ConfigureAwait(false))
 					responseOperationId = operationId;
 			}
 		}
@@ -135,7 +137,7 @@ namespace Raven.Client.Document
 		private async Task<string> GetToken()
 		{
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
-			var jsonToken = await GetAuthToken();
+			var jsonToken = await GetAuthToken().ConfigureAwait(false);
 
 			return jsonToken.Value<string>("Token");
 		}
@@ -201,6 +203,10 @@ namespace Raven.Client.Document
 						FlushBatch(stream, batch);
 						return;
 					}
+				    if (ReferenceEquals(AbortMarker, document)) // abort immediately
+				    {
+				        return;
+				    }
 
 					batch.Add(document);
 
@@ -216,11 +222,12 @@ namespace Raven.Client.Document
 
 		public Guid OperationId { get; private set; }
 
-		public void Write(string id, RavenJObject metadata, RavenJObject data)
+		public virtual void Write(string id, RavenJObject metadata, RavenJObject data)
 		{
 			if (id == null) throw new ArgumentNullException("id");
 			if (metadata == null) throw new ArgumentNullException("metadata");
 			if (data == null) throw new ArgumentNullException("data");
+		    if (aborted) throw new InvalidOperationException("Operation has been aborted");
 
 			if (operationTask.IsCanceled || operationTask.IsFaulted)
 				operationTask.Wait(); // error early if we have  any error
@@ -378,6 +385,13 @@ namespace Raven.Client.Document
 		public void OnCompleted()
 		{
 		}
+
+	    public void Abort()
+	    {
+	        aborted = true;
+            queue.Add(AbortMarker);
+
+	    }
 	}
 }
 #endif

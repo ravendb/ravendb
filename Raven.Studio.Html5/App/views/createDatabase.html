@@ -32,7 +32,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseIndexes">Indexes</label>
-                                        <input data-bind="value: databaseIndexes, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/Indexes/' + databaseName() }" type="text" class="form-control" id="databaseIndexes">
+                                        <input data-bind="value: databaseIndexes, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes">
                                     </div>
                                 </div>
                             </div>
@@ -63,8 +63,8 @@
                         <label class="btn btn-primary" data-bind="click: toggleVersioningBundle">
                             <input type="checkbox"> Versioning
                         </label>
-                        <label class="btn btn-primary active" data-bind="click: togglePeriodicBackupBundle">
-                            <input type="checkbox"> Periodic Backup
+                        <label class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle">
+                            <input type="checkbox"> Periodic Export
                         </label>
                         <label class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">
                             <input type="checkbox"> Scripted Index

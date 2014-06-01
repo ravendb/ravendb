@@ -1,6 +1,6 @@
 /// <amd-dependency path="ace/ext/language_tools" />
 /// <amd-dependency path="ace/mode/lucene" />
-/// <amd-dependency path="ace/theme/github" />
+/// <amd-dependency path="ace/theme/xcode" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 import aceLang = require("ace/ext/language_tools");
@@ -11,15 +11,20 @@ import aceLang = require("ace/ext/language_tools");
  * All params are optional, except code.
  */
 class aceEditorBindingHandler {
-        
+
     defaults = {
-        theme: "ace/theme/github",
+        theme: "ace/theme/xcode",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false
     }
-    
-    
+
+    static dom = require("ace/lib/dom");
+    static commands = require("ace/commands/default_commands").commands;
+    static isInFullScreeenMode = ko.observable<boolean>(false);
+    static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
+    static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
+
     static install() {
         if (!ko.bindingHandlers["aceEditor"]) {
             ko.bindingHandlers["aceEditor"] = new aceEditorBindingHandler();
@@ -33,27 +38,63 @@ class aceEditorBindingHandler {
             var Editor = require("ace/editor").Editor;
             require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
-                    set: function (val) {                       
+                    set: function (val) {
                     },
                     value: "general"
                 }
             });
+
+            /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
+            aceEditorBindingHandler.commands.push({
+                name: "Toggle Fullscreen",
+                bindKey: "Shift+F11",
+                exec: function (editor) {
+                    aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
+                    aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
+                    editor.resize();
+
+                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
+                        $(".fullScreenModeLabel").text(aceEditorBindingHandler.leaveFullScreenText);
+                        $(".fullScreenModeLabel").hide();
+                        $(editor.container).find(".fullScreenModeLabel").show();
+                    } else {
+                        $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
+                        $(".fullScreenModeLabel").show();
+                    }
+
+                }
+            });
+
+            aceEditorBindingHandler.commands.push({
+                name: "Exit FullScreen",
+                bindKey: "Esc",
+                exec: function (editor) {
+                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
+                        aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
+                        aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
+                        $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
+                        $(".fullScreenModeLabel").show();
+                    }
+                    editor.resize();
+                }
+            });
+            /// 
         }
     }
 
     static currentEditor;
 
-    static customCompleters: { editorType: string; containingViewModel:any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
+    static customCompleters: { editorType: string; containingViewModel: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
 
-    static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position,prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
+    static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
         var curEditorType = editor.getOption("editorType");
         var completerThreesome = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
 
         if (!!completerThreesome) {
-            completerThreesome.completer.call(completerThreesome.containingViewModel,editor, session, pos, prefix, callback);
+            completerThreesome.completer.call(completerThreesome.containingViewModel, editor, session, pos, prefix, callback);
         }
     }
-        
+
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement,
         valueAccessor: () => {
@@ -65,7 +106,7 @@ class aceEditorBindingHandler {
             readOnly?: boolean;
             completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
-            containigViewModel?:any;
+            containigViewModel?: any;
         },
         allBindings,
         viewModel,
@@ -79,7 +120,7 @@ class aceEditorBindingHandler {
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         var langTools = null;
         var containingViewModel = bindingValues.containigViewModel;
-        
+
 
         if (typeof code !== "function") {
             throw new Error("code should be an observable");
@@ -90,9 +131,9 @@ class aceEditorBindingHandler {
             langTools = ace.require("ace/ext/language_tools");
         }
 
-        var aceEditor:any = ace.edit(element);
-                
-        aceEditor.setOption("enableBasicAutocompletion", true);        
+        var aceEditor: any = ace.edit(element);
+
+        aceEditor.setOption("enableBasicAutocompletion", true);
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
         aceEditor.getSession().setMode(lang);
@@ -105,12 +146,12 @@ class aceEditorBindingHandler {
 
             if (!!langTools) {
                 if (!aceEditorBindingHandler.customCompleters.first(x=> x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, containingViewModel: containingViewModel , completer: bindingValues.completer});
+                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, containingViewModel: containingViewModel, completer: bindingValues.completer });
                 }
                 if (!!aceEditor.completers) {
                     var completersList: { getComplitions: any; moduleId?: string }[] = aceEditor.completers;
                     if (!completersList.first(x=> x.moduleId === "aceEditoBindingHandler")) {
-                        langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub});
+                        langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
                     }
                 }
                 else {
@@ -118,24 +159,48 @@ class aceEditorBindingHandler {
                 }
             }
         }
-                
-        // When we lose focus, push the value into the observable.
+
+        // In the event of keyup or lose focus, push the value into the observable.
         var aceFocusElement = ".ace_text-input";
-        //$(element).on('blur', aceFocusElement, () => code(aceEditor.getSession().getValue()));
         $(element).on('keyup', aceFocusElement, () => code(aceEditor.getSession().getValue()));
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
-        // When the element is removed from the DOM, unhook our blur event handler, lest we leak memory.
-        ko.utils.domNodeDisposal.addDisposeCallback(element, () => $(element).off('blur', aceFocusElement));
+        // Initialize ace resizeble text box
+        aceEditor.setOption('vScrollBarAlwaysVisible', true);
+        aceEditor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 120;
+        if ($(element).height() < minHeight) {
+            $(element).height(minHeight);
+        }
+        $(element).resizable({
+            minHeight: minHeight,
+            handles: "s, se",
+            grid: [10000000000000000, 1],
+            resize: function (event, ui) {
+                aceEditor.resize();
+            }
+        });
+        aceEditor.resize(); //for ace elements smaller than 'minHeight'
+        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
+        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
+        $('.ui-resizable-se').css('cursor', 's-resize');
+        $(element).append('<span class="fullScreenModeLabel" style="font-size:90%; z-index:2000000000; position:absolute; bottom:22px; right:22px;opacity:0.4">Press Shift+F11 to enter full screen mode</span>');
+
+        // When the element is removed from the DOM, unhook our keyup and focus event handlers and remove the  resizable functionality completely. lest we leak memory.
+        ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
+            $(element).off('keyup', aceFocusElement);
+            $(element).off('focus', aceFocusElement);
+            $(element).resizable("destroy");
+        });
 
         // Keep track of the editor for this element.
         ko.utils.domData.set(element, "aceEditor", aceEditor);
-
 
         if (bindingValues.getFocus && bindingValues.getFocus == true) {
             aceEditor.focus();
         }
     }
+
 
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor: () => { code: () => string; theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }, allBindings, viewModel, bindingContext: any) {

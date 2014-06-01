@@ -1,5 +1,6 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
+import shell = require("viewmodels/shell");
 
 import collection = require("models/collection");
 import database = require("models/database");
@@ -14,10 +15,8 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
-import changesApi = require("common/changesApi");
 import changeSubscription = require('models/changeSubscription');
-import shell = require("viewmodels/shell");
-
+import changesApi = require("common/changesApi");
 
 class documents extends viewModelBase {
 
@@ -77,11 +76,11 @@ class documents extends viewModelBase {
                 if (!!curCollection) {
                     if (curCollection.documentCount() == 1) {
                         this.collections.remove(curCollection);
+                        this.selectCollection(this.allDocumentsCollection);
                     } else {
                         curCollection.documentCount(curCollection.documentCount() - 1);
+                       
                     }
-
-                    this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() - 1);
                 }
             }
         });
@@ -108,7 +107,6 @@ class documents extends viewModelBase {
         this.fetchCollections(appUrl.getDatabase());
     }
 
-    
     changesApiBulkInsert(e: bulkInsertChangeNotificationDto) {
         if (e.Type == documentChangeType.BulkInsertEnded) {
 
@@ -206,6 +204,7 @@ class documents extends viewModelBase {
     //TODO: this binding has notification leak!
     selectedCollectionChanged(selected: collection) {
         if (selected) {
+            this.isSelectAll(false);
 
             var customColumnsCommand = selected.isAllDocuments ?
                 getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
@@ -243,6 +242,7 @@ class documents extends viewModelBase {
 
     selectCollection(collection: collection) {
         collection.activate();
+        
         var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
         router.navigate(documentsWithCollectionUrl, false);
     }

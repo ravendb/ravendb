@@ -7,7 +7,7 @@ enum filesystemSynchronizationType {
 }
 
 interface filesystemSynchronizationDetailsDto {
-    Filename: string;
+    FileName: string;
     FileETag: string;
     DestinationUrl: string;
     Type: filesystemSynchronizationType;
@@ -111,11 +111,16 @@ interface filesystemListPageDto<T> {
     Items: T[];
 }
 
+interface synchronizationReplicationsDto {
+    Destinations: synchronizationDestinationDto[];
+    Source: string;
+}
+
 interface synchronizationDestinationDto {
     ServerUrl: string;
-    FileSystem: string;
     Username: string;
     Password: string;
     Domain: string;
     ApiKey: string;
+    FileSystem: string;
 }

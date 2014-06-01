@@ -18,13 +18,17 @@ namespace Raven.Abstractions.Smuggler
     using System.Text.RegularExpressions;
     public class SmugglerOptions
     {
+        public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
+	    private int chunkSize;
         private int batchSize;
 	    private TimeSpan timeout;
+	    private long? totalDocumentSizeInChunkLimitInBytes;
 
 	    public SmugglerOptions()
         {
             Filters = new List<FilterSetting>();
             BatchSize = 1024;
+		    ChunkSize = int.MaxValue;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
@@ -32,9 +36,39 @@ namespace Raven.Abstractions.Smuggler
             Limit = int.MaxValue;
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;
+		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
         }
 
-        public bool ExportDeletions { get; set; }
+		/// <summary>
+		/// Limit total size of documents in each chunk
+		/// </summary>
+		public long? TotalDocumentSizeInChunkLimitInBytes
+		{
+			get { return totalDocumentSizeInChunkLimitInBytes; }
+			set
+			{
+				if (value < 1024)
+					throw new InvalidOperationException("Total document size in a chunk cannot be less than 1kb");
+
+				totalDocumentSizeInChunkLimitInBytes = value;
+			}
+		}
+
+		/// <summary>
+		/// The number of documents to import before new connection will be opened.
+		/// </summary>
+		public int ChunkSize
+		{
+			get { return chunkSize; }
+			set
+			{
+				if (value < 1)
+					throw new InvalidOperationException("Chunk size cannot be zero or a negative number");
+				chunkSize = value;
+			}
+		}
+
+	    public bool ExportDeletions { get; set; }
 
         /// <summary>
         /// Start exporting from the specified documents etag

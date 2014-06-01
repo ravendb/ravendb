@@ -9,6 +9,7 @@ class saveDocumentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<{ Key: string; ETag: string }> {
+
         if (this.reportSaveProgress) {
             this.reportInfo("Saving " + this.id + "...");
         }

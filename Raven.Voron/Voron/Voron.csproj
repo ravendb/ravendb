@@ -68,6 +68,7 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\MemoryMapNativeMethods.cs" />
     <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="SliceWriter.cs" />
     <Compile Include="Trees\PageIterator.cs" />
     <Compile Include="Trees\Tree.MultiTree.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
@@ -123,7 +124,6 @@
     <Compile Include="Trees\PageHeader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Slice.cs" />
-    <Compile Include="Impl\SliceComparer.cs" />
     <Compile Include="SliceOptions.cs" />
     <Compile Include="StorageEnvironment.cs" />
     <Compile Include="Impl\Transaction.cs" />

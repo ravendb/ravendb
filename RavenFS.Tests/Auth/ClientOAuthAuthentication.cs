@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Extensions;
 using Raven.Json.Linq;
@@ -90,7 +91,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.NotEqual(Guid.Empty, guid);
 
-            await client.UpdateMetadataAsync("/dir/cba.txt", new NameValueCollection() {{"Meta", "Data"}});
+            await client.UpdateMetadataAsync("/dir/cba.txt", new RavenJObject() { { "Meta", "Data" } });
 
             var results = await client.SearchAsync("Meta:Data");
 
@@ -104,7 +105,8 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task AdminClientWorkWithOAuthEnabled()
         {
-            var adminClient = NewClient(enableAuthentication: true, apiKey: apiKey).Admin;
+	        var client = NewClient(enableAuthentication: true, apiKey: apiKey);
+	        var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new DatabaseDocument
             {
@@ -115,14 +117,21 @@ namespace RavenFS.Tests.Auth
                  }
             }, "testName");
 
-            var names = await adminClient.GetFileSystemsNames();
+	        var names = await adminClient.GetFileSystemsNames();
 
             Assert.Equal(1, names.Length); // will not return 'testName' file system name because used apiKey doesn't have access to a such file system
             Assert.Equal("AdminClientWorkWithOAuthEnabled", names[0]);
 
-            var stats = await adminClient.GetFileSystemsStats();
+			var stats = await adminClient.GetFileSystemsStats();
 
-            Assert.Equal(0, stats.Count); // 0 because our fs aren't active
+			Assert.Equal(0, stats.Count); // 0 because our fs aren't active
+
+			using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, "testName"))
+			{
+				await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
+			}
+
+			await adminClient.DeleteFileSystemAsync("testName", true);
         }
 
         [Fact]
@@ -130,9 +139,9 @@ namespace RavenFS.Tests.Auth
         {
             var configClient = NewClient(enableAuthentication: true, apiKey: apiKey).Config;
 
-            await configClient.SetConfig("test-conf", new NameValueCollection() {{"key", "value"}});
+            await configClient.SetConfig("test-conf", new RavenJObject() { { "key", "value" } });
 
-            var config = await configClient.GetConfig("test-conf");
+            var config = await configClient.GetConfig<RavenJObject>("test-conf");
 
             Assert.Equal("value", config["key"]);
 

@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
-using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -69,7 +68,7 @@ namespace Voron
 
 		public bool Equals(Slice other)
 		{
-			return Compare(other, NativeMethods.memcmp) == 0;
+			return Compare(other) == 0;
 		}
 
 		public override bool Equals(object obj)
@@ -137,25 +136,25 @@ namespace Voron
 			return new string((sbyte*)_pointer, 0, _size, Encoding.UTF8);
 		}
 
-		public int Compare(Slice other, SliceComparer cmp)
+		public int Compare(Slice other)
 		{
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, cmp, Math.Min(Size, other.Size));
+			var r = CompareData(other, Math.Min(Size, other.Size));
 			if (r != 0)
 				return r;
 			return Size - other.Size;
 		}
 
-		public bool StartsWith(Slice other, SliceComparer cmp)
+		public bool StartsWith(Slice other)
 		{
 			if (Size < other.Size)
 				return false;
-			return CompareData(other, cmp, other.Size) == 0;
+			return CompareData(other,  other.Size) == 0;
 		}
 
-		private int CompareData(Slice other, SliceComparer cmp, ushort size)
+		private int CompareData(Slice other,  ushort size)
 		{
 			if (_array != null)
 			{
@@ -165,20 +164,20 @@ namespace Voron
 					{
 						fixed (byte* b = other._array)
 						{
-							return cmp(a, b, size);
+							return NativeMethods.memcmp(a, b, size);
 						}
 					}
-					return cmp(a, other._pointer, size);
+                    return NativeMethods.memcmp(a, other._pointer, size);
 				}
 			}
 			if (other._array != null)
 			{
 				fixed (byte* b = other._array)
 				{
-					return cmp(_pointer, b, size);
+                    return NativeMethods.memcmp(_pointer, b, size);
 				}
 			}
-			return cmp(_pointer, other._pointer, size);
+            return NativeMethods.memcmp(_pointer, other._pointer, size);
 		}
 
 		public static implicit operator Slice(string s)
@@ -210,6 +209,23 @@ namespace Voron
 			Buffer.BlockCopy(_array, 0, dest, 0, _size);
 		}
 
+		public void CopyTo(int from, byte[] dest, int offset, int count)
+		{
+			if (from + count > Size)
+				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the slice");
+			if(offset + count > dest.Length)
+				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the buffer" +
+				                                              "");
+			if (_array == null)
+			{
+				fixed (byte* p = dest)
+					NativeMethods.memcpy(p, _pointer + from, count);
+				return;
+			}
+			Buffer.BlockCopy(_array, from, dest, offset, count);
+		}
+
+
 		public void Set(NodeHeader* node)
 		{
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
@@ -233,20 +249,12 @@ namespace Voron
 			return new Slice(buffer);
 		}
 
-		public long ToInt64()
-		{
-			if (Size != sizeof(long))
-				throw new NotSupportedException("Invalid size for int 64 key");
-			if (_array != null)
-				return EndianBitConverter.Big.ToInt64(_array, 0);
+	    public ValueReader CreateReader()
+	    {
+            if(_array != null)
+                return new ValueReader(_array, _size);
 
-			var buffer = new byte[Size];
-			fixed (byte* dest = buffer)
-			{
-				NativeMethods.memcpy(dest, _pointer, _size);
-			}
-
-			return EndianBitConverter.Big.ToInt64(buffer, 0);
-		}
+	        return new ValueReader(_pointer, _size);
+	    }
 	}
 }

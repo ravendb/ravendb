@@ -12,14 +12,14 @@ namespace Voron.Tests.Bugs
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
-				tx.State.Root.DirectAdd(tx, "aggregations", sizeof (TreeRootHeader));
-				tx.State.Root.DirectAdd(tx, "aggregation-status", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd("events", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd("aggregations", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd("aggregation-status", sizeof (TreeRootHeader));
 				tx.Commit();
 			}
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd("events", sizeof (TreeRootHeader));
 
 				tx.Commit();
 			}
@@ -28,7 +28,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd("events", sizeof (TreeRootHeader));
 
 				tx.Commit();
 			}

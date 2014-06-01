@@ -1,4 +1,5 @@
-﻿using System.Collections.Specialized;
+﻿using Raven.Json.Linq;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -64,8 +65,8 @@ namespace RavenFS.Tests
             var client = NewClient();
 
             var ms = new MemoryStream();
-            client.UploadAsync("Test", new NameValueCollection() {{"TestKey", "TestValue"}}, ms).Wait();
-            client.UploadAsync("Test2", new NameValueCollection() {{"Another", "TestValue"}}, ms).Wait();
+            client.UploadAsync("Test", new RavenJObject() { { "TestKey", "TestValue" } }, ms).Wait();
+            client.UploadAsync("Test2", new RavenJObject() { { "Another", "TestValue" } }, ms).Wait();
 
             var terms = client.GetSearchFieldsAsync(0, pageSize: 1024).Result;
 

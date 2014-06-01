@@ -60,6 +60,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\TimeoutTester.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="Issues\RavenDB_1754.cs" />
     <Compile Include="Issues\RavenDB_1829.cs" />
     <Compile Include="Issues\RavenDB_2134.cs" />
+    <Compile Include="Issues\RavenDB_2143.cs" />
     <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="MailingList\FailingBulkInsertTest.cs" />
     <Compile Include="MailingList\Jalchr.cs" />
@@ -91,7 +93,6 @@
     <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
-    <Compile Include="Syncronization\IndexationTests.cs" />
     <Compile Include="Voron\Class1.cs" />
   </ItemGroup>
   <ItemGroup>

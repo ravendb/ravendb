@@ -33,6 +33,7 @@ namespace Raven.Database.Server.Connections
 
 		private int watchAllDocuments;
 		private int watchAllIndexes;
+	    private int watchAllTransformers;
 		private int watchAllReplicationConflicts;
 		private int watchCancellations;
 		private int watchConfig;
@@ -54,6 +55,7 @@ namespace Raven.Database.Server.Connections
 					eventsTransport.Connected,
 					WatchAllDocuments = watchAllDocuments > 0,
 					WatchAllIndexes = watchAllIndexes > 0,
+                    WatchAllTransformers = watchAllTransformers > 0,
 					WatchConfig = watchConfig > 0,
 					WatchConflicts = watchConflicts > 0,
 					WatchSync = watchSync > 0,
@@ -86,6 +88,16 @@ namespace Raven.Database.Server.Connections
 		{
 			matchingBulkInserts.TryRemove(operationId);
 		}
+
+        public void WatchTransformers()
+        {
+            Interlocked.Increment(ref watchAllTransformers);
+        }
+
+        public void UnwatchTransformers()
+        {
+            Interlocked.Decrement(ref watchAllTransformers);
+        }
 
 		public void WatchAllIndexes()
 		{
@@ -223,6 +235,16 @@ namespace Raven.Database.Server.Connections
 			Enqueue(value);
 		}
 
+        public void Send(TransformerChangeNotification transformerChangeNotification)
+        {
+            var value = new { Value = transformerChangeNotification, Type = "TransformerChangeNotification" };
+
+            if (watchAllTransformers > 0)
+            {
+                Enqueue(value);
+            }
+        }
+
 		public void Send(ReplicationConflictNotification replicationConflictNotification)
 		{
 			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
@@ -247,14 +269,14 @@ namespace Raven.Database.Server.Connections
 
 		private bool ShouldSend(Notification notification)
 		{
-			if (notification is FileChange &&
+			if (notification is FileChangeNotification &&
 				matchingFolders.Any(
-					f => ((FileChange)notification).File.StartsWith(f, StringComparison.InvariantCultureIgnoreCase)))
+					f => ((FileChangeNotification)notification).File.StartsWith(f, StringComparison.InvariantCultureIgnoreCase)))
 			{
 				return true;
 			}
 
-			if (notification is ConfigChange && watchConfig > 0)
+			if (notification is ConfigurationChangeNotification && watchConfig > 0)
 			{
 				return true;
 			}
@@ -264,12 +286,12 @@ namespace Raven.Database.Server.Connections
 				return true;
 			}
 
-			if (notification is SynchronizationUpdate && watchSync > 0)
+			if (notification is SynchronizationUpdateNotification && watchSync > 0)
 			{
 				return true;
 			}
 
-			if (notification is UploadFailed && watchCancellations > 0)
+			if (notification is CancellationNotification && watchCancellations > 0)
 			{
 				return true;
 			}

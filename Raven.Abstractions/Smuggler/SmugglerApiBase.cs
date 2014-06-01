@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
+
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
         public SmugglerOptions SmugglerOptions { get; set; }
@@ -703,49 +704,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-        private long GetRoughSize(RavenJToken token)
-        {
-            long sum; 
-            switch (token.Type)
-            {
-                case JTokenType.None:
-                    return 0;
-                case JTokenType.Object:
-                    sum = 2;// {}
-                    foreach (var prop in (RavenJObject)token)
-                    {
-                        sum += prop.Key.Length + 1; // name:
-                        sum += GetRoughSize(prop.Value);
-                    }
-                    return sum;
-                case JTokenType.Array:
-                    // the 1 is for ,
-                    return 2 + ((RavenJArray) token).Sum(prop => 1 + GetRoughSize(prop));
-                case JTokenType.Constructor:
-                case JTokenType.Property:
-                case JTokenType.Comment:
-                case JTokenType.Raw:
-                    return 0;
-                case JTokenType.Boolean:
-                    return token.Value<bool>() ? 4 : 5;
-                case JTokenType.Null:
-                    return 4;
-                case JTokenType.Undefined:
-                    return 9;
-                case JTokenType.Date:
-                    return 21;
-                case JTokenType.Bytes:
-                case JTokenType.Integer:
-                case JTokenType.Float:
-                case JTokenType.String:
-                case JTokenType.Guid:
-                case JTokenType.TimeSpan:
-                case JTokenType.Uri:
-                    return token.Value<string>().Length;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
+       
 
 		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
@@ -755,7 +714,7 @@ namespace Raven.Abstractions.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-			    var size = GetRoughSize(document);
+				var size = DocumentHelpers.GetRoughSize(document);
 				if (size > 1024 * 1024)
 				{
 					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",

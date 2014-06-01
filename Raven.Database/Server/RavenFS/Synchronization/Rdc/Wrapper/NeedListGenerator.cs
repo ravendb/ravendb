@@ -152,7 +152,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 
 				// Advance the intermediate pointer
 				// to our next RdcNeed struct.
-				ptr = new IntPtr(ptr.ToInt32() + needSize);
+				ptr = new IntPtr(ptr.ToInt64() + needSize);
 			}
 			return result;
 		}

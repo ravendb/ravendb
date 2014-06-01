@@ -1,5 +1,6 @@
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
+import counterStorage = require("models/counter/counterStorage");
 import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
@@ -11,6 +12,7 @@ class appUrl {
     private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
 
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
@@ -35,10 +37,27 @@ class appUrl {
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
-        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
+        quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
+        periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
+        versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
+
+        statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
+        statusDebugChanges: ko.computed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
+        statusDebugMetrics: ko.computed(() => appUrl.forStatusDebugMetrics(appUrl.currentDatabase())),
+        statusDebugConfig: ko.computed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
+        statusDebugDocrefs: ko.computed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
+        statusDebugCurrentlyIndexing: ko.computed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
+        statusDebugQueries: ko.computed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
+        statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
+        statusDebugRoutes: ko.computed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
+        statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
+        statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
+        statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
+        statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
+        statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
@@ -49,10 +68,17 @@ class appUrl {
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
+        filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
+        filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
-    };
+        couterStorages: ko.computed(() => appUrl.forCounterStorages()),
+        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?counterstorage=" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
+        counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
+        counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
+        counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
+        counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
 
-  
+    };
 
     static checkIsAreaActive(routeRoot: string): boolean {
 
@@ -60,6 +86,34 @@ class appUrl {
         var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
 
         return isThereAny;
+    }
+
+    static getEncodedCounterStoragePart(counterStorage:counterStorage): string {
+        return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
+    }
+
+    static forCounterStorages(): string {
+        return "#counterstorages";
+    }
+
+    static forCounterStorageCounters(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/counters?" + counterStroragePart;
+    }
+
+    static forCounterStorageReplication(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/replication?" + counterStroragePart;
+    }
+
+    static forCounterStorageStats(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/stats?" + counterStroragePart;
+    }
+
+    static forCounterStorageConfiguration(counterStorage: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/configuration?" + counterStroragePart;
     }
 
     static forDatabases(): string {
@@ -106,6 +160,62 @@ class appUrl {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forStatusDebug(db: database): string {
+        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugChanges(db: database): string {
+        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugMetrics(db: database): string {
+        return "#databases/status/debug/metrics?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugConfig(db: database): string {
+        return "#databases/status/debug/config?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugDocrefs(db: database): string {
+        return "#databases/status/debug/docrefs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugCurrentlyIndexing(db: database): string {
+        return "#databases/status/debug/currentlyIndexing?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugQueries(db: database): string {
+        return "#databases/status/debug/queries?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugTasks(db: database): string {
+        return "#databases/status/debug/tasks?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugRoutes(db): string {
+        return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugRequestTracing(db): string {
+        return "#databases/status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugSqlReplication(db: database): string {
+        return "#databases/status/debug/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugIndexFields(db: database): string {
+        return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugSlowDocCounts(db: database): string {
+        return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugIdentities(db: database): string {
+        return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forSettings(db: database): string {
         var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
         return path;
@@ -145,12 +255,20 @@ class appUrl {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forPeriodicBackup(db: database): string {
-        return "#databases/settings/periodicBackups?" + appUrl.getEncodedDbPart(db);
+    static forQuotas(db: database): string {
+        return "#databases/settings/quotas?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forPeriodicExport(db: database): string {
+        return "#databases/settings/periodicExports?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {
         return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forVersioning(db: database): string {
+        return "#databases/settings/versioning?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSqlReplications(db: database): string {
@@ -234,7 +352,9 @@ class appUrl {
             return appUrl.baseUrl + "/databases/" + res.name;
         }
         else if (res && res instanceof filesystem) {
-            return appUrl.baseUrl + "/ravenfs/" + res.name;
+            return appUrl.baseUrl + "/fs/" + res.name;
+        } else if (res && res instanceof counterStorage) {
+            return appUrl.baseUrl + "/counters/" + res.name;
         }
 
         return this.baseUrl;
@@ -285,6 +405,11 @@ class appUrl {
         return "#filesystems?" + filesystemPart;
     }
 
+    static forCounterStorage(cs: counterStorage): string {
+        var counterStoragePart = appUrl.getEncodedCounterPart(cs);
+        return "#filesystems?" + counterStoragePart;
+    }
+
     static forIndexesRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
@@ -318,6 +443,16 @@ class appUrl {
     static forFilesystemSynchronization(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/synchronization?" + filesystemPart;
+    }
+
+    static forFilesystemSynchronizationDestinations(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/synchronization/destinations?" + filesystemPart;
+    }
+
+    static forFilesystemStatus(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/status?" + filesystemPart;
     }
 
     static forFilesystemConfiguration(fs: filesystem): string {
@@ -458,7 +593,11 @@ class appUrl {
 	*/
 	static forCurrentDatabase(): computedAppUrls {
 		return appUrl.currentDbComputeds;
-	}
+    }
+
+    static forCurrentFilesystem(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs.
+    }
 
     private static getEncodedResourcePart(res?: resource) {
         if (!res)
@@ -477,6 +616,10 @@ class appUrl {
 
     private static getEncodedFsPart(fs?: filesystem) {
         return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
+    }
+
+    private static getEncodedCounterPart(cs?: counterStorage) {
+        return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
 
     public static warnWhenUsingSystemDatabase: boolean = true;

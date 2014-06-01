@@ -12,6 +12,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Bundles.MoreLikeThis;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
@@ -117,12 +118,8 @@ namespace Raven.Database.Queries
 						addIncludesCommand.Execute(jsonDocument.DataAsJson);
 					}
 
-					Etag computedEtag;
-					using (var md5 = MD5.Create())
-					{
-						var computeHash = md5.ComputeHash(includedEtags.ToArray());
-						computedEtag = Etag.Parse(computeHash);
-					}
+				    var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
+                    Etag computedEtag = Etag.Parse(computeHash);
 
 					return new MoreLikeThisQueryResult
 					{

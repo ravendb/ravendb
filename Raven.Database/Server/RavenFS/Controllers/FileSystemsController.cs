@@ -13,6 +13,7 @@ using Raven.Abstractions.RavenFS;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Controllers
@@ -20,15 +21,16 @@ namespace Raven.Database.Server.RavenFS.Controllers
     public class FileSystemsController : RavenDbApiController
     {
         [HttpGet]
-        [Route("ravenfs/names")]
+        [Route("fs/names")]
         public HttpResponseMessage Names()
         {
             var names = GetFileSystemNames();
-            return GetMessageWithObject(names);
+            return this.GetMessageWithObject(names)
+                       .WithNoCache();
         }
 
         [HttpGet]
-        [Route("ravenfs/stats")]
+        [Route("fs/stats")]
         public async Task<HttpResponseMessage> Stats()
         {
             var stats = new List<FileSystemStats>();
@@ -49,7 +51,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 stats.Add(fsStats);
             }
 
-            return GetMessageWithObject(stats);
+            return this.GetMessageWithObject(stats)
+                       .WithNoCache();
         }
 
 

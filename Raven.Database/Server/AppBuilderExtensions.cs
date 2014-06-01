@@ -21,6 +21,7 @@ using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
+using System.Net;
 
 // ReSharper disable once CheckNamespace
 namespace Owin
@@ -71,23 +72,19 @@ namespace Owin
 			app.UseInterceptor();
 #endif
 
-		    app.UseWebApi(CreateHttpCfg(options.DatabaseLandlord, options.FileSystemLandlord,
-		        options.MixedModeRequestAuthorizer, options.RequestManager));
+		    app.UseWebApi(CreateHttpCfg(options));
 			
 			return app;
 		}
 
-		private static HttpConfiguration CreateHttpCfg(
-            DatabasesLandlord databasesLandlord, 
-            FileSystemsLandlord fileSystemsLandlord,
-            MixedModeRequestAuthorizer mixedModeRequestAuthorizer, 
-            RequestManager requestManager)
+		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();
-			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
-            cfg.Properties[typeof(FileSystemsLandlord)] = fileSystemsLandlord;
-			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
-			cfg.Properties[typeof(RequestManager)] = requestManager;
+			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
+            cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
+			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
+			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
+			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
 
@@ -96,7 +93,7 @@ namespace Owin
 			cfg.MapHttpAttributeRoutes();
 
 			cfg.Routes.MapHttpRoute(
-				"RavenFs", "ravenfs/{controller}/{action}",
+				"RavenFs", "fs/{controller}/{action}",
 				new {id = RouteParameter.Optional});
 
 			cfg.Routes.MapHttpRoute(
@@ -141,13 +138,22 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
-				return (response.Content is ChangesPushContent ||
-						response.Content is StreamsController.StreamQueryContent ||
-						response.Content is StreamContent ||
-						response.Content is PushStreamContent ||
-						response.Content is JsonContent ||
-						response.Content is MultiGetController.MultiGetContent) == false;
+                var content = response.Content;
+			    var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
+			    if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
+                    return ShouldBuffer(compressedContent.OriginalContent);
+			    return ShouldBuffer(content);
 			}
+
+		    private bool ShouldBuffer(HttpContent content)
+		    {
+		        return (content is ChangesPushContent ||
+		                content is StreamsController.StreamQueryContent ||
+		                content is StreamContent ||
+		                content is PushStreamContent ||
+		                content is JsonContent ||
+		                content is MultiGetController.MultiGetContent) == false;
+		    }
 		}
 
 		private class InterceptMiddleware : OwinMiddleware

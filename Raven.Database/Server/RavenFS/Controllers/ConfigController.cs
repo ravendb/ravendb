@@ -8,11 +8,15 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
-using NameValueCollectionJsonConverter = Raven.Client.RavenFS.NameValueCollectionJsonConverter;
+using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
+using System.Web.Http.ModelBinding;
+using System.Text.RegularExpressions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -21,33 +25,52 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-		[Route("ravenfs/{fileSystemName}/config")]
-		public string[] Get()
+		[Route("fs/{fileSystemName}/config")]
+        public HttpResponseMessage Get()
 		{
 			string[] names = null;
 			Storage.Batch(accessor => { names = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToArray(); });
-			return names;
+
+            return this.GetMessageWithObject(names)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/config")]
-		public HttpResponseMessage Get(string name)
+        [Route("fs/{fileSystemName}/config")]
+        public HttpResponseMessage Get(string name)
 		{
 			try
 			{
-				NameValueCollection nameValueCollection = null;
-				Storage.Batch(accessor => { nameValueCollection = accessor.GetConfig(name); });
-				return Request.CreateResponse(HttpStatusCode.OK, nameValueCollection);
+                RavenJObject config = null;
+                Storage.Batch(accessor => { config = accessor.GetConfig(name); });
+                
+                return this.GetMessageWithObject(config, HttpStatusCode.OK)
+                           .WithNoCache();
 			}
 			catch (FileNotFoundException)
 			{
-				return Request.CreateResponse(HttpStatusCode.NotFound);
+                return this.GetEmptyMessage(HttpStatusCode.NotFound)
+                           .WithNoCache();
 			}
 		}
 
+        [HttpGet]
+        [Route("fs/{fileSystemName}/config/non-generated")]
+        public HttpResponseMessage NonGeneratedConfigNames()
+        {
+            IEnumerable<string> configs = null;
+            Storage.Batch(accessor => { configs = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToList(); });
+            
+            var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
+            configs = configs.Where((c) => !searchPattern.IsMatch(c)).AsEnumerable();
+
+            return this.GetMessageWithObject(configs)
+                       .WithNoCache();
+        }
+
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/config/search")]
-		public ConfigSearchResults ConfigNamesStartingWith(string prefix)
+        [Route("fs/{fileSystemName}/config/search")]
+        public HttpResponseMessage ConfigNamesStartingWith(string prefix)
 		{
 			if (prefix == null)
 				prefix = "";
@@ -67,43 +90,37 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				};
 			});
 
-			return results;
+            return this.GetMessageWithObject(results)
+                       .WithNoCache();
 		}
 
 		[HttpPut]
-        [Route("ravenfs/{fileSystemName}/config")]
+        [Route("fs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
-			var jsonSerializer = new JsonSerializer
-			{
-				Converters =
-				{
-					new NameValueCollectionJsonConverter()
-				}
-			};
-			var contentStream = await Request.Content.ReadAsStreamAsync();
+            var json = await ReadJsonAsync();
 
-			var nameValueCollection = jsonSerializer.Deserialize<NameValueCollection>(new JsonTextReader(new StreamReader(contentStream)));
+            ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, json)), ConcurrencyResponseException);
 
-			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, nameValueCollection)), ConcurrencyResponseException);
+            Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
 
-			Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Set });
+            Log.Debug("Config '{0}' was inserted", name);
 
-			Log.Debug("Config '{0}' was inserted", name);
-
-            return this.GetMessageWithObject(nameValueCollection, HttpStatusCode.Created);
+            return this.GetMessageWithObject(json, HttpStatusCode.Created)
+                       .WithNoCache();
 		}
 
 		[HttpDelete]
-        [Route("ravenfs/{fileSystemName}/config")]
-		public HttpResponseMessage Delete(string name)
+        [Route("fs/{fileSystemName}/config")]
+        public HttpResponseMessage Delete(string name)
 		{
 			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.DeleteConfig(name)),
 											 ConcurrencyResponseException);
 
-			Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Delete });
+			Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Delete });
 
 			Log.Debug("Config '{0}' was deleted", name);
+
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}

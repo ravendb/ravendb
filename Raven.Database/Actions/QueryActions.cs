@@ -183,7 +183,7 @@ namespace Raven.Database.Actions
                     throw new IndexDisabledException(indexFailureInformation);
                 }
                 docRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.InFlightTransactionalState, query.QueryInputs, idsToLoad);
-                var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.IsDistinct,
+                var fieldsToFetch = new FieldsToFetch(query,
                     viewGenerator.ReduceDefinition == null
                         ? Constants.DocumentIdFieldName
                         : Constants.ReduceKeyFieldName);

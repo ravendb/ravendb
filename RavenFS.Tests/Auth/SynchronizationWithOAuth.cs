@@ -51,7 +51,7 @@ namespace RavenFS.Tests.Auth
 
             var ms = new MemoryStream(new byte[] {3, 2, 1});
 
-            await source.UploadAsync("ms.bin", new NameValueCollection(), ms);
+            await source.UploadAsync("ms.bin", ms);
 
             var result = await source.Synchronization.StartAsync("ms.bin", destination);
 
@@ -67,9 +67,9 @@ namespace RavenFS.Tests.Auth
             var sourceClient = NewClient(0);
             var destinationClient = NewClient(1, enableAuthentication: true, apiKey: apiKey);
 
-            await sourceClient.UploadAsync("test.bin", new NameValueCollection {{"difference", "metadata"}}, content);
+            await sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content);
             content.Position = 0;
-            await destinationClient.UploadAsync("test.bin", content);
+            await destinationClient.UploadAsync("test.bin", new RavenJObject { { "really", "different" } }, content);
 
             var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
@@ -89,9 +89,9 @@ namespace RavenFS.Tests.Auth
             var sourceClient = NewClient(0);
             var destinationClient = NewClient(1, enableAuthentication: true, apiKey: apiKey);
 
-            await sourceClient.UploadAsync("test.bin", new NameValueCollection(), content);
+            await sourceClient.UploadAsync("test.bin",  content);
             content.Position = 0;
-            await destinationClient.UploadAsync("test.bin", new NameValueCollection(), content);
+            await destinationClient.UploadAsync("test.bin", content);
 
             await sourceClient.RenameAsync("test.bin", "renamed.bin");
 

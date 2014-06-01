@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Changes;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -24,18 +25,14 @@ namespace RavenFS.Tests.Synchronization
         [Fact]
 		public async Task NotificationsAreReceivedOnSourceWhenSynchronizationsAreStartedAndFinished()
 		{
-			await source.Notifications.ConnectionTask;
-
 			// content update
 			await source.UploadAsync("test.bin", new MemoryStream(new byte[] {1, 2, 3}));
 
 			var notificationTask =
-				source.Notifications.SynchronizationUpdates()
+                source.Changes().ForSynchronization()
 				      .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
-				      .Timeout(
-					      TimeSpan.FromSeconds(20)).Take(2).ToArray().
+				      .Timeout(TimeSpan.FromSeconds(20)).Take(2).ToArray().
 				       ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
 
 			var report = await source.Synchronization.StartAsync("test.bin", destination);
 
@@ -51,16 +48,13 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[1].Type);
 
 			// metadata update
-			await source.UpdateMetadataAsync("test.bin", new NameValueCollection {{"key", "value"}});
+            await source.UpdateMetadataAsync("test.bin", new RavenJObject { { "key", "value" } });
 
-			notificationTask =
-				source.Notifications.SynchronizationUpdates()
-				      .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
-				      .Timeout(
-					      TimeSpan.FromSeconds(20)).
-				       Take(2).ToArray().
-				       ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            notificationTask = source.Changes().ForSynchronization()
+				                    .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+				                    .Timeout(TimeSpan.FromSeconds(20))
+                                    .Take(2).ToArray()
+                                    .ToTask();
 
 			report = await source.Synchronization.StartAsync("test.bin", destination);
 
@@ -78,14 +72,11 @@ namespace RavenFS.Tests.Synchronization
 			// rename update
 			await source.RenameAsync("test.bin", "rename.bin");
 
-			notificationTask =
-				source.Notifications.SynchronizationUpdates()
-				      .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
-				      .Timeout(
-					      TimeSpan.FromSeconds(20)).
-				       Take(2).ToArray().
-				       ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            notificationTask = source.Changes().ForSynchronization()
+				                  .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+				                  .Timeout(TimeSpan.FromSeconds(20))
+                                  .Take(2).ToArray()
+                                  .ToTask();
 
 			report = await source.Synchronization.StartAsync("test.bin", destination);
 
@@ -103,14 +94,11 @@ namespace RavenFS.Tests.Synchronization
 			// delete update
 			await source.DeleteAsync("rename.bin");
 
-			notificationTask =
-				source.Notifications.SynchronizationUpdates()
-				      .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
-				      .Timeout(
-					      TimeSpan.FromSeconds(20)).
-				       Take(2).ToArray().
-				       ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            notificationTask = source.Changes().ForSynchronization()
+                                  .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+                                  .Timeout(TimeSpan.FromSeconds(20))
+                                  .Take(2).ToArray()
+                                  .ToTask();
 
 			report = await source.Synchronization.StartAsync("rename.bin", destination);
 
@@ -129,18 +117,14 @@ namespace RavenFS.Tests.Synchronization
         [Fact]
 		public async Task NotificationsAreReceivedOnDestinationWhenSynchronizationsAreFinished()
 		{
-			await destination.Notifications.ConnectionTask;
-
 			// content update
 			await source.UploadAsync("test.bin", new MemoryStream(new byte[] {1, 2, 3}));
 
-			var notificationTask =
-				destination.Notifications.SynchronizationUpdates()
-				           .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
-				           .Timeout(
-					           TimeSpan.FromSeconds(20)).Take(1).ToArray().
-				            ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            var notificationTask = destination.Changes().ForSynchronization()
+				                        .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                        .Timeout(TimeSpan.FromSeconds(20))
+                                        .Take(1).ToArray()
+                                        .ToTask();
 
 			var report = await source.Synchronization.StartAsync("test.bin", destination);
 
@@ -153,15 +137,13 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[0].Type);
 
 			// metadata update
-			await source.UpdateMetadataAsync("test.bin", new NameValueCollection {{"key", "value"}});
+            await source.UpdateMetadataAsync("test.bin", new RavenJObject { { "key", "value" } });
 
-			notificationTask =
-				destination.Notifications.SynchronizationUpdates()
-				           .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
-				           .Timeout(
-					           TimeSpan.FromSeconds(20)).Take(1).ToArray().
-				            ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            notificationTask = destination.Changes().ForSynchronization()
+				                   .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                   .Timeout(TimeSpan.FromSeconds(20))
+                                   .Take(1).ToArray()
+                                   .ToTask();
 
 			report = await source.Synchronization.StartAsync("test.bin", destination);
 
@@ -176,13 +158,11 @@ namespace RavenFS.Tests.Synchronization
 			// rename update
 			await source.RenameAsync("test.bin", "rename.bin");
 
-			notificationTask =
-				destination.Notifications.SynchronizationUpdates()
-				           .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
-				           .Timeout(
-					           TimeSpan.FromSeconds(20)).Take(1).ToArray().
-				            ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            notificationTask = destination.Changes().ForSynchronization()
+				                   .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                   .Timeout(TimeSpan.FromSeconds(20))
+                                   .Take(1).ToArray()
+                                   .ToTask();
 
 			report = await source.Synchronization.StartAsync("test.bin", destination);
 
@@ -197,13 +177,11 @@ namespace RavenFS.Tests.Synchronization
 			// delete update
 			await source.DeleteAsync("rename.bin");
 
-			notificationTask =
-				destination.Notifications.SynchronizationUpdates()
-				           .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
-				           .Timeout(
-					           TimeSpan.FromSeconds(20)).Take(1).ToArray().
-				            ToTask();
-			await source.Notifications.WhenSubscriptionsActive();
+            notificationTask = destination.Changes().ForSynchronization()
+				                   .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                   .Timeout(TimeSpan.FromSeconds(20))
+                                   .Take(1).ToArray()
+                                   .ToTask();
 
 			report = await source.Synchronization.StartAsync("rename.bin", destination);
 
@@ -218,13 +196,10 @@ namespace RavenFS.Tests.Synchronization
 
 		public override void Dispose()
 		{
-			var serverNotifications = destination.Notifications as ServerNotifications;
-			if (serverNotifications != null)
-				serverNotifications.DisposeAsync().Wait();
-			var notifications = source.Notifications as ServerNotifications;
-			if (notifications != null)
-				notifications.DisposeAsync().Wait();
-			base.Dispose();
+            destination.Dispose();
+            source.Dispose();
+
+            base.Dispose();
 		}
 	}
 }

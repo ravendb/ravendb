@@ -8,7 +8,7 @@ class getConfigurationByKeyCommand extends commandBase {
         super();        
     }
 
-    execute(): JQueryPromise<Array<Pair<string, string[]>>> {
+    execute(): JQueryPromise<string> {
 
         var url = "/config";
         var args = {
@@ -16,22 +16,11 @@ class getConfigurationByKeyCommand extends commandBase {
         };
 
         var task = $.Deferred();
-        this.query<Array<Pair<string, string[]>>>(url, args, this.fs)
+        this.query<string>(url, args, this.fs)
             .done(data => {
-                var array = new Array<Pair<string, string[]>>();
-                for (var key in data) {
-                    if (data.hasOwnProperty(key)) {
-                        var value = data[key];
-                        if (value instanceof Array) {
-                            array.push(new Pair(key, value));
-                        }
-                        else {
-                            array.push(new Pair(key, new Array<string>(value)));
-                        }
-                    }
-                }
-
-                task.resolve(array);
+                var prettifySpacing = 4;
+                var configText = JSON.stringify(data, null, prettifySpacing);
+                task.resolve(configText);
             })
             .fail(response => this.reportError("Failed to retrieve filesystem configuration key. Does exist in this filesystem?", response.responseText, response.statusText));
 

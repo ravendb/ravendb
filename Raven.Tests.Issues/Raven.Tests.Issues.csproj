@@ -65,11 +65,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive.Core">
-      <HintPath>..\packages\Rx-Core.2.2.2\lib\net45\System.Reactive.Core.dll</HintPath>
+    <Reference Include="System.Reactive.Core, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Core.2.2.4\lib\net45\System.Reactive.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="System.Reactive.Interfaces">
-      <HintPath>..\packages\Rx-Interfaces.2.2.2\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+    <Reference Include="System.Reactive.Interfaces, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Interfaces.2.2.4\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
@@ -113,6 +117,8 @@
     <Compile Include="RaveDB-1279.cs" />
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
+    <Compile Include="RavenDB-2036.cs" />
+    <Compile Include="RavenDB-2334.cs" />
     <Compile Include="RavenDB1009.cs" />
     <Compile Include="RavenDB1019.cs" />
     <Compile Include="RavenDB1025.cs" />
@@ -230,16 +236,32 @@
     <Compile Include="RavenDB_1762.cs" />
     <Compile Include="RavenDB_1765.cs" />
     <Compile Include="RavenDb_1816.cs" />
+    <Compile Include="RavenDB_1824.cs" />
     <Compile Include="RavenDB_1825.cs" />
     <Compile Include="RavenDB_1828.cs" />
     <Compile Include="RavenDB_1829.cs" />
     <Compile Include="RavenDB_187.cs" />
     <Compile Include="RavenDB_1877.cs" />
     <Compile Include="RavenDb_1977.cs" />
+    <Compile Include="RavenDb_1982.cs" />
+    <Compile Include="RavenDb_2016.cs" />
+    <Compile Include="RavenDB_2101.cs" />
     <Compile Include="RavenDB_2113.cs" />
+    <Compile Include="RavenDb_2123.cs" />
     <Compile Include="RavenDB_2124.cs" />
     <Compile Include="RavenDB_2129.cs" />
+    <Compile Include="RavenDB_2181.cs" />
     <Compile Include="RavenDB_2183.cs" />
+    <Compile Include="RavenDB_2205.cs" />
+    <Compile Include="RavenDB_2209.cs" />
+    <Compile Include="RavenDb_2215.cs" />
+    <Compile Include="RavenDb_2239.cs" />
+    <Compile Include="RavenDB_2233.cs" />
+    <Compile Include="RavenDB_2244.cs" />
+    <Compile Include="RavenDB_2325.cs" />
+    <Compile Include="RavenDB_2314.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />
@@ -291,11 +313,13 @@
     <Compile Include="RavenDB_895.cs" />
     <Compile Include="RavenDB_967.cs" />
     <Compile Include="RavenDB_993.cs" />
+    <Compile Include="RavenDB_2344.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
     <Compile Include="RDBQA_16.cs" />
     <Compile Include="RDBQA_17.cs" />
+    <Compile Include="RDBQA_18.cs" />
     <Compile Include="RDBQA_4.cs" />
     <Compile Include="RDBQA_6.cs" />
     <Compile Include="RDBQA_7.cs" />

@@ -4,7 +4,7 @@ import document = require("models/document");
 
 class getDatabaseSettingsCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private reportRefreshProgress = false) {
         super();
 
         if (!db) {
@@ -13,8 +13,19 @@ class getDatabaseSettingsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<document> {
+        if (this.reportRefreshProgress) {
+            this.reportInfo("Fetching Database Settings for '" + this.db.name + "'");
+        }
+
         var resultsSelector = (queryResult: queryResultDto) => new document(queryResult);
-        return this.query("/admin/databases/" + this.db.name, null, null, resultsSelector);
+        var url = "/admin/databases/" + this.db.name;
+        var getTask = this.query(url, null, null, resultsSelector);
+
+        if (this.reportRefreshProgress) {
+            getTask.done(() => this.reportSuccess("Database Settings of '" + this.db.name + "' were successfully refreshed!"));
+            getTask.fail((response: JQueryXHR) => this.reportError("Failed to refresh Database Settings!", response.responseText, response.statusText));
+        }
+        return getTask;
     }
 }
 

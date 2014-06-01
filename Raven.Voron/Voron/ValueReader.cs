@@ -7,13 +7,17 @@ using Voron.Util.Conversion;
 
 namespace Voron
 {
-	public unsafe class ValueReader
+	public unsafe struct ValueReader
 	{
-		private int _pos;
+        [ThreadStatic]
+        private static byte[] tmpBuf;
+		
+        private int _pos;
 		private readonly byte[] _buffer;
-	    private byte[] _tmpBuf;
 		private readonly int _len;
 		private readonly byte* _val;
+
+        public byte* Base { get { return _val; } }
 
 		public ValueReader(Stream stream)
 		{
@@ -30,13 +34,26 @@ namespace Voron
 				pos += read;
 			}
 			stream.Position = position;
+
+		    _pos = 0;
+		    _val = null;
 		}
+
+	    public ValueReader(byte[] array, int len)
+	    {
+	        if (array == null) throw new ArgumentNullException("array");
+	        _buffer = array;
+	        _len = len;
+	        _pos = 0;
+	        _val = null;
+	    }
 
 		public ValueReader(byte* val, int len)
 		{
 			_val = val;
 			_len = len;
 			_pos = 0;
+		    _buffer = null;
 		}
 
 		public int Length
@@ -120,7 +137,7 @@ namespace Voron
 		}
 
 
-		public long ReadbigEndianInt64()
+		public long ReadBigEndianInt64()
 		{
 			if (_len - _pos < sizeof(long))
 				throw new EndOfStreamException();
@@ -134,9 +151,9 @@ namespace Voron
 
 	    private byte[] EnsureTempBuffer(int size)
 	    {
-		    if (_tmpBuf != null && _tmpBuf.Length >= size)
-			    return _tmpBuf;
-		    return _tmpBuf = new byte[Utils.NearestPowerOfTwo(size)];
+		    if (tmpBuf != null && tmpBuf.Length >= size)
+			    return tmpBuf;
+		    return tmpBuf = new byte[Utils.NearestPowerOfTwo(size)];
 	    }
 
 		public string ToStringValue()

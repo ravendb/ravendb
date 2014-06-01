@@ -7,14 +7,16 @@ import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/deleteTransformerConfirm");
 import dialog = require("plugins/dialog");
 import app = require("durandal/app");
+import changeSubscription = require("models/changeSubscription");
+import shell = require("viewmodels/shell");
 
-//todo: implement refresh from db
 class Transformers extends viewModelBase {
 
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     
     transformersGroups = ko.observableArray<{ entityName: string; transformers: KnockoutObservableArray<transformer> }>();
-    containerSelector ="#transformersContainer";
+    containerSelector = "#transformersContainer";
+    transformersMutex = true;
 
 
     constructor() {
@@ -31,12 +33,38 @@ class Transformers extends viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
     }
 
-    modelPolling() {
-        this.fetchTransformers();
+    createNotifications(): Array<changeSubscription> {
+        return [shell.currentDbChangesApi().watchAllTransformers(e => this.processTransformerEvent(e))];
+    }
+
+    processTransformerEvent(e: transformerChangeNotificationDto) {
+        if (e.Type == transformerChangeType.TransformerRemoved) {
+            this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
+        } else {
+            if (this.transformersMutex == true) {
+                this.transformersMutex = false;
+                setTimeout(() => {
+                    this.fetchTransformers().always(() => this.transformersMutex = true);
+                }, 5000);
+            }
+        }
+    }
+
+    findTransformersByName(transformerName: string) {
+        var result = new Array<transformer>();
+        this.transformersGroups().forEach(g => {
+            g.transformers().forEach(i => {
+                if (i.name() == transformerName) {
+                    result.push(i);
+                }
+            });
+        });
+
+        return result;
     }
 
     fetchTransformers() {
-        new getTransformersCommand(this.activeDatabase())
+        return new getTransformersCommand(this.activeDatabase())
             .execute()
             .done((transformers: transformerDto[])=> {
                 transformers

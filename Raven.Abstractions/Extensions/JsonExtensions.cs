@@ -11,10 +11,12 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -30,7 +32,14 @@ namespace Raven.Abstractions.Extensions
                 return dynamicJsonObject.Inner;
             if (result is string || result is ValueType)
                 return new RavenJObject { { "Value", new RavenJValue(result) } };
+			if (result is DynamicNullObject)
+				return null;
             return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
+        }
+
+        public static RavenJArray ToJArray<T>(IEnumerable<T> result)
+        {
+            return (RavenJArray) RavenJArray.FromObject(result, CreateDefaultJsonSerializer());
         }
 
         /// <summary>

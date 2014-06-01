@@ -343,6 +343,8 @@ namespace Raven.Client.Document
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
 			indexName = other.indexName;
 			linqPathProvider = other.linqPathProvider;
+		    allowMultipleIndexEntriesForSameDocumentToResultTransformer =
+                other.allowMultipleIndexEntriesForSameDocumentToResultTransformer;
 			projectionFields = other.projectionFields;
 			theSession = other.theSession;
 			conventions = other.conventions;
@@ -633,7 +635,6 @@ namespace Raven.Client.Document
 		{
 			if (queryOperation != null) 
 				return;
-			theSession.IncrementRequestCount();
 			ClearSortHints(DatabaseCommands);
 			ExecuteBeforeQueryListeners();
 			queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
@@ -650,6 +651,7 @@ namespace Raven.Client.Document
 
 		protected virtual void ExecuteActualQuery()
 		{
+			theSession.IncrementRequestCount();
 			while (true)
 			{
 				using (queryOperation.EnterQueryContext())
@@ -773,7 +775,6 @@ namespace Raven.Client.Document
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
-			theSession.IncrementRequestCount();
 			return await ExecuteActualQueryAsync();
 		}
 
@@ -836,6 +837,12 @@ namespace Raven.Client.Document
 			this.Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
 			return this;
 		}
+
+	    IDocumentQueryCustomization IDocumentQueryCustomization.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
+	    {
+	        this.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+	        return this;
+	    }
 
 		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
 		{
@@ -1778,18 +1785,22 @@ If you really want to do in memory filtering on the data returned from the query
 
 		protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			using (queryOperation.EnterQueryContext())
+			theSession.IncrementRequestCount();
+			while (true)
 			{
-				queryOperation.LogQuery();
-				var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+				using (queryOperation.EnterQueryContext())
+				{
+					queryOperation.LogQuery();
+					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
 
-				if (queryOperation.IsAcceptable(result) == false)
+					if (queryOperation.IsAcceptable(result) == false)
 					{
-					await Task.Delay(100);
-					return await ExecuteActualQueryAsync();
-						}
-						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-				return queryOperation;
+						await Task.Delay(100);
+						continue;
+					}
+					InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+					return queryOperation;
+				}
 			}
 		}
 
@@ -1828,6 +1839,7 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPreTags = highlighterPreTags.ToArray(),
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
+                    AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     QueryInputs  = queryInputs,
 					DisableCaching = disableCaching,
 					ExplainScores = shouldExplainScores
@@ -1852,6 +1864,7 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
                 QueryInputs = queryInputs,
+                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				DisableCaching = disableCaching,
 				ExplainScores = shouldExplainScores
 			};
@@ -1872,6 +1885,7 @@ If you really want to do in memory filtering on the data returned from the query
 			);
 		protected QueryOperator defaultOperator;
 		protected bool isDistinct;
+	    protected bool allowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
@@ -2225,9 +2239,16 @@ If you really want to do in memory filtering on the data returned from the query
 			return propertyName;
 		}
 
-        public void SetResultTransformer(string resultsTransformer)
+	    public void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(
+	        bool val)
 	    {
-            this.resultsTransformer = resultsTransformer;
+	        this.allowMultipleIndexEntriesForSameDocumentToResultTransformer =
+	            val;
+	    }
+
+        public void SetResultTransformer(string transformer)
+	    {
+            this.resultsTransformer = transformer;
 	    }
 
 		public void Distinct()

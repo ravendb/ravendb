@@ -67,6 +67,7 @@
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\PageAllocation.cs" />
     <Compile Include="Bugs\PagesFilteredOutByJournalApplicator.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
     <Compile Include="Bugs\Isolation.cs" />
@@ -81,6 +82,9 @@
     <Compile Include="Bugs\PageSplitter.cs" />
     <Compile Include="Bugs\Recovery.cs" />
     <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
+    <Compile Include="Bugs\MultiReads.cs" />
+    <Compile Include="Bugs\Iterating.cs" />
+    <Compile Include="Bugs\StartsWithSearch.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
@@ -99,6 +103,7 @@
     <Compile Include="Storage\Files.cs" />
     <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\Increments.cs" />
+    <Compile Include="Storage\InitialSize.cs" />
     <Compile Include="Storage\MemoryMapWithoutBackingPagerTest.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />
@@ -112,6 +117,7 @@
     <Compile Include="Trees\CanIterateBackward.cs" />
     <Compile Include="Trees\Deletes.cs" />
     <Compile Include="Trees\FreeSpaceTest.cs" />
+    <Compile Include="Trees\ItemsCount.cs" />
     <Compile Include="Trees\Iteration.cs" />
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />

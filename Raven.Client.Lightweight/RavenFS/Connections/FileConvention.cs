@@ -14,7 +14,6 @@ namespace Raven.Client.RavenFS.Connections
 		/// </summary>
 		public FileConvention()
 		{
-			MaxFailoverCheckPeriod = TimeSpan.FromMinutes(5);
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			AllowMultipuleAsyncOperations = true;
 			IdentityPartsSeparator = "/";

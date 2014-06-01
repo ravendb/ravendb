@@ -1,10 +1,8 @@
-﻿
+﻿class synchronizationReport implements documentBase {
 
-class synchronizationReport {
-
-    fileName: string;
+    FileName: string;
     fileETag: string;
-    type: filesystemSynchronizationType;
+    Type: filesystemSynchronizationType;
 
     bytesTransfered: number;
     bytesCopied: number;
@@ -13,15 +11,23 @@ class synchronizationReport {
     exception: any;
 
     constructor(dto: filesystemSynchronizationReportDto) {
-        this.fileName = dto.FileName;
+        this.FileName = dto.FileName;
         this.fileETag = dto.FileETag;
-        this.type = dto.Type;
+        this.Type = dto.Type;
 
         this.bytesTransfered = dto.BytesTransfered;
         this.bytesCopied = dto.BytesCopied;
         this.needListLength = dto.NeedListLength;
 
         this.exception = dto.Exception;
+    }
+
+    getId() {
+        return this.FileName;
+    }
+
+    getDocumentPropertyNames(): Array<string> {
+        return ["Id", "Type"];
     }
 }
 

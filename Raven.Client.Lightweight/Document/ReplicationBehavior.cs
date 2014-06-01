@@ -37,7 +37,7 @@ namespace Raven.Client.Document
 		public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
 		{
 			etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
-			if (etag == Etag.Empty)
+			if (etag == Etag.Empty || etag == null)
 				return replicas; // if the etag is empty, nothing to do
 
 			var asyncDatabaseCommands = documentStore.AsyncDatabaseCommands;

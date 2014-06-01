@@ -49,6 +49,8 @@ class ctor {
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
         isCopyAllowed: boolean;
+        contextMenuOptions: string[];
+        selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
     }
 
@@ -64,6 +66,8 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
+            selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
@@ -143,6 +147,8 @@ class ctor {
             newRow.top(desiredTop);
             rows.push(newRow);
         }
+
+        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
 
         return rows;
     }
@@ -230,13 +236,7 @@ class ctor {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
-                    this.recycleRows.valueHasMutated();
-                    this.columns.valueHasMutated();
-
-                    var rows = this.recycleRows();
-                    var columns = this.columns();
                 }
-                this.recycleRows.valueHasMutated();
             });
         }
     }
@@ -539,15 +539,15 @@ class ctor {
     deleteSelectedItems() {
         var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
-        var self = this;
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => self.items.indexOf(d));
-            deletedDocIndices.forEach(i => self.settings.selectedIndices.remove(i));
-            self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-            self.items.invalidateCache(); // Causes the cache of items to be discarded.
-            self.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
+            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
+            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
+            this.items.invalidateCache(); // Causes the cache of items to be discarded.
+            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            this.onWindowHeightChanged(); // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
         });
-
         app.showDialog(deleteDocsVm);
     }
 

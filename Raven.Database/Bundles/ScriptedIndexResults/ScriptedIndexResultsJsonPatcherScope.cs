@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Jint;
 using Jint.Native;
 
 using Raven.Abstractions.Data;
@@ -21,10 +22,10 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 			this.entityNames = entityNames;
 		}
 
-		public override JsObject LoadDocument(string documentKey, IGlobal global)
+		public override JsValue LoadDocument(string documentKey, Engine engine)
 		{
-			var document =  base.LoadDocument(documentKey, global);
-			if (document != null && !forbiddenDocuments.Contains(documentKey))
+			var document =  base.LoadDocument(documentKey, engine);
+			if (document != JsValue.Null && !forbiddenDocuments.Contains(documentKey))
 			{
 				Database.TransactionalStorage.Batch(accessor =>
 				{
@@ -37,12 +38,12 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 			return document;
 		}
 
-		public override void PutDocument(string documentKey, JsObject data, JsObject meta)
+		public override void PutDocument(string documentKey, object data, object meta, Engine engine)
 		{
 			if (forbiddenDocuments.Contains(documentKey))
 				throw new InvalidOperationException(string.Format("Cannot PUT document '{0}' to prevent infinite indexing loop. Avoid modifying documents that could be indirectly referenced by index.", documentKey));
 
-			base.PutDocument(documentKey, data, meta);
+			base.PutDocument(documentKey, data, meta, engine);
 		}
 
 		public override void DeleteDocument(string documentKey)

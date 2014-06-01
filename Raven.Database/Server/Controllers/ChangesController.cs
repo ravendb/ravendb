@@ -24,7 +24,6 @@ namespace Raven.Database.Server.Controllers
 					Error = "id query string parameter is mandatory when using changes/config endpoint"
 				}, HttpStatusCode.BadRequest);
 			}
-
 			
 			var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
 
@@ -50,6 +49,14 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchAllIndexes();
 			}
+            else if (Match(cmd, "watch-transformers"))
+            {
+                connectionState.WatchTransformers();
+            } 
+            else if (Match(cmd, "unwatch-transformers"))
+            {
+                connectionState.UnwatchTransformers();
+            }
 			else if (Match(cmd, "watch-doc"))
 			{
 				connectionState.WatchDocument(name);

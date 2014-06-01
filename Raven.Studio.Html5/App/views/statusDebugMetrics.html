@@ -1,0 +1,105 @@
+﻿<section data-bind="with: data">
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <label class="col-md-4 control-label">Docs writes/second</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: DocsWritesPerSecond"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-4 control-label">Indexed/second</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: IndexedPerSecond"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-4 control-label">Reduced/second</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: ReducedPerSecond"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-4 control-label">Requests/second</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: RequestsPerSecond"></p>
+            </div>
+        </div>
+        <hr />
+        <div class="form-group">
+            <label class="col-md-2 control-label">Requests</label>
+            <label class="col-md-2 control-label">Count</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Requests.Count"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Mean rate</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Requests.MeanRate"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">One minute rate</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Requests.OneMinuteRate"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Five minute rate</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Requests.FiveMinuteRate"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Fifteen minute rate</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Requests.FifteenMinuteRate"></p>
+            </div>
+        </div>
+        <hr />
+        <div class="form-group">
+            <label class="col-md-2 control-label">Requests duration</label>
+            <label class="col-md-2 control-label">Counter</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: RequestsDuration.Counter"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Max</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: RequestsDuration.Max"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Min</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: RequestsDuration.Min"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Mean</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: RequestsDuration.Mean"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 col-md-offset-2 control-label">Std dev.</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: RequestsDuration.Stdev"></p>
+            </div>
+        </div>
+        <hr />
+        <div class="form-group" data-bind="foreach: $parent.percentiles">
+            <!-- ko if: $index() == 0 -->
+            <label class="col-md-2 control-label">Percentiles</label>
+            <label class="col-md-2 control-label" data-bind="text: key"></label>
+            <!-- /ko -->
+            <!-- ko if: $index() != 0 -->
+            <label class="col-md-2 col-md-offset-2 control-label" data-bind="text: key"></label>
+            <!-- /ko -->
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: value"></p>
+            </div>
+        </div>
+    </form>
+</section>
