@@ -111,8 +111,12 @@ namespace Raven.Smuggler.Client
 		}
 
 		public event Action<string> Report;
+	    public void Abort()
+	    {
+	        current.Abort();
+	    }
 
-		public void Dispose()
+	    public void Dispose()
 		{
 			if (disposed)
 				return;

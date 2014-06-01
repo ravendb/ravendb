@@ -95,6 +95,14 @@
                             <span data-bind="text: lastModified"></span>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-5">
+                            <label>Size in Kb</label>
+                        </div>
+                        <div class="col-md-7">
+                            <span data-bind="text: $root.documentSize() "></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-12 query-metadata" data-bind="visible:topRecentDocuments().length>0">
                     <h4><strong>Recent Documents</strong></h4>

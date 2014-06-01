@@ -35,6 +35,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     attached() {
+        super.attached();
         this.databaseNameFocus(true);
         
         var inputElement: any = $("#databaseName")[0];
@@ -46,9 +47,14 @@ class createDatabase extends dialogViewModelBase {
             else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
             inputElement.setCustomValidity(errorMessage);
         });
+    
+        inputElement.setCustomValidity("An empty database name is forbidden for use!");
+        
+
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
+
     }
 
     deactivate() {
@@ -58,8 +64,7 @@ class createDatabase extends dialogViewModelBase {
             this.creationTask.reject();
         }
     }
-
-    cancel() {
+     cancel() {
         dialog.close(this);
     }
 
@@ -69,8 +74,9 @@ class createDatabase extends dialogViewModelBase {
         // creating the database.
 
         this.creationTaskStarted = true;
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
         dialog.close(this);
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
+        
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
@@ -89,7 +95,7 @@ class createDatabase extends dialogViewModelBase {
 
         var message = '';
         if (!$.trim(name)) {
-            message = "An empty databse name is forbidden for use!";
+            message = "An empty database name is forbidden for use!";
         }
         else if (name.length > this.maxNameLength) {
             message = "The database length can't exceed " + this.maxNameLength + " characters!";
