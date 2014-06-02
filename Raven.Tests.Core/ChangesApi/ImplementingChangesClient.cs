@@ -65,7 +65,7 @@ namespace Raven.Tests.Core.ChangesApi
         [Fact]
         public void ClientImplementationShouldWorkWithUntypedInterface()
         {
-            new UntypedInterfaceInheritanceChangesClient();
+            new UntypedInterfaceInheritanceChangesClient().Dispose();
         }
 
 
