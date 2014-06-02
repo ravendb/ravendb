@@ -109,42 +109,15 @@ class editDocument extends viewModelBase {
         super.canActivate(args);
         if (args && args.id) {
             var canActivateResult = $.Deferred();
-            new getDocumentWithMetadataCommand(args.id, appUrl.getDatabase())
-                .execute()
-                .done((document) => {
-                    this.document(document);
+            this.databaseForEditedDoc = appUrl.getDatabase();
+            this.loadDocument(args.id)
+                .done(() => {
                     canActivateResult.resolve({ can: true });
-
-                    var relatedDocumentsCandidates:string[] = this.findRelatedDocumentsCandidates(document);
-
-                    var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
-                    var response = docIDsVerifyCommand.execute();
-
-                    if (response.then) {
-                        response.done(verifiedIDs => {
-                            this.relatedDocumentHrefs(verifiedIDs.map(verified => {
-                                return {
-                                    id: verified.toString(),
-                                    href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
-                                };
-                            }));
-                        });
-                    } else {
-
-                        this.relatedDocumentHrefs(response.map(verified => {
-                            return {
-                                id: verified.toString(),
-                                href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
-                            };
-                        }));                        
-                    }
-                    
                 })
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
-                }
-                );
+                });
             return canActivateResult;
         } else {
             return $.Deferred().resolve({ can: true });
@@ -350,6 +323,8 @@ class editDocument extends viewModelBase {
             this.document(document);
             this.lodaedDocumentName(this.userSpecifiedId());
             viewModelBase.dirtyFlag().reset(); //Resync Changes
+
+            this.loadRelatedDocumentsList(document);
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
@@ -429,8 +404,7 @@ class editDocument extends viewModelBase {
     pageToItem(index: number) {
         var list = this.docsList();
         if (list) {
-            list
-                .getNthItem(index)
+            list.getNthItem(index)
                 .done((doc: document) => {
                     this.loadDocument(doc.getId());
                     list.currentItemIndex(index);
@@ -529,6 +503,29 @@ class editDocument extends viewModelBase {
                 this.textarea.setCustomValidity(message);
             }
         });
+    }
+
+    loadRelatedDocumentsList(document) {
+        var relatedDocumentsCandidates: string[] = this.findRelatedDocumentsCandidates(document);
+        var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
+        var response = docIDsVerifyCommand.execute();
+        if (response.then) {
+            response.done(verifiedIDs => {
+                this.relatedDocumentHrefs(verifiedIDs.map(verified => {
+                    return {
+                        id: verified.toString(),
+                        href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                    };
+                }));
+            });
+        } else {
+            this.relatedDocumentHrefs(response.map(verified => {
+                return {
+                    id: verified.toString(),
+                    href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                };
+            }));
+        }
     }
 }
 
