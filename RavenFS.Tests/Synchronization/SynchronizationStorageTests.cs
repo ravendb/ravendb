@@ -8,20 +8,21 @@ using Xunit;
 using Xunit.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
     public class SynchronizationStorageTests : RavenFsTestBase
 	{
-		private readonly AsyncFilesServerClient destination;
+        private readonly IAsyncFilesCommandsImpl destination;
 		private readonly RavenFileSystem destinationRfs;
-		private readonly AsyncFilesServerClient source;
+        private readonly IAsyncFilesCommandsImpl source;
 		private readonly RavenFileSystem sourceRfs;
 
 		public SynchronizationStorageTests()
 		{
-			source = NewClient(0);
-			destination = NewClient(1);
+            source = (IAsyncFilesCommandsImpl)NewClient(0);
+            destination = (IAsyncFilesCommandsImpl) NewClient(1);
 
 			sourceRfs = GetRavenFileSystem(0);
 			destinationRfs = GetRavenFileSystem(1);

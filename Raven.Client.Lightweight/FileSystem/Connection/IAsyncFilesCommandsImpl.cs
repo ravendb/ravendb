@@ -14,5 +14,7 @@ namespace Raven.Client.FileSystem.Connection
         string ServerUrl { get; }
 
         HttpJsonRequestFactory RequestFactory { get; }
+
+        IFilesReplicationInformer ReplicationInformer { get; }
     }
 }

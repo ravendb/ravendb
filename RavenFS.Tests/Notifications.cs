@@ -13,11 +13,11 @@ namespace RavenFS.Tests
 {
     public class Notifications : RavenFsTestBase
     {
-	    private readonly AsyncFilesServerClient client;
+        private readonly AsyncFilesServerClient client;
 
 	    public Notifications()
 	    {
-		    client = NewClient();
+            client = (AsyncFilesServerClient)NewClient();
 	    }
 
 		[Fact]

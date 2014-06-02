@@ -20,6 +20,7 @@ using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Auth
 {
@@ -106,7 +107,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task AdminClientWorkWithOAuthEnabled()
         {
-	        var client = NewClient(enableAuthentication: true, apiKey: apiKey);
+            var client = (IAsyncFilesCommandsImpl) NewClient(enableAuthentication: true, apiKey: apiKey);
 	        var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new DatabaseDocument

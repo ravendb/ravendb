@@ -13,6 +13,7 @@ using Xunit.Extensions;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -435,7 +436,7 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var sourceContent = new RandomStream(1);
 			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl) NewClient(1);
 
             await sourceClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, -1);
 

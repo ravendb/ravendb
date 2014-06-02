@@ -10,6 +10,7 @@ using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -202,7 +203,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 			var sourceContent = new RandomStream(10000);
 
-			var destinationClient = NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl)NewClient(1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -223,11 +224,11 @@ namespace RavenFS.Tests.Synchronization
 		public async Task File_should_be_in_pending_queue_if_no_synchronization_requests_available()
 		{
 			var sourceContent = new RandomStream(1);
-			var sourceClient = NewClient(0);
+            var sourceClient = NewClient(0);
 
             await sourceClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, 1);
 
-			var destinationClient = NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl) NewClient(1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 			await sourceClient.UploadAsync("test2.bin", sourceContent);

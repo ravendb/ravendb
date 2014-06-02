@@ -29,7 +29,7 @@ namespace RavenFS.Tests.Synchronization
             source.Synchronization.SetDestinationsConfig(destinations.Select(x => x.ToSynchronizationDestination()).ToArray()).Wait();
 		}
 
-		public static void TurnOffSynchronization(AsyncFilesServerClient source)
+		public static void TurnOffSynchronization(IAsyncFilesCommands source)
 		{
 			source.Configuration.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations).Wait();
 		}

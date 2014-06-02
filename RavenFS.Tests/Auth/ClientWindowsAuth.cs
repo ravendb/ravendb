@@ -8,6 +8,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.Security.Windows;
@@ -110,7 +111,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task AdminClientWorkWithWinAuthEnabled()
         {
-	        var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = (IAsyncFilesCommandsImpl)NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 	        var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new DatabaseDocument

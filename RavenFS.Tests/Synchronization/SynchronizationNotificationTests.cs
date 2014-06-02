@@ -19,8 +19,8 @@ namespace RavenFS.Tests.Synchronization
 
 		public SynchronizationNotificationTests()
 		{
-			destination = NewClient(0);
-			source = NewClient(1);
+            destination = (AsyncFilesServerClient) NewClient(0);
+            source = (AsyncFilesServerClient) NewClient(1);
 		}
 
         [Fact]

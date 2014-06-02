@@ -17,6 +17,7 @@ using RavenFS.Tests.Tools;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -213,7 +214,7 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_detect_conflict_on_destination()
 		{
-			var destination = NewClient(1);
+            var destination = (IAsyncFilesCommandsImpl)NewClient(1);
 
 			const string fileName = "test.txt";
 
@@ -313,7 +314,7 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_successfully_get_finished_and_conflicted_synchronization()
 		{
-			var destinationClient = NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl) NewClient(1);
 
             destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } },
 			                              new MemoryStream(new byte[] {1, 2, 3, 4})).Wait();
@@ -383,7 +384,7 @@ namespace RavenFS.Tests.Synchronization
 		public async Task Source_should_remove_syncing_item_if_conflict_was_resolved_on_destination_by_current()
 		{
 			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl) NewClient(1);
 
 			await sourceClient.UploadAsync("test", new MemoryStream(new byte[] {1, 2, 3}));
 			await destinationClient.UploadAsync("test", new MemoryStream(new byte[] {1, 2}));
@@ -406,7 +407,7 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Conflict_item_should_have_remote_server_url()
 		{
-			var source = NewClient(0);
+            var source = (IAsyncFilesCommandsImpl) NewClient(0);
 			var destination = NewClient(1);
 
 			source.UploadAsync("test", new MemoryStream(new byte[] {1, 2, 3})).Wait();

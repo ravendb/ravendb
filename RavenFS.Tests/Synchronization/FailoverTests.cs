@@ -2,6 +2,8 @@
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -10,17 +12,18 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task ShouldFailOver()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = (IAsyncFilesCommandsImpl) NewClient(0);
 			var destinationClient = NewClient(1);
 			var source1Content = new RandomStream(10000);
 
 			await sourceClient.UploadAsync("test1.bin", source1Content);
 
-		    var destination = new SynchronizationDestination()
-		    {
-		        FileSystem = destinationClient.FileSystem,
-                ServerUrl = destinationClient.ServerUrl
-		    };
+            var destination = destinationClient.ToSynchronizationDestination();
+            //var destination = new SynchronizationDestination()
+            //{
+            //    FileSystem = destinationClient.FileSystem,
+            //    ServerUrl = destinationClient.ServerUrl
+            //};
 
 		    await sourceClient.Synchronization.SetDestinationsConfig(destination);
 

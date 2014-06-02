@@ -12,6 +12,7 @@ using Xunit;
 using Xunit.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests
 {
@@ -580,7 +581,7 @@ namespace RavenFS.Tests
         [Fact]
         public async Task CanCreateAndDeleteFileSystem()
         {
-            var client = NewClient();
+            var client = (IAsyncFilesCommandsImpl) NewClient();
             var adminClient = client.Admin;
 
             const string newFileSystemName = "testName_CanDeleteFileSystem";
