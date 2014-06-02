@@ -155,19 +155,7 @@ class editDocument extends viewModelBase {
         }
 
         if (navigationArgs && navigationArgs.id) {
-            var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
-            if (existingRecentDocumentsStore) {
-                var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === navigationArgs.id);
-                if (!existingDocumentInStore) {
-                    if (existingRecentDocumentsStore.recentDocuments().length == 5) {
-                        existingRecentDocumentsStore.recentDocuments.pop();
-                    }
-                    existingRecentDocumentsStore.recentDocuments.unshift(navigationArgs.id);
-                }
-
-            } else {
-                editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([navigationArgs.id]) });
-            }
+            this.appendRecentDocument(navigationArgs.id);
 
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
         } else {
@@ -319,12 +307,13 @@ class editDocument extends viewModelBase {
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
-        loadDocTask.done(document=> {
+        loadDocTask.done((document: document)=> {
             this.document(document);
             this.lodaedDocumentName(this.userSpecifiedId());
             viewModelBase.dirtyFlag().reset(); //Resync Changes
 
             this.loadRelatedDocumentsList(document);
+            this.appendRecentDocument(id);
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
@@ -526,6 +515,24 @@ class editDocument extends viewModelBase {
                 };
             }));
         }
+    }
+
+    appendRecentDocument(docId: string) {
+
+        var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
+        if (existingRecentDocumentsStore) {
+            var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === docId);
+            if (!existingDocumentInStore) {
+                if (existingRecentDocumentsStore.recentDocuments().length == 5) {
+                    existingRecentDocumentsStore.recentDocuments.pop();
+                }
+                existingRecentDocumentsStore.recentDocuments.unshift(docId);
+            }
+
+        } else {
+            editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([docId]) });
+        }
+
     }
 }
 
