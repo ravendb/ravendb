@@ -178,6 +178,45 @@ body {
 .document-collections li {
   outline: none;
 }
+.document-collections .collection-color-strip {
+  margin-right: 5px;
+}
+.document-collections .outer {
+  overflow: hidden!important;
+  white-space: nowrap !important;
+  -ms-text-overflow: clip !important;
+  -o-text-overflow: clip !important;
+  text-overflow: clip !important;
+  max-width: 90%;
+  margin-right: 0!important;
+}
+.document-collections .inner {
+  overflow: hidden!important;
+  white-space: nowrap !important;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+  max-width: 70%;
+  margin-right: 0!important;
+}
+.document-collections li:first-child .outer {
+  overflow: hidden!important;
+  white-space: nowrap !important;
+  -ms-text-overflow: clip !important;
+  -o-text-overflow: clip !important;
+  text-overflow: clip !important;
+  max-width: 80%;
+  margin-right: 0!important;
+}
+.document-collections li:first-child .inner {
+  overflow: hidden!important;
+  white-space: nowrap !important;
+  -ms-text-overflow: clip !important;
+  -o-text-overflow: clip !important;
+  text-overflow: clip !important;
+  max-width: 80%;
+  margin-right: 0!important;
+}
 .document-collections li:not(:first-child) {
   padding-left: 15px;
 }
@@ -342,20 +381,20 @@ body {
 }
 #nprogress .bar {
   /* IE9 SVG, needs conditional override of 'filter' to 'none' */
-  background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIxJSIgc3RvcC1jb2xvcj0iIzllZTE2NyIgc3RvcC1vcGFjaXR5PSIwLjg3Ii8+CiAgICA8c3RvcCBvZmZzZXQ9IjE2JSIgc3RvcC1jb2xvcj0iIzllZTE2NyIgc3RvcC1vcGFjaXR5PSIwLjg4Ii8+CiAgICA8c3RvcCBvZmZzZXQ9IjM4JSIgc3RvcC1jb2xvcj0iIzdjZGEyZiIgc3RvcC1vcGFjaXR5PSIwLjkiLz4KICAgIDxzdG9wIG9mZnNldD0iNDIlIiBzdG9wLWNvbG9yPSIjNzZkOTI1IiBzdG9wLW9wYWNpdHk9IjAuOSIvPgogICAgPHN0b3Agb2Zmc2V0PSI3OSUiIHN0b3AtY29sb3I9IiM0ZmIwMWUiIHN0b3Atb3BhY2l0eT0iMC45NSIvPgogICAgPHN0b3Agb2Zmc2V0PSI4MiUiIHN0b3AtY29sb3I9IiM0ZmIwMjMiIHN0b3Atb3BhY2l0eT0iMC45NSIvPgogICAgPHN0b3Agb2Zmc2V0PSI5OSUiIHN0b3AtY29sb3I9IiM0ZWIxM2QiIHN0b3Atb3BhY2l0eT0iMSIvPgogICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjNGViMTNkIiBzdG9wLW9wYWNpdHk9IjEiLz4KICA8L2xpbmVhckdyYWRpZW50PgogIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9InVybCgjZ3JhZC11Y2dnLWdlbmVyYXRlZCkiIC8+Cjwvc3ZnPg==);
-  background: -moz-linear-gradient(top, rgba(158, 225, 103, 0.87) 1%, rgba(158, 225, 103, 0.88) 16%, rgba(124, 218, 47, 0.9) 38%, rgba(118, 217, 37, 0.9) 42%, rgba(79, 176, 30, 0.95) 79%, rgba(79, 176, 35, 0.95) 82%, #4eb13d 99%, #4eb13d 100%);
+  background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIxJSIgc3RvcC1jb2xvcj0iIzU2YWNmMiIgc3RvcC1vcGFjaXR5PSIwLjg3Ii8+CiAgICA8c3RvcCBvZmZzZXQ9IjE2JSIgc3RvcC1jb2xvcj0iIzU2YWNmMiIgc3RvcC1vcGFjaXR5PSIwLjg4Ii8+CiAgICA8c3RvcCBvZmZzZXQ9IjM4JSIgc3RvcC1jb2xvcj0iIzE3OGZmMiIgc3RvcC1vcGFjaXR5PSIwLjkiLz4KICAgIDxzdG9wIG9mZnNldD0iNDIlIiBzdG9wLWNvbG9yPSIjMGM4YWYyIiBzdG9wLW9wYWNpdHk9IjAuOSIvPgogICAgPHN0b3Agb2Zmc2V0PSI3OSUiIHN0b3AtY29sb3I9IiMwYTViYzQiIHN0b3Atb3BhY2l0eT0iMC45NSIvPgogICAgPHN0b3Agb2Zmc2V0PSI4MiUiIHN0b3AtY29sb3I9IiMwZjVhYzQiIHN0b3Atb3BhY2l0eT0iMC45NSIvPgogICAgPHN0b3Agb2Zmc2V0PSI5OSUiIHN0b3AtY29sb3I9IiMyZDUyYzEiIHN0b3Atb3BhY2l0eT0iMSIvPgogICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMmQ1MmMxIiBzdG9wLW9wYWNpdHk9IjEiLz4KICA8L2xpbmVhckdyYWRpZW50PgogIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9InVybCgjZ3JhZC11Y2dnLWdlbmVyYXRlZCkiIC8+Cjwvc3ZnPg==);
+  background: -moz-linear-gradient(top, rgba(86, 172, 242, 0.87) 1%, rgba(86, 172, 242, 0.88) 16%, rgba(23, 143, 242, 0.9) 38%, rgba(12, 138, 242, 0.9) 42%, rgba(10, 91, 196, 0.95) 79%, rgba(15, 90, 196, 0.95) 82%, #2d52c1 99%, #2d52c1 100%);
   /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(1%, rgba(158, 225, 103, 0.87)), color-stop(16%, rgba(158, 225, 103, 0.88)), color-stop(38%, rgba(124, 218, 47, 0.9)), color-stop(42%, rgba(118, 217, 37, 0.9)), color-stop(79%, rgba(79, 176, 30, 0.95)), color-stop(82%, rgba(79, 176, 35, 0.95)), color-stop(99%, #4eb13d), color-stop(100%, #4eb13d));
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(1%, rgba(86, 172, 242, 0.87)), color-stop(16%, rgba(86, 172, 242, 0.88)), color-stop(38%, rgba(23, 143, 242, 0.9)), color-stop(42%, rgba(12, 138, 242, 0.9)), color-stop(79%, rgba(10, 91, 196, 0.95)), color-stop(82%, rgba(15, 90, 196, 0.95)), color-stop(99%, #2d52c1), color-stop(100%, #2d52c1));
   /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, rgba(158, 225, 103, 0.87) 1%, rgba(158, 225, 103, 0.88) 16%, rgba(124, 218, 47, 0.9) 38%, rgba(118, 217, 37, 0.9) 42%, rgba(79, 176, 30, 0.95) 79%, rgba(79, 176, 35, 0.95) 82%, #4eb13d 99%, #4eb13d 100%);
+  background: -webkit-linear-gradient(top, rgba(86, 172, 242, 0.87) 1%, rgba(86, 172, 242, 0.88) 16%, rgba(23, 143, 242, 0.9) 38%, rgba(12, 138, 242, 0.9) 42%, rgba(10, 91, 196, 0.95) 79%, rgba(15, 90, 196, 0.95) 82%, #2d52c1 99%, #2d52c1 100%);
   /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, rgba(158, 225, 103, 0.87) 1%, rgba(158, 225, 103, 0.88) 16%, rgba(124, 218, 47, 0.9) 38%, rgba(118, 217, 37, 0.9) 42%, rgba(79, 176, 30, 0.95) 79%, rgba(79, 176, 35, 0.95) 82%, #4eb13d 99%, #4eb13d 100%);
+  background: -o-linear-gradient(top, rgba(86, 172, 242, 0.87) 1%, rgba(86, 172, 242, 0.88) 16%, rgba(23, 143, 242, 0.9) 38%, rgba(12, 138, 242, 0.9) 42%, rgba(10, 91, 196, 0.95) 79%, rgba(15, 90, 196, 0.95) 82%, #2d52c1 99%, #2d52c1 100%);
   /* Opera 11.10+ */
-  background: -ms-linear-gradient(top, rgba(158, 225, 103, 0.87) 1%, rgba(158, 225, 103, 0.88) 16%, rgba(124, 218, 47, 0.9) 38%, rgba(118, 217, 37, 0.9) 42%, rgba(79, 176, 30, 0.95) 79%, rgba(79, 176, 35, 0.95) 82%, #4eb13d 99%, #4eb13d 100%);
+  background: -ms-linear-gradient(top, rgba(86, 172, 242, 0.87) 1%, rgba(86, 172, 242, 0.88) 16%, rgba(23, 143, 242, 0.9) 38%, rgba(12, 138, 242, 0.9) 42%, rgba(10, 91, 196, 0.95) 79%, rgba(15, 90, 196, 0.95) 82%, #2d52c1 99%, #2d52c1 100%);
   /* IE10+ */
-  background: linear-gradient(to bottom, rgba(158, 225, 103, 0.87) 1%, rgba(158, 225, 103, 0.88) 16%, rgba(124, 218, 47, 0.9) 38%, rgba(118, 217, 37, 0.9) 42%, rgba(79, 176, 30, 0.95) 79%, rgba(79, 176, 35, 0.95) 82%, #4eb13d 99%, #4eb13d 100%);
+  background: linear-gradient(to bottom, rgba(86, 172, 242, 0.87) 1%, rgba(86, 172, 242, 0.88) 16%, rgba(23, 143, 242, 0.9) 38%, rgba(12, 138, 242, 0.9) 42%, rgba(10, 91, 196, 0.95) 79%, rgba(15, 90, 196, 0.95) 82%, #2d52c1 99%, #2d52c1 100%);
   /* W3C */
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#de9ee167', endColorstr='#4eb13d', GradientType=0);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#de56acf2', endColorstr='#2d52c1', GradientType=0);
   /* IE6-8 */
   position: fixed;
   z-index: 100;
@@ -363,7 +402,7 @@ body {
   left: 0;
   opacity: 0.8;
   width: 100%;
-  height: 55px;
+  height: 10px;
 }
 #nprogress .spinner-icon {
   opacity: 0;
@@ -494,6 +533,20 @@ body {
 .help-cursor {
   cursor: help;
 }
+.breadcrumb {
+  width: 100%;
+}
+.breadcrumb li {
+  overflow: hidden!important;
+  white-space: nowrap!important;
+  -ms-text-overflow: ellipsis!important;
+  -o-text-overflow: ellipsis!important;
+  text-overflow: ellipsis!important;
+  max-width: 50%!important;
+}
+.breadcrumb h3 {
+  margin-bottom: 0;
+}
 @media (max-device-height: 1024px) {
   .breadcrumb h3 {
     font-size: 16px !important;
@@ -529,6 +582,15 @@ body {
   margin-top: 95px;
   padding-top: 10px;
   padding-bottom: 40px;
+  max-width: 41%;
+}
+#editDocumentContainer .document-addition-data span {
+  overflow: hidden!important;
+  white-space: nowrap!important;
+  -ms-text-overflow: ellipsis!important;
+  -o-text-overflow: ellipsis!important;
+  text-overflow: ellipsis!important;
+  max-width: 50%!important;
 }
 #editDocumentContainer hr {
   border-color: red;
