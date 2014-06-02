@@ -10,6 +10,8 @@ class commandBase {
 
     // TODO: better place for this?
     static ravenClientVersion = '3.0.0.0';
+    static splashTimerHandle = 0;
+    static loadingCounter = 0;
 
     constructor() {
     }
@@ -153,8 +155,32 @@ class commandBase {
                 defaultOptions[prop] = options[prop];
             }
         }
+        if (commandBase.loadingCounter == 0) {
+            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000);
+        }
+        commandBase.loadingCounter++;
+        return $.ajax(defaultOptions).always(() => {
+            --commandBase.loadingCounter;
+            if (commandBase.loadingCounter == 0) {
+                clearTimeout(commandBase.splashTimerHandle);
+                commandBase.hideSpin();
+            }
+        });
+    }
+    
 
-        return $.ajax(defaultOptions);
+    private static showSpin() {
+        ko.postbox.publish("LoadProgress", alertType.warning);
+        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, 7000);
+    }
+
+    private static showServerNotRespondingAlert() {
+        ko.postbox.publish("LoadProgress", alertType.danger);
+    }
+
+    private static  hideSpin() {
+        ko.postbox.publish("LoadProgress", null);
+
     }
 
     private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {
