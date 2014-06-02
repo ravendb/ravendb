@@ -4,12 +4,27 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Counters;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterReplicationController : RavenCountersApiController
     {
+		[Route("counters/{counterName}/lastEtag")]
+		[HttpGet]
+		public HttpResponseMessage GetLastEtag(string serverUrl)
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				var sourceId = reader.SourceIdFor(serverUrl);
+				var result = reader.GetServerEtags().FirstOrDefault(x => x.SourceId == sourceId) ?? new CounterStorage.ServerEtag();
+				return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
+			}
+		}
+
         [Route("counters/{counterName}/replication")]
+		[HttpPost]
         public async Task<HttpResponseMessage> Post()
         {
             /*Read Current Counter Value for CounterStorageName - Need ReaderWriter Lock
@@ -18,6 +33,8 @@ namespace Raven.Database.Counters.Controllers
              *Store last ETag for servers we've successfully rpelicated to
              */
 			ReplicationMessage replicationMessage;
+            Storage.MetricsCounters.IncomingReplications.Mark();
+
 			try
 			{
 				replicationMessage = await ReadJsonObjectAsync<ReplicationMessage>();
@@ -83,6 +100,7 @@ namespace Raven.Database.Counters.Controllers
         }
 
         [Route("counters/{counterName}/replication/heartbeat")]
+		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
             var replicationTask = Storage.ReplicationTask;
@@ -98,17 +116,6 @@ namespace Raven.Database.Counters.Controllers
 			replicationTask.HandleHeartbeat(sourceServer);
 
             return GetEmptyMessage();
-        }
-
-		[Route("counters/{counterName}/lastEtag")]
-		public HttpResponseMessage GetLastEtag(string serverUrl)
-        {
-            using (var reader = Storage.CreateReader())
-            {
-				var sourceId = reader.SourceIdFor(serverUrl);
-                var result = reader.GetServerEtags().FirstOrDefault(x => x.SourceId == sourceId) ?? new CounterStorage.ServerEtag();
-                return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
-            }
         }
 
 		[Route("counters/{counterName}/replications/get")]
@@ -149,5 +156,16 @@ namespace Raven.Database.Counters.Controllers
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
+
+        [Route("counters/{counterName}/replications/stats")]
+        [HttpGet]
+        public HttpResponseMessage ReplicationStats()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK,
+                new CounterStorageReplicationStats()
+                {
+                    Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
+                });
+        }
     }
 }

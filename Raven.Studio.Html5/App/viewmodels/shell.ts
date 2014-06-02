@@ -106,7 +106,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()); 
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     activate(args: any) {

@@ -147,8 +147,6 @@ class scriptedIndexes extends viewModelBase {
             trigger: 'hover',
             content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
             selector: '.delete-script-label',
-            delay: { show: 0, hide: 100000 }
-
         };
         $('#scriptedIndexesForm').popover(deleteScriptPopOverSettings);
     }
