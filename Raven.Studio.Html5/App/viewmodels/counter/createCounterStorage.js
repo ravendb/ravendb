@@ -19,6 +19,7 @@ define(["require", "exports", "plugins/dialog", "viewmodels/dialogViewModelBase"
         }
         createCounterStorage.prototype.attached = function () {
             var _this = this;
+            _super.prototype.attached.call(this);
             var inputElement = $("#counterStorageName")[0];
             this.counterStorageName.subscribe(function (newCounterStorageName) {
                 var errorMessage = '';

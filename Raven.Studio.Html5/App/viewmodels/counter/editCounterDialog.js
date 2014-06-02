@@ -36,6 +36,7 @@ define(["require", "exports", "plugins/dialog", "viewmodels/dialogViewModelBase"
 
         editCounterDialog.prototype.attached = function () {
             var _this = this;
+            _super.prototype.attached.call(this);
             this.counterDelta(0);
             var inputElement = $("#counterId")[0];
             this.editedCounter().id.subscribe(function (newCounterId) {
