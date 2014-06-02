@@ -130,4 +130,5 @@ interface folderNodeDto {
     title: string;
     isLazy: boolean;
     isFolder: boolean
+    addClass?: string;
 }

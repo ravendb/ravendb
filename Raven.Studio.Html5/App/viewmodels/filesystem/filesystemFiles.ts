@@ -23,13 +23,14 @@ class filesystemFiles extends viewModelBase {
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
     selectedFolder = ko.observable<string>();
-    addedFolder = ko.observable<string>();
+    addedFolder = ko.observable<folderNodeDto>();
     currentLevelSubdirectories = ko.observableArray<string>();
     uploadFiles = ko.observable<FileList>();
     uploadQueue = ko.observableArray<uploadItem>();
     private activeFilesystemSubscription: any;
 
 
+    static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
     static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle"
     static uploadQueueSelector = "#uploadQueue";
@@ -129,8 +130,16 @@ class filesystemFiles extends viewModelBase {
 
     createFolder() {
         var createFolderVm = new createFolderInFilesystem(this.currentLevelSubdirectories());
-        createFolderVm.creationTask.done((folderName : string) => {
-            this.addedFolder(folderName);
+        createFolderVm.creationTask.done((folderName: string) => {
+            var parentDirectory = this.selectedFolder() ? this.selectedFolder() : "";
+            var newNode = {
+                key: parentDirectory + "/" + folderName,
+                title: folderName,
+                isLazy: true,
+                isFolder: true,
+                addClass: "temp-folder"
+            };
+            this.addedFolder(newNode);
         });
 
         app.showDialog(createFolderVm);
@@ -167,6 +176,12 @@ class filesystemFiles extends viewModelBase {
     uploadSuccess(x: uploadItem) {
         ko.postbox.publish("UploadFileStatusChanged", x);
         uploadQueueHelper.updateQueueStatus(x.id(), "Uploaded", this.uploadQueue());
+        var lastSlash = x.fileName().lastIndexOf("/");
+        if (lastSlash > 0) {
+            var directory = x.fileName().substring(0, lastSlash);
+            treeBindingHandler.updateNodeHierarchyStyle(filesystemFiles.treeSelector, directory, "");
+        }
+
         this.loadFiles(true);
     }
 

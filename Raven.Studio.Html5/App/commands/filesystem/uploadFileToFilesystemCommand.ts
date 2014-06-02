@@ -49,12 +49,12 @@ class uploadFileToFilesystemCommand extends commandBase {
 
         if (this.reportUploadProgress) {
             uploadTask.done(() => {
-                this.reportSuccess("Uploaded " + this.source.name)
-                return deferred.resolve(new uploadItem(this.uploadId, this.source.name, "Uploaded", this.fs));
+                this.reportSuccess("Uploaded " + fileName)
+                return deferred.resolve(new uploadItem(this.uploadId, fileName, "Uploaded", this.fs));
             });
             uploadTask.fail((response: JQueryXHR) => {
-                this.reportError("Failed to upload " + this.source.name, response.responseText, response.statusText)
-                return deferred.reject(new uploadItem(this.uploadId, this.source.name, "Failed", this.fs));
+                this.reportError("Failed to upload " + fileName, response.responseText, response.statusText)
+                return deferred.reject(new uploadItem(this.uploadId, fileName, "Failed", this.fs));
             });
         }
 

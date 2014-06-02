@@ -40,6 +40,7 @@ class treeBindingHandler {
                 command.execute().done((results: folderNodeDto[]) => {
                     node.setLazyNodeStatus(0);
                     node.addChild(results);
+                    options.currentLevelNodes(results.map(x => x.key));
                 });
             },
             selectMode: 1,
@@ -65,15 +66,13 @@ class treeBindingHandler {
 
         var selectedNode = node.data && node.data.key != "#" ? node.data.key : null;
         options.selectedNode(selectedNode);
-        if (node.data && node.data.key != "#") {
-            var nodeParent = node.getParent();
-            if (nodeParent && nodeParent.hasChildren()) {
-                var siblings = nodeParent.getChildren();
-                if (siblings) {
-                    var mappedNodes = siblings.map(x => x.data.title);
-                    options.currentLevelNodes(mappedNodes);
-                }
+        if (node.data) {
+            var siblings = [];
+            if (node.hasChildren()) {
+               siblings = node.getChildren();
             }
+            var mappedNodes = siblings.map(x => x.data.title);
+            options.currentLevelNodes(mappedNodes);
         }
     }
 
@@ -81,21 +80,31 @@ class treeBindingHandler {
     update(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options: {
             selectedNode: KnockoutObservable<string>;
-            addedNode: KnockoutObservable<string>;
+            addedNode: KnockoutObservable<folderNodeDto>;
+            currentLevelNodes: KnockoutObservableArray<string>;
         } = <any>ko.utils.unwrapObservable(valueAccessor());
         if (options.addedNode()) {
             var activeNode = <DynaTreeNode>$(element).dynatree("getActiveNode", []);
             if (activeNode) {
-                var parentDirectory = activeNode.data.key != "#" ? activeNode.data.key : ""
-                var newNode = {
-                    key: parentDirectory + "/" + options.addedNode(),
-                    title: options.addedNode(),
-                    isLazy: true,
-                    isFolder: true
-                };
-                activeNode.addChild(newNode);
+                activeNode.addChild(options.addedNode());
+                options.currentLevelNodes(activeNode.getChildren().map(x => x.data.title));
                 options.addedNode(null);
             }
+        }
+    }
+
+    static updateNodeHierarchyStyle(tree: string, key: string, styleClass?: string) {
+        var dynaTree = $(tree).dynatree("getTree");
+        var slashPosition = key.length;
+        while (slashPosition > 0) {
+            key = key.substring(0, slashPosition);
+            var temporaryNode = dynaTree.getNodeByKey(key);
+            if (temporaryNode.data.addClass != styleClass) {
+                temporaryNode.data.addClass = styleClass
+                temporaryNode.reloadChildren();
+            }
+
+            slashPosition = key.lastIndexOf("/");
         }
     }
 }

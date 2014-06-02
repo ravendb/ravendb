@@ -3,6 +3,13 @@
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     border: none;
     font-size: 14pt;
+}
+
+/*ul.dynatree-container li {
+    color: GrayText;
+}*/
+
+span.dynatree-node {
     color: GrayText;
 }
 
@@ -42,8 +49,7 @@ span.dynatree-active a {
     width: 25px;
 }
 /* Expanded Folder */
-.dynatree-ico-cf span.dynatree-icon:before
-{
+.dynatree-ico-cf span.dynatree-icon:before {
   content:"\f07b";
   font-family:FontAwesome;
   font-weight: normal;
@@ -52,3 +58,12 @@ span.dynatree-active a {
   display: inline-block;
   text-decoration: inherit;
 }
+
+span.temp-folder {
+    color: silver;
+}
+
+span.temp-folder a{
+    color: silver;
+}
+
