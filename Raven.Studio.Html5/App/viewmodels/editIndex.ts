@@ -34,9 +34,7 @@ class editIndex extends viewModelBase {
 
     constructor() {
         super();
-        this.editedIndex.subscribe(()=> {
-            debugger;
-        });
+      
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
