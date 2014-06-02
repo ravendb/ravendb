@@ -8,11 +8,13 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
+import createDefaultSettingsCommand = require("commands/createDefaultSettingsCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
 import changeSubscription = require('models/changeSubscription');
+import databaseSettingsDialog = require("viewmodels/databaseSettingsDialog");
 
 class databases extends viewModelBase {
 
@@ -123,8 +125,10 @@ class databases extends viewModelBase {
 
     showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}) {
         var securedSettings = {};
-        var deferred = $.Deferred();
         var savedKey;
+
+        var encryptionDeferred = $.Deferred();
+        var settingsDeferred = $.Deferred();
 
         if (bundles.contains("Encryption")) {
             var createEncryptionViewModel = new createEncryption();
@@ -138,27 +142,46 @@ class databases extends viewModelBase {
                         'Raven/Encryption/KeyBitsPreference': encryptionBits,
                         'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
                     };
-                    deferred.resolve(securedSettings);
+                    encryptionDeferred.resolve(securedSettings);
                 });
             app.showDialog(createEncryptionViewModel);
         } else {
-            deferred.resolve({});
+            encryptionDeferred.resolve();
         }
 
-        deferred.done(() => {
+        encryptionDeferred.done((encryptionResult) => {
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
                     var newDb = new database(databaseName);
                     this.databases.unshift(newDb);
+
+                    var encryptionConfirmationDialogPromise = $.Deferred();
                     if (!jQuery.isEmptyObject(securedSettings)) {
                         var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
+                        createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
+                        createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
                         app.showDialog(createEncryptionConfirmationViewModel);
+                    } else {
+                        encryptionConfirmationDialogPromise.resolve();
                     }
 
                     this.selectDatabase(newDb);
+
+                    this.createDefaultSettings(newDb, bundles).always(() => {
+                      if (bundles.contains("Quotas") || bundles.contains("Versioning")) {
+                        encryptionConfirmationDialogPromise.always(() => {
+                          var settingsDialog = new databaseSettingsDialog(bundles);
+                          app.showDialog(settingsDialog);
+                        });
+                      }
+                    });
                 });
         });
+    }
+
+    private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
+        return new createDefaultSettingsCommand(db, bundles).execute();
     }
 
     private isEmptyStringOrWhitespace(str: string) {

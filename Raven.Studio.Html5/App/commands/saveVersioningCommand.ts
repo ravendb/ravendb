@@ -4,7 +4,7 @@ import commandBase = require("commands/commandBase");
 import saveBulkOfDocuments = require("commands/saveBulkOfDocuments");
 
 class saveVersioningCommand extends commandBase {
-    constructor(private versioningEntries: Array<versioningEntryDto>, private removeEntries: Array<versioningEntryDto>, private db: database) {
+    constructor(private db: database, private versioningEntries: Array<versioningEntryDto>, private removeEntries: Array<versioningEntryDto> = []) {
         super();
     }
 
