@@ -9,9 +9,7 @@ using System.Threading.Tasks;
 using NLog;
 using Newtonsoft.Json;
 using Raven.Abstractions;
-using Raven.Abstractions.RavenFS;
 using Raven.Abstractions.Util;
-using Raven.Client.RavenFS;
 using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Notifications;
@@ -23,6 +21,8 @@ using SynchronizationClient = Raven.Client.FileSystem.AsyncFilesServerClient.Syn
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -455,8 +455,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return report;
 		}
 
-		private IEnumerable<FileHeaderInformation> GetFilesToSynchronization(
-			SourceSynchronizationInformation destinationsSynchronizationInformationForSource, int take)
+		private IEnumerable<FileHeaderInformation> GetFilesToSynchronization( SourceSynchronizationInformation destinationsSynchronizationInformationForSource, int take)
 		{
 			var filesToSynchronization = new List<FileHeaderInformation>();
 

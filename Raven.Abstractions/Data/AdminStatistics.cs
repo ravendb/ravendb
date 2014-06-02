@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.RavenFS;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Abstractions.Data
 {

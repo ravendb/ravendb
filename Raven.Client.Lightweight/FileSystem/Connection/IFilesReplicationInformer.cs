@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Connection;
-using Raven.Client.RavenFS;
 using System;
 using System.Collections.Generic;
 using System.Linq;

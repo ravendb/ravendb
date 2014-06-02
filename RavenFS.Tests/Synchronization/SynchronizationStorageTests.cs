@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
@@ -8,6 +7,7 @@ using Raven.Database.Server.RavenFS.Util;
 using Xunit;
 using Xunit.Extensions;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {

@@ -1,5 +1,5 @@
-﻿using Raven.Client.Changes;
-using Raven.Client.RavenFS;
+﻿using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Client.Changes;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem.Shard;

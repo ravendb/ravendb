@@ -22,7 +22,6 @@ using Raven.Json.Linq;
 
 using Voron;
 using Voron.Impl;
-using Raven.Client.RavenFS;
 using System.Diagnostics;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron

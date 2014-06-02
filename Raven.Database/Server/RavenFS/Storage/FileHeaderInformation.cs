@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
-using Raven.Client.RavenFS;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {

@@ -7,7 +7,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
 using Xunit;
 using Raven.Client.FileSystem;
 

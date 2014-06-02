@@ -8,12 +8,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {

@@ -1,9 +1,10 @@
 ﻿using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;

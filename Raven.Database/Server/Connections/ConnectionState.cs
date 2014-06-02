@@ -2,8 +2,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
 using Raven.Database.Util;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Database.Server.Connections
 {

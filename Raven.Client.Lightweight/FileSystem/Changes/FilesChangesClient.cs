@@ -1,11 +1,11 @@
 ﻿using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
-using Raven.Client.RavenFS;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System;

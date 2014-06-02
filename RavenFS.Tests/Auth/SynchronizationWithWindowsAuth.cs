@@ -9,13 +9,13 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
 using RavenFS.Tests.Synchronization;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Abstractions.FileSystem;
 namespace RavenFS.Tests.Auth
 {
     public class SynchronizationWithWindowsAuth : RavenFsTestBase

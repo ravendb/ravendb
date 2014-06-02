@@ -11,7 +11,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.RavenFS;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Client.FileSystem
 {

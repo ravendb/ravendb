@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 {

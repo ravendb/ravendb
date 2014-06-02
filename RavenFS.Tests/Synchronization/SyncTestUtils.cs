@@ -2,11 +2,10 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Xunit;
-using Raven.Abstractions.RavenFS;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {

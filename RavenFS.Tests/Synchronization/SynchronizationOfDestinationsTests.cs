@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.RavenFS;
-using Raven.Client.RavenFS;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Util;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {

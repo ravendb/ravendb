@@ -5,15 +5,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {

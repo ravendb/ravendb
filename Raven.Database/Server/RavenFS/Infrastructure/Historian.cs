@@ -6,13 +6,13 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Infrastructure
 {

@@ -17,7 +17,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.RavenFS;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -32,6 +31,7 @@ using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System.Collections.Generic;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {

@@ -1,9 +1,8 @@
 ﻿using Raven.Abstractions.Connection;
-using Raven.Abstractions.RavenFS;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;

@@ -10,8 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.RavenFS;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
@@ -24,6 +22,8 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System.Diagnostics;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -502,7 +502,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/synchronization/Finished")]
 		public HttpResponseMessage Finished()
 		{
-			ListPage<SynchronizationReport> page = null;
+			ItemsPage<SynchronizationReport> page = null;
 
 			Storage.Batch(accessor =>
 			{
@@ -513,7 +513,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                  Paging.Start, Paging.PageSize, out totalCount);
 
 				var reports = configs.Select(config => config.JsonDeserialization<SynchronizationReport>()).ToList();
-                page = new ListPage<SynchronizationReport>(reports, totalCount);
+                page = new ItemsPage<SynchronizationReport>(reports, totalCount);
 			});
 
             return this.GetMessageWithObject(page, HttpStatusCode.OK)
@@ -524,7 +524,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/synchronization/Active")]
 		public HttpResponseMessage Active()
 		{
-            var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Active
+            var result = new ItemsPage<SynchronizationDetails>(SynchronizationTask.Queue.Active
                                                                                        .Skip(Paging.Start)
                                                                                        .Take(Paging.PageSize), 
                                                               SynchronizationTask.Queue.GetTotalActiveTasks());
@@ -537,7 +537,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/synchronization/Pending")]
 		public HttpResponseMessage Pending()
 		{
-            var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Pending
+            var result = new ItemsPage<SynchronizationDetails>(SynchronizationTask.Queue.Pending
                                                                                        .Skip(Paging.Start)
                                                                                        .Take(Paging.PageSize),
 											                  SynchronizationTask.Queue.GetTotalPendingTasks());
@@ -550,7 +550,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/synchronization/Conflicts")]
 		public HttpResponseMessage Conflicts()
 		{
-			ListPage<ConflictItem> page = null;
+			ItemsPage<ConflictItem> page = null;
 
 			Storage.Batch(accessor =>
 			{
@@ -559,7 +559,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 													Paging.PageSize * Paging.Start,
 													Paging.PageSize).ToList();
 
-				page = new ListPage<ConflictItem>(conflicts, conflicts.Count);
+				page = new ItemsPage<ConflictItem>(conflicts, conflicts.Count);
 			});
 
             return this.GetMessageWithObject(page, HttpStatusCode.OK)

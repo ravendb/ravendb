@@ -8,12 +8,12 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
 using Raven.Json.Linq;
 using Raven.Server;
 using RavenFS.Tests.Synchronization;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {

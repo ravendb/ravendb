@@ -1,8 +1,9 @@
 ﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.OAuth;
-using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
@@ -10,7 +11,6 @@ using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Client.RavenFS;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
@@ -815,7 +815,7 @@ namespace Raven.Client.FileSystem
                 });
             }
 
-            public Task<ConfigSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25)
+            public Task<ConfigurationSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("GET", async operation =>
                 {
@@ -836,7 +836,7 @@ namespace Raven.Client.FileSystem
                         var response = await request.ReadResponseJsonAsync();
                         using (var jsonTextReader = new RavenJTokenReader(response))
                         {
-                            return jsonSerializer.Deserialize<ConfigSearchResults>(jsonTextReader);
+                            return jsonSerializer.Deserialize<ConfigurationSearchResults>(jsonTextReader);
                         }
                     }
                     catch (Exception e)
@@ -1023,7 +1023,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<ListPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", BaseUrl, page,
                                                          pageSize);
@@ -1036,7 +1036,7 @@ namespace Raven.Client.FileSystem
                 {
                     var response = await request.ReadResponseJsonAsync();
                     var preResult =
-                        new JsonSerializer().Deserialize<ListPage<SynchronizationReport>>(new RavenJTokenReader(response));
+                        new JsonSerializer().Deserialize<ItemsPage<SynchronizationReport>>(new RavenJTokenReader(response));
                     return preResult;
                 }
                 catch (Exception e)
@@ -1045,7 +1045,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<ListPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/active?start={1}&pageSize={2}",
                                                         BaseUrl, page, pageSize);
@@ -1057,7 +1057,7 @@ namespace Raven.Client.FileSystem
                 {
                     var response = await request.ReadResponseJsonAsync();
                     var preResult =
-                        new JsonSerializer().Deserialize<ListPage<SynchronizationDetails>>(new RavenJTokenReader(response));
+                        new JsonSerializer().Deserialize<ItemsPage<SynchronizationDetails>>(new RavenJTokenReader(response));
                     return preResult;
                 }
                 catch (Exception e)
@@ -1066,7 +1066,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<ListPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/pending?start={1}&pageSize={2}",
                                                      BaseUrl, page, pageSize);
@@ -1079,7 +1079,7 @@ namespace Raven.Client.FileSystem
                     var response = await request.ReadResponseJsonAsync();
 
                     var preResult =
-                        new JsonSerializer().Deserialize<ListPage<SynchronizationDetails>>(new RavenJTokenReader(response));
+                        new JsonSerializer().Deserialize<ItemsPage<SynchronizationDetails>>(new RavenJTokenReader(response));
                     return preResult;
 
                 }
@@ -1140,7 +1140,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<ListPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", BaseUrl, page,
                                                          pageSize);
@@ -1151,7 +1151,7 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     var response = (RavenJObject)await request.ReadResponseJsonAsync();
-                    return response.JsonDeserialization<ListPage<ConflictItem>>();
+                    return response.JsonDeserialization<ItemsPage<ConflictItem>>();
                     //var preResult =
                     //    new JsonSerializer().Deserialize<ListPage<ConflictItem>>(new RavenJTokenReader(response));
                     //return preResult;

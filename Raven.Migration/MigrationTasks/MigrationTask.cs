@@ -8,7 +8,6 @@ using System.Net;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Client.RavenFS;
 using Raven.Client.FileSystem;
 
 namespace Raven.Migration.MigrationTasks

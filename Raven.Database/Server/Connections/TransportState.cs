@@ -8,8 +8,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.Controllers;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.Connections
 {

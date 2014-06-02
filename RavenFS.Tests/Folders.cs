@@ -1,8 +1,8 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Xunit;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {

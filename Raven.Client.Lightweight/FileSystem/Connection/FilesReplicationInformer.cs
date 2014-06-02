@@ -1,12 +1,11 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.RavenFS;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.RavenFS;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;

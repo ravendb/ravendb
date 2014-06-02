@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Net;
-using Raven.Client.RavenFS;
 
 namespace RavenFS.Tests
 {

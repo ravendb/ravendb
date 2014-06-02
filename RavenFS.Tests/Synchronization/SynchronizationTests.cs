@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -13,6 +12,7 @@ using Xunit;
 using Xunit.Extensions;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {

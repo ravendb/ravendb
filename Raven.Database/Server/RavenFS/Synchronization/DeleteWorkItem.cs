@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {

@@ -1,7 +1,6 @@
 ﻿using Raven.Abstractions.Data;
-using Raven.Abstractions.RavenFS;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.RavenFS;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -60,7 +59,7 @@ namespace Raven.Client.FileSystem
         Task<T> GetConfig<T>(string name);
         Task DeleteConfig(string name);
 
-        Task<ConfigSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25);
+        Task<ConfigurationSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25);
     }
 
     public interface IAsyncFilesSynchronizationCommands : IDisposable, IHoldProfilingInformation
@@ -78,14 +77,14 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> GetSynchronizationStatusAsync(string fileName);
 
         
-        Task<ListPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25);
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, IList<HistoryItem> remoteHistory, string remoteServerUrl);
         
                 
-        Task<ListPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25);
-        Task<ListPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25);
-        Task<ListPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25);        
+        Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25);        
         
     }
 

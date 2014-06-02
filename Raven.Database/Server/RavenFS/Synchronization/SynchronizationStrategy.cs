@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {

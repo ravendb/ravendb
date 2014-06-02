@@ -143,10 +143,10 @@
     <Compile Include="FileSystem\Extensions\AsyncExtensions.cs" />
     <Compile Include="FileSystem\Extensions\ExceptionExtensions.cs" />
     <Compile Include="FileSystem\ListenableStream.cs" />
-    <Compile Include="RavenFS\AsyncFilesServerClient.cs" />
+    <Compile Include="FileSystem\AsyncFilesServerClient.cs" />
     <Compile Include="FileSystem\Shard\DefaultShardResolutionStrategy.cs" />
     <Compile Include="FileSystem\Shard\SequentialShardAccessStrategy.cs" />
-    <Compile Include="RavenFS\Shard\AsyncShardedFilesServerClient.cs" />
+    <Compile Include="FileSystem\Shard\AsyncShardedFilesServerClient.cs" />
     <Compile Include="FileSystem\Shard\ShardPagingInfo.cs" />
     <Compile Include="FileSystem\Shard\ShardRequestData.cs" />
     <Compile Include="FileSystem\Shard\ShardStrategy.cs" />

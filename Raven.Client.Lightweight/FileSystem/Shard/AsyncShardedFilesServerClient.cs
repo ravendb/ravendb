@@ -5,9 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.RavenFS;
 using Raven.Json.Linq;
-using Raven.Client.RavenFS;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Client.FileSystem.Shard
 {

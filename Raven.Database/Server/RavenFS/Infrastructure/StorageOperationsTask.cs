@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
@@ -19,6 +18,8 @@ using Raven.Database.Server.RavenFS.Storage.Exceptions;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Infrastructure
 {

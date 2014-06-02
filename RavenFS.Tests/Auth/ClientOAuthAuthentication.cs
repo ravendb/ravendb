@@ -13,14 +13,13 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.RavenFS;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
-using Raven.Abstractions.RavenFS;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {

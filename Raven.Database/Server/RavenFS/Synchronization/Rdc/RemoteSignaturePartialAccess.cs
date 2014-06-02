@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Client.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc

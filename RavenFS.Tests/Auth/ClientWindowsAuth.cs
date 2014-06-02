@@ -3,6 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.Security.Windows;
+using Raven.Json.Linq;
+using Raven.Server;
+using RavenFS.Tests.Synchronization.IO;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,18 +21,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
-using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.Security.Windows;
-using Raven.Json.Linq;
-using Raven.Server;
-using RavenFS.Tests.Synchronization.IO;
 using Xunit;
-using Raven.Abstractions.RavenFS;
-using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {

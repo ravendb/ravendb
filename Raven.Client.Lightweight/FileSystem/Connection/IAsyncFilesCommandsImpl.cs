@@ -1,5 +1,4 @@
-﻿using Raven.Abstractions.RavenFS;
-using Raven.Client.RavenFS;
+﻿using Raven.Abstractions.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
