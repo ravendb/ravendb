@@ -54,10 +54,10 @@ namespace RavenFS.Tests.Synchronization
 
 			destinationSyncResults = sourceClient.Synchronization.SynchronizeDestinationsAsync().Result;
 
-			var conflictItem = destination1Client.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflictItem = destination1Client.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 			Assert.Null(conflictItem);
 
-			conflictItem = destination2Client.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			conflictItem = destination2Client.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 			Assert.Null(conflictItem);
 
 			// check if reports match
@@ -163,7 +163,7 @@ namespace RavenFS.Tests.Synchronization
 
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 
-			var configs = await destinationClient.Config.GetConfigNames();
+			var configs = await destinationClient.Configuration.GetConfigNames();
 
 			Assert.DoesNotContain("SyncingLock-test1.bin", configs);
 			Assert.DoesNotContain("SyncingLock-test2.bin", configs);
@@ -188,7 +188,7 @@ namespace RavenFS.Tests.Synchronization
 
 		    var fullDstUrl = destinationClient.ToSynchronizationDestination().FileSystemUrl;
 
-            var synchronizationDetails = sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", fullDstUrl)).Result;
+            var synchronizationDetails = sourceClient.Configuration.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", fullDstUrl)).Result;
 
 			Assert.Equal("test.bin", synchronizationDetails.FileName);
             Assert.Equal(fullDstUrl, synchronizationDetails.DestinationUrl);
@@ -214,7 +214,7 @@ namespace RavenFS.Tests.Synchronization
 			// start synchronization again to force confirmation by source
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 
-            var shouldBeNull = await sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.ServerUrl));
+            var shouldBeNull = await sourceClient.Configuration.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.ServerUrl));
 
 			Assert.Null(shouldBeNull);
 		}
@@ -225,7 +225,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceContent = new RandomStream(1);
 			var sourceClient = NewClient(0);
 
-            await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, 1);
+            await sourceClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, 1);
 
 			var destinationClient = NewClient(1);
 
@@ -264,7 +264,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 
 			// prevent pushing files after metadata update
-			await sourceClient.Config.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations);
+			await sourceClient.Configuration.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations);
 
             await sourceClient.UpdateMetadataAsync("test.txt", new RavenJObject { { "value", "shouldBeSynchronized" } });
 
@@ -303,7 +303,7 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.Synchronization.SetDestinationsConfig(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 
-			await sourceClient.Config.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations);
+			await sourceClient.Configuration.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations);
 
 
 			// delete file on source
@@ -447,7 +447,7 @@ namespace RavenFS.Tests.Synchronization
                                                  Exception = new Exception("There was an exception in last synchronization.")
                                              };
 
-			await destinationClient.Config.SetConfig(RavenFileNameHelper.SyncResultNameForFile("test.bin"), failureSynchronization);
+			await destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncResultNameForFile("test.bin"), failureSynchronization);
 
             var confirmations = await destinationClient.Synchronization
                                                        .ConfirmFilesAsync(new List<Tuple<string, Guid>>

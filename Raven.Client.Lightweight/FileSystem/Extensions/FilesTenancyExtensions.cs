@@ -10,19 +10,19 @@ namespace Raven.Client.FileSystem.Extensions
 {
     public static class FilesTenancyExtensions
     {
-        public static async Task EnsureFileSystemExistsAsync(this AsyncFilesServerClient client)
+        public static async Task EnsureFileSystemExistsAsync(this IAsyncFilesCommands commands)
         {
-            var existingSystems = await client.Admin.GetFileSystemsNames();
+            var existingSystems = await commands.Admin.GetFileSystemsNames();
 
-            if (existingSystems.Any(x => x.Equals(client.FileSystemName, StringComparison.InvariantCultureIgnoreCase)))
+            if (existingSystems.Any(x => x.Equals(commands.FileSystem, StringComparison.InvariantCultureIgnoreCase)))
                 return;
 
-            await client.Admin.CreateFileSystemAsync(new DatabaseDocument
+            await commands.Admin.CreateFileSystemAsync(new DatabaseDocument
             {
-                Id = "Raven/FileSystem/" + client.FileSystemName,
+                Id = "Raven/FileSystem/" + commands.FileSystem,
                 Settings =
                  {
-                     {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", client.FileSystemName)}
+                     {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", commands.FileSystem)}
                  }
             });
         }

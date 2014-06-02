@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
@@ -20,6 +21,35 @@ namespace Raven.Client.FileSystem
         /// <value>The operations headers.</value>
         NameValueCollection OperationsHeaders { get; set; }
 
+        /// <summary>
+        /// Admin operations for current database
+        /// </summary>
+        IAsyncFilesAdminCommands Admin { get; }
+
+        /// <summary>
+        /// Configuration commands used to change the general configuration of file systems.
+        /// </summary>
+        IAsyncFilesConfigurationCommands Configuration { get; }
+
+        /// <summary>
+        /// Very low level storage commands.
+        /// </summary>
+        IAsyncFilesStorageCommands Storage { get; }
+
+        /// <summary>
+        /// Low level synchronization commands.
+        /// </summary>
+        IAsyncFilesSynchronizationCommands Synchronization { get; }
+
+        /// <summary>
+        /// Primary credentials for access. Will be used also in replication context - for failovers
+        /// </summary>
+        OperationCredentials PrimaryCredentials { get; }
+
+        FilesConvention Conventions { get; }
+
+        string FileSystem { get; }   
+
 
         Task<Guid> GetServerId();
 
@@ -40,6 +70,8 @@ namespace Raven.Client.FileSystem
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation
     {
+        IAsyncFilesCommands Commands { get; }
+
         Task<string[]> GetFileSystemsNames();
         Task<List<FileSystemStats>> GetFileSystemsStats();
         Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null);
@@ -49,6 +81,8 @@ namespace Raven.Client.FileSystem
 
     public interface IAsyncFilesConfigurationCommands : IDisposable, IHoldProfilingInformation
     {
+        IAsyncFilesCommands Commands { get; }
+
         Task<string[]> GetConfigNames(int start = 0, int pageSize = 25);
 
         Task SetConfig<T>(string name, T data);
@@ -60,6 +94,8 @@ namespace Raven.Client.FileSystem
 
     public interface IAsyncFilesSynchronizationCommands : IDisposable, IHoldProfilingInformation
     {
+        IAsyncFilesCommands Commands { get; }
+
         Task SetDestinationsConfig(params SynchronizationDestination[] destinations);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
@@ -87,8 +123,9 @@ namespace Raven.Client.FileSystem
         Task<SignatureManifest> GetRdcManifestAsync(string path);
         Task<RdcStats> GetRdcStatsAsync();
 
-
+        Task<SynchronizationReport> StartAsync(string fileName, IAsyncFilesCommands destination);
         Task<SynchronizationReport> StartAsync(string fileName, SynchronizationDestination destination);
+
         Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer);
         Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject currentMetadata, ServerInfo sourceServer);
         Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer);
@@ -97,6 +134,8 @@ namespace Raven.Client.FileSystem
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation
     {
+        IAsyncFilesCommands Commands { get; }
+
         Task CleanUp();
         Task RetryRenaming();
     }

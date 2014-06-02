@@ -13,6 +13,7 @@ using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -60,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public abstract SynchronizationType SynchronizationType { get; }
 
-        public abstract Task<SynchronizationReport> PerformAsync(AsyncFilesServerClient.SynchronizationClient destination);
+        public abstract Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination);
 
 		public virtual void Cancel()
 		{
@@ -88,9 +89,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             return null;
 		}
 
-        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, AsyncFilesServerClient.SynchronizationClient destination, string localServerUrl, ILog log)
+        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, IAsyncFilesSynchronizationCommands destination, string localServerUrl, ILog log)
 		{
-			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, destination.BaseUrl);
+            var commands = (IAsyncFilesCommandsImpl)destination.Commands;
+
+            log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, commands.BaseUrl);
 
 			try
 			{

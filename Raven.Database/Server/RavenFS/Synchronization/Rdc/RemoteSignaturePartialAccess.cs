@@ -7,9 +7,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 	public class RemoteSignaturePartialAccess : IPartialDataAccess
 	{
 		private readonly string _fileName;
-        private readonly AsyncFilesServerClient.SynchronizationClient synchronizationClient;
+        private readonly IAsyncFilesSynchronizationCommands synchronizationClient;
 
-        public RemoteSignaturePartialAccess(AsyncFilesServerClient.SynchronizationClient synchronizationClient, string fileName)
+        public RemoteSignaturePartialAccess(IAsyncFilesSynchronizationCommands synchronizationClient, string fileName)
 		{
 			this.synchronizationClient = synchronizationClient;
 			_fileName = fileName;

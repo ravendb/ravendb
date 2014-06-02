@@ -551,9 +551,9 @@ namespace RavenFS.Tests
 
 	            var stats = await anotherClient.Admin.GetFileSystemsStats();
 
-	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystemName);
+	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystem);
                 Assert.NotNull(stats1);
-	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
+	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystem);
 	            Assert.NotNull(stats2);
 
                 Assert.Equal(2, stats1.Metrics.Requests.Count);

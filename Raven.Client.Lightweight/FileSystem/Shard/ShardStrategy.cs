@@ -25,7 +25,7 @@ namespace Raven.Client.FileSystem.Shard
 			this.shards = new Dictionary<string, AsyncFilesServerClient>(shards, StringComparer.OrdinalIgnoreCase);
 
 
-			Conventions = shards.First().Value.Convention.Clone();
+			Conventions = shards.First().Value.Conventions.Clone();
 
 			ShardAccessStrategy = new SequentialShardAccessStrategy();
 			ShardResolutionStrategy = new DefaultShardResolutionStrategy(shards.Keys, this);

@@ -30,7 +30,7 @@ namespace RavenFS.Tests.Synchronization
 		[Theory]
 		[InlineData(2)]
 		[InlineData(10)]
-		public void Should_reuse_pages_when_data_appended(int numberOfPages)
+		public async void Should_reuse_pages_when_data_appended(int numberOfPages)
 		{
 			var file = SyncTestUtils.PreparePagesStream(numberOfPages);
 
@@ -43,13 +43,12 @@ namespace RavenFS.Tests.Synchronization
 			destinationContent.Position = 0;
 			destination.UploadAsync("test", destinationContent).Wait();
 
-			var contentUpdate = new ContentUpdateWorkItem("test", "http://localhost:12345", sourceRfs.Storage,
-			                                              sourceRfs.SigGenerator);
+			var contentUpdate = new ContentUpdateWorkItem("test", "http://localhost:12345", sourceRfs.Storage, sourceRfs.SigGenerator);
 
 			// force to upload entire file, we just want to check which pages will be reused
-		    contentUpdate.UploadToAsync(destination.Synchronization).Wait();
-			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
-            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
+		    await contentUpdate.UploadToAsync(destination.Synchronization);
+			await destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion);
+            await contentUpdate.UploadToAsync(destination.Synchronization);
 
 			FileAndPagesInformation fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 2*numberOfPages));

@@ -28,7 +28,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.MetadataUpdate; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(AsyncFilesServerClient.SynchronizationClient destination)
+        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 

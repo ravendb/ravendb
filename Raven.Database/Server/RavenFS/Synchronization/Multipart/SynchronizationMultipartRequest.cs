@@ -3,6 +3,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -20,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 {
 	public class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
-        private readonly AsyncFilesServerClient.SynchronizationClient destination;
+        private readonly IAsyncFilesSynchronizationCommands destination;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly ServerInfo serverInfo;
@@ -29,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private readonly string syncingBoundary;
 		private HttpJsonRequest request;
 
-        public SynchronizationMultipartRequest(AsyncFilesServerClient.SynchronizationClient destination, ServerInfo serverInfo, string fileName,
+        public SynchronizationMultipartRequest(IAsyncFilesSynchronizationCommands destination, ServerInfo serverInfo, string fileName,
                                                RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
 			this.destination = destination;
@@ -51,9 +52,15 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			if (sourceStream.CanRead == false)
 				throw new Exception("Stream does not support reading");
 
-			request = destination.RequestFactory.CreateHttpJsonRequest(
-                                    new CreateHttpJsonRequestParams(this, destination.BaseUrl + "/synchronization/MultipartProceed",
-					                                                "POST", destination.Credentials, destination.Convention));
+            var commands = (IAsyncFilesCommandsImpl)this.destination.Commands;
+
+            var baseUrl = commands.BaseUrl;
+            var credentials = commands.PrimaryCredentials;
+            var conventions = commands.Conventions;
+
+            request = commands.RequestFactory.CreateHttpJsonRequest(
+                                    new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed",
+                                                                    "POST", credentials, conventions));
 
             // REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 
             //         If AddHeader/s ever put an etag it should check for that.

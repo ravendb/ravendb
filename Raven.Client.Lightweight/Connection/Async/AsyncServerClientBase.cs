@@ -20,7 +20,7 @@ namespace Raven.Client.Connection.Async
             this.WasDisposed = false;
 
             this.ServerUrl = serverUrl.TrimEnd('/'); 
-            this.Convention = convention;
+            this.Conventions = convention;
             this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             this.RequestFactory = jsonRequestFactory;
             this.SessionId = sessionId;
@@ -47,7 +47,7 @@ namespace Raven.Client.Connection.Async
             get;
         }
 
-        public TConvention Convention
+        public TConvention Conventions
         {
             get;
             private set;
@@ -97,20 +97,21 @@ namespace Raven.Client.Connection.Async
         private int requestCount;
         private volatile bool currentlyExecuting;
 
-        internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation, Func<string> baseUrlGetter = null)
+        internal Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
+        {
+            return ExecuteWithReplication(method, operation, this.BaseUrl);
+        }
+
+        internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation, string baseUrl)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
-            if (currentlyExecuting && Convention.AllowMultipuleAsyncOperations == false)
+            if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
                 throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
 
             currentlyExecuting = true;
             try
             {
-                string operationUrl = this.BaseUrl;
-                if (baseUrlGetter != null)
-                    operationUrl = baseUrlGetter();
-
-                return await ReplicationInformer.ExecuteWithReplicationAsync(method, operationUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStrippingBase.Value, operation)
+                return await ReplicationInformer.ExecuteWithReplicationAsync(method, baseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStrippingBase.Value, operation)
                                                 .ConfigureAwait(false);
             }
             catch (AggregateException e)
@@ -127,15 +128,18 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-
-        internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation, Func<string> baseUrlGetter = null)
+        internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation)
+        {
+            return ExecuteWithReplication(method, operation, this.BaseUrl);
+        }
+        internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation, string baseUrl)
         {
             // Convert the Func<string, Task> to a Func<string, Task<object>>
             return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
             {
                 t.AssertNotFailed();
                 return null;
-            }), baseUrlGetter);
+            }), baseUrl);
         }
 
         #endregion

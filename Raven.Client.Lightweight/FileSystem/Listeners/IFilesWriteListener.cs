@@ -18,11 +18,8 @@ namespace Raven.Client.FileSystem.Listeners
         /// <param name="data">The data stream to send.</param>
         /// <param name="metadata">The metadata.</param>
         /// <returns>
-        /// Whatever the file was modified and requires us re-send it.
-        /// The returning stream will be the data sent to the server, returning null would 
-        /// mean that any request of write to the file would be ignored in the current SaveChanges call.
         /// </returns>
-        Stream BeforeWrite(FileHeader file, Stream data, RavenJObject metadata);
+        RavenJObject BeforeWrite(FileHeader file, Stream data, RavenJObject metadata);
 
         /// <summary>
         /// Invoked after the data was sent to the server.

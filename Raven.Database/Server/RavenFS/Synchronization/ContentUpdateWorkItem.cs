@@ -43,7 +43,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			Cts.Cancel();
 		}
 
-        public override async Task<SynchronizationReport> PerformAsync(AsyncFilesServerClient.SynchronizationClient destination)
+        public override async Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        private async Task<SynchronizationReport> SynchronizeTo(AsyncFilesServerClient.SynchronizationClient destination,
+        private async Task<SynchronizationReport> SynchronizeTo(IAsyncFilesSynchronizationCommands destination,
 																ISignatureRepository localSignatureRepository,
 																ISignatureRepository remoteSignatureRepository,
 																SignatureManifest sourceSignatureManifest,
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        public async Task<SynchronizationReport> UploadToAsync(AsyncFilesServerClient.SynchronizationClient destination)
+        public async Task<SynchronizationReport> UploadToAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			using (var sourceFileStream = StorageStream.Reading(Storage, FileName))
 			{
@@ -147,7 +147,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        private Task<SynchronizationReport> PushByUsingMultipartRequest(AsyncFilesServerClient.SynchronizationClient destination, Stream sourceFileStream,
+        private Task<SynchronizationReport> PushByUsingMultipartRequest(IAsyncFilesSynchronizationCommands destination, Stream sourceFileStream,
 																		IList<RdcNeed> needList)
 		{
 			Cts.Token.ThrowIfCancellationRequested();

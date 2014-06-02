@@ -12,10 +12,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 	public class RemoteRdcManager
 	{
 		private readonly ISignatureRepository localSignatureRepository;
-        private readonly AsyncFilesServerClient.SynchronizationClient ravenFileSystemClient;
+        private readonly IAsyncFilesSynchronizationCommands ravenFileSystemClient;
 		private readonly ISignatureRepository remoteCacheSignatureRepository;
 
-        public RemoteRdcManager(AsyncFilesServerClient.SynchronizationClient ravenFileSystemClient, ISignatureRepository localSignatureRepository,
+        public RemoteRdcManager(IAsyncFilesSynchronizationCommands ravenFileSystemClient, ISignatureRepository localSignatureRepository,
 								ISignatureRepository remoteCacheSignatureRepository)
 		{
 			this.localSignatureRepository = localSignatureRepository;

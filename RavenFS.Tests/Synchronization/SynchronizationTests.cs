@@ -437,7 +437,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
 
-            await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, -1);
+            await sourceClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, -1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -520,7 +520,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
-			var conflictItem = destinationClient.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflictItem = destinationClient.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
 			Assert.Null(conflictItem);
 
@@ -550,7 +550,7 @@ namespace RavenFS.Tests.Synchronization
 
 			Assert.Equal(SynchronizationType.Rename, report.Type);
 
-			var conflictItem = destinationClient.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflictItem = destinationClient.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
 			Assert.Null(conflictItem);
 

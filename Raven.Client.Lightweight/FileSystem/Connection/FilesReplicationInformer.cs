@@ -42,7 +42,7 @@ namespace Raven.Client.FileSystem.Connection
 
                 try
                 {
-                    var config = serverClient.Config.GetConfig<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
+                    var config = serverClient.Configuration.GetConfig<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
                     failureCounts[serverClient.BaseUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)

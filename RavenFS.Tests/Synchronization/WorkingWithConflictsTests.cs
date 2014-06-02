@@ -114,7 +114,7 @@ namespace RavenFS.Tests.Synchronization
 
 				if (i%3 == 0) // sometimes insert other configs
 				{
-                    await  destination.Config.SetConfig("test" + i, new RavenJObject { { "foo", "bar" } });
+                    await  destination.Configuration.SetConfig("test" + i, new RavenJObject { { "foo", "bar" } });
 				}
 
 				// make sure that conflicts indeed are created
@@ -165,7 +165,7 @@ namespace RavenFS.Tests.Synchronization
 			                                          new List<HistoryItem> {new HistoryItem {ServerId = guid, Version = 3}},
 			                                          "http://localhost:12345").Wait();
 			var resultFileMetadata = client.GetMetadataForAsync("test.bin").Result;
-			var conflict = client.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflict = client.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
 			Assert.Equal(true.ToString(), resultFileMetadata[SynchronizationConstants.RavenSynchronizationConflict]);
 			Assert.Equal(guid, conflict.RemoteHistory.Last().ServerId);
@@ -220,7 +220,7 @@ namespace RavenFS.Tests.Synchronization
 			destination.UploadAsync(fileName, new MemoryStream(new byte[] {1})).Wait();
 
 			var request =
-                (HttpWebRequest)WebRequest.Create(destination.ServerUrl + "/fs/" + destination.FileSystemName + "/synchronization/updatemetadata/" + fileName);
+                (HttpWebRequest)WebRequest.Create(destination.ServerUrl + "/fs/" + destination.FileSystem + "/synchronization/updatemetadata/" + fileName);
 
 			request.Method = "POST";
 			request.ContentLength = 0;
@@ -318,7 +318,7 @@ namespace RavenFS.Tests.Synchronization
             destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } },
 			                              new MemoryStream(new byte[] {1, 2, 3, 4})).Wait();
 
-            var webRequest = (HttpWebRequest)WebRequest.Create(destinationClient.ServerUrl + "/fs/" + destinationClient.FileSystemName + "/synchronization/updatemetadata/test.bin");
+            var webRequest = (HttpWebRequest)WebRequest.Create(destinationClient.ServerUrl + "/fs/" + destinationClient.FileSystem + "/synchronization/updatemetadata/test.bin");
 			webRequest.ContentLength = 0;
 			webRequest.Method = "POST";
 
@@ -399,7 +399,7 @@ namespace RavenFS.Tests.Synchronization
 			var report = await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 			Assert.Null(report.ToArray()[0].Exception);
 
-            var syncingItem = await sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
+            var syncingItem = await sourceClient.Configuration.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
 			Assert.Null(syncingItem);
 		}
 

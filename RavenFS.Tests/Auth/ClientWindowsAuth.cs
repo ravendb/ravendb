@@ -145,7 +145,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task ConfigClientCanWorkWithWinAuthEnabled()
         {
-            var configClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Config;
+            var configClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
 
             await configClient.SetConfig("test-conf", new NameValueCollection() { { "key", "value" } });
 

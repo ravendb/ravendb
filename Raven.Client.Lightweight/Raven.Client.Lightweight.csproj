@@ -115,6 +115,7 @@
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
     <Compile Include="FileSystem\Changes\FilesConnectionState.cs" />
     <Compile Include="FileSystem\Connection\FilesReplicationInformer.cs" />
+    <Compile Include="FileSystem\Connection\IAsyncFilesCommandsImpl.cs" />
     <Compile Include="FileSystem\Connection\IFilesReplicationInformer.cs" />
     <Compile Include="FileSystem\Extensions\FilesSynchronizationExtensions.cs" />
     <Compile Include="FileSystem\Extensions\FilesTenancyExtensions.cs" />

@@ -138,7 +138,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task ConfigClientCanWorkWithOAuthEnabled()
         {
-            var configClient = NewClient(enableAuthentication: true, apiKey: apiKey).Config;
+            var configClient = NewClient(enableAuthentication: true, apiKey: apiKey).Configuration;
 
             await configClient.SetConfig("test-conf", new RavenJObject() { { "key", "value" } });
 

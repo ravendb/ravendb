@@ -26,7 +26,7 @@ namespace RavenFS.Tests
 
 			await client.Storage.CleanUp();
 
-			var configNames = await client.Config.GetConfigNames();
+			var configNames = await client.Configuration.GetConfigNames();
 
 			Assert.DoesNotContain(
 				RavenFileNameHelper.DeleteOperationConfigNameForFile(RavenFileNameHelper.DeletingFileName("toDelete.bin")),
@@ -263,7 +263,7 @@ namespace RavenFS.Tests
 
 			await client.Storage.RetryRenaming();
 
-			IEnumerable<string> configNames = await client.Config.GetConfigNames();
+			IEnumerable<string> configNames = await client.Configuration.GetConfigNames();
 
 			Assert.DoesNotContain(renameOpConfig, configNames);
 

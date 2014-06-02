@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,17 +11,18 @@ namespace Raven.Client.FileSystem.Extensions
 {
     public static class FilesSynchronizationExtensions
     {
-        public static SynchronizationDestination ToSynchronizationDestination(this AsyncFilesServerClient self)
+        public static SynchronizationDestination ToSynchronizationDestination(this IAsyncFilesCommands self)
         {
+            var selfImpl = (IAsyncFilesCommandsImpl)self;
+
             var result = new SynchronizationDestination()
             {
-                FileSystem = self.FileSystemName,
-                ServerUrl = self.ServerUrl,
-                ApiKey = self.ApiKey
+                FileSystem = self.FileSystem,
+                ServerUrl = selfImpl.ServerUrl,               
             };
 
             if (self.PrimaryCredentials != null)
-            {
+            {                
                 var networkCredential = self.PrimaryCredentials.Credentials as NetworkCredential;
 
                 if (networkCredential != null)
@@ -33,6 +35,8 @@ namespace Raven.Client.FileSystem.Extensions
                 {
                     throw new InvalidOperationException("Expected NetworkCredential object while get: " + self.PrimaryCredentials.Credentials);
                 }
+
+                result.ApiKey = self.PrimaryCredentials.ApiKey;
             }
 
             return result;

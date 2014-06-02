@@ -17,7 +17,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.Delete; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(AsyncFilesServerClient.SynchronizationClient destination)
+        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));

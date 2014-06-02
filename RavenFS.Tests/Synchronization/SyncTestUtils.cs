@@ -27,14 +27,14 @@ namespace RavenFS.Tests.Synchronization
 		{
             source.Synchronization.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
             {
-                FileSystem = x.FileSystemName,
+                FileSystem = x.FileSystem,
                 ServerUrl = x.ServerUrl
             }).ToArray()).Wait();
 		}
 
 		public static void TurnOffSynchronization(AsyncFilesServerClient source)
 		{
-			source.Config.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations).Wait();
+			source.Configuration.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations).Wait();
 		}
 
 		public static Exception ExecuteAndGetInnerException(Func<Task> action)
