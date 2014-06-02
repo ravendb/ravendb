@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Transactions;
 using Raven.Abstractions;
-using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -13,9 +12,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ReadsWillRespectTxLockExpiry()
 		{
-            using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
-                EnsureDtcIsSupported(store);
+				EnsureDtcIsSupported(store);
 
 				using(var session = store.OpenSession())
 				{
@@ -32,14 +31,11 @@ namespace Raven.Tests.Issues
 
 					using(new TransactionScope(TransactionScopeOption.Suppress))
 					{
-						Assert.True(
-							store.DatabaseCommands.Get("test").NonAuthoritativeInformation.Value
-							);
+						Assert.True(store.DatabaseCommands.Get("test").NonAuthoritativeInformation.Value);
 
+						// Make the test 
 						SystemTime.UtcDateTime = () => DateTime.Today.AddDays(15);
-						Assert.Null(
-							store.DatabaseCommands.Get("test").NonAuthoritativeInformation
-							);
+						Assert.True(store.DatabaseCommands.Get("test").NonAuthoritativeInformation.HasValue == false || store.DatabaseCommands.Get("test").NonAuthoritativeInformation.Value == false);
 					}
 				}
 			}
