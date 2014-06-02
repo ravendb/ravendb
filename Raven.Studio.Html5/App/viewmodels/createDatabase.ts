@@ -109,6 +109,9 @@ class createDatabase extends dialogViewModelBase {
         else if (rg3.test(name)) {
             message = "The name '" + name + "' is forbidden for use!";
         }
+        else if (name[name.length-1]==".") {
+            message = "The database name can't end with a dot !";
+        }
         return message;
     }
 
