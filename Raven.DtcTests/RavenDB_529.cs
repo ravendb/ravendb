@@ -35,7 +35,8 @@ namespace Raven.Tests.Issues
 
 						// Make the test 
 						SystemTime.UtcDateTime = () => DateTime.Today.AddDays(15);
-						Assert.True(store.DatabaseCommands.Get("test").NonAuthoritativeInformation.HasValue == false || store.DatabaseCommands.Get("test").NonAuthoritativeInformation.Value == false);
+						var nonAuthoritativeInformation = store.DatabaseCommands.Get("test").NonAuthoritativeInformation;
+						Assert.True(nonAuthoritativeInformation.HasValue == false || nonAuthoritativeInformation.Value == false);
 					}
 				}
 			}
