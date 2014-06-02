@@ -12,8 +12,9 @@ class saveVersioningCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var commands: bulkDocumentDto[] = [];
 
-        for (var i = 0; i < this.versioningEntries.length; i++) {
-            var entry: document = new document(this.versioningEntries[i]);
+        //for (var i = 0; i < this.versioningEntries.length; i++) {
+        this.versioningEntries.forEach((dto: versioningEntryDto) => {
+            var entry: document = new document(dto);
             commands.push({
                 Key: "Raven/Versioning/" + entry["Id"],
                 Method: "PUT",
@@ -21,16 +22,17 @@ class saveVersioningCommand extends commandBase {
                 Metadata: entry.__metadata.toDto(),
                 Etag: entry.__metadata.etag
             });
-        }
+        });
 
-        for (var i = 0; i < this.removeEntries.length; i++) {
-            var entry: document = new document(this.removeEntries[i]);
+        //for (var i = 0; i < this.removeEntries.length; i++) {
+        this.removeEntries.forEach((dto: versioningEntryDto) => {
+            var entry: document = new document(dto);
             commands.push({
                 Key: "Raven/Versioning/" + entry["Id"],
                 Method: "DELETE",
                 Etag: entry.__metadata.etag
             });
-        }
+        });
 
         var saveTask = new saveBulkOfDocuments("versioning", commands, this.db).execute();
         return saveTask;

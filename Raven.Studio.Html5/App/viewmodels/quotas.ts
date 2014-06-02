@@ -17,8 +17,6 @@ class quotas extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        var self = this;
-        var baseModel = viewModelBase;
 
         // fetch current quotas from the database
         var deferred = $.Deferred();
@@ -26,21 +24,24 @@ class quotas extends viewModelBase {
         this.fetchQuotas(db)
             .done(() => {
                 deferred.resolve({ can: true });
-                baseModel.dirtyFlag().reset();
+                viewModelBase.dirtyFlag().reset();
             })
             .fail(() => deferred.resolve({ redirect: appUrl.forStatus(db) }));
 
-        // initialize dirty flag
-        baseModel.dirtyFlag = new ko.DirtyFlag([
-          self.maximumSize,
-          self.warningLimitThreshold,
-          self.maxNumberOfDocs,
-          self.warningThresholdForDocs
-        ]);
+        this.initializeDirtyFlag();
 
         this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
+    }
+
+    initializeDirtyFlag() {
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([
+            this.maximumSize,
+            this.warningLimitThreshold,
+            this.maxNumberOfDocs,
+            this.warningThresholdForDocs
+        ]);
     }
 
     saveChanges() {
