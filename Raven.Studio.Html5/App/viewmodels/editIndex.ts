@@ -34,7 +34,9 @@ class editIndex extends viewModelBase {
 
     constructor() {
         super();
-
+        this.editedIndex.subscribe(()=> {
+            debugger;
+        });
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
@@ -161,18 +163,35 @@ class editIndex extends viewModelBase {
     }
 
     updateUrl(indexName: string) {
-        router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
+        if(indexName!=null)
+            router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
     }
 
     refreshIndex() {
         var existingIndex = this.editedIndex();
+        var existingIndexName = "";
         if (existingIndex) {
             this.editedIndex(null);
-            this.editExistingIndex(existingIndex.name());
+            existingIndexName = existingIndex.name();
+
+            this.fetchIndexToEdit(existingIndexName)
+                .done(()=> {
+                    this.editExistingIndex(existingIndexName);
+                    
+
+                    viewModelBase.dirtyFlag().reset();
+                    if (existingIndexName.length > 0)
+                        this.updateUrl(existingIndexName);
+                }).fail(() => this.editedIndex(existingIndex));
+
+        } else {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+            if (existingIndexName.length > 0)
+                this.updateUrl(existingIndexName);
         }
 
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        
     }
 
     deleteIndex() {
@@ -180,7 +199,7 @@ class editIndex extends viewModelBase {
         if (index) {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm([index.name()], db);
-            deleteViewModel.deleteTask.done(() => router.navigate(appUrl.forIndexes(db)))
+            deleteViewModel.deleteTask.done(()=> router.navigate(appUrl.forIndexes(db)));
 
             dialog.show(deleteViewModel);
         }
