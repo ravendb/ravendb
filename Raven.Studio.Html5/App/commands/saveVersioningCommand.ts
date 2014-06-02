@@ -12,7 +12,6 @@ class saveVersioningCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var commands: bulkDocumentDto[] = [];
 
-        //for (var i = 0; i < this.versioningEntries.length; i++) {
         this.versioningEntries.forEach((dto: versioningEntryDto) => {
             var entry: document = new document(dto);
             commands.push({
@@ -24,7 +23,6 @@ class saveVersioningCommand extends commandBase {
             });
         });
 
-        //for (var i = 0; i < this.removeEntries.length; i++) {
         this.removeEntries.forEach((dto: versioningEntryDto) => {
             var entry: document = new document(dto);
             commands.push({
