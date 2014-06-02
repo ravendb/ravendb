@@ -321,7 +321,10 @@ class shell extends viewModelBase {
             if (alert.type === alertType.danger || alert.type === alertType.warning) {
                 fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
             }
-            setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
+            setTimeout(() => {
+                debugger;
+                this.closeAlertAndShowNext(alert)
+            }, fadeTime);
         }
     }
 
