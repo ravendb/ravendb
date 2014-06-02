@@ -881,6 +881,9 @@ footer ul {
 .quotas-settings-form input[type=number] {
   text-align: right;
 }
+.quotas-settings-form .input-group {
+  max-width: 300px;
+}
 .versioning-settings-form .versioning-card {
   display: inline-table;
   width: 500px;

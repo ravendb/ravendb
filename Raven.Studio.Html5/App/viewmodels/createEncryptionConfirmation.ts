@@ -6,6 +6,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createEncryptionConfirmation extends dialogViewModelBase {
 
+    public dialogPromise = $.Deferred();
+
     key = ko.observable();
 
     constructor(savedKey) {
@@ -19,6 +21,10 @@ class createEncryptionConfirmation extends dialogViewModelBase {
 
     ok() {
         dialog.close(this);
+    }
+
+    deactivate() {
+        this.dialogPromise.resolve();
     }
 
     clickKey() {
