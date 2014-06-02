@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var docKey = "Raven/Databases/" + id;
 			var document = Database.Documents.Get(docKey, null);
 			if (document == null)
-				return GetMessageWithString("Database " + id + " not found", HttpStatusCode.NotFound);
+				return GetMessageWithString("Database " + id + " wasn't found", HttpStatusCode.NotFound);
 
 			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
 			dbDoc.Id = id;
@@ -111,7 +111,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[Route("admin/databases/{*id}")]
-		public HttpResponseMessage DatabasesDisable(string id)
+		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
 		{
 			if (IsSystemDatabase(id))
 				return GetMessageWithString("System Database document cannot be disabled", HttpStatusCode.Forbidden);
@@ -119,14 +119,17 @@ namespace Raven.Database.Server.Controllers.Admin
 			var docKey = "Raven/Databases/" + id;
 			var document = Database.Documents.Get(docKey, null);
 			if (document == null)
-				return GetMessageWithString("Database " + id + " not found", HttpStatusCode.NotFound);
+				return GetMessageWithString("Database " + id + " wasn't found", HttpStatusCode.NotFound);
 
 			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-			if (dbDoc.Disabled)
-				return GetMessageWithString("Database " + id + " already disabled");
+			if (dbDoc.Disabled == isSettingDisabled)
+			{
+				string state = isSettingDisabled ? "disabled" : "enabled";
+				return GetMessageWithString("Database " + id + " is already " + state, HttpStatusCode.BadRequest);
+			}
 
 			DatabasesLandlord.Unprotect(dbDoc);
-			dbDoc.Disabled = true;
+			dbDoc.Disabled = !dbDoc.Disabled;
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
 			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);

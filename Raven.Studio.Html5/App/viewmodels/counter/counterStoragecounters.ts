@@ -66,17 +66,16 @@ class counterStorageCounters extends viewModelBase {
     }
 
     resetCounter(counterToReset: counter) {
-        app.showMessage('Are you sure you want to reset the counter?', 'Reset Counter', ['Yes', 'No'])
-            .done(answer=> {
-                if (answer == "Yes") {
-                    require(["commands/counter/resetCounterCommand"], resetCounterCommand => {
-                        new resetCounterCommand(this.activeCounterStorage(), counterToReset)
-                            .execute()
-                            .done(() => {
-                                this.fetchGroups(); //TODO: remove this after changes api is implemented
-                            });
-                    });
-                }
+        var confirmationMessageViewModel = this.confirmationMessage('Reset Counter', 'Are you sure you want to reset the counter?');
+        confirmationMessageViewModel
+            .done(() => {
+                require(["commands/counter/resetCounterCommand"], resetCounterCommand => {
+                    new resetCounterCommand(this.activeCounterStorage(), counterToReset)
+                        .execute()
+                        .done(() => {
+                            this.fetchGroups(); //TODO: remove this after changes api is implemented
+                        });
+                });
             });
     }
 

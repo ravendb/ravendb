@@ -4,7 +4,7 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "durandal/app", "common/appUrl", "viewmodels/viewModelBase", "models/counter/counterStorageReplicationSetup", "models/counter/counterStorageReplicationDestination", "commands/counter/getCounterStorageReplicationCommand", "commands/counter/saveCounterStorageReplicationCommand"], function(require, exports, app, appUrl, viewModelBase, counterStorageReplicationSetup, counterStorageReplicationDestination, getCounterStorageReplicationCommand, saveCounterStorageReplicationCommand) {
+define(["require", "exports", "common/appUrl", "viewmodels/viewModelBase", "models/counter/counterStorageReplicationSetup", "models/counter/counterStorageReplicationDestination", "commands/counter/getCounterStorageReplicationCommand", "commands/counter/saveCounterStorageReplicationCommand"], function(require, exports, appUrl, viewModelBase, counterStorageReplicationSetup, counterStorageReplicationDestination, getCounterStorageReplicationCommand, saveCounterStorageReplicationCommand) {
     var counterStorageReplication = (function (_super) {
         __extends(counterStorageReplication, _super);
         function counterStorageReplication() {
@@ -68,22 +68,23 @@ define(["require", "exports", "durandal/app", "common/appUrl", "viewmodels/viewM
 
         counterStorageReplication.prototype.refreshFromServer = function () {
             var _this = this;
-            this.showRefreshPrompt().done(function (answer) {
-                if (answer == "Yes") {
-                    _this.fetchCountersDestinations(_this.activeCounterStorage(), true).done(function () {
-                        return viewModelBase.dirtyFlag().reset();
-                    });
-                }
-            });
-        };
-
-        counterStorageReplication.prototype.showRefreshPrompt = function () {
             var deferred = $.Deferred();
+
             var isDirty = viewModelBase.dirtyFlag().isDirty();
             if (isDirty) {
-                return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
+                var confirmationMessageViewModel = this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+                confirmationMessageViewModel.done(function () {
+                    return deferred.resolve();
+                });
+            } else {
+                deferred.resolve();
             }
-            return deferred.resolve("Yes");
+
+            deferred.done(function () {
+                _this.fetchCountersDestinations(_this.activeCounterStorage(), true).done(function () {
+                    return viewModelBase.dirtyFlag().reset();
+                });
+            });
         };
         return counterStorageReplication;
     })(viewModelBase);

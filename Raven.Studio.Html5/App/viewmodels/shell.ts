@@ -65,6 +65,7 @@ class shell extends viewModelBase {
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
     refreshTimeoutFlag: boolean = true;
+    isDatabaseDisabled = ko.observable<boolean>(false);
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
@@ -186,7 +187,11 @@ class shell extends viewModelBase {
         }, "Raven/Databases");
     }
 
-
+    compositionComplete() {
+        super.compositionComplete();
+        debugger;
+        this.isDatabaseDisabled(this.activeDatabase().disabled());
+    }
 
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
@@ -216,7 +221,12 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x => x.isVisible()).activate();
+            var urlDatabase = appUrl.getDatabase();
+            if (urlDatabase != null) {
+                urlDatabase.activate();
+            } else {
+                this.databases.first(x => x.isVisible()).activate();
+            }
         }
     }
 
@@ -243,7 +253,11 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
-            });
+
+                var activeDatabaseName = appUrl.getDatabase().name;
+
+            debugger;
+        });
 
         this.filesystemsLoadedTask = new getFilesystemsCommand()
             .execute()
@@ -360,27 +374,29 @@ class shell extends viewModelBase {
     }
 
     updateChangesApi(newDb: database) {
-        if (shell.currentDbChangesApi()) {
-            shell.currentDbChangesApi().dispose();
-        }
-        shell.currentDbChangesApi(new changesApi(newDb));
-
-        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                this.modelPolling();
-            } 
-        });
-
-        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                this.modelPolling();
-            } else {
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        if (!newDb.disabled()) {
+            if (shell.currentDbChangesApi()) {
+                shell.currentDbChangesApi().dispose();
             }
-        });
+            shell.currentDbChangesApi(new changesApi(newDb));
+
+            shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+                if (this.modelPollingTimeoutFlag === true) {
+                    this.modelPollingTimeoutFlag = false;
+                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+                    this.modelPolling();
+                }
+            });
+
+            shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+                if (this.modelPollingTimeoutFlag === true) {
+                    this.modelPollingTimeoutFlag = false;
+                    this.modelPolling();
+                } else {
+                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+                }
+            });
+        }
     }
 
     reloadDatabases() {
@@ -412,7 +428,7 @@ class shell extends viewModelBase {
     }
 
     fetchDbStats(db: database) {
-        if (db) {
+        if (db && !db.disabled()) {
             new getDatabaseStatsCommand(db)
                 .execute()
                 .done(result=> db.statistics(result));
@@ -428,6 +444,7 @@ class shell extends viewModelBase {
 
     selectDatabase(db: database) {
         if (db.name != this.activeDatabase().name) {
+            this.isDatabaseDisabled(db.disabled());
             db.activate();
             var updatedUrl = appUrl.forCurrentPage(db);
             this.navigate(updatedUrl);

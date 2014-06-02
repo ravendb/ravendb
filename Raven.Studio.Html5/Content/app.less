@@ -191,6 +191,7 @@ html, body {
 
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
+            @disabledColor: rgba(255,2,2,1);
 
             &:hover {
                 background-color: white;
@@ -206,6 +207,11 @@ html, body {
                 a, .text-muted {
                     color: white;
                 }
+            }
+
+            &.disabled {
+                -webkit-box-shadow: 0 0 6px 0 @disabledColor;
+                box-shadow: 0 0 6px 0 @disabledColor;
             }
 
             &.system-database {

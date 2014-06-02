@@ -58,14 +58,13 @@ define(["require", "exports", "models/counter/counterGroup", "commands/counter/g
 
         counterStorageCounters.prototype.resetCounter = function (counterToReset) {
             var _this = this;
-            app.showMessage('Are you sure you want to reset the counter?', 'Reset Counter', ['Yes', 'No']).done(function (answer) {
-                if (answer == "Yes") {
-                    require(["commands/counter/resetCounterCommand"], function (resetCounterCommand) {
-                        new resetCounterCommand(_this.activeCounterStorage(), counterToReset).execute().done(function () {
-                            _this.fetchGroups(); //TODO: remove this after changes api is implemented
-                        });
+            var confirmationMessageViewModel = this.confirmationMessage('Reset Counter', 'Are you sure you want to reset the counter?');
+            confirmationMessageViewModel.done(function () {
+                require(["commands/counter/resetCounterCommand"], function (resetCounterCommand) {
+                    new resetCounterCommand(_this.activeCounterStorage(), counterToReset).execute().done(function () {
+                        _this.fetchGroups(); //TODO: remove this after changes api is implemented
                     });
-                }
+                });
             });
         };
 

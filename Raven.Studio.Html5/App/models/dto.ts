@@ -760,3 +760,9 @@ interface changesApiEventDto {
     Type: string;
     Value: any;
 }
+
+interface databaseDto
+{
+    Name: string;
+    Disabled: boolean;
+}

@@ -98,17 +98,25 @@ class databaseSettings extends viewModelBase {
     }
 
     refreshFromServer() {
-        this.showRefreshAlert().done((answer) => {
-            if (answer == "Yes") {
-                this.fetchDatabaseSettings(this.activeDatabase(), true)
-                    .done(() => {
-                        this.metadataText("{}");
-                        this.docEditor.setReadOnly(true);
-                        this.isEditingEnabled(false);
-                        this.activateDoc();
-                        viewModelBase.dirtyFlag().reset(); //Resync Changes
-                    });
-            }
+        var deferred = $.Deferred();
+
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            var confirmationMessageViewModel = this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+            confirmationMessageViewModel.done(() => deferred.resolve());
+        } else {
+            deferred.resolve();
+        }
+
+        deferred.done(() => {
+            this.fetchDatabaseSettings(this.activeDatabase(), true)
+                .done(() => {
+                    this.metadataText("{}");
+                    this.docEditor.setReadOnly(true);
+                    this.isEditingEnabled(false);
+                    this.activateDoc();
+                    viewModelBase.dirtyFlag().reset(); //Resync Changes
+                });
         });
     }
 
@@ -181,15 +189,6 @@ class databaseSettings extends viewModelBase {
                 this.textarea.setCustomValidity(message);
             }
         });
-    }
-
-    private showRefreshAlert(): any {
-        var deferred = $.Deferred();
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
-        if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
-        }
-        return deferred.resolve("Yes");
     }
 
     private getDatabaseSettingsDocumentId(db: database) {
