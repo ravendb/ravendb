@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
-	public class FileAndPages
+	public class FileAndPagesInformation
 	{
 		public string Name { get; set; }
         public RavenJObject Metadata { get; set; }
@@ -15,7 +15,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 
 		public List<PageInformation> Pages { get; set; }
 
-		public FileAndPages()
+		public FileAndPagesInformation()
 		{
 			Pages = new List<PageInformation>();
             Metadata = new RavenJObject();

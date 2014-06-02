@@ -20,6 +20,7 @@ using Raven.Server;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.RavenFS;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {
@@ -127,7 +128,7 @@ namespace RavenFS.Tests.Auth
 
 			Assert.Equal(0, stats.Count); // 0 because our fs aren't active
 
-            using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, "testName"))
+            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName"))
 			{
 				await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
 			}
@@ -175,7 +176,7 @@ namespace RavenFS.Tests.Auth
 
             await client.UploadAsync("abc.bin", new RandomStream(3));
 
-            using (var anotherClient = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_ApiKeyDoesnContainsThisFS", apiKey: apiKey))
+            using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_ApiKeyDoesnContainsThisFS", apiKey: apiKey))
             {
                 await anotherClient.EnsureFileSystemExistsAsync(); // will pass because by using this api key we have access to <system> database
 

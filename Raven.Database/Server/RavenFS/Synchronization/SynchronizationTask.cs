@@ -19,9 +19,10 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
-using SynchronizationClient = Raven.Client.RavenFS.RavenFileSystemClient.SynchronizationClient;
+using SynchronizationClient = Raven.Client.FileSystem.AsyncFilesServerClient.SynchronizationClient;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -131,7 +132,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                                   : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
             }
 
-		    var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey, credentials: credentials).Synchronization;
+		    var destinationClient = new AsyncFilesServerClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey, credentials: credentials).Synchronization;
 
             RavenJObject destinationMetadata;
 
@@ -181,7 +182,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                                       : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
                 }
 
-                var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem,
+                var destinationClient = new AsyncFilesServerClient(destination.ServerUrl, destination.FileSystem,
                                                                   apiKey: destination.ApiKey, credentials: credentials).Synchronization;
 
 				var lastETag = await destinationClient.GetLastSynchronizationFromAsync(storage.Id);
@@ -191,7 +192,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 				var confirmations = await ConfirmPushedFiles(filesNeedConfirmation, destinationClient);
 
-				var needSyncingAgain = new List<FileHeader>();
+				var needSyncingAgain = new List<FileHeaderInformation>();
 
 				foreach (var confirmation in confirmations)
 				{
@@ -258,20 +259,20 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-		private async Task EnqueueMissingUpdatesAsync(SynchronizationClient destination,
+        private async Task EnqueueMissingUpdatesAsync(SynchronizationClient destination,
 													  SourceSynchronizationInformation lastEtag,
-													  IList<FileHeader> needSyncingAgain)
+													  IList<FileHeaderInformation> needSyncingAgain)
 		{
 			LogFilesInfo("There were {0} file(s) that needed synchronization because the previous one went wrong: {1}",
 						 needSyncingAgain);
 
-			var filesToSynchronization = new HashSet<FileHeader>(GetFilesToSynchronization(lastEtag, 100),
+			var filesToSynchronization = new HashSet<FileHeaderInformation>(GetFilesToSynchronization(lastEtag, 100),
 																 new FileHeaderNameEqualityComparer());
 
 			LogFilesInfo("There were {0} file(s) that needed synchronization because of greater ETag value: {1}",
 						 filesToSynchronization);
 
-			foreach (FileHeader needSyncing in needSyncingAgain)
+			foreach (FileHeaderInformation needSyncing in needSyncingAgain)
 			{
 				filesToSynchronization.Add(needSyncing);
 			}
@@ -454,10 +455,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return report;
 		}
 
-		private IEnumerable<FileHeader> GetFilesToSynchronization(
+		private IEnumerable<FileHeaderInformation> GetFilesToSynchronization(
 			SourceSynchronizationInformation destinationsSynchronizationInformationForSource, int take)
 		{
-			var filesToSynchronization = new List<FileHeader>();
+			var filesToSynchronization = new List<FileHeaderInformation>();
 
 			Log.Debug("Getting files to synchronize with ETag greater than {0} [parameter take = {1}]",
 					  destinationsSynchronizationInformationForSource.LastSourceFileEtag, take);
@@ -563,7 +564,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             {
                 return null;
             }
-            FileAndPages fileAndPages = null;
+            FileAndPagesInformation fileAndPages = null;
             {
                 try
                 {
@@ -652,7 +653,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             LastSuccessfulSynchronizationTime = SystemTime.UtcNow;
         }
 
-		private static void LogFilesInfo(string message, ICollection<FileHeader> files)
+		private static void LogFilesInfo(string message, ICollection<FileHeaderInformation> files)
 		{
 			Log.Debug(message, files.Count,
 					  string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.Name, x.Metadata.Value<Guid>("ETag")))));

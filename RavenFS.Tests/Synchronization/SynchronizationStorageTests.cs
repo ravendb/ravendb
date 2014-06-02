@@ -7,14 +7,15 @@ using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
 using Xunit;
 using Xunit.Extensions;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {
     public class SynchronizationStorageTests : RavenFsTestBase
 	{
-		private readonly RavenFileSystemClient destination;
+		private readonly AsyncFilesServerClient destination;
 		private readonly RavenFileSystem destinationRfs;
-		private readonly RavenFileSystemClient source;
+		private readonly AsyncFilesServerClient source;
 		private readonly RavenFileSystem sourceRfs;
 
 		public SynchronizationStorageTests()
@@ -50,7 +51,7 @@ namespace RavenFS.Tests.Synchronization
 			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
             contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 2*numberOfPages));
 
 			Assert.Equal(2*numberOfPages, fileAndPages.Pages.Count);
@@ -93,7 +94,7 @@ namespace RavenFS.Tests.Synchronization
 			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
             contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 256));
 
 			Assert.Equal(2, fileAndPages.Pages.Count);
@@ -131,7 +132,7 @@ namespace RavenFS.Tests.Synchronization
 			await destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion);
             await contentUpdate.UploadToAsync(destination.Synchronization);
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 256));
 
 			Assert.Equal(3, fileAndPages.Pages.Count);

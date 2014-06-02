@@ -35,7 +35,7 @@ namespace RavenFS.Tests
 				stream.Write(buffer, 0, 1);
 			}
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 
 			transactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile("file", 0, 10));
 
@@ -63,7 +63,7 @@ namespace RavenFS.Tests
 				stream.PreventUploadComplete = false;
 			}
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 
 			transactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile("file", 0, 10));
 

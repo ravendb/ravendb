@@ -4,6 +4,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -27,7 +28,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.MetadataUpdate; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination)
+        public override Task<SynchronizationReport> PerformAsync(AsyncFilesServerClient.SynchronizationClient destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 

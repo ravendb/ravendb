@@ -28,7 +28,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			Storage = storage;
 			FileName = fileName;
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
 			FileMetadata = fileAndPages.Metadata;
 			ServerInfo = new ServerInfo
@@ -61,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public abstract SynchronizationType SynchronizationType { get; }
 
-        public abstract Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination);
+        public abstract Task<SynchronizationReport> PerformAsync(AsyncFilesServerClient.SynchronizationClient destination);
 
 		public virtual void Cancel()
 		{
@@ -89,7 +89,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             return null;
 		}
 
-        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenFileSystemClient.SynchronizationClient destination, string localServerUrl, ILog log)
+        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, AsyncFilesServerClient.SynchronizationClient destination, string localServerUrl, ILog log)
 		{
 			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, destination.BaseUrl);
 
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			if (Storage != null)
 			{
-				FileAndPages fileAndPages = null;
+				FileAndPagesInformation fileAndPages = null;
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 				FileMetadata = fileAndPages.Metadata;
 			}

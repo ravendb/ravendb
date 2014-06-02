@@ -24,13 +24,14 @@ using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Server;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests
 {
     public class RavenFsTestBase : WithNLog, IDisposable
     {
         private readonly List<RavenDbServer> servers = new List<RavenDbServer>();
-        private readonly List<RavenFileSystemClient> ravenFileSystemClients = new List<RavenFileSystemClient>();
+        private readonly List<AsyncFilesServerClient> ravenFileSystemClients = new List<AsyncFilesServerClient>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
         public static readonly int[] Ports = { 19069, 19068, 19067 };
 
@@ -81,14 +82,14 @@ namespace RavenFS.Tests
             return ravenDbServer;
         }
 
-        protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
+        protected virtual AsyncFilesServerClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                           ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
             var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
 
-            var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey, credentials: credentials);
+            var client = new AsyncFilesServerClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey, credentials: credentials);
 
             client.EnsureFileSystemExistsAsync().Wait();
 

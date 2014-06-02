@@ -5,7 +5,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
-	public class FileHeader
+	public class FileHeaderInformation 
 	{
 		public string Name { get; set; }
 		public long? TotalSize { get; set; }
@@ -47,7 +47,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 			return TotalSize == null || TotalSize != UploadedSize || (Metadata[SynchronizationConstants.RavenDeleteMarker] == null && Metadata["Content-MD5"] == null);
 		}
 
-		protected bool Equals(FileHeader other)
+		protected bool Equals(FileHeaderInformation other)
 		{
 			return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Equals(Metadata, other.Metadata);
 		}
@@ -57,7 +57,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != GetType()) return false;
-			return Equals((FileHeader)obj);
+			return Equals((FileHeaderInformation)obj);
 		}
 
 		public override int GetHashCode()

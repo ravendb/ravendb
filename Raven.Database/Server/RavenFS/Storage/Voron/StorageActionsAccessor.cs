@@ -200,7 +200,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return result.Reader.Length;
         }
 
-        public FileHeader ReadFile(string filename)
+        public FileHeaderInformation ReadFile(string filename)
         {
             var key = CreateKey(filename);
 
@@ -212,7 +212,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return ConvertToFile(file);
         }
 
-        public FileAndPages GetFile(string filename, int start, int pagesToLoad)
+        public FileAndPagesInformation GetFile(string filename, int start, int pagesToLoad)
         {
             var key = CreateKey(filename);
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException("Could not find file: " + filename);
 
             var f = ConvertToFile(file);
-            var fileInformation = new FileAndPages
+            var fileInformation = new FileAndPagesInformation
                                   {
                                       TotalSize = f.TotalSize,
                                       Name = f.Name,
@@ -263,7 +263,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         }
 
 
-        public IEnumerable<FileHeader> ReadFiles(int start, int size)
+        public IEnumerable<FileHeaderInformation> ReadFiles(int start, int size)
         {
             using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
             {
@@ -286,7 +286,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
         }
 
-        public IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take)
+        public IEnumerable<FileHeaderInformation> GetFilesAfter(Guid etag, int take)
         {
             var key = CreateKey(etag);
 
@@ -819,12 +819,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             };
         }
 
-        private static FileHeader ConvertToFile(RavenJObject file)
+        private static FileHeaderInformation ConvertToFile(RavenJObject file)
         {
             var metadata = (RavenJObject)file["metadata"];
             metadata["ETag"] = file["etag"];
 
-            return new FileHeader
+            return new FileHeaderInformation
                    {
                        Name = file.Value<string>("name"),
                        TotalSize = file.Value<long?>("total_size"),

@@ -10,6 +10,7 @@ using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
+using Raven.Client.RavenFS;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
@@ -25,10 +26,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.Client.RavenFS
+namespace Raven.Client.FileSystem
 {
 
-    public class RavenFileSystemClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IDisposable, IHoldProfilingInformation
+    public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IDisposable, IHoldProfilingInformation
     {
         private readonly FilesChangesClient notifications;
 
@@ -56,7 +57,7 @@ namespace Raven.Client.RavenFS
         }
 
 
-        public RavenFileSystemClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
+        public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
             : base(serverUrl, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, new NameValueCollection())
         {
             try
@@ -211,7 +212,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -232,7 +233,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -252,12 +253,12 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
 
-        public Task<FileInfo[]> BrowseAsync(int start = 0, int pageSize = 25)
+        public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -268,12 +269,12 @@ namespace Raven.Client.RavenFS
                 try
                 {
                     var response = (RavenJArray) await request.ReadResponseJsonAsync();
-                    var items = response.Select(x => JsonExtensions.JsonDeserialization<FileInfo>((RavenJObject)x));
+                    var items = response.Select(x => JsonExtensions.JsonDeserialization<FileHeader>((RavenJObject)x));
                     return items.ToArray();
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -295,7 +296,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -331,7 +332,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
 
@@ -366,10 +367,10 @@ namespace Raven.Client.RavenFS
                 {
                     if (responseException.StatusCode == HttpStatusCode.NotFound)
                         return null;
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
 
-                throw e.TryThrowBetterError();
+                throw e.SimplifyException();
             }
         }
 
@@ -428,7 +429,7 @@ namespace Raven.Client.RavenFS
             }
             catch (Exception e)
             {
-                throw e.TryThrowBetterError();
+                throw e.SimplifyException();
             }
         }
 
@@ -449,7 +450,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -491,7 +492,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
                 finally
                 {
@@ -593,7 +594,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -628,7 +629,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             });
         }
@@ -697,12 +698,12 @@ namespace Raven.Client.RavenFS
 
         public class ConfigurationClient : IHoldProfilingInformation
         {
-            private readonly RavenFileSystemClient ravenFileSystemClient;
+            private readonly AsyncFilesServerClient ravenFileSystemClient;
             private readonly FilesConvention convention;
             private readonly JsonSerializer jsonSerializer;
             private readonly string filesystemName;
 
-            public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient, FilesConvention convention)
+            public ConfigurationClient(AsyncFilesServerClient ravenFileSystemClient, FilesConvention convention)
             {
                 this.jsonSerializer = new JsonSerializer();
                 this.ravenFileSystemClient = ravenFileSystemClient;
@@ -727,7 +728,7 @@ namespace Raven.Client.RavenFS
                     }
                     catch (Exception e)
                     {
-                        throw e.TryThrowBetterError();
+                        throw e.SimplifyException();
                     }
                 });
             }
@@ -840,7 +841,7 @@ namespace Raven.Client.RavenFS
                     }
                     catch (Exception e)
                     {
-                        throw e.TryThrowBetterError();
+                        throw e.SimplifyException();
                     }
                 });
             }
@@ -853,9 +854,9 @@ namespace Raven.Client.RavenFS
             private readonly OperationCredentials credentials;
             private readonly FilesConvention convention;
             private readonly HttpJsonRequestFactory jsonRequestFactory;
-            private readonly RavenFileSystemClient fullClient;
+            private readonly AsyncFilesServerClient fullClient;
 
-            public SynchronizationClient(RavenFileSystemClient client, FilesConvention convention)
+            public SynchronizationClient(AsyncFilesServerClient client, FilesConvention convention)
             {
                 this.credentials = client.PrimaryCredentials;
                 this.jsonRequestFactory = client.RequestFactory;
@@ -904,7 +905,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -923,11 +924,11 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
-            public Task<SynchronizationReport> StartAsync(string fileName, RavenFileSystemClient destination)
+            public Task<SynchronizationReport> StartAsync(string fileName, AsyncFilesServerClient destination)
             {
                 return StartAsync(fileName, destination.ToSynchronizationDestination());
             }
@@ -948,7 +949,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -967,7 +968,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -987,7 +988,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1018,7 +1019,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1040,7 +1041,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1061,7 +1062,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1084,7 +1085,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1104,7 +1105,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1135,7 +1136,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1157,7 +1158,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1176,7 +1177,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1194,7 +1195,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1214,7 +1215,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (ErrorResponseException exception)
                 {
-                    throw exception.BetterWebExceptionError();
+                    throw exception.SimplifyException();
                 }
             }
 
@@ -1234,7 +1235,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (ErrorResponseException exception)
                 {
-                    throw exception.BetterWebExceptionError();
+                    throw exception.SimplifyException();
                 }
             }
 
@@ -1257,7 +1258,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (ErrorResponseException exception)
                 {
-                    throw exception.BetterWebExceptionError();
+                    throw exception.SimplifyException();
                 }
             }
 
@@ -1266,11 +1267,11 @@ namespace Raven.Client.RavenFS
 
         public class StorageClient : IHoldProfilingInformation
         {
-            private readonly RavenFileSystemClient ravenFileSystemClient;
+            private readonly AsyncFilesServerClient ravenFileSystemClient;
             private readonly FilesConvention convention;
             private readonly string filesystemName;
 
-            public StorageClient(RavenFileSystemClient ravenFileSystemClient, FilesConvention convention)
+            public StorageClient(AsyncFilesServerClient ravenFileSystemClient, FilesConvention convention)
             {
                 this.ravenFileSystemClient = ravenFileSystemClient;
                 this.convention = convention;
@@ -1293,7 +1294,7 @@ namespace Raven.Client.RavenFS
                     }
                     catch (Exception e)
                     {
-                        throw e.TryThrowBetterError();
+                        throw e.SimplifyException();
                     }
                 });
             }
@@ -1314,7 +1315,7 @@ namespace Raven.Client.RavenFS
                     }
                     catch (Exception e)
                     {
-                        throw e.TryThrowBetterError();
+                        throw e.SimplifyException();
                     }
                 });
             }
@@ -1324,11 +1325,11 @@ namespace Raven.Client.RavenFS
 
         public class AdminClient : IHoldProfilingInformation
         {
-            private readonly RavenFileSystemClient ravenFileSystemClient;
+            private readonly AsyncFilesServerClient ravenFileSystemClient;
             private readonly FilesConvention convention;
             private readonly string filesystemName;
 
-            public AdminClient(RavenFileSystemClient ravenFileSystemClient, FilesConvention convention)
+            public AdminClient(AsyncFilesServerClient ravenFileSystemClient, FilesConvention convention)
             {
                 this.ravenFileSystemClient = ravenFileSystemClient;
                 this.convention = convention;
@@ -1350,7 +1351,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1369,7 +1370,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1389,13 +1390,13 @@ namespace Raven.Client.RavenFS
                 catch (ErrorResponseException e)
                 {
                     if (e.StatusCode == HttpStatusCode.Conflict)
-                        throw new InvalidOperationException("Cannot create file system with the name '" + newFileSystemName + "' because it already exists. Use CreateOrUpdateFileSystemAsync in case you want to update an existing file system", e).TryThrowBetterError();
+                        throw new InvalidOperationException("Cannot create file system with the name '" + newFileSystemName + "' because it already exists. Use CreateOrUpdateFileSystemAsync in case you want to update an existing file system", e).SimplifyException();
 
                     throw;
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1414,7 +1415,7 @@ namespace Raven.Client.RavenFS
                 }
                 catch (Exception e)
                 {
-                    throw e.TryThrowBetterError();
+                    throw e.SimplifyException();
                 }
             }
 
@@ -1432,7 +1433,7 @@ namespace Raven.Client.RavenFS
 				}
 				catch (Exception e)
 				{
-					throw e.TryThrowBetterError();
+					throw e.SimplifyException();
 				}
 			}
 

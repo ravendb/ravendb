@@ -35,7 +35,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             int results;
             var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
 
-            var list = new List<FileHeader>();
+            var list = new List<FileHeaderInformation>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
             return this.GetMessageWithObject(list, HttpStatusCode.OK)
@@ -47,7 +47,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -137,7 +137,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));

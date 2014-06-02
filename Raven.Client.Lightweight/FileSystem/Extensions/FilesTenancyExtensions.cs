@@ -11,7 +11,7 @@ namespace Raven.Client.FileSystem.Extensions
 {
     public static class FilesTenancyExtensions
     {
-        public static async Task EnsureFileSystemExistsAsync(this RavenFileSystemClient client)
+        public static async Task EnsureFileSystemExistsAsync(this AsyncFilesServerClient client)
         {
             var existingSystems = await client.Admin.GetFileSystemsNames();
 

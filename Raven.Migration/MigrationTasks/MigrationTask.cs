@@ -9,6 +9,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.RavenFS;
+using Raven.Client.FileSystem;
 
 namespace Raven.Migration.MigrationTasks
 {
@@ -34,9 +35,9 @@ namespace Raven.Migration.MigrationTasks
 			return s;
 		}
 
-		protected RavenFileSystemClient CreateFileSystemClient(RavenConnectionStringOptions options, string fileSystemName)
+		protected AsyncFilesServerClient CreateFileSystemClient(RavenConnectionStringOptions options, string fileSystemName)
 		{
-			var fsClient = new RavenFileSystemClient(options.Url, fileSystemName, apiKey: options.ApiKey, credentials: options.Credentials);
+			var fsClient = new AsyncFilesServerClient(options.Url, fileSystemName, apiKey: options.ApiKey, credentials: options.Credentials);
 
 			ValidateThatServerIsUpAndFileSystemExists(fsClient);
 
@@ -86,7 +87,7 @@ namespace Raven.Migration.MigrationTasks
 			}
 		}
 
-		protected void ValidateThatServerIsUpAndFileSystemExists(RavenFileSystemClient fsClient)
+		protected void ValidateThatServerIsUpAndFileSystemExists(AsyncFilesServerClient fsClient)
 		{
 			var shouldDispose = false;
 

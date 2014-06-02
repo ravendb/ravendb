@@ -61,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		{
             try
             {
-                FileAndPages fileAndPages = null;
+                FileAndPagesInformation fileAndPages = null;
                 storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
                 return fileAndPages.Metadata;
             }

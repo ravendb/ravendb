@@ -11,8 +11,9 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Client.RavenFS;
 
-namespace Raven.Client.RavenFS
+namespace Raven.Client.FileSystem
 {
 	/// <summary>
 	///     Extension methods to handle common scenarios
@@ -26,21 +27,25 @@ namespace Raven.Client.RavenFS
 				if (task.Status != TaskStatus.Faulted)
 					return task;
 
-				var webException = task.Exception.ExtractSingleInnerException() as WebException;
-				if (webException == null || webException.Response == null)
-					return task;
+                var innerException = task.Exception.ExtractSingleInnerException();
 
-				throw webException.BetterWebExceptionError();
+				var webException = innerException as WebException;
+                if (webException != null)
+                    throw webException.SimplifyException();
+
+                var errorResponseException = innerException as ErrorResponseException;
+                if (errorResponseException != null)
+                    throw errorResponseException.SimplifyException();
+
+                throw innerException;
 			}).Unwrap();
 		}
 
-		public static Exception BetterWebExceptionError(this ErrorResponseException webException)
+		public static Exception SimplifyException(this ErrorResponseException webException)
 		{
 			if (webException.StatusCode == (HttpStatusCode)420)
 			{
-				return
-					new JsonSerializer().Deserialize<SynchronizationException>(
-						new JsonTextReader(new StringReader(webException.Message)));
+				return new JsonSerializer().Deserialize<SynchronizationException>(new JsonTextReader(new StringReader(webException.Message)));
 			}
 			if (webException.StatusCode == HttpStatusCode.MethodNotAllowed)
 			{
@@ -59,7 +64,7 @@ namespace Raven.Client.RavenFS
 			}
 		}
 
-		public static Exception BetterWebExceptionError(this WebException webException)
+        public static Exception SimplifyException(this WebException webException)
 		{
 			var httpWebResponse = webException.Response as HttpWebResponse;
 			if (httpWebResponse != null)
@@ -100,11 +105,17 @@ namespace Raven.Client.RavenFS
 				if (task.Status != TaskStatus.Faulted)
 					return task;
 
-				var webException = task.Exception.ExtractSingleInnerException() as WebException;
-				if (webException == null || webException.Response == null)
-					return task;
+                var innerException = task.Exception.ExtractSingleInnerException();
 
-				throw webException.BetterWebExceptionError();
+                var webException = innerException as WebException;
+                if (webException != null)
+                    throw webException.SimplifyException();
+
+                var errorResponseException = innerException as ErrorResponseException;
+                if (errorResponseException != null)
+                    throw errorResponseException.SimplifyException();
+
+                throw innerException;
 			}).Unwrap();
 		}
 
@@ -138,24 +149,25 @@ namespace Raven.Client.RavenFS
 		}
 
 
-		public static Exception TryThrowBetterError(this Exception exception)
+        public static Exception SimplifyException(this Exception exception)
 		{
-			var httpException = exception as ErrorResponseException;
-			if (httpException != null)
-			{
-				return httpException.BetterWebExceptionError();
-			}
-			var aggregateException = exception as AggregateException;
-			if (aggregateException == null)
-			{
-				var web = exception as WebException;
-				return web != null ? web.BetterWebExceptionError() : exception;
-			}
-			var webException = aggregateException.ExtractSingleInnerException() as WebException;
-			if (webException == null || webException.Response == null)
-				return aggregateException;
+            var aggregateException = exception as AggregateException;
+            if (aggregateException != null)
+            {
+                var innerException = aggregateException.ExtractSingleInnerException();
+                if (innerException != null)
+                    return innerException.SimplifyException();
+            }
 
-			return webException.BetterWebExceptionError();
+            var webException = exception as WebException;
+            if (webException != null)
+                throw webException.SimplifyException();
+
+            var errorResponseException = exception as ErrorResponseException;
+            if (errorResponseException != null)
+                throw errorResponseException.SimplifyException();
+
+            return exception;
 		}
 
 		/// <summary>

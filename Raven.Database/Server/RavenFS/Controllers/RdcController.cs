@@ -61,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public async Task<HttpResponseMessage> Manifest(string id)
 		{
 			var filename = Uri.UnescapeDataString(id);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(filename, 0, 0));

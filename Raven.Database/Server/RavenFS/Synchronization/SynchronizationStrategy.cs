@@ -23,7 +23,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			this.sigGenerator = sigGenerator;
 		}
 
-		public bool Filter(FileHeader file, Guid destinationId, IEnumerable<FileHeader> candidatesToSynchronization)
+		public bool Filter(FileHeaderInformation file, Guid destinationId, IEnumerable<FileHeaderInformation> candidatesToSynchronization)
 		{
 			// prevent synchronization back to source
 			if (file.Metadata.Value<Guid>(SynchronizationConstants.RavenSynchronizationSource) == destinationId)
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return true;
 		}
 
-		private static bool ExistsRenameTombstone(string name, IEnumerable<FileHeader> candidatesToSynchronization)
+		private static bool ExistsRenameTombstone(string name, IEnumerable<FileHeaderInformation> candidatesToSynchronization)
 		{
 			return
 				candidatesToSynchronization.Any(

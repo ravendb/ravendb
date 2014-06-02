@@ -33,7 +33,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		private readonly IndexStorage search;
 		private readonly ITransactionalStorage storage;
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
-		private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
+		private readonly ConcurrentDictionary<string, FileHeaderInformation> uploadingFiles = new ConcurrentDictionary<string, FileHeaderInformation>();
 
 		public StorageOperationsTask(ITransactionalStorage storage, IndexStorage search, INotificationPublisher notificationPublisher)
 		{
@@ -306,7 +306,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		private bool IsUploadInProgress(string originalFileName)
 		{
-			FileHeader deletedFile = null;
+			FileHeaderInformation deletedFile = null;
 			storage.Batch(accessor => deletedFile = accessor.ReadFile(originalFileName));
 
 			if (deletedFile != null) // if there exists a file already marked as deleted
@@ -323,7 +323,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					{
 						return true; // if uploaded size changed it means that file is being uploading
 					}
-					FileHeader header;
+					FileHeaderInformation header;
 					uploadingFiles.TryRemove(deletedFile.Name, out header);
 				}
 			}

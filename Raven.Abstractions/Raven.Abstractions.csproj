@@ -277,7 +277,7 @@
     <Compile Include="RavenFS\ConflictResolved.cs" />
     <Compile Include="RavenFS\DestinationSyncResult.cs" />
     <Compile Include="RavenFS\FileChangeNotification.cs" />
-    <Compile Include="RavenFS\FileInfo.cs" />
+    <Compile Include="RavenFS\FileHeader.cs" />
     <Compile Include="RavenFS\FilesSortOptions.cs" />
     <Compile Include="RavenFS\FileStatus.cs" />
     <Compile Include="RavenFS\FileSystemMetrics.cs" />

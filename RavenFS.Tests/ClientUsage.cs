@@ -12,6 +12,7 @@ using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests
 {
@@ -540,7 +541,7 @@ namespace RavenFS.Tests
 	        var client = NewClient();
 	        var server = GetServer();
 
-	        using (var anotherClient = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "test"))
+	        using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "test"))
 	        {
 	            await anotherClient.EnsureFileSystemExistsAsync();
 
@@ -594,7 +595,7 @@ namespace RavenFS.Tests
                  }
             }, newFileSystemName);
 
-            using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, newFileSystemName))
+            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, newFileSystemName))
             {
                 await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
             }

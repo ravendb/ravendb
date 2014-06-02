@@ -7,16 +7,16 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.RavenFS;
 using Raven.Json.Linq;
-using Raven.Client.FileSystem.Shard;
+using Raven.Client.RavenFS;
 
-namespace Raven.Client.RavenFS.Shard
+namespace Raven.Client.FileSystem.Shard
 {
-	public class ShardedRavenFileSystemClient
+	public class AsyncShardedFilesServerClient
 	{
 		protected readonly ShardStrategy ShardStrategy;
-		protected readonly IDictionary<string, RavenFileSystemClient> ShardClients;
+		protected readonly IDictionary<string, AsyncFilesServerClient> ShardClients;
 
-		public ShardedRavenFileSystemClient(ShardStrategy strategy)
+		public AsyncShardedFilesServerClient(ShardStrategy strategy)
 		{
 			ShardStrategy = strategy;
 			ShardClients = strategy.Shards;
@@ -29,21 +29,21 @@ namespace Raven.Client.RavenFS.Shard
 
 		#region Sharding support methods
 
-		public IList<Tuple<string, RavenFileSystemClient>> GetShardsToOperateOn(ShardRequestData resultionData)
+		public IList<Tuple<string, AsyncFilesServerClient>> GetShardsToOperateOn(ShardRequestData resultionData)
 		{
 			var shardIds = ShardStrategy.ShardResolutionStrategy.PotentialShardsFor(resultionData);
 
-			IEnumerable<KeyValuePair<string, RavenFileSystemClient>> cmds = ShardClients;
+			IEnumerable<KeyValuePair<string, AsyncFilesServerClient>> cmds = ShardClients;
 
 			if (shardIds == null)
 			{
 				return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
 			}
 
-			var list = new List<Tuple<string, RavenFileSystemClient>>();
+			var list = new List<Tuple<string, AsyncFilesServerClient>>();
 			foreach (var shardId in shardIds)
 			{
-				RavenFileSystemClient value;
+				AsyncFilesServerClient value;
 				if (ShardClients.TryGetValue(shardId, out value) == false)
 					throw new InvalidOperationException("Could not find shard id: " + shardId);
 
@@ -53,7 +53,7 @@ namespace Raven.Client.RavenFS.Shard
 			return list;
 		}
 
-		protected IList<RavenFileSystemClient> GetCommandsToOperateOn(ShardRequestData resultionData)
+		protected IList<AsyncFilesServerClient> GetCommandsToOperateOn(ShardRequestData resultionData)
 		{
 			return GetShardsToOperateOn(resultionData).Select(x => x.Item2).ToList();
 		}
@@ -136,7 +136,7 @@ namespace Raven.Client.RavenFS.Shard
 			return client.RenameAsync(filename, rename);
 		}
 
-		public async Task<FileInfo[]> BrowseAsync(int pageSize = 25, ShardPagingInfo pagingInfo = null)
+		public async Task<FileHeader[]> BrowseAsync(int pageSize = 25, ShardPagingInfo pagingInfo = null)
 		{
 			if (pagingInfo == null)
 				pagingInfo = new ShardPagingInfo(ShardClients.Count);
@@ -159,7 +159,7 @@ namespace Raven.Client.RavenFS.Shard
 				indexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			}
 
-			var results = new List<FileInfo>();
+			var results = new List<FileHeader>();
 
 			var applyAsync = await ShardStrategy.ShardAccessStrategy.ApplyAsync(ShardClients.Values.ToList(), 
                                                                                 new ShardRequestData(),
@@ -260,7 +260,7 @@ namespace Raven.Client.RavenFS.Shard
 				if (item == null)
 					break;
 
-				var files = new List<FileInfo>();
+				var files = new List<FileHeader>();
 				if (result.Files != null)
 					files.AddRange(result.Files);
 				if (item.Files != null)
@@ -379,9 +379,9 @@ namespace Raven.Client.RavenFS.Shard
 		}
 
 		#region private Methods
-		private FileInfo GetSmallest(FileInfo[][] applyAsync, int[] indexes, int[] originalIndexes)
+		private FileHeader GetSmallest(FileHeader[][] applyAsync, int[] indexes, int[] originalIndexes)
 		{
-			FileInfo smallest = null;
+			FileHeader smallest = null;
 			var smallestIndex = -1;
 			for (var i = 0; i < applyAsync.Length; i++)
 			{
@@ -407,7 +407,7 @@ namespace Raven.Client.RavenFS.Shard
 
 		private SearchResults GetSmallest(SearchResults[] searchResults, int[] indexes, int[] originalIndexes, string[] sortFields)
 		{
-			FileInfo smallest = null;
+			FileHeader smallest = null;
 			var smallestIndex = -1;
 			for (var i = 0; i < searchResults.Length; i++)
 			{
@@ -434,7 +434,7 @@ namespace Raven.Client.RavenFS.Shard
 			};
 		}
 
-		private int CompareFileInfos(FileInfo current, FileInfo smallest, string[] sortFields)
+		private int CompareFileInfos(FileHeader current, FileHeader smallest, string[] sortFields)
 		{
 			if (sortFields == null || sortFields.Length == 0)
 			{
@@ -508,14 +508,14 @@ namespace Raven.Client.RavenFS.Shard
 			return smallest;
 		}
 
-		private RavenFileSystemClient TryGetClintFromFileName(string filename)
+		private AsyncFilesServerClient TryGetClintFromFileName(string filename)
 		{
 			var clientId = ShardStrategy.ShardResolutionStrategy.GetShardIdFromFileName(filename);
 			var client = TryGetClient(clientId);
 			return client;
 		}
 
-		private RavenFileSystemClient TryGetClient(string clientId)
+		private AsyncFilesServerClient TryGetClient(string clientId)
 		{
 			try
 			{

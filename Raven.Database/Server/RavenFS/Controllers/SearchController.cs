@@ -32,7 +32,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			int results;
 			var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results);
 
-			var list = new List<FileHeader>();
+			var list = new List<FileHeaderInformation>();
 
 			Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 

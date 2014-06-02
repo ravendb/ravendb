@@ -11,7 +11,7 @@ namespace Raven.Client.FileSystem.Extensions
 {
     public static class FilesSynchronizationExtensions
     {
-        public static SynchronizationDestination ToSynchronizationDestination(this RavenFileSystemClient self)
+        public static SynchronizationDestination ToSynchronizationDestination(this AsyncFilesServerClient self)
         {
             var result = new SynchronizationDestination()
             {

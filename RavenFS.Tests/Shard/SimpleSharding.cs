@@ -5,22 +5,22 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Shard;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem.Shard;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests.Shard
 {
     public class SimpleSharding : RavenFsTestBase
 	{
-	    readonly ShardedRavenFileSystemClient shardedClient;
+	    readonly AsyncShardedFilesServerClient shardedClient;
 
 		public SimpleSharding()
 		{
 			var client1 = NewClient(0, fileSystemName: "shard1");
 			var client2 = NewClient(1, fileSystemName: "shard2");
-			shardedClient = new ShardedRavenFileSystemClient(new ShardStrategy(new Dictionary<string, RavenFileSystemClient>
+			shardedClient = new AsyncShardedFilesServerClient(new ShardStrategy(new Dictionary<string, AsyncFilesServerClient>
 				{
 					{"1", client1},
 					{"2", client2},

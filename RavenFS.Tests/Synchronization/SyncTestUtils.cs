@@ -6,13 +6,14 @@ using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Xunit;
 using Raven.Abstractions.RavenFS;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {
 	public class SyncTestUtils
 	{
-		public static SynchronizationReport ResolveConflictAndSynchronize(RavenFileSystemClient sourceClient,
-		                                                                  RavenFileSystemClient destinationClient,
+		public static SynchronizationReport ResolveConflictAndSynchronize(AsyncFilesServerClient sourceClient,
+		                                                                  AsyncFilesServerClient destinationClient,
 		                                                                  string fileName)
 		{
 			var shouldBeConflict = sourceClient.Synchronization.StartAsync(fileName, destinationClient).Result;
@@ -23,7 +24,7 @@ namespace RavenFS.Tests.Synchronization
 			return sourceClient.Synchronization.StartAsync(fileName, destinationClient).Result;
 		}
 
-		public static void TurnOnSynchronization(RavenFileSystemClient source, params RavenFileSystemClient[] destinations)
+		public static void TurnOnSynchronization(AsyncFilesServerClient source, params AsyncFilesServerClient[] destinations)
 		{
             source.Config.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
             {
@@ -32,7 +33,7 @@ namespace RavenFS.Tests.Synchronization
             }).ToArray()).Wait();
 		}
 
-		public static void TurnOffSynchronization(RavenFileSystemClient source)
+		public static void TurnOffSynchronization(AsyncFilesServerClient source)
 		{
 			source.Config.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations).Wait();
 		}

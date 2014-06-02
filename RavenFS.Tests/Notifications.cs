@@ -7,12 +7,13 @@ using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Xunit;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests
 {
     public class Notifications : RavenFsTestBase
     {
-	    private readonly RavenFileSystemClient client;
+	    private readonly AsyncFilesServerClient client;
 
 	    public Notifications()
 	    {
