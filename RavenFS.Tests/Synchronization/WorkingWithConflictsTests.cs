@@ -352,29 +352,29 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public void Should_increment_etag_on_dest_if_conflict_was_resolved_there_by_current_strategy()
+		public async void Should_increment_etag_on_dest_if_conflict_was_resolved_there_by_current_strategy()
 		{
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
 
-			sourceClient.UploadAsync("test", new MemoryStream(new byte[] {1, 2, 3})).Wait();
-			destinationClient.UploadAsync("test", new MemoryStream(new byte[] {1, 2})).Wait();
+            await sourceClient.UploadAsync("test", new MemoryStream(new byte[] { 1, 2, 3 }));
+            await destinationClient.UploadAsync("test", new MemoryStream(new byte[] { 1, 2 }));
 
 			var shouldBeConflict = sourceClient.Synchronization.StartAsync("test", destinationClient).Result;
 
 			Assert.Equal("File test is conflicted", shouldBeConflict.Exception.Message);
 
-			destinationClient.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.CurrentVersion).Wait();
+            await destinationClient.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.CurrentVersion);
 
-			sourceClient.Config.SetDestinationsConfig(destinationClient.ToSynchronizationDestination()).Wait();
+            await sourceClient.Synchronization.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
 
 			var report = sourceClient.Synchronization.SynchronizeDestinationsAsync().Result;
 
 			Assert.Equal(1, report.Count());
 			Assert.Null(report.First().Reports);
 
-			var lastEtag =
-				destinationClient.Synchronization.GetLastSynchronizationFromAsync(sourceClient.GetServerId().Result).Result;
+            var serverId = await sourceClient.GetServerId();
+            var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
 			Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>("ETag"), lastEtag.LastSourceFileEtag);
 		}
@@ -394,7 +394,7 @@ namespace RavenFS.Tests.Synchronization
 
 			await destinationClient.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.CurrentVersion);
 
-		    await sourceClient.Config.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
+            await sourceClient.Synchronization.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
 
 			var report = await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 			Assert.Null(report.ToArray()[0].Exception);

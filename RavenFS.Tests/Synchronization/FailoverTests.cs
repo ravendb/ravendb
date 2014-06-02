@@ -22,7 +22,7 @@ namespace RavenFS.Tests.Synchronization
                 ServerUrl = destinationClient.ServerUrl
 		    };
 
-		    await sourceClient.Config.SetDestinationsConfig(destination);
+		    await sourceClient.Synchronization.SetDestinationsConfig(destination);
 
 			sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();

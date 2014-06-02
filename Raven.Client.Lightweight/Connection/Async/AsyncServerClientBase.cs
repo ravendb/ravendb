@@ -75,10 +75,10 @@ namespace Raven.Client.Connection.Async
             get { return CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication; }
         }
 
-        protected virtual NameValueCollection OperationsHeaders
+        public virtual NameValueCollection OperationsHeaders
         {
             get;
-            private set;
+            set;
         }
 
         #region Execute with replication

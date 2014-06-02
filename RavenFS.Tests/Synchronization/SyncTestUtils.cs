@@ -25,7 +25,7 @@ namespace RavenFS.Tests.Synchronization
 
 		public static void TurnOnSynchronization(AsyncFilesServerClient source, params AsyncFilesServerClient[] destinations)
 		{
-            source.Config.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
+            source.Synchronization.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
             {
                 FileSystem = x.FileSystemName,
                 ServerUrl = x.ServerUrl

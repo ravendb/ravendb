@@ -153,8 +153,6 @@ namespace RavenFS.Tests.Auth
             var configSearch = await configClient.SearchAsync("test");
 
             Assert.Equal(1, configSearch.TotalCount);
-
-            await configClient.SetDestinationsConfig(new SynchronizationDestination(){ServerUrl = "http://local:123", FileSystem = "test"});
         }
 
         [Fact]

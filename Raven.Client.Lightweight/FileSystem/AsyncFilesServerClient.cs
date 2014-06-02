@@ -29,7 +29,8 @@ using System.Threading.Tasks;
 namespace Raven.Client.FileSystem
 {
 
-    public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IDisposable, IHoldProfilingInformation
+    public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, 
+                                          IAsyncFilesCommands, IDisposable, IHoldProfilingInformation
     {
         private readonly FilesChangesClient notifications;
 
@@ -696,7 +697,7 @@ namespace Raven.Client.FileSystem
             return sortFields;
         }
 
-        public class ConfigurationClient : IHoldProfilingInformation
+        public class ConfigurationClient : IAsyncFilesConfigurationCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient ravenFileSystemClient;
             private readonly FilesConvention convention;
@@ -752,26 +753,6 @@ namespace Raven.Client.FileSystem
                     else
                     {
                         await request.WriteAsync(JsonExtensions.ToJObject(data));
-                    }
-                });
-            }
-
-            public Task SetDestinationsConfig(params SynchronizationDestination[] destinations)
-            {
-                return ravenFileSystemClient.ExecuteWithReplication("PUT", async operation =>
-                {
-                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-                    var request = ravenFileSystemClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention));
-
-                    var data = new { Destinations = destinations };
-
-                    using (var ms = new MemoryStream())
-                    using (var streamWriter = new StreamWriter(ms))
-                    {
-                        jsonSerializer.Serialize(streamWriter, data);
-                        streamWriter.Flush();
-                        ms.Position = 0;
-                        await request.WriteAsync(ms);
                     }
                 });
             }
@@ -846,10 +827,14 @@ namespace Raven.Client.FileSystem
                 });
             }
 
+            public void Dispose()
+            {
+            }
+
             public ProfilingInformation ProfilingInformation { get; private set; }
         }
 
-        public class SynchronizationClient : IHoldProfilingInformation
+        public class SynchronizationClient : IAsyncFilesSynchronizationCommands, IHoldProfilingInformation
         {
             private readonly OperationCredentials credentials;
             private readonly FilesConvention convention;
@@ -931,6 +916,35 @@ namespace Raven.Client.FileSystem
             public Task<SynchronizationReport> StartAsync(string fileName, AsyncFilesServerClient destination)
             {
                 return StartAsync(fileName, destination.ToSynchronizationDestination());
+            }
+
+            public Task SetDestinationsConfig(params SynchronizationDestination[] destinations)
+            {
+                return fullClient.ExecuteWithReplication("PUT", async operation =>
+                {
+                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
+                    var request = fullClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention));
+
+                    var data = new { Destinations = destinations };
+
+                    try
+                    {
+                        await request.WriteAsync(JsonExtensions.ToJObject(data));
+                    }
+                    catch (Exception e)
+                    {
+                        throw e.SimplifyException();
+                    }
+
+                    //using (var ms = new MemoryStream())
+                    //using (var streamWriter = new StreamWriter(ms))
+                    //{                                  
+                    //    jsonSerializer.Serialize(streamWriter, data);
+                    //    streamWriter.Flush();
+                    //    ms.Position = 0;
+                    //    await request.WriteAsync(ms);
+                    //}
+                });
             }
 
             public async Task<SynchronizationReport> StartAsync(string fileName, SynchronizationDestination destination)
@@ -1261,11 +1275,14 @@ namespace Raven.Client.FileSystem
                     throw exception.SimplifyException();
                 }
             }
+            public void Dispose()
+            {
+            }
 
             public ProfilingInformation ProfilingInformation { get; private set; }
         }
 
-        public class StorageClient : IHoldProfilingInformation
+        public class StorageClient : IAsyncFilesStorageCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient ravenFileSystemClient;
             private readonly FilesConvention convention;
@@ -1321,9 +1338,13 @@ namespace Raven.Client.FileSystem
             }
 
             public ProfilingInformation ProfilingInformation { get; private set; }
+
+            public void Dispose()
+            {
+            }
         }
 
-        public class AdminClient : IHoldProfilingInformation
+        public class AdminClient : IAsyncFilesAdminCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient ravenFileSystemClient;
             private readonly FilesConvention convention;
@@ -1438,6 +1459,10 @@ namespace Raven.Client.FileSystem
 			}
 
             public ProfilingInformation ProfilingInformation { get; private set; }
+
+            public void Dispose()
+            {
+            }
         }
 
         public override void Dispose()
