@@ -37,7 +37,7 @@ class getSyncIncomingActivitiesCommand extends commandBase {
                     //}
                 })
                 .fail((xhr) => {
-                    this.reportError("Failed to get synchronization incoming activities.")
+                    this.reportError("Failed to get synchronization incoming activities.");
                         task.reject(xhr);
                 });
         //}

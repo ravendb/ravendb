@@ -57,28 +57,23 @@ class status extends viewModelBase {
             this.isFsSyncUpToDate = false;
 
             switch (e.Action) {
+                case synchronizationAction.Enqueue:
                 case synchronizationAction.Start:
-                    if (!this.activityContains(e)) {
-                        this.activity.push(new synchronizationDetail({
-                            FileName: e.FileName,
-                            DestinationUrl: e.DestinationFileSystemUrl,
-                            FileETag: "",
-                            Type: e.Type,
-                            Direction: e.SynchronizationDirection
-                        }, this.getActionDescription(e.Action)));
-                    }
-                    else {
-                        console.log(e.FileName + " has been modified");
-                    }
+                    this.addOrUpdateActivity(e);
                     break;
                 case synchronizationAction.Finish:
                     console.log(e.FileName + " sync has finished");
-                    setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 1000);
+                    setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
                     break;
                 default:
                     console.error("unknown notification action");
             }
         });
+
+        new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+            .done(x => {
+                this.activity(x);
+            });
 
         if (this.outgoingActivity().length == 0) {
             $("#outgoingActivityCollapse").collapse();
@@ -88,29 +83,6 @@ class status extends viewModelBase {
     deactivate() {
         super.deactivate();
         this.activeFilesystemSubscription.dispose();
-    }
-
-    modelPolling() {
-
-        var fs = this.activeFilesystem();
-        if (fs) {
-
-            //var incomingGrid = this.getIncomingActivityTable();
-            //if (incomingGrid) {
-            //    incomingGrid.loadRowData();
-            //}
-
-            //new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-            //    .done(x => {
-            //        this.outgoingActivity(x);
-            //        if (this.outgoingActivity().length > 0) {
-            //            $("#outgoingActivityCollapse").collapse('show');
-            //        }
-            //        else {
-            //            $("#outgoingActivityCollapse").collapse();
-            //        }
-            //    });
-        }
     }
 
     loadSynchronizationActivity() {
@@ -157,6 +129,37 @@ class status extends viewModelBase {
             this.modelPollingStop();
             this.loadSynchronizationActivity();
             this.modelPollingStart();
+        }
+    }
+
+    private addOrUpdateActivity(e: synchronizationUpdateNotification) {
+        if (!this.activityContains(e)) {
+            this.activity.push(new synchronizationDetail({
+                FileName: e.FileName,
+                DestinationUrl: e.DestinationFileSystemUrl,
+                FileETag: "",
+                Type: e.Type,
+                Direction: e.SynchronizationDirection
+            }, this.getActionDescription(e.Action)));
+        }
+        else {
+            console.log(e.FileName + " has been modified");
+            this.activity.remove((item) => { return item.fileName === e.FileName; });
+            this.activity.push(new synchronizationDetail({
+                FileName: e.FileName,
+                DestinationUrl: e.DestinationFileSystemUrl,
+                FileETag: "",
+                Type: e.Type,
+                Direction: e.SynchronizationDirection
+            }, this.getActionDescription(e.Action)));
+            /*var match = ko.utils.arrayFirst(this.activity(), (item) => {
+                return item.fileName === e.FileName;
+            });
+
+            if (match) {
+                console.log("match");
+                match.Status = this.getActionDescription(e.Action);
+            }*/
         }
     }
 
