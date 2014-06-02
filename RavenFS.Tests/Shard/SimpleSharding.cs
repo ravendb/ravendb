@@ -19,7 +19,7 @@ namespace RavenFS.Tests.Shard
 		{
 			var client1 = NewClient(0, fileSystemName: "shard1");
 			var client2 = NewClient(1, fileSystemName: "shard2");
-			shardedClient = new AsyncShardedFilesServerClient(new ShardStrategy(new Dictionary<string, AsyncFilesServerClient>
+            shardedClient = new AsyncShardedFilesServerClient(new ShardStrategy(new Dictionary<string, IAsyncFilesCommands>
 				{
 					{"1", client1},
 					{"2", client2},

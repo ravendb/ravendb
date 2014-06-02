@@ -20,7 +20,7 @@ namespace Raven.Client.FileSystem.Connection
     /// <summary>
     /// Replication and failover management on the client side
     /// </summary>
-    public class FilesReplicationInformer : ReplicationInformerBase<AsyncFilesServerClient>, IFilesReplicationInformer
+    public class FilesReplicationInformer : ReplicationInformerBase<IAsyncFilesCommands>, IFilesReplicationInformer
     {
         public FilesReplicationInformer(Convention conventions, HttpJsonRequestFactory requestFactory)
             : base(conventions, requestFactory)
@@ -32,10 +32,12 @@ namespace Raven.Client.FileSystem.Connection
         /// Refreshes the replication information.
         /// Expert use only.
         /// </summary>
-        public override void RefreshReplicationInformation(AsyncFilesServerClient serverClient)
-        {
+        public override void RefreshReplicationInformation(IAsyncFilesCommands commands)
+        {            
             lock (this)
             {
+                var serverClient = (IAsyncFilesCommandsImpl)commands;
+                
                 var serverHash = ServerHash.GetServerHash(serverClient.BaseUrl);
 
                 JsonDocument document = null;
@@ -111,8 +113,10 @@ namespace Raven.Client.FileSystem.Connection
             return baseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
         }
 
-        public override Task UpdateReplicationInformationIfNeeded(AsyncFilesServerClient serverClient)
+        public override Task UpdateReplicationInformationIfNeeded(IAsyncFilesCommands commands)
         {
+            var serverClient = (IAsyncFilesCommandsImpl)commands;
+
             if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
                 return new CompletedTask();
 

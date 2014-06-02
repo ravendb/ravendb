@@ -47,7 +47,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var destinationMetadata = await destination.GetMetadataForAsync(FileName);
+            var destinationMetadata = await destination.Commands.GetMetadataForAsync(FileName);
 
 			if (destinationMetadata == null)
 			{

@@ -15,12 +15,12 @@ namespace Raven.Client.FileSystem.Shard
         /// Occurs on error, allows to handle an error one (or more) of the nodes
         /// is failing
         /// </summary>
-        event ShardingErrorHandle<AsyncFilesServerClient> OnAsyncError;
+        event ShardingErrorHandle<IAsyncFilesCommands> OnAsyncError;
 
         /// <summary>
         /// Applies the specified action to all shard sessions.
         /// </summary>
-        Task<T[]> ApplyAsync<T>(IList<AsyncFilesServerClient> commands, ShardRequestData request, Func<AsyncFilesServerClient, int, Task<T>> operation);
+        Task<T[]> ApplyAsync<T>(IList<IAsyncFilesCommands> commands, ShardRequestData request, Func<IAsyncFilesCommands, int, Task<T>> operation);
     }
 
     public delegate bool ShardingErrorHandle<TRavenFileSystemClient>(TRavenFileSystemClient failingCommands, ShardRequestData request, Exception exception);

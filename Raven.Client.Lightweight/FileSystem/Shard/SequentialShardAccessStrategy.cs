@@ -9,9 +9,9 @@ namespace Raven.Client.FileSystem.Shard
 	/// </summary>
 	public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
-		public event ShardingErrorHandle<AsyncFilesServerClient> OnAsyncError;
+        public event ShardingErrorHandle<IAsyncFilesCommands> OnAsyncError;
 
-		public Task<T[]> ApplyAsync<T>(IList<AsyncFilesServerClient> commands, ShardRequestData request, Func<AsyncFilesServerClient, int, Task<T>> operation)
+        public Task<T[]> ApplyAsync<T>(IList<IAsyncFilesCommands> commands, ShardRequestData request, Func<IAsyncFilesCommands, int, Task<T>> operation)
 		{
 			var resultsTask = new TaskCompletionSource<List<T>>();
 			var results = new List<T>();

@@ -52,9 +52,13 @@ namespace Raven.Client.FileSystem
 
 
         Task<Guid> GetServerId();
+        Task<FileSystemStats> StatsAsync();
+
 
         Task DeleteAsync(string fileName);
         Task RenameAsync(string currentName, string newName);
+
+        Task<RavenJObject> GetMetadataForAsync(string filename);
         Task UpdateMetadataAsync(string filename, RavenJObject metadata);
 
         Task UploadAsync(string filename, Stream source);
@@ -64,6 +68,10 @@ namespace Raven.Client.FileSystem
         Task<RavenJObject> DownloadAsync(string filename, Stream destination, long? from = null, long? to = null);
         
         Task<SearchResults> GetFilesAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
+        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25);
+
+        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);
+        Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25);
         Task<string[]> GetFoldersAsync(string from = null, int start = 0, int pageSize = 25);        
 
     }
@@ -98,7 +106,6 @@ namespace Raven.Client.FileSystem
 
         Task SetDestinationsConfig(params SynchronizationDestination[] destinations);
 
-        Task<RavenJObject> GetMetadataForAsync(string filename);
         
         Task<DestinationSyncResult[]> SynchronizeDestinationsAsync(bool forceSyncingAll = false);        
 

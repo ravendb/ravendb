@@ -18,8 +18,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_delete_sync_configuration_after_synchronization()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -32,8 +32,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_refuse_to_update_metadata_while_sync_configuration_exists()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -48,8 +48,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_refuse_to_delete_file_while_sync_configuration_exists()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -64,8 +64,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_refuse_to_rename_file_while_sync_configuration_exists()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -81,8 +81,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_refuse_to_upload_file_while_sync_configuration_exists()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -97,8 +97,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async void Should_refuse_to_synchronize_file_while_sync_configuration_exists()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -112,8 +112,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_successfully_update_metadata_if_last_synchronization_timeout_exceeded()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -123,8 +123,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_successfully_delete_file_if_last_synchronization_timeout_exceeded()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -134,8 +134,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_successfully_rename_file_if_last_synchronization_timeout_exceeded()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -145,8 +145,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_successfully_upload_file_if_last_synchronization_timeout_exceeded()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -156,8 +156,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async void Should_successfully_synchronize_if_last_synchronization_timeout_exceeded()
 		{
-			AsyncFilesServerClient destinationClient;
-			AsyncFilesServerClient sourceClient;
+            IAsyncFilesCommands destinationClient;
+            IAsyncFilesCommands sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
@@ -166,8 +166,8 @@ namespace RavenFS.Tests.Synchronization
 			Assert.DoesNotThrow(() => SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin"));
 		}
 
-		private void UploadFilesSynchronously(out AsyncFilesServerClient sourceClient,
-		                                      out AsyncFilesServerClient destinationClient, string fileName = "test.bin")
+        private void UploadFilesSynchronously(out IAsyncFilesCommands sourceClient,
+                                              out IAsyncFilesCommands destinationClient, string fileName = "test.bin")
 		{
 			sourceClient = NewClient(1);
 			destinationClient = NewClient(0);
@@ -184,7 +184,7 @@ namespace RavenFS.Tests.Synchronization
             return new SynchronizationLock { FileLockedAt = fileLockedDate };
 		}
 
-		private static void ZeroTimeoutTest(AsyncFilesServerClient destinationClient, Action action)
+        private static void ZeroTimeoutTest(IAsyncFilesCommands destinationClient, Action action)
 		{
 			destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.MinValue)).Wait();
 

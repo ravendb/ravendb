@@ -12,17 +12,17 @@ namespace Raven.Client.FileSystem.Shard
 	/// </summary>
 	public class ShardStrategy
 	{
-		private readonly IDictionary<string, AsyncFilesServerClient> shards;
+        private readonly IDictionary<string, IAsyncFilesCommands> shards;
 
         public delegate string ModifyFileNameFunc(FilesConvention convention, string shardId, string filename);
 
-		public ShardStrategy(IDictionary<string, AsyncFilesServerClient> shards)
+        public ShardStrategy(IDictionary<string, IAsyncFilesCommands> shards)
 		{
 			if (shards == null) throw new ArgumentNullException("shards");
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
 
-			this.shards = new Dictionary<string, AsyncFilesServerClient>(shards, StringComparer.OrdinalIgnoreCase);
+            this.shards = new Dictionary<string, IAsyncFilesCommands>(shards, StringComparer.OrdinalIgnoreCase);
 
 
 			Conventions = shards.First().Value.Conventions.Clone();
@@ -49,7 +49,7 @@ namespace Raven.Client.FileSystem.Shard
 		/// </summary>
 		public ModifyFileNameFunc ModifyFileName { get; set; }
 
-		public IDictionary<string, AsyncFilesServerClient> Shards
+        public IDictionary<string, IAsyncFilesCommands> Shards
 		{
 			get { return shards; }
 		}

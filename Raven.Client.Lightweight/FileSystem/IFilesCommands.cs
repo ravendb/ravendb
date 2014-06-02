@@ -57,17 +57,10 @@ namespace Raven.Client.FileSystem
         IFilesCommands ForFileSystem(string filesystem);
 
 
-
-        /// <summary>
-        /// Retrieve the statistics for the filesystem
-        /// </summary>
-        FileSystemStats GetStatistics();
-
         /// <summary>
         /// Force the database commands to read directly from the master, unless there has been a failover.
         /// </summary>
         IDisposable ForceReadFromMaster();
-
     }
 
     public interface IFilesAdminCommands

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Connection
 {
-    public interface IFilesReplicationInformer : IReplicationInformerBase<AsyncFilesServerClient>
+    public interface IFilesReplicationInformer : IReplicationInformerBase<IAsyncFilesCommands>
     {
     }
 }

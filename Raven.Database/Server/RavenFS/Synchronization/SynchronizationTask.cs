@@ -139,7 +139,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
             try
             {
-                destinationMetadata = await destinationClient.GetMetadataForAsync(fileName);
+                destinationMetadata = await destinationClient.Commands.GetMetadataForAsync(fileName);
             }
             catch (Exception ex)
             {
@@ -302,7 +302,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
                 try
                 {
-                    destinationMetadata = await destination.GetMetadataForAsync(file);
+                    destinationMetadata = await destination.Commands.GetMetadataForAsync(file);
                 }
                 catch (Exception ex)
                 {
