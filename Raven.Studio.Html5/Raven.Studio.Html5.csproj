@@ -290,10 +290,10 @@
     <TypeScriptCompile Include="App\viewmodels\executePatchConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\quotas.ts" />
     <TypeScriptCompile Include="App\viewmodels\versioning.ts" />
-    <TypeScriptCompile Include="App\commands\getVersioningCommand.ts" />
     <TypeScriptCompile Include="App\models\versioningEntry.ts" />
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
+    <Content Include="App\commands\getVersioningsCommand.ts" />
     <Content Include="App\commands\saveDefaultSettingsCommand.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <Content Include="App\views\alerts.html" />
