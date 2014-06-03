@@ -100,6 +100,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BackupRestore\BackupRestore.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="Querying\Intersection.cs" />
@@ -153,7 +154,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Auth\" />
-    <Folder Include="BackupRestore\" />
     <Folder Include="Patching\" />
   </ItemGroup>
   <ItemGroup>
