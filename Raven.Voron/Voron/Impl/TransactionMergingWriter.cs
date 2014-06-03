@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -62,10 +63,39 @@ namespace Voron.Impl
 			{
 				_pendingWrites.Enqueue(mine);
 
+				var pendingWritesCopy = _pendingWrites.ToArray().ToList();
+
+#if DEBUG
+				var pendingOperations = new List<WriteBatch.BatchOperation>();
+				pendingWritesCopy.ForEach(write => pendingOperations.AddRange(GetBatchOperations(write)));
+
+				var incomingBatchOperaitons = GetBatchOperations(mine).ToList();
+
+				incomingBatchOperaitons.AddRange(pendingOperations);
+				var groupedByValue = incomingBatchOperaitons
+					.Where(x => x != null && x.Value != null && x.Type != WriteBatch.BatchOperationType.Increment)
+					//.Where(x => x.Value.)
+					.GroupBy(x => x.Value)
+					.Where(x => x.Count() > 1).ToList();
+
+//				if (groupedByValue.Any())
+//				{
+//					Debugger.Break();
+//				}
+#endif		
 				_hasWrites.Set();
 
 				mine.Wait();
 			}
+		}
+
+		private IEnumerable<WriteBatch.BatchOperation> GetBatchOperations(OutstandingWrite write)
+		{
+			var trees = write.Trees.ToList();
+
+			var operations = new List<WriteBatch.BatchOperation>();
+			trees.ForEach(tree => operations.AddRange(write.GetOperations(tree)));
+			return operations.Where(x => x != null);
 		}
 
 		private void EnsureValidBackgroundTaskState()

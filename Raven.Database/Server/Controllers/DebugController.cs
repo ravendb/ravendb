@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
@@ -18,14 +19,16 @@ using Raven.Abstractions.Data;
 using Raven.Client.Util;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Voron.StorageActions;
 using Raven.Database.Tasks;
 using Raven.Json.Linq;
+using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -424,6 +427,45 @@ namespace Raven.Database.Server.Controllers
 											Identities = identities
 			                            });
 		}
+
+		[HttpGet]
+		[Route("debug/etags")]
+		[Route("databases/{databaseName}/debug/etags")]
+		public HttpResponseMessage Etags()
+		{
+			if (!Database.TransactionalStorage.FriendlyName.Equals("Voron", StringComparison.InvariantCultureIgnoreCase))
+				throw new InvalidOperationException("This endpoint is operational only for voron storage engine");
+
+			IEnumerable<KeyValuePair<string, Etag>> etagsFromMetadata = null;
+			IEnumerable<KeyValuePair<string, Etag>> etagsFromKeysByEtag = null;
+
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				etagsFromMetadata = ((DocumentsStorageActions)accessor.Documents).GetDocumentEtagsFromMetadata();
+				etagsFromKeysByEtag = ((DocumentsStorageActions)accessor.Documents).GetDocumentEtagsFromKeyByEtagIndice();
+			});
+
+			var results = 
+				(from etagFromMetadata in etagsFromMetadata
+				 join etagFromIndice in etagsFromKeysByEtag 
+					on etagFromMetadata.Key equals etagFromIndice.Key
+				select new
+				{
+					etagFromIndice.Key,
+					EtagFromIndice = etagFromIndice.Value,
+					EtagFromMetadata = etagFromMetadata.Value
+				}).ToList();
+
+			var badResults = results.Where(x => !x.EtagFromIndice.Equals(x.EtagFromMetadata)).ToList();
+
+			return GetMessageWithObject(new
+			{
+				ResultsWithDifferentEtag = badResults,
+				DuplicateEtagsFromMetadata = etagsFromMetadata.GroupBy(x => x.Key).Where(x => x.Count() > 1).ToList(),
+				DuplicateEtagsFromKeysByEtag = etagsFromKeysByEtag.GroupBy(x => x.Key).Where(x => x.Count() > 1).ToList()
+			});
+		}
+	
 	}
 
 	public class RouteInfo

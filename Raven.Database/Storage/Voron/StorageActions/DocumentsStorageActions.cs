@@ -92,6 +92,47 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromKeyByEtagIndice()
+		{
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+				.Iterate(Snapshot, writeBatch.Value))
+			{
+				if (!iterator.Seek(Slice.AfterAllKeys))
+					yield break;
+				do
+				{
+					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
+						continue;
+
+					var key = GetKeyFromCurrent(iterator);
+					var etag = Etag.Parse(iterator.CurrentKey.ToString());
+
+					yield return new KeyValuePair<string, Etag>(key,etag);
+				} while (iterator.MovePrev());
+			}
+		}
+
+		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromMetadata()
+		{			
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+				.Iterate(Snapshot, writeBatch.Value))
+			{
+				if (!iterator.Seek(Slice.AfterAllKeys))
+					yield break;
+				do
+				{
+					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
+						continue;
+
+					var key = GetKeyFromCurrent(iterator);
+					var documentMetadata = DocumentMetadataByKey(key, null);
+					yield return new KeyValuePair<string, Etag>(key, documentMetadata.Etag);
+
+				} while (iterator.MovePrev());
+			}
+		}
+
+
 		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null)
 		{
 			if (take < 0)
