@@ -13,6 +13,7 @@ using Xunit.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
@@ -366,7 +367,7 @@ namespace RavenFS.Tests
 
 			client.DeleteAsync("toDelete.bin").Wait();
 
-			Assert.Equal(0, client.StatsAsync().Result.FileCount);
+			Assert.Equal(0, client.GetStatisticsAsync().Result.FileCount);
 		}
 
 		[Fact]
@@ -377,7 +378,7 @@ namespace RavenFS.Tests
 
 			client.RenameAsync("file.bin", "renamed.bin").Wait();
 
-			Assert.Equal(1, client.StatsAsync().Result.FileCount);
+			Assert.Equal(1, client.GetStatisticsAsync().Result.FileCount);
 		}
 
 		[Fact]
@@ -550,7 +551,7 @@ namespace RavenFS.Tests
 
                 await client.UploadAsync("test2", new RandomStream(10));
 
-	            var stats = await anotherClient.Admin.GetFileSystemsStats();
+	            var stats = await anotherClient.Admin.GetStatisticsAsync();
 
 	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystem);
                 Assert.NotNull(stats1);
@@ -573,7 +574,7 @@ namespace RavenFS.Tests
 	    {
             var client = NewClient(); // will create a file system but it remain inactive until any request will go there
 
-            var stats = (await client.Admin.GetFileSystemsStats()).FirstOrDefault();
+            var stats = (await client.Admin.GetStatisticsAsync()).FirstOrDefault();
 
             Assert.Null(stats);
 	    }
@@ -586,7 +587,7 @@ namespace RavenFS.Tests
 
             const string newFileSystemName = "testName_CanDeleteFileSystem";
 
-            await adminClient.CreateOrUpdateFileSystemAsync(new DatabaseDocument
+            await adminClient.CreateOrUpdateFileSystemAsync(new FileSystemDocument
             {
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
@@ -600,17 +601,17 @@ namespace RavenFS.Tests
                 await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
             }
 
-            var names = await adminClient.GetFileSystemsNames();
+            var names = await adminClient.GetNamesAsync();
 
             Assert.Contains(newFileSystemName, names);
 
-            var stats = await adminClient.GetFileSystemsStats();
+            var stats = await adminClient.GetStatisticsAsync();
 
             Assert.NotNull(stats.FirstOrDefault(x => x.Name == newFileSystemName));
 
             await adminClient.DeleteFileSystemAsync(newFileSystemName);
 
-            names = await adminClient.GetFileSystemsNames();
+            names = await adminClient.GetNamesAsync();
 
             Assert.DoesNotContain(newFileSystemName, names);
         }
@@ -623,7 +624,7 @@ namespace RavenFS.Tests
 
             const string newFileSystemName = "testName_CreateFileSystemWhenExistingWillFail";
 
-            var fileSystemSpec = new DatabaseDocument
+            var fileSystemSpec = new FileSystemDocument
             {
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
@@ -634,7 +635,7 @@ namespace RavenFS.Tests
 
             await adminClient.CreateFileSystemAsync(fileSystemSpec, newFileSystemName);
 
-            var names = await adminClient.GetFileSystemsNames();
+            var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
 
             bool throwsException = false;

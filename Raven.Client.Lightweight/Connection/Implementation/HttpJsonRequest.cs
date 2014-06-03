@@ -35,6 +35,7 @@ using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using System.Collections;
 
 namespace Raven.Client.Connection
 {
@@ -644,6 +645,19 @@ namespace Raven.Client.Connection
 				return (IObservable<string>)observableLineStream;
 			}).ConfigureAwait(false);
 		}
+
+        public Task WriteWithObjectAsync<T>(IEnumerable<T> data) 
+        {
+            return WriteAsync(JsonExtensions.ToJArray(data));
+        }
+
+        public Task WriteWithObjectAsync<T>(T data)
+        {
+            if (data is IEnumerable)
+                throw new ArgumentException("The object implements IEnumerable. This method cannot handle it. Give the type system some hint with the 'as IEnumerable' statement to help the compiler to select the correct overload.");
+
+            return WriteAsync(JsonExtensions.ToJObject(data));           
+        }
 
         public async Task WriteAsync(RavenJToken tokenToWrite)
         {

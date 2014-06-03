@@ -47,8 +47,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                 var stats = new RdcStats
                 {
-                    CurrentVersion = rdcVersion.CurrentVersion,
-                    MinimumCompatibleAppVersion = rdcVersion.MinimumCompatibleAppVersion
+                    CurrentVersion = (int)rdcVersion.CurrentVersion,
+                    MinimumCompatibleAppVersion = (int)rdcVersion.MinimumCompatibleAppVersion
                 };
 
                 return this.GetMessageWithObject(stats, HttpStatusCode.OK)

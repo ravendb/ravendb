@@ -115,7 +115,7 @@ namespace RavenFS.Tests.Synchronization
 
 				if (i%3 == 0) // sometimes insert other configs
 				{
-                    await  destination.Configuration.SetConfig("test" + i, new RavenJObject { { "foo", "bar" } });
+                    await  destination.Configuration.SetKeyAsync("test" + i, new RavenJObject { { "foo", "bar" } });
 				}
 
 				// make sure that conflicts indeed are created
@@ -166,7 +166,7 @@ namespace RavenFS.Tests.Synchronization
 			                                          new List<HistoryItem> {new HistoryItem {ServerId = guid, Version = 3}},
 			                                          "http://localhost:12345").Wait();
 			var resultFileMetadata = client.GetMetadataForAsync("test.bin").Result;
-			var conflict = client.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflict = client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
 			Assert.Equal(true.ToString(), resultFileMetadata[SynchronizationConstants.RavenSynchronizationConflict]);
 			Assert.Equal(guid, conflict.RemoteHistory.Last().ServerId);
@@ -367,14 +367,14 @@ namespace RavenFS.Tests.Synchronization
 
             await destinationClient.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.CurrentVersion);
 
-            await sourceClient.Synchronization.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
+            await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = sourceClient.Synchronization.SynchronizeDestinationsAsync().Result;
+			var report = sourceClient.Synchronization.SynchronizeAsync().Result;
 
 			Assert.Equal(1, report.Count());
 			Assert.Null(report.First().Reports);
 
-            var serverId = await sourceClient.GetServerId();
+            var serverId = await sourceClient.GetServerIdAsync();
             var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
 			Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>("ETag"), lastEtag.LastSourceFileEtag);
@@ -395,12 +395,12 @@ namespace RavenFS.Tests.Synchronization
 
 			await destinationClient.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.CurrentVersion);
 
-            await sourceClient.Synchronization.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
+            await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = await sourceClient.Synchronization.SynchronizeDestinationsAsync();
+			var report = await sourceClient.Synchronization.SynchronizeAsync();
 			Assert.Null(report.ToArray()[0].Exception);
 
-            var syncingItem = await sourceClient.Configuration.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
+            var syncingItem = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
 			Assert.Null(syncingItem);
 		}
 

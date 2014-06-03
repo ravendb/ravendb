@@ -73,7 +73,7 @@ namespace RavenFS.Tests.Auth
 
             await client.RenameAsync("/dir/abc.txt", "/dir/cba.txt");
 
-            var searchResults = await client.GetFilesAsync("/dir");
+            var searchResults = await client.GetFilesFromAsync("/dir");
 
             Assert.Equal(1, searchResults.FileCount);
 
@@ -89,7 +89,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.True(searchFields.Length > 0);
 
-            var guid = await client.GetServerId();
+            var guid = await client.GetServerIdAsync();
 
             Assert.NotEqual(Guid.Empty, guid);
 
@@ -99,7 +99,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.Equal(1, results.FileCount);
 
-            var stats = await client.StatsAsync();
+            var stats = await client.GetStatisticsAsync();
 
             Assert.Equal(1, stats.FileCount);
         }
@@ -110,7 +110,7 @@ namespace RavenFS.Tests.Auth
             var client = (IAsyncFilesCommandsImpl) NewClient(enableAuthentication: true, apiKey: apiKey);
 	        var adminClient = client.Admin;
 
-            await adminClient.CreateFileSystemAsync(new DatabaseDocument
+            await adminClient.CreateFileSystemAsync(new FileSystemDocument
             {
                 Id = "Raven/FileSystem/" + "testName",
                 Settings =
@@ -119,14 +119,13 @@ namespace RavenFS.Tests.Auth
                  }
             }, "testName");
 
-	        var names = await adminClient.GetFileSystemsNames();
+	        var names = await adminClient.GetNamesAsync();
 
             Assert.Equal(1, names.Length); // will not return 'testName' file system name because used apiKey doesn't have access to a such file system
             Assert.Equal("AdminClientWorkWithOAuthEnabled", names[0]);
 
-			var stats = await adminClient.GetFileSystemsStats();
-
-			Assert.Equal(0, stats.Count); // 0 because our fs aren't active
+			var stats = await adminClient.GetStatisticsAsync();            
+			Assert.Equal(0, stats.Length); // 0 because our fs aren't active
 
             using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName"))
 			{
@@ -141,13 +140,13 @@ namespace RavenFS.Tests.Auth
         {
             var configClient = NewClient(enableAuthentication: true, apiKey: apiKey).Configuration;
 
-            await configClient.SetConfig("test-conf", new RavenJObject() { { "key", "value" } });
+            await configClient.SetKeyAsync("test-conf", new RavenJObject() { { "key", "value" } });
 
-            var config = await configClient.GetConfig<RavenJObject>("test-conf");
+            var config = await configClient.GetKeyAsync<RavenJObject>("test-conf");
 
             Assert.Equal("value", config["key"]);
 
-            var names = await configClient.GetConfigNames();
+            var names = await configClient.GetKeyNamesAsync();
 
             Assert.Contains("test-conf", names);
 
@@ -161,9 +160,9 @@ namespace RavenFS.Tests.Auth
         {
             var storageClient = NewClient(enableAuthentication: true, apiKey: apiKey).Storage;
 
-            await storageClient.RetryRenaming();
+            await storageClient.RetryRenamingAsync();
 
-            await storageClient.CleanUp();
+            await storageClient.CleanUpAsync();
         }
 
         [Fact]

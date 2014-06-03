@@ -204,6 +204,7 @@
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
     <Compile Include="FileSystem\DirectoryHeader.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />
+    <Compile Include="FileSystem\FileSystemDocument.cs" />
     <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />

@@ -12,7 +12,7 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-            Assert.Null(await client.Configuration.GetConfig<RavenJObject>("test"));
+            Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 		}
 
 		[Fact]
@@ -20,14 +20,14 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-            Assert.Null(await client.Configuration.GetConfig<RavenJObject>("test"));
+            Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
-            await client.Configuration.SetConfig("test", new RavenJObject
+            await client.Configuration.SetKeyAsync("test", new RavenJObject
 		                                            {
 			                                            {"test", "there"},
 			                                            {"hi", "you"}
 		                                            });
-            var nameValueCollection = await client.Configuration.GetConfig<RavenJObject>("test");
+            var nameValueCollection = await client.Configuration.GetKeyAsync<RavenJObject>("test");
 			Assert.NotNull(nameValueCollection);
 
 			Assert.Equal("there", nameValueCollection["test"]);
@@ -41,20 +41,20 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-            Assert.Null(await client.Configuration.GetConfig<RavenJObject>("test"));
+            Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
-            await client.Configuration.SetConfig("test", new RavenJObject
+            await client.Configuration.SetKeyAsync("test", new RavenJObject
 		                                            {
 			                                            {"test", "there"},
 			                                            {"hi", "you"}
 		                                            });
 
-            await client.Configuration.SetConfig("test2", new RavenJObject
+            await client.Configuration.SetKeyAsync("test2", new RavenJObject
 				                                    {
 					                                    {"test", "there"},
 					                                    {"hi", "you"}
 				                                    });
-			var names = await client.Configuration.GetConfigNames();
+			var names = await client.Configuration.GetKeyNamesAsync();
 			Assert.Equal(new[]{"Raven/Sequences/Raven/Etag", "test", "test2"}, names);
 		}
 
@@ -63,18 +63,18 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-            Assert.Null(await client.Configuration.GetConfig<RavenJObject>("test"));
+            Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
-            await client.Configuration.SetConfig("test", new RavenJObject
+            await client.Configuration.SetKeyAsync("test", new RavenJObject
 			                                        {
 				                                        {"test", "there"},
 				                                        {"hi", "you"}
 			                                        });
-            Assert.NotNull(await client.Configuration.GetConfig<RavenJObject>("test"));
+            Assert.NotNull(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
-			await client.Configuration.DeleteConfig("test");
+            await client.Configuration.DeleteKeyAsync("test");
 
-            Assert.Null(await client.Configuration.GetConfig<RavenJObject>("test"));
+            Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 		}
 
 	    [Fact]
@@ -82,8 +82,8 @@ namespace RavenFS.Tests
 	    {
 	        var client = NewClient();
 
-            client.Configuration.SetConfig("TestConfigA", new RavenJObject()).Wait();
-            client.Configuration.SetConfig("TestConfigB", new RavenJObject()).Wait();
+            client.Configuration.SetKeyAsync("TestConfigA", new RavenJObject()).Wait();
+            client.Configuration.SetKeyAsync("TestConfigB", new RavenJObject()).Wait();
 
 	        Assert.Equal(2, client.Configuration.SearchAsync(prefix: "Test").Result.TotalCount);
 	    }
@@ -93,9 +93,9 @@ namespace RavenFS.Tests
         {
             var client = NewClient();
 
-            client.Configuration.SetConfig("TestConfigA", new RavenJObject()).Wait();
-            client.Configuration.SetConfig("TestConfigB", new RavenJObject()).Wait();
-            client.Configuration.SetConfig("AnotherB", new RavenJObject()).Wait();
+            client.Configuration.SetKeyAsync("TestConfigA", new RavenJObject()).Wait();
+            client.Configuration.SetKeyAsync("TestConfigB", new RavenJObject()).Wait();
+            client.Configuration.SetKeyAsync("AnotherB", new RavenJObject()).Wait();
 
             Assert.Equal(2, client.Configuration.SearchAsync(prefix: "Test").Result.TotalCount);
         }

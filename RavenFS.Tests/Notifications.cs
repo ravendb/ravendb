@@ -109,7 +109,7 @@ namespace RavenFS.Tests
                                                .Timeout(TimeSpan.FromSeconds(2))
                                                .Take(1).ToTask();
 
-            await client.Configuration.SetConfig("Test", new RavenJObject());
+            await client.Configuration.SetKeyAsync("Test", new RavenJObject());
 
             var configChange = await notificationTask;
 
@@ -124,7 +124,7 @@ namespace RavenFS.Tests
                                                 .Timeout(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();           
 
-            await client.Configuration.DeleteConfig("Test");
+            await client.Configuration.DeleteKeyAsync("Test");
 
             var configChange = await notificationTask;
 

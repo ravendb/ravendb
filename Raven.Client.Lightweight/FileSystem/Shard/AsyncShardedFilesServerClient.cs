@@ -64,7 +64,7 @@ namespace Raven.Client.FileSystem.Shard
 			var applyAsync =
 				await
 				Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), new ShardRequestData(),
-															 (client, i) => client.StatsAsync());
+															 (client, i) => client.GetStatisticsAsync());
 
 		    var activeSyncs = new List<SynchronizationDetails>();
 

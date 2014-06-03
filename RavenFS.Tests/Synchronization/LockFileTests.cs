@@ -24,7 +24,7 @@ namespace RavenFS.Tests.Synchronization
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
 			await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
-            var config = await destinationClient.Configuration.GetConfig<SynchronizationLock>(RavenFileNameHelper.SyncLockNameForFile("test.bin"));
+            var config = await destinationClient.Configuration.GetKeyAsync<SynchronizationLock>(RavenFileNameHelper.SyncLockNameForFile("test.bin"));
 
 			Assert.Null(config);
 		}
@@ -37,7 +37,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			await destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
+			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
 
             var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.UpdateMetadataAsync("test.bin", new RavenJObject()));
 
@@ -53,7 +53,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			await destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
+			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
 
 			var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.DeleteAsync("test.bin"));
 
@@ -69,7 +69,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			await destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
+			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
 
 			var innerException =
 				SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.RenameAsync("test.bin", "newname.bin"));
@@ -86,7 +86,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			await destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
+			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
 
 			var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.UploadAsync("test.bin", new MemoryStream()));
 
@@ -102,7 +102,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			await destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
+			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.UtcNow));
 
 			var synchronizationReport = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
@@ -161,7 +161,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-            await destinationClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0));
+            await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0));
 
 			Assert.DoesNotThrow(() => SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin"));
 		}
@@ -186,9 +186,9 @@ namespace RavenFS.Tests.Synchronization
 
         private static void ZeroTimeoutTest(IAsyncFilesCommands destinationClient, Action action)
 		{
-			destinationClient.Configuration.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.MinValue)).Wait();
+			destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.MinValue)).Wait();
 
-            destinationClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0) ).Wait();
+            destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0) ).Wait();
 
 			Assert.DoesNotThrow(() => action());
 		}

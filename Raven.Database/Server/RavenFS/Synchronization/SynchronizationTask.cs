@@ -489,16 +489,13 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return filesToSynchronization;
 		}
 
-		private Task<IEnumerable<SynchronizationConfirmation>> ConfirmPushedFiles(
-			IList<SynchronizationDetails> filesNeedConfirmation, IAsyncFilesSynchronizationCommands destinationClient)
+		private Task<SynchronizationConfirmation[]> ConfirmPushedFiles(IList<SynchronizationDetails> filesNeedConfirmation, IAsyncFilesSynchronizationCommands destinationClient)
 		{
 			if (filesNeedConfirmation.Count == 0)
 			{
-				return new CompletedTask<IEnumerable<SynchronizationConfirmation>>(Enumerable.Empty<SynchronizationConfirmation>());
+				return new CompletedTask<SynchronizationConfirmation[]>(new SynchronizationConfirmation[0]);
 			}
-			return
-				destinationClient.ConfirmFilesAsync(
-					filesNeedConfirmation.Select(x => new Tuple<string, Guid>(x.FileName, x.FileETag)));
+			return destinationClient.GetConfirmationForFilesAsync(filesNeedConfirmation.Select(x => new Tuple<string, Guid>(x.FileName, x.FileETag)));
 		}
 
         private IEnumerable<SynchronizationDetails> GetSyncingConfigurations(SynchronizationDestination destination)

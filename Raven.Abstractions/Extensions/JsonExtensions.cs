@@ -105,6 +105,15 @@ namespace Raven.Abstractions.Extensions
         }
 
         /// <summary>
+        /// Deserialize a <param name="self"/> to a list of instances of<typeparam name="T"/>
+        /// </summary>
+        public static T[] JsonDeserialization<T>(this RavenJArray self)
+        {
+            var serializer = CreateDefaultJsonSerializer();
+            return self.Select(x => (T) serializer.Deserialize(new RavenJTokenReader(x), typeof(T))).ToArray();
+        }
+
+        /// <summary>
         /// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
         /// </summary>
         public static T JsonDeserialization<T>(this StreamReader self)

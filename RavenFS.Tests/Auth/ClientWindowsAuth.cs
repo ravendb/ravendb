@@ -77,7 +77,7 @@ namespace RavenFS.Tests.Auth
             Assert.Equal(ms.GetMD5Hash(), result.GetMD5Hash());
             await client.RenameAsync("/dir/ms.bin", "/dir/sm.bin");
 
-            var searchResults = await client.GetFilesAsync("/dir");
+            var searchResults = await client.GetFilesFromAsync("/dir");
 
             Assert.Equal(1, searchResults.FileCount);
 
@@ -93,7 +93,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.True(searchFields.Length > 0);
 
-            var guid = await client.GetServerId();
+            var guid = await client.GetServerIdAsync();
 
             Assert.NotEqual(Guid.Empty, guid);
 
@@ -103,7 +103,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.Equal(1, results.FileCount);
 
-            var stats = await client.StatsAsync();
+            var stats = await client.GetStatisticsAsync();
 
             Assert.Equal(1, stats.FileCount);
         }
@@ -114,7 +114,7 @@ namespace RavenFS.Tests.Auth
             var client = (IAsyncFilesCommandsImpl)NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 	        var adminClient = client.Admin;
 
-            await adminClient.CreateFileSystemAsync(new DatabaseDocument
+            await adminClient.CreateFileSystemAsync(new FileSystemDocument
             {
                 Id = "Raven/FileSystem/" + "testName",
                 Settings =
@@ -128,17 +128,17 @@ namespace RavenFS.Tests.Auth
 		        await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
 	        }
 
-            var names = await adminClient.GetFileSystemsNames();
+            var names = await adminClient.GetNamesAsync();
 
             Assert.Contains("testName", names);
 
-            var stats = await adminClient.GetFileSystemsStats();
+            var stats = await adminClient.GetStatisticsAsync();
 
 			Assert.NotNull(stats.FirstOrDefault(x => x.Name == "testName"));
 
 	        await adminClient.DeleteFileSystemAsync("testName");
 
-			names = await adminClient.GetFileSystemsNames();
+			names = await adminClient.GetNamesAsync();
 
 			Assert.DoesNotContain("testName", names);
         }
@@ -148,13 +148,13 @@ namespace RavenFS.Tests.Auth
         {
             var configClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
 
-            await configClient.SetConfig("test-conf", new NameValueCollection() { { "key", "value" } });
+            await configClient.SetKeyAsync("test-conf", new NameValueCollection() { { "key", "value" } });
 
-            var config = await configClient.GetConfig<NameValueCollection>("test-conf");
+            var config = await configClient.GetKeyAsync<NameValueCollection>("test-conf");
 
             Assert.Equal("value", config["key"]);
 
-            var names = await configClient.GetConfigNames();
+            var names = await configClient.GetKeyNamesAsync();
 
             Assert.Contains("test-conf", names);
 
@@ -168,9 +168,9 @@ namespace RavenFS.Tests.Auth
         {
             var storageClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Storage;
 
-            await storageClient.RetryRenaming();
+            await storageClient.RetryRenamingAsync();
 
-            await storageClient.CleanUp();
+            await storageClient.CleanUpAsync();
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]

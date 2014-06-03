@@ -92,7 +92,7 @@ namespace Raven.Migration.MigrationTasks
 
 			try
 			{
-				var fileSystemStats = fsClient.StatsAsync().Result;
+				var fileSystemStats = fsClient.GetStatisticsAsync().Result;
 			}
 			catch (Exception e)
 			{

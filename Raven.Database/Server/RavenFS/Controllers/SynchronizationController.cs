@@ -610,8 +610,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Version = remoteVersion
 			};
 
-			var remoteConflictHistory =
-				new JsonSerializer().Deserialize<IList<HistoryItem>>(new JsonTextReader(new StreamReader(contentStream)));
+            var remoteConflictHistory = RavenJArray.Load(new JsonTextReader(new StreamReader(contentStream)))
+                                                   .JsonDeserialization<HistoryItem>().ToList();
 			remoteConflictHistory.Add(remote);
 
 			var conflict = new ConflictItem

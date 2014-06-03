@@ -24,9 +24,9 @@ namespace RavenFS.Tests
 
 			await client.DeleteAsync("toDelete.bin");
 
-			await client.Storage.CleanUp();
+			await client.Storage.CleanUpAsync();
 
-			var configNames = await client.Configuration.GetConfigNames();
+			var configNames = await client.Configuration.GetKeyNamesAsync();
 
 			Assert.DoesNotContain(
 				RavenFileNameHelper.DeleteOperationConfigNameForFile(RavenFileNameHelper.DeletingFileName("toDelete.bin")),
@@ -81,7 +81,7 @@ namespace RavenFS.Tests
 
             await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
-            var searchResults = await client.GetFilesAsync("/");
+            var searchResults = await client.GetFilesFromAsync("/");
 
 			Assert.Equal(0, searchResults.FileCount);
 			Assert.Equal(0, searchResults.Files.Count());
@@ -233,7 +233,7 @@ namespace RavenFS.Tests
 
 			Assert.NotNull(renamedMetadata);
 
-			var results = client.GetFilesAsync("/").Result; // make sure that indexes are updated
+			var results = client.GetFilesFromAsync("/").Result; // make sure that indexes are updated
 
 			Assert.Equal(1, results.FileCount);
 			Assert.Equal(rename, results.Files[0].Name);
@@ -261,9 +261,9 @@ namespace RavenFS.Tests
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation ));
 
-			await client.Storage.RetryRenaming();
+			await client.Storage.RetryRenamingAsync();
 
-			IEnumerable<string> configNames = await client.Configuration.GetConfigNames();
+			IEnumerable<string> configNames = await client.Configuration.GetKeyNamesAsync();
 
 			Assert.DoesNotContain(renameOpConfig, configNames);
 

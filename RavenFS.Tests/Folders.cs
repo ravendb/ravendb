@@ -151,7 +151,7 @@ namespace RavenFS.Tests
 			await client.UploadAsync("test/ced.txt", ms);
 			await client.UploadAsync("why/abc.txt", ms);
 
-			var results = await client.GetFilesAsync("/test");
+			var results = await client.GetFilesFromAsync("/test");
 			var strings = results.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new[] { "/test/abc.txt", "/test/ced.txt" }, strings);
 		}
@@ -164,7 +164,7 @@ namespace RavenFS.Tests
 			client.UploadAsync("test/abc.txt", new MemoryStream(new byte[4])).Wait();
 			client.UploadAsync("test/ced.txt", new MemoryStream(new byte[8])).Wait();
 
-			var strings = client.GetFilesAsync("/test", FilesSortOptions.Size | FilesSortOptions.Desc).Result.Files.Select(x => x.Name).ToArray();
+			var strings = client.GetFilesFromAsync("/test", FilesSortOptions.Size | FilesSortOptions.Desc).Result.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new[] { "/test/ced.txt", "/test/abc.txt" }, strings);
 		}
 
@@ -175,7 +175,7 @@ namespace RavenFS.Tests
 			client.UploadAsync("test/abc.txt", new MemoryStream(new byte[4])).Wait();
 			client.UploadAsync("test/ced.txt", new MemoryStream(new byte[8])).Wait();
 
-			var strings = client.GetFilesAsync("/test", FilesSortOptions.Name | FilesSortOptions.Desc).Result.Files.Select(x => x.Name).ToArray();
+			var strings = client.GetFilesFromAsync("/test", FilesSortOptions.Name | FilesSortOptions.Desc).Result.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new[] { "/test/ced.txt", "/test/abc.txt" }, strings);
 		}
 
@@ -189,7 +189,7 @@ namespace RavenFS.Tests
 			client.UploadAsync("test/ced.txt", ms).Wait();
 			client.UploadAsync("why/abc.txt", ms).Wait();
 
-			var strings = client.GetFilesAsync("/").Result.Files.Select(x => x.Name).ToArray();
+			var strings = client.GetFilesFromAsync("/").Result.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new string[] { }, strings);
 		}
 
@@ -203,7 +203,7 @@ namespace RavenFS.Tests
 			client.UploadAsync("test/ced.txt", ms).Wait();
 			client.UploadAsync("why/abc.txt", ms).Wait();
 
-			var strings = client.GetFilesAsync("/test").Result.Files.Select(x => x.Name).ToArray();
+			var strings = client.GetFilesFromAsync("/test").Result.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new string[] { "/test/abc.txt", "/test/ced.txt" }, strings);
 		}
 
@@ -218,7 +218,7 @@ namespace RavenFS.Tests
             client.UploadAsync("dhi.txt", ms).Wait();
 
             var fileNames =
-                client.GetFilesAsync("/", fileNameSearchPattern: "d*").Result.Files.Select(x => x.Name).ToArray();
+                client.GetFilesFromAsync("/", fileNameSearchPattern: "d*").Result.Files.Select(x => x.Name).ToArray();
             Assert.Equal(new string[] { "def.txt", "dhi.txt"}, fileNames);
         }
 
@@ -234,7 +234,7 @@ namespace RavenFS.Tests
             client.UploadAsync("jkl.png", ms).Wait();
 
             var fileNames =
-                client.GetFilesAsync("/", fileNameSearchPattern: "*.png").Result.Files.Select(x => x.Name).ToArray();
+                client.GetFilesFromAsync("/", fileNameSearchPattern: "*.png").Result.Files.Select(x => x.Name).ToArray();
             Assert.Equal(new string[] { "ghi.png", "jkl.png" }, fileNames);
         }
 
@@ -250,7 +250,7 @@ namespace RavenFS.Tests
             client.UploadAsync("jkl.png", ms).Wait();
 
             var fileNames =
-                client.GetFilesAsync("/", fileNameSearchPattern: "?bc?txt").Result.Files.Select(x => x.Name).ToArray();
+                client.GetFilesFromAsync("/", fileNameSearchPattern: "?bc?txt").Result.Files.Select(x => x.Name).ToArray();
             Assert.Equal(new string[] { "abc.txt" }, fileNames);
         }
 
@@ -264,7 +264,7 @@ namespace RavenFS.Tests
             client.UploadAsync("test/def.txt", ms).Wait();
 
             var fileNames =
-                client.GetFilesAsync("/test", fileNameSearchPattern: "a*").Result.Files.Select(x => x.Name).ToArray();
+                client.GetFilesFromAsync("/test", fileNameSearchPattern: "a*").Result.Files.Select(x => x.Name).ToArray();
             Assert.Equal(new string[] { "/test/abc.txt" }, fileNames);
         }
 
@@ -278,7 +278,7 @@ namespace RavenFS.Tests
             client.UploadAsync("def.txt", ms).Wait();
 
             var fileNames =
-                client.GetFilesAsync("/", fileNameSearchPattern: "a").Result.Files.Select(x => x.Name).ToArray();
+                client.GetFilesFromAsync("/", fileNameSearchPattern: "a").Result.Files.Select(x => x.Name).ToArray();
             Assert.Equal(new string[] { "abc.txt" }, fileNames);
         }
 
@@ -323,7 +323,7 @@ namespace RavenFS.Tests
 			client.DeleteAsync("toDelete.bin").Wait();
 
 			var fileNames =
-				client.GetFilesAsync("/").Result.Files.Select(x => x.Name).ToArray();
+				client.GetFilesFromAsync("/").Result.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new[] { "visible.bin" }, fileNames);
 		}
 	}

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Xunit;
 using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {
@@ -21,7 +22,7 @@ namespace RavenFS.Tests.Auth
 
             using (var client = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {
-                await client.Admin.CreateFileSystemAsync(new DatabaseDocument()
+                await client.Admin.CreateFileSystemAsync(new FileSystemDocument()
                 {
                     Id = "Raven/FileSystem/" + client.FileSystem,
                     Settings =

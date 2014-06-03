@@ -1,5 +1,4 @@
 ﻿using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
@@ -7,7 +6,6 @@ using Raven.Abstractions.OAuth;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -198,7 +196,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public Task<FileSystemStats> StatsAsync()
+        public Task<FileSystemStats> GetStatisticsAsync()
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -210,7 +208,7 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     var response = (RavenJObject) await request.ReadResponseJsonAsync();
-                    return JsonExtensions.JsonDeserialization<FileSystemStats>(response);
+                    return response.JsonDeserialization<FileSystemStats>();
                 }
                 catch (Exception e)
                 {
@@ -271,8 +269,7 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     var response = (RavenJArray) await request.ReadResponseJsonAsync();
-                    var items = response.Select(x => JsonExtensions.JsonDeserialization<FileHeader>((RavenJObject)x));
-                    return items.ToArray();
+                    return response.JsonDeserialization<FileHeader>();
                 }
                 catch (Exception e)
                 {
@@ -293,8 +290,7 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     var response = (RavenJArray) await request.ReadResponseJsonAsync();
-                    var items = response.Select(x => x.Value<string>());
-                    return items.ToArray();
+                    return response.JsonDeserialization<string>();
                 }
                 catch (Exception e)
                 {
@@ -328,9 +324,8 @@ namespace Raven.Client.FileSystem
                                                                                         "GET", operation.Credentials, Conventions));
                 try
                 {
-                    var response = (RavenJObject)await request.ReadResponseJsonAsync();        
-                    
-                    return JsonExtensions.JsonDeserialization<SearchResults>(response);
+                    var response = (RavenJObject)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<SearchResults>();
                 }
                 catch (Exception e)
                 {
@@ -590,9 +585,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-
-                    return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
+                    var response = (RavenJArray) await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<string>();
                 }
                 catch (Exception e)
                 {
@@ -601,7 +595,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task<SearchResults> GetFilesAsync(string folder, FilesSortOptions options = FilesSortOptions.Default,
+        public Task<SearchResults> GetFilesFromAsync(string folder, FilesSortOptions options = FilesSortOptions.Default,
                                                  string fileNameSearchPattern = "", int start = 0, int pageSize = 25)
         {
             var folderQueryPart = GetFolderQueryPart(folder);
@@ -615,7 +609,7 @@ namespace Raven.Client.FileSystem
             return SearchAsync(folderQueryPart + fileNameQueryPart, GetSortFields(options), start, pageSize);
         }
 
-        public Task<Guid> GetServerId()
+        public Task<Guid> GetServerIdAsync()
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -626,8 +620,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<Guid>(new RavenJTokenReader(response));
+                    var response = (RavenJValue) await request.ReadResponseJsonAsync();
+                    return response.Value<Guid>();
                 }
                 catch (Exception e)
                 {
@@ -718,7 +712,7 @@ namespace Raven.Client.FileSystem
                 this.filesystemName = ravenFileSystemClient.FileSystem;
             }
 
-            public Task<string[]> GetConfigNames(int start = 0, int pageSize = 25)
+            public Task<string[]> GetKeyNamesAsync(int start = 0, int pageSize = 25)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("GET", async operation =>
                 {
@@ -730,8 +724,8 @@ namespace Raven.Client.FileSystem
 
                     try
                     {
-                        var response = await request.ReadResponseJsonAsync();
-                        return jsonSerializer.Deserialize<string[]>(new RavenJTokenReader(response));
+                        var response = (RavenJArray) await request.ReadResponseJsonAsync();
+                        return response.JsonDeserialization<string>();
                     }
                     catch (Exception e)
                     {
@@ -740,7 +734,7 @@ namespace Raven.Client.FileSystem
                 });
             }
 
-            public Task SetConfig<T>(string name, T data)
+            public Task SetKeyAsync<T>(string name, T data)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("PUT", async operation =>
                 {
@@ -758,12 +752,12 @@ namespace Raven.Client.FileSystem
                     }
                     else
                     {
-                        await request.WriteAsync(JsonExtensions.ToJObject(data));
+                        await request.WriteWithObjectAsync(data);
                     }
                 });
             }
 
-            public Task DeleteConfig(string name)
+            public Task DeleteKeyAsync(string name)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("DELETE", operation =>
                 {
@@ -775,7 +769,7 @@ namespace Raven.Client.FileSystem
                 });
             }
 
-            public Task<T> GetConfig<T>(string name)
+            public Task<T> GetKeyAsync<T>(string name)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("GET", async operation =>
                 {
@@ -820,11 +814,8 @@ namespace Raven.Client.FileSystem
 
                     try
                     {
-                        var response = await request.ReadResponseJsonAsync();
-                        using (var jsonTextReader = new RavenJTokenReader(response))
-                        {
-                            return jsonSerializer.Deserialize<ConfigurationSearchResults>(jsonTextReader);
-                        }
+                        var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                        return response.JsonDeserialization<ConfigurationSearchResults>();
                     }
                     catch (Exception e)
                     {
@@ -905,7 +896,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<DestinationSyncResult[]> SynchronizeDestinationsAsync(bool forceSyncingAll = false)
+            public async Task<DestinationSyncResult[]> SynchronizeAsync(bool forceSyncingAll = false)
             {
                 var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", BaseUrl, forceSyncingAll);
 
@@ -916,7 +907,7 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     var response = (RavenJArray) await request.ReadResponseJsonAsync();
-                    return response.Select(x => ((RavenJObject)x).JsonDeserialization<DestinationSyncResult>()).ToArray();
+                    return response.JsonDeserialization<DestinationSyncResult>();                    
                 }
                 catch (Exception e)
                 {
@@ -929,7 +920,7 @@ namespace Raven.Client.FileSystem
                 return StartAsync(fileName, destination.ToSynchronizationDestination());
             }
 
-            public Task SetDestinationsConfig(params SynchronizationDestination[] destinations)
+            public Task SetDestinationsAsync(params SynchronizationDestination[] destinations)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("PUT", async operation =>
                 {
@@ -940,21 +931,12 @@ namespace Raven.Client.FileSystem
 
                     try
                     {
-                        await request.WriteAsync(JsonExtensions.ToJObject(data));
+                        await request.WriteWithObjectAsync(data);
                     }
                     catch (Exception e)
                     {
                         throw e.SimplifyException();
                     }
-
-                    //using (var ms = new MemoryStream())
-                    //using (var streamWriter = new StreamWriter(ms))
-                    //{                                  
-                    //    jsonSerializer.Serialize(streamWriter, data);
-                    //    streamWriter.Flush();
-                    //    ms.Position = 0;
-                    //    await request.WriteAsync(ms);
-                    //}
                 });
             }
 
@@ -968,7 +950,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    await request.WriteAsync(JsonExtensions.ToJObject(destination));
+                    await request.WriteWithObjectAsync(destination);
+                    
                     var response = (RavenJObject)await request.ReadResponseJsonAsync();
                     return response.JsonDeserialization<SynchronizationReport>();
                 }
@@ -978,7 +961,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<SynchronizationReport> GetSynchronizationStatusAsync(string fileName)
+            public async Task<SynchronizationReport> GetSynchronizationStatusForAsync(string fileName)
             {
                 var requestUriString = String.Format("{0}/synchronization/status/{1}", BaseUrl, Uri.EscapeDataString(fileName));
 
@@ -1018,7 +1001,7 @@ namespace Raven.Client.FileSystem
             }
 
             public async Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId,
-                                                   IList<HistoryItem> remoteHistory, string remoteServerUrl)
+                                                   IEnumerable<HistoryItem> remoteHistory, string remoteServerUrl)
             {
                 var requestUriString =
                     String.Format("{0}/synchronization/applyConflict/{1}?remoteVersion={2}&remoteServerId={3}&remoteServerUrl={4}",
@@ -1030,17 +1013,7 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    using (var stream = new MemoryStream())
-                    {
-                        var sb = new StringBuilder();
-                        var jw = new JsonTextWriter(new StringWriter(sb));
-                        new JsonSerializer().Serialize(jw, remoteHistory);
-                        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-
-                        await stream.WriteAsync(bytes, 0, bytes.Length);
-                        stream.Position = 0;
-                        await request.WriteAsync(stream);
-                    }
+                    await request.WriteWithObjectAsync(remoteHistory);
                 }
                 catch (Exception e)
                 {
@@ -1059,10 +1032,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    var preResult =
-                        new JsonSerializer().Deserialize<ItemsPage<SynchronizationReport>>(new RavenJTokenReader(response));
-                    return preResult;
+                    var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<ItemsPage<SynchronizationReport>>();
                 }
                 catch (Exception e)
                 {
@@ -1080,10 +1051,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    var preResult =
-                        new JsonSerializer().Deserialize<ItemsPage<SynchronizationDetails>>(new RavenJTokenReader(response));
-                    return preResult;
+                    var response = (RavenJObject)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<ItemsPage<SynchronizationDetails>>();
                 }
                 catch (Exception e)
                 {
@@ -1101,12 +1070,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-
-                    var preResult =
-                        new JsonSerializer().Deserialize<ItemsPage<SynchronizationDetails>>(new RavenJTokenReader(response));
-                    return preResult;
-
+                    var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<ItemsPage<SynchronizationDetails>>();
                 }
                 catch (Exception e)
                 {
@@ -1124,9 +1089,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    var preResult = new JsonSerializer().Deserialize<SourceSynchronizationInformation>(new RavenJTokenReader(response));
-                    return preResult;
+                    var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<SourceSynchronizationInformation>();
                 }
                 catch (Exception e)
                 {
@@ -1134,7 +1098,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<IEnumerable<SynchronizationConfirmation>> ConfirmFilesAsync(IEnumerable<Tuple<string, Guid>> sentFiles)
+            public async Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Guid>> sentFiles)
             {
                 var requestUriString = String.Format("{0}/synchronization/Confirm", BaseUrl);
 
@@ -1152,10 +1116,9 @@ namespace Raven.Client.FileSystem
                         await stream.WriteAsync(bytes, 0, bytes.Length);
                         stream.Position = 0;
                         await request.WriteAsync(stream);
-                        var response = await request.ReadResponseJsonAsync();
 
-                        return new JsonSerializer().Deserialize<IEnumerable<SynchronizationConfirmation>>(
-                            new RavenJTokenReader(response));
+                        var response = (RavenJArray)await request.ReadResponseJsonAsync();
+                        return response.JsonDeserialization<SynchronizationConfirmation>();
                     }
 
                 }
@@ -1177,9 +1140,6 @@ namespace Raven.Client.FileSystem
                 {
                     var response = (RavenJObject)await request.ReadResponseJsonAsync();
                     return response.JsonDeserialization<ItemsPage<ConflictItem>>();
-                    //var preResult =
-                    //    new JsonSerializer().Deserialize<ListPage<ConflictItem>>(new RavenJTokenReader(response));
-                    //return preResult;
                 }
                 catch (Exception e)
                 {
@@ -1215,8 +1175,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<RdcStats>(new RavenJTokenReader(response));
+                    var response = (RavenJObject)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<RdcStats>();
                 }
                 catch (Exception e)
                 {
@@ -1235,8 +1195,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
+                    var response = (RavenJObject)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<SynchronizationReport>();
                 }
                 catch (ErrorResponseException exception)
                 {
@@ -1255,8 +1215,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
+                    var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<SynchronizationReport>();
                 }
                 catch (ErrorResponseException exception)
                 {
@@ -1278,8 +1238,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
+                    var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<SynchronizationReport>();
                 }
                 catch (ErrorResponseException exception)
                 {
@@ -1311,7 +1271,7 @@ namespace Raven.Client.FileSystem
                 this.filesystemName = ravenFileSystemClient.FileSystem;
             }
 
-            public Task CleanUp()
+            public Task CleanUpAsync()
             {
                 return ravenFileSystemClient.ExecuteWithReplication("POST", async operation =>
                 {
@@ -1332,7 +1292,7 @@ namespace Raven.Client.FileSystem
                 });
             }
 
-            public Task RetryRenaming()
+            public Task RetryRenamingAsync()
             {
                 return ravenFileSystemClient.ExecuteWithReplication("POST", async operation =>
                 {
@@ -1379,7 +1339,7 @@ namespace Raven.Client.FileSystem
                 this.filesystemName = ravenFileSystemClient.FileSystem;
             }
 
-            public async Task<string[]> GetFileSystemsNames()
+            public async Task<string[]> GetNamesAsync()
             {
                 var requestUriString = string.Format("{0}/fs/names", ravenFileSystemClient.ServerUrl);
 
@@ -1389,8 +1349,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
+                    var response = (RavenJArray)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<string>();
                 }
                 catch (Exception e)
                 {
@@ -1398,7 +1358,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task<List<FileSystemStats>> GetFileSystemsStats()
+            public async Task<FileSystemStats[]> GetStatisticsAsync()
             {
                 var requestUriString = string.Format("{0}/fs/stats", ravenFileSystemClient.ServerUrl);
 
@@ -1408,8 +1368,8 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<List<FileSystemStats>>(new RavenJTokenReader(response));
+                    var response = (RavenJArray)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<FileSystemStats>();
                 }
                 catch (Exception e)
                 {
@@ -1417,7 +1377,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
+            public async Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
                 var requestUriString = string.Format("{0}/fs/admin/{1}", ravenFileSystemClient.ServerUrl,
                                                      newFileSystemName ?? ravenFileSystemClient.FileSystem);
@@ -1428,7 +1388,7 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));
+                    await request.WriteWithObjectAsync(filesystemDocument);
                 }
                 catch (ErrorResponseException e)
                 {
@@ -1443,7 +1403,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task CreateOrUpdateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
+            public async Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
                 var requestUriString = string.Format("{0}/fs/admin/{1}?update=true", ravenFileSystemClient.ServerUrl,
                                                      newFileSystemName ?? ravenFileSystemClient.FileSystem);
@@ -1454,7 +1414,7 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));                    
+                    await request.WriteWithObjectAsync(filesystemDocument);                    
                 }
                 catch (Exception e)
                 {

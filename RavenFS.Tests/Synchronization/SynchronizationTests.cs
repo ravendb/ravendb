@@ -269,7 +269,7 @@ namespace RavenFS.Tests.Synchronization
 
 			await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
-			var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerId());
+			var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerIdAsync());
 
 			var sourceMetadataWithEtag = await sourceClient.GetMetadataForAsync("test.bin");
 
@@ -295,7 +295,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.Synchronization.StartAsync("test1.bin", destinationClient);
 
 			var lastSourceETag = sourceClient.GetMetadataForAsync("test2.bin").Result.Value<Guid>("ETag");
-			var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerId());
+			var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerIdAsync());
 
 			Assert.Equal(lastSourceETag, lastSynchronization.LastSourceFileEtag);
 		}
@@ -438,7 +438,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
             var destinationClient = (IAsyncFilesCommandsImpl) NewClient(1);
 
-            await sourceClient.Configuration.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, -1);
+            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLimit, -1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -521,7 +521,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
-			var conflictItem = destinationClient.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflictItem = destinationClient.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
 			Assert.Null(conflictItem);
 
@@ -551,7 +551,7 @@ namespace RavenFS.Tests.Synchronization
 
 			Assert.Equal(SynchronizationType.Rename, report.Type);
 
-			var conflictItem = destinationClient.Configuration.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			var conflictItem = destinationClient.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
 			Assert.Null(conflictItem);
 
@@ -561,7 +561,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Null(testMetadata);
 			Assert.NotNull(renamedMetadata);
 
-			var result = await destinationClient.GetFilesAsync("/");
+			var result = await destinationClient.GetFilesFromAsync("/");
 
 			Assert.Equal(1, result.FileCount);
 			Assert.Equal("renamed.bin", result.Files[0].Name);
