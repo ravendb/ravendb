@@ -76,6 +76,7 @@ class documents extends viewModelBase {
                 if (!!curCollection) {
                     if (curCollection.documentCount() == 1) {
                         this.collections.remove(curCollection);
+                        this.allDocumentsCollection.clearCollection();
                         this.selectCollection(this.allDocumentsCollection);
                     } else {
                         curCollection.documentCount(curCollection.documentCount() - 1);

@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
-
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
-
 using Xunit;
 
 namespace Raven.SlowTests.Bugs
@@ -43,7 +41,6 @@ namespace Raven.SlowTests.Bugs
 						using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew))
 						{
 							// Promote the transaction
-
 							Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
 							using (var session = store.OpenSession())
@@ -59,6 +56,7 @@ namespace Raven.SlowTests.Bugs
 					}));
 				}
 				Task.WaitAll(tasks.ToArray());
+
 				foreach (var id in ids)
 				{
 					using(var session = store.OpenSession())
@@ -67,6 +65,7 @@ namespace Raven.SlowTests.Bugs
 						Assert.NotNull(session.Load<TestDocument>(id));
 					}
 				}
+
 				using (var session = store.OpenSession())
 				{
 					var items = session.Query<TestDocument>()

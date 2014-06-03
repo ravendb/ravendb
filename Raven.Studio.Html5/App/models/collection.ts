@@ -53,6 +53,13 @@ class collection {
         return this.documentsList;
     }
 
+    clearCollection() {
+        if (this.isAllDocuments === true && !!this.documentsList) {
+            this.documentsList.clear();
+        }
+    }
+
+
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet> {
         if (this.isSystemDocuments) {
             // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
