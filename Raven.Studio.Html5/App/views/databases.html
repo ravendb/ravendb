@@ -21,7 +21,8 @@
                 </div>
             </form>
             <div class="btn-group">
-                <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
+                <!--<button type="button" class="btn btn-danger use-bootstrap-tooltip" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>-->
+                <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
             </div>
         </div>
         <div class="databases-container" data-bind="foreach: databases">

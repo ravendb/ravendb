@@ -1,7 +1,8 @@
 ﻿<nav class="navbar navbar-default" role="navigation">
     <div class="collapse navbar-collapse">
         <form class="navbar-form navbar-left">
-            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
+            <!--<button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>-->
+            <button type="button" class="btn btn-primary" data-bind="click: saveChanges" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
         </form>
     </div>
 </nav>
@@ -16,7 +17,8 @@
 <div class="tab-content win-auth-tabs">
     <div class="tab-pane fade in active" id="windowsAuthUsers">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: addUserSettings" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
+            <!--<button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: addUserSettings" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>-->
+            <button type="button" class="btn btn-primary" data-bind="click: addUserSettings" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
         </div>
         <div data-bind="foreach: setup().requiredUsers" class="win-auth-panels-container">
             <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">

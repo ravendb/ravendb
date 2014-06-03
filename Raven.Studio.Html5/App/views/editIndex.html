@@ -1,9 +1,10 @@
 ﻿<section id="editIndex">
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: save" title="Save the index (Alt+S)" accesskey="S">
-                <i class="fa fa-save"></i>
-            </button>
+            <!--<button class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: save" title="Save the index (Alt+S)" accesskey="S">-->
+                <button class="btn btn-primary" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: save" title="Save the index (Alt+S)" accesskey="S">
+                    <i class="fa fa-save"></i>
+                </button>
         </div>
 
         <div class="btn-group">
@@ -13,12 +14,19 @@
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
-                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addMap" title="Add a map function (Alt+M)" accesskey="M"><a href="#">Map</a></li>
-                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addReduce, visible: !hasExistingReduce()" title="Add a reduce function (Alt+R)" accesskey="R"><a href="#">Reduce</a></li>
-                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addField" title="Add a field (Alt+G)" accesskey="G"><a href="#">Field</a></li>
-                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addTransform, visible: !hasExistingTransform()" title="Add a transform function (Alt+T) - deprecated. Use Result Transformers instead" accesskey="T"><a class="text-muted" href="#">Transform</a></li>
-                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
-                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: function() {$root.editMaxIndexOutputsPerDocument(true); return false;}"><a href="#">Max Index Outputs</a></li>
+                <!--<li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addMap" title="Add a map function (Alt+M)" accesskey="M"><a href="#">Map</a></li>
+        <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addReduce, visible: !hasExistingReduce()" title="Add a reduce function (Alt+R)" accesskey="R"><a href="#">Reduce</a></li>
+        <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addField" title="Add a field (Alt+G)" accesskey="G"><a href="#">Field</a></li>
+        <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addTransform, visible: !hasExistingTransform()" title="Add a transform function (Alt+T) - deprecated. Use Result Transformers instead" accesskey="T"><a class="text-muted" href="#">Transform</a></li>
+        <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
+        <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: function() {$root.editMaxIndexOutputsPerDocument(true); return false;}"><a href="#">Max Index Outputs</a></li>-->
+                <li  data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addMap" title="Add a map function (Alt+M)" accesskey="M"><a href="#">Map</a></li>
+                <li data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addReduce, visible: !hasExistingReduce()" title="Add a reduce function (Alt+R)" accesskey="R"><a href="#">Reduce</a></li>
+                <li data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addField" title="Add a field (Alt+G)" accesskey="G"><a href="#">Field</a></li>
+                <li  data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addTransform, visible: !hasExistingTransform()" title="Add a transform function (Alt+T) - deprecated. Use Result Transformers instead" accesskey="T"><a class="text-muted" href="#">Transform</a></li>
+                <li  data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
+                <li  data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: function() {$root.editMaxIndexOutputsPerDocument(true); return false;}"><a href="#">Max Index Outputs</a></li>
+
             </ul>
         </div>
 
@@ -37,19 +45,23 @@
         </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
-            <a class="btn btn-default use-bootstrap-tooltip" title="Query the index (Alt+Q)" accesskey="Q" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: queryUrl }">
-                <i class="fa fa-play"></i>
-            </a>
-            <a class="btn btn-default use-bootstrap-tooltip" title="Navigate to index terms" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: termsUrl }">Terms</a>
+            <!--<a class="btn btn-default use-bootstrap-tooltip" title="Query the index (Alt+Q)" accesskey="Q" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: queryUrl }">-->
+                <a class="btn btn-default" title="Query the index (Alt+Q)" accesskey="Q" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: queryUrl }">
+                    <i class="fa fa-play"></i>
+                </a>
+            <!--<a class="btn btn-default use-bootstrap-tooltip" title="Navigate to index terms" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: termsUrl }">Terms</a>-->
+            <a class="btn btn-default" title="Navigate to index terms" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: termsUrl }">Terms</a>
         </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
-            <button class="btn btn-default use-bootstrap-tooltip" title="Refresh from server, discarding any unsaved changes" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshIndex">
-                <i class="fa fa-refresh"></i>
-            </button>
-            <button class="btn btn-danger use-bootstrap-tooltip" title="Delete index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteIndex">
-                <i class="fa fa-trash-o"></i>
-            </button>
+            <!--<button class="btn btn-default use-bootstrap-tooltip" title="Refresh from server, discarding any unsaved changes" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshIndex">-->
+                <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshIndex">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            <!--<button class="btn btn-danger use-bootstrap-tooltip" title="Delete index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteIndex">-->
+                <button class="btn btn-danger" title="Delete index"   data-bind="click: deleteIndex">
+                    <i class="fa fa-trash-o"></i>
+                </button>
         </div>
     </div>
 
@@ -57,7 +69,8 @@
         <br />
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
             <div class="form-group">
-                <label for="indexName" class="col-md-1 control-label use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" title=" index name (alt+i)">Name</label>
+                <!--<label for="indexName" class="col-md-1 control-label use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" title=" index name (alt+i)">Name</label>-->
+                <label for="indexName" class="col-md-1 control-label" data-trigger="hover" data-toggle="tooltip" data-placement="right" title=" index name (alt+i)">Name</label>
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
@@ -76,7 +89,8 @@
                         <div class="col-md-11">
                             <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, getFocus: true, lang:'ace/mode/ravenLinq'}"></pre>
                         </div>
-                        <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                        <!--<button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>-->
+                        <button type="button" class="close pull-left" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                     </div>
                     <br />
                 </div>
@@ -91,7 +105,8 @@
                         <div class="col-md-11">
                             <pre class="form-control map" data-bind="aceEditor: { code: reduce, lang:'ace/mode/ravenLinq' }"></pre>
                         </div>
-                        <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeReduce.bind($root)" aria-hidden="true" title="Remove the Reduce function from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                        <!--<button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeReduce.bind($root)" aria-hidden="true" title="Remove the Reduce function from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>-->
+                        <button type="button" class="close pull-left" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeReduce.bind($root)" aria-hidden="true" title="Remove the Reduce function from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                     </div>
                 </div>
             </div>
@@ -105,7 +120,8 @@
                         <div class="col-md-11">
                             <pre class="form-control map" data-bind="aceEditor: { code: transformResults, lang:'ace/mode/ravenLinq' }"></pre>
                         </div>
-                        <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeTransform.bind($root)" aria-hidden="true" title="Remove Transform Results from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                        <!--<button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeTransform.bind($root)" aria-hidden="true" title="Remove Transform Results from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>-->
+                        <button type="button" class="close pull-left" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeTransform.bind($root)" aria-hidden="true" title="Remove Transform Results from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                     </div>
                 </div>
             </div>
@@ -129,7 +145,8 @@
                                     </ul>
                                 </div>
                                 <div>
-                                    <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                                    <!--<button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>-->
+                                    <button type="button" class="close" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                                 </div>
                                 <div class="clearfix"></div>
                             </div>
@@ -157,10 +174,12 @@
                                     <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
                                         <input type="text" class="form-control fieldControl" data-bind="value: analyzer, attr: { title: analyzer }" />
                                     </div>
-                                    <label class="control-label col-md-5 use-bootstrap-tooltip fieldControl" title="The suggestion distance algorithm" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">Suggestion</label>
+                                    <!--<label class="control-label col-md-5 use-bootstrap-tooltip fieldControl" title="The suggestion distance algorithm" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">Suggestion</label>-->
+                                    <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">Suggestion</label>
                                     <div class="col-md-7 fieldControl">
                                         <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
-                                        <input type="number" class="form-control use-bootstrap-tooltip fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />
+                                        <!--<input type="number" class="form-control use-bootstrap-tooltip fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />-->
+                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />
                                     </div>
                                 </div>
                             </div>
@@ -181,7 +200,8 @@
                                     <input type="text" class="form-control" data-bind="value: name" placeholder="spatial field name" />
                                 </div>
                                 <div>
-                                    <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeSpatialField.bind($root, $index())" aria-hidden="true" title="Remove this spatial field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                                    <!--<button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeSpatialField.bind($root, $index())" aria-hidden="true" title="Remove this spatial field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>-->
+                                    <button type="button" class="close" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeSpatialField.bind($root, $index())" aria-hidden="true" title="Remove this spatial field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                                 </div>
                                 <div class="clearfix"></div>
                             </div>
@@ -238,7 +258,8 @@
                     <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument" min="0" />
                 </div>
                 <div class="col-md-1">
-                    <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                    <!--<button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>-->
+                    <button type="button" class="close pull-left" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                 </div>
             </div>
         </form>
