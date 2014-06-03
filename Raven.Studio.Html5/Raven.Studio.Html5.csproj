@@ -428,6 +428,7 @@
     <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
+    <Content Include="Content\app.css" />
     <Content Include="Content\app.min.css">
       <DependentUpon>app.less</DependentUpon>
     </Content>
@@ -1080,6 +1081,7 @@
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
     <Content Include="Content\bootstrap-theme.css.map" />
     <Content Include="Content\bootstrap.css.map" />
+    <Content Include="Content\app.css.map" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />

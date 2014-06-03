@@ -88,7 +88,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (IsSystemDatabase(id))
 				return GetMessageWithString("System Database document cannot be deleted", HttpStatusCode.Forbidden);
 
-			var configuration = DatabasesLandlord.CreateTenantConfiguration(id);
+			//get configuration even if the database is disabled
+			var configuration = DatabasesLandlord.CreateTenantConfiguration(id, true);
 
 			if (configuration == null)
 				return GetEmptyMessage();
