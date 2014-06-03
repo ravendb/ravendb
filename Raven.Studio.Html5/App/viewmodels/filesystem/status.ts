@@ -55,7 +55,7 @@ class status extends viewModelBase {
         // treat notifications events
         this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
-
+            console.warn("Notification: " + e.FileName + " status: " + this.getActionDescription(e.Action));
             switch (e.Action) {
                 case synchronizationAction.Enqueue:
                 case synchronizationAction.Start:
@@ -152,14 +152,6 @@ class status extends viewModelBase {
                 Type: e.Type,
                 Direction: e.SynchronizationDirection
             }, this.getActionDescription(e.Action)));
-            /*var match = ko.utils.arrayFirst(this.activity(), (item) => {
-                return item.fileName === e.FileName;
-            });
-
-            if (match) {
-                console.log("match");
-                match.Status = this.getActionDescription(e.Action);
-            }*/
         }
     }
 
