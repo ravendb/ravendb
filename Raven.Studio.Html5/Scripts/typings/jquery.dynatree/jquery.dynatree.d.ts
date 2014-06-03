@@ -77,6 +77,7 @@ interface DynaTreeNode {
     makeVisible(): boolean;
     move(targetNode: DynaTreeNode, mode: string): boolean;
     reload(force: boolean): void;
+    reloadChildren(callback?: (node: DynaTreeNode, isOk: boolean) => any): void;
     remove(): void;
     removeChildren(): void;
     render(useEffects: boolean, includeInvisible: boolean): void;

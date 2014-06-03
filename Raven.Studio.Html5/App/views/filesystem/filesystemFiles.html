@@ -53,6 +53,7 @@
                         <i class="fa fa-download"></i>
                     </button>
                 </div>
+                <span></span>
             </div>
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', contextMenuOptions: ['Delete'] }"></div>
         </div>
@@ -65,11 +66,11 @@
             </div>
             <div class="panel-body">
                 <div id="uploadQueue" >
-                    <button id="clearUploadQueue" class="btn btn-danger btn-sm use-bootstrap-tooltip pull-right" title="Clear queue" 
+                    <button id="clearUploadQueue" class="btn btn-default btn-sm use-bootstrap-tooltip pull-right" title="Clear queue" 
                             data-trigger="hover" data-toggle="tooltip" data-bind="click: $root.clearUploadQueue.bind($root)">
-                        <i class="fa fa-trash-o"></i>
+                        <i class="fa fa-ban"></i>
                     </button>
-                    <div class="row" style="height:210px; overflow-y:auto">
+                    <div style="height:230px; overflow-y:auto">
                         <table class="table table-striped table-hover">
                             <thead>
                                 <tr class="database-header">

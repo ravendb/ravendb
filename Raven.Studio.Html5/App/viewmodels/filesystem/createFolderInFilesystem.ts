@@ -74,6 +74,21 @@ class createFolderInFilesystem extends dialogViewModelBase {
         }
         return false;
     }
+
+    enterKeyPressed() {
+        var submit: boolean = this.folderName != null;
+
+        if (this.folderName())
+            submit = false;
+
+        submit = this.folderName() && this.folderName().trim() != "";
+
+        if (submit) {
+            super.enterKeyPressed();
+        }
+
+        return submit;
+    }
 }
 
 export = createFolderInFilesystem;
