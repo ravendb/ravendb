@@ -166,7 +166,7 @@
                                 <span data-bind="text: name"></span>
                                 <b class="caret"></b>
                             </a>
-                            <ul class="dropdown-menu" data-bind="foreach: databases">
+                            <ul class="dropdown-menu" data-bind="foreach: listedDatabases">
                                 <li>
                                     <a href="#" data-bind="text: name, click: $root.selectDatabase.bind($root, $data)"></a>
                                 </li>

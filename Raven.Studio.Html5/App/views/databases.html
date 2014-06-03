@@ -45,7 +45,14 @@
         </div>
         <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: $data.disabled }">
-                <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>
+                <h4>
+                    <!-- ko ifnot: $data.disabled -->
+                    <a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
+                    <!-- /ko -->
+                    <!-- ko if: $data.disabled -->
+                    <a data-bind="text: name"></a>
+                    <!-- /ko -->
+                </h4>
                 <!-- ko ifnot: $data.disabled -->
                 <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCount() + ' documents'"></span>
                 <!-- /ko -->

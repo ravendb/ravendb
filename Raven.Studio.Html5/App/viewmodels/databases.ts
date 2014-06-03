@@ -195,34 +195,20 @@ class databases extends viewModelBase {
         return fullEncryptionName;
     }
 
-    fetchStats(db: database) {
+    private fetchStats(db: database) {
         new getDatabaseStatsCommand(db)
             .execute()
             .done(result=> db.statistics(result));
     }
 
     selectDatabase(db: database) {
-        this.databases().forEach(d=> d.isSelected(d === db));
+        this.databases().forEach(d=> d.isSelected(d.name === db.name));
         db.activate();
         this.selectedDatabase(db);
     }
 
     goToDocuments(db: database) {
         router.navigate(appUrl.forDocuments(null, db));
-    }
-
-    filterDatabases(filter: string) {
-        var filterLower = filter.toLowerCase();
-        this.databases().forEach(d=> {
-            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
-            d.isVisible(isMatch);
-        });
-
-        var selectedDatabase = this.selectedDatabase();
-        if (selectedDatabase && !selectedDatabase.isVisible()) {
-            selectedDatabase.isSelected(false);
-            this.selectedDatabase(null);
-        }
     }
 
     deleteSelectedDatabase() {
@@ -232,30 +218,9 @@ class databases extends viewModelBase {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(db, this.systemDb);
                 confirmDeleteViewModel.deleteTask.done(()=> {
                     this.onDatabaseDeleted(db);
-                    this.selectedDatabase(null);
                 });
                 app.showDialog(confirmDeleteViewModel);
             });
-        }
-    }
-
-    onDatabaseDeleted(db: database) {
-        this.databases.remove(db);
-        if (this.databases.length === 0)
-            this.selectDatabase(this.systemDb);
-        else if (this.databases.contains(this.selectedDatabase()) === false) {
-            this.selectDatabase(this.databases().first());
-        }
-    }
-
-    changesApiFiredForDatabases(e: documentChangeNotificationDto) {
-        if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
-            (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
-            if (e.Type === documentChangeType.Delete) {
-                this.onDatabaseDeleted(new database(e.Id));
-            }
-
-            this.modelPolling();
         }
     }
 
@@ -270,9 +235,48 @@ class databases extends viewModelBase {
                 .done(() => {
                     require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
                         new toggleDatabaseDisabledCommand(db)
-                            .execute();
+                            .execute()
+                            .done(() => {
+                                db.isSelected(false);
+                                db.disabled(!db.disabled());
+                                this.selectDatabase(db);
+                            });
                     });
                 });
+        }
+    }
+
+    private filterDatabases(filter: string) {
+        var filterLower = filter.toLowerCase();
+        this.databases().forEach(d=> {
+            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
+            d.isVisible(isMatch);
+        });
+
+        var selectedDatabase = this.selectedDatabase();
+        if (selectedDatabase && !selectedDatabase.isVisible()) {
+            selectedDatabase.isSelected(false);
+            this.selectedDatabase(null);
+        }
+    }
+
+    private onDatabaseDeleted(db: database) {
+        this.databases.remove(db);
+        if (this.databases().length === 0)
+            this.selectDatabase(this.systemDb);
+        else if (this.databases.contains(this.selectedDatabase()) === false) {
+            this.selectDatabase(this.databases().first());
+        }
+    }
+
+    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
+        if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
+            (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
+            if (e.Type === documentChangeType.Delete) {
+                this.onDatabaseDeleted(new database(e.Id));
+            }
+
+            this.modelPolling();
         }
     }
 }

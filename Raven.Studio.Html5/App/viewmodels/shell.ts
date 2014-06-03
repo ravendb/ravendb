@@ -65,7 +65,8 @@ class shell extends viewModelBase {
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
     refreshTimeoutFlag: boolean = true;
-    isDatabaseDisabled = ko.observable<boolean>(false);
+    isDatabaseDisabled: KnockoutComputed<boolean>;
+    listedDatabases: KnockoutComputed<database[]>;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
@@ -108,6 +109,19 @@ class shell extends viewModelBase {
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+        this.isDatabaseDisabled = ko.computed(() => {
+            var activeDb = this.activeDatabase();
+            return !!activeDb ? activeDb.disabled() : false;
+        });
+
+        this.listedDatabases = ko.computed(() => {
+            var currentDb = this.activeDatabase();
+            if (!!currentDb) {
+                return this.databases().filter(database => database.name != currentDb.name);
+            }
+            return this.databases();
+        });
     }
 
     activate(args: any) {
@@ -189,8 +203,7 @@ class shell extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        debugger;
-        this.isDatabaseDisabled(this.activeDatabase().disabled());
+        
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -222,8 +235,9 @@ class shell extends viewModelBase {
             systemDatabase.activate();
         } else {
             var urlDatabase = appUrl.getDatabase();
-            if (urlDatabase != null) {
-                urlDatabase.activate();
+            var newSelectedDb;
+            if (urlDatabase != null && (newSelectedDb = this.databases.first(x => x.name == urlDatabase.name)) != null) {
+                newSelectedDb.activate();
             } else {
                 this.databases.first(x => x.isVisible()).activate();
             }
@@ -253,10 +267,6 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
-
-                var activeDatabaseName = appUrl.getDatabase().name;
-
-            debugger;
         });
 
         this.filesystemsLoadedTask = new getFilesystemsCommand()
@@ -378,6 +388,7 @@ class shell extends viewModelBase {
             if (shell.currentDbChangesApi()) {
                 shell.currentDbChangesApi().dispose();
             }
+
             shell.currentDbChangesApi(new changesApi(newDb));
 
             shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
@@ -444,7 +455,6 @@ class shell extends viewModelBase {
 
     selectDatabase(db: database) {
         if (db.name != this.activeDatabase().name) {
-            this.isDatabaseDisabled(db.disabled());
             db.activate();
             var updatedUrl = appUrl.forCurrentPage(db);
             this.navigate(updatedUrl);

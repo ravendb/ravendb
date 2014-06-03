@@ -12,7 +12,6 @@ class database extends resource {
 
 	activate() {
         ko.postbox.publish("ActivateDatabase", this);
-	    debugger;
 	}
 
     static getNameFromUrl(url: string) {
