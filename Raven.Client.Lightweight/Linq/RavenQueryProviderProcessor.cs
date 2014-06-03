@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
@@ -1459,12 +1460,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var identityProperty = documentQuery.DocumentConvention.GetIdentityProperty(typeof(T));
 			if (identityProperty != null && identityProperty.Name == expression.Path)
 			{
-				if (identityProperty.PropertyType == typeof(int) ||
-					identityProperty.PropertyType == typeof(long) ||
-					identityProperty.PropertyType == typeof(double) ||
-					identityProperty.PropertyType == typeof(float) ||
-					identityProperty.PropertyType == typeof(Guid) ||
-					identityProperty.PropertyType == typeof(decimal))
+				if (identityProperty.Type() == typeof(int) ||
+					identityProperty.Type() == typeof(long) ||
+					identityProperty.Type() == typeof(double) ||
+					identityProperty.Type() == typeof(float) ||
+					identityProperty.Type() == typeof(Guid) ||
+					identityProperty.Type() == typeof(decimal))
 				{
 					throw new NotSupportedException("You cannot issue range queries on a identity property that is of a numeric type.\r\n" +
 					                                "RavenDB numeric ids are purely client side, on the server, they are always strings, " +

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 #if !NETFX_CORE
 using System.Collections.Generic;
@@ -449,7 +450,7 @@ namespace Raven.Client.Document
             value.OriginalValue = jsonDocument.DataAsJson;
             var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
             var type = entity.GetType();
-            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            foreach (var property in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var prop = property;
                 if (prop.DeclaringType != type && prop.DeclaringType != null)
@@ -458,9 +459,9 @@ namespace Raven.Client.Document
                     if (prop == null)
                         prop = property; // shouldn't happen ever...
                 }
-                if (!prop.CanWrite || !prop.CanRead || prop.GetIndexParameters().Length != 0)
+                if (!prop.CanWrite() || !prop.CanRead() || prop.GetIndexParameters().Length != 0)
                     continue;
-                prop.SetValue(entity, prop.GetValue(newEntity, null), null);
+                prop.SetValue(entity, prop.GetValue(newEntity));
             }
         }
 

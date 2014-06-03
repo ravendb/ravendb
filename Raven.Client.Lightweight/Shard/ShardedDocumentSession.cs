@@ -3,8 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Reflection;
 #if !NETFX_CORE
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -807,11 +807,10 @@ namespace Raven.Client.Shard
 				value.OriginalValue = jsonDocument.DataAsJson;
 				var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
 				foreach (
-					var property in
-						entity.GetType().GetProperties().Where(
-							property => property.CanWrite && property.CanRead && property.GetIndexParameters().Length == 0))
+					var property in ReflectionUtil.GetPropertiesAndFieldsFor(entity.GetType(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+					.Where(property => property.CanWrite() && property.CanRead() && property.GetIndexParameters().Length == 0))
 				{
-					property.SetValue(entity, property.GetValue(newEntity, null), null);
+					property.SetValue(entity, property.GetValue(newEntity));
 				}
 				return true;
 			});

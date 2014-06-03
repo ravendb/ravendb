@@ -12,7 +12,7 @@ namespace Raven.Client
 {
 	public abstract class Convention
 	{
-		protected Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
+		protected Dictionary<Type, MemberInfo> idPropertyCache = new Dictionary<Type, MemberInfo>();
 
 		/// <summary>
 		/// How should we behave in a replicated environment when we can't 
@@ -34,7 +34,7 @@ namespace Raven.Client
 		/// Gets or sets the function to find the identity property.
 		/// </summary>
 		/// <value>The find identity property.</value>
-		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
+		public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
 
 		/// <summary>
 		/// Gets or sets the identity parts separator used by the HiLo generators
@@ -52,9 +52,9 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="type">The type.</param>
 		/// <returns></returns>
-		public PropertyInfo GetIdentityProperty(Type type)
+		public MemberInfo GetIdentityProperty(Type type)
 		{
-			PropertyInfo info;
+			MemberInfo info;
 			var currentIdPropertyCache = idPropertyCache;
 			if (currentIdPropertyCache.TryGetValue(type, out info))
 				return info;
@@ -67,7 +67,7 @@ namespace Raven.Client
 				identityProperty = propertyInfo ?? identityProperty;
 			}
 
-			idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
+			idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
 			{
 				{type, identityProperty}
 			};
@@ -75,9 +75,9 @@ namespace Raven.Client
 			return identityProperty;
 		}
 
-		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
+		private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
 		{
-			foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+			foreach (var propertyInfo in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
 			{
 				yield return propertyInfo;
 			}

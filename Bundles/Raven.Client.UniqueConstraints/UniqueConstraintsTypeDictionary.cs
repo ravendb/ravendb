@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using Raven.Client.Document;
+
 namespace Raven.Client.UniqueConstraints
 {
 	using System.Collections.Concurrent;
@@ -22,7 +24,7 @@ namespace Raven.Client.UniqueConstraints
 		protected virtual ConstraintInfo[] GetUniqueProperties(Type type)
 		{
 			var attrType = typeof(UniqueConstraintAttribute);
-			return type.GetProperties()
+			return ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
 				.Where(p => Attribute.IsDefined(p, attrType))
 				.Select(pi => new ReflectedConstraintInfo(pi, (UniqueConstraintAttribute)Attribute.GetCustomAttribute(pi, attrType)))
 				.ToArray();
