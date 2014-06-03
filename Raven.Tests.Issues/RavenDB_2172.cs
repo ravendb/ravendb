@@ -8,15 +8,17 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Client.UniqueConstraints;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+using Raven.Tests.Bundles.UniqueConstraints;
 
 using Xunit;
 
+using User = Raven.Tests.Common.Dto.User;
+
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2172 : RavenTest
+	public class RavenDB_2172 : UniqueConstraintsTest
 	{
 		private class UserIndex : AbstractIndexCreationTask<User>
 		{
@@ -24,11 +26,11 @@ namespace Raven.Tests.Issues
 			{
 				Map = users => from user in users
 							   select new
-							          {
-								          user.Active,
+									  {
+										  user.Active,
 										  user.Age,
 										  user.Name
-							          };
+									  };
 
 				StoreAllFields(FieldStorage.Yes);
 			}
@@ -49,6 +51,7 @@ namespace Raven.Tests.Issues
 
 			public bool Active;
 
+			[UniqueConstraint]
 			public int Age;
 
 			public string Name;
@@ -161,6 +164,28 @@ namespace Raven.Tests.Issues
 					Assert.Equal(20, user.Age);
 					Assert.Equal("Name2", user.Name);
 				}
+			}
+		}
+
+		[Fact]
+		public void UniqueConstraintShouldWorkOnFields()
+		{
+			using (var session = DocumentStore.OpenSession())
+			{
+				session.Store(new UserWithIdAsField { Active = true, Age = 10, Name = "Name1" });
+				session.Store(new UserWithIdAsField { Active = false, Age = 20, Name = "Name2" });
+
+				session.SaveChanges();
+			}
+
+			using (var session = DocumentStore.OpenSession())
+			{
+				var user = session.LoadByUniqueConstraint<UserWithIdAsField>(x => x.Age, 10);
+
+				Assert.Equal("UserWithIdAsFields/1", user.Id);
+				Assert.Equal(true, user.Active);
+				Assert.Equal(10, user.Age);
+				Assert.Equal("Name1", user.Name);
 			}
 		}
 	}
