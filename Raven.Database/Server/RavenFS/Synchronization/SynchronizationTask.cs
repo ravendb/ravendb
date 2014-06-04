@@ -22,6 +22,7 @@ using Raven.Database.Server.RavenFS.Util;
 using SynchronizationClient = Raven.Client.RavenFS.RavenFileSystemClient.SynchronizationClient;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
+using System.Collections.Concurrent;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -36,6 +37,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly SynchronizationQueue synchronizationQueue;
 		private readonly SynchronizationStrategy synchronizationStrategy;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
+
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
+            new ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>>();
 
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(10));
 		private int failedAttemptsToGetDestinationsConfig;
@@ -65,6 +69,54 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			get { return synchronizationQueue; }
 		}
+
+        public void IncomingSynchronizationStarted(string fileName, ServerInfo sourceServerInfo, Guid sourceFileETag, SynchronizationType type)
+        {
+            var activeForDestination = activeIncomingSynchronizations.GetOrAdd(sourceServerInfo.FileSystemUrl,
+                                                       new ConcurrentDictionary<string, SynchronizationDetails>());
+
+            var syncDetails = new SynchronizationDetails()
+            {
+                DestinationUrl = sourceServerInfo.FileSystemUrl,
+                FileETag = sourceFileETag,
+                FileName = fileName,
+                Type = type
+            };
+            if (activeForDestination.TryAdd(fileName, syncDetails))
+            {
+                Log.Debug("File '{0}' with ETag {1} was added to an incomign active synchronization queue for a destination {2}",
+                          fileName,
+                          sourceFileETag, sourceServerInfo.FileSystemUrl);
+            }
+        }
+
+        public void IncomingSynchronizationFinished(string fileName, ServerInfo sourceServerInfo, Guid sourceFileETag)
+        {
+            ConcurrentDictionary<string, SynchronizationDetails> activeSourceTasks;
+
+            if (activeIncomingSynchronizations.TryGetValue(sourceServerInfo.FileSystemUrl, out activeSourceTasks) == false)
+            {
+                Log.Warn("Could not get an active synchronization queue for {0}", sourceServerInfo.FileSystemUrl);
+                return;
+            }
+
+            SynchronizationDetails removingItem;
+            if (activeSourceTasks.TryRemove(fileName, out removingItem))
+            {
+                Log.Debug("File '{0}' with ETag {1} was removed from an active synchronization queue for a destination {2}",
+                          fileName, sourceFileETag, sourceServerInfo);
+            }
+        }
+
+        public IEnumerable<SynchronizationDetails> IncomingQueue
+        {
+            get
+            {
+                return from destinationActive in activeIncomingSynchronizations
+                       from activeFile in destinationActive.Value
+                       select activeFile.Value;
+            }
+        }
 
 		private void InitializeTimer()
 		{
