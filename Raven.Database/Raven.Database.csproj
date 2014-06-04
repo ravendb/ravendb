@@ -440,7 +440,6 @@
     <Compile Include="Server\RavenFS\Synchronization\DeleteWorkItem.cs" />
     <Compile Include="Server\RavenFS\Synchronization\FileHeaderNameEqualityComparer.cs" />
     <Compile Include="Server\RavenFS\Synchronization\FileLockManager.cs" />
-    <Compile Include="Server\RavenFS\Synchronization\IncomingSychronizationWorkItem.cs" />
     <Compile Include="Server\RavenFS\Synchronization\MetadataUpdateWorkItem.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Multipart\MultipartSyncStreamProvider.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SeedFilePart.cs" />
