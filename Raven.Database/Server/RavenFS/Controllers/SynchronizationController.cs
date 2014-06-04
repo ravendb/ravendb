@@ -96,7 +96,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				});
 
                 SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.ContentUpdate);
-
 				PublishSynchronizationNotification(fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
@@ -204,7 +203,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				// we want to execute those operations in a single batch but we also have to ensure that
 				// Raven/Synchronization/Sources/sourceServerId config is modified only by one finishing synchronization at the same time
 				SynchronizationFinishLocks.GetOrAdd(sourceServer.Id, new ReaderWriterLockSlim()).EnterWriteLock();
-
                 SynchronizationTask.IncomingSynchronizationFinished(fileName, sourceServer, sourceFileETag);
 
 				Storage.Batch(accessor =>
@@ -283,7 +281,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				});
 
                 SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.MetadataUpdate);
-
 				PublishSynchronizationNotification(fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
@@ -353,7 +350,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				});
 
                 SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.Delete);
-
 				PublishSynchronizationNotification(fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
@@ -439,7 +435,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				});
 
                 SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.Rename);
-
 				PublishSynchronizationNotification(fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
