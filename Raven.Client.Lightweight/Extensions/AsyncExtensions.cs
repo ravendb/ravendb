@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Raven.Client.Util;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.Client.FileSystem.Extensions
+namespace Raven.Client.Extensions
 {
 	public static class AsyncExtensions
 	{

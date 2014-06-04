@@ -6,6 +6,7 @@ using Raven.Abstractions.OAuth;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -183,9 +184,7 @@ namespace Raven.Client.FileSystem
                 return;
 
             var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
-            if (authHeaders == null ||
-                (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false)
-                )
+            if (authHeaders == null || (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false))
             {
                 // we are trying to do windows auth, but we didn't get the windows auth headers
                 throw new SecurityException(

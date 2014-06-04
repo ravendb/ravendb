@@ -140,9 +140,9 @@
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
-    <Compile Include="FileSystem\Extensions\AsyncExtensions.cs" />
+    <Compile Include="Extensions\AsyncExtensions.cs" />
     <Compile Include="FileSystem\Extensions\ExceptionExtensions.cs" />
-    <Compile Include="FileSystem\ListenableStream.cs" />
+    <Compile Include="Util\ListenableStream.cs" />
     <Compile Include="FileSystem\AsyncFilesServerClient.cs" />
     <Compile Include="FileSystem\Shard\DefaultShardResolutionStrategy.cs" />
     <Compile Include="FileSystem\Shard\SequentialShardAccessStrategy.cs" />
