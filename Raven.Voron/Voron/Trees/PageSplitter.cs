@@ -9,7 +9,7 @@ namespace Voron.Trees
     {
         private readonly Cursor _cursor;
         private readonly int _len;
-        private readonly Slice _newKey;
+        private readonly IMemorySlice _newKey;
         private readonly NodeFlags _nodeType;
         private readonly ushort _nodeVersion;
         private readonly Page _page;
@@ -21,7 +21,7 @@ namespace Voron.Trees
 
         public PageSplitter(Transaction tx,
             Tree tree,
-            Slice newKey,
+            IMemorySlice newKey,
             int len,
             long pageNumber,
             NodeFlags nodeType,
@@ -112,7 +112,7 @@ namespace Voron.Trees
 					rightPage.AddPageRefNode(0, PrefixedSlice.BeforeAllKeys, node->PageNumber);
                     pos = AddNodeToPage(rightPage, 1);
 
-                    AddSeparatorToParentPage(rightPage.PageNumber, _page.GetFullNodeKey(node));
+                    AddSeparatorToParentPage(rightPage.PageNumber, _page.GetNodeKey(node));
 
                     _page.RemoveNode(_page.NumberOfEntries - 1);
                 }
@@ -159,11 +159,11 @@ namespace Voron.Trees
             }
 
             NodeHeader* currentNode = _page.GetNode(splitIndex);
-            var currentKey = _page.GetFullNodeKey(currentNode);
+            var currentKey = _page.GetNodeKey(currentNode);
 
             // here the current key is the separator key and can go either way, so 
             // use newPosition to decide if it stays on the left node or moves to the right
-            Slice seperatorKey;
+            IMemorySlice seperatorKey;
             if (currentIndex == splitIndex && newPosition)
             {
                 seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
@@ -186,7 +186,7 @@ namespace Voron.Trees
                 }
                 else
                 {
-					rightPage.CopyNodeDataToEndOfPage(node, rightPage.ConvertToPrefixedKey(_page.GetFullNodeKey(node), rightPage.NumberOfEntries));
+					rightPage.CopyNodeDataToEndOfPage(node, rightPage.ConvertToPrefixedKey(_page.GetNodeKey(node), rightPage.NumberOfEntries));
                 }
             }
             _page.Truncate(_tx, splitIndex);
@@ -206,7 +206,7 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private void AddSeparatorToParentPage(long pageNumber, Slice seperatorKey)
+        private void AddSeparatorToParentPage(long pageNumber, IMemorySlice seperatorKey)
         {
 	        var prefixedSeparatorKey = _parentPage.ConvertToPrefixedKey(seperatorKey, _parentPage.LastSearchPosition);
 

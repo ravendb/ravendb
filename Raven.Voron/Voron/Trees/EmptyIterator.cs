@@ -10,7 +10,7 @@ namespace Voron.Trees
 			return false;
 		}
 
-		public Slice CurrentKey
+		public IMemorySlice CurrentKey
 		{
 			get { throw new InvalidOperationException("No current page"); }
 		}

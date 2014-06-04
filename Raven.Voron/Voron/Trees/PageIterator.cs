@@ -7,7 +7,7 @@ namespace Voron.Trees
 	public unsafe class PageIterator : IIterator
 	{
 		private readonly Page _page;
-		private Slice _currentKey = new Slice(SliceOptions.Key);
+		private IMemorySlice _currentKey = new Slice(SliceOptions.Key);
 
 		public PageIterator(Page page)
 		{
@@ -24,7 +24,7 @@ namespace Voron.Trees
 			var current = _page.Search(key);
 			if (current == null)
 				return false;
-			_currentKey = _page.GetFullNodeKey(current);
+			_currentKey = _page.GetNodeKey(current);
 			return this.ValidateCurrentKey(current, _page);
 		}
 
@@ -39,7 +39,7 @@ namespace Voron.Trees
 		}
 
 
-		public Slice CurrentKey
+		public IMemorySlice CurrentKey
 		{
 			get
 			{
@@ -88,7 +88,7 @@ namespace Voron.Trees
 			{
 				return false;
 			}
-			_currentKey = _page.GetFullNodeKey(current);
+			_currentKey = _page.GetNodeKey(current);
 			return true;
 		}
 

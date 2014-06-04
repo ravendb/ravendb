@@ -7,7 +7,7 @@ namespace Voron.Trees
 	public interface IIterator : IDisposable
 	{
 		bool Seek(Slice key);
-		Slice CurrentKey { get; }
+		IMemorySlice CurrentKey { get; }
 		int GetCurrentDataSize();
 		Slice RequiredPrefix { get; set; }
 		Slice MaxKey { get; set; }

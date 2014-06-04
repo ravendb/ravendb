@@ -141,7 +141,7 @@ namespace Voron.Trees
 			}
 		}
 
-		internal byte* DirectAdd(Slice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
+		internal byte* DirectAdd(IMemorySlice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
 		{
 			Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
 
@@ -163,7 +163,7 @@ namespace Voron.Trees
 			{
 				var node = page.GetNode(page.LastSearchPosition);
 
-				Debug.Assert(page.GetFullNodeKey(node).Equals(key));
+				Debug.Assert(page.GetNodeKey(node).Equals(key));
 
 				shouldGoToOverflowPage = _tx.DataPager.ShouldGoToOverflowPage(len);
 
@@ -300,7 +300,7 @@ namespace Voron.Trees
 			}
 		}
 
-		internal Page FindPageFor(Slice key, out Lazy<Cursor> cursor)
+		internal Page FindPageFor(IMemorySlice key, out Lazy<Cursor> cursor)
 		{
 			Page p;
 
@@ -312,7 +312,7 @@ namespace Voron.Trees
 			return SearchForPage(key, ref cursor);
 		}
 
-	    private Page SearchForPage(Slice key, ref Lazy<Cursor> cursor)
+	    private Page SearchForPage(IMemorySlice key, ref Lazy<Cursor> cursor)
 	    {
 			var p = _tx.GetReadOnlyPage(State.RootPageNumber);
 	        var c = new Cursor();
@@ -382,8 +382,8 @@ namespace Voron.Trees
 	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
 	        {
 	            Number = p.PageNumber,
-	            FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetFullNodeKey(0),
-	            LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetFullNodeKey(p.NumberOfEntries - 1),
+	            FirstKey = leftmostPage == true ? PrefixedSlice.BeforeAllKeys : p.GetNodeKey(0),
+	            LastKey = rightmostPage == true ? PrefixedSlice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
 	        };
 	        var cur = c.Pages.First;
 	        int pos = foundPage.CursorPath.Length - 1;
@@ -396,7 +396,7 @@ namespace Voron.Trees
 			_tx.AddRecentlyFoundPage(this, foundPage);
 	    }
 
-	    private bool TryUseRecentTransactionPage(Slice key, out Lazy<Cursor> cursor, out Page page)
+	    private bool TryUseRecentTransactionPage(IMemorySlice key, out Lazy<Cursor> cursor, out Page page)
 		{
 			page = null;
 			cursor = null;
@@ -465,7 +465,7 @@ namespace Voron.Trees
 			return page;
 		}
 
-		public void Delete(Slice key, ushort? version = null)
+		public void Delete(IMemorySlice key, ushort? version = null)
 		{
 			if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot delete a value in a read only transaction");
@@ -520,7 +520,7 @@ namespace Voron.Trees
 			var p = FindPageFor(key, out lazy);
 			var node = p.Search(key);
 
-			if (node == null || p.GetFullNodeKey(node).Compare(key) != 0)
+			if (node == null || p.GetNodeKey(node).Compare(key) != 0)
 				return -1;
 
 		    return NodeHeader.GetDataSize(_tx, node);
@@ -532,7 +532,7 @@ namespace Voron.Trees
 			var p = FindPageFor(key, out lazy);
 			var node = p.Search(key);
 
-			if (node == null || p.GetFullNodeKey(node).Compare(key) != 0)
+			if (node == null || p.GetNodeKey(node).Compare(key) != 0)
 				return 0;
 
 			return node->Version;
@@ -547,7 +547,7 @@ namespace Voron.Trees
 			if (node == null)
 				return null;
 
-			var foundKey = p.GetFullNodeKey(node);
+			var foundKey = p.GetNodeKey(node);
 
 			if (foundKey.Compare(key) != 0)
 				return null;
@@ -594,7 +594,7 @@ namespace Voron.Trees
 						results.Add(childTreeHeader->RootPageNumber);
 
 						// this is a multi value
-						var tree = OpenOrCreateMultiValueTree(_tx, p.GetFullNodeKey(node), node);
+						var tree = OpenOrCreateMultiValueTree(_tx, p.GetNodeKey(node), node);
 						results.AddRange(tree.AllPages());
 					}
 				}
@@ -608,7 +608,7 @@ namespace Voron.Trees
 		}
 
 
-		private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
+		private void CheckConcurrency(IMemorySlice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
 		{
 			if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
 				throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name));
@@ -633,7 +633,7 @@ namespace Voron.Trees
 		}
 
 		private bool TryOverwriteOverflowPages(TreeMutableState treeState, NodeHeader* updatedNode,
-													  Slice key, int len, ushort? version, out byte* pos)
+													  IMemorySlice key, int len, ushort? version, out byte* pos)
 		{
 			if (updatedNode->Flags == NodeFlags.PageRef &&
 				_tx.Id <= _tx.Environment.OldestTransaction) // ensure MVCC - do not overwrite if there is some older active transaction that might read those overflows

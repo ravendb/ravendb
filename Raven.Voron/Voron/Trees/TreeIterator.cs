@@ -12,7 +12,7 @@ namespace Voron.Trees
 		private readonly Transaction _tx;
 		private Cursor _cursor;
 		private Page _currentPage;
-		private Slice _currentKey = new Slice(SliceOptions.Key);
+		private IMemorySlice _currentKey = new Slice(SliceOptions.Key);
 
 		public TreeIterator(Tree tree, Transaction tx)
 		{
@@ -35,7 +35,7 @@ namespace Voron.Trees
 			var node = _currentPage.Search(key);
 			if (node != null)
 			{
-				_currentKey = _currentPage.GetFullNodeKey(node);
+				_currentKey = _currentPage.GetNodeKey(node);
 				return this.ValidateCurrentKey(Current, _currentPage);
 			}
 
@@ -47,7 +47,7 @@ namespace Voron.Trees
 			return MoveNext();
 		}
 
-		public Slice CurrentKey
+		public IMemorySlice CurrentKey
 		{
 			get
 			{
@@ -103,7 +103,7 @@ namespace Voron.Trees
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
-					_currentKey = _currentPage.GetFullNodeKey(current);
+					_currentKey = _currentPage.GetNodeKey(current);
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -133,7 +133,7 @@ namespace Voron.Trees
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
-					_currentKey = _currentPage.GetFullNodeKey(current);
+					_currentKey = _currentPage.GetNodeKey(current);
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -195,13 +195,13 @@ namespace Voron.Trees
 		{
 			if (self.RequiredPrefix != null)
 			{
-				var currentKey = page.GetFullNodeKey(node);
+				var currentKey = page.GetNodeKey(node);
 				if (currentKey.StartsWith(self.RequiredPrefix) == false)
 					return false;
 			}
 			if (self.MaxKey != null)
 			{
-				var currentKey = page.GetFullNodeKey(node);
+				var currentKey = page.GetNodeKey(node);
 				if (currentKey.Compare(self.MaxKey) >= 0)
 					return false;
 			}

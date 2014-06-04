@@ -1,27 +1,27 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
 using Voron.Impl;
-using Voron.Trees;
 
 namespace Voron
 {
 	public unsafe delegate int SliceComparer(byte* a, byte* b, int size);
 
-	public unsafe class Slice
+	public unsafe class Slice : AbstractMemorySlice
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
 		public static Slice Empty = new Slice(new byte[0]);
 
 		private ushort _size;
-		private readonly byte[] _array;
-		private byte* _pointer;
+		internal readonly byte[] _array;
+		internal byte* _pointer;
 
-		public SliceOptions Options;
+		public override ushort Size
+		{
+			get { return _size; }
+		}
 
-		public ushort Size
+		public override ushort KeyLength
 		{
 			get { return _size; }
 		}
@@ -65,11 +65,6 @@ namespace Voron
 			Options = SliceOptions.Key;
 			_pointer = null;
 			_array = key;
-		}
-
-		public bool Equals(Slice other)
-		{
-			return Compare(other) == 0;
 		}
 
 		public override bool Equals(object obj)
@@ -137,87 +132,60 @@ namespace Voron
 			return new string((sbyte*)_pointer, 0, _size, Encoding.UTF8);
 		}
 
-		public int Compare(Slice other)
+		protected override int CompareData(IMemorySlice other, SliceComparer cmp, ushort size)
 		{
-			Debug.Assert(Options == SliceOptions.Key);
-			Debug.Assert(other.Options == SliceOptions.Key);
+			var otherSlice = other as Slice;
 
-			var r = CompareData(other, NativeMethods.memcmp, Math.Min(Size, other.Size));
-			if (r != 0)
-				return r;
-			return Size - other.Size;
+			if (otherSlice != null)
+				return CompareSlices(otherSlice, cmp, size);
+
+			var prefixedSlice = other as PrefixedSlice;
+
+			if (prefixedSlice != null)
+			{
+				var prefixLength = Math.Min(prefixedSlice.Header.PrefixUsage, size);
+
+				var r = prefixedSlice.ComparePrefixWithNonPrefixedData(this, cmp, 0, prefixLength);
+
+				if (r != 0)
+					return r * -1;
+
+				// compare non prefixed data
+
+				size -= prefixLength;
+
+				r = prefixedSlice.CompareNonPrefixedData(0, this, prefixLength, cmp, size);
+
+				return r * -1;
+			}
+
+			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
-		public bool StartsWith(Slice other)
-		{
-			if (Size < other.Size)
-				return false;
-			return CompareData(other, NativeMethods.memcmp, other.Size) == 0;
-		}
-
-		private int CompareData(Slice other, SliceComparer cmp, ushort size)
+		internal int CompareSlices(Slice otherSlice, SliceComparer cmp, int size, int offset = 0, int otherOffset = 0)
 		{
 			if (_array != null)
 			{
 				fixed (byte* a = _array)
 				{
-					if (other._array != null)
+					if (otherSlice._array != null)
 					{
-						fixed (byte* b = other._array)
+						fixed (byte* b = otherSlice._array)
 						{
-							return cmp(a, b, size);
+							return cmp(a + offset, b + otherOffset, size);
 						}
 					}
-                    return cmp(a, other._pointer, size);
+					return cmp(a + offset, otherSlice._pointer + otherOffset, size);
 				}
 			}
-			if (other._array != null)
+			if (otherSlice._array != null)
 			{
-				fixed (byte* b = other._array)
+				fixed (byte* b = otherSlice._array)
 				{
-                    return cmp(_pointer, b, size);
+					return cmp(_pointer + offset, b + otherOffset, size);
 				}
 			}
-            return cmp(_pointer, other._pointer, size);
-		}
-
-		private class SlicePrefixMatcher
-		{
-			private readonly int _maxPrefixLength;
-
-			public SlicePrefixMatcher(int maxPrefixLength)
-			{
-				_maxPrefixLength = maxPrefixLength;
-			}
-
-			public int MatchedBytes { get; private set; }
-
-			public int MatchPrefix(byte* a, byte* b, int size)
-			{
-				MatchedBytes = 0;
-
-				for (var i = 0; i < _maxPrefixLength; i++)
-				{
-					if (*a == *b)
-						MatchedBytes++;
-					else
-						break;
-
-					a++;
-					b++;
-				}
-
-				return 0;
-			} 
-		}
-
-		public int FindPrefixSize(Slice other)
-		{
-			var slicePrefixMatcher = new SlicePrefixMatcher(Math.Min(Size, other.Size));
-
-			CompareData(other, slicePrefixMatcher.MatchPrefix, 0);
-
-			return slicePrefixMatcher.MatchedBytes;
+			return cmp(_pointer + offset, otherSlice._pointer + otherOffset, size);
 		}
 
 		public static implicit operator Slice(string s)
@@ -225,7 +193,7 @@ namespace Voron
 			return new Slice(Encoding.UTF8.GetBytes(s));
 		}
 
-		public void CopyTo(byte* dest)
+		public override void CopyTo(byte* dest)
 		{
 			if (_array == null)
 			{
@@ -238,7 +206,7 @@ namespace Voron
 			}
 		}
 
-		public void CopyTo(byte[] dest)
+		public override void CopyTo(byte[] dest)
 		{
 			if (_array == null)
 			{
@@ -297,12 +265,25 @@ namespace Voron
 			return new Slice(buffer);
 		}
 
-	    public ValueReader CreateReader()
+	    public override ValueReader CreateReader()
 	    {
             if(_array != null)
                 return new ValueReader(_array, _size);
 
 	        return new ValueReader(_pointer, _size);
 	    }
+
+		public override Slice Skip(ushort bytesToSkip)
+		{
+			if (_pointer != null)
+				return new Slice(_pointer + bytesToSkip, (ushort)(_size - bytesToSkip));
+
+			var toAllocate = _size - bytesToSkip;
+			var array = new byte[toAllocate];
+
+			Buffer.BlockCopy(_array, bytesToSkip, array, 0, toAllocate);
+
+			return new Slice(array);
+		}
 	}
 }

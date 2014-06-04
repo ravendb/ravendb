@@ -231,7 +231,7 @@ namespace Voron
                 tx.FreePage(page);
             }
 
-            tx.State.Root.Delete(name);
+            tx.State.Root.Delete((Slice) name);
 
             tx.RemoveTree(name);
         }

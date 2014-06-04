@@ -277,23 +277,23 @@ namespace Voron.Trees
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    private Slice GetActualKey(Page page, int pos)
+	    private IMemorySlice GetActualKey(Page page, int pos)
 	    {
 		    NodeHeader* _;
 		    return GetActualKey(page, pos, out _);
 	    }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Slice GetActualKey(Page page, int pos, out NodeHeader* node)
+        private IMemorySlice GetActualKey(Page page, int pos, out NodeHeader* node)
         {
             node = page.GetNode(pos);
-			var key = page.GetFullNodeKey(node);
+			var key = page.GetNodeKey(node);
 			while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
-				key = page.GetFullNodeKey(node);
+				key = page.GetNodeKey(node);
             }
 
             return key;

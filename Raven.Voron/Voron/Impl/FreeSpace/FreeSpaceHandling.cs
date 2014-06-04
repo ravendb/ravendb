@@ -34,9 +34,9 @@ namespace Voron.Impl.FreeSpace
 			int numberOfNeededFullSections = num / NumberOfPagesInSection;
 			int numberOfExtraBitsNeeded = num % NumberOfPagesInSection;
 			int foundSections = 0;
-			Slice startSection = null;
+			IMemorySlice startSection = null;
 			long? startSectionId = null;
-			var sections = new List<Slice>();
+			var sections = new List<IMemorySlice>();
 
 			do
 			{
@@ -127,7 +127,7 @@ namespace Voron.Impl.FreeSpace
 			return null;
 		}
 
-		private static void ResetSections(ref int foundSections, List<Slice> sections, ref Slice startSection, ref long? startSectionId)
+		private static void ResetSections(ref int foundSections, List<IMemorySlice> sections, ref IMemorySlice startSection, ref long? startSectionId)
 		{
 			foundSections = 0;
 			startSection = null;

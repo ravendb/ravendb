@@ -92,7 +92,7 @@ namespace Voron.Trees
 			if (existingItem != null)
 			{
 				// maybe same value added twice?
-				var tmpKey = page.GetFullNodeKey(item);
+				var tmpKey = page.GetNodeKey(item);
 				if (tmpKey.Compare(value) == 0)
 					return; // already there, turning into a no-op
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
@@ -121,7 +121,7 @@ namespace Voron.Trees
 			var tree = Create(_tx, TreeFlags.MultiValue);
 			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 			{
-				var existingValue = nestedPage.GetFullNodeKey(i);
+				var existingValue = nestedPage.GetNodeKey(i);
 				tree.DirectAdd(existingValue, 0);
 			}
 			tree.DirectAdd(value, 0, version: version);
@@ -157,7 +157,7 @@ namespace Voron.Trees
 				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 				{
 					var nodeHeader = nestedPage.GetNode(i);
-					nodeKey = newNestedPage.ConvertToPrefixedKey(nestedPage.GetFullNodeKey(nodeHeader), i);
+					nodeKey = newNestedPage.ConvertToPrefixedKey(nestedPage.GetNodeKey(nodeHeader), i);
 					newNestedPage.AddDataNode(i, nodeKey, 0,
 						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
@@ -273,7 +273,7 @@ namespace Voron.Trees
 
 			var item = page.Search(key);
 
-			var fetchedNodeKey = page.GetFullNodeKey(item);
+			var fetchedNodeKey = page.GetNodeKey(item);
 			if (fetchedNodeKey.Compare(key) != 0)
 			{
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
@@ -291,7 +291,7 @@ namespace Voron.Trees
 			return new PageIterator(nestedPage);
 		}
 
-		private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
+		private Tree OpenOrCreateMultiValueTree(Transaction tx, IMemorySlice key, NodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
@@ -308,7 +308,7 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,
+		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, IMemorySlice key, int len,
 														NodeFlags requestedNodeType, ushort? version,
 														out byte* pos)
 		{

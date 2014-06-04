@@ -157,7 +157,7 @@ namespace Voron.Tests
 			if (node == null)
 				return null;
 
-			var item1 = p.GetFullNodeKey(node);
+			var item1 = p.GetNodeKey(node);
 
 			if (item1.Compare(key) != 0)
 				return null;
