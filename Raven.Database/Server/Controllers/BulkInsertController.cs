@@ -78,8 +78,9 @@ namespace Raven.Database.Server.Controllers
 
 			mre.Wait(Database.WorkContext.CancellationToken);
 
-			//TODO: log
-			//context.Log(log => log.Debug("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
+            sp.Stop();
+
+            AddRequestTraceInfo(log => log.AppendFormat("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
 
 			return GetMessageWithObject(new
 			{

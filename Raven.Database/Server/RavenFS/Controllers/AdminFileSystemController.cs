@@ -56,7 +56,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
 			{
-				IOExtensions.DeleteDirectory(configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(configuration.FileSystemDataDirectory);
 				if (configuration.IndexStoragePath != null)
 					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
 				if (configuration.JournalsStoragePath != null)

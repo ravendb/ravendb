@@ -13,13 +13,10 @@ class quotas extends viewModelBase {
     maxNumberOfDocs = ko.observable<string>();
     warningThresholdForDocs = ko.observable<string>();
  
-    dirtyCheck = new ko.DirtyFlag([]);
     isSaveEnabled: KnockoutComputed<boolean>;
 
     activate(args) {
         super.activate(args);
-        var self = this;
-        var baseModel = viewModelBase;
 
         // fetch current quotas from the database
         var deferred = $.Deferred();
@@ -27,21 +24,24 @@ class quotas extends viewModelBase {
         this.fetchQuotas(db)
             .done(() => {
                 deferred.resolve({ can: true });
-                baseModel.dirtyFlag().reset();
+                viewModelBase.dirtyFlag().reset();
             })
             .fail(() => deferred.resolve({ redirect: appUrl.forStatus(db) }));
 
-        // initialize dirty flag
-        baseModel.dirtyFlag = new ko.DirtyFlag([
-          self.maximumSize,
-          self.warningLimitThreshold,
-          self.maxNumberOfDocs,
-          self.warningThresholdForDocs
-        ]);
+        this.initializeDirtyFlag();
 
         this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
+    }
+
+    initializeDirtyFlag() {
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([
+            this.maximumSize,
+            this.warningLimitThreshold,
+            this.maxNumberOfDocs,
+            this.warningThresholdForDocs
+        ]);
     }
 
     saveChanges() {
@@ -52,7 +52,7 @@ class quotas extends viewModelBase {
             document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = (parseInt(this.warningLimitThreshold()) * 1024).toString();
             document["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs().toString();
             document["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs().toString();
-            var saveTask = new saveDatabaseSettingsCommand(appUrl.getDatabase(), document).execute();
+            var saveTask = new saveDatabaseSettingsCommand(db, document).execute();
             saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
                 this.settingsDocument().__metadata['@etag'] = idAndEtag.ETag;
                 viewModelBase.dirtyFlag().reset();

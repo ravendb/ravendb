@@ -684,7 +684,7 @@ namespace Raven.Client.RavenFS
         {
             return ExecuteWithReplication("GET", async operation =>
             {
-                var requestUriString = operation.Url + "/staticfs/id/";
+                var requestUriString = operation.Url + "/static/id";
 
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
                                         new CreateHttpJsonRequestParams(this, requestUriString, "GET", operation.Credentials, convention));

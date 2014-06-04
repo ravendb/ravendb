@@ -22,7 +22,7 @@ class createCounterStorage extends dialogViewModelBase {
     }
 
     attached() {
-
+        super.attached();
         var inputElement: any = $("#counterStorageName")[0];
         this.counterStorageName.subscribe((newCounterStorageName) => {
             var errorMessage: string = '';

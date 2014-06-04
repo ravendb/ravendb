@@ -41,11 +41,11 @@ namespace Raven.Database.Server.Tenancy
             get { return systemConfiguration; }
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledDatabase = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
                 return systemConfiguration;
-            var document = GetTenantDatabaseDocument(tenantId);
+			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledDatabase);
             if (document == null)
                 return null;
 
@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Tenancy
         }
 
 
-        private DatabaseDocument GetTenantDatabaseDocument(string tenantId)
+		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Tenancy
             if (document.Settings["Raven/DataDir"] == null)
                 throw new InvalidOperationException("Could not find Raven/DataDir");
 
-            if (document.Disabled)
+			if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
 
             return document;

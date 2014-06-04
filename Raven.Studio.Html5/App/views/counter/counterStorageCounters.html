@@ -20,6 +20,7 @@
                         <a data-bind="text: id, attr: { href: '#counterCollapse' + $index() }"></a>
                     </h4>
                     <button class="btn btn-primary md-col-3" data-bind="click:function(){$root.addOrEditCounter($data);}">Edit Counter</button>
+                    <button class="btn btn-primary md-col-3" data-bind="click:function(){$root.resetCounter($data);}">Reset Counter</button>
                 </div>
                 <div class="panel-collapse" data-bind="attr:{id:'counterCollapse' + $index()}">
                     <div class="panel panel-default">
@@ -27,7 +28,7 @@
                             <div> <strong>Overall Total: </strong> <span data-bind="text:overallTotal"></span></div>
                             <div> <strong>Group: </strong> <span data-bind="text:group"></span></div>
                             <div> <strong>Servers: </strong></div>
-                            <ul class="list-inline" data-bind="foreach: servers">
+                            <ul data-bind="foreach: servers">
                                 <li>
                                     <span class="col-md-4"> <strong>Server URL: </strong><span data-bind="text:name()"></span></span>
                                     <span class="col-md-4"> <strong>Positive: </strong><span data-bind="text:posCount()"></span></span>

@@ -30,6 +30,11 @@ namespace Raven.Client.Document
 
 		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
 
+	    public void Abort()
+	    {
+	        Operation.Abort();
+	    }
+
 		public event Action<string> Report
 		{
 			add { Operation.Report += value; }

@@ -35,6 +35,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     attached() {
+        super.attached();
         this.databaseNameFocus(true);
         
         var inputElement: any = $("#databaseName")[0];
@@ -46,9 +47,14 @@ class createDatabase extends dialogViewModelBase {
             else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
             inputElement.setCustomValidity(errorMessage);
         });
+    
+        inputElement.setCustomValidity("An empty database name is forbidden for use!");
+        
+
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
+
     }
 
     deactivate() {
@@ -58,8 +64,7 @@ class createDatabase extends dialogViewModelBase {
             this.creationTask.reject();
         }
     }
-
-    cancel() {
+     cancel() {
         dialog.close(this);
     }
 
@@ -69,8 +74,9 @@ class createDatabase extends dialogViewModelBase {
         // creating the database.
 
         this.creationTaskStarted = true;
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
         dialog.close(this);
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
+        
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
@@ -89,7 +95,7 @@ class createDatabase extends dialogViewModelBase {
 
         var message = '';
         if (!$.trim(name)) {
-            message = "An empty databse name is forbidden for use!";
+            message = "An empty database name is forbidden for use!";
         }
         else if (name.length > this.maxNameLength) {
             message = "The database length can't exceed " + this.maxNameLength + " characters!";
@@ -103,6 +109,9 @@ class createDatabase extends dialogViewModelBase {
         else if (rg3.test(name)) {
             message = "The name '" + name + "' is forbidden for use!";
         }
+        else if (name[name.length-1]==".") {
+            message = "The database name can't end with a dot !";
+        }
         return message;
     }
 
@@ -115,13 +124,13 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private isPathLegal(name: string, pathName: string): string {
-        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
         var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var errorMessage = null;
 
         if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
-            if (name.length > 30) {
-                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 30 + " characters!";
+            if (name.length > 248) {
+                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 248 + " characters!";
             } else if (!rg1.test(name)) {
                 errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
             } else if (rg2.test(name)) {
@@ -156,8 +165,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
-        if (this.isVersioningBundleEnabled() === false)
-            app.showMessage("Versioning Bundle configuration window is not implemented yet.", "Not implemented");
         this.isVersioningBundleEnabled.toggle();
     }
 

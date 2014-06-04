@@ -67,6 +67,7 @@
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\PageAllocation.cs" />
     <Compile Include="Bugs\PagesFilteredOutByJournalApplicator.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
     <Compile Include="Bugs\Isolation.cs" />
@@ -116,6 +117,7 @@
     <Compile Include="Trees\CanIterateBackward.cs" />
     <Compile Include="Trees\Deletes.cs" />
     <Compile Include="Trees\FreeSpaceTest.cs" />
+    <Compile Include="Trees\ItemsCount.cs" />
     <Compile Include="Trees\Iteration.cs" />
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />

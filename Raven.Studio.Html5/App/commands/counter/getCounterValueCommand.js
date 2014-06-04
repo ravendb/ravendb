@@ -5,33 +5,32 @@
     d.prototype = new __();
 };
 define(["require", "exports", "commands/commandBase", "models/counter/counter"], function(require, exports, commandBase, counter) {
-    var getCounterValueCommand = (function (_super) {
-        __extends(getCounterValueCommand, _super);
+    var getCounterOverallTotalCommand = (function (_super) {
+        __extends(getCounterOverallTotalCommand, _super);
         /**
         * @param ownerDb The database the collections will belong to.
         */
-        function getCounterValueCommand(storage, counterToReceive) {
+        function getCounterOverallTotalCommand(storage, counterToReceive) {
             _super.call(this);
             this.storage = storage;
             this.counterToReceive = counterToReceive;
         }
-        getCounterValueCommand.prototype.execute = function () {
+        getCounterOverallTotalCommand.prototype.execute = function () {
             var args = {
-                counterName: this.counterToReceive.id(),
-                group: this.counterToReceive.group()
+                group: this.counterToReceive.group(),
+                counterName: this.counterToReceive.id()
             };
 
-            var url = "/getCounterValue";
+            var url = "/getCounterOverallTotal";
             var selector = function (dto) {
                 return new counter(dto);
             };
             return this.query(url, args, this.storage, selector);
         };
-        return getCounterValueCommand;
+        return getCounterOverallTotalCommand;
     })(commandBase);
 
     
-    return getCounterValueCommand;
+    return getCounterOverallTotalCommand;
 });
-//getCounterValue
 //# sourceMappingURL=getCounterValueCommand.js.map

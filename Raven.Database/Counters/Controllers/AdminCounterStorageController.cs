@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -22,9 +23,10 @@ namespace Raven.Database.Counters.Controllers
         {
             var docKey = "Raven/Counters/" + id;
 
-            if (IsCounterStorageNameExists(id))
+			bool isCounterStorageUpdate = CheckQueryStringParameterResult("update");
+			if (IsCounterStorageNameExists(id) && !isCounterStorageUpdate)
             {
-                return GetMessageWithString(string.Format("Counter Storage {0} already exists", id), HttpStatusCode.BadRequest);
+				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
             }
 
             var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
@@ -37,6 +39,12 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage(HttpStatusCode.Created);
         }
 
+	    private bool CheckQueryStringParameterResult(string parameterName)
+	    {
+		    bool result;
+		    return bool.TryParse(InnerRequest.RequestUri.ParseQueryString()[parameterName], out result) && result;
+	    }
+
 		[HttpDelete]
         [Route("counterstorage/admin/{*id}")]
 		public HttpResponseMessage Delete(string id)
@@ -47,18 +55,17 @@ namespace Raven.Database.Counters.Controllers
 			if (configuration == null)
 				return GetEmptyMessage();
 
-
             if (!IsCounterStorageNameExists(id))
             {
-                return GetMessageWithString(string.Format("Counter Storage {0} was not found exists", id), HttpStatusCode.BadRequest);
+                return GetMessageWithString(string.Format("Counter Storage {0} doesn't exist!", id), HttpStatusCode.NotFound);
             }
 
 			Database.Documents.Delete(docKey, null, null);
-			bool result;
 
-			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
+			bool isHardDeleteNeeded = CheckQueryStringParameterResult("hard-delete");
+			if (isHardDeleteNeeded)
 			{
-				IOExtensions.DeleteDirectory(configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(configuration.CountersDataDirectory);
 			}
 
 			return GetEmptyMessage();
@@ -66,11 +73,9 @@ namespace Raven.Database.Counters.Controllers
 
         private bool IsCounterStorageNameExists(string id)
         {
-            string errorMessage = null;
             var docKey = "Raven/Counters/" + id;
             var database = Database.Documents.Get(docKey, null);
             return database != null;
-
         }
     }
 }
