@@ -4,6 +4,7 @@ namespace Raven.Client.RavenFS
 {
 	public class SynchronizationUpdateNotification : Notification
 	{
+        public string FileSystemName { get; set; }
 		public string FileName { get; set; }
         public string DestinationFileSystemUrl { get; set; }
 		public Guid SourceServerId { get; set; }

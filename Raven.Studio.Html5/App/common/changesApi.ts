@@ -29,7 +29,7 @@ class changesApi {
         if (!!window.EventSource) {
             var url = appUrl.forResourceQuery(this.rs);
 
-            //console.log("Connecting to changes API (db = " + this.db.name + ")");
+            console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
             this.source = new EventSource(url + '/changes/events?id=' + this.eventsId);
             this.source.onmessage = (e) => this.onEvent(e);
@@ -183,7 +183,7 @@ class changesApi {
         this.allFsSyncHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsSyncHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
+            if (this.allFsSyncHandlers().length == 0) {
                 this.send('unwatch-sync');
             }
         });

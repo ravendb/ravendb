@@ -55,14 +55,12 @@ class status extends viewModelBase {
         // treat notifications events
         this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
-            console.warn("Notification: " + e.FileName + " status: " + this.getActionDescription(e.Action));
             switch (e.Action) {
                 case synchronizationAction.Enqueue:
                 case synchronizationAction.Start:
                     this.addOrUpdateActivity(e);
                     break;
                 case synchronizationAction.Finish:
-                    console.log(e.FileName + " sync has finished");
                     setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
                     break;
                 default:
@@ -83,6 +81,7 @@ class status extends viewModelBase {
     deactivate() {
         super.deactivate();
         this.activeFilesystemSubscription.dispose();
+        this.activitiesSubscription.off();
     }
 
     loadSynchronizationActivity() {
@@ -133,6 +132,12 @@ class status extends viewModelBase {
     }
 
     private addOrUpdateActivity(e: synchronizationUpdateNotification) {
+
+        if (e.SynchronizationDirection == synchronizationDirection.Incoming && e.FileSystemName != this.activeFilesystem().name) {
+            console.warn("ignoring notification: " + e.FileName);
+            return;
+        }
+
         if (!this.activityContains(e)) {
             this.activity.push(new synchronizationDetail({
                 FileName: e.FileName,

@@ -135,6 +135,7 @@ interface folderNodeDto {
 }
 
 interface synchronizationUpdateNotification {
+    FileSystemName: string;
     FileName: string;
     DestinationFileSystemUrl: string;
     SourceServerId: string;
