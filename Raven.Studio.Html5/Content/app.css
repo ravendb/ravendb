@@ -173,6 +173,11 @@ body {
   -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
   box-shadow: 0 0 5px 0 #6aa3d5;
 }
+.database-page .databases-container .database .margin {
+  clear: both;
+  display: block;
+  margin: 22px 0;
+}
 .database-page .databases-container .database.disabled {
   -webkit-box-shadow: 0 0 6px 0 #cdcdcd;
   box-shadow: 0 0 6px 0 #cdcdcd;

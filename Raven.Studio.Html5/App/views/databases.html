@@ -16,7 +16,7 @@
             </div>
             <form class="form-inline  col-md-3">
                 <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+/)">
-            </form>
+            </formm>
         </div>
         <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: $data.disabled }">
@@ -58,7 +58,7 @@
                     </ul>
                 </div>
 
-                <br style="clear:both;" />
+                <span class="margin"></span>
                 <!-- ko ifnot: $data.disabled -->
                 <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCount() + ' documents'"></span>
                 <!-- /ko -->
