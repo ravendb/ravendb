@@ -4,7 +4,7 @@ import commandBase = require("commands/commandBase");
 import saveBulkOfDocuments = require("commands/saveBulkOfDocuments");
 
 class saveVersioningCommand extends commandBase {
-    constructor(private versioningEntries: Array<versioningEntryDto>, private removeEntries: Array<versioningEntryDto>, private db: database) {
+    constructor(private db: database, private versioningEntries: Array<versioningEntryDto>, private removeEntries: Array<versioningEntryDto> = []) {
         super();
     }
 
@@ -12,8 +12,8 @@ class saveVersioningCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var commands: bulkDocumentDto[] = [];
 
-        for (var i = 0; i < this.versioningEntries.length; i++) {
-            var entry: document = new document(this.versioningEntries[i]);
+        this.versioningEntries.forEach((dto: versioningEntryDto) => {
+            var entry: document = new document(dto);
             commands.push({
                 Key: "Raven/Versioning/" + entry["Id"],
                 Method: "PUT",
@@ -21,16 +21,16 @@ class saveVersioningCommand extends commandBase {
                 Metadata: entry.__metadata.toDto(),
                 Etag: entry.__metadata.etag
             });
-        }
+        });
 
-        for (var i = 0; i < this.removeEntries.length; i++) {
-            var entry: document = new document(this.removeEntries[i]);
+        this.removeEntries.forEach((dto: versioningEntryDto) => {
+            var entry: document = new document(dto);
             commands.push({
                 Key: "Raven/Versioning/" + entry["Id"],
                 Method: "DELETE",
                 Etag: entry.__metadata.etag
             });
-        }
+        });
 
         var saveTask = new saveBulkOfDocuments("versioning", commands, this.db).execute();
         return saveTask;

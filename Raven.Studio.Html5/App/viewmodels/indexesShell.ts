@@ -40,6 +40,9 @@ class indexesShell extends viewModelBase {
             this.indexName(indexName);
             this.isIndexNameVisible(true);
         }
+        else{
+            this.isIndexNameVisible(false);
+        }
     }
 }
 

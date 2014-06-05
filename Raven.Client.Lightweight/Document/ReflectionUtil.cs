@@ -67,5 +67,22 @@ namespace Raven.Client.Document
 			return result;
 		}
 
+		public static IEnumerable<MemberInfo> GetPropertiesAndFieldsFor<TType>(BindingFlags bindingFlags = BindingFlags.Default)
+		{
+			return GetPropertiesAndFieldsFor(typeof(TType), bindingFlags);
+		}
+
+		public static IEnumerable<MemberInfo> GetPropertiesAndFieldsFor(Type type, BindingFlags bindingFlags = BindingFlags.Default)
+		{
+			foreach (var field in type.GetFields(bindingFlags))
+			{
+				yield return field;
+			}
+
+			foreach (var property in type.GetProperties(bindingFlags))
+			{
+				yield return property;
+			}
+		}
 	}
 }

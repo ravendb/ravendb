@@ -165,6 +165,10 @@ body {
 .database-page .databases-container .database.selected .text-muted {
   color: white;
 }
+.database-page .databases-container .database.disabled {
+  -webkit-box-shadow: 0 0 6px 0 #ff0202;
+  box-shadow: 0 0 6px 0 #ff0202;
+}
 .database-page .databases-container .database.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
@@ -942,6 +946,9 @@ footer ul {
 }
 .quotas-settings-form input[type=number] {
   text-align: right;
+}
+.quotas-settings-form .input-group {
+  max-width: 300px;
 }
 .versioning-settings-form .versioning-card {
   display: inline-table;

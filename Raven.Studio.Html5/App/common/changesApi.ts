@@ -96,6 +96,7 @@ class changesApi {
     }
 
     private onError(e: any) {
+
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
 

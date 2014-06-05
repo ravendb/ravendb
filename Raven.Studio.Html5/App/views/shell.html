@@ -11,7 +11,7 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
-                <div data-bind="visible: appUrls.isAreaActive('databases')">
+                <div data-bind="visible: appUrls.isAreaActive('databases') && !isDatabaseDisabled()">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -166,7 +166,7 @@
                                 <span data-bind="text: name"></span>
                                 <b class="caret"></b>
                             </a>
-                            <ul class="dropdown-menu" data-bind="foreach: databases">
+                            <ul class="dropdown-menu" data-bind="foreach: listedDatabases">
                                 <li>
                                     <a href="#" data-bind="text: name, click: $root.selectDatabase.bind($root, $data)"></a>
                                 </li>
@@ -247,7 +247,7 @@
 <footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases') && !isDatabaseDisabled()">
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>

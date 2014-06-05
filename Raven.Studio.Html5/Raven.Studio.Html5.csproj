@@ -112,6 +112,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\toggleDatabaseDisabledCommand.ts" />
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
@@ -269,6 +270,7 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
+    <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -289,9 +291,12 @@
     <TypeScriptCompile Include="App\viewmodels\executePatchConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\quotas.ts" />
     <TypeScriptCompile Include="App\viewmodels\versioning.ts" />
-    <TypeScriptCompile Include="App\commands\getVersioningCommand.ts" />
     <TypeScriptCompile Include="App\models\versioningEntry.ts" />
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
+    <Content Include="App\commands\getVersioningsCommand.ts" />
+    <Content Include="App\commands\saveDefaultSettingsCommand.ts" />
+    <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
@@ -302,6 +307,7 @@
     <Content Include="App\views\counter\editCounterDialog.html" />
     <Content Include="App\views\counter\deleteCounterStorageConfirm.html" />
     <Content Include="App\views\counter\editCounterStorage.html" />
+    <Content Include="App\views\databaseSettingsDialog.html" />
     <Content Include="App\views\executePatchConfirm.html" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRequestTracing.ts" />
@@ -423,6 +429,7 @@
     <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
+    <Content Include="Content\app.css" />
     <Content Include="Content\app.min.css">
       <DependentUpon>app.less</DependentUpon>
     </Content>
@@ -1075,9 +1082,7 @@
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
     <Content Include="Content\bootstrap-theme.css.map" />
     <Content Include="Content\bootstrap.css.map" />
-    <Content Include="Content\app.css.map">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
+    <Content Include="Content\app.css.map" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
@@ -1361,9 +1366,6 @@
     <Content Include="App\widgets\virtualTable\view.html" />
     <TypeScriptCompile Include="App\common\extensions.ts" />
     <Content Include="App\views\shell.html" />
-    <Content Include="Content\app.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
     <Content Include="Content\images\checked.png" />
     <Content Include="Content\images\glyphicons-halflings-white.png" />
     <Content Include="Content\images\glyphicons-halflings.png" />
