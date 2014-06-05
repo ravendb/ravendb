@@ -16,8 +16,8 @@ namespace RavenFS.Tests.Bugs
 			streamWriter.Flush();
 			ms.Position = 0;
 
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
 			const string fileName = "abc.txt";
 			await sourceClient.UploadAsync(fileName, ms);

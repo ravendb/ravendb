@@ -50,7 +50,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public void CanCreateFileSystem()
         {
-            NewClient(enableAuthentication: true, apiKey: apiKey);
+            NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace RavenFS.Tests.Auth
             streamWriter.Flush();
             ms.Position = 0;
 
-            var client = NewClient(enableAuthentication: true, apiKey: apiKey);
+            var client = NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
             await client.UploadAsync("/dir/abc.txt", ms);
 
             var stream = new MemoryStream();
@@ -107,7 +107,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task AdminClientWorkWithOAuthEnabled()
         {
-            var client = (IAsyncFilesCommandsImpl) NewClient(enableAuthentication: true, apiKey: apiKey);
+            var client = (IAsyncFilesCommandsImpl) NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
 	        var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new FileSystemDocument
@@ -138,7 +138,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task ConfigClientCanWorkWithOAuthEnabled()
         {
-            var configClient = NewClient(enableAuthentication: true, apiKey: apiKey).Configuration;
+            var configClient = NewAsyncClient(enableAuthentication: true, apiKey: apiKey).Configuration;
 
             await configClient.SetKeyAsync("test-conf", new RavenJObject() { { "key", "value" } });
 
@@ -158,7 +158,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task StorageClientCanWorkWithOAuthEnabled()
         {
-            var storageClient = NewClient(enableAuthentication: true, apiKey: apiKey).Storage;
+            var storageClient = NewAsyncClient(enableAuthentication: true, apiKey: apiKey).Storage;
 
             await storageClient.RetryRenamingAsync();
 
@@ -168,7 +168,7 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task ShouldThrowWhenUsedApiKeyDefinitionDoesNotContainFileSystem()
         {
-            var client = NewClient(enableAuthentication: true, apiKey: apiKey);
+            var client = NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
             var server = GetServer();
 
             await client.UploadAsync("abc.bin", new RandomStream(3));

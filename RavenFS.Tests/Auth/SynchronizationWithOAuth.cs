@@ -46,8 +46,8 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task CanSynchronizeFileContent()
         {
-            var source = NewClient(0);
-            var destination = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+            var source = NewAsyncClient(0);
+            var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
 
             var ms = new MemoryStream(new byte[] {3, 2, 1});
 
@@ -64,8 +64,8 @@ namespace RavenFS.Tests.Auth
         {
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
-            var sourceClient = NewClient(0);
-            var destinationClient = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+            var sourceClient = NewAsyncClient(0);
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
 
             await sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content);
             content.Position = 0;
@@ -86,8 +86,8 @@ namespace RavenFS.Tests.Auth
         {
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
-            var sourceClient = NewClient(0);
-            var destinationClient = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+            var sourceClient = NewAsyncClient(0);
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
 
             await sourceClient.UploadAsync("test.bin",  content);
             content.Position = 0;
@@ -111,8 +111,8 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task CanSynchronizeFileDelete()
         {
-            var source = NewClient(0);
-            var destination = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+            var source = NewAsyncClient(0);
+            var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
 
             await source.UploadAsync("test.bin", new RandomStream(1));
 

@@ -94,7 +94,7 @@ namespace Raven.Client.FileSystem
         /// Gets the filesystem commands.
         /// </summary>
         /// <value>The filesystem commands.</value>
-        IFilesCommands FileSystemCommands { get; }
+        IFilesCommands FilesCommands { get; }
 
 #endif
 

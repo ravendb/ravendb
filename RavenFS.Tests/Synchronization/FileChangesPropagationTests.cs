@@ -18,9 +18,9 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var content = new MemoryStream(new byte[] {1, 2, 3});
 
-			var server1 = NewClient(0);
-			var server2 = NewClient(1);
-		    var server3 = NewClient(2);
+			var server1 = NewAsyncClient(0);
+			var server2 = NewAsyncClient(1);
+		    var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
             await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
@@ -70,9 +70,9 @@ namespace RavenFS.Tests.Synchronization
 			var content = new MemoryStream(buffer);
 			var changedContent = new RandomlyModifiedStream(content, 0.02);
 
-			var server1 = NewClient(0);
-			var server2 = NewClient(1);
-            var server3 = NewClient(2);
+			var server1 = NewAsyncClient(0);
+			var server2 = NewAsyncClient(1);
+            var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
             await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
@@ -142,9 +142,9 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var content = new MemoryStream(new byte[] {1, 2, 3});
 
-			var server1 = NewClient(0);
-			var server2 = NewClient(1);
-            var server3 = NewClient(2);
+			var server1 = NewAsyncClient(0);
+			var server2 = NewAsyncClient(1);
+            var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
             server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
@@ -193,9 +193,9 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var content = new MemoryStream(new byte[] {1, 2, 3});
 
-			var server1 = NewClient(0);
-			var server2 = NewClient(1);
-            var server3 = NewClient(2);
+			var server1 = NewAsyncClient(0);
+			var server2 = NewAsyncClient(1);
+            var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
             await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);

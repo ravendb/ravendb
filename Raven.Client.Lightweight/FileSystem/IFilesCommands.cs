@@ -50,6 +50,8 @@ namespace Raven.Client.FileSystem
 
         string FileSystem { get; }
 
+        IFilesCommands ForFileSystem(string fileSystem);
+
         void Delete(string filename);
         void Rename(string currentName, string newName);
 

@@ -12,8 +12,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task ShouldFailOver()
 		{
-			var sourceClient = (IAsyncFilesCommandsImpl) NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = (IAsyncFilesCommandsImpl) NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 			var source1Content = new RandomStream(10000);
 
 			await sourceClient.UploadAsync("test1.bin", source1Content);

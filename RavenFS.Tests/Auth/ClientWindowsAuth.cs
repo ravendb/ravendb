@@ -61,7 +61,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task CanWorkWithWinAuthEnabled()
         {
-            var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 
             var ms = new MemoryStream(new byte[]{1, 2, 4});
 
@@ -111,7 +111,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task AdminClientWorkWithWinAuthEnabled()
         {
-            var client = (IAsyncFilesCommandsImpl)NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 	        var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new FileSystemDocument
@@ -146,7 +146,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task ConfigClientCanWorkWithWinAuthEnabled()
         {
-            var configClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
+            var configClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
 
             await configClient.SetKeyAsync("test-conf", new NameValueCollection() { { "key", "value" } });
 
@@ -166,7 +166,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task StorageClientCanWorkWithWinAuthEnabled()
         {
-            var storageClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Storage;
+            var storageClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Storage;
 
             await storageClient.RetryRenamingAsync();
 
@@ -178,7 +178,7 @@ namespace RavenFS.Tests.Auth
         {
             // in this test be careful if the specified credentials belong to admin user or not
 
-            var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
             var server = GetServer();
 
             await client.UploadAsync("abc.bin", new RandomStream(3));

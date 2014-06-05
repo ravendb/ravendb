@@ -169,8 +169,8 @@ namespace RavenFS.Tests.Synchronization
         private void UploadFilesSynchronously(out IAsyncFilesCommands sourceClient,
                                               out IAsyncFilesCommands destinationClient, string fileName = "test.bin")
 		{
-			sourceClient = NewClient(1);
-			destinationClient = NewClient(0);
+			sourceClient = NewAsyncClient(1);
+			destinationClient = NewAsyncClient(0);
 
 			var sourceContent = new RandomlyModifiedStream(new RandomStream(10, 1), 0.01);
 			var destinationContent = new RandomlyModifiedStream(new RandomStream(10, 1), 0.01);

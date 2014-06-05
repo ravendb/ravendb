@@ -10,7 +10,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task CanGetConfig_NotThere()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
             Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 		}
@@ -18,7 +18,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task CanSetConfig()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
             Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
@@ -39,7 +39,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task CanGetConfigNames()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
             Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
@@ -61,7 +61,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task CanDelConfig()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
             Assert.Null(await client.Configuration.GetKeyAsync<RavenJObject>("test"));
 
@@ -80,7 +80,7 @@ namespace RavenFS.Tests
 	    [Fact]
 	    public void CanGetTotalConfigCount()
 	    {
-	        var client = NewClient();
+	        var client = NewAsyncClient();
 
             client.Configuration.SetKeyAsync("TestConfigA", new RavenJObject()).Wait();
             client.Configuration.SetKeyAsync("TestConfigB", new RavenJObject()).Wait();
@@ -91,7 +91,7 @@ namespace RavenFS.Tests
         [Fact]
         public void SearchResultsOnlyIncludeConfigsWithPrefix()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
 
             client.Configuration.SetKeyAsync("TestConfigA", new RavenJObject()).Wait();
             client.Configuration.SetKeyAsync("TestConfigB", new RavenJObject()).Wait();

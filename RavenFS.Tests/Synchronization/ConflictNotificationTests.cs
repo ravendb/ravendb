@@ -18,8 +18,8 @@ namespace RavenFS.Tests.Synchronization
 
 		public ConflictNotificationTests()
 		{
-            destinationClient = (AsyncFilesServerClient) NewClient(0);
-            sourceClient = (AsyncFilesServerClient) NewClient(1);
+            destinationClient = (AsyncFilesServerClient) NewAsyncClient(0);
+            sourceClient = (AsyncFilesServerClient) NewAsyncClient(1);
 		}
 
         [Fact]

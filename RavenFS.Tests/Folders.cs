@@ -11,7 +11,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanGetListOfFolders()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/abc.txt", ms).Wait();
 			client.UploadAsync("test/ced.txt", ms).Wait();
@@ -24,7 +24,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void WillNotGetNestedFolders()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
             await client.UploadAsync("test/c.txt", ms);
             await client.UploadAsync("test/ab/c.txt", ms);
@@ -42,7 +42,7 @@ namespace RavenFS.Tests
         [Fact]
         public async void WillWorkWithTrailingSlash()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
             await client.UploadAsync("test/ab/c.txt", ms);
             await client.UploadAsync("test/ce/d.txt", ms);
@@ -55,7 +55,7 @@ namespace RavenFS.Tests
         [Fact]
         public async void WillUploadFileInNestedFolders()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
             var streamWriter = new StreamWriter(ms);
             var expected = new string('a', 1024);
@@ -76,7 +76,7 @@ namespace RavenFS.Tests
         [Fact]
         public async void WillUploadFileInNestedFolders_InverseOrder()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
             var streamWriter = new StreamWriter(ms);
             var expected = new string('a', 1024);
@@ -97,7 +97,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void WillNotGetOtherFolders()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/ab/c.txt", ms).Wait();
 			client.UploadAsync("test/ce/d.txt", ms).Wait();
@@ -112,7 +112,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanRename()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/abc.txt", ms).Wait();
 
@@ -126,7 +126,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void AfterRename_OldFolderIsGoneAndWeHaveNewOne()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/abc.txt", ms).Wait();
 
@@ -145,7 +145,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task CanGetListOfFilesInFolder()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			await client.UploadAsync("test/abc.txt", ms);
 			await client.UploadAsync("test/ced.txt", ms);
@@ -160,7 +160,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanGetListOfFilesInFolder_Sorted_Size()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("test/abc.txt", new MemoryStream(new byte[4])).Wait();
 			client.UploadAsync("test/ced.txt", new MemoryStream(new byte[8])).Wait();
 
@@ -171,7 +171,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanGetListOfFilesInFolder_Sorted_Name()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("test/abc.txt", new MemoryStream(new byte[4])).Wait();
 			client.UploadAsync("test/ced.txt", new MemoryStream(new byte[8])).Wait();
 
@@ -183,7 +183,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanGetListOfFilesInFolderInRoot()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/abc.txt", ms).Wait();
 			client.UploadAsync("test/ced.txt", ms).Wait();
@@ -197,7 +197,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanGetListOfFilesInFolder2()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/abc.txt", ms).Wait();
 			client.UploadAsync("test/ced.txt", ms).Wait();
@@ -210,7 +210,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesByPattern()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
 
             client.UploadAsync("abc.txt", ms).Wait();
@@ -225,7 +225,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesByPatternBeginningWithMultiCharacterWildcard()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
 
             client.UploadAsync("abc.txt", ms).Wait();
@@ -241,7 +241,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesByPatternBeginningWithSingleCharacterWildcard()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
 
             client.UploadAsync("abc.txt", ms).Wait();
@@ -257,7 +257,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesByNameWithinAFolder()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
 
             client.UploadAsync("test/abc.txt", ms).Wait();
@@ -271,7 +271,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchPatternContainingNoWildcardsDoesStartsWithSearchByDefault()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
 
             client.UploadAsync("abc.txt", ms).Wait();
@@ -285,7 +285,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void CanPage()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			await client.UploadAsync("test/abc.txt", ms);
 			await client.UploadAsync("test/ced.txt", ms);
@@ -299,7 +299,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanDetectRemoval()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("test/abc.txt", ms).Wait();
 			client.UploadAsync("test/ced.txt", ms).Wait();
@@ -315,7 +315,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void Should_not_see_already_deleted_files()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			client.UploadAsync("visible.bin", ms).Wait();
 			client.UploadAsync("toDelete.bin", ms).Wait();

@@ -11,7 +11,7 @@ namespace RavenFS.Tests.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var tasks = new List<Task>(10);
 
 			// upload 10 files with the same content but different names concurrently

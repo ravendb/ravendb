@@ -17,7 +17,7 @@ namespace RavenFS.Tests
 
 	    public Notifications()
 	    {
-            client = (AsyncFilesServerClient)NewClient();
+            client = (AsyncFilesServerClient)NewAsyncClient();
 	    }
 
 		[Fact]

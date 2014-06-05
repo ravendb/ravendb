@@ -57,17 +57,16 @@ namespace Raven.Client.FileSystem
             remove { this.ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-
-        public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-            : base(serverUrl, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, new NameValueCollection())
+        public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, NameValueCollection operationsHeaders = null)
+            : base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders)
         {
             try
             {
-                FileSystem = fileSystemName;
-                ApiKey = apiKey;
+                FileSystem = fileSystemName;                
+                ApiKey = credentials.ApiKey;                
 
-                notifications = new FilesChangesClient(serverUrl, apiKey, credentials, RequestFactory, this.Conventions, this.ReplicationInformer, () => { });
-                               
+                notifications = new FilesChangesClient(serverUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, () => { });
+
                 InitializeSecurity();
             }
             catch (Exception)
@@ -75,6 +74,11 @@ namespace Raven.Client.FileSystem
                 Dispose();
                 throw;
             }
+        }
+
+        public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
+            : this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, new NameValueCollection())
+        {
         }
 
         protected override IFilesReplicationInformer GetReplicationInformer()
@@ -88,6 +92,11 @@ namespace Raven.Client.FileSystem
         }
 
         public string FileSystem { get; private set; }
+
+        public IAsyncFilesCommands ForFileSystem(string fileSystem)
+        {
+            return new AsyncFilesServerClient(this.ServerUrl, fileSystem, Conventions, PrimaryCredentials, RequestFactory, SessionId, OperationsHeaders);
+        }
 
         public string ApiKey { get; private set; }
 
@@ -1451,5 +1460,6 @@ namespace Raven.Client.FileSystem
         }
 
         public ProfilingInformation ProfilingInformation { get; private set; }
+
     }
 }

@@ -21,8 +21,8 @@ namespace RavenFS.Tests.Synchronization
 
 		public SynchronizationStorageTests()
 		{
-            source = (IAsyncFilesCommandsImpl)NewClient(0);
-            destination = (IAsyncFilesCommandsImpl) NewClient(1);
+            source = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
+            destination = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
 			sourceRfs = GetRavenFileSystem(0);
 			destinationRfs = GetRavenFileSystem(1);

@@ -122,6 +122,7 @@
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
     <Compile Include="FileSystem\FilesSessionListeners.cs" />
     <Compile Include="FileSystem\FilesConvention.cs" />
+    <Compile Include="FileSystem\FilesStore.cs" />
     <Compile Include="FileSystem\IAdvancedFilesSessionOperations.cs" />
     <Compile Include="FileSystem\IAsyncAdvancedFilesSessionOperations.cs" />
     <Compile Include="FileSystem\IAsyncFilesCommands.cs" />

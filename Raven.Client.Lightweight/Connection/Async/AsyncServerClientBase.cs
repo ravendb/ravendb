@@ -24,7 +24,11 @@ namespace Raven.Client.Connection.Async
             this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             this.RequestFactory = jsonRequestFactory;
             this.SessionId = sessionId;
+            
             this.OperationsHeaders = operationsHeaders;
+            if (this.OperationsHeaders == null)
+                this.OperationsHeaders = new NameValueCollection();
+
             this._replicationInformer = new Lazy<TReplicationInformer>(() => GetReplicationInformer(), true);
             this.readStrippingBase = new Lazy<int>(() => this.ReplicationInformer.GetReadStripingBase(), true);
 

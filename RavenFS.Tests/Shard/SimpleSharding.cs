@@ -17,8 +17,8 @@ namespace RavenFS.Tests.Shard
 
 		public SimpleSharding()
 		{
-			var client1 = NewClient(0, fileSystemName: "shard1");
-			var client2 = NewClient(1, fileSystemName: "shard2");
+			var client1 = NewAsyncClient(0, fileSystemName: "shard1");
+			var client2 = NewAsyncClient(1, fileSystemName: "shard2");
             shardedClient = new AsyncShardedFilesServerClient(new ShardStrategy(new Dictionary<string, IAsyncFilesCommands>
 				{
 					{"1", client1},

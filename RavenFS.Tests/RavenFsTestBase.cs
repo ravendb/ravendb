@@ -30,7 +30,8 @@ namespace RavenFS.Tests
     public class RavenFsTestBase : WithNLog, IDisposable
     {
         private readonly List<RavenDbServer> servers = new List<RavenDbServer>();
-        private readonly List<IAsyncFilesCommands> ravenFileSystemClients = new List<IAsyncFilesCommands>();
+        private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
+        private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
         public static readonly int[] Ports = { 19069, 19068, 19067 };
 
@@ -81,20 +82,51 @@ namespace RavenFS.Tests
             return ravenDbServer;
         }
 
-        protected virtual IAsyncFilesCommands NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                          ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
+        protected virtual IFilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
+                                                                    ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
             var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
 
-            var client = new AsyncFilesServerClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey, credentials: credentials);
+            var store = new FilesStore()
+            {
+                Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
+                DefaultFileSystem = fileSystemName,
+                Credentials = credentials,
+                ApiKey = apiKey,
+            };
 
-            client.EnsureFileSystemExistsAsync().Wait();
+            store.Initialize(true);
 
-            ravenFileSystemClients.Add(client);
+            this.filesStores.Add(store);
 
-            return client;
+            return store;                        
+        }
+
+        protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
+                                                                    ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
+        {
+            fileSystemName = NormalizeFileSystemName(fileSystemName);
+
+            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+
+            var store = new FilesStore()
+            {
+                Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
+                DefaultFileSystem = fileSystemName,
+                Credentials = credentials,
+                ApiKey = apiKey,
+            };
+
+            store.Initialize(true);
+
+            this.filesStores.Add(store);
+
+            var client = store.AsyncFilesCommands;
+            asyncCommandClients.Add(client);
+
+            return client;       
         }
 
         protected RavenFileSystem GetRavenFileSystem(int index = 0, [CallerMemberName] string fileSystemName = null)
@@ -201,7 +233,7 @@ namespace RavenFS.Tests
         {
             var errors = new List<Exception>();
 
-            foreach (var client in ravenFileSystemClients)
+            foreach (var client in asyncCommandClients)
             {
                 try
                 {
@@ -213,7 +245,8 @@ namespace RavenFS.Tests
                 }
             }
 
-            ravenFileSystemClients.Clear();
+            asyncCommandClients.Clear();
+            filesStores.Clear();
 
             foreach (var server in servers)
             {

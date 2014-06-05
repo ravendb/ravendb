@@ -13,8 +13,8 @@ namespace RavenFS.Tests.Bugs
 		[Fact]
 		public async Task Should_transfer_entire_file_even_if_rename_operation_was_performed()
 		{
-			var source = NewClient(0);
-			var destination = NewClient(1);
+			var source = NewAsyncClient(0);
+			var destination = NewAsyncClient(1);
 
 			var fileContent = new MemoryStream(new byte[] {1, 2, 3});
 			await source.UploadAsync("test.bin", fileContent);

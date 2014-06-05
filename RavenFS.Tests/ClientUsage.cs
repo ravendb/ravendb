@@ -28,7 +28,7 @@ namespace RavenFS.Tests
 			streamWriter.Write(expected);
 			streamWriter.Flush();
 			ms.Position = 0;
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("abc.txt", new RavenJObject
 		                                        {
 		                                            {"test", "1"}
@@ -62,7 +62,7 @@ namespace RavenFS.Tests
 			}
 			streamWriter.Flush();
 			ms.Position = 0;
-			var client = NewClient();
+			var client = NewAsyncClient();
 		    await client.UploadAsync("numbers.txt", ms);
 
 			var actual = new MemoryStream();
@@ -88,7 +88,7 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 
-			var client = NewClient();
+			var client = NewAsyncClient();
 		    await client.UploadAsync("abc.txt", ms);
 
 		    var stream = new MemoryStream();
@@ -106,7 +106,7 @@ namespace RavenFS.Tests
 			streamWriter.Write(expected);
 			streamWriter.Flush();
 			ms.Position = 0;
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("abc.txt", new RavenJObject
 		                                        {
 		                                            {"test", "value"},
@@ -130,7 +130,7 @@ namespace RavenFS.Tests
 			streamWriter.Write(expected);
 			streamWriter.Flush();
 			ms.Position = 0;
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("abc.txt", new RavenJObject
 		                                        {
 		                                            {"Test", "value"},
@@ -154,7 +154,7 @@ namespace RavenFS.Tests
 			streamWriter.Write(expected);
 			streamWriter.Flush();
 			ms.Position = 0;
-			var client = NewClient();
+			var client = NewAsyncClient();
 		    await client.UploadAsync("abc.txt", ms);
 
 			var ms2 = new MemoryStream();
@@ -170,7 +170,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Can_check_rdc_stats()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var result = await client.Synchronization.GetRdcStatsAsync();
 			Assert.NotNull(result);
 			Assert.True(result.CurrentVersion > 0);
@@ -181,7 +181,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Can_get_rdc_manifest()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			var buffer = new byte[1024*1024];
 			new Random().NextBytes(buffer);
@@ -196,7 +196,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Can_get_rdc_signatures()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			var buffer = new byte[1024*1024*2];
 			new Random().NextBytes(buffer);
@@ -218,7 +218,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Can_get_rdc_signature_partialy()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var buffer = new byte[1024*1024*4];
 			new Random().NextBytes(buffer);
 
@@ -234,7 +234,7 @@ namespace RavenFS.Tests
 		public void Can_get_partial_content_from_the_begin()
 		{
 			var ms = PrepareTextSourceStream();
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("abc.txt",
                                new RavenJObject
 				                   {
@@ -255,7 +255,7 @@ namespace RavenFS.Tests
 		public void Can_get_partial_content_from_the_middle()
 		{
 			var ms = PrepareTextSourceStream();
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("abc.txt",
                                new RavenJObject
 				                   {
@@ -276,7 +276,7 @@ namespace RavenFS.Tests
 		public void Can_get_partial_content_from_the_end_explicitely()
 		{
 			var ms = PrepareTextSourceStream();
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("abc.txt",
                                new RavenJObject
 				                   {
@@ -297,7 +297,7 @@ namespace RavenFS.Tests
 		public void Can_get_partial_content_from_the_end()
 		{
 			var ms = PrepareTextSourceStream();
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("abc.bin",
                                new RavenJObject
 				                   {
@@ -318,7 +318,7 @@ namespace RavenFS.Tests
 		public async void Should_modify_etag_after_upload()
 		{
 			var content = new RandomStream(10);
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			// note that file upload modifies ETag twice
             await client.UploadAsync("test.bin", new RavenJObject(), content);
@@ -336,7 +336,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void Should_not_see_already_deleted_files()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("visible.bin", new RandomStream(1));
             await client.UploadAsync("toDelete.bin", new RandomStream(1));
 
@@ -350,7 +350,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Should_not_return_metadata_of_deleted_file()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			await client.UploadAsync("toDelete.bin", new RandomStream(1));
 
 			await client.DeleteAsync("toDelete.bin");
@@ -362,7 +362,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void File_system_stats_after_file_delete()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
 
 			client.DeleteAsync("toDelete.bin").Wait();
@@ -373,7 +373,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void File_system_stats_after_rename()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
 
 			client.RenameAsync("file.bin", "renamed.bin").Wait();
@@ -384,7 +384,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void Can_back_to_previous_name()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
             await client.RenameAsync("file.bin", "renamed.bin");
@@ -397,7 +397,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void Can_upload_file_with_the_same_name_as_previously_deleted()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
             await client.DeleteAsync("file.bin");
@@ -410,7 +410,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void Can_upload_file_with_the_same_name_as_previously_renamed()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
             await client.RenameAsync("file.bin", "renamed.bin");
@@ -425,7 +425,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Should_refuse_to_rename_if_file_with_the_same_name_already_exists()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			await client.UploadAsync("file1.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
 			await client.UploadAsync("file2.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
 
@@ -444,7 +444,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void Can_upload_file_with_hash_in_name()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			client.UploadAsync("name#.bin", new MemoryStream(new byte[] {1, 2, 3})).Wait();
 
@@ -454,7 +454,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Should_throw_file_not_found_exception()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			var throwsCount = 0;
 
@@ -501,7 +501,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Must_not_rename_tombstone()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			await client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3}));
 			await client.RenameAsync("file.bin", "newname.bin");
@@ -520,7 +520,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task Next_file_delete_should_throw_file_not_found_exception()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 
 			await client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3}));
 			await client.DeleteAsync("file.bin");
@@ -539,7 +539,7 @@ namespace RavenFS.Tests
 	    [Fact]
 	    public async Task Can_get_stats_for_all_active_file_systems()
 	    {
-	        var client = NewClient();
+	        var client = NewAsyncClient();
 	        var server = GetServer();
 
 	        using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "test"))
@@ -572,7 +572,7 @@ namespace RavenFS.Tests
 	    [Fact]
 	    public async Task Will_not_return_stats_of_inactive_file_systems()
 	    {
-            var client = NewClient(); // will create a file system but it remain inactive until any request will go there
+            var client = NewAsyncClient(); // will create a file system but it remain inactive until any request will go there
 
             var stats = (await client.Admin.GetStatisticsAsync()).FirstOrDefault();
 
@@ -582,7 +582,7 @@ namespace RavenFS.Tests
         [Fact]
         public async Task CanCreateAndDeleteFileSystem()
         {
-            var client = (IAsyncFilesCommandsImpl) NewClient();
+            var client = (IAsyncFilesCommandsImpl) NewAsyncClient();
             var adminClient = client.Admin;
 
             const string newFileSystemName = "testName_CanDeleteFileSystem";
@@ -619,7 +619,7 @@ namespace RavenFS.Tests
         [Fact]
         public async Task CreateFileSystemWhenExistingWillFail()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var adminClient = client.Admin;
 
             const string newFileSystemName = "testName_CreateFileSystemWhenExistingWillFail";

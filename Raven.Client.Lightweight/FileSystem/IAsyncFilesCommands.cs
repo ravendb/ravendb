@@ -48,7 +48,9 @@ namespace Raven.Client.FileSystem
 
         FilesConvention Conventions { get; }
 
-        string FileSystem { get; }   
+        string FileSystem { get; }
+
+        IAsyncFilesCommands ForFileSystem(string fileSystem);
 
 
         Task<Guid> GetServerIdAsync();

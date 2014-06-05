@@ -24,10 +24,10 @@ namespace RavenFS.Tests.Synchronization
 			var sourceContent = SyncTestUtils.PrepareSourceStream(10000);
 			sourceContent.Position = 0;
 
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 
-			var destination1Client = NewClient(1);
-		    var destination2Client = NewClient(2);
+			var destination1Client = NewAsyncClient(1);
+		    var destination2Client = NewAsyncClient(2);
 
 			var destination1Content = new RandomlyModifiedStream(sourceContent, 0.01);
 			sourceContent.Position = 0;
@@ -99,8 +99,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_not_synchronize_file_back_to_source_if_origins_from_source()
 		{
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
 			await sourceClient.UploadAsync("test.bin", new RandomStream(1024));
 
@@ -124,8 +124,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Synchronization_should_upload_all_missing_files()
 		{
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
 			var source1Content = new RandomStream(10000);
 
@@ -149,8 +149,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Make_sure_that_locks_are_released_after_synchronization_when_two_files_synchronized_simultaneously()
 		{
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
 			var source1Content = new RandomStream(10000);
 
@@ -177,10 +177,10 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Source_should_save_configuration_record_after_synchronization()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 			var sourceContent = new RandomStream(10000);
 
-			var destinationClient = NewClient(1);
+			var destinationClient = NewAsyncClient(1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -200,10 +200,10 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Source_should_delete_configuration_record_if_destination_confirm_that_file_is_safe()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 			var sourceContent = new RandomStream(10000);
 
-            var destinationClient = (IAsyncFilesCommandsImpl)NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl)NewAsyncClient(1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -224,11 +224,11 @@ namespace RavenFS.Tests.Synchronization
 		public async Task File_should_be_in_pending_queue_if_no_synchronization_requests_available()
 		{
 			var sourceContent = new RandomStream(1);
-            var sourceClient = NewClient(0);
+            var sourceClient = NewAsyncClient(0);
 
             await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLimit, 1);
 
-            var destinationClient = (IAsyncFilesCommandsImpl) NewClient(1);
+            var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 			await sourceClient.UploadAsync("test2.bin", sourceContent);
@@ -245,10 +245,10 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_change_metadata_on_all_destinations()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 
-			var destination1Client = NewClient(1);
-		    var destination2Client = NewClient(2);
+			var destination1Client = NewAsyncClient(1);
+		    var destination2Client = NewAsyncClient(2);
 
 			var sourceContent = new MemoryStream();
 			var streamWriter = new StreamWriter(sourceContent);
@@ -294,10 +294,10 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_rename_file_on_all_destinations()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 
-			var destination1Client = NewClient(1);
-		    var destination2Client = NewClient(2);
+			var destination1Client = NewAsyncClient(1);
+		    var destination2Client = NewAsyncClient(2);
 
 			// upload file to all servers
 			await sourceClient.UploadAsync("test.bin", new RandomStream(10));
@@ -333,10 +333,10 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_delete_file_on_all_destinations()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 
-			var destination1Client = NewClient(1);
-		    var destination2Client = NewClient(2);
+			var destination1Client = NewAsyncClient(1);
+		    var destination2Client = NewAsyncClient(2);
 
 			// upload file to first server and synchronize to others
 			await sourceClient.UploadAsync("test.bin", new RandomStream(10));
@@ -369,8 +369,8 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var sourceContent = new RandomStream(1024*1024);
 
-			var sourceClient = NewClient(1);
-			var destinationClient = NewClient(0);
+			var sourceClient = NewAsyncClient(1);
+			var destinationClient = NewAsyncClient(0);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -396,8 +396,8 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var sourceContent = new RandomStream(1024*1024);
 
-			var sourceClient = NewClient(1);
-			var destinationClient = NewClient(0);
+			var sourceClient = NewAsyncClient(1);
+			var destinationClient = NewAsyncClient(0);
 
 			sourceClient.UploadAsync("test.bin", sourceContent).Wait();
 
@@ -423,7 +423,7 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_report_that_file_state_is_unknown_if_file_doesnt_exist()
 		{
-			var destinationClient = NewClient(0);
+			var destinationClient = NewAsyncClient(0);
 
 			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
 					                                                    {
@@ -439,7 +439,7 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_report_that_file_is_broken_if_last_synchronization_set_exception()
 		{
-			var destinationClient = NewClient(0);
+			var destinationClient = NewAsyncClient(0);
 
 			var sampleGuid = Guid.NewGuid();
 
@@ -464,8 +464,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_not_synchronize_if_file_is_conflicted_on_destination()
 		{
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
             await destinationClient.UploadAsync("file.bin", new RavenJObject { { SynchronizationConstants.RavenSynchronizationConflict, new RavenJValue(true) } }, new RandomStream(10));
 			
@@ -481,8 +481,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Should_not_synchronize_if_file_is_conflicted_on_source()
 		{
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
             await sourceClient.UploadAsync("file.bin", new RavenJObject { { SynchronizationConstants.RavenSynchronizationConflict, new RavenJValue(true) } }, new RandomStream(10));
 
@@ -496,7 +496,7 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public void Should_not_fail_if_no_destinations_given()
 		{
-			var sourceClient = NewClient(0);
+			var sourceClient = NewAsyncClient(0);
 
 			IEnumerable<DestinationSyncResult> results = null;
 
@@ -507,8 +507,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async void Should_not_fail_if_there_is_no_file_to_synchronize()
 		{
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 

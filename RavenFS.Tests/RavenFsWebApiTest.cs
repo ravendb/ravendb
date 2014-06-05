@@ -14,7 +14,7 @@ namespace RavenFS.Tests
 
         public RavenFsWebApiTest()
         {
-            var ravenFsClient = (IAsyncFilesCommandsImpl) NewClient(fileSystemName: WebApiTestName);
+            var ravenFsClient = (IAsyncFilesCommandsImpl) NewAsyncClient(fileSystemName: WebApiTestName);
 
             WebClient = new WebClient()
             {
