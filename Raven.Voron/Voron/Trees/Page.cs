@@ -274,7 +274,9 @@ namespace Voron.Trees
 
 			newNode->KeySize = key.Size;
             newNode->Flags = other->Flags;
-			key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
+
+			if(key.Options == SliceOptions.Key)
+				key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
             if (IsBranch || other->Flags==(NodeFlags.PageRef))
             {
@@ -352,8 +354,8 @@ namespace Voron.Trees
 				return false;
 			}
 
-			IMemorySlice left;
-			IMemorySlice right;
+			PrefixedSlice left;
+			PrefixedSlice right;
 
 			if (nodeIndex > 0 && nodeIndex < NumberOfEntries) // middle
 			{
@@ -388,7 +390,7 @@ namespace Voron.Trees
 			{
 				prefixedSlice = new PrefixedSlice(NextPrefixId, leftLength, key.Skip(leftLength))
 				{
-					NewPrefix = new Slice(left.Skip(0), leftLength) // TODO check this
+					NewPrefix = new Slice(left.ToSlice(), leftLength) // TODO check this
 				};
 
 				return true;
@@ -398,7 +400,7 @@ namespace Voron.Trees
 			{
 				prefixedSlice = new PrefixedSlice(NextPrefixId, rightLength, key.Skip(rightLength))
 				{
-					NewPrefix = new Slice(right.Skip(0), rightLength) // TODO check this
+					NewPrefix = new Slice(right.ToSlice(), rightLength) // TODO check this
 				};
 
 				return true;

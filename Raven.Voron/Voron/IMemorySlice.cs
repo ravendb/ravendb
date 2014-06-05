@@ -16,7 +16,6 @@ namespace Voron
 		bool StartsWith(IMemorySlice other);
 		ushort FindPrefixSize(IMemorySlice other);
 		void CopyTo(byte* dest);
-		void CopyTo(byte[] dest);
 
 		Slice Skip(ushort bytesToSkip);
 

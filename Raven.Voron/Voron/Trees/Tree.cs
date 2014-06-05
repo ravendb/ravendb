@@ -73,6 +73,11 @@ namespace Voron.Trees
 
 		public void Add(Slice key, Stream value, ushort? version = null)
 		{
+			Add((IMemorySlice) key, value, version);
+		}
+
+		internal void Add(IMemorySlice key, Stream value, ushort? version = null)
+		{
 		    if (value == null) throw new ArgumentNullException("value");
 		    if (value.Length > int.MaxValue)
 		        throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
@@ -102,6 +107,11 @@ namespace Voron.Trees
 
 		public void Add(Slice key, byte[] value, ushort? version = null)
 		{
+			Add((IMemorySlice) key, value, version);
+		}
+
+		internal void Add(IMemorySlice key, byte[] value, ushort? version = null)
+		{
 			if (value == null) throw new ArgumentNullException("value");
 
 			State.IsModified = true;
@@ -114,6 +124,11 @@ namespace Voron.Trees
 		}
 
 		public void Add(Slice key, Slice value, ushort? version = null)
+		{
+			Add((IMemorySlice) key, value, version);
+		}
+
+		internal void Add(IMemorySlice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 
@@ -465,7 +480,12 @@ namespace Voron.Trees
 			return page;
 		}
 
-		public void Delete(IMemorySlice key, ushort? version = null)
+		public void Delete(Slice key, ushort? version = null)
+		{
+			Delete((IMemorySlice) key, version);
+		}
+
+		internal void Delete(IMemorySlice key, ushort? version = null)
 		{
 			if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot delete a value in a read only transaction");

@@ -206,7 +206,7 @@ namespace Voron
 			}
 		}
 
-		public override void CopyTo(byte[] dest)
+		public void CopyTo(byte[] dest)
 		{
 			if (_array == null)
 			{
@@ -275,6 +275,9 @@ namespace Voron
 
 		public override Slice Skip(ushort bytesToSkip)
 		{
+			if (bytesToSkip == 0)
+				return this;
+
 			if (_pointer != null)
 				return new Slice(_pointer + bytesToSkip, (ushort)(_size - bytesToSkip));
 

@@ -16,7 +16,6 @@ namespace Voron
 		public SliceOptions Options { get; protected set; }
 
 		public abstract void CopyTo(byte* dest);
-		public abstract void CopyTo(byte[] dest);
 		public abstract Slice Skip(ushort bytesToSkip);
 		public abstract ValueReader CreateReader();
 
@@ -77,7 +76,7 @@ namespace Voron
 					if (*a == *b)
 						MatchedBytes++;
 					else
-						break;
+						return *a > *b ? 1 : -1;
 
 					a++;
 					b++;

@@ -12,7 +12,7 @@ namespace Voron.Trees
 		private readonly Transaction _tx;
 		private Cursor _cursor;
 		private Page _currentPage;
-		private IMemorySlice _currentKey = new Slice(SliceOptions.Key);
+		private Slice _currentKey = new Slice(SliceOptions.Key);
 
 		public TreeIterator(Tree tree, Transaction tx)
 		{
@@ -35,7 +35,7 @@ namespace Voron.Trees
 			var node = _currentPage.Search(key);
 			if (node != null)
 			{
-				_currentKey = _currentPage.GetNodeKey(node);
+				_currentKey = _currentPage.GetNodeKey(node).ToSlice();
 				return this.ValidateCurrentKey(Current, _currentPage);
 			}
 
@@ -47,7 +47,7 @@ namespace Voron.Trees
 			return MoveNext();
 		}
 
-		public IMemorySlice CurrentKey
+		public Slice CurrentKey
 		{
 			get
 			{
@@ -103,7 +103,7 @@ namespace Voron.Trees
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
-					_currentKey = _currentPage.GetNodeKey(current);
+					_currentKey = _currentPage.GetNodeKey(current).ToSlice();
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -133,7 +133,7 @@ namespace Voron.Trees
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
-					_currentKey = _currentPage.GetNodeKey(current);
+					_currentKey = _currentPage.GetNodeKey(current).ToSlice();
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)

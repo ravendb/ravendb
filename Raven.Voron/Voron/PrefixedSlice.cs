@@ -28,13 +28,16 @@ namespace Voron
 	{
 		public static PrefixedSlice AfterAllKeys = new PrefixedSlice(SliceOptions.AfterAllKeys);
 		public static PrefixedSlice BeforeAllKeys = new PrefixedSlice(SliceOptions.BeforeAllKeys);
-		public static PrefixedSlice Empty = new PrefixedSlice();
+		public static PrefixedSlice Empty = new PrefixedSlice(Slice.Empty)
+		{
+			_size = 0
+		};
 
 		public const byte NonPrefixedId = 0xff;
 
 		private readonly PrefixedSliceHeader _header;
 		private readonly Slice _nonPrefixedData;
-		private readonly ushort _size;
+		private ushort _size;
 
 		private PrefixNode _prefix;
 
@@ -63,6 +66,7 @@ namespace Voron
 				NonPrefixedDataSize = nonPrefixedValue.KeyLength
 			};
 
+			_nonPrefixedData = nonPrefixedValue;
 			_size = (ushort)(Constants.PrefixedSliceHeaderSize + nonPrefixedValue.KeyLength);
 			Options = nonPrefixedValue.Options;
 		}
@@ -123,21 +127,25 @@ namespace Voron
 
 				NativeMethods.memcpy(dest, pt, Constants.PrefixedSliceHeaderSize);
 			}
-
+			//TODO arek
 			//fixed (byte* b = &_header.PrefixId)
 			//	NativeMethods.memcpy(dest, b, Constants.PrefixedSliceHeaderSize);
 
-			_nonPrefixedData.CopyTo(dest + Constants.PrefixedSliceHeaderSize);
-		}
 
-		public override void CopyTo(byte[] dest)
-		{
-			throw new System.NotImplementedException(); //TODO arek
+			//fixed (byte* b = &_header)
+			//	NativeMethods.memcpy(dest, (byte*)b, Constants.PrefixedSliceHeaderSize);
+
+			_nonPrefixedData.CopyTo(dest + Constants.PrefixedSliceHeaderSize);
 		}
 
 		internal void SetPrefix(PrefixNode prefix)
 		{
 			_prefix = prefix;
+		}
+
+		public Slice ToSlice()
+		{
+			return Skip(0);
 		}
 
 		public override Slice Skip(ushort bytesToSkip)
@@ -263,22 +271,13 @@ namespace Voron
 
 		internal int ComparePrefixWithNonPrefixedData(Slice other, SliceComparer cmp, int prefixOffset, int count)
 		{
-			Debug.Assert(_prefix != null);
-
 			if (count == 0)
 				return 0;
 
+			Debug.Assert(_prefix != null);
+
 			return _prefix.Value.CompareSlices(other, cmp, count, prefixOffset);
 		}
-
-		//TODO arek
-		//internal int CompareNonPrefixedData(int offset, PrefixedSlice other, int otherOffset, SliceComparer cmp, int count)
-		//{
-		//	if (count == 0)
-		//		return 0;
-
-		//	return _nonPrefixedData.CompareSlices(other._nonPrefixedData, cmp, count, offset, otherOffset);
-		//}
 
 		internal int CompareNonPrefixedData(int offset, Slice other, int otherOffset, SliceComparer cmp, int count)
 		{
@@ -286,6 +285,17 @@ namespace Voron
 				return 0;
 
 			return _nonPrefixedData.CompareSlices(other, cmp, count, offset, otherOffset);
+		}
+
+		public override string ToString()
+		{
+			if (_prefix != null)
+				return new Slice(_prefix.Value, _header.PrefixUsage) + _nonPrefixedData.ToString();
+
+			if (_header.PrefixId == NonPrefixedId)
+				return _nonPrefixedData.ToString();
+
+			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header.PrefixId, _header.PrefixUsage, _nonPrefixedData);
 		}
 	}
 }
