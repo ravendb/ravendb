@@ -52,7 +52,7 @@ class row {
 
     addOrUpdateCellMap(propertyName: string, data: any) {
         if (!this.cellMap[propertyName]) {
-            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));
+            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));            
         } else {
             var cellVal: cell = this.cellMap[propertyName];
             cellVal.data(data);
@@ -71,7 +71,14 @@ class row {
     getCellTemplate(cellName: string): string {
         var cellVal: cell = this.cellMap[cellName];
         if (cellVal) {
-            return cellVal.templateName;
+            if (cellVal.resetFlag === true) {
+                cellVal.templateName = this.getCellTemplateName(cellName, this.cellMap[cellName].data())
+                cellVal.resetFlag = false;
+                return cellVal.templateName;
+            }
+            else {
+                return cellVal.templateName;
+            }
         }
 
         // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002

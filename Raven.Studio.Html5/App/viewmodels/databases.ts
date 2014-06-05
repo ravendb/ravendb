@@ -35,7 +35,11 @@ class databases extends viewModelBase {
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
-        return true;
+        var result = $.Deferred();
+
+        this.fetchDatabases().always(() => result.resolve({ can: true }));
+        
+        return result;
     }
 
     attached() {
@@ -48,7 +52,7 @@ class databases extends viewModelBase {
         this.databasesChangeSubscription.off();
     }
 
-    modelPolling(): JQueryPromise<database[]> {
+    fetchDatabases(): JQueryPromise<database[]> {
         return new getDatabasesCommand()
             .execute()
             .done((results: database[]) => this.databasesLoaded(results));
@@ -166,7 +170,7 @@ class databases extends viewModelBase {
                 .execute()
                 .done(() => {
                     var newDb = new database(databaseName);
-                    this.databases.unshift(newDb);
+                    this.addNewDatabase(newDb);
 
                     var encryptionConfirmationDialogPromise = $.Deferred();
                     if (!jQuery.isEmptyObject(securedSettings)) {
@@ -240,7 +244,7 @@ class databases extends viewModelBase {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(db, this.systemDb);
                 confirmDeleteViewModel.deleteTask.done(()=> {
-                    this.onDatabaseDeleted(db);
+                    this.onDatabaseDeleted(db.name);
                 });
                 app.showDialog(confirmDeleteViewModel);
             });
@@ -256,6 +260,9 @@ class databases extends viewModelBase {
             var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' the database?');
             confirmationMessageViewModel
                 .done(() => {
+                    if (shell.currentDbChangesApi()) {
+                        shell.currentDbChangesApi().dispose();
+                    }
                     require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
                         new toggleDatabaseDisabledCommand(db)
                             .execute()
@@ -283,8 +290,11 @@ class databases extends viewModelBase {
         }
     }
 
-    private onDatabaseDeleted(db: database) {
-        this.databases.remove(db);
+    private onDatabaseDeleted(databaseName: string) {
+        var databaseInList = this.databases.first((curDB: database) => curDB.name == databaseName);
+        if (!!databaseInList) {
+            this.databases.remove(databaseInList);
+        }
         if (this.databases().length === 0)
             this.selectDatabase(this.systemDb);
         else if (this.databases.contains(this.selectedDatabase()) === false) {
@@ -292,14 +302,27 @@ class databases extends viewModelBase {
         }
     }
 
+    private addNewDatabase(db: database) {
+        var databaseInList = this.databases.first((curDb: database) => curDb.name == db.name);
+        if (!databaseInList) {
+            this.databases.unshift(db);
+        }
+    }
+
     private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
         if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
             (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
             if (e.Type === documentChangeType.Delete) {
-                this.onDatabaseDeleted(new database(e.Id));
+                var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+                this.onDatabaseDeleted(receivedDocumentName);
             }
-
-            this.modelPolling();
+            if (e.Type === documentChangeType.Put) {
+                var existing = this.databases.first((cur: database) => "Raven/Databases/" + cur.name == e.Id);
+                if (!existing) {
+                    var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+                    this.addNewDatabase(new database(receivedDocumentName));
+                }
+            }
         }
     }
 }

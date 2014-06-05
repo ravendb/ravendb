@@ -181,6 +181,7 @@ class editDocument extends viewModelBase {
     setupKeyboardShortcuts() {        
         this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);

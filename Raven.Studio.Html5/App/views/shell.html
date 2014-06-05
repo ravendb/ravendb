@@ -11,7 +11,7 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
-                <div data-bind="visible: appUrls.isAreaActive('databases') && !isDatabaseDisabled()">
+                <div data-bind="visible: canShowDocumentsNavbar() === true">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -233,7 +233,9 @@
     <div class="studio-alerts" data-bind="with: currentAlert">
         <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
             <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-            <strong data-bind="text: title"></strong>
+            <div class="alert-text">
+                <strong data-bind="text: title, attr:{title:title}"></strong>
+            </div>
             <span data-bind="visible: errorMessage, text: errorMessage"></span>
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
         </div>
