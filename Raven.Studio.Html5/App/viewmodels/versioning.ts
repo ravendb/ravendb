@@ -35,9 +35,10 @@ class versioning extends viewModelBase {
         if (db) {
 
             var saveTask = new saveVersioningCommand(
+                db,
                 this.versionings().map((v) => { return v.toDto(true); }),
-                this.toRemove.map((v) => { return v.toDto(true); }),
-                db).execute();
+                this.toRemove.map((v) => { return v.toDto(true); })
+                ).execute();
             saveTask.done((saveResult: bulkDocumentDto[]) => {
                 this.versioningsSaved(saveResult);
             });

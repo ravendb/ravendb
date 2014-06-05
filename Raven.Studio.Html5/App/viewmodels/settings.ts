@@ -13,7 +13,7 @@ class settings extends viewModelBase {
     isOnUserDatabase: KnockoutComputed<boolean>;
     appUrls: computedAppUrls;
 
-    bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "ScriptedIndexResults", scriptedindex: "Scripted Index"};
+    bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index"};
     userDatabasePages = ko.observableArray(["Database Settings"]);
     systemDatabasePages = ["API Keys", "Windows Authentication"];
 

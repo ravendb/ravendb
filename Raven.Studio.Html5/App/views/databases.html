@@ -16,18 +16,49 @@
             </div>
             <form class="form-inline col-md-3 col-sm-3">
                 <div class="input-group">
-                    <input type="text" accesskey="s" class="form-control " placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
+                    <input type="text" accesskey="s" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
                     <span class="input-group-addon"><i class="fa fa-search"></i></span>
                 </div>
             </form>
-            <div class="btn-group">
-                <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
-            </div>
+                <div class="btn-group" data-bind="visible: selectedDatabase() != null">
+                    <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-bind="click: deleteSelectedDatabase" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
+                </div>
+                <div class="btn-group" data-bind="visible: selectedDatabase() != null">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
+                        <i class="fa fa-cogs"></i>
+                    </button>
+                    <ul class="dropdown-menu col-sm-3" role="menu">
+                        <li role="presentation" data-bind="visible: selectedDatabase() != null && !selectedDatabase().disabled()">
+                            <a class="btn use-bootstrap-tooltip" title="Disable the Database" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleSelectedDatabase">
+                                <i class="fa fa-lock"></i>
+                                Disable
+                            </a>
+                        </li>
+                        <li role="presentation" data-bind="visible: selectedDatabase() != null && selectedDatabase().disabled">
+                            <a class="btn use-bootstrap-tooltip" title="Enable the Database" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleSelectedDatabase">
+                                <i class="fa fa-unlock"></i>
+                                Enable
+                            </a>
+                        </li>
+                    </ul>
+                </div>
         </div>
         <div class="databases-container" data-bind="foreach: databases">
-            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected}">
-                <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>
-                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' documents'"></span>
+            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: $data.disabled }">
+                <h4>
+                    <!-- ko ifnot: $data.disabled -->
+                    <a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
+                    <!-- /ko -->
+                    <!-- ko if: $data.disabled -->
+                    <a data-bind="text: name"></a>
+                    <!-- /ko -->
+                </h4>
+                <!-- ko ifnot: $data.disabled -->
+                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCount() + ' documents'"></span>
+                <!-- /ko -->
+                <!-- ko if: $data.disabled -->
+                <span class="text-muted">Disabled</span>
+                <!-- /ko -->
             </div>
         </div>
     </div>

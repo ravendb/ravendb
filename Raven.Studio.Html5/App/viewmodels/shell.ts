@@ -65,6 +65,8 @@ class shell extends viewModelBase {
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
     refreshTimeoutFlag: boolean = true;
+    isDatabaseDisabled: KnockoutComputed<boolean>;
+    listedDatabases: KnockoutComputed<database[]>;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
@@ -95,6 +97,7 @@ class shell extends viewModelBase {
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
+        ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
@@ -107,6 +110,19 @@ class shell extends viewModelBase {
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+        this.isDatabaseDisabled = ko.computed(() => {
+            var activeDb = this.activeDatabase();
+            return !!activeDb ? activeDb.disabled() : false;
+        });
+
+        this.listedDatabases = ko.computed(() => {
+            var currentDb = this.activeDatabase();
+            if (!!currentDb) {
+                return this.databases().filter(database => database.name != currentDb.name);
+            }
+            return this.databases();
+        });
     }
 
     activate(args: any) {
@@ -186,7 +202,10 @@ class shell extends viewModelBase {
         }, "Raven/Databases");
     }
 
-
+    compositionComplete() {
+        super.compositionComplete();
+        
+    }
 
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
@@ -216,7 +235,13 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x => x.isVisible()).activate();
+            var urlDatabase = appUrl.getDatabase();
+            var newSelectedDb;
+            if (urlDatabase != null && (newSelectedDb = this.databases.first(x => x.name == urlDatabase.name)) != null) {
+                newSelectedDb.activate();
+            } else {
+                this.databases.first(x => x.isVisible()).activate();
+            }
         }
     }
 
@@ -243,7 +268,7 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
-            });
+        });
 
         this.filesystemsLoadedTask = new getFilesystemsCommand()
             .execute()
@@ -289,6 +314,20 @@ class shell extends viewModelBase {
                 this.connectToRavenServer();
             }
         });
+    }
+
+    dataLoadProgress(splashType?: alertType) {
+        if (!splashType) {
+            NProgress.configure({ showSpinner: false });
+            NProgress.done();
+        } else if (splashType == alertType.warning) {
+            NProgress.configure({ showSpinner: true });
+            NProgress.start();
+        } else {
+            NProgress.done();
+            NProgress.configure({ showSpinner: false });
+            this.showAlert(new alertArgs(alertType.danger, "Database load time is too long", "The database server might not be responding."));
+        }
     }
 
     showAlert(alert: alertArgs) {
@@ -360,27 +399,30 @@ class shell extends viewModelBase {
     }
 
     updateChangesApi(newDb: database) {
-        if (shell.currentDbChangesApi()) {
-            shell.currentDbChangesApi().dispose();
-        }
-        shell.currentDbChangesApi(new changesApi(newDb));
-
-        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                this.modelPolling();
-            } 
-        });
-
-        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                this.modelPolling();
-            } else {
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        if (!newDb.disabled()) {
+            if (shell.currentDbChangesApi()) {
+                shell.currentDbChangesApi().dispose();
             }
-        });
+
+            shell.currentDbChangesApi(new changesApi(newDb));
+
+            shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+                if (this.modelPollingTimeoutFlag === true) {
+                    this.modelPollingTimeoutFlag = false;
+                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+                    this.modelPolling();
+                }
+            });
+
+            shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+                if (this.modelPollingTimeoutFlag === true) {
+                    this.modelPollingTimeoutFlag = false;
+                    this.modelPolling();
+                } else {
+                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+                }
+            });
+        }
     }
 
     reloadDatabases() {
@@ -412,7 +454,7 @@ class shell extends viewModelBase {
     }
 
     fetchDbStats(db: database) {
-        if (db) {
+        if (db && !db.disabled()) {
             new getDatabaseStatsCommand(db)
                 .execute()
                 .done(result=> db.statistics(result));
