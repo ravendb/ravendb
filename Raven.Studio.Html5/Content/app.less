@@ -189,8 +189,8 @@ html, body {
         .database {
             cursor: pointer;
             border-radius: 10px;
-            -webkit-box-shadow: 0 0 5px 1px silver;
-            box-shadow: 0 0 5px 1px silver;
+            -webkit-box-shadow: 0 0 5px 2px silver;
+            box-shadow: 0 0 5px 2px silver;
             min-width: 140px;
             min-height: 60px;
             display: inline-block;
@@ -199,7 +199,31 @@ html, body {
 
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
-            @disabledColor: rgba(255,2,2,1);
+            @disabledColor: lighten(silver, 5%);
+
+            .database-name{ 
+                float: left;
+            }
+
+            .btn-group{ 
+                float: right;
+                margin-left: 5px;
+                margin-top: 3px;
+            }
+
+            .btn-default{
+                border-color: white;
+            }
+
+            .btn-default:hover{
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }
+
+            &.disabled {
+                -webkit-box-shadow: 0 0 6px 0 @disabledColor;
+                box-shadow: 0 0 6px 0 @disabledColor;
+            }
 
             &:hover {
                 background-color: white;
@@ -215,11 +239,15 @@ html, body {
                 a, .text-muted {
                     color: white;
                 }
-            }
 
-            &.disabled {
-                -webkit-box-shadow: 0 0 6px 0 @disabledColor;
-                box-shadow: 0 0 6px 0 @disabledColor;
+                a.btn{
+                    color: black;
+                    text-align: left;
+                }
+
+                .btn-default{
+                    border-color: @hoverColor;
+                }
             }
 
             &.system-database {
@@ -238,6 +266,12 @@ html, body {
     }
 }
 
+.menu-item-disabled{
+    pointer-events: none;
+    cursor: default;
+    text-decoration: line-through;
+}
+
 .document-collections {
         
     li {
@@ -248,7 +282,7 @@ html, body {
     }
    
     .outer {
-                overflow: hidden!important;
+        overflow: hidden!important;
         white-space: nowrap !important;
         -ms-text-overflow: clip !important;
         -o-text-overflow: clip !important;

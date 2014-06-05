@@ -55,7 +55,6 @@ class shell extends viewModelBase {
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
-    canShowDocumentsNavbar = ko.computed(() => this.databases().length > 0 && this.appUrls.isAreaActive('databases')() && !this.isDatabaseDisabled());
     canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
     canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
 
