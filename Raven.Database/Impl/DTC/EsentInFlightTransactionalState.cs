@@ -19,6 +19,7 @@ namespace Raven.Database.Impl.DTC
 {
 	public class EsentInFlightTransactionalState : InFlightTransactionalState, IDisposable
 	{
+		private readonly DocumentDatabase _database;
 		private readonly TransactionalStorage storage;
 		private readonly CommitTransactionGrbit txMode;
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
@@ -27,9 +28,10 @@ namespace Raven.Database.Impl.DTC
 		private long transactionContextNumber;
 		private readonly Timer timer;
 
-		public EsentInFlightTransactionalState(TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
+		public EsentInFlightTransactionalState(DocumentDatabase database,TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 			: base(databasePut, databaseDelete)
 		{
+			_database = database;
 			this.storage = storage;
 			this.txMode = txMode;
 			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
@@ -83,6 +85,8 @@ namespace Raven.Database.Impl.DTC
 							{
 								foreach (var docId in context.DocumentIdsToTouch)
 								{
+									_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId,accessor);
+
 									Etag preTouchEtag;
 									Etag afterTouchEtag;
 									accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
