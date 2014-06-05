@@ -16,12 +16,11 @@
             </div>
             <form class="form-inline col-md-3 col-sm-3">
                 <div class="input-group">
-                    <input type="text" accesskey="s" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
+                    <input type="text" accesskey="s" class="form-control " placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
                     <span class="input-group-addon"><i class="fa fa-search"></i></span>
                 </div>
             </form>
             <div class="btn-group">
-                <!--<button type="button" class="btn btn-danger use-bootstrap-tooltip" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>-->
                 <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
             </div>
         </div>

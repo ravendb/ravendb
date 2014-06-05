@@ -205,6 +205,7 @@ class editDocument extends viewModelBase {
         this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("/", () => this.docsList(), editDocument.editDocSelector);
     }
 
     focusOnMetadata() {
