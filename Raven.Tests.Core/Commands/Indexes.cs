@@ -11,6 +11,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
+using Raven.Tests.Core.Utils.Indexes;
 
 namespace Raven.Tests.Core.Commands
 {
@@ -193,5 +194,22 @@ namespace Raven.Tests.Core.Commands
 				}
 			}
 		}
+
+        [Fact]
+        public async Task CanGetIndexNames()
+        {
+            var index1 = new Users_ByName();
+            var index2 = new Posts_Recurse();
+            using (var store = GetDocumentStore())
+            {
+                index1.Execute(store);
+                index2.Execute(store);
+
+                var indexes = await store.AsyncDatabaseCommands.GetIndexNamesAsync(0, 10);
+                Assert.Equal(2, indexes.Length);
+                Assert.Equal(index1.IndexName, indexes[1]);
+                Assert.Equal(index2.IndexName, indexes[0]);
+            }
+        }
 	}
 }
