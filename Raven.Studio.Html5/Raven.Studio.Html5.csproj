@@ -1086,7 +1086,6 @@
     <Content Include="Content\app.css.map">
       <DependentUpon>app.css</DependentUpon>
     </Content>
-    <Content Include="Scripts\bootstrap-filestyle.js" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
