@@ -1413,7 +1413,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
+    <TypeScriptCompile Include="Content\images\es6shim\es6shim.d.ts" />
   </ItemGroup>
   <ItemGroup />
   <PropertyGroup>
