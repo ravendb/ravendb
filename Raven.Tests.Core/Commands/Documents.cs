@@ -30,7 +30,10 @@ namespace Raven.Tests.Core.Commands
                         Address1 = "To be removed.",
                         Address2 = "Address2"
                     }),
-                    new RavenJObject());
+                    RavenJObject.FromObject(new 
+                    {
+                        SomeMetadataKey = "SomeMetadataValue"
+                    }));
                 Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
                 await store.AsyncDatabaseCommands.PutAsync("users/2", null, RavenJObject.FromObject(new User { Name = "testname2" }), new RavenJObject());
@@ -38,6 +41,12 @@ namespace Raven.Tests.Core.Commands
 
                 var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 25);
                 Assert.Equal(2, documents.Length);
+
+                var metadata = await store.AsyncDatabaseCommands.HeadAsync("companies/1");
+                RavenJToken value = null;
+                Assert.NotNull(metadata);
+                Assert.True(metadata.Metadata.TryGetValue("SomeMetadataKey", out value));
+                Assert.Equal("SomeMetadataValue", value);
 
                 await store.AsyncDatabaseCommands.PatchAsync(
                     "companies/1",
