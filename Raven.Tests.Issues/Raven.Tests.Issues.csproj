@@ -263,6 +263,7 @@
     <Compile Include="RavenDB_2314.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="RavenDB_2387.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />

@@ -156,7 +156,7 @@ namespace Raven.Database
                     Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
                     Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
 
-                    inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(Documents.Put, Documents.Delete);
+                    inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
                     CompleteWorkContextSetup();
 
