@@ -211,5 +211,25 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(index2.IndexName, indexes[0]);
             }
         }
+
+        [Fact]
+        public async Task CanResetIndex()
+        {
+            var index = new Users_ByName();
+            using (var store = GetDocumentStore())
+            {
+                index.Execute(store);
+                for (var i = 0; i < 20; i++)
+                {
+                    await store.AsyncDatabaseCommands.PutAsync("users/" + i, null, RavenJObject.FromObject(new User { }), new RavenJObject());
+                }
+                WaitForIndexing(store);
+
+                await store.AsyncDatabaseCommands.ResetIndexAsync(index.IndexName);
+                var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                Assert.Equal(1, stats.StaleIndexes.Length);
+                Assert.Equal(index.IndexName, stats.StaleIndexes[0]);
+            }
+        }
 	}
 }
