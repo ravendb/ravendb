@@ -94,6 +94,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceServerInfo, accessor);
 				});
 
+                SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.ContentUpdate);
+
 				PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
@@ -199,6 +201,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				// we want to execute those operation in a single batch but we also have to ensure that
 				// Raven/Synchronization/Sources/sourceServerId config is modified only by one finishing synchronization at the same time
 				SynchronizationFinishLocks.GetOrAdd(sourceServer.Id, new ReaderWriterLockSlim()).EnterWriteLock();
+                SynchronizationTask.IncomingSynchronizationFinished(fileName, sourceServer, sourceFileETag);
+
 				Storage.Batch(accessor =>
 				{
 					SaveSynchronizationReport(fileName, accessor, report);
@@ -273,6 +277,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					AssertFileIsNotBeingSynced(fileName, accessor);
 					FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceServerInfo, accessor);
 				});
+                
+                SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.MetadataUpdate);
 
                 PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
@@ -341,6 +347,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					AssertFileIsNotBeingSynced(fileName, accessor);
 					FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceServerInfo, accessor);
 				});
+
+
+                SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.Delete);
 
                 PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
@@ -425,6 +434,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					AssertFileIsNotBeingSynced(fileName, accessor);
 					FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceServerInfo, accessor);
 				});
+
+                SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceServerInfo, sourceFileETag, SynchronizationType.Rename);
 
                 PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Start);
 
@@ -544,6 +555,21 @@ namespace Raven.Database.Server.RavenFS.Controllers
             return this.GetMessageWithObject(result, HttpStatusCode.OK)
                        .WithNoCache();
 		}
+
+        [HttpGet]
+        [Route("fs/{fileSystemName}/synchronization/Incoming")]
+        public HttpResponseMessage Incoming()
+        {
+            var activeIncoming = SynchronizationTask.IncomingQueue;
+
+            var result = new ListPage<SynchronizationDetails>(activeIncoming.Skip(Paging.Start)
+                                                                            .Take(Paging.PageSize),
+                                                              activeIncoming.Count());
+
+            return this.GetMessageWithObject(result, HttpStatusCode.OK)
+                       .WithNoCache();
+        }
+
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/synchronization/Conflicts")]
