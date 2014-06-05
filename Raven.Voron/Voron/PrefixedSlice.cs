@@ -31,7 +31,8 @@ namespace Voron
 		public static PrefixedSlice BeforeAllKeys = new PrefixedSlice(SliceOptions.BeforeAllKeys);
 		public static PrefixedSlice Empty = new PrefixedSlice(Slice.Empty)
 		{
-			_size = 0
+			_size = 0,
+			_keyLength = 0
 		};
 
 		public const byte NonPrefixedId = 0xff;
@@ -39,6 +40,7 @@ namespace Voron
 		private readonly PrefixedSliceHeader _header;
 		private readonly Slice _nonPrefixedData;
 		private ushort _size;
+		private ushort _keyLength;
 
 		private PrefixNode _prefix;
 
@@ -48,6 +50,7 @@ namespace Voron
 		{
 			Options = SliceOptions.Key;
 			_size = 0;
+			_keyLength = 0;
 			_header = new PrefixedSliceHeader();
 		}
 
@@ -69,6 +72,7 @@ namespace Voron
 
 			_nonPrefixedData = nonPrefixedValue;
 			_size = (ushort)(Constants.PrefixedSliceHeaderSize + nonPrefixedValue.KeyLength);
+			_keyLength = (ushort)(prefixUsage + nonPrefixedValue.KeyLength);
 			Options = nonPrefixedValue.Options;
 		}
 
@@ -82,10 +86,12 @@ namespace Voron
 				_nonPrefixedData = new Slice((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, _header.NonPrefixedDataSize);
 
 				_size = node->KeySize;
+				_keyLength = (ushort) (_header.PrefixUsage + _header.NonPrefixedDataSize);
 			}
 			else
 			{
 				_size = 0;
+				_keyLength = 0;
 			}
 
 			Options = SliceOptions.Key;
@@ -103,6 +109,7 @@ namespace Voron
 			_nonPrefixedData = key.ToSlice();
 
 			_size = (ushort)(Constants.PrefixedSliceHeaderSize + key.KeyLength);
+			_keyLength = key.KeyLength;
 		}
 
 		public PrefixedSliceHeader Header
@@ -114,9 +121,10 @@ namespace Voron
 		{
 			get { return _size; }
 		}
+
 		public override ushort KeyLength
 		{
-			get { return (ushort)(_header.NonPrefixedDataSize + _header.PrefixUsage); }
+			get { return _keyLength; }
 		}
 
 		public override void CopyTo(byte* dest)
