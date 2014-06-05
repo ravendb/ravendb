@@ -63,7 +63,7 @@ namespace Raven.Client.FileSystem
             try
             {
                 FileSystem = fileSystemName;                
-                ApiKey = credentials.ApiKey;                
+                ApiKey = credentials.ApiKey;
 
                 notifications = new FilesChangesClient(serverUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, () => { });
 
@@ -569,14 +569,6 @@ namespace Raven.Client.FileSystem
             {
                 return new AdminClient(this, Conventions);
             }
-        }
-
-        /// <summary>
-        /// Subscribe to change notifications from the server
-        /// </summary>
-        public IFilesChanges Changes()
-        {
-            return this.notifications;
         }
 
         private static void AddHeaders(RavenJObject metadata, HttpJsonRequest request)

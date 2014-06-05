@@ -2,6 +2,7 @@
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.FileSystem.Changes;
+using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Client.Util;
 using System;
@@ -27,6 +28,8 @@ namespace Raven.Client.FileSystem
         private HttpJsonRequestFactory jsonRequestFactory;
         private FilesConvention conventions;
         private readonly AtomicDictionary<IFilesChanges> fileSystemChanges = new AtomicDictionary<IFilesChanges>(StringComparer.OrdinalIgnoreCase);
+        private readonly AtomicDictionary<IAsyncFilesCommandsImpl> fileSystemCommands = new AtomicDictionary<IAsyncFilesCommandsImpl>(StringComparer.OrdinalIgnoreCase);
+        
 
         private bool initialized;
         private FilesSessionListeners listeners = new FilesSessionListeners();
@@ -59,9 +62,12 @@ namespace Raven.Client.FileSystem
         /// </summary>
         public string ApiKey { get; set; }
 
-        public IFilesChanges Changes(string filesystem)
+        public IFilesChanges Changes(string filesystem = null)
         {
             AssertInitialized();
+
+            if (filesystem == null)
+                filesystem = this.DefaultFileSystem;
 
             return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges);
         }
@@ -73,23 +79,21 @@ namespace Raven.Client.FileSystem
 
             var fsUrl = Url + "/fs/" + filesystem;
 
-            throw new NotImplementedException();
+            var commands = fileSystemCommands.GetOrAdd(filesystem, x => (IAsyncFilesCommandsImpl)this.AsyncFilesCommands.ForFileSystem(x));
 
-            //using (NoSynchronizationContext.Scope())
-            //{
-            //    return new FilesChangesClient(fsUrl,
-            //        ApiKey,
-            //        Credentials,
-            //        jsonRequestFactory,
-            //        Conventions,
-            //        GetReplicationInformerForFileSystem(filesystem),
-            //        () => fileSystemChanges.Remove(filesystem));
-            //}
-        }
-
-        public IDisposable SetRequestsTimeoutFor(TimeSpan timeout)
-        {
-            throw new NotImplementedException();
+            using (NoSynchronizationContext.Scope())
+            {
+                return new FilesChangesClient(Url,
+                    ApiKey,
+                    Credentials,
+                    jsonRequestFactory,
+                    Conventions,
+                    commands.ReplicationInformer,
+                    () => {
+                        fileSystemChanges.Remove(filesystem);
+                        fileSystemCommands.Remove(filesystem);
+                    });
+            }
         }
 
         /// <summary>
@@ -292,7 +296,6 @@ namespace Raven.Client.FileSystem
             }
         }
 
-
         public FilesSessionListeners Listeners
         {
             get 
@@ -350,11 +353,17 @@ namespace Raven.Client.FileSystem
                 }
             }
 
+            foreach (var fileSystemCommand in fileSystemCommands)
+            {
+                var remoteFileSystemCommand = fileSystemCommand.Value as IDisposable;
+                if (remoteFileSystemCommand != null)
+                    remoteFileSystemCommand.Dispose();
+            }
+
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
 
             // if this is still going, we continue with disposal, it is for grace only, anyway
-
             if (jsonRequestFactory != null)
                 jsonRequestFactory.Dispose();
 

@@ -13,13 +13,19 @@ namespace RavenFS.Tests.Synchronization
 {
     public class ConflictNotificationTests : RavenFsTestBase
 	{
-		private readonly AsyncFilesServerClient destinationClient;
-		private readonly AsyncFilesServerClient sourceClient;
+        private readonly IFilesStore sourceStore;
+        private readonly IFilesStore destinationStore;
 
-		public ConflictNotificationTests()
+        private readonly IAsyncFilesCommands destinationClient;
+        private readonly IAsyncFilesCommands sourceClient;
+
+        public ConflictNotificationTests()
 		{
-            destinationClient = (AsyncFilesServerClient) NewAsyncClient(0);
-            sourceClient = (AsyncFilesServerClient) NewAsyncClient(1);
+            sourceStore = NewStore(0);
+            sourceClient = sourceStore.AsyncFilesCommands;
+
+            destinationStore = NewStore(1);
+            destinationClient = destinationStore.AsyncFilesCommands;
 		}
 
         [Fact]
@@ -41,18 +47,18 @@ namespace RavenFS.Tests.Synchronization
 			await destinationClient.UploadAsync("abc.txt", destinationMetadata, destinationContent);
 			await sourceClient.UploadAsync("abc.txt", sourceMetadata, sourceContent);
 
-            var notificationTask = destinationClient.Changes().ForConflicts()
-                                                         .OfType<ConflictDetectedNotification>()
-				                                         .Timeout(TimeSpan.FromSeconds(5))
-				                                         .Take(1)
-				                                         .ToTask();
+            var notificationTask = destinationStore.Changes().ForConflicts()
+                                        .OfType<ConflictDetectedNotification>()
+				                        .Timeout(TimeSpan.FromSeconds(5))
+				                        .Take(1)
+				                        .ToTask();
 
 			await sourceClient.Synchronization.StartAsync("abc.txt", destinationClient);
 
 			var conflictDetected = await notificationTask;
 
 			Assert.Equal("abc.txt", conflictDetected.FileName);
-            Assert.Equal(new Uri(sourceClient.ServerUrl).Port, new Uri(conflictDetected.SourceServerUrl).Port);
+            Assert.Equal(new Uri(sourceStore.Url).Port, new Uri(conflictDetected.SourceServerUrl).Port);
 		}
 
 		public override void Dispose()

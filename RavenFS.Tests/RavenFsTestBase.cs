@@ -83,7 +83,7 @@ namespace RavenFS.Tests
         }
 
         protected virtual IFilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                                    ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
+                                                ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -105,7 +105,7 @@ namespace RavenFS.Tests
         }
 
         protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                                    ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
+                                                             ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
