@@ -317,11 +317,8 @@ class databases extends viewModelBase {
                 this.onDatabaseDeleted(receivedDocumentName);
             }
             if (e.Type === documentChangeType.Put) {
-                var existing = this.databases.first((cur: database) => "Raven/Databases/" + cur.name == e.Id);
-                if (!existing) {
-                    var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
-                    this.addNewDatabase(new database(receivedDocumentName));
-                }
+                var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+                this.addNewDatabase(new database(receivedDocumentName));
             }
         }
     }
