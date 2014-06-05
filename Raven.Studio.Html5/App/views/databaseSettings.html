@@ -4,7 +4,7 @@
             <div class="navbar-form">
                     <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                     <button type="button" class="btn btn-default" data-bind="click: editDatabaseSettings, visible: !isEditingEnabled()" title="Edit Database Settings"><i class="fa fa-pencil"></i></button>
-                    <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">
+                    <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes" >
                         <i class="fa fa-refresh"></i>
                     </button>
                     <button type="button" class="btn btn-default"  data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="[">
