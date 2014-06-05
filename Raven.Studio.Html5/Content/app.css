@@ -219,7 +219,7 @@ body {
 .document-collections .collection-color-strip {
   margin-right: 5px;
 }
-.document-collections .outer {
+.document-collections .collectionText {
   overflow: hidden!important;
   white-space: nowrap !important;
   -ms-text-overflow: clip !important;
@@ -228,7 +228,7 @@ body {
   max-width: 90%;
   margin-right: 0!important;
 }
-.document-collections .inner {
+.document-collections .collectionName {
   overflow: hidden!important;
   white-space: nowrap !important;
   -ms-text-overflow: ellipsis !important;
