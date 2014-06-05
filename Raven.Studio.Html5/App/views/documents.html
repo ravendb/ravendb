@@ -4,13 +4,13 @@
             <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
                 <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                     <a href="javascript:void(0)">
-                        <div class="outer">
+                        <div class="collectionText">
                             <div class="inner pull-left collection-color-strip" data-bind="css: colorClass"></div>
                             <div class="inner pull-left collection-name-part">
                                 <span data-bind="text: name, attr:{title:name}"></span>
                                 
                             </div>
-                            <div class="inner pull-left">
+                            <div class="collectionName pull-left">
                                 <span class="text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text: '(' + documentCount() + ')'"></span>
                             </div>
                         </div>
