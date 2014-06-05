@@ -98,6 +98,16 @@ namespace Raven.Client.FileSystem
             return new AsyncFilesServerClient(this.ServerUrl, fileSystem, Conventions, PrimaryCredentials, RequestFactory, SessionId, OperationsHeaders);
         }
 
+        public IAsyncFilesCommands With(ICredentials credentials)
+        {
+            var primaryCredentials = new OperationCredentials(this.ApiKey, credentials);
+            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, primaryCredentials, RequestFactory, SessionId, OperationsHeaders);
+        }
+        public IAsyncFilesCommands With(OperationCredentials credentials)
+        {
+            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, credentials, RequestFactory, SessionId, OperationsHeaders);
+        }
+
         public string ApiKey { get; private set; }
 
         public bool IsObservingFailedUploads

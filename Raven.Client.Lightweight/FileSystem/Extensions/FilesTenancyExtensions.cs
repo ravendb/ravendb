@@ -26,21 +26,5 @@ namespace Raven.Client.FileSystem.Extensions
                  }
             });
         }
-
-        public static void EnsureFileSystemExists(this IFilesCommands commands)
-        {
-            var existingSystems = commands.Admin.GetNames();
-            if (existingSystems.Any(x => x.Equals(commands.FileSystem, StringComparison.InvariantCultureIgnoreCase)))
-                return;
-
-            commands.Admin.CreateFileSystem(new FileSystemDocument
-            {
-                Id = "Raven/FileSystem/" + commands.FileSystem,
-                Settings =
-                 {
-                     {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", commands.FileSystem)}
-                 }
-            });
-        }
     }
 }

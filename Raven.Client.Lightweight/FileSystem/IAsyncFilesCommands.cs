@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -51,6 +52,8 @@ namespace Raven.Client.FileSystem
         string FileSystem { get; }
 
         IAsyncFilesCommands ForFileSystem(string fileSystem);
+        IAsyncFilesCommands With(ICredentials credentials);
+        IAsyncFilesCommands With(OperationCredentials credentials);
 
 
         Task<Guid> GetServerIdAsync();

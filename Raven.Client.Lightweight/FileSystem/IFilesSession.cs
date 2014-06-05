@@ -28,11 +28,10 @@ namespace Raven.Client.FileSystem
 
         FileHeader LoadFile(string path);
         FileHeader LoadFile(DirectoryHeader directory, string filename);
-
-        FileHeader LoadFiles(IEnumerable<string> path);
+        FileHeader[] LoadFiles(IEnumerable<string> path);
 
         // TODO: Paging or streaming?
-        // FileHeader LoadFiles(DirectoryHeader directory);
+        // FileHeader[] LoadFiles(DirectoryHeader directory);
 
         DirectoryHeader LoadDirectory(string path);
 

@@ -200,7 +200,6 @@ namespace Raven.Client.FileSystem
 
                 if (ensureFileSystemExists && string.IsNullOrEmpty(DefaultFileSystem) == false)
                 {
-                    // TODO: Use the sync one after we implement it.
                     AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
                                       .EnsureFileSystemExistsAsync()
                                       .Wait();
@@ -221,18 +220,11 @@ namespace Raven.Client.FileSystem
             {
                 return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId);
             };
-
-            filesCommandsGenerator = () =>
-            {
-                throw new NotImplementedException();
-            };
         }
 
         /// <summary>
         /// Generate new instance of files commands
         /// </summary>
-        protected Func<IFilesCommands> filesCommandsGenerator;
-
         protected Func<IAsyncFilesCommands> asyncFilesCommandsGenerator;
         
         /// <summary>
@@ -245,27 +237,6 @@ namespace Raven.Client.FileSystem
             {
                 AssertInitialized();
                 var commands = asyncFilesCommandsGenerator();
-                foreach (string key in SharedOperationsHeaders)
-                {
-                    var values = SharedOperationsHeaders.GetValues(key);
-                    if (values == null)
-                        continue;
-                    foreach (var value in values)
-                    {
-                        commands.OperationsHeaders[key] = value;
-                    }
-                }
-                return commands;
-            }
-        }
-
-
-        public virtual IFilesCommands FilesCommands
-        {
-            get
-            {
-                AssertInitialized();
-                var commands = filesCommandsGenerator();
                 foreach (string key in SharedOperationsHeaders)
                 {
                     var values = SharedOperationsHeaders.GetValues(key);

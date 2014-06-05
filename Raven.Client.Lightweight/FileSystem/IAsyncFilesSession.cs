@@ -24,8 +24,7 @@ namespace Raven.Client.FileSystem
 
         Task<FileHeader> LoadFileAsync(string path);
         Task<FileHeader> LoadFileAsync(DirectoryHeader directory, string filename);
-
-        Task<FileHeader> LoadFilesAsync(IEnumerable<string> path);
+        Task<FileHeader[]> LoadFilesAsync(IEnumerable<string> path);
 
         Task<DirectoryHeader> LoadDirectoryAsync(string path);
 
@@ -33,20 +32,20 @@ namespace Raven.Client.FileSystem
         Task<Stream> DownloadAsync(FileHeader path);
 
 
-        Task RegisterUploadAsync(string path, Stream stream, RavenJObject metadata = null, Etag etag = null);
-        Task RegisterUploadAsync(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null);
-        Task RegisterUploadAsync(string path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
-        Task RegisterUploadAsync(FileHeader path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
+        void RegisterUploadAsync(string path, Stream stream, RavenJObject metadata = null, Etag etag = null);
+        void RegisterUploadAsync(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null);
+        void RegisterUploadAsync(string path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
+        void RegisterUploadAsync(FileHeader path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
 
-        Task RegisterFileDeletionAsync(string path, Etag etag = null);
-        Task RegisterFileDeletionAsync(FileHeader path, Etag etag = null);
+        void RegisterFileDeletionAsync(string path, Etag etag = null);
+        void RegisterFileDeletionAsync(FileHeader path, Etag etag = null);
 
-        Task RegisterDirectoryDeletionAsync(string path, bool recurse = false);
-        Task RegisterDirectoryDeletionAsync(DirectoryHeader path, bool recurse = false);
+        void RegisterDirectoryDeletionAsync(string path, bool recurse = false);
+        void RegisterDirectoryDeletionAsync(DirectoryHeader path, bool recurse = false);
 
-        Task RegisterRenameAsync(string sourceFile, string destinationFile);
-        Task RegisterRenameAsync(FileHeader sourceFile, string destinationFile);
-        Task RegisterRenameAsync(FileHeader sourceFile, DirectoryHeader destinationPath, string destinationName);
+        void RegisterRenameAsync(string sourceFile, string destinationFile);
+        void RegisterRenameAsync(FileHeader sourceFile, string destinationFile);
+        void RegisterRenameAsync(FileHeader sourceFile, DirectoryHeader destinationPath, string destinationName);
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>

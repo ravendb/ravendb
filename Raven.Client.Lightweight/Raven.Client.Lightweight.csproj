@@ -128,7 +128,6 @@
     <Compile Include="FileSystem\IAsyncFilesCommands.cs" />
     <Compile Include="FileSystem\IAsyncFilesSession.cs" />
     <Compile Include="FileSystem\IFilesChanges.cs" />
-    <Compile Include="FileSystem\IFilesCommands.cs" />
     <Compile Include="FileSystem\Listeners\IFilesConflictListener.cs" />
     <Compile Include="FileSystem\Listeners\IFilesDeleteListener.cs" />
     <Compile Include="FileSystem\IFilesSession.cs" />

@@ -13,7 +13,7 @@ namespace Raven.Client.FileSystem
         /// <summary>
         /// The filesystem store associated with this session
         /// </summary>
-        IFilesStore DocumentStore { get; }
+        IFilesStore FilesStore { get; }
 
         /// <summary>
         /// Gets the store identifier for this session.
