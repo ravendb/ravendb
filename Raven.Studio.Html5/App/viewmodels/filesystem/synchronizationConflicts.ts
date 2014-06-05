@@ -2,6 +2,7 @@
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
+import shell = require("viewmodels/shell");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
@@ -20,24 +21,61 @@ class synchronizationConflicts extends viewModelBase {
 
     private isSelectAllValue = ko.observable<boolean>(false); 
     private activeFilesystemSubscription: any;
+    private conflictsSubscription: any;
 
     activate(args) {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        // treat notifications events
+        this.conflictsSubscription = shell.currentFsChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => {
+            if (e.FileSystemName === this.activeFilesystem()) {
+                switch (e.Type) {
+                    case conflictType.ConflictDetected: {
+                        this.addConflict(e);
+                        break;
+                    }
+                    case conflictType.ConflictResolved: {
+                        this.removeResolvedConflict(e);
+                        break;
+                    }
+                    default:
+                        console.error("unknown notification action");
+                }
+            }
+        });
+
+        this.loadConflicts();
     }
 
     deactivate() {
         super.deactivate();
         this.activeFilesystemSubscription.dispose();
+        this.conflictsSubscription.off();
     }
 
-    modelPolling() {
-        var fs = this.activeFilesystem();
-        if (fs) {
-            new getFilesConflictsCommand(fs).execute()
-                .done(x => this.conflicts(x));
+    addConflict(conflictUpdate: synchronizationConflictNotification) {
+        var match = this.conflictsContains(conflictUpdate);
+        if (!match) {
+            this.conflicts.push(conflictItem.fromConflictNotificationDto(conflictUpdate));
         }
     }
+
+    removeResolvedConflict(conflictUpdate: synchronizationConflictNotification) {
+        var match = this.conflictsContains(conflictUpdate);
+        if (match) {
+            this.conflicts.remove(match);
+        }
+    }
+
+    private conflictsContains(e: synchronizationConflictNotification) : conflictItem {
+        var match = ko.utils.arrayFirst(this.conflicts(), (item) => {
+            return item.fileName === e.FileName;
+        });
+
+        return match;
+    }
+
 
     loadConflicts(): JQueryPromise<any> {
         var fs = this.activeFilesystem();
@@ -110,10 +148,7 @@ class synchronizationConflicts extends viewModelBase {
 
     fileSystemChanged(fs: filesystem) {
         if (fs) {
-            this.modelPollingStop();
-            this.loadConflicts().always(() => {
-                this.modelPollingStart();
-            });
+            this.loadConflicts();
         }
     }
 

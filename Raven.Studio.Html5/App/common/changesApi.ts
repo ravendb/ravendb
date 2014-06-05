@@ -18,6 +18,7 @@ class changesApi {
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
+    private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private commandBase = new commandBase();
 
     constructor(private rs: resource) {
@@ -161,7 +162,7 @@ class changesApi {
         });
     }
 
-    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?:string) {
+    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?: string) {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
         if (this.allDocsHandlers().length == 0) {
             this.send('watch-prefix', prefix);
@@ -185,6 +186,20 @@ class changesApi {
             this.allFsSyncHandlers.remove(callback);
             if (this.allFsSyncHandlers().length == 0) {
                 this.send('unwatch-sync');
+            }
+        });
+    }
+
+    watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) {
+        var callback = new changesCallback<synchronizationConflictNotification>(onChange);
+        if (this.allFsConflictsHandlers().length == 0) {
+            this.send('watch-conflicts');
+        }
+        this.allFsConflictsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsConflictsHandlers.remove(callback);
+            if (this.allFsConflictsHandlers().length == 0) {
+                this.send('unwatch-conflicts');
             }
         });
     }

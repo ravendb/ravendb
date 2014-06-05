@@ -156,7 +156,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
+                    Publisher.Publish(new ConflictResolvedNotification 
+                    { 
+                        FileName = fileName,
+                        FileSystemName = FileSystemName
+                    });
                 }
 			}
 			catch (Exception ex)
@@ -233,7 +237,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Publisher.Publish(new ConflictDetectedNotification
 				{
 					FileName = fileName,
-					SourceServerUrl = sourceServer.FileSystemUrl
+					SourceServerUrl = sourceServer.FileSystemUrl,
+                    FileSystemName = FileSystemName
 				});
 
 				Log.Debug(
@@ -294,7 +299,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
+                    Publisher.Publish(new ConflictResolvedNotification 
+                    { 
+                        FileName = fileName,
+                        FileSystemName = FileSystemName
+                    });
                 }
 
                 PublishFileNotification(fileName, FileChangeAction.Update);
@@ -439,7 +448,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				if (isConflictResolved)
 				{
 					ConflictArtifactManager.Delete(fileName);
-					Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
+					Publisher.Publish(new ConflictResolvedNotification 
+                    { 
+                        FileName = fileName,
+                        FileSystemName = FileSystemName
+                    });
 				}
 
                 StorageOperationsTask.RenameFile(new RenameFileOperation
@@ -626,7 +639,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Publisher.Publish(new ConflictDetectedNotification
 			{
 				FileName = filename,
-				SourceServerUrl = remoteServerUrl
+				SourceServerUrl = remoteServerUrl,
+                FileSystemName = FileSystemName
 			});
 
 			Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);
@@ -718,7 +732,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 accessor.UpdateFileMetadata(fileName, localMetadata);
 
                 ConflictArtifactManager.Delete(fileName, accessor);
-                Publisher.Publish(new ConflictResolvedNotification { FileName = fileName });
+                Publisher.Publish(new ConflictResolvedNotification 
+                { 
+                    FileName = fileName,
+                    FileSystemName = FileSystemName
+                });
 			});
 		}
 

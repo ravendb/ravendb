@@ -163,3 +163,15 @@ enum synchronizationDirection {
     Outgoing,
     Incoming
 }
+
+interface synchronizationConflictNotification {
+    FileSystemName;
+    FileName;
+    SourceServerUrl;
+    Type: conflictType;
+}
+
+enum conflictType {
+    ConflictDetected,
+    ConflictResolved
+}
