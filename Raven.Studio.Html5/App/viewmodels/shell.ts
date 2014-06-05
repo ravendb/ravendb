@@ -55,11 +55,12 @@ class shell extends viewModelBase {
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
+    canShowDocumentsNavbar = ko.computed(() => this.databases().length > 0 && this.appUrls.isAreaActive('databases')() && !this.isDatabaseDisabled());
     canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
-    
+    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
+
     coutersLoadedTask:JQueryPromise<any>;
     currentRawUrl = ko.observable<string>("");
-    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
@@ -202,11 +203,6 @@ class shell extends viewModelBase {
         }, "Raven/Databases");
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-        
-    }
-
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
             NProgress.start();
@@ -346,8 +342,7 @@ class shell extends viewModelBase {
                 fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
             }
             setTimeout(() => {
-                debugger;
-                this.closeAlertAndShowNext(alert)
+                this.closeAlertAndShowNext(alert);
             }, fadeTime);
         }
     }
@@ -436,8 +431,8 @@ class shell extends viewModelBase {
                     var existingDb = this.databases().first(d=> {
                         return d.name == result.name;
                     });
-                if (!existingDb ) {
-                    this.databases.unshift(result);
+                    if (!existingDb) {
+                        this.databases.unshift(result);
                     }
                 });
             });

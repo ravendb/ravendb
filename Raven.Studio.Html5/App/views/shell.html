@@ -11,7 +11,7 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
-                <div data-bind="visible: appUrls.isAreaActive('databases') && !isDatabaseDisabled()">
+                <div data-bind="visible: canShowDocumentsNavbar() === true">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
