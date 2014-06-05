@@ -16,8 +16,8 @@ namespace Voron
 		public SliceOptions Options { get; protected set; }
 
 		public abstract void CopyTo(byte* dest);
+		public abstract Slice ToSlice();
 		public abstract Slice Skip(ushort bytesToSkip);
-		public abstract ValueReader CreateReader();
 
 		protected abstract int CompareData(IMemorySlice other, SliceComparer cmp, ushort size);
 

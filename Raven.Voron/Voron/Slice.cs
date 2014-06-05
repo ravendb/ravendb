@@ -208,6 +208,11 @@ namespace Voron
 			}
 		}
 
+		public override Slice ToSlice()
+		{
+			return this;
+		}
+
 		public void CopyTo(byte[] dest)
 		{
 			if (_array == null)
@@ -267,7 +272,7 @@ namespace Voron
 			return new Slice(buffer);
 		}
 
-	    public override ValueReader CreateReader()
+	    public ValueReader CreateReader()
 	    {
             if(_array != null)
                 return new ValueReader(_array, _size);

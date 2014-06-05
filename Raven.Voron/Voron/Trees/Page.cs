@@ -390,7 +390,7 @@ namespace Voron.Trees
 			{
 				prefixedSlice = new PrefixedSlice(NextPrefixId, leftLength, key.Skip(leftLength))
 				{
-					NewPrefix = new Slice(left.ToSlice(), leftLength) // TODO check this
+					NewPrefix = new Slice(left.ToSlice(), leftLength)
 				};
 
 				return true;
@@ -400,7 +400,7 @@ namespace Voron.Trees
 			{
 				prefixedSlice = new PrefixedSlice(NextPrefixId, rightLength, key.Skip(rightLength))
 				{
-					NewPrefix = new Slice(right.ToSlice(), rightLength) // TODO check this
+					NewPrefix = new Slice(right.ToSlice(), rightLength)
 				};
 
 				return true;

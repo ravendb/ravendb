@@ -17,8 +17,7 @@ namespace Voron
 		ushort FindPrefixSize(IMemorySlice other);
 		void CopyTo(byte* dest);
 
+		Slice ToSlice();
 		Slice Skip(ushort bytesToSkip);
-
-		ValueReader CreateReader();
 	}
 }

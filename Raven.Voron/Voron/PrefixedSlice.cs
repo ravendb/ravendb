@@ -76,7 +76,7 @@ namespace Voron
 		{
 			if (node->KeySize > 0)
 			{
-				var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize); //TODO arek check this
+				var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);
 				_header = *prefixHeaderPtr;
 
 				_nonPrefixedData = new Slice((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, _header.NonPrefixedDataSize);
@@ -100,7 +100,7 @@ namespace Voron
 				NonPrefixedDataSize = key.KeyLength
 			};
 
-			_nonPrefixedData = key.Skip(0); //TODO arek check this
+			_nonPrefixedData = key.ToSlice();
 
 			_size = (ushort)(Constants.PrefixedSliceHeaderSize + key.KeyLength);
 		}
@@ -135,7 +135,7 @@ namespace Voron
 			_prefix = prefix;
 		}
 
-		public Slice ToSlice()
+		public override Slice ToSlice()
 		{
 			return Skip(0);
 		}
@@ -166,11 +166,6 @@ namespace Voron
 			return new Slice(sliceData);
 		}
 
-		public override ValueReader CreateReader()
-		{
-			throw new System.NotImplementedException(); //TODO arek - now this method is never called
-		}
-
 		protected override int CompareData(IMemorySlice other, SliceComparer cmp, ushort size)
 		{
 			var prefixedSlice = other as PrefixedSlice;
@@ -199,8 +194,8 @@ namespace Voron
 					// compare non prefixed data
 
 					size -= (ushort)remainingPrefix;
-					//TODO arek review Min(Min) - isn't size enough
-					r = prefixedSlice.CompareNonPrefixedData(remainingPrefix, _nonPrefixedData, 0, cmp, Math.Min(Math.Min(prefixedSlice._header.NonPrefixedDataSize - remainingPrefix, _header.NonPrefixedDataSize), size));
+
+					r = prefixedSlice.CompareNonPrefixedData(remainingPrefix, _nonPrefixedData, 0, cmp, size);
 
 					return r * -1;
 				}
@@ -217,8 +212,8 @@ namespace Voron
 					// compare non prefixed data
 
 					size -= (ushort)remainingPrefix;
-					//TODO arek review Min(Min) - isn't size enough
-					r = CompareNonPrefixedData(remainingPrefix, prefixedSlice._nonPrefixedData, 0, cmp, Math.Min(Math.Min(_header.NonPrefixedDataSize - remainingPrefix, prefixedSlice._header.NonPrefixedDataSize), size));
+
+					r = CompareNonPrefixedData(remainingPrefix, prefixedSlice._nonPrefixedData, 0, cmp, size);
 
 					return r;
 				}
