@@ -20,7 +20,6 @@ namespace Voron.Trees
 		private readonly PrefixNodeHeader* _header;
 		public readonly byte* Base;
 		public readonly int Size;
-		public readonly byte* ValuePtr;
 		public readonly Slice Value;
 
 
@@ -29,8 +28,7 @@ namespace Voron.Trees
 			_header = (PrefixNodeHeader*)p;
 
 			Base = p;
-			ValuePtr = (byte*)_header + Constants.PrefixNodeHeaderSize;
-			Value = new Slice(ValuePtr, _header->PrefixLength);
+			Value = new Slice((byte*)_header + Constants.PrefixNodeHeaderSize, _header->PrefixLength);
 			Size = Constants.PrefixNodeHeaderSize + _header->PrefixLength;
 		}
 

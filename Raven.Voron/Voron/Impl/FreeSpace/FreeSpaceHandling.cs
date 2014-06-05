@@ -36,7 +36,7 @@ namespace Voron.Impl.FreeSpace
 			int foundSections = 0;
 			IMemorySlice startSection = null;
 			long? startSectionId = null;
-			var sections = new List<IMemorySlice>();
+			var sections = new List<Slice>();
 
 			do
 			{
@@ -127,7 +127,7 @@ namespace Voron.Impl.FreeSpace
 			return null;
 		}
 
-		private static void ResetSections(ref int foundSections, List<IMemorySlice> sections, ref IMemorySlice startSection, ref long? startSectionId)
+		private static void ResetSections(ref int foundSections, List<Slice> sections, ref IMemorySlice startSection, ref long? startSectionId)
 		{
 			foundSections = 0;
 			startSection = null;

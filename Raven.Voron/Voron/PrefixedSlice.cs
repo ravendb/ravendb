@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 using Voron.Trees;
@@ -120,20 +121,11 @@ namespace Voron
 
 		public override void CopyTo(byte* dest)
 		{
-			fixed (byte* pt = new byte[Marshal.SizeOf(_header)])
-			{
-				var intPtr = new IntPtr(pt);
-				Marshal.StructureToPtr(_header, intPtr, true);
+			var destHeader = (PrefixedSliceHeader*) dest;
 
-				NativeMethods.memcpy(dest, pt, Constants.PrefixedSliceHeaderSize);
-			}
-			//TODO arek
-			//fixed (byte* b = &_header.PrefixId)
-			//	NativeMethods.memcpy(dest, b, Constants.PrefixedSliceHeaderSize);
-
-
-			//fixed (byte* b = &_header)
-			//	NativeMethods.memcpy(dest, (byte*)b, Constants.PrefixedSliceHeaderSize);
+			destHeader->PrefixId = _header.PrefixId;
+			destHeader->PrefixUsage = _header.PrefixUsage;
+			destHeader->NonPrefixedDataSize = _header.NonPrefixedDataSize;
 
 			_nonPrefixedData.CopyTo(dest + Constants.PrefixedSliceHeaderSize);
 		}
@@ -176,7 +168,7 @@ namespace Voron
 
 		public override ValueReader CreateReader()
 		{
-			throw new System.NotImplementedException();
+			throw new System.NotImplementedException(); //TODO arek - now this method is never called
 		}
 
 		protected override int CompareData(IMemorySlice other, SliceComparer cmp, ushort size)
@@ -261,6 +253,7 @@ namespace Voron
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private int ComparePrefixes(PrefixedSlice other, SliceComparer cmp, int count)
 		{
 			if (count == 0)
@@ -269,6 +262,7 @@ namespace Voron
 			return _prefix.Value.CompareSlices(other._prefix.Value, cmp, count);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int ComparePrefixWithNonPrefixedData(Slice other, SliceComparer cmp, int prefixOffset, int count)
 		{
 			if (count == 0)
@@ -279,6 +273,7 @@ namespace Voron
 			return _prefix.Value.CompareSlices(other, cmp, count, prefixOffset);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int CompareNonPrefixedData(int offset, Slice other, int otherOffset, SliceComparer cmp, int count)
 		{
 			if (count == 0)

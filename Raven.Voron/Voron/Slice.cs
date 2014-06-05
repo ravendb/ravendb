@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Impl;
 
@@ -162,6 +163,7 @@ namespace Voron
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int CompareSlices(Slice otherSlice, SliceComparer cmp, int size, int offset = 0, int otherOffset = 0)
 		{
 			if (_array != null)
