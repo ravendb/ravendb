@@ -218,7 +218,7 @@ namespace Raven.Database
                 try
                 {
 
-	                inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(Put, Delete);
+	                inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Put, Delete);
 
                     TransactionalStorage.Batch(actions =>
                         sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
