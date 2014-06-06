@@ -18,6 +18,21 @@ class pagedList {
         }
     }
 
+    clear() {
+        if (!!this.queuedFetch) {
+            this.queuedFetch.task.reject("data is being reloaded");
+            this.queuedFetch = null;
+        }
+
+        while (this.items.length > 0) {
+            this.items.pop();
+        }
+    }
+
+    itemCount():number {
+        return this.items.length;
+    }
+
     fetch(skip: number, take: number): JQueryPromise<pagedResultSet> {
         if (this.isFetching) {
             this.queuedFetch = { skip: skip, take: take, task: $.Deferred() };

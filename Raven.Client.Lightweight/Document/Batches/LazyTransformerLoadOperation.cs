@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
@@ -66,18 +65,7 @@ namespace Raven.Client.Document.Batches
 			return null;
 		}
 
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			return commands.Get(ids, null, transformer);
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			var multiLoadResult = (MultiLoadResult) result;
-			HandleRespose(multiLoadResult);
-		}
-
-		private void HandleRespose(MultiLoadResult multiLoadResult)
+	    private void HandleRespose(MultiLoadResult multiLoadResult)
 		{
 			T[] complete = loadTransformerOperation.Complete<T>(multiLoadResult);
 			Result = singleResult ? (object) complete[0] : complete;

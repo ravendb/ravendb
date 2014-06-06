@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -125,7 +126,7 @@ namespace Raven.Database.Server.Controllers
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = "Dump of " + this.DatabaseName + ", " + DateTime.Now.ToString("dd MMM yyyy HH-mm")
+                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("dd MM yyyy HH-mm", CultureInfo.InvariantCulture))
             };
 			
 			return result;

@@ -227,13 +227,59 @@ arrayPrototype.distinct = function () {
     return distinctElements;
 };
 
+
+
 // String extensions
 interface String {
     hashCode: () => number;
     replaceAll: (find, replace) => string;
     reverse: (input) => string;
     count: (input) => number;
+    fixedCharCodeAt:(input, position)=>number;
+    getSizeInBytesAsUTF8: () => number;
 }
+
+String.prototype.fixedCharCodeAt = function (idx) {
+    idx = idx || 0;
+    var code = this.charCodeAt(idx);
+    var hi, low;
+    if (0xD800 <= code && code <= 0xDBFF) { // High surrogate (could change last hex to 0xDB7F to treat high private surrogates as single characters)
+        hi = code;
+        low = this.charCodeAt(idx + 1);
+        if (isNaN(low)) {
+            throw 'No valid character or memory error!';
+        }
+        return ((hi - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000;
+    }
+    if (0xDC00 <= code && code <= 0xDFFF) { // Low surrogate
+        // We return false to allow loops to skip this iteration since should have already handled high surrogate above in the previous iteration
+        return false;
+    }
+    return code;
+};
+
+String.prototype.getSizeInBytesAsUTF8 = function() {
+    var result = 0;
+    for (var n = 0; n < this.length; n++) {
+        var charCode = this.fixedCharCodeAt(n);
+        if (typeof charCode === "number") {
+            if (charCode < 128) {
+                result = result + 1;
+            } else if (charCode < 2048) {
+                result = result + 2;
+            } else if (charCode < 65536) {
+                result = result + 3;
+            } else if (charCode < 2097152) {
+                result = result + 4;
+            } else if (charCode < 67108864) {
+                result = result + 5;
+            } else {
+                result = result + 6;
+            }
+        }
+    }
+    return result;
+};
 
 String.prototype.hashCode = function () {
     var hash = 0;

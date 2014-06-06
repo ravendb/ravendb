@@ -286,6 +286,10 @@ but the attachment itself was found. Data corruption?", key));
 						key = keyStream.ReadStringWithoutPrefix();
 
 					var attachmentInfo = AttachmentInfoByKey(key);
+					if (!attachmentInfo.Etag.Equals(attachmentEtag))
+					{
+						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between attachment and its indice", key));
+					}
 
 					fetchedTotalSize += attachmentInfo.Size;
 					fetchedDocumentCount++;
