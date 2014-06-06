@@ -1,6 +1,8 @@
 import document = require("models/document");
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
+import customColumns = require('models/customColumns');
+import execJs = require('common/execJs');
 
 class row {
     top = ko.observable(0);
@@ -33,16 +35,27 @@ class row {
     }
 
     fillCells(rowData: documentBase) {
+        var customColumns = this.viewModel.settings.customColumns();
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();
-        for (var i = 0; i < rowProperties.length; i++) {
-            var prop = rowProperties[i];
-            var cellValue = rowData[prop];
-            // pass json object when not custom template!
-            if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
-                cellValue = JSON.stringify(cellValue, null, 4);
+
+        if (customColumns.customMode()) {
+            customColumns.columns().forEach((column, index) => {
+                var binding = column.binding();
+                var cellValueGenerator = execJs.createSimpleCallableCode(binding, rowData);
+                this.addOrUpdateCellMap(binding, cellValueGenerator());
+            });
+
+        } else {
+            for (var i = 0; i < rowProperties.length; i++) {
+                var prop = rowProperties[i];
+                var cellValue = rowData[prop];
+                // pass json object when not custom template!
+                if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
+                    cellValue = JSON.stringify(cellValue, null, 4);
+                }
+                this.addOrUpdateCellMap(prop, cellValue);
             }
-            this.addOrUpdateCellMap(prop, cellValue);
         }
 
         if (rowData.getId()) {
