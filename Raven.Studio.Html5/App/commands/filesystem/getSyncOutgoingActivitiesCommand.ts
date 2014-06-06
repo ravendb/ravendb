@@ -2,7 +2,6 @@
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDetails = require("models/filesystem/synchronizationDetails");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getSyncOutgoingActivitiesCommand extends commandBase {
 
