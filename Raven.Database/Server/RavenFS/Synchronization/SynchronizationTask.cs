@@ -382,6 +382,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 {
                     publisher.Publish(new SynchronizationUpdateNotification
                     {
+                        FileSystemName = systemConfiguration.FileSystemName,
                         FileName = work.FileName,
                         DestinationFileSystemUrl = destination.FileSystemUrl,
                         SourceServerId = storage.Id,
@@ -411,6 +412,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                         // add it again at the end of the queue
                         publisher.Publish(new SynchronizationUpdateNotification
                         {
+                            FileSystemName = systemConfiguration.FileSystemName,
                             FileName = work.FileName,
                             DestinationFileSystemUrl = destination.FileSystemUrl,
                             SourceServerId = storage.Id,
@@ -449,6 +451,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 {
                     publisher.Publish(new SynchronizationUpdateNotification
                     {
+                        FileSystemName = systemConfiguration.FileSystemName,
                         FileName = work.FileName,
                         DestinationFileSystemUrl = destination.FileSystemUrl,
                         SourceServerId = storage.Id,
@@ -471,6 +474,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			synchronizationQueue.SynchronizationStarted(work, destination.FileSystemUrl);
 			publisher.Publish(new SynchronizationUpdateNotification
 			{
+                FileSystemName = systemConfiguration.FileSystemName,
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,
 				SourceServerId = storage.Id,
@@ -531,6 +535,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			publisher.Publish(new SynchronizationUpdateNotification
 			{
+                FileSystemName = systemConfiguration.FileSystemName,
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,
 				SourceServerId = storage.Id,

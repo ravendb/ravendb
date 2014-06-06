@@ -30,7 +30,7 @@ interface filesystemMetricsMeterDataDto {
     FifteenMinuteRate: number;
 }
 
-interface filesystemMetricsDto{
+interface filesystemMetricsDto {
     FilesWritesPerSecond: number;
     RequestsPerSecond: number;
     Requests: filesystemMetricsMeterDataDto;
@@ -50,7 +50,7 @@ interface filesystemFileHeaderDto {
 
     TotalSize?: number;
     UploadedSize: number;
-		
+
     HumaneTotalSize: string;
     HumaneUploadedSize: string;
 
@@ -67,7 +67,7 @@ interface fileMetadataDto {
     'Origin': string;
 }
 
-interface filesystemSynchronizationReportDto{
+interface filesystemSynchronizationReportDto {
 
     FileName: string;
     FileETag: string;
@@ -87,7 +87,7 @@ interface filesystemSearchResultsDto {
     PageSize: number;
 }
 
-interface filesystemConfigSearchResultsDto{
+interface filesystemConfigSearchResultsDto {
     ConfigNames: string[];
     TotalCount: number;
     Start: number;
@@ -143,14 +143,6 @@ interface synchronizationUpdateNotification {
     Type: filesystemSynchronizationType;
     Action: synchronizationAction;
     SynchronizationDirection: synchronizationDirection;
-}
-
-enum synchronizationType {
-    Unknown,
-    ContentUpdate,
-	MetadataUpdate,
-	Rename,
-    Delete
 }
 
 enum synchronizationAction {

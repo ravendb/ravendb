@@ -37,38 +37,34 @@ class status extends viewModelBase {
 
     activitiesSubscription: changeSubscription;
 
-    static outgoingGridSelector = "#outgoingGrid";
-    static incomingGridSelector = "#incomingGrid";
-
     private activeFilesystemSubscription: any;
-
-    canActivate(args: any) {
-        this.loadSynchronizationActivity();
-
-        return true;
-    }
 
     activate(args) {
         super.activate(args);
-        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
 
         // treat notifications events
         this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
-            switch (e.Action) {
-                case synchronizationAction.Enqueue:
-                case synchronizationAction.Start:
-                    this.addOrUpdateActivity(e);
-                    break;
-                case synchronizationAction.Finish:
-                    setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
-                    break;
-                default:
-                    console.error("unknown notification action");
+
+            if (e.FileSystemName != this.activeFilesystem().name) {
+                return;
             }
+
+            if (e.Action != synchronizationAction.Finish) {
+                this.addOrUpdateActivity(e);
+            }
+            else {
+                setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
+            }
+
         });
 
         new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+            .done(x => {
+                this.activity(x);
+            });
+
+        new getSyncIncomingActivitiesCommand(this.activeFilesystem()).execute()
             .done(x => {
                 this.activity(x);
             });
@@ -84,26 +80,11 @@ class status extends viewModelBase {
         this.activitiesSubscription.off();
     }
 
-    loadSynchronizationActivity() {
-        this.incomingActivityPagedList(this.createIncomingActivityPagedList());
-    }
-
     synchronizeNow() {
         var fs = this.activeFilesystem();
         if (fs) {
             new synchronizeNowCommand(fs).execute();
         }
-    }
-
-    createIncomingActivityPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.incomingActivityFetchTask(skip, take);
-        var list = new pagedList(fetcher);
-        return list;
-    }
-
-    incomingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncIncomingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
-        return task;
     }
 
     collapseAll() {
@@ -114,29 +95,7 @@ class status extends viewModelBase {
         $(".synchronization-group-content").collapse('show');
     }
 
-    getIncomingActivityTable(): virtualTable {
-        var gridContents = $(status.incomingGridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
-    }
-
-    fileSystemChanged(fs: filesystem) {
-        if (fs) {
-            this.modelPollingStop();
-            this.loadSynchronizationActivity();
-            this.modelPollingStart();
-        }
-    }
-
     private addOrUpdateActivity(e: synchronizationUpdateNotification) {
-
-        if (e.SynchronizationDirection == synchronizationDirection.Incoming && e.FileSystemName != this.activeFilesystem().name) {
-            console.warn("ignoring notification: " + e.FileName);
-            return;
-        }
 
         if (!this.activityContains(e)) {
             this.activity.push(new synchronizationDetail({
