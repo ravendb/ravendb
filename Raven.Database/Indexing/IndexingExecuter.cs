@@ -71,7 +71,7 @@ namespace Raven.Database.Indexing
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
 		{
 		    return (Task)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
-		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
+		           actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>();
 		}
 
 		protected override void FlushAllIndexes()

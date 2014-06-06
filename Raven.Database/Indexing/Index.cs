@@ -1497,17 +1497,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected object LoadDocument(string key)
-		{
-			var jsonDocument = context.Database.Get(key, null);
-			if (jsonDocument == null)
-				return new DynamicNullObject();
-			return new DynamicJsonObject(jsonDocument.ToJson());
-		}
-
         protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
             ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
-			ConcurrentQueue<IDictionary<string, HashSet<string>>> missingReferencedDocs)
+			ConcurrentQueue<IDictionary<string, Etag>> missingReferencedDocs)
         {
             IDictionary<string, HashSet<string>> result;
             while (allReferencedDocs.TryDequeue(out result))
@@ -1518,24 +1510,24 @@ namespace Raven.Database.Indexing
                     actions.General.MaybePulseTransaction();
                 }
             }
-            var task = new TouchMissingReferenceDocumentTask
+            var task = new TouchReferenceDocumentIfChangedTask
             {
                 Index = name, // so we will get IsStale properly
-                MissingReferences = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+                ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
             };
 
-            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-			IDictionary<string, HashSet<string>> docs;
+            var set = context.DoNotTouchAgainIfCheckingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+			IDictionary<string, Etag> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
                 foreach (var doc in docs)
                 {
                     if (set.TryRemove(doc.Key))
                         continue;
-                    task.MissingReferences.Add(doc);
+                    task.ReferencesToCheck.Add(doc);
                 }
             }
-            if (task.MissingReferences.Count == 0)
+            if (task.ReferencesToCheck.Count == 0)
                 return;
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
         }
