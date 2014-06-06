@@ -264,14 +264,14 @@ namespace Raven.Client.RavenFS.Changes
                     }
                     break;
                 case "ConflictDetectedNotification":
-                    var conflictDetectedNotification = value.JsonDeserialization<ConflictDetectedNotification>();
+                    var conflictDetectedNotification = value.JsonDeserialization<ConflictNotification>();
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(conflictDetectedNotification);
                     }
                     break;
                 case "ConflictResolvedNotification":
-                     var conflictResolvedNotification = value.JsonDeserialization<ConflictResolvedNotification>();
+                     var conflictResolvedNotification = value.JsonDeserialization<ConflictNotification>();
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(conflictResolvedNotification);

@@ -94,6 +94,7 @@ class changesApi {
 
     private onMessage(e: any) {
         var eventDto: changesApiEventDto = JSON.parse(e.data);
+        console.warn("Received "+e.Type);
         this.processEvent(eventDto);
         this.recordChangeInEventQueue(eventDto, e.data);
     }
@@ -128,6 +129,8 @@ class changesApi {
                 this.fireEvents(this.allTransformersHandlers(), change.Value, (e) => true);
             } else if (change.Type === "SynchronizationUpdateNotification") {
                 this.fireEvents(this.allFsSyncHandlers(), change.Value, (e) => true);
+            } else if (change.Type === "ConflictNotification") {
+                this.fireEvents(this.allFsConflictsHandlers(), change.Value, (e) => true);  
             } else {
                 console.log("Unhandled Changes API notification type: " + change.Type);
             }

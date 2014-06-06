@@ -29,13 +29,13 @@ class synchronizationConflicts extends viewModelBase {
 
         // treat notifications events
         this.conflictsSubscription = shell.currentFsChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => {
-            if (e.FileSystemName === this.activeFilesystem()) {
-                switch (e.Type) {
-                    case conflictType.ConflictDetected: {
+            if (e.FileSystemName === this.activeFilesystem().name) {
+                switch (e.Status) {
+                    case conflictStatus.Detected: {
                         this.addConflict(e);
                         break;
                     }
-                    case conflictType.ConflictResolved: {
+                    case conflictStatus.Resolved: {
                         this.removeResolvedConflict(e);
                         break;
                     }
@@ -114,8 +114,7 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 1, fs).execute()
-                            .done(this.modelPolling());
+                        new resolveConflictCommand(conflict, 1, fs).execute();
                     }
                 });
             app.showDialog(resolveConflictViewModel);
@@ -137,8 +136,7 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 0, fs).execute()
-                            .done(this.modelPolling());
+                        new resolveConflictCommand(conflict, 0, fs).execute();
                     }
                 });
             app.showDialog(resolveConflictViewModel);

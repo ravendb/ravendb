@@ -160,10 +160,10 @@ interface synchronizationConflictNotification {
     FileSystemName;
     FileName;
     SourceServerUrl;
-    Type: conflictType;
+    Status: conflictStatus;
 }
 
-enum conflictType {
-    ConflictDetected,
-    ConflictResolved
+enum conflictStatus {
+    Detected = 0,
+    Resolved = 1
 }

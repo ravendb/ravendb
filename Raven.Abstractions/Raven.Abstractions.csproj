@@ -276,11 +276,9 @@
     <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
     <Compile Include="RavenFS\ConfigurationChangeNotification.cs" />
-    <Compile Include="RavenFS\ConflictDetectedNotification.cs" />
     <Compile Include="RavenFS\ConflictItem.cs" />
     <Compile Include="RavenFS\ConflictNotification.cs" />
     <Compile Include="RavenFS\ConflictResolutionStrategy.cs" />
-    <Compile Include="RavenFS\ConflictResolved.cs" />
     <Compile Include="RavenFS\DestinationSyncResult.cs" />
     <Compile Include="RavenFS\FileChangeNotification.cs" />
     <Compile Include="RavenFS\FileInfo.cs" />

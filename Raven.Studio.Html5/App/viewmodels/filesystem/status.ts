@@ -76,7 +76,7 @@ class status extends viewModelBase {
 
     deactivate() {
         super.deactivate();
-        this.activeFilesystemSubscription.dispose();
+        //this.activeFilesystemSubscription.dispose();
         this.activitiesSubscription.off();
     }
 

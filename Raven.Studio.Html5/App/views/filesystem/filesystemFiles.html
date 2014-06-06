@@ -55,11 +55,11 @@
                 </div>
                 <span></span>
             </div>
-            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', contextMenuOptions: ['Delete'] }"></div>
+            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, dynamicHeightTargetSelector: '#uploadQueueContainer', gridSelector: '#filesGrid', contextMenuOptions: ['Delete'] }"></div>
         </div>
     </div>
     <div class="row">
-        <div class="upload-queue panel panel-info">
+        <div id="uploadQueueContainer" class="upload-queue panel panel-info">
             <div class="panel-heading">
                 <span><i class="fa fa-upload bold blue"></i>&nbsp;Upload Queue</span>
                 <a href="#" id="uploadQueuePanelToggle" class="opened pull-right" style="float:right; padding-right:10px" data-bind="click: toggleCollapseUploadQueue"><i class="fa fa-angle-double-down bold red"></i></a>

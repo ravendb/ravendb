@@ -42,7 +42,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.UploadAsync("abc.txt", sourceMetadata, sourceContent);
 
             var notificationTask = destinationClient.Changes().ForConflicts()
-                                                         .OfType<ConflictDetectedNotification>()
+                                                         .OfType<ConflictNotification>()
 				                                         .Timeout(TimeSpan.FromSeconds(5))
 				                                         .Take(1)
 				                                         .ToTask();
