@@ -65,9 +65,18 @@ namespace Raven.Tests.Core.ChangesApi
         [Fact]
         public void ClientImplementationShouldWorkWithUntypedInterface()
         {
-            new UntypedInterfaceInheritanceChangesClient();
+            using (var untypedInterfaceInheritanceChangesClient = new UntypedInterfaceInheritanceChangesClient())
+            {
+                try
+                {
+                    untypedInterfaceInheritanceChangesClient.Task.Wait();
+                }
+                catch (Exception e)
+                {
+                    
+                }
+            }
         }
-
 
 
         private interface ITypedConnectable : IConnectableChanges<ITypedConnectable>

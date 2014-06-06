@@ -8,7 +8,9 @@ define(["require", "exports", "commands/commandBase"], function(require, exports
     var updateCounterCommand = (function (_super) {
         __extends(updateCounterCommand, _super);
         /**
-        * @param ownerDb The database the collections will belong to.
+        * @param counterStorage - the counter storage that is being used
+        * @param editedCounter - the edited counter
+        * @param delta - the change to apply to the counter
         */
         function updateCounterCommand(storage, editedCounter, delta) {
             _super.call(this);

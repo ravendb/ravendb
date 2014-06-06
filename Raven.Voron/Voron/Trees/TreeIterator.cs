@@ -28,10 +28,11 @@ namespace Voron.Trees
 		public bool Seek(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			_currentPage = _tree.FindPageFor(key, out lazy);
+			NodeHeader* node;
+			_currentPage = _tree.FindPageFor(key, out node, out lazy);
 			_cursor = lazy.Value;
 			_cursor.Pop();
-			var node = _currentPage.Search(key);
+
 		    if (node != null)
 		    {
                 _currentKey.Set(node);

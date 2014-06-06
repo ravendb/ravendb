@@ -63,22 +63,20 @@ class counterStorageReplication extends viewModelBase {
     }
 
     refreshFromServer() {
-        this.showRefreshPrompt()
-            .done((answer) => {
-                if (answer == "Yes") {
-                    this.fetchCountersDestinations(this.activeCounterStorage(), true)
-                        .done(()=> viewModelBase.dirtyFlag().reset());
-                }
-            });
-    }
-
-    private showRefreshPrompt(): any {
         var deferred = $.Deferred();
+
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
+            var confirmationMessageViewModel = this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+            confirmationMessageViewModel.done(() => deferred.resolve());
+        } else {
+            deferred.resolve();
         }
-        return deferred.resolve("Yes");
+
+        deferred.done(()=> {
+            this.fetchCountersDestinations(this.activeCounterStorage(), true)
+                .done(() => viewModelBase.dirtyFlag().reset());
+        });
     }
 }
 

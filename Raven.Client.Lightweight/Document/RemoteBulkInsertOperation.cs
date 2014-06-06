@@ -42,26 +42,28 @@ namespace Raven.Client.Document
 		///     Report on the progress of the operation
 		/// </summary>
 		event Action<string> Report;
+	    void Abort();
 	}
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 	{
 		private CancellationTokenSource cancellationTokenSource;
 		private readonly AsyncServerClient operationClient;
-		private readonly IDatabaseChanges operationChanges;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly BlockingCollection<RavenJObject> queue;
-
+        private static readonly RavenJObject AbortMarker = new RavenJObject();
 		private HttpJsonRequest operationRequest;
 		private readonly Task operationTask;
 		private int total;
+	    private bool aborted;
+
+
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
 			using (NoSynchronizationContext.Scope())
 			{
 				OperationId = Guid.NewGuid();
 				operationClient = client;
-				operationChanges = changes;
 				queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
 				operationTask = StartBulkInsertAsync(options);
@@ -201,6 +203,10 @@ namespace Raven.Client.Document
 						FlushBatch(stream, batch);
 						return;
 					}
+				    if (ReferenceEquals(AbortMarker, document)) // abort immediately
+				    {
+				        return;
+				    }
 
 					batch.Add(document);
 
@@ -221,6 +227,7 @@ namespace Raven.Client.Document
 			if (id == null) throw new ArgumentNullException("id");
 			if (metadata == null) throw new ArgumentNullException("metadata");
 			if (data == null) throw new ArgumentNullException("data");
+		    if (aborted) throw new InvalidOperationException("Operation has been aborted");
 
 			if (operationTask.IsCanceled || operationTask.IsFaulted)
 				operationTask.Wait(); // error early if we have  any error
@@ -378,6 +385,13 @@ namespace Raven.Client.Document
 		public void OnCompleted()
 		{
 		}
+
+	    public void Abort()
+	    {
+	        aborted = true;
+            queue.Add(AbortMarker);
+
+	    }
 	}
 }
 #endif

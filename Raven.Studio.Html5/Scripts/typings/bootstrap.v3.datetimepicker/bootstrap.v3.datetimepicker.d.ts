@@ -12,87 +12,90 @@
 /// <reference path="../jquery/jquery.d.ts"/>
 /// <reference path="../moment/moment.d.ts"/>
 
+declare module BootstrapV3DatetimePicker {
+    interface DatetimepickerChangeEventObject extends JQueryEventObject {
+        date: Moment;
+        oldDate: Moment;
+    }
 
-interface DatetimepickerChangeEventObject extends JQueryEventObject {
-    date: Moment;
-    oldDate: Moment;
+    interface DatetimepickerEventObject extends JQueryEventObject {
+        date: Moment;
+    }
+
+    interface DatetimepickerIcons {
+        time?: string;
+        date?: string;
+        up?: string;
+        down?: string;
+    }
+
+    interface DatetimepickerOptions {
+        pickDate?: boolean;
+        pickTime?: boolean;
+        useMinutes?: boolean;
+        useSeconds?: boolean;
+        useCurrent?: boolean;
+        minuteStepping?: number;
+        minDate?: any;
+        maxDate?: any;
+        showToday?: boolean;
+        collapse?: boolean;
+        language?: string;
+        defaultDate?: string;
+        disabledDates?: Array<any>;
+        enabledDates?: Array<any>;
+        icons?: DatetimepickerIcons;
+        useStrict?: boolean;
+        direction?: string;
+        sideBySide?: boolean;
+        daysOfWeekDisabled?: Array<any>;
+    }
+
+    interface Datetimepicker {
+        setDate(date: any): void;
+        setMinDate(date: any): void;
+        setMaxDate(date: any): void;
+        show(): void;
+        disable(): void;
+        enable(): void;
+        getDate(): void;
+    }
+
 }
 
-interface DatetimepickerEventObject extends JQueryEventObject {
-    date: Moment;
-}
-
-interface DatetimepickerIcons {
-    time?: string;
-    date?: string;
-    up?: string;
-    down?: string;
-}
-
-interface DatetimepickerOptions {
-    pickDate?: boolean;
-    pickTime?: boolean;
-    useMinutes?: boolean;
-    useSeconds?: boolean;
-    useCurrent?: boolean;
-    minuteStepping?: number;
-    minDate?: any;
-    maxDate?: any;
-    showToday?: boolean;
-    collapse?: boolean;
-    language?: string;
-    defaultDate?: string;
-    disabledDates?: Array<any>;
-    enabledDates?: Array<any>;
-    icons?: DatetimepickerIcons;
-    useStrict?: boolean;
-    direction?: string;
-    sideBySide?: boolean;
-    daysOfWeekDisabled?: Array<any>;
-}
-
-interface Datetimepicker {
-    setDate(date: any);
-    setMinDate(date: any);
-    setMaxDate(date: any);
-    show();
-    disable();
-    enable();
-    getDate();
-}
 
 interface JQuery {
 
     datetimepicker(): JQuery;
-    datetimepicker(options: DatetimepickerOptions): JQuery;
+    datetimepicker(options: BootstrapV3DatetimePicker.DatetimepickerOptions): JQuery;
 
-    off(events: "dp.change", selector?: string, handler?: (eventobject: DatetimepickerChangeEventObject) => any): JQuery;
-    off(events: "dp.change", handler: (eventobject: DatetimepickerChangeEventObject) => any): JQuery;
+    off(events: "dp.change", selector?: string, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerChangeEventObject) => any): JQuery;
+    off(events: "dp.change", handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerChangeEventObject) => any): JQuery;
 
-    on(events: "dp.change", selector: string, data: any, handler?: (eventobject: DatetimepickerChangeEventObject) => any): JQuery;
-    on(events: "dp.change", selector: string, handler: (eventobject: DatetimepickerChangeEventObject) => any): JQuery;
-    on(events: 'dp.change', handler: (eventObject: DatetimepickerChangeEventObject) => any): JQuery;
+    on(events: "dp.change", selector: string, data: any, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerChangeEventObject) => any): JQuery;
+    on(events: "dp.change", selector: string, handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerChangeEventObject) => any): JQuery;
+    on(events: 'dp.change', handler: (eventObject: BootstrapV3DatetimePicker.DatetimepickerChangeEventObject) => any): JQuery;
 
-    off(events: "dp.show", selector?: string, handler?: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    off(events: "dp.show", handler: (eventobject: DatetimepickerEventObject) => any): JQuery;
+    off(events: "dp.show", selector?: string, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    off(events: "dp.show", handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
 
-    on(events: "dp.show", selector: string, data: any, handler?: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    on(events: "dp.show", selector: string, handler: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    on(events: 'dp.show', handler: (eventObject: DatetimepickerEventObject) => any): JQuery;
+    on(events: "dp.show", selector: string, data: any, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    on(events: "dp.show", selector: string, handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    on(events: 'dp.show', handler: (eventObject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
 
-    off(events: "dp.hide", selector?: string, handler?: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    off(events: "dp.hide", handler: (eventobject: DatetimepickerEventObject) => any): JQuery;
+    off(events: "dp.hide", selector?: string, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    off(events: "dp.hide", handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
 
-    on(events: "dp.hide", selector: string, data: any, handler?: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    on(events: "dp.hide", selector: string, handler: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    on(events: 'dp.hide', handler: (eventObject: DatetimepickerEventObject) => any): JQuery;
+    on(events: "dp.hide", selector: string, data: any, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    on(events: "dp.hide", selector: string, handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    on(events: 'dp.hide', handler: (eventObject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
 
-    off(events: "dp.error", selector?: string, handler?: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    off(events: "dp.error", handler: (eventobject: DatetimepickerEventObject) => any): JQuery;
+    off(events: "dp.error", selector?: string, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    off(events: "dp.error", handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
 
-    on(events: "dp.error", selector: string, data: any, handler?: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    on(events: "dp.error", selector: string, handler: (eventobject: DatetimepickerEventObject) => any): JQuery;
-    on(events: 'dp.error', handler: (eventObject: DatetimepickerEventObject) => any): JQuery;
+    on(events: "dp.error", selector: string, data: any, handler?: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    on(events: "dp.error", selector: string, handler: (eventobject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
+    on(events: 'dp.error', handler: (eventObject: BootstrapV3DatetimePicker.DatetimepickerEventObject) => any): JQuery;
 
-    data(key: 'DateTimePicker'): Datetimepicker;
+    data(key: 'DateTimePicker'): BootstrapV3DatetimePicker.Datetimepicker;
 }

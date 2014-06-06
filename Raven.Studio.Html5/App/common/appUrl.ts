@@ -40,6 +40,7 @@ class appUrl {
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
+        versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
 
@@ -83,7 +84,6 @@ class appUrl {
 
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
         var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
-
         return isThereAny;
     }
 
@@ -264,6 +264,10 @@ class appUrl {
 
     static forReplications(db: database): string {
         return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forVersioning(db: database): string {
+        return "#databases/settings/versioning?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSqlReplications(db: database): string {

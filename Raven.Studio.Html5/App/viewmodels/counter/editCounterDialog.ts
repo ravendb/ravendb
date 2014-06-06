@@ -39,6 +39,7 @@ class editCounterDialog extends dialogViewModelBase {
     }
     
     attached() {
+        super.attached();
         this.counterDelta(0);
         var inputElement: any = $("#counterId")[0];
         this.editedCounter().id.subscribe((newCounterId) => {

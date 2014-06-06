@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 #if !NETFX_CORE
 using System.Collections.Generic;
@@ -449,7 +450,7 @@ namespace Raven.Client.Document
             value.OriginalValue = jsonDocument.DataAsJson;
             var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
             var type = entity.GetType();
-            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            foreach (var property in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var prop = property;
                 if (prop.DeclaringType != type && prop.DeclaringType != null)
@@ -458,9 +459,9 @@ namespace Raven.Client.Document
                     if (prop == null)
                         prop = property; // shouldn't happen ever...
                 }
-                if (!prop.CanWrite || !prop.CanRead || prop.GetIndexParameters().Length != 0)
+                if (!prop.CanWrite() || !prop.CanRead() || prop.GetIndexParameters().Length != 0)
                     continue;
-                prop.SetValue(entity, prop.GetValue(newEntity, null), null);
+                prop.SetValue(entity, prop.GetValue(newEntity));
             }
         }
 
@@ -932,59 +933,31 @@ namespace Raven.Client.Document
 			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
             {
-                if (DatabaseCommands is ServerClient) // server mode
-                {
-                    var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
-                    var responses = DatabaseCommands.MultiGet(requests);
+                var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
+                var responses = DatabaseCommands.MultiGet(requests);
 
-                    for (int i = 0; i < pendingLazyOperations.Count; i++)
-                    {
-                        long totalTime;
-                        long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
-                        
-                        responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
-                        {
-                            Url = requests[i].UrlAndQuery,
-                            Duration = TimeSpan.FromMilliseconds(totalTime)
-                        });
-                        if (responses[i].RequestHasErrors())
-                        {
-                            throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-                                                                Environment.NewLine + responses[i].Result);
-                        }
-                        pendingLazyOperations[i].HandleResponse(responses[i]);
-                        if (pendingLazyOperations[i].RequiresRetry)
-                        {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                else // embedded mode
+                for (int i = 0; i < pendingLazyOperations.Count; i++)
                 {
-                    var responses = new List<object>();
-                    foreach (var lazyOp in pendingLazyOperations)
+                    long totalTime;
+                    long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
+
+                    responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
                     {
-                        var sw = Stopwatch.StartNew();
-                        var result = lazyOp.ExecuteEmbedded(DatabaseCommands);
-                        responses.Add(result);
-                        responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
-                        {
-                            Url = lazyOp.ToString(),
-                            Duration = sw.Elapsed
-                        });
-                    }
-                    
-                    for (int i = 0; i < pendingLazyOperations.Count; i++)
+                        Url = requests[i].UrlAndQuery,
+                        Duration = TimeSpan.FromMilliseconds(totalTime)
+                    });
+                    if (responses[i].RequestHasErrors())
                     {
-                        pendingLazyOperations[i].HandleEmbeddedResponse(responses[i]);
-                        if (pendingLazyOperations[i].RequiresRetry)
-                        {
-                            return true;
-                        }
+                        throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+                                                            Environment.NewLine + responses[i].Result);
                     }
-                    return false;
+                    pendingLazyOperations[i].HandleResponse(responses[i]);
+                    if (pendingLazyOperations[i].RequiresRetry)
+                    {
+                        return true;
+                    }
                 }
+                return false;
             }
             finally
             {

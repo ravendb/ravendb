@@ -21,7 +21,7 @@
   var Settings = NProgress.settings = {
     minimum: 0.08,
     easing: 'ease',
-    positionUsing: '',
+    positionUsing: 'translate3d',
     speed: 200,
     trickle: true,
     trickleRate: 0.02,
