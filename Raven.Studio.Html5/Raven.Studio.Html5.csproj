@@ -294,6 +294,8 @@
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
     <Content Include="App\commands\saveDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\common\execJs.ts" />
+    <TypeScriptCompile Include="App\common\inputCursor.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
