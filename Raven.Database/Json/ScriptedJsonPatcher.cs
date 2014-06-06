@@ -28,7 +28,8 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
-		public IList<JsonDocument> CreatedDocs = new List<JsonDocument>();
+		private readonly Dictionary<string, JsonDocument> createdDocDict = new Dictionary<string, JsonDocument>();
+		public IEnumerable<JsonDocument> CreatedDocs { get { return createdDocDict.Values; } }
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
@@ -52,7 +53,10 @@ namespace Raven.Database.Json
 				additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
 				loadDocument = id =>
 				{
-					var jsonDocument = database.Get(id, null);
+					JsonDocument jsonDocument;
+					if (!createdDocDict.TryGetValue(id, out jsonDocument))
+						jsonDocument = database.Get(id, null);
+
 					return jsonDocument == null ? null : jsonDocument.ToJson();
 				};
 			}
@@ -429,7 +433,7 @@ function ExecutePatchScript(docInner){{
 	            newDocument.Metadata = ToRavenJObject(meta);
 	        }
 	        ValidateDocument(newDocument);
-            CreatedDocs.Add(newDocument);
+	        createdDocDict[key] = newDocument;
 	    }
 
 	    protected virtual void ValidateDocument(JsonDocument newDocument)

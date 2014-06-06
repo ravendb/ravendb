@@ -142,5 +142,75 @@ PutDocument(docId, type);
 				}
 			}
 		}
+
+		[Fact]
+		public void MultipleUpdatesToSameInSameBatch()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new Raven.Abstractions.Data.ScriptedIndexResults
+					{
+						Id = Raven.Abstractions.Data.ScriptedIndexResults.IdPrefix + new Animals_Stats().IndexName,
+						IndexScript = @"
+
+var types = LoadDocument('AnimalTypes');
+
+types.TypeCounts[this.Type] = this.Count;
+
+PutDocument('AnimalTypes', types);",
+						DeleteScript = @"
+
+var types = LoadDocument(docId);
+if(type == null)
+	return;
+type.Count = 0;
+PutDocument(docId, type);
+"
+					});
+					s.SaveChanges();
+				}
+				using (var s = store.OpenSession())
+				{
+					s.Store(new AnimalTypes(){Id = "AnimalTypes"});
+
+					s.Store(new Animal
+					{
+						Name = "Arava",
+						Type = "Dog"
+					});
+					s.Store(new Animal
+					{
+						Name = "Oscar",
+						Type = "Dog"
+					});
+					s.Store(new Animal
+					{
+						Name = "Felix",
+						Type = "Cat"
+					});
+
+					s.Store(new AnimalType
+					{
+						Id = "AnimalTypes/Dog",
+						Description = "Man's Best Friend"
+					});
+
+					s.SaveChanges();
+				}
+
+				new Animals_Stats().Execute(store);
+
+				WaitForIndexing(store);
+
+				using (var s = store.OpenSession())
+				{
+					var animalType = s.Load<AnimalTypes>("AnimalTypes");
+					Assert.Equal(2, animalType.TypeCounts["Dog"]);
+					Assert.Equal(1, animalType.TypeCounts["Cat"]);
+				}
+			}
+		}
 	}
 }
