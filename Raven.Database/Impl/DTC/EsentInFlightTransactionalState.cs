@@ -82,11 +82,13 @@ namespace Raven.Database.Impl.DTC
 				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
-				    if (context.DocumentIdsToTouch != null)
-				    {
-					    using (docDb.DocumentLock.Lock())
-					    {
-							using (storage.SetTransactionContext(context))
+				    context.Transaction.Commit(txMode);
+
+					if (context.DocumentIdsToTouch != null)
+					{
+						using (docDb.DocumentLock.Lock())
+						{
+							using (storage.DisableBatchNesting())
 							{
 								storage.Batch(accessor =>
 								{
@@ -106,9 +108,8 @@ namespace Raven.Database.Impl.DTC
 									}
 								});
 							}
-					    }
-				    }
-				    context.Transaction.Commit(txMode);
+						}
+					}
 					
 					foreach (var afterCommit in context.ActionsAfterCommit)
 					{

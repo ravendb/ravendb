@@ -51,48 +51,51 @@ namespace Raven.Database.Tasks
 					string.Join(", ", ReferencesToCheck));
 			}
 
-			var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			context.TransactionalStorage.Batch(accessor =>
+			using (context.Database.TransactionalStorage.DisableBatchNesting())
 			{
-				foreach (var kvp in ReferencesToCheck)
-				{
-					foreach (var index in context.IndexStorage.Indexes)
-					{
-						var set = context.DoNotTouchAgainIfCheckingReferences.GetOrAdd(index,
-							_ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-						set.Add(kvp.Key);
-					}
-
-					var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key, null);
-
-					if (doc == null || doc.Etag == kvp.Value)
-						continue;
-
-
-					docsToTouch.Add(kvp.Key);
-				}
-			});
-
-			using (context.Database.DocumentLock.Lock())
-			{
+				var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 				context.TransactionalStorage.Batch(accessor =>
 				{
-					foreach (var doc in docsToTouch)
+					foreach (var kvp in ReferencesToCheck)
 					{
-						try
+						foreach (var index in context.IndexStorage.Indexes)
 						{
-							Etag preTouchEtag;
-							Etag afterTouchEtag;
-							accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
+							var set = context.DoNotTouchAgainIfCheckingReferences.GetOrAdd(index,
+								_ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+							set.Add(kvp.Key);
 						}
-						catch (ConcurrencyException)
-						{
-						}
-						context.Database.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+
+						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key, null);
+
+						if (doc == null || doc.Etag == kvp.Value)
+							continue;
+
+
+						docsToTouch.Add(kvp.Key);
 					}
 				});
-			}
 
+				using (context.Database.DocumentLock.Lock())
+				{
+					context.TransactionalStorage.Batch(accessor =>
+					{
+						foreach (var doc in docsToTouch)
+						{
+							try
+							{
+								Etag preTouchEtag;
+								Etag afterTouchEtag;
+								accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
+							}
+							catch (ConcurrencyException)
+							{
+							}
+							context.Database.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+						}
+					});
+				}
+
+			}
 		}
 
 		public override Task Clone()
