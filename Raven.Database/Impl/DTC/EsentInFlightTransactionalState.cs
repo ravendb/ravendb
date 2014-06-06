@@ -84,26 +84,29 @@ namespace Raven.Database.Impl.DTC
 				{
 				    if (context.DocumentIdsToTouch != null)
 				    {
-				        using (storage.SetTransactionContext(context))
-				        {
-				            storage.Batch(accessor =>
-				            {
-				                foreach (var docId in context.DocumentIdsToTouch)
-				                {
-									docDb.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
-				                    try
-					                {
-										Etag preTouchEtag;
-										Etag afterTouchEtag;
-										accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
-					                }
-					                catch (ConcurrencyException)
-					                {
-						                
-					                }
-				                }
-				            });
-				        }
+					    using (docDb.DocumentLock.Lock())
+					    {
+							using (storage.SetTransactionContext(context))
+							{
+								storage.Batch(accessor =>
+								{
+									foreach (var docId in context.DocumentIdsToTouch)
+									{
+										docDb.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
+										try
+										{
+											Etag preTouchEtag;
+											Etag afterTouchEtag;
+											accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+										}
+										catch (ConcurrencyException)
+										{
+
+										}
+									}
+								});
+							}
+					    }
 				    }
 				    context.Transaction.Commit(txMode);
 					

@@ -44,16 +44,16 @@ namespace Raven.Database.Tasks
 		}
 
 		public override void Execute(WorkContext context)
-        {
-            if (logger.IsDebugEnabled)
-            {
-                logger.Debug("Going to touch the following documents (LoadDocument references, need to check for concurrent transactions): {0}",
-                    string.Join(", ", ReferencesToCheck));
-            }
+		{
+			if (logger.IsDebugEnabled)
+			{
+				logger.Debug("Going to touch the following documents (LoadDocument references, need to check for concurrent transactions): {0}",
+					string.Join(", ", ReferencesToCheck));
+			}
 
-	        var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            context.TransactionalStorage.Batch(accessor =>
-            {
+			var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			context.TransactionalStorage.Batch(accessor =>
+			{
 				foreach (var kvp in ReferencesToCheck)
 				{
 					foreach (var index in context.IndexStorage.Indexes)
@@ -71,28 +71,29 @@ namespace Raven.Database.Tasks
 
 					docsToTouch.Add(kvp.Key);
 				}
-            });
+			});
 
-			try
+			using (context.Database.DocumentLock.Lock())
 			{
-				using (context.Database.DocumentLock.Lock())
+				context.TransactionalStorage.Batch(accessor =>
 				{
-					context.TransactionalStorage.Batch(accessor =>
+					foreach (var doc in docsToTouch)
 					{
-						foreach (var doc in docsToTouch)
+						try
 						{
 							Etag preTouchEtag;
 							Etag afterTouchEtag;
 							accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
-							context.Database.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
 						}
-					});
-				}
+						catch (ConcurrencyException)
+						{
+						}
+						context.Database.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+					}
+				});
 			}
-			catch (ConcurrencyException)
-			{
-			}
-        }
+
+		}
 
 		public override Task Clone()
 		{
