@@ -29,7 +29,7 @@ class changesApi {
     private static eventQueueOwnerDeadTime = 10000;
 
         constructor(private rs: resource) {
-        this.eventsId = this.makeid();
+        this.eventsId = this.makeId();
         this.eventQueueName = "Raven/Studio/ChangesApiEventQueue_" + rs.name;
         this.connectOrReuseExistingConnection();
     }
