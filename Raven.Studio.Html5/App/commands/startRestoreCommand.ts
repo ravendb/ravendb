@@ -40,7 +40,7 @@ class startRestoreCommand extends commandBase {
 
         var lastMessage = restoreStatus.Messages.last();
         var isRestoreFinished =
-          lastMessage.contains("The new database was created") ||
+            lastMessage.contains("The new database was created") ||
             lastMessage.contains("Restore Canceled") ||
             lastMessage.contains("A database name must be supplied if the restore location does not contain a valid Database.Document file") ||
             lastMessage.contains("Cannot do an online restore for the <system> database") ||

@@ -29,7 +29,7 @@ class changesApi {
     private static eventQueueOwnerDeadTime = 10000;
 
         constructor(private rs: resource) {
-        this.eventsId = this.makeId();
+        this.eventsId = this.makeid();
         this.eventQueueName = "Raven/Studio/ChangesApiEventQueue_" + rs.name;
         this.connectOrReuseExistingConnection();
     }
@@ -64,7 +64,7 @@ class changesApi {
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
             this.source = new EventSource(url + '/changes/events?id=' + this.eventsId);
-            this.source.onmessage = (e) => this.onEvent(e);
+            this.source.onmessage = (e) => this.onMessage(e);
             this.source.onerror = (e) => this.onError(e);
 
         } else {
@@ -126,8 +126,8 @@ class changesApi {
                 this.fireEvents(this.allIndexesHandlers(), change.Value, (e) => true);
             } else if (change.Type === "TransformerChangeNotification") {
                 this.fireEvents(this.allTransformersHandlers(), change.Value, (e) => true);
-            } else if (type === "SynchronizationUpdateNotification") {
-                this.fireEvents(this.allFsSyncHandlers(), json.Value, (e) => true);
+            } else if (change.Type === "SynchronizationUpdateNotification") {
+                this.fireEvents(this.allFsSyncHandlers(), change.Value, (e) => true);
             } else {
                 console.log("Unhandled Changes API notification type: " + change.Type);
             }
@@ -254,7 +254,7 @@ class changesApi {
         clearTimeout(this.pollQueueHandle);
     }
 
-    private makeid() {
+    private makeId() {
         var text = "";
         var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -288,7 +288,7 @@ class changesApi {
     private createEventQueue(): changesApiEventQueue {
         return {
             ownerId: this.eventsId,
-            name: this.db.name,
+            name: this.rs.name,
             lastHeartbeatMs: new Date().getTime(),
             events: []
         };

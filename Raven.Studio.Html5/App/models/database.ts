@@ -2,7 +2,6 @@ import resource = require("models/resource");
 
 class database extends resource {
     statistics = ko.observable<databaseStatisticsDto>();
-    disabled = ko.observable<boolean>(false);
 
     constructor(public name: string, private isDisabled?: boolean) {
         super(name, 'database');
