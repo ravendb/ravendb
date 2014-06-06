@@ -31,6 +31,7 @@ using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Spatial4n.Core.Exceptions;
 
 namespace Raven.Database.Indexing
 {
@@ -398,16 +399,25 @@ namespace Raven.Database.Indexing
 					doc = boostedValue.Value;
 					boost = boostedValue.Boost;
 				}
-				IEnumerable<AbstractField> fields;
-				if (doc is IDynamicJsonObject)
+				IEnumerable<AbstractField> fields = null;
+
+				try
 				{
-					fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.NO);
+					if (doc is IDynamicJsonObject)
+					{
+						fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject) doc).Inner, Field.Store.NO);
+					}
+					else
+					{
+						properties = properties ?? TypeDescriptor.GetProperties(doc);
+						fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
+					}
 				}
-				else
+				catch (InvalidShapeException e)
 				{
-					properties = properties ?? TypeDescriptor.GetProperties(doc);
-					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
+					
 				}
+
 				if (Math.Abs(boost - 1) > float.Epsilon)
 				{
 					var abstractFields = fields.ToList();

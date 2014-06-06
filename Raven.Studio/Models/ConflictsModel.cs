@@ -128,11 +128,11 @@ namespace Raven.Studio.Models
                 Map = @"from doc in docs
                         let id = doc[""@metadata""][""@id""]
                         where doc[""@metadata""][""Raven-Replication-Conflict""] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(""/conflicts/"", StringComparison.OrdinalIgnoreCase))
-                        select new { ConflictDetectedAt = (DateTime)doc[""@metadata""][""Last-Modified""]}",
+                        select new { ConflictDetectedAt = doc[""@metadata""][""Last-Modified""].ToString()}",
                 TransformResults = @"from result in results
                                     select new { 
 	                                    Id = result[""@metadata""][""@id""], 
-	                                    ConflictDetectedAt = (DateTime)result[""@metadata""][""Last-Modified""], 
+	                                    ConflictDetectedAt = result[""@metadata""][""Last-Modified""].ToString(), 
 	                                    Versions = result.Conflicts.Select(versionId => { var version = Database.Load(versionId); return new { Id = versionId, SourceId = version[""@metadata""][""Raven-Replication-Source""]}; })
                                     }"
             };

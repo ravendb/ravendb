@@ -112,7 +112,12 @@ namespace Raven.Abstractions.Extensions
 			"X-ARR-LOG-ID",
 			"X-ARR-SSL",
 			"X-Forwarded-For",
-			"X-Original-URL"
+			"X-Original-URL",
+
+			// Azure specific
+			"X-LiveUpgrade",
+			"DISGUISED-HOST",
+			"X-SITE-DEPLOYMENT-ID",
 		};
 
 		/// <summary>

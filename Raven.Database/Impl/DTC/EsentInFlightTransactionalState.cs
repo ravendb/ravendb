@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
@@ -19,6 +20,7 @@ namespace Raven.Database.Impl.DTC
 	public class EsentInFlightTransactionalState : InFlightTransactionalState, IDisposable
 	{
 		private readonly TransactionalStorage storage;
+		private readonly DocumentDatabase docDb;
 		private readonly CommitTransactionGrbit txMode;
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
 			new ConcurrentDictionary<string, EsentTransactionContext>();
@@ -26,10 +28,15 @@ namespace Raven.Database.Impl.DTC
 		private long transactionContextNumber;
 		private readonly Timer timer;
 
-		public EsentInFlightTransactionalState(TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
+		public EsentInFlightTransactionalState(DocumentDatabase docDb,
+			TransactionalStorage storage,
+			CommitTransactionGrbit txMode, 
+			Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, 
+			Func<string, Etag, TransactionInformation, bool> databaseDelete)
 			: base(databasePut, databaseDelete)
 		{
 			this.storage = storage;
+			this.docDb = docDb;
 			this.txMode = txMode;
 			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 		}
@@ -74,8 +81,24 @@ namespace Raven.Database.Impl.DTC
 				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
-					context.Transaction.Commit(txMode);
-
+				    if (context.DocumentIdsToTouch != null)
+				    {
+				        using (storage.SetTransactionContext(context))
+				        {
+				            storage.Batch(accessor =>
+				            {
+				                foreach (var docId in context.DocumentIdsToTouch)
+				                {
+									docDb.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
+				                    Etag preTouchEtag;
+				                    Etag afterTouchEtag;
+				                    accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+				                }
+				            });
+				        }
+				    }
+				    context.Transaction.Commit(txMode);
+					
 					foreach (var afterCommit in context.ActionsAfterCommit)
 					{
 						afterCommit();
@@ -104,7 +127,11 @@ namespace Raven.Database.Impl.DTC
 			{
 				using (storage.SetTransactionContext(context))
 				{
-					storage.Batch(accessor => RunOperationsInTransaction(id));
+					storage.Batch(accessor =>
+					{
+					    var documentsToTouch = RunOperationsInTransaction(id);
+					    context.DocumentIdsToTouch = documentsToTouch;
+					});
 				}
 			}
 			catch (Exception)

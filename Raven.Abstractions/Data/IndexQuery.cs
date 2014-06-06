@@ -246,6 +246,10 @@ namespace Raven.Abstractions.Data
                 path.Append("&skipTransformResults=true");
             }
 
+            if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
+                path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
+
+
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));

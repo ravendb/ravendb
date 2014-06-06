@@ -218,7 +218,7 @@ namespace Raven.Database
                 try
                 {
 
-	                inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(Put, Delete);
+	                inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Put, Delete);
 
                     TransactionalStorage.Batch(actions =>
                         sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
@@ -1086,16 +1086,19 @@ namespace Raven.Database
 
 		public void PrepareTransaction(string txId)
 		{
-			try
+			using (DocumentLock.Lock())
 			{
-				inFlightTransactionalState.Prepare(txId);
-				log.Debug("Prepare of tx {0} completed", txId);
-			}
-			catch (Exception e)
-			{
-				if (TransactionalStorage.HandleException(e))
-					return;
-				throw;
+				try
+				{
+					inFlightTransactionalState.Prepare(txId);
+					log.Debug("Prepare of tx {0} completed", txId);
+				}
+				catch (Exception e)
+				{
+					if (TransactionalStorage.HandleException(e))
+						return;
+					throw;
+				}
 			}
 		}
 
@@ -1130,12 +1133,12 @@ namespace Raven.Database
         }
 
 
-        public void Rollback(string txId)
-        {
-            inFlightTransactionalState.Rollback(txId);
-        }
+	    public void Rollback(string txId)
+	    {
+		    inFlightTransactionalState.Rollback(txId);
+	    }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
+	    [MethodImpl(MethodImplOptions.Synchronized)]
         public string PutTransform(string name, TransformerDefinition definition)
         {
             if (name == null) throw new ArgumentNullException("name");

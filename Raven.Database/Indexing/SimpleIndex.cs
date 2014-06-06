@@ -15,12 +15,14 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Spatial4n.Core.Exceptions;
 
 namespace Raven.Database.Indexing
 {
@@ -99,10 +101,20 @@ namespace Raven.Database.Indexing
 
                         using (CurrentIndexingScope.Current = new CurrentIndexingScope(context.Database))
                         {
-                            foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
+	                        Action<Exception, object> onErrorFunc;
+	                        foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats,out onErrorFunc))
                             {
                                 float boost;
-                                var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+	                            IndexingResult indexingResult;
+	                            try
+                                  {
+                                      indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+                                  }
+                                  catch (InvalidSpatialShapeException e)
+                                  {
+                                      onErrorFunc(e, doc);
+                                      continue;
+                                  }
 
                                 if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                                 {
@@ -256,8 +268,10 @@ namespace Raven.Database.Indexing
             }
 
             IndexingResult indexingResult;
-            if (doc is DynamicJsonObject)
-                indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject)doc);
+
+	        var docAsDynamicObject = doc as DynamicJsonObject;
+	        if (docAsDynamicObject != null)
+                indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, docAsDynamicObject);
             else
                 indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, doc);
 
@@ -281,11 +295,23 @@ namespace Raven.Database.Indexing
 
         private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, DynamicJsonObject dynamicJsonObject)
         {
-            var newDocId = dynamicJsonObject.GetRootParentOrSelf().GetDocumentId();
-            return new IndexingResult
+            var newDocIdAsObject = dynamicJsonObject.GetRootParentOrSelf().GetDocumentId();
+	        var newDocId = newDocIdAsObject is DynamicNullObject ? null : (string) newDocIdAsObject;
+	        List<AbstractField> abstractFields;
+
+	        try
+	        {
+		        abstractFields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList();
+	        }
+	        catch (InvalidShapeException e)
+	        {
+		        throw new InvalidSpatialShapeException(e,newDocId);
+	        }
+
+	        return new IndexingResult
             {
-                Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList(),
-                NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
+                Fields = abstractFields,
+                NewDocId = newDocId,
                 ShouldSkip = false
             };
         }
@@ -294,20 +320,35 @@ namespace Raven.Database.Indexing
 
         private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
         {
-            Type type = doc.GetType();
-            PropertyDescriptorCollection properties =
-                propertyDescriptorCache.GetOrAdd(type, TypeDescriptor.GetProperties);
+	        PropertyDescriptorCollection properties;
+			var newDocId = GetDocumentIdByReflection(doc, out properties);
 
-            var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
-            return new IndexingResult()
+            List<AbstractField> abstractFields;
+	        try
+	        {
+		        abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
+	        }
+	        catch (InvalidShapeException e)
+	        {
+		        throw new InvalidSpatialShapeException(e, newDocId);
+	        }
+
+	        return new IndexingResult
             {
                 Fields = abstractFields,
-                NewDocId = properties.Find(Constants.DocumentIdFieldName, false).GetValue(doc) as string,
+                NewDocId = newDocId,
                 ShouldSkip = properties.Count > 1  // we always have at least __document_id
                             && abstractFields.Count == 0
             };
         }
 
+
+		private string GetDocumentIdByReflection(object doc, out PropertyDescriptorCollection properties)
+		{
+			Type type = doc.GetType();
+			properties = propertyDescriptorCache.GetOrAdd(type, TypeDescriptor.GetProperties);
+			return properties.Find(Constants.DocumentIdFieldName, false).GetValue(doc) as string;
+		}
 
         public override void Remove(string[] keys, WorkContext context)
         {
