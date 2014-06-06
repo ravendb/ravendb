@@ -81,6 +81,7 @@ namespace Raven.Client.FileSystem
 
             var commands = fileSystemCommands.GetOrAdd(filesystem, x => (IAsyncFilesCommandsImpl)this.AsyncFilesCommands.ForFileSystem(x));
 
+            //TODO: Fix the backend events API to handle this. 
             using (NoSynchronizationContext.Scope())
             {
                 return new FilesChangesClient(Url,

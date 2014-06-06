@@ -54,7 +54,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 
             var commands = (IAsyncFilesCommandsImpl)this.destination.Commands;
 
-            var baseUrl = commands.BaseUrl;
+            var baseUrl = commands.UrlFor();
             var credentials = commands.PrimaryCredentials;
             var conventions = commands.Conventions;
 

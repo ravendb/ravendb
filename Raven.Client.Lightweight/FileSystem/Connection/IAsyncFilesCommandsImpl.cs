@@ -8,9 +8,7 @@ using System.Threading.Tasks;
 namespace Raven.Client.FileSystem.Connection
 {
     public interface IAsyncFilesCommandsImpl : IAsyncFilesCommands
-    {
-        string BaseUrl { get; }     
-
+    {   
         string ServerUrl { get; }
 
         HttpJsonRequestFactory RequestFactory { get; }

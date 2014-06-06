@@ -86,9 +86,17 @@ namespace Raven.Client.FileSystem
             return new FilesReplicationInformer(this.Conventions, this.RequestFactory);
         }
 
-        public override string BaseUrl
+        protected override string BaseUrl
         {
-            get { return this.ServerUrl + "/fs/" + this.FileSystem; }
+            get { return UrlFor(); }
+        }
+
+        public override string UrlFor(string fileSystem = null)
+        {
+            if (string.IsNullOrWhiteSpace(fileSystem))
+                fileSystem = this.FileSystem;
+
+            return this.ServerUrl + "/fs/" + fileSystem;
         }
 
         public string FileSystem { get; private set; }
@@ -1462,6 +1470,5 @@ namespace Raven.Client.FileSystem
         }
 
         public ProfilingInformation ProfilingInformation { get; private set; }
-
     }
 }

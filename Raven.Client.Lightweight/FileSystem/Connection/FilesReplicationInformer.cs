@@ -37,15 +37,16 @@ namespace Raven.Client.FileSystem.Connection
             lock (this)
             {
                 var serverClient = (IAsyncFilesCommandsImpl)commands;
-                
-                var serverHash = ServerHash.GetServerHash(serverClient.BaseUrl);
+
+                string urlForFilename = serverClient.UrlFor();
+                var serverHash = ServerHash.GetServerHash(urlForFilename);
 
                 JsonDocument document = null;
 
                 try
                 {
                     var config = serverClient.Configuration.GetKeyAsync<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
-                    failureCounts[serverClient.BaseUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+                    failureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)
                     {

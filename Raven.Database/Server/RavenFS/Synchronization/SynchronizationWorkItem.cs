@@ -93,7 +93,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
             var commands = (IAsyncFilesCommandsImpl)destination.Commands;
 
-            log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, commands.BaseUrl);
+            log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, commands.UrlFor());
 
 			try
 			{

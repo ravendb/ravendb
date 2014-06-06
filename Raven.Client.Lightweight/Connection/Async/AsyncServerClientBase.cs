@@ -46,11 +46,6 @@ namespace Raven.Client.Connection.Async
             get; protected set;
         }
 
-        public abstract string BaseUrl
-        {
-            get;
-        }
-
         public TConvention Conventions
         {
             get;
@@ -84,6 +79,13 @@ namespace Raven.Client.Connection.Async
             get;
             set;
         }
+
+        protected abstract string BaseUrl
+        {
+            get;
+        }
+
+        public abstract string UrlFor(string fileSystem);
 
         #region Execute with replication
 
@@ -136,6 +138,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(method, operation, this.BaseUrl);
         }
+
         internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation, string baseUrl)
         {
             // Convert the Func<string, Task> to a Func<string, Task<object>>

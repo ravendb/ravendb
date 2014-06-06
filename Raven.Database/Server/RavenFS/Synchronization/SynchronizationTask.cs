@@ -293,6 +293,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			if (filteredFilesToSynchronization.Count == 0)
 				return;
 
+            var baseUrl = commands.UrlFor();
+
 			foreach (var fileHeader in filteredFilesToSynchronization)
 			{
 				var file = fileHeader.Name;
@@ -308,29 +310,28 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 {
                     Log.WarnException(
                         string.Format("Could not retrieve a metadata of a file '{0}' from {1} in order to determine needed synchronization type", file,
-                            commands.BaseUrl), ex);
+                            baseUrl), ex);
 
                     continue;
-                }
+                }                
 
 				NoSyncReason reason;
 				var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
-
 				if (work == null)
 				{
-                    Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, commands.BaseUrl, reason.GetDescription());
+                    Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, baseUrl, reason.GetDescription());
 
 					if (reason == NoSyncReason.ContainedInDestinationHistory)
 					{
 						var etag = localMetadata.Value<Guid>("ETag");
 						await destination.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag);
-                        RemoveSyncingConfiguration(file, commands.BaseUrl);
+                        RemoveSyncingConfiguration(file, baseUrl);
 					}
 
 					continue;
 				}
 
-                synchronizationQueue.EnqueueSynchronization(commands.BaseUrl, work);
+                synchronizationQueue.EnqueueSynchronization(baseUrl, work);
 			}
 		}
 
@@ -338,7 +339,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
             var commands = (IAsyncFilesCommandsImpl)destination.Commands;
 
-            var destinationUrl = commands.BaseUrl;
+            var destinationUrl = commands.UrlFor();
 
             for (var i = 0; i < AvailableSynchronizationRequestsTo(destinationUrl); i++)
 			{
@@ -369,7 +370,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 																			  SynchronizationWorkItem work)
 		{
             var commands = (IAsyncFilesCommandsImpl)destination.Commands;
-            string destinationUrl = commands.BaseUrl;
+            string destinationUrl = commands.UrlFor();
 
 			Log.Debug("Starting to perform {0} for a file '{1}' and a destination server {2}",
                        work.GetType().Name, work.FileName, destinationUrl);

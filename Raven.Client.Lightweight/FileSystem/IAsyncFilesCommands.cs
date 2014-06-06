@@ -51,6 +51,8 @@ namespace Raven.Client.FileSystem
 
         string FileSystem { get; }
 
+        string UrlFor(string fileSystem = null);
+
         IAsyncFilesCommands ForFileSystem(string fileSystem);
         IAsyncFilesCommands With(ICredentials credentials);
         IAsyncFilesCommands With(OperationCredentials credentials);
