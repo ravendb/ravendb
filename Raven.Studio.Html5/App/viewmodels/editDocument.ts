@@ -119,8 +119,11 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             return canActivateResult;
-        } else {
-            return $.Deferred().resolve({ can: true });
+        } else if (args && args.item && args.list) {
+            return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
+        }
+        else{
+        return $.Deferred().resolve({ can: true });
         }
     }
 
@@ -142,15 +145,20 @@ class editDocument extends viewModelBase {
         }
 
         if (navigationArgs && navigationArgs.list && navigationArgs.item) {
-            var itemIndex = parseInt(navigationArgs.item, 10);
-            if (!isNaN(itemIndex)) {
-                var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
-                var fetcher = (skip: number, take: number) => newCollection.fetchDocuments(skip, take);
-                var list = new pagedList(fetcher);
-                list.collectionName = navigationArgs.list;
-                list.currentItemIndex(itemIndex);
-                list.getNthItem(0); // Force us to get the total items count.
-                this.docsList(list);
+            if (navigationArgs.index) {
+                
+            }
+            else{
+                var itemIndex = parseInt(navigationArgs.item, 10);
+                if (!isNaN(itemIndex)) {
+                    var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
+                    var fetcher = (skip: number, take: number) => newCollection.fetchDocuments(skip, take);
+                    var list = new pagedList(fetcher);
+                    list.collectionName = navigationArgs.list;
+                    list.currentItemIndex(itemIndex);
+                    list.getNthItem(0); // Force us to get the total items count.
+                    this.docsList(list);
+                }
             }
         }
 
