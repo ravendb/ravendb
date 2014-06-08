@@ -62,7 +62,8 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesGet(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesDelete(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesPut(string.Empty));
-            RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases());
+            RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(false));
+			RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(true));
             RegisterRouteForOnlySysDb<DebugController>(a => a.Routes());
             RegisterRouteForOnlySysDb<HardRouteController>(a => a.FaviconGet());
             RegisterRouteForOnlySysDb<HardRouteController>(a => a.ClientaccessPolicyGet());

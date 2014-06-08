@@ -311,13 +311,12 @@ class databases extends viewModelBase {
 
     private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
         if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
-            (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
+                (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
+            var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
             if (e.Type === documentChangeType.Delete) {
-                var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
                 this.onDatabaseDeleted(receivedDocumentName);
             }
             if (e.Type === documentChangeType.Put) {
-                var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
                 this.addNewDatabase(new database(receivedDocumentName));
             }
         }

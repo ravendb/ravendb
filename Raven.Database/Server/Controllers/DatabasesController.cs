@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Controllers
 	{
 		[HttpGet]
 		[Route("databases")]
-		public HttpResponseMessage Databases()
+		public HttpResponseMessage Databases(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
 				return
@@ -49,6 +49,8 @@ namespace Raven.Database.Server.Controllers
 						Disabled = database.Value<bool>("Disabled")
 					}).ToList();
 
+			var databaseNames = databaseData.Select(databaseObject => databaseObject.Name).ToArray();
+
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
 				var user = User;
@@ -58,8 +60,7 @@ namespace Raven.Database.Server.Controllers
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-					var databaseNames = databaseData.Select(databaseObject => databaseObject.Name).ToArray();
-
+					
 					approvedDatabases = authorizer.GetApprovedDatabases(user, this, databaseNames);
 				}
 			}
@@ -74,9 +75,12 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			if (approvedDatabases != null)
+			{
 				databaseData = databaseData.Where(database => approvedDatabases.Contains(database.Name)).ToList();
+				databaseNames = databaseNames.Where(databaseName => approvedDatabases.Contains(databaseName)).ToArray();
+			}
 
-			var msg = GetMessageWithObject(databaseData);
+			var msg = getAdditionalData ? GetMessageWithObject(databaseData) : GetMessageWithObject(databaseNames);
 			WriteHeaders(new RavenJObject(), lastDocEtag, msg);
 
 			return msg;

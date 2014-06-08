@@ -1,8 +1,8 @@
 ﻿<div id="indexesContainer">
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
-            <a class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: newIndexUrl }" title="Add a new index (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: queryUrl }" title="New query (Alt+Q)" accesskey="Q"><i class="fa fa-search"></i> Query</a>
+            <a class="btn btn-primary"  data-bind="attr: { href: newIndexUrl }" title="Add a new index (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>
+            <a class="btn btn-default" data-bind="attr: { href: queryUrl }" title="New query (Alt+Q)" accesskey="Q"><i class="fa fa-search"></i> Query</a>
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     Recent Queries <span class="caret"></span>
@@ -41,7 +41,7 @@
             </div>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleExpandAll" title="Expand all index groups (Alt+=)" accesskey="="><i class="fa fa-plus-square-o"></i></a>
+            <a class="btn btn-default"  data-bind="click: toggleExpandAll" title="Expand all index groups (Alt+=)" accesskey="="><i class="fa fa-plus-square-o"></i></a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: pasteIndex" title="Paste Index Definition From JSON (Alt+v)" accesskey="v"><i class="fa fa-paste"></i></a>
@@ -65,7 +65,7 @@
             <div class="index-group panel panel-default index-panel">
                 <div class="panel-heading">
                     <div class="pull-right indexGroup-actions-container">
-                        <button class="btn btn-danger use-bootstrap-tooltip" title="Delete all indexes in group" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.deleteIndexGroup.bind($root)">
+                            <button class="btn btn-danger" title="Delete all indexes in group"  data-bind="click: $root.deleteIndexGroup.bind($root)">
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>
@@ -84,19 +84,19 @@
                             <div class="index-panel panel panel-default">
                                 <div class="panel-body">
                                     <h4 class="pull-left">
-                                        <a class="use-bootstrap-tooltip" data-bind="attr: { href: queryUrl }" title="Query this index">
+                                            <a  data-bind="attr: { href: queryUrl }" title="Query this index">
                                             <span data-bind="text: name, css: { 'text-warning': isIdle, 'text-muted': isDisabled, 'text-danger': isAbandoned }"></span>
                                         </a>
                                         <small class="text-warning" data-bind="visible: isIdle">Idle</small>
                                         <small class="text-danger" data-bind="visible: isAbandoned">Abandoned</small>
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
-                                        <small class="text-muted use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="text: ' - ' + docsCount + ' docs' " title=" the number of documents affected by this index"></small>
+                                        <small class="text-muted"  data-bind="text: ' - ' + docsCount + ' docs' " title=" the number of documents affected by this index"></small>
                                         <label>
                                             <i data-bind="css: {'fa': 1==1, 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore'  }"></i>
                                         </label>
                                     </h4>
                                     <div class="pull-right">
-                                        <a class="btn btn-default indexes-controls use-bootstrap-tooltip" title="Edit the index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: editUrl }">
+                                            <a class="btn btn-default indexes-controls"  data-placement="bottom" data-bind="attr: { href: editUrl }">
                                             <i class="fa fa-pencil"></i>
                                         </a>
                                         <div class="btn-group">
@@ -113,25 +113,25 @@
                                                     </a>
                                                 </li>
                                                 <li role="presentation">
-                                                    <a class="btn indexes-controls use-bootstrap-tooltip" title="Reset the index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.resetIndex.bind($root)">
+                                                        <a class="btn indexes-controls" title="Reset the index"  data-bind="click: $root.resetIndex.bind($root)">
                                                         Refresh Index
                                                     </a>
                                                 </li>
                                                 <li role="presentation" class="divider"></li>
                                                 <li role="presentation">
-                                                    <a class="btn use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-bind="click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                                                        <a class="btn"  data-bind="click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
                                                         <i class="fa fa-unlock"></i>
                                                         Unlocked
                                                     </a>
                                                 </li>
                                                 <li role="presentation">
-                                                    <a class="btn use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.lockIndex.bind($root, $data), css: { active: lockMode() === 'LockedIgnore' }" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                                                         <a class="btn"  data-bind="click: $root.lockIndex.bind($root, $data), css: { active: lockMode() === 'LockedIgnore' }" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
                                                         <i class="fa fa-lock"></i>
                                                         Locked
                                                     </a>
                                                 </li>
                                                 <li role="presentation">
-                                                    <a class="btn use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.lockErrorIndex.bind($root, $data), css: { active: lockMode() === 'LockedError' }" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                                                        <a class="btn"  data-bind="click: $root.lockErrorIndex.bind($root, $data), css: { active: lockMode() === 'LockedError' }" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
                                                         <i class="fa fa-lock text-danger"></i>
                                                         Locked (Error)
                                                     </a>
