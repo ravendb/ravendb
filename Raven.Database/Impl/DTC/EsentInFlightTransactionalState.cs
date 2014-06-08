@@ -10,6 +10,7 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -90,9 +91,15 @@ namespace Raven.Database.Impl.DTC
 				                foreach (var docId in context.DocumentIdsToTouch)
 				                {
 									docDb.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
-				                    Etag preTouchEtag;
-				                    Etag afterTouchEtag;
-				                    accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+				                    try
+				                    {
+                                        Etag preTouchEtag;
+                                        Etag afterTouchEtag;
+                                        accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+				                    }
+				                    catch (ConcurrencyException)
+				                    {
+				                    }
 				                }
 				            });
 				        }

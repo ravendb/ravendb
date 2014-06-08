@@ -94,6 +94,7 @@ namespace Raven.Database.Tasks
                     }
                     catch (ConcurrencyException)
                     {
+                        logger.Info("Concurrency exception when touching {0}", docWithMissingRef.Key);
                     }
                 }
             });
