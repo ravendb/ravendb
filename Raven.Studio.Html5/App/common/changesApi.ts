@@ -123,7 +123,10 @@ class changesApi {
                 this.fireEvents(this.allIndexesHandlers(), change.Value, (e) => true);
             } else if (change.Type === "TransformerChangeNotification") {
                 this.fireEvents(this.allTransformersHandlers(), change.Value, (e) => true);
-            } else {
+            } else if (change.Type === "BulkInsertChangeNotification") {
+                this.fireEvents(this.allBulkInsertsHandlers(), change.Value, (e) => true);
+            }
+            else {
                 console.log("Unhandled Changes API notification type: " + change.Type);
             }
         }
@@ -195,7 +198,7 @@ class changesApi {
         }
         this.allBulkInsertsHandlers.push(callback);
         return new changeSubscription(() => {
-            this.allDocsHandlers.remove(callback);
+            this.allBulkInsertsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
                 this.send('unwatch-bulk-operation');
             }

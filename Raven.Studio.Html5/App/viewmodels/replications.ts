@@ -36,15 +36,15 @@ class replications extends viewModelBase {
 
         var self = this;
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
-        this.isConfigSaveEnabled = ko.computed(function () {
+        this.isConfigSaveEnabled = ko.computed(() => {
             return self.replicationConfigDirtyFlag().isDirty();
         });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
-        this.isSetupSaveEnabled = ko.computed(function () {
+        this.isSetupSaveEnabled = ko.computed(() => {
             return self.replicationsSetupDirtyFlag().isDirty();
         });
 
-        var combinedFlag = ko.computed(function () {
+        var combinedFlag = ko.computed(() => {
             return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
         });
         viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
@@ -69,7 +69,8 @@ class replications extends viewModelBase {
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(replicationDestination.empty());
+        var db = this.activeDatabase();
+        this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
     }
 
     removeDestination(repl: replicationDestination) {

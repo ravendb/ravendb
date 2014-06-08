@@ -14,7 +14,7 @@ class sqlReplication extends document {
         { label: "Connection String Name", value: this.CONNECTION_STRING_NAME },
         { label: "Connection String Setting Name", value: this.CONNECTION_STRING_SETTING_NAME }
     ];
-    
+
     public metadata: documentMetadata;
 
     name = ko.observable<string>().extend({ required: true });
@@ -23,13 +23,13 @@ class sqlReplication extends document {
     connectionStringType = ko.observable<string>().extend({ required: true });
     connectionStringValue = ko.observable<string>(null).extend({ required: true });
     ravenEntityName = ko.observable<string>("").extend({ required: true });
+    parameterizeDeletesDisabled = ko.observable<boolean>().extend({ required: true });
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
     connectionString = ko.observable<string>(null);
     connectionStringName = ko.observable<string>(null);
     connectionStringSettingName = ko.observable<string>(null);
     connectionStringSourceFieldName: KnockoutComputed<string>;
-    parameterizeDeletesDisabled = ko.observable<boolean>();
 
     collections = ko.observableArray<string>();
     searchResults = ko.observableArray<string>();
@@ -39,11 +39,11 @@ class sqlReplication extends document {
 
         this.name(dto.Name);
         this.disabled(dto.Disabled);
-        this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
-        this.ravenEntityName(dto.RavenEntityName);
-        this.script(dto.Script);
         this.factoryName(dto.FactoryName);
+        this.ravenEntityName(dto.RavenEntityName);
+        this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
+        this.script(dto.Script);
 
         this.setupConnectionString(dto);
 
@@ -51,7 +51,7 @@ class sqlReplication extends document {
 
         this.connectionStringSourceFieldName = ko.computed(() => {
             if (this.connectionStringType() == this.CONNECTION_STRING) {
-                return "Connection string text";
+                return "Connection String Text";
             } else if (this.connectionStringType() == this.CONNECTION_STRING_NAME) {
                 return "Setting name in local machine configuration";
             } else {
@@ -117,7 +117,7 @@ class sqlReplication extends document {
         return new sqlReplication({
             Name: "",
             Disabled: true,
-            ParameterizeDeletesDisabled: false,
+            ParameterizeDeletesDisabled: true,
             RavenEntityName: "",
             Script: "",
             FactoryName: null,
@@ -130,7 +130,7 @@ class sqlReplication extends document {
 
     toDto(): sqlReplicationDto {
         var meta = this.__metadata.toDto();
-        meta['@id'] = "Raven/ApiKeys/" + this.name();
+        meta['@id'] = "Raven/SqlReplication/Configuration/" + this.name();
         return {
             '@metadata': meta,
             Name: this.name(),
@@ -156,6 +156,14 @@ class sqlReplication extends document {
 
     disable() {
         this.disabled(true);
+    }
+
+    enableParameterizeDeletes() {
+        this.parameterizeDeletesDisabled(false);
+    }
+
+    disableParameterizeDeletes() {
+        this.parameterizeDeletesDisabled(true);
     }
 
     addNewTable() {

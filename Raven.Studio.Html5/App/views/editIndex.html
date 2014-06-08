@@ -44,12 +44,15 @@
         </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
-                <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes"    data-bind="click: refreshIndex">
-                    <i class="fa fa-refresh"></i>
-                </button>
-                  <button class="btn btn-danger" title="Delete index"   data-bind="click: deleteIndex">
-                    <i class="fa fa-trash-o"></i>
-                </button>
+            <button class="btn btn-default" title="Copy edited index to clipboard" data-bind="click: copyIndex">
+                <i class="fa fa-files-o"></i>
+            </button>
+            <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes"    data-bind="click: refreshIndex">
+                <i class="fa fa-refresh"></i>
+            </button>
+            <button class="btn btn-danger" title="Delete index"   data-bind="click: deleteIndex">
+                <i class="fa fa-trash-o"></i>
+            </button>
         </div>
     </div>
 
