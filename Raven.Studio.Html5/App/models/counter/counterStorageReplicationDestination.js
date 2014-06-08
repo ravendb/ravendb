@@ -63,11 +63,11 @@
             }
         };
 
-        counterStorageReplicationDestination.empty = function () {
+        counterStorageReplicationDestination.empty = function (counterStorageName) {
             return new counterStorageReplicationDestination({
                 Disabled: false,
                 ServerUrl: null,
-                CounterStorageName: null,
+                CounterStorageName: counterStorageName,
                 Username: null,
                 Password: null,
                 Domain: null,

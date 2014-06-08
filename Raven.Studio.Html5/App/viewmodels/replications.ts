@@ -69,7 +69,8 @@ class replications extends viewModelBase {
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(replicationDestination.empty());
+        var db = this.activeDatabase();
+        this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
     }
 
     removeDestination(repl: replicationDestination) {
