@@ -44,6 +44,9 @@
             <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleExpandAll" title="Expand all index groups (Alt+=)" accesskey="="><i class="fa fa-plus-square-o"></i></a>
         </div>
         <div class="btn-group">
+            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: pasteIndex" title="Paste Index Definition From JSON (Alt+v)" accesskey="v"><i class="fa fa-paste"></i></a>
+        </div>
+        <div class="btn-group">
             <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
                 <i class="fa fa-trash-o"></i> <span class="caret"></span>
             </button>
@@ -101,6 +104,9 @@
                                                 <i class="fa fa-cogs"></i>
                                             </button>
                                             <ul class="dropdown-menu index-dropdown" role="menu">
+                                                <li role="presentation">
+                                                    <a data-bind="click: $root.copyIndex.bind($root)">Copy index</a>
+                                                </li>
                                                 <li role="presentation">
                                                     <a class="btn use-bootstrap-tooltip" title="Delete the index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.deleteIndex.bind($root)">
                                                         Delete Index

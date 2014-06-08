@@ -16,6 +16,13 @@ body {
   left: 0;
   right: 0;
 }
+.alert-text {
+  overflow: hidden!important;
+  white-space: nowrap !important;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+}
 .table-no-borders td {
   border-top: none !important;
 }
@@ -105,6 +112,17 @@ body {
 }
 .fullScreen {
   overflow: hidden;
+}
+.fullScreen-textarea {
+  height: 30%!important;
+  width: 100%!important;
+  border: 0;
+  margin: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
 }
 .dropdown-menu .selected {
   color: #555;

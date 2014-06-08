@@ -12,6 +12,8 @@ import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
 import router = require("plugins/router"); 
 import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
+import copyIndexDialog = require("viewmodels/copyIndexDialog");
+
 
 class indexes extends viewModelBase {
 
@@ -36,6 +38,14 @@ class indexes extends viewModelBase {
         return [ shell.currentDbChangesApi().watchAllIndexes( e => this.processIndexEvent(e)) ];
     }
 
+
+    copyIndex(i: index) {
+        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(),false));
+    }
+
+    pasteIndex() {
+        app.showDialog(new copyIndexDialog('', this.activeDatabase(),true));
+    }
     processIndexEvent(e: indexChangeNotificationDto) {
         if (e.Type == indexChangeType.IndexRemoved) {
             this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
