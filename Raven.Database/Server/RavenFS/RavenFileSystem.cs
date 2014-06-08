@@ -41,7 +41,7 @@ namespace Raven.Database.Server.RavenFS
 
         public string Name { get; private set; }
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, TransportState transportState, string name)
+		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name)
 		{
 		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
@@ -65,7 +65,7 @@ namespace Raven.Database.Server.RavenFS
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
-			this.transportState = transportState;
+			this.transportState = new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			fileLockManager = new FileLockManager();
 			storage.Initialize();

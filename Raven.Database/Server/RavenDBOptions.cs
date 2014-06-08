@@ -33,8 +33,7 @@ namespace Raven.Database.Server
 				{
 					systemDatabase = db;
 				}
-				var transportState = systemDatabase.TransportState;
-			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase, transportState);
+			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);

@@ -300,25 +300,6 @@ namespace Raven.Database.Server.Connections
 			return false;
 		}
 
-	//	private readonly ConcurrentQueue<Notification> pendingMessages = new ConcurrentQueue<Notification>();
-
-		//private async Task Enqueue(Notification msg)
-		//{
-		//	if (eventsTransport == null || eventsTransport.Connected == false)
-		//	{
-		//		pendingMessages.Enqueue(msg);
-		//		return;
-		//	}
-		//	try
-		//	{
-		//		eventsTransport.SendAsync(msg);
-		//		pendingMessages.Enqueue(msg);
-		//	}
-		//	catch (Exception)
-		//	{
-		//	}
-		//}
-
 		private void Enqueue(object msg)
 		{
 			if (eventsTransport == null || eventsTransport.Connected == false)

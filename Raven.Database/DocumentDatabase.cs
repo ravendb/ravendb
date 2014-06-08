@@ -86,12 +86,12 @@ namespace Raven.Database
 
         private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
+        public DocumentDatabase(InMemoryRavenConfiguration configuration)
         {
             DocumentLock = new PutSerialLock();
             Name = configuration.DatabaseName;
             Configuration = configuration;
-            this.transportState = transportState ?? new TransportState();
+            this.transportState = new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
