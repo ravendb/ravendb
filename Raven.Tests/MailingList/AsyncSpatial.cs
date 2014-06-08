@@ -36,7 +36,7 @@ namespace Raven.Tests.MailingList
 						Title = "BLACKBERRY",
 						Coordinate = new Coordinate {latitude = 12.233, longitude = -73.995}
 					});
-					session.SaveChangesAsync().Wait();
+					await session.SaveChangesAsync();
 
 					WaitForIndexing(db);
 
