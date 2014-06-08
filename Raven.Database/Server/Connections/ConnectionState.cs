@@ -163,10 +163,11 @@ namespace Raven.Database.Server.Connections
 		{
 			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
 
-			if (matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()) == false)
-				return;
-
-			Enqueue(value);
+		    if (matchingBulkInserts.Contains(string.Empty) || matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()))
+		    {
+                Enqueue(value);
+		    }
+			return;
 		}
 
 		public void Send(DocumentChangeNotification documentChangeNotification)
