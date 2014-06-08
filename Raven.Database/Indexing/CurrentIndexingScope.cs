@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
 
 namespace Raven.Database.Indexing
 {
 	public class CurrentIndexingScope : IDisposable
 	{
-		private readonly Func<string, dynamic> loadDocument;
-		private readonly Action<IDictionary<string, HashSet<string>>, IDictionary<string, HashSet<string>>> onDispose;
+		private readonly DocumentDatabase database;
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
@@ -17,18 +17,24 @@ namespace Raven.Database.Indexing
 			set { current = value; }
 		}
 
-		public CurrentIndexingScope(
-			Func<string, dynamic> loadDocument,
-			Action<IDictionary<string, HashSet<string>>, IDictionary<string, HashSet<string>>> onDispose)
+		public CurrentIndexingScope(DocumentDatabase database)
 		{
-			this.loadDocument = loadDocument;
-			this.onDispose = onDispose;
+			this.database = database;
+		}
+
+		public IDictionary<string, HashSet<string>> ReferencedDocuments
+		{
+			get { return referencedDocuments; }
+		}
+		public IDictionary<string, Etag> ReferencesEtags
+		{
+			get { return referencesEtags; }
 		}
 
 		public dynamic Source { get; set; }
 
 		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-		private readonly IDictionary<string, HashSet<string>> missingReferencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+		private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>();
 		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
 
 		public dynamic LoadDocument(string key)
@@ -59,16 +65,18 @@ namespace Raven.Database.Indexing
 			if (docsCache.TryGetValue(key, out value))
 				return value;
 
-			value = loadDocument(key);
+			var doc = database.Get(key, null);
 
-            if (value == null)
-            {
-				HashSet<string> missingDocsSet;
-				if (missingReferencedDocuments.TryGetValue(id, out missingDocsSet) == false)
-					missingReferencedDocuments.Add(id, missingDocsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-	            missingDocsSet.Add(key);
-            }
+			if (doc == null)
+			{
+				referencesEtags.Add(key, Etag.Empty);
+				value = new DynamicNullObject();
+			}
+			else
+			{
+				referencesEtags.Add(key, doc.Etag);
+				value = new DynamicJsonObject(doc.ToJson());
+			}
 
 			docsCache[key] = value;
 			return value;
@@ -76,7 +84,6 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			onDispose(referencedDocuments, missingReferencedDocuments);
 			current = null;
 		}
 	}

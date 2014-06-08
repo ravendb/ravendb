@@ -46,7 +46,7 @@ namespace Raven.Tests.Issues
 					AssertTask(task, task.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000001") : 1, date1, "index1", typeof(RemoveFromIndexTask));
 				});
 
-				storage.Batch(accessor => accessor.Tasks.AddTask(new TouchMissingReferenceDocumentTask
+				storage.Batch(accessor => accessor.Tasks.AddTask(new TouchReferenceDocumentIfChangedTask
 																 {
 																	 Index = "index2"
 																 }, date2));
@@ -73,7 +73,7 @@ namespace Raven.Tests.Issues
 					}
 
 					AssertTask(t1, t1.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000001") : 1, date1, "index1", typeof(RemoveFromIndexTask));
-					AssertTask(t2, t2.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000002") : 2, date2, "index2", typeof(TouchMissingReferenceDocumentTask));
+					AssertTask(t2, t2.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000002") : 2, date2, "index2", typeof(TouchReferenceDocumentIfChangedTask));
 				});
 			}
 		}

@@ -90,7 +90,7 @@ namespace Raven.Database.Indexing
                         .ToList();
 
                     var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-					var missingReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+					var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
 
                     BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
                     {
@@ -99,12 +99,7 @@ namespace Raven.Database.Indexing
                         var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
                                                         Field.Index.NOT_ANALYZED_NO_NORMS);
 
-                        using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, (references,
-                                                                                                      missing) =>
-                        {
-                            allReferencedDocs.Enqueue(references);
-                            missingReferencedDocs.Enqueue(missing);
-                        } ))
+                        using (CurrentIndexingScope.Current = new CurrentIndexingScope(context.Database))
                         {
 	                        Action<Exception, object> onErrorFunc;
 	                        foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats,out onErrorFunc))
@@ -152,9 +147,11 @@ namespace Raven.Database.Indexing
 
                                 Interlocked.Increment(ref stats.IndexingSuccesses);
                             }
+	                        allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
+							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
                         }
                     });
-                    UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
+					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
                 }
                 catch (Exception e)
                 {

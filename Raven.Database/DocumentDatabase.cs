@@ -1531,7 +1531,7 @@ namespace Raven.Database
                     }
                 }
                 ConcurrentSet<string> _;
-                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(name, out _);
+                workContext.DoNotTouchAgainIfCheckingReferences.TryRemove(name, out _);
                 workContext.ClearErrorsFor(name);
             }
         }
@@ -1903,7 +1903,7 @@ namespace Raven.Database
                 {
                     if (scriptedJsonPatcher == null)
                         return null;
-                    return scriptedJsonPatcher.CreatedDocs;
+					return scriptedJsonPatcher.CreatedDocs.ToList();
                 }, debugMode);
             return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
         }
@@ -1933,7 +1933,7 @@ namespace Raven.Database
                 {
                     if (scriptedJsonPatcher == null)
                         return null;
-                    return scriptedJsonPatcher.CreatedDocs;
+					return scriptedJsonPatcher.CreatedDocs.ToList();
                 }, debugMode);
             return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
         }

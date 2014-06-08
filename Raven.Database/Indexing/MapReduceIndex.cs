@@ -97,7 +97,7 @@ namespace Raven.Database.Indexing
 				.Where(x => x is FilteredDocument == false)
 				.ToList();
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-			var missingReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+			var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
 
 			if (documentsWrapped.Count > 0)
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, deleted);
@@ -110,11 +110,7 @@ namespace Raven.Database.Indexing
 				var statsPerKey = new Dictionary<string, int>();
 				allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
-				using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, (references, missing) =>
-				{
-				    allReferencedDocs.Enqueue(references);
-                    missingReferencedDocs.Enqueue(missing);
-				}))
+				using (CurrentIndexingScope.Current = new CurrentIndexingScope(context.Database))
 				{
 					// we are writing to the transactional store from multiple threads here, and in a streaming fashion
 					// should result in less memory and better perf
@@ -137,11 +133,13 @@ namespace Raven.Database.Indexing
 						}
 						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey);
 					});
+					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
+					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
 				}
 			});
 
 
-			UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
+			UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
 
 		    var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
 					.Distinct()
