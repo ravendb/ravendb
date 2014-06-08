@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
@@ -58,17 +59,18 @@ namespace Raven.Database.Tasks
 				{
 					foreach (var kvp in ReferencesToCheck)
 					{
-						foreach (var index in context.IndexStorage.Indexes)
-						{
-							var set = context.DoNotTouchAgainIfCheckingReferences.GetOrAdd(index,
-								_ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-							set.Add(kvp.Key);
-						}
-
 						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key, null);
 
-						if (doc == null || doc.Etag == kvp.Value)
-							continue;
+					    if (doc == null)
+					    {
+                            logger.Debug("Cannot touch {0}, non existant document", kvp.Key);
+					        continue;
+					    }
+					    if (doc.Etag == kvp.Value)
+					    {
+					        logger.Debug("Don't need to touch {0}, etag {1} is the same as when we last saw it", kvp.Key, doc.Etag);
+                            continue;
+					    }
 
 
 						docsToTouch.Add(kvp.Key);
@@ -89,6 +91,7 @@ namespace Raven.Database.Tasks
 							}
 							catch (ConcurrencyException)
 							{
+                                logger.Info("Concurrency exception when touching {0}", doc);
 							}
 							context.Database.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
 						}

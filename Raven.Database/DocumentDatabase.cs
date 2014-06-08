@@ -841,7 +841,7 @@ namespace Raven.Database
         {
             TouchedDocumentInfo touch;
             recentTouches.TryRemove(key, out touch);
-
+            log.Debug("Checking references for {0}", key);
             foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
             {
                 Etag preTouchEtag;
@@ -1531,7 +1531,6 @@ namespace Raven.Database
                     }
                 }
                 ConcurrentSet<string> _;
-                workContext.DoNotTouchAgainIfCheckingReferences.TryRemove(name, out _);
                 workContext.ClearErrorsFor(name);
             }
         }

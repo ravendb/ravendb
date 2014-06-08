@@ -110,7 +110,7 @@ namespace Raven.Database.Indexing
 				var statsPerKey = new Dictionary<string, int>();
 				allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
-				using (CurrentIndexingScope.Current = new CurrentIndexingScope(context.Database))
+				using (CurrentIndexingScope.Current = new CurrentIndexingScope(context.Database, name))
 				{
 					// we are writing to the transactional store from multiple threads here, and in a streaming fashion
 					// should result in less memory and better perf

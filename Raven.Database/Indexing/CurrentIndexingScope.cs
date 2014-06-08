@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
 {
-	public class CurrentIndexingScope : IDisposable
-	{
+    public class CurrentIndexingScope : IDisposable
+    {
+        private ILog log = LogManager.GetCurrentClassLogger();
+
 		private readonly DocumentDatabase database;
-		[ThreadStatic]
+        private readonly string index;
+        [ThreadStatic]
 		private static CurrentIndexingScope current;
 
 		public static CurrentIndexingScope Current
@@ -17,12 +22,13 @@ namespace Raven.Database.Indexing
 			set { current = value; }
 		}
 
-		public CurrentIndexingScope(DocumentDatabase database)
+		public CurrentIndexingScope(DocumentDatabase database, string index)
 		{
-			this.database = database;
+		    this.database = database;
+		    this.index = index;
 		}
 
-		public IDictionary<string, HashSet<string>> ReferencedDocuments
+        public IDictionary<string, HashSet<string>> ReferencedDocuments
 		{
 			get { return referencedDocuments; }
 		}
@@ -66,14 +72,17 @@ namespace Raven.Database.Indexing
 				return value;
 
 			var doc = database.Get(key, null);
-
+            
 			if (doc == null)
 			{
+			    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
+
 				referencesEtags.Add(key, Etag.Empty);
 				value = new DynamicNullObject();
 			}
 			else
 			{
+			    log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
 				referencesEtags.Add(key, doc.Etag);
 				value = new DynamicJsonObject(doc.ToJson());
 			}

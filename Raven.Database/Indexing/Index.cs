@@ -1529,15 +1529,17 @@ namespace Raven.Database.Indexing
                 ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
             };
 
-            var set = context.DoNotTouchAgainIfCheckingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
 			IDictionary<string, Etag> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
                 foreach (var doc in docs)
                 {
-                    if (set.TryRemove(doc.Key))
+                    Etag etag;
+                    if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
+                        task.ReferencesToCheck[doc.Key] = doc.Value;
+                    if(etag == doc.Value)
                         continue;
-                    task.ReferencesToCheck.Add(doc);
+                    task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
                 }
             }
             if (task.ReferencesToCheck.Count == 0)

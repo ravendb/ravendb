@@ -66,7 +66,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return null;
 			}
 			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-			logger.Debug("Document with key '{0}' was found", key);
+			logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
 			var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
 			return createResult(new JsonDocumentMetadata()
 			{
@@ -308,6 +308,7 @@ namespace Raven.Storage.Esent.StorageActions
 			afterTouchEtag = newEtag;
 			try
 			{
+                logger.Debug("Touching document {0} {1} -> {2}", key, preTouchEtag, afterTouchEtag);
 				using (var update = new Update(session, Documents, JET_prep.Replace))
 				{
 					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());

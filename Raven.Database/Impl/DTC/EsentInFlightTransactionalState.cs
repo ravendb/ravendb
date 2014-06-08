@@ -103,7 +103,8 @@ namespace Raven.Database.Impl.DTC
 										}
 										catch (ConcurrencyException)
 										{
-
+                                            log.Info("Concurrency exception when touching {0}", docId);
+               
 										}
 									}
 								});

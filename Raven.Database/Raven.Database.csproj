@@ -832,7 +832,7 @@
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
-    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
+    <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\IPerformanceCounter.cs" />

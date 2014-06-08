@@ -13,6 +13,7 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
@@ -374,6 +375,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			foreach (var reference in references)
 			{
+			    logger.Debug("Adding reference {0} -> {1} on index {2}", key, reference, view);
 				using (var update = new Update(session, IndexedDocumentsReferences, JET_prep.Insert))
 				{
 					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["key"], key, Encoding.Unicode);
