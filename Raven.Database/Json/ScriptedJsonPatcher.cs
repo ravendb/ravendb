@@ -29,7 +29,9 @@ namespace Raven.Database.Json
 
 		public List<string> Debug = new List<string>();
 		private readonly Dictionary<string, JsonDocument> createdDocDict = new Dictionary<string, JsonDocument>();
-		public IEnumerable<JsonDocument> CreatedDocs { get { return createdDocDict.Values; } }
+
+        private readonly List<JsonDocument> createdDocIdentity = new List<JsonDocument>(); 
+		public IEnumerable<JsonDocument> CreatedDocs { get { return createdDocDict.Values.Concat(createdDocIdentity); } }
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
@@ -433,7 +435,11 @@ function ExecutePatchScript(docInner){{
 	            newDocument.Metadata = ToRavenJObject(meta);
 	        }
 	        ValidateDocument(newDocument);
-	        createdDocDict[key] = newDocument;
+
+            if(key == null || key.EndsWith("/"))
+                createdDocIdentity.Add(newDocument);
+            else 
+                createdDocDict[key] = newDocument;
 	    }
 
 	    protected virtual void ValidateDocument(JsonDocument newDocument)
