@@ -34,43 +34,7 @@ class indexes extends viewModelBase {
         return groups;
     });
     
-    createNotifications(): Array<changeSubscription> {
-        return [ shell.currentDbChangesApi().watchAllIndexes( e => this.processIndexEvent(e)) ];
-    }
-
-
-    copyIndex(i: index) {
-        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(),false));
-    }
-
-    pasteIndex() {
-        app.showDialog(new copyIndexDialog('', this.activeDatabase(),true));
-    }
-    processIndexEvent(e: indexChangeNotificationDto) {
-        if (e.Type == indexChangeType.IndexRemoved) {
-            this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
-        } else {
-            if (this.indexMutex == true) {
-                this.indexMutex = false;
-                setTimeout(() => {
-                    this.fetchIndexes().always(() => this.indexMutex = true);
-                }, 5000);
-            }
-        }
-    }
-
-    findIndexesByName(indexName: string) {
-        var result = new Array<index>();
-        this.indexGroups().forEach(g => {
-            g.indexes().forEach(i => {
-                if (i.name == indexName) {
-                    result.push(i);
-                }
-            });
-        });
-
-        return result;
-    }
+    
 
     activate(args) {
         super.activate(args);
@@ -147,6 +111,44 @@ class indexes extends viewModelBase {
                 this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
             }
         }
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [shell.currentDbChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
+    }
+
+    processIndexEvent(e: indexChangeNotificationDto) {
+        if (e.Type == indexChangeType.IndexRemoved) {
+            this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
+        } else {
+            if (this.indexMutex == true) {
+                this.indexMutex = false;
+                setTimeout(() => {
+                    this.fetchIndexes().always(() => this.indexMutex = true);
+                }, 5000);
+            }
+        }
+    }
+
+    findIndexesByName(indexName: string) {
+        var result = new Array<index>();
+        this.indexGroups().forEach(g => {
+            g.indexes().forEach(i => {
+                if (i.name == indexName) {
+                    result.push(i);
+                }
+            });
+        });
+
+        return result;
+    }
+
+    copyIndex(i: index) {
+        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
+    }
+
+    pasteIndex() {
+        app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
     
     toggleExpandAll() {

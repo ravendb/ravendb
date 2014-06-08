@@ -87,7 +87,7 @@ class copyIndexDialog extends dialogViewModelBase {
                         }
                     })
                     .done(() => {
-                        var title = "Cannot paste Index, Index with that name already exist";
+                        var title = "Cannot paste, Index with that name already exist";
                         ko.postbox.publish("Alert", new alertArgs(alertType.danger, title));
                         if (console && console.log && typeof console.log === "function") {
                             console.log("Cannot paste Index, Index with that name already exist", title);

@@ -10,7 +10,7 @@
         </div>
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
-        <button type="button" class="btn btn-primary" data-bind="click: finishOperation">Save Index</button>
+        <button type="button" class="btn btn-default" data-bind="click: close, visible:isPaste===true">Close</button>
+        <button type="button" class="btn btn-primary" data-bind="click: finishOperation, text:isPaste === true?'Save Index':'Close'"></button>
     </div>
 </div>
