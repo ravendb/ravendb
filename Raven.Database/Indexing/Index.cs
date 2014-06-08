@@ -1578,40 +1578,45 @@ namespace Raven.Database.Indexing
 			return new DynamicJsonObject(jsonDocument.ToJson());
 		}
 
-        protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
-            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
-			ConcurrentQueue<IDictionary<string, HashSet<string>>> missingReferencedDocs)
-        {
-            IDictionary<string, HashSet<string>> result;
-            while (allReferencedDocs.TryDequeue(out result))
-            {
-                foreach (var referencedDocument in result)
-                {
-                    actions.Indexing.UpdateDocumentReferences(IndexId, referencedDocument.Key, referencedDocument.Value);
-                    actions.General.MaybePulseTransaction();
-                }
-            }
-            var task = new TouchMissingReferenceDocumentTask
-            {
-				Index = IndexId, // so we will get IsStale properly
-                MissingReferences = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
-            };
+		protected void UpdateDocumentReferences(IStorageActionsAccessor actions,
+		 ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
+		 ConcurrentQueue<IDictionary<string, Etag>> missingReferencedDocs)
+		{
+			IDictionary<string, HashSet<string>> result;
+			while (allReferencedDocs.TryDequeue(out result))
+			{
+				foreach (var referencedDocument in result)
+				{
+					actions.Indexing.UpdateDocumentReferences(indexId, referencedDocument.Key, referencedDocument.Value);
+					actions.General.MaybePulseTransaction();
+				}
+			}
+			var task = new TouchReferenceDocumentIfChangedTask
+			{
+				Index = indexId, // so we will get IsStale properly
+				ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
+			};
 
-			var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(IndexId, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-			IDictionary<string, HashSet<string>> docs;
-            while (missingReferencedDocs.TryDequeue(out docs))
-            {
-                foreach (var doc in docs)
-                {
-                    if (set.TryRemove(doc.Key))
-                        continue;
-                    task.MissingReferences.Add(doc);
-                }
-            }
-            if (task.MissingReferences.Count == 0)
-                return;
-            actions.Tasks.AddTask(task, SystemTime.UtcNow);
-        }
+			IDictionary<string, Etag> docs;
+			while (missingReferencedDocs.TryDequeue(out docs))
+			{
+				foreach (var doc in docs)
+				{
+					Etag etag;
+					if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
+					{
+						task.ReferencesToCheck[doc.Key] = doc.Value;
+						continue;						
+					}
+					if (etag == doc.Value)
+						continue;
+					task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
+				}
+			}
+			if (task.ReferencesToCheck.Count == 0)
+				return;
+			actions.Tasks.AddTask(task, SystemTime.UtcNow);
+		}
 
                   
 		public void ForceWriteToDisk()
