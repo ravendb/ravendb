@@ -1536,7 +1536,10 @@ namespace Raven.Database.Indexing
                 {
                     Etag etag;
                     if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
+                    {
                         task.ReferencesToCheck[doc.Key] = doc.Value;
+                        continue;
+                    }
                     if(etag == doc.Value)
                         continue;
                     task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
