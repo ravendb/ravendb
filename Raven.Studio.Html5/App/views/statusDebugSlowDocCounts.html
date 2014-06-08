@@ -13,31 +13,31 @@
         <div class="form-group">
             <label class="col-md-4 control-label">Time to generate</label>
             <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: timeToGenerate"></p>
+                <p class="col-md-1 form-control-static" data-bind="text: timeToGenerate"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-4 control-label">Total</label>
             <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: total"></p>
+                <p class="col-md-1 form-control-static" data-bind="text: total"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-4 control-label">Tombstones</label>
             <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: tombstones"></p>
+                <p class="col-md-1 form-control-static" data-bind="text: tombstones"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-4 control-label">System</label>
             <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: system"></p>
+                <p class="col-md-1 form-control-static" data-bind="text: system"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-4 control-label">No collection</label>
             <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: noCollection"></p>
+                <p class="col-md-1 form-control-static" data-bind="text: noCollection"></p>
             </div>
         </div>
         <!-- ko foreach: collections -->
@@ -47,10 +47,11 @@
             <label class="col-md-2 control-label" data-bind="text: name"></label>
             <!-- /ko -->
             <!-- ko if: $index() != 0 -->
-            <label class="col-md-2 col-md-offset-2 control-label" data-bind="text: name"></label>
+            <label class="col-md-2 col-md-offset-2 control-label" data-bind="text: name + ': '"></label>
             <!-- /ko -->
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: count"></p>
+            <div class="col-md-5">
+                <span class="col-md-1 control-label" data-bind="text: count"></span>
+                <span class="col-md-4 control-label" data-bind="text: size"></span>
             </div>
         </div>
         <!-- /ko -->

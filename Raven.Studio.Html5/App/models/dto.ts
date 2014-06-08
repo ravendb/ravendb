@@ -667,8 +667,13 @@ interface debugDocumentStatsDto {
     Tombstones: number;
     System: number;
     NoCollection: number;
-    Collections: dictionary<number>;
+    Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
+}
+
+interface collectionStats {
+    Quantity: number;
+    Size: number;
 }
 
 enum documentChangeType {

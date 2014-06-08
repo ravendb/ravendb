@@ -14,7 +14,7 @@ class debugDocumentStats {
         this.tombstones = dto.Tombstones;
         this.system = dto.System;
         this.noCollection = dto.NoCollection;
-        this.collections = $.map(dto.Collections, (v, k) => { return {"name": k, "count": v } });
+        this.collections = $.map(dto.Collections, (data: collectionStats, name: string) => { return { "name": name, "count": data.Quantity, "size": data.Size }; });
         this.timeToGenerate = dto.TimeToGenerate;
     }
 

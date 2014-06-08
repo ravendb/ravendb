@@ -257,13 +257,21 @@ namespace Raven.Storage.Esent.StorageActions
 	            if (string.IsNullOrEmpty(entityName))
 	                stat.NoCollection++;
 	            else
-	                stat.IncrementCollection(entityName);
+	            {
+                    var doc = DocumentByKey(key, null);
+                    var size = doc.SerializedSizeOnDisk;
+
+                    stat.IncrementCollection(entityName, size);
+	            }
+	               
 
 	            if (metadata.ContainsKey("Raven-Delete-Marker"))
 	                stat.Tombstones++;
 	        }
-
-	        stat.TimeToGenerate = sp.Elapsed;
+            var sortedStat = stat.Collections.OrderByDescending(x => x.Value.Size).ToDictionary(x => x.Key, x => x.Value);
+            stat.TimeToGenerate = sp.Elapsed;
+            stat.Collections = sortedStat;
+	       
 	        return stat;
 	    }
 
