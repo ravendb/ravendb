@@ -128,6 +128,43 @@ namespace Raven.Tests.Core.Commands
         }
 
         [Fact]
+        public async Task CanDeleteAndUpdateDocumentByIndex()
+        {
+            var usersByNameIndex = new Users_ByName();
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("MyIndex", new IndexDefinition
+                {
+                    Map = "from doc in docs select new { Name }"
+                });
+
+                store.DatabaseCommands.Put("items/1", null, RavenJObject.FromObject(new
+                {
+                    Name = "testname"
+                }), new RavenJObject());
+                WaitForIndexing(store);
+
+                store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery { Query = "" }, new[] 
+                {
+                    new PatchRequest 
+                    {
+                        Type = PatchCommandType.Set,
+                        Name = "NewName",
+                        Value = "NewValue"
+                    }
+                },
+                false).WaitForCompletion();
+
+                var document = await store.AsyncDatabaseCommands.GetAsync("items/1");
+                Assert.Equal("NewValue", document.DataAsJson.Value<string>("NewName"));
+
+                store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery { Query = "" }, false).WaitForCompletion();
+                var documents = store.DatabaseCommands.GetDocuments(0, 25);
+                Assert.Equal(0, documents.Length);
+            }
+        }
+
+        [Fact]
         public async Task CanGetDocumentsWhoseIdStartsWithAPrefix()
         {
             using (var store = GetDocumentStore())
