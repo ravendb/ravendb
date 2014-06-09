@@ -9,6 +9,8 @@ using Xunit;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Abstractions.Data;
 using System.Collections.Generic;
+using Raven.Tests.Core.Utils.Indexes;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Tests.Core.Commands
 {
@@ -139,6 +141,89 @@ namespace Raven.Tests.Core.Commands
 
                 var documents = await store.AsyncDatabaseCommands.StartsWithAsync("Companies", null, 0, 25);
                 Assert.Equal(1, documents.Length);
+            }
+        }
+
+        [Fact]
+        public void Replacing_Value()
+        {
+            const string oldTagName = "old";
+            using (var store = GetDocumentStore())
+            {
+
+                store.DatabaseCommands.PutIndex("MyIndex", new IndexDefinition
+                {
+                    Map = "from doc in docs from note in doc.Comment.Notes select new { note}"
+                });
+
+                store.DatabaseCommands.Put("items/1", null, RavenJObject.FromObject(new
+                {
+                    Comment = new
+                    {
+                        Notes = new[] { "old", "item" }
+                    }
+                }), new RavenJObject());
+                WaitForIndexing(store);
+
+                store.DatabaseCommands.UpdateByIndex("MyIndex",
+                   new IndexQuery
+                   {
+                       Query = "note:" + oldTagName
+                   },
+                   new[]
+				   {
+					   new PatchRequest
+					   {
+						   Name = "Comment",
+						   Type = PatchCommandType.Modify,
+						   AllPositions = true,
+						   Nested = new[]
+						   {
+							   new PatchRequest
+							   {
+								   Type = PatchCommandType.Remove,
+								   Name = "Notes",
+								   Value = oldTagName
+							   },
+							   new PatchRequest
+							   {
+								   Type = PatchCommandType.Add,
+								   Name = "Notes",
+								   Value = "new"
+							   }
+						   }
+					   }
+				   },
+                   false
+               ).WaitForCompletion();
+
+                Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString());
+            }
+        }
+
+        [Fact]
+        public void CanStreamDocs()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 200; i++)
+                    {
+                        session.Store(new User());
+                    }
+                    session.SaveChanges();
+                }
+
+                int count = 0;
+                using (var reader = store.DatabaseCommands.StreamDocs(startsWith: "users/"))
+                {
+                    while (reader.MoveNext())
+                    {
+                        count++;
+                    }
+                }
+                Assert.Equal(200, count);
             }
         }
     }
