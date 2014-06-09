@@ -53,7 +53,7 @@ class statusDebugSlowDocCounts extends viewModelBase {
         }
         if ((timeStr == "") && (milisec > 0))
         {
-            timeStr = milisec + " Milisec ";
+            timeStr = milisec + " Ms ";
         }
         return timeStr;
     }

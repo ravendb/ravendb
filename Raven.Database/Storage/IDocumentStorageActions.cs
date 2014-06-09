@@ -37,9 +37,12 @@ namespace Raven.Database.Storage
     public class DebugDocumentStats
     {
         public long Total { get; set; }
+        public long TotalSize { get; set; }
         public long Tombstones { get; set; }
         public long System { get; set; }
+        public long SystemSize { get; set; }
         public long NoCollection { get; set; }
+        public long NoCollectionSize { get; set; }
         public Dictionary<string, CollectionDetails> Collections { get; set; }
         
         public TimeSpan TimeToGenerate { get; set; }

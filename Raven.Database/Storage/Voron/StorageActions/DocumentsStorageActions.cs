@@ -599,19 +599,28 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = GetKeyFromCurrent(iterator);
-					if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-						stat.System++;
+                    var doc = DocumentByKey(key, null);
+                    var size = doc.SerializedSizeOnDisk;
+				    stat.TotalSize += size;
+				    if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+				    {
+                        stat.System++;
+				        stat.SystemSize += size;
+				    }
+						
 
 					var metadata = ReadDocumentMetadata(key);
 
 					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
 				    if (string.IsNullOrEmpty(entityName))
-				        stat.NoCollection++;
+				    {
+                        stat.NoCollection++;
+				        stat.NoCollectionSize += size;
+				    }
+				        
 				    else
 				    {
-                        var doc = DocumentByKey(key, null);
-                        var size = doc.SerializedSizeOnDisk;
-
+  
                         stat.IncrementCollection(entityName, size);
  				    }
 						

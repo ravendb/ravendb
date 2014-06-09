@@ -664,9 +664,12 @@ interface statusDebugIndexFieldsDto {
 
 interface debugDocumentStatsDto {
     Total: number;
+    TotalSize: number;
     Tombstones: number;
     System: number;
+    SystemSize: number;
     NoCollection: number;
+    NoCollectionSize: number;
     Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
 }
