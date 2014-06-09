@@ -11,6 +11,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -18,9 +19,7 @@ namespace Raven.Database.Server.Tenancy
     {
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly DocumentDatabase systemDatabase;
-
-
-
+        private readonly TransportState _transportState;
 
         private bool initialized;
         public DatabasesLandlord(DocumentDatabase systemDatabase)

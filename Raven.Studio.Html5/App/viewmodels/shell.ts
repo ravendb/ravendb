@@ -395,6 +395,24 @@ class shell extends viewModelBase {
         }
     }
 
+    fetchDBStatsBuffered() {
+        //                if (this.modelPollingTimeoutFlag === true) {
+        //                    this.modelPollingTimeoutFlag = false;
+        //                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        //                    this.modelPolling();
+        //                }
+        //prev impl for indexChangeNotificationDto was . recheck required
+        //   shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+        //if (this.modelPollingTimeoutFlag === true) {
+         //   this.modelPollingTimeoutFlag = false;
+        //    this.modelPolling();
+       // } else {
+        //    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        //}
+         //   });
+        this.fetchDbStats(this.activeDatabase());
+    }
+
     updateChangesApi(newDb: database) {
         if (!newDb.disabled()) {
             if (shell.currentDbChangesApi()) {
@@ -403,22 +421,9 @@ class shell extends viewModelBase {
 
             shell.currentDbChangesApi(new changesApi(newDb));
 
-            shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-                if (this.modelPollingTimeoutFlag === true) {
-                    this.modelPollingTimeoutFlag = false;
-                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                    this.modelPolling();
-                }
-            });
-
-            shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-                if (this.modelPollingTimeoutFlag === true) {
-                    this.modelPollingTimeoutFlag = false;
-                    this.modelPolling();
-                } else {
-                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                }
-            });
+            shell.currentDbChangesApi().watchAllDocs(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchBulks(() => this.fetchDBStatsBuffered());
         }
     }
 

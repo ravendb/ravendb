@@ -22,17 +22,15 @@ namespace Raven.Database.Server.Tenancy
     {
 		private bool initialized;
         private readonly DocumentDatabase systemDatabase;
-        private readonly TransportState transportState;
 
         public InMemoryRavenConfiguration SystemConfiguration
         {
             get { return systemDatabase.Configuration; }
         }
 
-        public FileSystemsLandlord(DocumentDatabase systemDatabase, TransportState transportState)
+        public FileSystemsLandlord(DocumentDatabase systemDatabase)
 		{
 			this.systemDatabase = systemDatabase;
-            this.transportState = transportState;
 
             Init();
 		}
@@ -120,7 +118,7 @@ namespace Raven.Database.Server.Tenancy
 
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-                var fs = new RavenFileSystem(config, transportState, tenantId);
+                var fs = new RavenFileSystem(config, tenantId);
                 AssertLicenseParameters();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
