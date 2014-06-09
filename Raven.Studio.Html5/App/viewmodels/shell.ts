@@ -41,6 +41,7 @@ class shell extends viewModelBase {
     private router = router;
 
     databases = ko.observableArray<database>();
+    systemDb: database;
     counterStorages = ko.observableArray<counterStorage>();
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
@@ -101,9 +102,10 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
+        this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase();
         
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -180,26 +182,6 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-
-        shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
-            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
-                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
-
-                if (e.Type == documentChangeType.Delete) {
-                    var deletedDbName = e.Id.substring(16, e.Id.length);
-                    
-                    this.databases.remove((dbToRemove: database) => {
-                    
-                        return dbToRemove.name === deletedDbName;
-                    });
-                    
-                }
-
-                if (this.refreshTimeoutFlag) {
-                    setTimeout(() => this.modelPolling(), 5000);
-                }
-            }
-        }, "Raven/Databases");
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -218,8 +200,77 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases()),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForDatabases(e)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForFileSystems(e))
         ];
+    }
+
+    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
+        if (e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled
+                || e.Type === documentChangeType.Delete) {
+            var receivedDatabaseName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+
+            if (e.Type === documentChangeType.Delete) {
+                this.onDatabaseDeleted(receivedDatabaseName);
+            } else {
+                var existingDatabase = this.databases.first((db: database) => db.name == receivedDatabaseName);
+                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+
+                if (existingDatabase == null) {
+                    var newDatabase = new database(receivedDatabaseName);
+                    this.databases.unshift(newDatabase);
+                }
+                else if (existingDatabase.disabled() != receivedDatabaseDisabled) {
+                    existingDatabase.disabled(receivedDatabaseDisabled);
+                }
+            }
+        }
+    }
+
+    private onDatabaseDeleted(databaseName: string) {
+        var databaseInList = this.databases.first((curDb: database) => curDb.name == databaseName);
+        if (!!databaseInList) {
+            this.databases.remove(databaseInList);
+        }
+        if (this.databases().length === 0) {
+            this.selectDatabase(this.systemDb);
+        } else if (this.databases.contains(this.activeDatabase()) === false) {
+            this.selectDatabase(this.databases().first());
+        }
+    }
+
+    private changesApiFiredForFileSystems(e: documentChangeNotificationDto) {
+        if (e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled
+            || e.Type === documentChangeType.Delete) {
+            var receivedFileSystemName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+
+            if (e.Type === documentChangeType.Delete) {
+                this.onFileSystemDeleted(receivedFileSystemName);
+            } else {
+                var existingFileSystem = this.filesystems.first((fs: filesystem) => fs.name == receivedFileSystemName);
+                var receivedFileSystemDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+
+                if (existingFileSystem == null) {
+                    var fileSystem = new filesystem(receivedFileSystemName);
+                    this.filesystems.unshift(fileSystem);
+                }
+                else if (existingFileSystem.disabled() != receivedFileSystemDisabled) {
+                    existingFileSystem.disabled(receivedFileSystemDisabled);
+                }
+            }
+        }
+    }
+
+    private onFileSystemDeleted(fileSystemName: string) {
+        var fileSystemInList = this.filesystems.first((curFs: filesystem) => curFs.name == fileSystemName);
+        if (!!fileSystemInList) {
+            this.filesystems.remove(fileSystemInList);
+        }
+        if (this.filesystems().length === 0) {
+            //this.selectFilesystem(this.systemDb);//todo: decide what to do here!
+        } else if (this.filesystems.contains(this.activeFilesystem()) === false) {
+            this.selectFilesystem(this.filesystems().first());
+        }
     }
 
     databasesLoaded(databases) {
@@ -294,7 +345,7 @@ class shell extends viewModelBase {
         new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase())
             .execute()
             .done((doc: document) => {
-              appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
+                appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             });
     }
 
@@ -395,24 +446,6 @@ class shell extends viewModelBase {
         }
     }
 
-    fetchDBStatsBuffered() {
-        //                if (this.modelPollingTimeoutFlag === true) {
-        //                    this.modelPollingTimeoutFlag = false;
-        //                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-        //                    this.modelPolling();
-        //                }
-        //prev impl for indexChangeNotificationDto was . recheck required
-        //   shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-        //if (this.modelPollingTimeoutFlag === true) {
-         //   this.modelPollingTimeoutFlag = false;
-        //    this.modelPolling();
-       // } else {
-        //    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-        //}
-         //   });
-        this.fetchDbStats(this.activeDatabase());
-    }
-
     updateChangesApi(newDb: database) {
         if (!newDb.disabled()) {
             if (shell.currentDbChangesApi()) {
@@ -421,38 +454,10 @@ class shell extends viewModelBase {
 
             shell.currentDbChangesApi(new changesApi(newDb));
 
-            shell.currentDbChangesApi().watchAllDocs(() => this.fetchDBStatsBuffered());
-            shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDBStatsBuffered());
-            shell.currentDbChangesApi().watchBulks(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchAllDocs(() => this.fetchDbStats(newDb));
+            shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDbStats(newDb));
+            shell.currentDbChangesApi().watchBulks(() => this.fetchDbStats(newDb));
         }
-    }
-
-    reloadDatabases() {
-        new getDatabasesCommand()
-            .execute()
-            .done(results => {
-                ko.utils.arrayForEach(results, (result:database) => {
-                    var existingDb = this.databases().first(d=> {
-                        return d.name == result.name;
-                    });
-                    if (!existingDb) {
-                        this.databases.unshift(result);
-                    }
-                });
-            });
-                
-        new getFilesystemsCommand()
-            .execute()
-            .done(results => {
-                ko.utils.arrayForEach(results, (result: filesystem) => {
-                    var existingFs = this.filesystems().first(d=> {
-                        return d.name == result.name;
-                });
-                    if (!existingFs) {
-                        this.filesystems.unshift(result);
-                    }
-                });
-        });
     }
 
     fetchDbStats(db: database) {

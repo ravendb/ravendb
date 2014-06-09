@@ -52,7 +52,7 @@ class databases extends viewModelBase {
         this.databasesChangeSubscription.off();
     }
 
-    fetchDatabases(): JQueryPromise<database[]> {
+    private fetchDatabases(): JQueryPromise<database[]> {
         return new getDatabasesCommand()
             .execute()
             .done((results: database[]) => this.databasesLoaded(results));
@@ -67,7 +67,7 @@ class databases extends viewModelBase {
         return appUrl.forDocuments(null, db);
     }
 
-    databasesLoaded(results: Array<database>) {
+    private databasesLoaded(results: Array<database>) {
         // If we have no databases, show the "create a new database" screen.
         if (results.length === 0 && this.isFirstLoad) {
             this.newDatabase();
@@ -256,6 +256,7 @@ class databases extends viewModelBase {
         if (db) {
             var desiredAction = db.disabled() ? "enable" : "disable";
             var desiredActionCapitalized = desiredAction.charAt(0).toUpperCase() + desiredAction.slice(1);
+            var action = !db.disabled();
 
             var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' the database?');
             confirmationMessageViewModel
@@ -268,7 +269,7 @@ class databases extends viewModelBase {
                             .execute()
                             .done(() => {
                                 db.isSelected(false);
-                                db.disabled(!db.disabled());
+                                db.disabled(action);
                                 this.selectDatabase(db);
                             });
                     });
@@ -291,13 +292,13 @@ class databases extends viewModelBase {
     }
 
     private onDatabaseDeleted(databaseName: string) {
-        var databaseInList = this.databases.first((curDB: database) => curDB.name == databaseName);
+        var databaseInList = this.databases.first((curDb: database) => curDb.name == databaseName);
         if (!!databaseInList) {
             this.databases.remove(databaseInList);
         }
-        if (this.databases().length === 0)
+        if (this.databases().length === 0) {
             this.selectDatabase(this.systemDb);
-        else if (this.databases.contains(this.selectedDatabase()) === false) {
+        } else if (this.databases.contains(this.selectedDatabase()) === false) {
             this.selectDatabase(this.databases().first());
         }
     }
@@ -311,13 +312,22 @@ class databases extends viewModelBase {
 
     private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
         if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
-                (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
-            var receivedDocumentName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+                (e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled
+                || e.Type === documentChangeType.Delete)) {
+            var receivedDatabaseName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+
             if (e.Type === documentChangeType.Delete) {
-                this.onDatabaseDeleted(receivedDocumentName);
-            }
-            if (e.Type === documentChangeType.Put) {
-                this.addNewDatabase(new database(receivedDocumentName));
+                this.onDatabaseDeleted(receivedDatabaseName);
+            } else {
+                var existingDatabase = this.databases.first((db: database) => db.name == receivedDatabaseName);
+                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+
+                if (existingDatabase == null) {
+                    this.addNewDatabase(new database(receivedDatabaseName));
+                }
+                else if (existingDatabase.disabled() != receivedDatabaseDisabled) {
+                    existingDatabase.disabled(receivedDatabaseDisabled);
+                }
             }
         }
     }

@@ -558,14 +558,24 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-                                Database.Notifications.RaiseNotifications(new DocumentChangeNotification
-                                {
-                                    Id = key,
-                                    Type = DocumentChangeTypes.Put,
-                                    TypeName = metadata.Value<string>(Constants.RavenClrType),
-                                    CollectionName = metadata.Value<string>(Constants.RavenEntityName),
-                                    Etag = newEtag,
-                                }, metadata);
+	                            
+								var newDocumentChangeNotification =
+		                            new DocumentChangeNotification
+		                            {
+			                            Id = key,
+			                            Type = DocumentChangeTypes.Put,
+			                            TypeName = metadata.Value<string>(Constants.RavenClrType),
+			                            CollectionName = metadata.Value<string>(Constants.RavenEntityName),
+			                            Etag = newEtag
+		                            };
+
+								if (key.StartsWith("Raven/Databases/") || key.StartsWith("Raven/FileSystems/")) //it's a database document
+	                            {
+									var disabledStatus = document.Value<bool>("Disabled");
+		                            newDocumentChangeNotification.Type = disabledStatus ? DocumentChangeTypes.SystemResourceDisabled : DocumentChangeTypes.SystemResourceEnabled;
+	                            }
+	                            
+								Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });
 
                         WorkContext.ShouldNotifyAboutWork(() => "PUT " + key);
