@@ -20,7 +20,7 @@ class sqlReplications extends viewModelBase {
     firstIndex: KnockoutComputed<number>;
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
-    loadedSqlReplications = [];
+    loadedSqlReplications: sqlReplication[];
 
     constructor() {
         super();
@@ -69,14 +69,13 @@ class sqlReplications extends viewModelBase {
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
         });
-
-
     }
 
     addNewSqlReplication() {
         if (this.isFirstLoad()) {
             this.isFirstLoad(false);
         }
+
         var newSqlReplication: sqlReplication = sqlReplication.empty();
         newSqlReplication.collections = this.collections;
         this.replications.unshift(newSqlReplication);
@@ -88,8 +87,8 @@ class sqlReplications extends viewModelBase {
         this.initializeCollapsedInvalidElements();
     }
 
-    removeSqlReplication(repl: sqlReplication) {
-        this.replications.remove(repl);
+    removeSqlReplication(sr: sqlReplication) {
+        this.replications.remove(sr);
 
         this.replications().forEach((replication: sqlReplication) => {
             replication.name.valueHasMutated();
@@ -99,44 +98,44 @@ class sqlReplications extends viewModelBase {
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-            this.replications().forEach(r => r.setIdFromName());
-            var deletedReplications = this.loadedSqlReplications.slice(0);
-            var onScreenReplications = this.replications();
+            this.replications().forEach((r: sqlReplication) => r.setIdFromName());
+
+            var onScreenReplications: sqlReplication[] = this.replications();
+            var deletedReplications: sqlReplication[] = this.loadedSqlReplications.filter((currentLoaded: sqlReplication) => {
+                return onScreenReplications.filter((currentOnScreen: sqlReplication) => {
+                    return currentLoaded.name() == currentOnScreen.name();
+                }).length == 0;
+            });
+            var loadedSqlReplicationsIds = this.loadedSqlReplications.map((sr: sqlReplication) => sr.getId());
 
             for (var i = 0; i < onScreenReplications.length; i++) {
                 var replication: sqlReplication = onScreenReplications[i];
                 var replicationId = replication.getId();
-                deletedReplications.remove(replicationId);
 
                 //clear the etag if the name of the replication was changed
-                if (this.loadedSqlReplications.indexOf(replicationId) == -1) {
+                if (loadedSqlReplicationsIds.indexOf(replicationId) == -1) {
                     delete replication.__metadata.etag;
                     delete replication.__metadata.lastModified;
                 }
             }
 
-            var deleteDeferred = this.deleteSqlReplications(deletedReplications, db);
-            deleteDeferred.done(() => {
-                var saveDeferred = this.saveSqlReplications(onScreenReplications, db);
-                saveDeferred.done(() => {
-                    this.updateLoadedSqlReplications();
+            var saveDeferred = this.saveSqlReplications(onScreenReplications, deletedReplications, db);
+            saveDeferred.done(() => {
+                    this.loadedSqlReplications = this.deepCopySqlReplications(this.replications()); //make a deep copy of the sql replications
                     viewModelBase.dirtyFlag().reset(); //Resync Changes
                 });
-            });
         }
     }
 
-    itemNumber = function (index) {
+    itemNumber = (index) => {
         return index + 1;
     }
 
     private fetchSqlReplications(db: database): JQueryPromise<any> {
         return new getSqlReplicationsCommand(db)
             .execute()
-            .done(results=> {
-                for (var i = 0; i < results.length; i++) {
-                    this.loadedSqlReplications.push(results[i].getId());
-                }
+            .done((results: sqlReplication[])=> {
+                this.loadedSqlReplications = this.deepCopySqlReplications(results); //make a deep copy of the sql replications
                 this.replications(results);
             });
     }
@@ -217,26 +216,11 @@ class sqlReplications extends viewModelBase {
         }
     }
 
-    private deleteSqlReplications(deletedReplications: Array<string>, db): JQueryDeferred<{}> {
-        var deleteDeferred = $.Deferred();
-        //delete from the server the deleted on screen sql replications
-        if (deletedReplications.length > 0) {
-            new deleteDocumentsCommand(deletedReplications, db)
-                .execute()
-                .done(() => {
-                    deleteDeferred.resolve();
-                });
-        } else {
-            deleteDeferred.resolve();
-        }
-        return deleteDeferred;
-    }
-
-    private saveSqlReplications(onScreenReplications, db): JQueryDeferred<{}>{
+    private saveSqlReplications(onScreenReplications, deletedReplications, db): JQueryDeferred<{}>{
         var saveDeferred = $.Deferred();
-        //save the new/updated sql replications
-        if (onScreenReplications.length > 0) {
-            new saveSqlReplicationsCommand(this.replications(), db)
+        //save the new/updated sql replications and delete the deleted ones
+        if (onScreenReplications.length > 0 || deletedReplications.length > 0) {
+            new saveSqlReplicationsCommand(onScreenReplications, deletedReplications, db)
                 .execute()
                 .done((result: bulkDocumentDto[]) => {
                     this.updateKeys(result);
@@ -248,12 +232,15 @@ class sqlReplications extends viewModelBase {
         return saveDeferred;
     }
 
-    private updateLoadedSqlReplications() {
-        this.loadedSqlReplications = [];
-        var sqlReplications = this.replications();
-        for (var i = 0; i < sqlReplications.length; i++) {
-            this.loadedSqlReplications.push(sqlReplications[i].getId());
-        }
+    private deepCopySqlReplications(replicationsArray: sqlReplication[]): sqlReplication[] {
+        var copiedSqlReplications: sqlReplication[] = [];
+
+        replicationsArray.forEach((replication: sqlReplication) => {
+            var copiedSqlReplication = new sqlReplication(replication.toDto());
+            copiedSqlReplications.push(copiedSqlReplication);
+        });
+
+        return copiedSqlReplications;
     }
 
     private updateKeys(serverKeys: bulkDocumentDto[]) {

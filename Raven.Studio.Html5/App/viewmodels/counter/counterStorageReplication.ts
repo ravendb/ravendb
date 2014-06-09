@@ -55,7 +55,8 @@ class counterStorageReplication extends viewModelBase {
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(counterStorageReplicationDestination.empty());
+        var cs = this.activeCounterStorage();
+        this.replicationsSetup().destinations.unshift(counterStorageReplicationDestination.empty(cs.name));
     }
 
     removeDestination(resplicationDestination: counterStorageReplicationDestination) {

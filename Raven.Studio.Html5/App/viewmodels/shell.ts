@@ -400,27 +400,15 @@ class shell extends viewModelBase {
 
     updateDbChangesApi(newResource: resource) {
         if (!newResource.disabled()) {
-        if (shell.currentDbChangesApi()) {
-            shell.currentDbChangesApi().dispose();
-        }
-        shell.currentDbChangesApi(new changesApi(newResource));
+            if (shell.currentDbChangesApi()) {
+                shell.currentDbChangesApi().dispose();
+            }
 
-        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                this.modelPolling();
-            } 
-        });
+            shell.currentDbChangesApi(new changesApi(newResource));
 
-        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                this.modelPolling();
-            } else {
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                }
-            });
+            shell.currentDbChangesApi().watchAllDocs(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchBulks(() => this.fetchDBStatsBuffered());
         }
     }
 
@@ -429,6 +417,24 @@ class shell extends viewModelBase {
             shell.currentFsChangesApi().dispose();
         }
         shell.currentFsChangesApi(new changesApi(newResource));
+    }
+
+    fetchDBStatsBuffered() {
+        //                if (this.modelPollingTimeoutFlag === true) {
+        //                    this.modelPollingTimeoutFlag = false;
+        //                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        //                    this.modelPolling();
+        //                }
+        //prev impl for indexChangeNotificationDto was . recheck required
+        //   shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+        //if (this.modelPollingTimeoutFlag === true) {
+         //   this.modelPollingTimeoutFlag = false;
+        //    this.modelPolling();
+       // } else {
+        //    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        //}
+         //   });
+        this.fetchDbStats(this.activeDatabase());
     }
 
     reloadDatabases() {

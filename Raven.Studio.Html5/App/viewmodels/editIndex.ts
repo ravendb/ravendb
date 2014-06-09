@@ -15,6 +15,8 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import copyIndexDialog = require("viewmodels/copyIndexDialog");
+import app = require("durandal/app");
 
 class editIndex extends viewModelBase { 
 
@@ -292,6 +294,10 @@ class editIndex extends viewModelBase {
 
     removeSpatialField(fieldIndex: number) {
         this.editedIndex().spatialFields.splice(fieldIndex, 1);
+    }
+
+    copyIndex() {
+        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 }
 

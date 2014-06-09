@@ -156,6 +156,7 @@
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\copyIndexDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageCounters.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
@@ -302,6 +303,7 @@
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\copyIndexDialog.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
     <Content Include="App\views\counter\counterStorageStats.html" />
     <Content Include="App\views\counter\counterStorageReplication.html" />
@@ -433,7 +435,9 @@
     <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
-    <Content Include="Content\app.css" />
+    <Content Include="Content\app.css">
+      <DependentUpon>app.less</DependentUpon>
+    </Content>
     <Content Include="Content\app.min.css">
       <DependentUpon>app.less</DependentUpon>
     </Content>
@@ -1096,7 +1100,9 @@
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
     <Content Include="Content\bootstrap-theme.css.map" />
     <Content Include="Content\bootstrap.css.map" />
-    <Content Include="Content\app.css.map" />
+    <Content Include="Content\app.css.map">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
