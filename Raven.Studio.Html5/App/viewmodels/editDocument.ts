@@ -111,8 +111,9 @@ class editDocument extends viewModelBase {
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
         super.canActivate(args);
+        var canActivateResult = $.Deferred();
         if (args && args.id) {
-            var canActivateResult = $.Deferred();
+            
             this.databaseForEditedDoc = appUrl.getDatabase();
             this.loadDocument(args.id)
                 .done(() => {
@@ -129,7 +130,35 @@ class editDocument extends viewModelBase {
         else if (args && args.index ) {
             // todo: maybe validate query and index
             this.isInDocMode(false);
-            return $.Deferred().resolve({ can: true });
+            var indexName: string = args.index;
+            var queryText: string = args.query;
+            var sorts: querySort[];
+
+            if (args.sorts) {
+                sorts = args.sorts.split(',').map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
+                
+            } else {
+                sorts = [];
+            }
+                
+            var resultsFetcher = (skip: number, take: number) => {
+                var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, queryText, sorts);
+                return command
+                    .execute();
+            };
+            var list = new pagedList(resultsFetcher);
+            var item = !!args.item && !isNaN(args.item)?args.item:0;
+            list.getNthItem(item)
+                .done((doc: document) => {
+                    this.document(doc);
+                    this.lodaedDocumentName("");
+                    canActivateResult.resolve({ can: true });
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+            });
+            return canActivateResult;
         }
         else{
             return $.Deferred().resolve({ can: true });
@@ -153,38 +182,16 @@ class editDocument extends viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
 
-        if (navigationArgs && navigationArgs.index) {
-            var indexName: string = navigationArgs.index;
-            var queryText: string = navigationArgs.query;            
-            var sorts: querySort[] = [];
-            var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, queryText, sorts);
-                return command
-                    .execute();
-            };
-
-            this.docsList(new pagedList(resultsFetcher));
-
-            if (navigationArgs.item) {
-                this.pageToItem(navigationArgs.item);
-            }
-             
-        }
-        else if (navigationArgs && navigationArgs.list && navigationArgs.item) {
-            if (navigationArgs.index) {
-                
-            }
-            else{
-                var itemIndex = parseInt(navigationArgs.item, 10);
-                if (!isNaN(itemIndex)) {
-                    var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
-                    var fetcher = (skip: number, take: number) => newCollection.fetchDocuments(skip, take);
-                    var list = new pagedList(fetcher);
-                    list.collectionName = navigationArgs.list;
-                    list.currentItemIndex(itemIndex);
-                    list.getNthItem(0); // Force us to get the total items count.
-                    this.docsList(list);
-                }
+        if (navigationArgs && navigationArgs.list && navigationArgs.item) {
+            var itemIndex = parseInt(navigationArgs.item, 10);
+            if (!isNaN(itemIndex)) {
+                var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
+                var fetcher = (skip: number, take: number) => newCollection.fetchDocuments(skip, take);
+                var list = new pagedList(fetcher);
+                list.collectionName = navigationArgs.list;
+                list.currentItemIndex(itemIndex);
+                list.getNthItem(0); // Force us to get the total items count.
+                this.docsList(list);
             }
         }
 
@@ -192,7 +199,10 @@ class editDocument extends viewModelBase {
             this.appendRecentDocument(navigationArgs.id);
 
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-        } else {
+        } else if (navigationArgs && navigationArgs.index) {
+            //todo: implement SetRawJSONUrl for document from query
+        }
+        else{
             this.editNewDocument();
         }
     }
@@ -249,6 +259,7 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
         if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
             //the name of the document was changed and we have to save it as a new one

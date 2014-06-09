@@ -194,12 +194,18 @@ class ctor {
             target: '#gridContextMenu',
             before: (e: MouseEvent) => {
 
+                var parentRow = $(e.target).parent(".ko-grid-row");
+                var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+
                 if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
-                    var parentRow = $(e.target).parent(".ko-grid-row");
-                    var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+                    
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
                         this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                    }
+                } else {
+                    if (rightClickedElement) {
+                        this.settings.selectedIndices([rightClickedElement.rowIndex()]);
                     }
                 }
                 return true;
@@ -510,6 +516,15 @@ class ctor {
         }
 
         return indices;
+    }
+
+    editItem() {
+        var selectedDocs = this.getSelectedItems();
+
+        if (this.settings.selectedIndices().length >0) {
+            ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
+        }
+        
     }
 
     copySelectedDocs() {
