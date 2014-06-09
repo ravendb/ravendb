@@ -9,52 +9,58 @@
       </div>
     </div>
 
-    <form class="form-horizontal" role="form" data-bind="with: data">
-        <div class="form-group">
-            <label class="col-md-4 control-label">Time to generate</label>
-            <div class="col-md-8">
-                <p class="col-md-1 form-control-static" data-bind="text: timeToGenerate"></p>
+    <form class="form-horizontal container" role="form" data-bind="with: data">
+        <div class="form-group ">
+            <label class=" col-md-3 control-label">Name</label>
+            <label class="col-md-1 control-label">Amount</label>
+            <label class="col-md-1 control-label">Size</label>
+            <label class="col-md-2 col-md-offset-3 control-label">General Data</label>
+        </div>
+        <div class="row">
+            <div class="col-md-7" data-bind="foreach: collections">
+                <div class="form-group">
+                    <!-- ko if: $index() == 0 -->
+                    <label class="col-md-3 control-label">Collections</label>
+                    <label class="col-md-2 control-label" data-bind="text: name"></label>
+                    <!-- /ko -->
+                    <!-- ko if: $index() != 0 -->
+                    <label class="col-md-2 col-md-offset-3 control-label" data-bind="text: name + ': '"></label>
+                    <!-- /ko -->
+                    <div class="col-md-6">
+                        <span class="col-md-2 control-label" data-bind="text: count"></span>
+                        <!--<span class="col-md-4 control-label" data-bind="text: size"></span>-->
+                        <span class="col-md-4 col-md-offset-2 control-label" data-bind="text: $root.formatBytesToSize(size)"></span>
+
+                        <!--data-bind="text: $root.documentSize()-->
+                    </div>
+                </div>
+            </div>
+            <div class="form-group col-md-5">
+                <label class="col-md-4 col-md-offset-2 control-label">Time to generate</label>
+                <!--<div class="col-md-1">-->
+                    <p class="col-md-1 form-control-static" data-bind="text: $root.formatTimeSpan(timeToGenerate)"></p>
+                <!--</div>-->
+
+                <label class="col-md-4 col-md-offset-2 control-label">Total</label>
+                <div class="col-md-1">
+                    <p class="col-md-1 form-control-static" data-bind="text: total"></p>
+                </div>
+
+                <label class="col-md-4 col-md-offset-2 control-label">Tombstones</label>
+                <div class="col-md-1">
+                    <p class="col-md-1 form-control-static" data-bind="text: tombstones"></p>
+                </div>
+
+                <label class="col-md-4 col-md-offset-2 control-label">System</label>
+                <div class="col-md-1">
+                    <p class="col-md-1 form-control-static" data-bind="text: system"></p>
+                </div>
+
+                <label class="col-md-4 col-md-offset-2 control-label">No collection</label>
+                <div class="col-md-1">
+                    <p class="col-md-1 form-control-static" data-bind="text: noCollection"></p>
+                </div>
             </div>
         </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">Total</label>
-            <div class="col-md-8">
-                <p class="col-md-1 form-control-static" data-bind="text: total"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">Tombstones</label>
-            <div class="col-md-8">
-                <p class="col-md-1 form-control-static" data-bind="text: tombstones"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">System</label>
-            <div class="col-md-8">
-                <p class="col-md-1 form-control-static" data-bind="text: system"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">No collection</label>
-            <div class="col-md-8">
-                <p class="col-md-1 form-control-static" data-bind="text: noCollection"></p>
-            </div>
-        </div>
-        <!-- ko foreach: collections -->
-        <div class="form-group" >
-            <!-- ko if: $index() == 0 -->
-            <label class="col-md-2 control-label">Collections</label>
-            <label class="col-md-2 control-label" data-bind="text: name"></label>
-            <!-- /ko -->
-            <!-- ko if: $index() != 0 -->
-            <label class="col-md-2 col-md-offset-2 control-label" data-bind="text: name + ': '"></label>
-            <!-- /ko -->
-            <div class="col-md-5">
-                <span class="col-md-1 control-label" data-bind="text: count"></span>
-                <span class="col-md-4 control-label" data-bind="text: size"></span>
-            </div>
-        </div>
-        <!-- /ko -->
-        
-    </form>
+</form>
 </section>

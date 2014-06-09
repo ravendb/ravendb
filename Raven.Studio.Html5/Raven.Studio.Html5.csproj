@@ -119,6 +119,7 @@
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\generalUtils.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
