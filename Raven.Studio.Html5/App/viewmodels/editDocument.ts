@@ -19,6 +19,9 @@ import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import queryIndexCommand = require("commands/queryIndexCommand");
+import pagedResultSet = require("common/pagedResultSet");
+import querySort = require("models/querySort");
 
 class editDocument extends viewModelBase {
 
@@ -44,6 +47,7 @@ class editDocument extends viewModelBase {
     isSaveEnabled: KnockoutComputed<Boolean>;
     textarea: any;
     documentSize: KnockoutComputed<string>;
+    isInDocMode = ko.observable(true);
 
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -122,8 +126,13 @@ class editDocument extends viewModelBase {
         } else if (args && args.item && args.list) {
             return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
         }
+        else if (args && args.index ) {
+            // todo: maybe validate query and index
+            this.isInDocMode(false);
+            return $.Deferred().resolve({ can: true });
+        }
         else{
-        return $.Deferred().resolve({ can: true });
+            return $.Deferred().resolve({ can: true });
         }
     }
 
@@ -144,7 +153,24 @@ class editDocument extends viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
 
-        if (navigationArgs && navigationArgs.list && navigationArgs.item) {
+        if (navigationArgs && navigationArgs.index) {
+            var indexName: string = navigationArgs.index;
+            var queryText: string = navigationArgs.query;            
+            var sorts: querySort[] = [];
+            var resultsFetcher = (skip: number, take: number) => {
+                var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, queryText, sorts);
+                return command
+                    .execute();
+            };
+
+            this.docsList(new pagedList(resultsFetcher));
+
+            if (navigationArgs.item) {
+                this.pageToItem(navigationArgs.item);
+            }
+             
+        }
+        else if (navigationArgs && navigationArgs.list && navigationArgs.item) {
             if (navigationArgs.index) {
                 
             }
@@ -405,9 +431,16 @@ class editDocument extends viewModelBase {
         if (list) {
             list.getNthItem(index)
                 .done((doc: document) => {
-                    this.loadDocument(doc.getId());
-                    list.currentItemIndex(index);
-                    this.updateUrl(doc.getId());
+                    if (this.isInDocMode() === true) {
+                        this.loadDocument(doc.getId());
+                        list.currentItemIndex(index);
+                        this.updateUrl(doc.getId());
+                    }
+                    else {
+                        this.document(doc);
+                        this.lodaedDocumentName("");
+                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+                    }
                 });
         }
     }
