@@ -4,24 +4,23 @@
         <li style="display: inline-block">
             <h3 style="display: inline-block">
                 <i class="fa fa-file-text-o" style="display: inline-block"></i>
-                <a href="#documents" data-bind="click: navigateToDocuments" style="display: inline-block">
-                    Documents
+                <a href="#documents" data-bind="click: navigateToDocuments, text:isInDocMode() === true?'Documents':'Indexes'" style="display: inline-block">
                 </a>
             </h3>
         </li>
         <!-- ko ifnot: isCreatingNewDocument -->
         <li data-bind="with: metadata" style="display: inline-block">
-            <a style="display: inline-block" href="#" data-bind="text: ravenEntityName, attr: {title:ravenEntityName, href: '#documents?collection=' + ravenEntityName }, click: $root.navigateToCollection.bind($root, ravenEntityName)"></a>
+            <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode() === true?ravenEntityName:$root.queryIndex, attr: {title:ravenEntityName, href: '#documents?collection=' + ravenEntityName }, click: $root.navigateToCollection.bind($root, ravenEntityName)"></a>
         </li>
         <!-- /ko -->
-        <li class="active" data-bind="text:isCreatingNewDocument()===true?'New Document': editedDocId, attr:{title:isCreatingNewDocument()===true?'New Document': editedDocId}" style="display: inline-block">
+        <li class="active" data-bind="text:docTitle, attr:{title:docTitle}" style="display: inline-block">
         </li>
     </ul>
     <form data-bind="submit: saveDocument">
         <div class="btn-toolbar">
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary "  data-bind="enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-				<a class="btn btn-default "  data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
+                <a class="btn btn-default " data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
                 <button type="button" class="btn btn-default "  data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
                 <button type="button" class="btn btn-danger "  data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
             </div>

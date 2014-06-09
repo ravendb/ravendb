@@ -37,6 +37,8 @@ class editDocument extends viewModelBase {
     userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
+    queryResultList = ko.observable<pagedList>();
+    currentQueriedItemIndex:number;
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
@@ -48,7 +50,10 @@ class editDocument extends viewModelBase {
     textarea: any;
     documentSize: KnockoutComputed<string>;
     isInDocMode = ko.observable(true);
+    queryIndex = ko.observable<String>();
 
+    docTitle: KnockoutComputed<string>;
+    
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
@@ -96,6 +101,20 @@ class editDocument extends viewModelBase {
             },
             owner: this
         });
+
+
+        this.docTitle = ko.computed(() => {
+            if (this.isInDocMode() == true) {
+                //isCreatingNewDocument()===true?'New Document': editedDocId
+                if (this.isCreatingNewDocument() === true) {
+                    return 'New Document';
+                } else {
+                    return this.editedDocId();
+                }
+            } else {
+                return 'Projection';
+            }
+        });
     }
 
     formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
@@ -128,12 +147,11 @@ class editDocument extends viewModelBase {
             return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
         }
         else if (args && args.index ) {
-            // todo: maybe validate query and index
             this.isInDocMode(false);
             var indexName: string = args.index;
             var queryText: string = args.query;
             var sorts: querySort[];
-
+            
             if (args.sorts) {
                 sorts = args.sorts.split(',').map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
                 
@@ -147,7 +165,8 @@ class editDocument extends viewModelBase {
                     .execute();
             };
             var list = new pagedList(resultsFetcher);
-            var item = !!args.item && !isNaN(args.item)?args.item:0;
+            var item = !!args.item && !isNaN(args.item) ? args.item : 0;
+            
             list.getNthItem(item)
                 .done((doc: document) => {
                     this.document(doc);
@@ -157,7 +176,10 @@ class editDocument extends viewModelBase {
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
-            });
+                });
+            this.currentQueriedItemIndex = item;
+            this.queryResultList(list);
+            this.queryIndex(indexName);
             return canActivateResult;
         }
         else{
@@ -370,15 +392,20 @@ class editDocument extends viewModelBase {
 
     refreshDocument() {
         var meta = this.metadata();
-        if (!this.isCreatingNewDocument()) {
-            var docId = this.editedDocId();
-            this.document(null);
-            this.documentText(null);
-            this.metadataText(null);
-            this.userSpecifiedId('');
-            this.loadDocument(docId);
+        if (this.isInDocMode()) {
+            if (!this.isCreatingNewDocument()) {
+                var docId = this.editedDocId();
+                this.document(null);
+                this.documentText(null);
+                this.metadataText(null);
+                this.userSpecifiedId('');
+                this.loadDocument(docId);
+            } else {
+                this.editNewDocument();
+            }
         } else {
-            this.editNewDocument();
+            this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
+            this.lodaedDocumentName("");
         }
     }
 
