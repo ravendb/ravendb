@@ -101,52 +101,65 @@ namespace Raven.Database.Server.Security
 		}
 
 
+	    public bool TryAuthorizeSingleUseAuthToken(string token, string tenantName, out object msg, out HttpStatusCode statusCode, out IPrincipal user)
+        {
+            user = null;
+            OneTimeToken value;
+            if (singleUseAuthTokens.TryRemove(token, out value) == false)
+            {
+                msg = new
+                {
+                    Error = "Unknown single use token, maybe it was already used?"
+                };
+                statusCode = HttpStatusCode.Forbidden;
+                return false;
+            }
 
+            if (string.Equals(value.DatabaseName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
+                (value.DatabaseName == Constants.SystemDatabase && tenantName == null) == false)
+            {
+                msg = new
+                {
+                    Error = "This single use token cannot be used for this database"
+                };
+                statusCode = HttpStatusCode.Forbidden;
+                return false;
+            }
+            if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
+            {
+                msg = new
+                {
+                    Error = "This single use token has expired"
+                };
+                statusCode = HttpStatusCode.Forbidden;
+                return false;
+            }
+
+            if (value.User != null)
+            {
+                CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
+            }
+	        msg = null;
+	        statusCode = HttpStatusCode.OK;
+
+            CurrentOperationContext.User.Value = user = value.User;
+            return true;
+        }
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
-		{
-			OneTimeToken value;
-			if (singleUseAuthTokens.TryRemove(token, out value) == false)
-			{
-				msg = controller.GetMessageWithObject(
-					new
-					{
-						Error = "Unknown single use token, maybe it was already used?"
-					}, HttpStatusCode.Forbidden);
-				return false;
-			}
+        {
+            object result;
+            HttpStatusCode statusCode;
+            IPrincipal user;
+            var success = TryAuthorizeSingleUseAuthToken(token, controller.TenantName, out result, out statusCode, out user);
+            controller.User = user;
+            if (success == false)
+                msg = controller.GetMessageWithObject(result, statusCode);
+            else
+                msg = controller.GetEmptyMessage();
+            return success;
+        }
 
-			if (string.Equals(value.DatabaseName, controller.TenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
-                (value.DatabaseName == "<system>" && controller.TenantName == null) == false)
-			{
-				msg = controller.GetMessageWithObject(
-					new
-					{
-						Error = "This single use token cannot be used for this database"
-					}, HttpStatusCode.Forbidden);
-				return false;
-			}
-			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
-			{
-				msg = controller.GetMessageWithObject(
-					new
-					{
-						Error = "This single use token has expired"
-					}, HttpStatusCode.Forbidden);
-				return false;
-			}
-
-			if (value.User != null)
-			{
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
-			}
-
-			CurrentOperationContext.User.Value = value.User;
-			controller.User = value.User;
-			msg = controller.GetEmptyMessage();
-			return true;
-		}
-
-		public IPrincipal GetUser(RavenDbApiController controller)
+	    public IPrincipal GetUser(RavenDbApiController controller)
 		{
 			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = controller.GetHeader("Authorization");
