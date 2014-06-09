@@ -21,16 +21,7 @@ class statusDebugSlowDocCounts extends viewModelBase {
         this.data(null);
         this.canSearch(true);
     }
-    //formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
-    //    var parts = input.toString().split(".");
-    //    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-    //    if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
-    //        parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
-    //    }
-    //    return parts.join(".");
-    //}
-
+   
     formatTimeSpan(input:string) {
         var timeParts = input.split(":");
         var miliPart ;
@@ -55,10 +46,10 @@ class statusDebugSlowDocCounts extends viewModelBase {
             timeStr = hours + " Hours ";
         }
         if (min > 0) {
-            timeStr += min + " Min";
+            timeStr += min + " Min ";
         }
         if (sec > 0) {
-            timeStr += sec + " Sec";
+            timeStr += sec + " Sec ";
         }
         if ((timeStr == "") && (milisec > 0))
         {
@@ -73,23 +64,11 @@ class statusDebugSlowDocCounts extends viewModelBase {
 
         var res = bytes / Math.pow(1024, i);
         var newRes = genUtils.formatAsCommaSeperatedString(res, 2);   
-        //var parts = res.toString().split(".");
-        //parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        //if (parts.length == 2 && parts[1].length > 2) {
-        //    parts[1] = parts[1].substring(0, 2);
-        //}
-        //var newRes = parts.join(".");
+       
         return newRes + ' ' + sizes[i];
     }  
    
-        //var i = -1;
-        //var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
-        //do {
-        //    fileSizeInBytes = fileSizeInBytes / 1024;
-        //    i++;
-        //} while (fileSizeInBytes > 1024);
-
-        //return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+      
    
     fetchDocCounts(): JQueryPromise<debugDocumentStats> {
         var db = this.activeDatabase();
@@ -99,7 +78,6 @@ class statusDebugSlowDocCounts extends viewModelBase {
                 .execute()
                 .done((results: debugDocumentStats)=> {
                     this.data(results);
-                   // formatBytesToSize(this.data.)
                 })
                    
                 .always(() => this.canSearch(true));

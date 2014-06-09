@@ -14,7 +14,7 @@
             <label class=" col-md-3 control-label">Name</label>
             <label class="col-md-1 control-label">Amount</label>
             <label class="col-md-1 control-label">Size</label>
-            <label class="col-md-2 col-md-offset-3 control-label">General Data</label>
+            <label class="col-md-2 col-md-offset-2 control-label">General Data</label>
         </div>
         <div class="row">
             <div class="col-md-7" data-bind="foreach: collections">
@@ -28,39 +28,31 @@
                     <!-- /ko -->
                     <div class="col-md-6">
                         <span class="col-md-2 control-label" data-bind="text: count"></span>
-                        <!--<span class="col-md-4 control-label" data-bind="text: size"></span>-->
                         <span class="col-md-4 col-md-offset-2 control-label" data-bind="text: $root.formatBytesToSize(size)"></span>
 
-                        <!--data-bind="text: $root.documentSize()-->
+                     
                     </div>
                 </div>
             </div>
             <div class="form-group col-md-5">
-                <label class="col-md-4 col-md-offset-2 control-label">Time to generate</label>
-                <!--<div class="col-md-1">-->
-                    <p class="col-md-1 form-control-static" data-bind="text: $root.formatTimeSpan(timeToGenerate)"></p>
-                <!--</div>-->
+              
+                <label class="col-md-4  form-control-static">Time to generate</label>
+                <span class="col-md-4 col-md-offset-1 form-control-static" data-bind="text: $root.formatTimeSpan(timeToGenerate)"></span>
+               
 
-                <label class="col-md-4 col-md-offset-2 control-label">Total</label>
-                <div class="col-md-1">
-                    <p class="col-md-1 form-control-static" data-bind="text: total"></p>
-                </div>
+                <label class="col-md-4  form-control-static">Total</label>
+                <span class="col-md-4 col-md-offset-1 form-control-static" data-bind="text: total"></span>
 
-                <label class="col-md-4 col-md-offset-2 control-label">Tombstones</label>
-                <div class="col-md-1">
-                    <p class="col-md-1 form-control-static" data-bind="text: tombstones"></p>
-                </div>
+  
+                <label class="col-md-4   form-control-static">Tombstones</label>
+                <span class="col-md-4 col-md-offset-1 form-control-static" data-bind="text: tombstones"></span>
+ 
+                <label class="col-md-4  form-control-static">System</label>
+                <span class="col-md-4 col-md-offset-1 form-control-static" data-bind="text: system"></span>
 
-                <label class="col-md-4 col-md-offset-2 control-label">System</label>
-                <div class="col-md-1">
-                    <p class="col-md-1 form-control-static" data-bind="text: system"></p>
+                <label class="col-md-4  form-control-static">No collection</label>
+                <span class="col-md-1 col-md-offset-1 form-control-static" data-bind="text: noCollection"></span>
                 </div>
-
-                <label class="col-md-4 col-md-offset-2 control-label">No collection</label>
-                <div class="col-md-1">
-                    <p class="col-md-1 form-control-static" data-bind="text: noCollection"></p>
-                </div>
-            </div>
         </div>
 </form>
 </section>
