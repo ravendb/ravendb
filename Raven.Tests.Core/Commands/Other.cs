@@ -51,6 +51,39 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanSwitchDatabases()
         {
+            using (var store1 = GetDocumentStore("store1"))
+            using (var store2 = GetDocumentStore("store2"))
+            {
+                store1.DatabaseCommands.Put(
+                    "items/1",
+                    null,
+                    RavenJObject.FromObject(new
+                    {
+                        Name = "For store1"
+                    }),
+                    new RavenJObject());
+                store2.DatabaseCommands.Put(
+                    "items/2",
+                    null,
+                    RavenJObject.FromObject(new
+                    {
+                        Name = "For store2"
+                    }),
+                    new RavenJObject());
+
+                var doc = store1.DatabaseCommands.ForDatabase("store2").Get("items/2");
+                Assert.NotNull(doc);
+                Assert.Equal("For store2", doc.DataAsJson.Value<string>("Name"));
+
+                doc = store1.DatabaseCommands.ForDatabase("store1").Get("items/1");
+                Assert.NotNull(doc);
+                Assert.Equal("For store1", doc.DataAsJson.Value<string>("Name"));
+
+                var docs = store1.DatabaseCommands.ForSystemDatabase().GetDocuments(0, 20);
+                Assert.Equal(2, docs.Length);
+                Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
+                Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
+            }
         }
 	}
 }
