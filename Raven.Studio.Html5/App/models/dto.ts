@@ -760,3 +760,7 @@ interface changesApiEventDto {
     Type: string;
     Value: any;
 }
+
+interface customFunctionsDto {
+    Functions: string;
+}

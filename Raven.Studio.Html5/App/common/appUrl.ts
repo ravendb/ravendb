@@ -43,6 +43,7 @@ class appUrl {
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
+        customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
 
         statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
         statusDebugChanges: ko.computed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
@@ -279,7 +280,11 @@ class appUrl {
         return "#databases/settings/scriptedIndex?" + appUrl.getEncodedDbPart(db);
     }
 
-	static forDocuments(collection: string, db: database): string {
+    static forCustomFunctionsEditor(db: database): string {
+        return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forDocuments(collection: string, db: database): string {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/documents?" + collectionPart + databasePart;
