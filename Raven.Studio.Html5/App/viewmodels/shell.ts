@@ -41,6 +41,7 @@ class shell extends viewModelBase {
     private router = router;
 
     databases = ko.observableArray<database>();
+    currentConnectedDatabase: database;
     systemDb: database;
     counterStorages = ko.observableArray<counterStorage>();
     currentAlert = ko.observable<alertArgs>();
@@ -106,6 +107,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
+        this.currentConnectedDatabase = this.systemDb;
         this.appUrls = appUrl.forCurrentDatabase();
         
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -447,7 +449,7 @@ class shell extends viewModelBase {
     }
 
     updateChangesApi(newDb: database) {
-        if (!newDb.disabled()) {
+        if (!newDb.disabled() && this.currentConnectedDatabase.name != newDb.name) {
             if (shell.currentDbChangesApi()) {
                 shell.currentDbChangesApi().dispose();
             }
@@ -457,6 +459,8 @@ class shell extends viewModelBase {
             shell.currentDbChangesApi().watchAllDocs(() => this.fetchDbStats(newDb));
             shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDbStats(newDb));
             shell.currentDbChangesApi().watchBulks(() => this.fetchDbStats(newDb));
+
+            this.currentConnectedDatabase = newDb;
         }
     }
 
