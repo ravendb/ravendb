@@ -47,35 +47,35 @@
 
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary use-bootstrap-tooltip" title="Run the query (Alt+R)" accesskey="R" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
+            <button class="btn btn-primary" title="Run the query (Alt+R)" accesskey="R"  data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
-                    <i class="fa fa-plus"></i> Add <span class="caret"></span>
-                </button>
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
+                        <i class="fa fa-plus"></i> Add <span class="caret"></span>
+                    </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li data-bind="visible: selectedIndex() !== 'All Documents'"><a class="use-bootstrap-tooltip" href="#" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
-                    <li data-bind="visible: !transformer()"><a href="#" class="use-bootstrap-tooltip" data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
+                     <li data-bind="visible: selectedIndex() !== 'All Documents'"><a  href="#" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
+                    <li data-bind="visible: !transformer()"><a href="#"  data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
                 </ul>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
-                    <i class="fa fa-cog"></i> <span class="caret"></span>
-                </button>
+                    <button type="button" class="btn btn-default dropdown-toggle"  data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
+                        <i class="fa fa-cog"></i> <span class="caret"></span>
+                    </button>
                 <ul class="dropdown-menu" role="menu">
                     <li style="padding-left: 20px;">
                         <div class="btn-group">
-                            <label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-trigger="hover" data-toggle="tooltip" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
-                            <label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-trigger="hover" data-toggle="tooltip" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
-                        </div>
+                             <label class="btn btn-default"  data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
+                            <label class="btn btn-default"  data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
+                      </div>
                     </li>
-                    <li><a href="#"><label class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: toggleShowFields, css: { active: showFields }" title="Show fields from matching index entries instead of matching documents">Show Fields</label></a></li>
-                    <li><a href="#"><label class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
+                     <li><a href="#"><label class="btn btn-default"  data-bind="click: toggleShowFields, css: { active: showFields }" title="Show fields from matching index entries instead of matching documents">Show Fields</label></a></li>
+                    <li><a href="#"><label class="btn btn-default"  data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
                 </ul>
             </div>
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: selectColumns" title="Choose columns...">
-                <i class="fa fa-table"></i>
-            </button>
+            <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+                <button type="button" class="btn btn-default"  data-bind="click: selectColumns" title="Choose columns...">
+                    <i class="fa fa-table"></i>
+                </button>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -115,15 +115,15 @@
         </div>
 
         <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: termsUrl }, enable: hasSelectedIndex" title="Navigate to index terms">Terms</a>
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="enable: !!queryStats(), click: openQueryStats" title="Show Query Stats In Dialog">Query Stats</a>
-        </div>
+            <a class="btn btn-default"  data-bind="attr: { href: termsUrl }, enable: hasSelectedIndex" title="Navigate to index terms">Terms</a>
+            <a class="btn btn-default"  data-bind="enable: !!queryStats(), click: openQueryStats" title="Show Query Stats In Dialog">Query Stats</a>
+       </div>
 
-        <div class="btn-group use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom"  title="Delete all documents matching the query">
-            <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex, click: deleteDocsMatchingQuery">
-                <i class="fa fa-trash-o"></i>
-            </button>
-        </div>
+            <div class="btn-group"  title="Delete all documents matching the query">
+                <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex, click: deleteDocsMatchingQuery">
+                    <i class="fa fa-trash-o"></i>
+                </button>
+            </div>
     </div>
     <br />
 
@@ -134,7 +134,7 @@
                     Query
                     <i class="fa fa-info-circle text-info"></i>
                 </span>
-                <a target="_blank" class="use-bootstrap-tooltip control-label-additional-link" data-trigger="hover" data-toggle="tooltip" data-placement="right" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                <a target="_blank" class="control-label-additional-link"  title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
             </label>
             <div class="col-md-11">
                 <div class="row">
@@ -161,7 +161,7 @@
                                 </ul>
                             </div>
                             <div>
-                                <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                                <button type="button" class="close"  data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                             </div>
                             <div class="clearfix"></div>
                         </div>
@@ -199,7 +199,7 @@
                             </ul>
                         </div>
                         <div>
-                            <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                            <button type="button" class="close"  data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                         </div>
                         <div class="clearfix"></div>
                     </div>

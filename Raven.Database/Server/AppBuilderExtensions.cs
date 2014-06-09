@@ -10,6 +10,7 @@ using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
 using Raven.Abstractions.Connection;
+using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -72,11 +73,35 @@ namespace Owin
 			app.UseInterceptor();
 #endif
 
-		    app.UseWebApi(CreateHttpCfg(options));
-			
+            app.Use((context, func) => UpgradeToWebSockets(options, context, func));
+            
+            app.UseWebApi(CreateHttpCfg(options));
+
+
 			return app;
 		}
 
+        private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
+        {
+            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket") == false)
+            {
+                // Not a websocket request
+                await next();
+                return;
+            }
+
+            var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+            if (accept == null)
+            {
+                // Not a websocket request
+                await next();
+                return;
+            }
+
+            var webSocketsTrasport = new WebSocketsTrasport(options, context);
+            if (await webSocketsTrasport.TrySetupRequest())
+                accept(null, webSocketsTrasport.Run);
+        }
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();

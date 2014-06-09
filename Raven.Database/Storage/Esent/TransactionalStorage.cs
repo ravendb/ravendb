@@ -384,13 +384,13 @@ namespace Raven.Storage.Esent
             return StorageSizes.ReportOn(this);
         }
 
-        public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 	    {
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 			   ? CommitTransactionGrbit.LazyFlush
 			   : CommitTransactionGrbit.None;
 
-		    return inFlightTransactionalState ?? (inFlightTransactionalState = new EsentInFlightTransactionalState(this, txMode, put, delete));
+		    return inFlightTransactionalState ?? (inFlightTransactionalState = new EsentInFlightTransactionalState(self, this, txMode, put, delete));
 	    }
 
 	    public void ClearCaches()

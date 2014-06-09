@@ -165,6 +165,21 @@ class viewModelBase {
         clearInterval(this.modelPollingHandle);
     }
 
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No']): JQueryPromise<any> {
+        var viewTask = $.Deferred();
+        var messageView = app.showMessage(confirmationMessage, title, options);
+
+        messageView.done((answer) => {
+            if (answer == options[0]) {
+                viewTask.resolve();
+            } else {
+                viewTask.reject();
+            }
+        });
+
+        return viewTask;
+    }
+
     private promptNavSystemDb(): any {
         if (!appUrl.warnWhenUsingSystemDatabase) {
             return true;
@@ -183,8 +198,6 @@ class viewModelBase {
 
         return canNavTask;
     }
-
-
 
     private beforeUnload(e: any) {
         var isDirty = viewModelBase.dirtyFlag().isDirty();

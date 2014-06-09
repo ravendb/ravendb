@@ -84,7 +84,6 @@ class appUrl {
 
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
         var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
-
         return isThereAny;
     }
 
