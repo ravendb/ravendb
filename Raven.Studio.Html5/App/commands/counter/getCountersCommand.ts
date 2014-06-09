@@ -7,11 +7,13 @@ import appUrl = require("common/appUrl");
 class getCountersCommand extends commandBase {
 
     /**
-    * @param ownerDb The database the collections will belong to.
+    * @param counterStorage - the counter storage that is being used
+    * @param skip - number of entries to skip
+    * @param take - number of entries to take
+    * @param counterGroupName - the counter group to take the entries from
     */
-    constructor(private storage: counterStorage,private skip: number, private take: number, private counterGroupName?: string) {
+    constructor(private storage: counterStorage, private skip: number, private take: number, private counterGroupName?: string) {
         super();
-
     }
 
     execute(): JQueryPromise<counter[]> {

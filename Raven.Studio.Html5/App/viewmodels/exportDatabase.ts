@@ -54,19 +54,6 @@ class exportDatabase extends viewModelBase {
         });
     }
 
-    /*
-     * public enum ItemType
-	{
-		Documents = 0x1,
-		Indexes = 0x2,
-		Attachments = 0x4,
-		Transformers = 0x8,
-
-        RemoveAnalyzers = 0x8000,
-	}
-     * 
-     */
-
     startExport() {
         var operateOnTypes = 0;
         if (this.includeDocuments()) {
@@ -106,9 +93,7 @@ class exportDatabase extends viewModelBase {
             Filters: filtersToSend,
             TransformScript: this.transformScript()
         };
-        /*
-        new exportDatabaseCommand(smugglerOptions, this.activeDatabase())
-            .execute();*/
+        
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
         $("#dbExportDownloadForm").submit();
     }

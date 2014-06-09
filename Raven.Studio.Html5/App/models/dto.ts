@@ -289,6 +289,16 @@ interface indexQueryResultsDto extends indexResultsDto<documentDto> {
 
 }
 
+interface versioningEntryDto extends documentDto {
+  Id: string;
+  MaxRevisions: number;
+  Exclude: boolean;
+}
+
+interface versioningDto {
+  Entries: versioningEntryDto[]
+}
+
 interface replicationDestinationDto {
     Url: string;
     Username: string;
@@ -495,6 +505,7 @@ interface conflictVersionsDto {
 
 interface documentBase {
     getId(): string;
+    getUrl(): string;
     getDocumentPropertyNames(): Array<string>;
 }
 
@@ -504,7 +515,6 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
-
 }
 
 interface customColumnParamsDto {
@@ -744,4 +754,15 @@ enum ImportItemType {
     Attachments = 0x4,
     Transformers = 0x8,
     RemoveAnalyzers = 0x8000
+}
+
+interface changesApiEventDto {
+    Type: string;
+    Value: any;
+}
+
+interface databaseDto
+{
+    Name: string;
+    Disabled: boolean;
 }

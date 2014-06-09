@@ -2,5 +2,6 @@
 {
 	public class Notification
 	{
+        public string FileSystemName { get; set; }
 	}
 }

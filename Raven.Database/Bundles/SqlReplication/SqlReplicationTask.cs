@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Configuration;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -102,7 +103,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				bool hasChanges = false;
-				foreach (var config in replicationConfigs)
+				foreach (var config in GetConfiguredReplicationDestinations())
 				{
 					if (string.Equals(config.RavenEntityName, metadata.Value<string>(Constants.RavenEntityName), StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;

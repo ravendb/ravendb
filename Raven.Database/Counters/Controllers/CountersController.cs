@@ -3,36 +3,72 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-
-
 
 namespace Raven.Database.Counters.Controllers
 {
 	public class CountersController : RavenCountersApiController
 	{
-
 		[Route("counters/{counterName}/change")]
 		[HttpPost]
-		public HttpResponseMessage Change(string group, string counterName, long delta)
+		public HttpResponseMessage CounterChange(string group, string counterName, long delta)
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-				string counter = String.Join(Constants.GroupSeperatorString, new [] { group, counterName });
-				writer.Store(Storage.CounterStorageUrl, counter, delta);
+				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+				writer.Store(Storage.CounterStorageUrl, counterFullName, delta);
+				writer.Commit(delta != 0);
+                Storage.MetricsCounters.ClientRuqeusts.Mark();
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}
+		}
 
-				writer.Commit();
-				return new HttpResponseMessage(HttpStatusCode.Accepted);
+		[Route("counters/{counterName}/batch")]
+		[HttpPost]
+		public async Task<HttpResponseMessage> CountersBatch()
+		{
+			List<CounterChanges> counterChanges;
+			try
+			{
+				counterChanges = await ReadJsonObjectAsync<List<CounterChanges>>();
+			}
+			catch (Exception e)
+			{
+				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
+			}
+
+			using (var writer = Storage.CreateWriter())
+			{
+				counterChanges.ForEach(counterChange => 
+					writer.Store(Storage.CounterStorageUrl, counterChange.FullCounterName, counterChange.Delta));
+
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}	
+		}
+
+		[Route("counters/{counterName}/reset")]
+		[HttpPost]
+		public HttpResponseMessage CounterReset(string group, string counterName)
+		{
+			using (var writer = Storage.CreateWriter())
+			{
+				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+				bool changesWereMade = writer.Reset(Storage.CounterStorageUrl, counterFullName);
+
+				if (changesWereMade)
+				{
+					writer.Commit();
+				}
+				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
 
 		[Route("counters/{counterName}/groups")]
 		[HttpGet]
-		public HttpResponseMessage Groups()
+		public HttpResponseMessage GetCounterGroups()
 		{
 			using (var reader = Storage.CreateReader())
 			{
@@ -42,12 +78,11 @@ namespace Raven.Database.Counters.Controllers
 
 		[Route("counters/{counterName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage Counters(int skip = 0, int take = 20, string counterGroupName = null)
+		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
-            // todo:change counterGroupName to "group"
 			using (var reader = Storage.CreateReader())
 			{
-				var prefix = (counterGroupName == null) ? string.Empty : (counterGroupName + Constants.GroupSeperatorString);
+				var prefix = (group == null) ? string.Empty : (group + Constants.GroupSeperatorString);
 				var results = (
 					from counterFullName in reader.GetCounterNames(prefix)
 					let counter = reader.GetCounter(counterFullName)
@@ -66,46 +101,62 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [Route("counters/{counterName}/getCounterValue")]
+        [Route("counters/{counterName}/getCounterOverallTotal")]
         [HttpGet]
-        public HttpResponseMessage GetCounterValue(string counterName, string group = null)
+		public HttpResponseMessage GetCounterOverallTotal(string group, string counterName)
+        {
+			using (var reader = Storage.CreateReader())
+			{
+				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+				Counter counter = reader.GetCounter(counterFullName);
+				
+				if (counter == null)
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound);
+				}
+
+				long overallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative);
+				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
+			}
+        }
+
+        [Route("counters/{counterName}/getCounterServersValues")]
+        [HttpGet]
+        public HttpResponseMessage GetCounterServersValues(string group, string counterName)
         {
             using (var reader = Storage.CreateReader())
             {
-                var prefix = (group == null) ? string.Empty : (group + Constants.GroupSeperatorString) + counterName;
-                var results = (
-                    from counterFullName in reader.GetCounterNames(prefix)
-                    let counter = reader.GetCounter(counterFullName)
-                    select new CounterView
-                    {
-                        Name = counterFullName.Split(Constants.GroupSeperatorChar)[1],
-                        Group = counterFullName.Split(Constants.GroupSeperatorChar)[0],
-                        OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
+                string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
+                Counter counter = reader.GetCounter(counterFullName);
 
-                        Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
-                        {
-                            Negative = s.Negative,
-                            Positive = s.Positive,
-                            Name = reader.ServerNameFor(s.SourceId)
-                        }).ToList()
+                if (counter == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                }
+
+                List<CounterView.ServerValue> serverValues =
+                    counter.ServerValues.Select(s => new CounterView.ServerValue
+                    {
+                        Negative = s.Negative,
+                        Positive = s.Positive,
+                        Name = reader.ServerNameFor(s.SourceId)
                     }).ToList();
-                return Request.CreateResponse(HttpStatusCode.OK, results);
+                return Request.CreateResponse(HttpStatusCode.OK, serverValues);
             }
         }
-		public class CounterView
-		{
-			public string Name { get; set; }
-			public string Group { get; set; }
-			public long OverallTotal { get; set; }
-			public List<ServerValue> Servers { get; set; }
 
+        [Route("counters/{counterName}/metrics")]
+        [HttpGet]
+        public HttpResponseMessage CounterMetrics()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateMetrics());            
+        }
 
-			public class ServerValue
-			{
-				public string Name { get; set; }
-				public long Positive { get; set; }
-				public long Negative { get; set; }
-			}
-		}
+        [Route("counters/{counterName}/stats")]
+        [HttpGet]
+        public HttpResponseMessage CounterStats()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateStats());
+        }
 	}
 }

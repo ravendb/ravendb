@@ -16,7 +16,7 @@ class saveCounterStorageReplicationCommand extends commandBase {
     }
 
     private saveSetup(): JQueryPromise<any> {
-        var url = "/replications-save";
+        var url = "/replications/save";
         var putArgs = JSON.stringify(this.dto);
         return this.post(url, putArgs, this.counterStorage, { dataType: undefined });
     }

@@ -13,6 +13,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("changes/config")]
 		[Route("databases/{databaseName}/changes/config")]
+        [Route("fs/{fsName}/changes/config")]
 		public HttpResponseMessage GetChangeConfig()
 		{
 			var value = GetQueryStringValue("value");
@@ -167,6 +168,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("changes/events")]
 		[Route("databases/{databaseName}/changes/events")]
+        [Route("fs/{fsName}/changes/events")]
 		public HttpResponseMessage GetChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);

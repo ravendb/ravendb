@@ -70,7 +70,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				activeSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>()).Count;
 		}
 
-        public void EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
+        public bool EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
 		{
 			pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).EnterUpgradeableReadLock();
 
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					{
 						Log.Debug("{0} for a file {1} and a destination {2} was already existed in a pending queue",
 								  workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-						return;
+						return false;
 					}
 
 					// if there is a work for a file of the same type but with lower file ETag just refresh existing work metadata and do not enqueue again
@@ -126,7 +126,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 						Log.Debug(
 							"{0} for a file {1} and a destination {2} was already existed in a pending queue but with older ETag, it's metadata has been refreshed",
 							workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-						return;
+						return false;
 					}
 				}
 
@@ -139,7 +139,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				{
 					Log.Debug("{0} for a file {1} and a destination {2} was already existed in an active queue",
 							  workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-					return;
+					return false;
 				}
 
 				pendingForDestination.Enqueue(workItem);
@@ -150,6 +150,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			{
 				pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).ExitUpgradeableReadLock();
 			}
+
+            return true;
 		}
 
         public bool TryDequePendingSynchronization(string destinationFileSystemUrl, out SynchronizationWorkItem workItem)

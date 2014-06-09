@@ -75,33 +75,5 @@ namespace Raven.Client.Document.Batches
 		{
 			return loadOperation.EnterLoadContext();
 		}
-
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			return commands.Get(key);
-		}
-
-        public void HandleEmbeddedResponse(object result)
-		{
-			var multiLoadResult = result as MultiLoadResult;
-			if (multiLoadResult != null)
-			{
-				var resultItem = multiLoadResult.Results.FirstOrDefault();
-				var ravenJObject = resultItem.Value<RavenJArray>("$values")
-				                             .Cast<RavenJObject>()
-											 .Select(value =>
-											 {
-												 if (handleInternalMetadata != null)
-													 handleInternalMetadata(value);
-												 return value;
-											 })
-				                             .FirstOrDefault();
-				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument(ravenJObject);
-				HandleResponse(jsonDocument);
-				return;
-			}
-
-			HandleResponse((JsonDocument) result);
-		}
 	}
 }

@@ -246,7 +246,7 @@ class ctor {
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getId(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
+            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getUrl(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
@@ -255,7 +255,7 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditItem(selectedItem.getId(), appUrl.getResource(), itemIndex, collectionName));
+            router.navigate(appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName));
         }
     }
 
@@ -546,8 +546,14 @@ class ctor {
             this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
             this.items.invalidateCache(); // Causes the cache of items to be discarded.
             this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            
+            // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
+            // note: won't run on delete of last document(s) of a collection in order to prevent race condition 
+            // with changes api
+            if (this.items.itemCount()> 0) {
+                this.onWindowHeightChanged(); 
+            }
         });
-
         app.showDialog(deleteDocsVm);
     }
 

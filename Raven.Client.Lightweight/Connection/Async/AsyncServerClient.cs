@@ -1285,21 +1285,24 @@ namespace Raven.Client.Connection.Async
 				ErrorResponseException responseException;
 				try
 				{
-					var result = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					var result = (RavenJObject) await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					if (result == null)
+						throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
+
 					var queryResult = SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
-																									 request.ResponseHeaders.Get("Temp-Request-Time"));
+						request.ResponseHeaders.Get("Temp-Request-Time"));
 
 					var docResults = queryResult.Results.Concat(queryResult.Includes);
 					return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult,
-													() => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly),
-													conflictedResultId =>
-												   new ConflictException(
-													   "Conflict detected on " +
-													   conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
-													   ", conflict must be resolved before the document will be accessible", true)
-												   {
-													   ConflictedVersionIds = new[] { conflictedResultId }
-												   }).ConfigureAwait(false);
+						() => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly),
+						conflictedResultId =>
+							new ConflictException(
+								"Conflict detected on " +
+								conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+								", conflict must be resolved before the document will be accessible", true)
+							{
+								ConflictedVersionIds = new[] {conflictedResultId}
+							}).ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{

@@ -17,13 +17,13 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
-using SynchronizationClient = Raven.Client.FileSystem.AsyncFilesServerClient.SynchronizationClient;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Client.FileSystem.Connection;
+using System.Collections.Concurrent;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -38,6 +38,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly SynchronizationQueue synchronizationQueue;
 		private readonly SynchronizationStrategy synchronizationStrategy;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
+
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
+            new ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>>();
 
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(10));
 		private int failedAttemptsToGetDestinationsConfig;
@@ -67,6 +70,54 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			get { return synchronizationQueue; }
 		}
+
+        public void IncomingSynchronizationStarted(string fileName, ServerInfo sourceServerInfo, Guid sourceFileETag, SynchronizationType type)
+        {
+            var activeForDestination = activeIncomingSynchronizations.GetOrAdd(sourceServerInfo.FileSystemUrl,
+                                                       new ConcurrentDictionary<string, SynchronizationDetails>());
+
+            var syncDetails = new SynchronizationDetails()
+            {
+                DestinationUrl = sourceServerInfo.FileSystemUrl,
+                FileETag = sourceFileETag,
+                FileName = fileName,
+                Type = type
+            };
+            if (activeForDestination.TryAdd(fileName, syncDetails))
+            {
+                Log.Debug("File '{0}' with ETag {1} was added to an incomign active synchronization queue for a destination {2}",
+                          fileName,
+                          sourceFileETag, sourceServerInfo.FileSystemUrl);
+            }
+        }
+
+        public void IncomingSynchronizationFinished(string fileName, ServerInfo sourceServerInfo, Guid sourceFileETag)
+        {
+            ConcurrentDictionary<string, SynchronizationDetails> activeSourceTasks;
+
+            if (activeIncomingSynchronizations.TryGetValue(sourceServerInfo.FileSystemUrl, out activeSourceTasks) == false)
+            {
+                Log.Warn("Could not get an active synchronization queue for {0}", sourceServerInfo.FileSystemUrl);
+                return;
+            }
+
+            SynchronizationDetails removingItem;
+            if (activeSourceTasks.TryRemove(fileName, out removingItem))
+            {
+                Log.Debug("File '{0}' with ETag {1} was removed from an active synchronization queue for a destination {2}",
+                          fileName, sourceFileETag, sourceServerInfo);
+            }
+        }
+
+        public IEnumerable<SynchronizationDetails> IncomingQueue
+        {
+            get
+            {
+                return from destinationActive in activeIncomingSynchronizations
+                       from activeFile in destinationActive.Value
+                       select activeFile.Value;
+            }
+        }
 
 		private void InitializeTimer()
 		{
@@ -316,7 +367,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 }                
 
 				NoSyncReason reason;
-				var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
+                var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, baseUrl, out reason);
 				if (work == null)
 				{
                     Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, baseUrl, reason.GetDescription());
@@ -324,14 +375,27 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					if (reason == NoSyncReason.ContainedInDestinationHistory)
 					{
 						var etag = localMetadata.Value<Guid>("ETag");
-						await destination.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag);
+                        await destination.IncrementLastETagAsync(storage.Id, baseUrl, etag);
                         RemoveSyncingConfiguration(file, baseUrl);
 					}
 
 					continue;
 				}
 
-                synchronizationQueue.EnqueueSynchronization(baseUrl, work);
+                if (synchronizationQueue.EnqueueSynchronization(baseUrl, work))
+                {
+                    publisher.Publish(new SynchronizationUpdateNotification
+                    {
+                        FileSystemName = systemConfiguration.FileSystemName,
+                        FileName = work.FileName,
+                        DestinationFileSystemUrl = baseUrl,
+                        SourceServerId = storage.Id,
+                        SourceFileSystemUrl = FileSystemUrl,
+                        Type = work.SynchronizationType,
+                        Action = SynchronizationAction.Enqueue,
+                        SynchronizationDirection = SynchronizationDirection.Outgoing
+                    });
+                }
 			}
 		}
 
@@ -351,7 +415,22 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				{
 					Log.Debug("There was an already being performed synchronization of a file '{0}' to {1}", work.FileName,
 							  destination);
-                    synchronizationQueue.EnqueueSynchronization(destinationUrl, work); // add it again at the end of the queue
+
+                    if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work)) // add it again at the end of the queue
+                    {
+                        // add it again at the end of the queue
+                        publisher.Publish(new SynchronizationUpdateNotification
+                        {
+                            FileSystemName = systemConfiguration.FileSystemName,
+                            FileName = work.FileName,
+                            DestinationFileSystemUrl = destinationUrl,
+                            SourceServerId = storage.Id,
+                            SourceFileSystemUrl = FileSystemUrl,
+                            Type = work.SynchronizationType,
+                            Action = SynchronizationAction.Enqueue,
+                            SynchronizationDirection = SynchronizationDirection.Outgoing
+                        });
+                    }
 				}
 				else
 				{
@@ -380,7 +459,20 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				Log.Debug("The limit of active synchronizations to {0} server has been achieved. Cannot process a file '{1}'.",
                           destinationUrl, work.FileName);
 
-                synchronizationQueue.EnqueueSynchronization(destinationUrl, work);
+                if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work))
+                {
+                    publisher.Publish(new SynchronizationUpdateNotification
+                    {
+                        FileSystemName = systemConfiguration.FileSystemName,
+                        FileName = work.FileName,
+                        DestinationFileSystemUrl = destinationUrl,
+                        SourceServerId = storage.Id,
+                        SourceFileSystemUrl = FileSystemUrl,
+                        Type = work.SynchronizationType,
+                        Action = SynchronizationAction.Enqueue,
+                        SynchronizationDirection = SynchronizationDirection.Outgoing
+                    });
+                }
 
 				return new SynchronizationReport(work.FileName, work.FileETag, work.SynchronizationType)
 				{
@@ -394,6 +486,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             synchronizationQueue.SynchronizationStarted(work, destinationUrl);
 			publisher.Publish(new SynchronizationUpdateNotification
 			{
+                FileSystemName = systemConfiguration.FileSystemName,
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destinationUrl,
 				SourceServerId = storage.Id,
@@ -454,6 +547,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			publisher.Publish(new SynchronizationUpdateNotification
 			{
+                FileSystemName = systemConfiguration.FileSystemName,
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destinationUrl,
 				SourceServerId = storage.Id,

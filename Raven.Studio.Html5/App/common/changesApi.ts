@@ -1,7 +1,7 @@
 /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import database = require('models/database');
+import resource = require('models/resource');
 import appUrl = require('common/appUrl');
 import changeSubscription = require('models/changeSubscription');
 import changesCallback = require('common/changesCallback');
@@ -10,66 +10,72 @@ import commandBase = require('commands/commandBase');
 class changesApi {
 
     private eventsId: string;
-    private source: EventSource;
+    source: EventSource;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
+    private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
+    private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private commandBase = new commandBase();
-    private sharedConnection = this.loadSharedConnection();
-    private sharedConnectionLastPingMs = new Date().getTime();
-    private sharedConnectionLiveHeartbeatHandle: number;
-    
-    private static sharedConnectionPingInterval = 5000;
-    private static sharedConnectionName = "Raven/Studio/ChangesApiConnection";
 
-    constructor(private db: database) {
+    private eventQueueName: string;
+    private lastEventQueueCheckTime = new Date().getTime();
+    private pollQueueHandle = 0;
+
+    private static eventQueuePollInterval = 4000;
+    private static eventQueueOwnerDeadTime = 10000;
+
+        constructor(private rs: resource) {
         this.eventsId = this.makeId();
+        this.eventQueueName = "Raven/Studio/ChangesApiEventQueue_" + rs.name;
         this.connectOrReuseExistingConnection();
     }
 
     private connectOrReuseExistingConnection() {
         // If we already have the Studio opened in another tab, we must re-use that connection.
         // Why? Because some browsers, such as Chrome, limit the number of connections.
-        // When this happens, Chrome suspends all HTTP requests, which stops the Studio from working.
+        // This is a problem if you have the Studio opened in multiple tabs, each creating its own connection.
+        // When you reach the browser-enforced connection limit, all HTTP requests stop, thus breaking the Studio.
         //
-        // To fix this, we "share" a connection with the first opened tab.
-        // How? By using local storage, shared between tabs on the same host, to notify of events.
-        // Only the first tab has a real connection, while the other tabs will get notifications via local storage polling.
-        var connectionForDb = this.getSharedConnectionForDb();
-        if (this.isConnectionOwnedByOtherTab(connectionForDb) && this.isConnectionLive(connectionForDb)) {
-            this.reuseExistingConnection();
-        } else {
-            this.createNewConnection();
+        // To fix this, we share a single /changes connections between tabs using local storage.
+        // All events go into a queue, that queue is stored in local storage.
+        var eventQueue = this.loadEventQueue();
+        if (this.isOwnerDead(eventQueue)) {
+            this.takeOwnership(eventQueue);
+            this.storeEventQueue(eventQueue);
         }
-    }
 
-    private createNewConnection() {
-        this.connect();
-        this.recordHeartbeatInSharedConnection();
-    }
+        // If we're not the owner of the event queue in local storage,
+        // just consume that, rather than establish a new connection.
+        if (this.isOwner(eventQueue)) {
+            this.connect();
+        }
 
-    private recordHeartbeatInSharedConnection() {
-        var connection = this.getSharedConnectionForDb();
-        connection.lastHeartbeatMs = new Date().getTime();
-        this.storeSharedConnection();
-        this.sharedConnectionLiveHeartbeatHandle = setTimeout(() => this.recordHeartbeatInSharedConnection(), 3000);
+        this.pollQueueHandle = setTimeout(() => this.monitorEventQueueOwnership(), changesApi.eventQueuePollInterval);
     }
 
     private connect() {
         if (!!window.EventSource) {
-            var dbUrl = appUrl.forResourceQuery(this.db);
+            var url = appUrl.forResourceQuery(this.rs);
 
-            console.log("Connecting to changes API (db = " + this.db.name + ")");
+            console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            this.source = new EventSource(dbUrl + '/changes/events?id=' + this.eventsId);
+            this.source = new EventSource(url + '/changes/events?id=' + this.eventsId);
             this.source.onmessage = (e) => this.onMessage(e);
             this.source.onerror = (e) => this.onError(e);
 
         } else {
             console.log("EventSource is not supported");
+        }
+    }
+
+    private disconnect() {
+        this.send('disconnect');
+        if (this.source) {
+            this.source.close();
         }
     }
 
@@ -82,15 +88,19 @@ class changesApi {
             args["value"] = value;
         }
         //TODO: exception handling?
-        this.commandBase.query('/changes/config', args, this.db);
+        this.commandBase.query('/changes/config', args, this.rs);
+
     }
 
     private onMessage(e: any) {
-        this.recordChangeOnSharedConnection(e.data);
-        this.processEvent(e.data);
+        var eventDto: changesApiEventDto = JSON.parse(e.data);
+        console.warn("Received "+e.Type);
+        this.processEvent(eventDto);
+        this.recordChangeInEventQueue(eventDto, e.data);
     }
 
     private onError(e: any) {
+
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
 
@@ -102,24 +112,30 @@ class changesApi {
         }
     }
 
-    private processEvent(eventJson: string) {
-        var json = JSON.parse(eventJson);
-        var type = json.Type;
-        if (type === "Heartbeat") {
+    private processEvent(change: changesApiEventDto) {
+        if (change.Type === "Heartbeat") {
             // ignore 
-        } else if (type === "DocumentChangeNotification") {
-            this.fireEvents(this.allDocsHandlers(), json.Value, (e) => true);
-            for (var key in this.watchedPrefixes) {
-                var callbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
-                this.fireEvents(callbacks(), json.Value, (e) => e.Id != null && e.Id.match("^" + key));
-            }
-
-        } else if (type === "IndexChangeNotification") {
-            this.fireEvents(this.allIndexesHandlers(), json.Value, (e) => true);
-        } else if (type === "TransformerChangeNotification") {
-            this.fireEvents(this.allTransformersHandlers(), json.Value, (e) => true);
         } else {
-            console.log("Unhandled Changes API notification type: " + type);
+            if (change.Type === "DocumentChangeNotification") {
+                this.fireEvents(this.allDocsHandlers(), change.Value, (e) => true);
+                for (var key in this.watchedPrefixes) {
+                    var callbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
+                    this.fireEvents(callbacks(), change.Value, (e) => e.Id != null && e.Id.match("^" + key));
+                }
+
+            } else if (change.Type === "IndexChangeNotification") {
+                this.fireEvents(this.allIndexesHandlers(), change.Value, (e) => true);
+            } else if (change.Type === "TransformerChangeNotification") {
+                this.fireEvents(this.allTransformersHandlers(), change.Value, (e) => true);
+            } else if (change.Type === "BulkInsertChangeNotification") {
+                this.fireEvents(this.allBulkInsertsHandlers(), change.Value, (e) => true);
+            } else if (change.Type === "SynchronizationUpdateNotification") {
+                this.fireEvents(this.allFsSyncHandlers(), change.Value, (e) => true);
+            } else if (change.Type === "ConflictNotification") {
+                this.fireEvents(this.allFsConflictsHandlers(), change.Value, (e) => true);  
+            } else {
+                console.log("Unhandled Changes API notification type: " + change.Type);
+            }
         }
     }
 
@@ -189,14 +205,14 @@ class changesApi {
         }
         this.allBulkInsertsHandlers.push(callback);
         return new changeSubscription(() => {
-            this.allDocsHandlers.remove(callback);
+            this.allBulkInsertsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
                 this.send('unwatch-bulk-operation');
             }
         });
     }
 
-    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?:string) {
+    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?: string) {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
         if (this.allDocsHandlers().length == 0) {
             this.send('watch-prefix', prefix);
@@ -210,13 +226,37 @@ class changesApi {
         });
     }
 
-    dispose() {
-        if (this.source) {
-            //console.log("Disconnecting from changes API");
-            this.send('disconnect');
-            this.source.close();
-            clearTimeout(this.sharedConnectionLiveHeartbeatHandle);
+    watchFsSync(onChange: (e: synchronizationUpdateNotification) => void) {
+        var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
+        if (this.allFsSyncHandlers().length == 0) {
+            this.send('watch-sync');
         }
+        this.allFsSyncHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsSyncHandlers.remove(callback);
+            if (this.allFsSyncHandlers().length == 0) {
+                this.send('unwatch-sync');
+            }
+        });
+    }
+
+    watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) {
+        var callback = new changesCallback<synchronizationConflictNotification>(onChange);
+        if (this.allFsConflictsHandlers().length == 0) {
+            this.send('watch-conflicts');
+        }
+        this.allFsConflictsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsConflictsHandlers.remove(callback);
+            if (this.allFsConflictsHandlers().length == 0) {
+                this.send('unwatch-conflicts');
+            }
+        });
+    }
+
+    dispose() {
+        this.disconnect();
+        clearTimeout(this.pollQueueHandle);
     }
 
     private makeId() {
@@ -229,117 +269,107 @@ class changesApi {
         return text;
     }
 
-    private loadSharedConnection(): sharedChangesConnection {
-        var connectionJson: string = window.localStorage.getItem(changesApi.sharedConnectionName);
-
-        if (!connectionJson) {
-            return this.createAndStoreNewConnection();
+    private loadEventQueue(): changesApiEventQueue {
+        var queueJson: string = window.localStorage.getItem(this.eventQueueName);
+        
+        if (!queueJson) {
+            return this.createAndStoreEventQueue();
         } else {
             try {
-                return JSON.parse(connectionJson);
+                return JSON.parse(queueJson);
             }
             catch (error) {
-                this.createAndStoreNewConnection();
+                return this.createAndStoreEventQueue();
             }
         }
     }
 
-    private createAndStoreNewConnection(): sharedChangesConnection {
-        var connection: sharedChangesConnection = {
-            databases: [this.createSharedConnectionForDatabase()]
-        };
-        localStorage.setItem(changesApi.sharedConnectionName, JSON.stringify(connection));
-        return connection;
+    private createAndStoreEventQueue(): changesApiEventQueue {
+        var queue = this.createEventQueue();
+        this.storeEventQueue(queue);
+        return queue;
     }
 
-    private createSharedConnectionForDatabase(): sharedChangesConnectionDatabase {
+    private createEventQueue(): changesApiEventQueue {
         return {
-            id: this.eventsId,
-            name: this.db.name,
+            ownerId: this.eventsId,
+            name: this.rs.name,
             lastHeartbeatMs: new Date().getTime(),
             events: []
         };
     }
 
-    private getSharedConnectionForDb(): sharedChangesConnectionDatabase {
-        var sharedConnectionForDb = this.sharedConnection.databases.first(db => db.name === this.db.name);
-        if (sharedConnectionForDb) {
-            return sharedConnectionForDb;
-        } else {
-            sharedConnectionForDb = this.createSharedConnectionForDatabase();
-            this.sharedConnection.databases.push(sharedConnectionForDb);
-            this.storeSharedConnection();
-            return sharedConnectionForDb;
-        }
+    private storeEventQueue(queue: changesApiEventQueue) {
+        window.localStorage.setItem(this.eventQueueName, JSON.stringify(queue));
     }
 
-    private storeSharedConnection() {
-        window.localStorage.setItem(changesApi.sharedConnectionName, JSON.stringify(this.sharedConnection));
-    }
+    private recordChangeInEventQueue(change: changesApiEventDto, changeDtoJson: string) {
+        if (change.Type !== "Heartbeat") { // No need to record /changes API heartbeats.
+            var queue = this.loadEventQueue();
+            if (this.isOwner(queue)) {
+                queue.events.push({
+                    time: new Date().getTime(),
+                    dtoJson: changeDtoJson
+                });
 
-    private reuseExistingConnection() {
-        setTimeout(() => this.pingSharedConnectionForUpdates(), changesApi.sharedConnectionPingInterval);
-    }
+                // For performance's sake, don't keep more than N events.
+                // Events are typically processed within 5 seconds, and aren't used after that.
+                var maxEvents = 50;
+                if (queue.events.length > maxEvents) {
+                    queue.events.splice(0, 1);
+                }
 
-    private pingSharedConnectionForUpdates() {
-        this.sharedConnection = this.loadSharedConnection();
-        var connectionForDb = this.getSharedConnectionForDb();
-        if (this.isConnectionOwnedByOtherTab(connectionForDb) && this.isConnectionLive(connectionForDb)) {
-            try {
-                this.processSharedConnectionEvents(connectionForDb);
-            } finally {
-                setTimeout(() => this.pingSharedConnectionForUpdates(), changesApi.sharedConnectionPingInterval);
+                this.storeEventQueue(queue);
             }
-        } else {
-            // The other tab has been closed or disconnected.
-            this.takeoverAsPrimaryConnection();
         }
     }
 
-    private takeoverAsPrimaryConnection() {
-        var connection = this.getSharedConnectionForDb();
-        if (connection.id !== this.eventsId) {
-            connection.id = this.eventsId;
-            connection.lastHeartbeatMs = new Date().getTime();
-            this.storeSharedConnection();
+    private isOwner(queue: changesApiEventQueue) {
+        return queue.ownerId === this.eventsId;
+    }
+
+    private isOwnerDead(queue: changesApiEventQueue) {
+        var differentOwner = queue.ownerId !== this.eventsId;
+        var ownerIsDead = new Date().getTime() - queue.lastHeartbeatMs > changesApi.eventQueueOwnerDeadTime;
+        return differentOwner && ownerIsDead;
+    }
+
+    private takeOwnership(queue: changesApiEventQueue) {
+        queue.lastHeartbeatMs = new Date().getTime();
+        queue.ownerId = this.eventsId;
+    }
+
+    private monitorEventQueueOwnership() {
+        var queue = this.loadEventQueue();
+        var nowMs = new Date().getTime();
+        var isExpectedToBeOwner = !!this.source;
+        var isOwner = this.isOwner(queue);
+        if (this.isOwnerDead(queue)) {
+            // Owner is dead! Taking ownership.
+            this.takeOwnership(queue);
+            this.storeEventQueue(queue);
             this.connect();
         }
-    }
-
-    private processSharedConnectionEvents(connection: sharedChangesConnectionDatabase) {
-        var eventsAfterLastPing = connection
-            .events
-            .filter(e => e.time >= this.sharedConnectionLastPingMs);
-        try {
-            eventsAfterLastPing.forEach(e => this.processEvent(e.eventJson));
-        } finally {
-            this.sharedConnectionLastPingMs = new Date().getTime();
-        }
-    }
-
-    private isConnectionOwnedByOtherTab(connection: sharedChangesConnectionDatabase) {
-        return connection.id !== this.eventsId;
-    }
-
-    private isConnectionLive(connection: sharedChangesConnectionDatabase) {
-        var consideredAliveMs = 10000;
-        var timeSinceLastHeartbeat = new Date().getTime() - connection.lastHeartbeatMs;
-        return timeSinceLastHeartbeat < consideredAliveMs;
-    }
-
-    private recordChangeOnSharedConnection(eventJson: string) {
-        var sharedConnectionForDb = this.getSharedConnectionForDb();
-        sharedConnectionForDb.events.push({
-            time: new Date().getTime(),
-            eventJson: eventJson
-        });
-
-        // For performance's sake, don't keep more than 100 events.
-        if (sharedConnectionForDb.events.length > 100) {
-            sharedConnectionForDb.events.splice(0, 1);
+        else if (isExpectedToBeOwner && isOwner) {
+            // We're the owner. Record a heartbeat and move on.
+            queue.lastHeartbeatMs = new Date().getTime();
+            this.storeEventQueue(queue);
+        } else if (isExpectedToBeOwner && !isOwner) {
+            // Somebody else grabbed our queue and thought we were dead.
+            // Rumors of my demise are greatly exaggerated!
+            // This should never happen. But, no worries, we'll graciously let them hold the connection.
+            this.disconnect();
+        } else if (!isExpectedToBeOwner && !isOwner) {
+            // Someone else is the owner. Consume the events in the shared queue.
+            queue.events
+                .filter(e => e.time > this.lastEventQueueCheckTime)
+                .reverse() // So that the oldest ones are processed first.
+                .map(e => <changesApiEventDto>JSON.parse(e.dtoJson))
+                .forEach(e => this.processEvent(e));
+            this.lastEventQueueCheckTime = nowMs;
         }
 
-        this.storeSharedConnection();
+        this.pollQueueHandle = setTimeout(() => this.monitorEventQueueOwnership(), changesApi.eventQueuePollInterval);
     }
 }
 

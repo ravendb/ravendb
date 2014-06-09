@@ -15,6 +15,8 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import copyIndexDialog = require("viewmodels/copyIndexDialog");
+import app = require("durandal/app");
 
 class editIndex extends viewModelBase { 
 
@@ -34,7 +36,7 @@ class editIndex extends viewModelBase {
 
     constructor() {
         super();
-
+      
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
@@ -161,18 +163,35 @@ class editIndex extends viewModelBase {
     }
 
     updateUrl(indexName: string) {
-        router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
+        if(indexName!=null)
+            router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
     }
 
     refreshIndex() {
         var existingIndex = this.editedIndex();
+        var existingIndexName = "";
         if (existingIndex) {
             this.editedIndex(null);
-            this.editExistingIndex(existingIndex.name());
+            existingIndexName = existingIndex.name();
+
+            this.fetchIndexToEdit(existingIndexName)
+                .done(()=> {
+                    this.editExistingIndex(existingIndexName);
+                    
+
+                    viewModelBase.dirtyFlag().reset();
+                    if (existingIndexName.length > 0)
+                        this.updateUrl(existingIndexName);
+                }).fail(() => this.editedIndex(existingIndex));
+
+        } else {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+            if (existingIndexName.length > 0)
+                this.updateUrl(existingIndexName);
         }
 
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        
     }
 
     deleteIndex() {
@@ -180,7 +199,7 @@ class editIndex extends viewModelBase {
         if (index) {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm([index.name()], db);
-            deleteViewModel.deleteTask.done(() => router.navigate(appUrl.forIndexes(db)))
+            deleteViewModel.deleteTask.done(()=> router.navigate(appUrl.forIndexes(db)));
 
             dialog.show(deleteViewModel);
         }
@@ -275,6 +294,10 @@ class editIndex extends viewModelBase {
 
     removeSpatialField(fieldIndex: number) {
         this.editedIndex().spatialFields.splice(fieldIndex, 1);
+    }
+
+    copyIndex() {
+        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 }
 

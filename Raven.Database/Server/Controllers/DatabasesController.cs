@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,8 +14,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class DatabasesController : RavenDbApiController
 	{
-		[HttpGet][Route("databases")]
-		public HttpResponseMessage Databases()
+		[HttpGet]
+		[Route("databases")]
+		public HttpResponseMessage Databases(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
 				return
@@ -40,9 +40,16 @@ namespace Raven.Database.Server.Controllers
 			var nextPageStart = start; // will trigger rapid pagination
 			var databases = Database.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
 																	GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-			var data = databases
-				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
-				.ToArray();
+
+			var databaseData = databases
+				.Select(database =>
+					new 
+					{
+						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
+						Disabled = database.Value<bool>("Disabled")
+					}).ToList();
+
+			var databaseNames = databaseData.Select(databaseObject => databaseObject.Name).ToArray();
 
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
@@ -53,8 +60,8 @@ namespace Raven.Database.Server.Controllers
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-
-					approvedDatabases = authorizer.GetApprovedDatabases(user, this, data);
+					
+					approvedDatabases = authorizer.GetApprovedDatabases(user, this, databaseNames);
 				}
 			}
 
@@ -68,9 +75,12 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			if (approvedDatabases != null)
-				data = data.Where(s => approvedDatabases.Contains(s)).ToArray();
+			{
+				databaseData = databaseData.Where(database => approvedDatabases.Contains(database.Name)).ToList();
+				databaseNames = databaseNames.Where(databaseName => approvedDatabases.Contains(databaseName)).ToArray();
+			}
 
-			var msg = GetMessageWithObject(data);
+			var msg = getAdditionalData ? GetMessageWithObject(databaseData) : GetMessageWithObject(databaseNames);
 			WriteHeaders(new RavenJObject(), lastDocEtag, msg);
 
 			return msg;

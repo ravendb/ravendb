@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
@@ -107,17 +106,6 @@ namespace Raven.Client.Document.Batches
 		public IDisposable EnterContext()
 		{
 			return loadOperation.EnterMultiLoadContext();
-		}
-
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			return commands.Get(ids, includePaths, transformer);
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			HandleResponse((MultiLoadResult) result);
 		}
 	}
 }

@@ -164,10 +164,11 @@ namespace Raven.Database.Server.Connections
 		{
 			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
 
-			if (matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()) == false)
-				return;
-
-			Enqueue(value);
+		    if (matchingBulkInserts.Contains(string.Empty) || matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()))
+		    {
+                Enqueue(value);
+		    }
+			return;
 		}
 
 		public void Send(DocumentChangeNotification documentChangeNotification)
@@ -299,25 +300,6 @@ namespace Raven.Database.Server.Connections
 
 			return false;
 		}
-
-	//	private readonly ConcurrentQueue<Notification> pendingMessages = new ConcurrentQueue<Notification>();
-
-		//private async Task Enqueue(Notification msg)
-		//{
-		//	if (eventsTransport == null || eventsTransport.Connected == false)
-		//	{
-		//		pendingMessages.Enqueue(msg);
-		//		return;
-		//	}
-		//	try
-		//	{
-		//		eventsTransport.SendAsync(msg);
-		//		pendingMessages.Enqueue(msg);
-		//	}
-		//	catch (Exception)
-		//	{
-		//	}
-		//}
 
 		private void Enqueue(object msg)
 		{

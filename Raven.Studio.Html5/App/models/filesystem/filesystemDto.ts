@@ -11,6 +11,7 @@ interface filesystemSynchronizationDetailsDto {
     FileETag: string;
     DestinationUrl: string;
     Type: filesystemSynchronizationType;
+    Direction: synchronizationDirection;
 }
 
 interface filesystemMetricsHistogramDataDto {
@@ -29,7 +30,7 @@ interface filesystemMetricsMeterDataDto {
     FifteenMinuteRate: number;
 }
 
-interface filesystemMetricsDto{
+interface filesystemMetricsDto {
     FilesWritesPerSecond: number;
     RequestsPerSecond: number;
     Requests: filesystemMetricsMeterDataDto;
@@ -49,7 +50,7 @@ interface filesystemFileHeaderDto {
 
     TotalSize?: number;
     UploadedSize: number;
-		
+
     HumaneTotalSize: string;
     HumaneUploadedSize: string;
 
@@ -66,7 +67,7 @@ interface fileMetadataDto {
     'Origin': string;
 }
 
-interface filesystemSynchronizationReportDto{
+interface filesystemSynchronizationReportDto {
 
     FileName: string;
     FileETag: string;
@@ -86,7 +87,7 @@ interface filesystemSearchResultsDto {
     PageSize: number;
 }
 
-interface filesystemConfigSearchResultsDto{
+interface filesystemConfigSearchResultsDto {
     ConfigNames: string[];
     TotalCount: number;
     Start: number;
@@ -123,4 +124,46 @@ interface synchronizationDestinationDto {
     Domain: string;
     ApiKey: string;
     FileSystem: string;
+}
+
+interface folderNodeDto {
+    key: string;
+    title: string;
+    isLazy: boolean;
+    isFolder: boolean
+    addClass?: string;
+}
+
+interface synchronizationUpdateNotification {
+    FileSystemName: string;
+    FileName: string;
+    DestinationFileSystemUrl: string;
+    SourceServerId: string;
+    SourceFileSystemUrl: string;
+    Type: filesystemSynchronizationType;
+    Action: synchronizationAction;
+    SynchronizationDirection: synchronizationDirection;
+}
+
+enum synchronizationAction {
+    Enqueue,
+    Start,
+    Finish
+}
+
+enum synchronizationDirection {
+    Outgoing,
+    Incoming
+}
+
+interface synchronizationConflictNotification {
+    FileSystemName;
+    FileName;
+    SourceServerUrl;
+    Status: conflictStatus;
+}
+
+enum conflictStatus {
+    Detected = 0,
+    Resolved = 1
 }

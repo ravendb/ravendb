@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Tests.Common;
 
@@ -65,11 +66,9 @@ namespace Raven.Tests.Bugs
 				{
 					s.Store(new AccurateCount.User { Name = "Ayende" });
 					s.SaveChanges();
-
-					s.Advanced.DocumentQuery<AccurateCount.User>("test")
-						.WaitForNonStaleResults()
-						.FirstOrDefault();
 				}
+
+				WaitForIndexing(documentStore);
 
 				var task = new Task(() =>
 				{

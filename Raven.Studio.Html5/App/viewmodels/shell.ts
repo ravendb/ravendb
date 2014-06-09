@@ -33,6 +33,7 @@ import changeSubscription = require("models/changeSubscription");
 
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import resource = require("models/resource");
 
 import counterStorage = require("models/counter/counterStorage");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
@@ -56,18 +57,21 @@ class shell extends viewModelBase {
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
     canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
-    
+    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
+
     coutersLoadedTask:JQueryPromise<any>;
     currentRawUrl = ko.observable<string>("");
-    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
     refreshTimeoutFlag: boolean = true;
+    isDatabaseDisabled: KnockoutComputed<boolean>;
+    listedDatabases: KnockoutComputed<database[]>;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
+    static currentFsChangesApi = ko.observable<changesApi>(null);
 
     globalDocPrefixChangesSubscription: changeSubscription;
 
@@ -95,10 +99,12 @@ class shell extends viewModelBase {
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
+        ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { console.log("ActivateDatabase"); this.updateDbChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { console.log("ActivateFilesystem"); this.updateFsChangesApi(fs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
@@ -106,7 +112,20 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()); 
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+        this.isDatabaseDisabled = ko.computed(() => {
+            var activeDb = this.activeDatabase();
+            return !!activeDb ? activeDb.disabled() : false;
+        });
+
+        this.listedDatabases = ko.computed(() => {
+            var currentDb = this.activeDatabase();
+            if (!!currentDb) {
+                return this.databases().filter(database => database.name != currentDb.name);
+            }
+            return this.databases();
+        });
     }
 
     activate(args: any) {
@@ -186,8 +205,6 @@ class shell extends viewModelBase {
         }, "Raven/Databases");
     }
 
-
-
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
             NProgress.start();
@@ -216,7 +233,13 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x => x.isVisible()).activate();
+            var urlDatabase = appUrl.getDatabase();
+            var newSelectedDb;
+            if (urlDatabase != null && (newSelectedDb = this.databases.first(x => x.name == urlDatabase.name)) != null) {
+                newSelectedDb.activate();
+            } else {
+                this.databases.first(x => x.isVisible()).activate();
+            }
         }
     }
 
@@ -243,7 +266,7 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
-            });
+        });
 
         this.filesystemsLoadedTask = new getFilesystemsCommand()
             .execute()
@@ -291,6 +314,20 @@ class shell extends viewModelBase {
         });
     }
 
+    dataLoadProgress(splashType?: alertType) {
+        if (!splashType) {
+            NProgress.configure({ showSpinner: false });
+            NProgress.done();
+        } else if (splashType == alertType.warning) {
+            NProgress.configure({ showSpinner: true });
+            NProgress.start();
+        } else {
+            NProgress.done();
+            NProgress.configure({ showSpinner: false });
+            this.showAlert(new alertArgs(alertType.danger, "Database load time is too long", "The database server might not be responding."));
+        }
+    }
+
     showAlert(alert: alertArgs) {
         if (alert.type === alertType.danger || alert.type === alertType.warning) {
             this.recordedErrors.unshift(alert);
@@ -306,7 +343,9 @@ class shell extends viewModelBase {
             if (alert.type === alertType.danger || alert.type === alertType.warning) {
                 fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
             }
-            setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
+            setTimeout(() => {
+                this.closeAlertAndShowNext(alert);
+            }, fadeTime);
         }
     }
 
@@ -359,28 +398,43 @@ class shell extends viewModelBase {
         }
     }
 
-    updateChangesApi(newDb: database) {
-        if (shell.currentDbChangesApi()) {
-            shell.currentDbChangesApi().dispose();
-        }
-        shell.currentDbChangesApi(new changesApi(newDb));
-
-        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                this.modelPolling();
-            } 
-        });
-
-        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                this.modelPolling();
-            } else {
-                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+    updateDbChangesApi(newResource: resource) {
+        if (!newResource.disabled()) {
+            if (shell.currentDbChangesApi()) {
+                shell.currentDbChangesApi().dispose();
             }
-        });
+
+            shell.currentDbChangesApi(new changesApi(newResource));
+
+            shell.currentDbChangesApi().watchAllDocs(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDBStatsBuffered());
+            shell.currentDbChangesApi().watchBulks(() => this.fetchDBStatsBuffered());
+        }
+    }
+
+    updateFsChangesApi(newResource: resource) {
+        if (shell.currentFsChangesApi()) {
+            shell.currentFsChangesApi().dispose();
+        }
+        shell.currentFsChangesApi(new changesApi(newResource));
+    }
+
+    fetchDBStatsBuffered() {
+        //                if (this.modelPollingTimeoutFlag === true) {
+        //                    this.modelPollingTimeoutFlag = false;
+        //                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        //                    this.modelPolling();
+        //                }
+        //prev impl for indexChangeNotificationDto was . recheck required
+        //   shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+        //if (this.modelPollingTimeoutFlag === true) {
+         //   this.modelPollingTimeoutFlag = false;
+        //    this.modelPolling();
+       // } else {
+        //    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+        //}
+         //   });
+        this.fetchDbStats(this.activeDatabase());
     }
 
     reloadDatabases() {
@@ -391,8 +445,8 @@ class shell extends viewModelBase {
                     var existingDb = this.databases().first(d=> {
                         return d.name == result.name;
                     });
-                if (!existingDb ) {
-                    this.databases.unshift(result);
+                    if (!existingDb) {
+                        this.databases.unshift(result);
                     }
                 });
             });
@@ -412,7 +466,7 @@ class shell extends viewModelBase {
     }
 
     fetchDbStats(db: database) {
-        if (db) {
+        if (db && !db.disabled()) {
             new getDatabaseStatsCommand(db)
                 .execute()
                 .done(result=> db.statistics(result));

@@ -15,6 +15,7 @@ namespace Raven.Abstractions.FileSystem.Notifications
 
 	public enum SynchronizationAction
 	{
+        Enqueue,
 		Start,
 		Finish
 	}
