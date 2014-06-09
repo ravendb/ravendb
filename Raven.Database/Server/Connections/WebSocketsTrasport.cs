@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.Net;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Owin;
@@ -11,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Connections
 {
@@ -152,10 +153,59 @@ namespace Raven.Database.Server.Connections
             {
                 _context.Response.StatusCode = 400;
                 _context.Response.ReasonPhrase = "BadRequest";
-                _context.Response.Write("Id is mandatory");
+                _context.Response.Write("{ 'Error': 'Id is mandatory' }");
                 return false;
             }
+            var documentDatabase = await GetDatabase();
+            if (documentDatabase == null) 
+                return false;
+
+            var singleUseToken = _context.Request.Headers["Single-Use-Auth-Token"];
+
+            if (string.IsNullOrEmpty(singleUseToken) == false)
+            {
+                object msg;
+                HttpStatusCode code;
+                IPrincipal user;
+                if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, documentDatabase.Name, out msg, out code, out user) == false)
+                {
+                    _context.Response.StatusCode = (int) code;
+                    _context.Response.ReasonPhrase = code.ToString();
+                    _context.Response.Write(RavenJToken.FromObject(msg).ToString(Formatting.Indented));
+                    return false;
+                }
+            }
+            else
+            {
+                switch (_options.SystemDatabase.Configuration.AnonymousUserAccessMode)
+                {
+                    case AnonymousUserAccessMode.Admin:
+                    case AnonymousUserAccessMode.All:
+                    case AnonymousUserAccessMode.Get:
+                        // this is effectively a GET request, so we'll allow it
+                        // under this circumstances
+                        break;
+                    case AnonymousUserAccessMode.None:
+                        _context.Response.StatusCode = 403;
+                        _context.Response.ReasonPhrase = "Forbidden";
+                        _context.Response.Write("{'Error': 'Single use token is required for authenticated web sockets connections' }");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(_options.SystemDatabase.Configuration.AnonymousUserAccessMode.ToString());
+                }
+            }
+
+            documentDatabase.TransportState.Register(this);
+
+            return true;
+        }
+
+        private async Task<DocumentDatabase> GetDatabase()
+        {
             var dbName = GetDatabaseName();
+
+            if (dbName == null)
+                return _options.SystemDatabase;
 
             DocumentDatabase documentDatabase;
             try
@@ -167,14 +217,9 @@ namespace Raven.Database.Server.Connections
                 _context.Response.StatusCode = 500;
                 _context.Response.ReasonPhrase = "InternalServerError";
                 _context.Response.Write(e.ToString());
-                return false;
+                return null;
             }
-
-            // TODO: check permissions
-
-            documentDatabase.TransportState.Register(this);
-
-            return true;
+            return documentDatabase;
         }
 
         private string GetDatabaseName()
