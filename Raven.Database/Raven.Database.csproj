@@ -372,6 +372,7 @@
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
     <Compile Include="Server\RavenFS\Controllers\AdminFileSystemController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FilesChangesController.cs" />
     <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FoldersController.cs" />

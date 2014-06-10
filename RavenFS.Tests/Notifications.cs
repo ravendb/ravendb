@@ -26,8 +26,8 @@ namespace RavenFS.Tests
         public async Task NotificationReceivedWhenFileAdded()
         {
             var notificationTask = store.Changes().ForFolder("/")
-                                                   .Timeout(TimeSpan.FromSeconds(2))
-                                                   .Take(1).ToTask();
+                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Take(1).ToTask();
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
@@ -123,7 +123,7 @@ namespace RavenFS.Tests
 		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
             var notificationTask = store.Changes().ForConfiguration()
-                                                .Timeout(TimeSpan.FromSeconds(2))
+                                                .Timeout(TimeSpan.FromSeconds(5))
                                                 .Take(1).ToTask();
 
             await client.Configuration.DeleteKeyAsync("Test");

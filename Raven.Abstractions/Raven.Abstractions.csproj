@@ -281,11 +281,9 @@
     <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
     <Compile Include="FileSystem\Notifications\ConfigurationChangeNotification.cs" />
-    <Compile Include="FileSystem\Notifications\ConflictDetectedNotification.cs" />
     <Compile Include="FileSystem\ConflictItem.cs" />
     <Compile Include="FileSystem\Notifications\ConflictNotification.cs" />
     <Compile Include="FileSystem\ConflictResolutionStrategy.cs" />
-    <Compile Include="FileSystem\Notifications\ConflictResolvedNotification.cs" />
     <Compile Include="FileSystem\DestinationSyncResult.cs" />
     <Compile Include="FileSystem\Notifications\FileChangeNotification.cs" />
     <Compile Include="FileSystem\FilesSortOptions.cs" />

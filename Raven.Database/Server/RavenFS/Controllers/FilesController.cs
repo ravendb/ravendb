@@ -25,9 +25,9 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	public class FilesController : RavenFsApiController
-	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class FilesController : RavenFsApiController
+    {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/files")]

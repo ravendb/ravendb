@@ -32,7 +32,7 @@ namespace Raven.Client.FileSystem
                                           IAsyncFilesCommands, IAsyncFilesCommandsImpl,
                                           IDisposable, IHoldProfilingInformation
     {
-        private readonly FilesChangesClient notifications;
+        private readonly Lazy<FilesChangesClient> notifications;
 
         private IDisposable failedUploadsObserver;
 
@@ -65,7 +65,7 @@ namespace Raven.Client.FileSystem
                 FileSystem = fileSystemName;                
                 ApiKey = credentials.ApiKey;
 
-                notifications = new FilesChangesClient(serverUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, () => { });
+                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, () => { }));
 
                 InitializeSecurity();
             }
@@ -96,7 +96,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(fileSystem))
                 fileSystem = this.FileSystem;
 
-            return this.ServerUrl + "/fs/" + fileSystem;
+            return this.ServerUrl + "/fs/" + Uri.EscapeDataString(fileSystem);
         }
 
         public string FileSystem { get; private set; }
@@ -125,8 +125,8 @@ namespace Raven.Client.FileSystem
             {
                 if (value)
                 {
-                    failedUploadsObserver = notifications.ForCancellations()
-                                                         .Subscribe(CancelFileUpload);
+                    failedUploadsObserver = notifications.Value.ForCancellations()
+                                                .Subscribe(CancelFileUpload);
                 }
                 else
                 {
@@ -1463,8 +1463,8 @@ namespace Raven.Client.FileSystem
 
         public override void Dispose()
         {            
-            if (notifications != null)
-                notifications.Dispose();
+            if (notifications.IsValueCreated)
+                notifications.Value.Dispose();
 
             base.Dispose();
         }
