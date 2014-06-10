@@ -82,7 +82,24 @@ namespace Raven.Tests.Core.Commands
                 var docs = store1.DatabaseCommands.ForSystemDatabase().GetDocuments(0, 20);
                 Assert.Equal(2, docs.Length);
                 Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
-                Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
+                Assert.NotNull(docs[1].DataAsJson.Value<RavenJObject>("Settings"));
+            }
+        }
+
+        [Fact]
+        public void CanGetUrlForDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    "items/1",
+                    null,
+                    RavenJObject.FromObject(new Company 
+                    {
+                        Name = "Name"
+                    }),
+                    new RavenJObject());
+                Assert.Equal(store.Url + "/databases/CanGetUrlForDocument/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
             }
         }
 	}
