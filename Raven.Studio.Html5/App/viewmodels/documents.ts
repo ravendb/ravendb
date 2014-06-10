@@ -45,6 +45,55 @@ class documents extends viewModelBase {
         this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
     }
 
+
+    updateCollections(receivedCollections: Array<collection>, db: database) {
+
+        var deletedCollections = [];
+        var curSelectedCollectionName = this.selectedCollection().name;
+        var collectionsChanged = false;
+
+        this.collections().forEach((col: collection) => {
+            if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
+                deletedCollections.push(col);
+                collectionsChanged = true;
+            }
+        });
+
+        this.collections.removeAll(deletedCollections);
+
+        receivedCollections.forEach((receivedCol: collection) => {
+            var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
+            if (!foundCollection) {
+                this.collections.push(receivedCol);
+                receivedCol.fetchTotalDocumentCount();
+                collectionsChanged = true;
+            }
+        });
+
+        this.collections.valueHasMutated();
+
+        var collectionToSelect = this.collections().first(c => c.name === curSelectedCollectionName) || this.allDocumentsCollection;
+        collectionToSelect.activate();
+    }
+
+    
+
+    throttledFetchCollections() {
+        if (this.modelPollingTimeoutFlag === true) {
+            this.modelPollingTimeoutFlag = false;
+            setTimeout(() => {
+                var db = appUrl.getDatabase();
+                new getCollectionsCommand(db)
+                    .execute()
+                    .done(results => this.updateCollections(results, db)).always(() => {
+                        this.modelPollingTimeoutFlag = true;
+                        this.isDocumentsUpToDate = true;
+                    });
+            }, 5000);
+        }
+    }
+
+
     activate(args) {
         super.activate(args);
 
@@ -53,26 +102,13 @@ class documents extends viewModelBase {
             this.isDocumentsUpToDate = false;
             var collections = this.collections();
             var curCollection = this.collections.first(x => x.name === e.CollectionName);
+            
+            if(!!curCollection)
+                curCollection.isUpToDate(false);
 
-            if (!curCollection) {
-                var systemDocumentsCollection = this.collections.first(x => x.isSystemDocuments === true);
-                if (!!systemDocumentsCollection && (!!e.CollectionName || (!!e.Id && e.Id.indexOf("Raven/Databases/") == 0))) {
-                    curCollection = systemDocumentsCollection;
-                }
-            }
+            this.allDocumentsCollection.isUpToDate(false);
 
-            // for put event, if collection is recognized, increment collection and allDocuments count, if not, create new one also
-            if (e.Type == documentChangeType.Put) {
-                if (!!curCollection) {
-                    curCollection.documentCount(curCollection.documentCount() + 1);
-                } else {
-                    curCollection = new collection(e.CollectionName, this.activeDatabase());
-                    curCollection.documentCount(1);
-                    this.collections.push(curCollection);
-                }
-                this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() + 1);
-                // for delete event, if collection is recognized, decrease collection and allDocuments count, if left with zero documents, delete collection
-            } else if (e.Type == documentChangeType.Delete) {
+            if (e.Type == documentChangeType.Delete) {
                 if (!!curCollection) {
                     if (curCollection.documentCount() == 1) {
                         this.collections.remove(curCollection);
@@ -80,27 +116,20 @@ class documents extends viewModelBase {
                         this.selectCollection(this.allDocumentsCollection);
                     } else {
                         curCollection.documentCount(curCollection.documentCount() - 1);
-                       
+
                     }
                 }
             }
-        });
 
+            this.throttledFetchCollections();
+        });
+        
         // treat bulk Insert events
         this.currentDBBulkInsertSubscription = shell.currentDbChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
             if (e.Type == documentChangeType.BulkInsertEnded) {
-
                 this.isDocumentsUpToDate = false;
 
-                if (this.modelPollingTimeoutFlag === true) {
-                    this.modelPollingTimeoutFlag = false;
-                    setTimeout(() => {
-                        this.fetchCollections(appUrl.getDatabase()).always(() => {
-                            this.modelPollingTimeoutFlag = true;
-                            this.isDocumentsUpToDate = true;
-                        });
-                    }, 10000);
-                }
+                this.throttledFetchCollections();
             }
         });
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
@@ -113,15 +142,7 @@ class documents extends viewModelBase {
 
             this.isDocumentsUpToDate = false;
 
-            if (this.modelPollingTimeoutFlag === true) {
-                this.modelPollingTimeoutFlag = false;
-                setTimeout(() => {
-                    this.fetchCollections(appUrl.getDatabase()).always(() => {
-                        this.modelPollingTimeoutFlag = true;
-                        this.isDocumentsUpToDate = true;
-                    });
-                }, 10000);
-            }
+            this.throttledFetchCollections();
         }
     }
 
@@ -238,6 +259,14 @@ class documents extends viewModelBase {
                 this.allDocumentsCollection.activate();
             });
             app.showDialog(viewModel);
+        }
+    }
+
+    refreshCollection() {
+        var collection = this.selectedCollection();
+        if (collection) {
+            collection.fetchTotalDocumentCount();
+            this.selectedCollectionChanged(collection);
         }
     }
 

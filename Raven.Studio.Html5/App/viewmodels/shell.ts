@@ -396,20 +396,6 @@ class shell extends viewModelBase {
     }
 
     fetchDBStatsBuffered() {
-        //                if (this.modelPollingTimeoutFlag === true) {
-        //                    this.modelPollingTimeoutFlag = false;
-        //                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-        //                    this.modelPolling();
-        //                }
-        //prev impl for indexChangeNotificationDto was . recheck required
-        //   shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-        //if (this.modelPollingTimeoutFlag === true) {
-         //   this.modelPollingTimeoutFlag = false;
-        //    this.modelPolling();
-       // } else {
-        //    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-        //}
-         //   });
         this.fetchDbStats(this.activeDatabase());
     }
 
@@ -456,17 +442,23 @@ class shell extends viewModelBase {
     }
 
     fetchDbStats(db: database) {
-        if (db && !db.disabled()) {
-            new getDatabaseStatsCommand(db)
-                .execute()
-                .done(result=> db.statistics(result));
-        }
 
-        var fs = this.activeFilesystem();
-        if (fs) {
-            new getFilesystemStatsCommand(fs)
-                .execute()
-                .done(result=> fs.statistics(result));
+        if (this.modelPollingTimeoutFlag === true) {
+            this.modelPollingTimeoutFlag = false;
+            setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+            
+            if (db && !db.disabled()) {
+                new getDatabaseStatsCommand(db)
+                    .execute()
+                    .done(result=> db.statistics(result));
+            }
+
+            var fs = this.activeFilesystem();
+            if (fs) {
+                new getFilesystemStatsCommand(fs)
+                    .execute()
+                    .done(result=> fs.statistics(result));
+            }
         }
     }
 

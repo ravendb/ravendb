@@ -13,6 +13,7 @@ class collection {
     documentCount: any = ko.observable(0);
     isAllDocuments = false;
     isSystemDocuments = false;
+    isUpToDate = ko.observable<boolean>(true); 
 
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
@@ -41,7 +42,10 @@ class collection {
         } else {
             new getCollectionInfoCommand(this)
                 .execute()
-                .done((info: collectionInfo) => this.documentCount(info.totalResults));
+                .done((info: collectionInfo) => {
+                    this.documentCount(info.totalResults);
+                    this.isUpToDate(true);
+            });
         }
     }
 
