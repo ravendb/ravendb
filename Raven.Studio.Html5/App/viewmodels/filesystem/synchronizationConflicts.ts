@@ -65,6 +65,7 @@ class synchronizationConflicts extends viewModelBase {
         var match = this.conflictsContains(conflictUpdate);
         if (match) {
             this.conflicts.remove(match);
+            this.selectedConflicts.remove(match.fileName);
         }
     }
 
@@ -114,7 +115,9 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 1, fs).execute();
+                        new resolveConflictCommand(conflict, 1, fs).execute().done(() => {
+                            this.selectedConflicts.remove(conflict);
+                        });
                     }
                 });
             app.showDialog(resolveConflictViewModel);
