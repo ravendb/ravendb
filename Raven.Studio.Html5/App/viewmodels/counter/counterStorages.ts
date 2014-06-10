@@ -10,7 +10,6 @@ import appUrl = require("common/appUrl");
 class counterStorages extends viewModelBase {
 
     counterStorages = ko.observableArray<counterStorage>();
-    hasCounterStorages = ko.computed(() => this.counterStorages().length > 0 );
     selectedCounterStorage = ko.observable<counterStorage>();
     searchCounterStorageByText = ko.observable<string>();
 
