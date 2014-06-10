@@ -9,6 +9,13 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using System.Collections.Generic;
+using Raven.Client.Connection;
+using Raven.Database.Server.Security;
+using System.Net;
+using Raven.Database.Server;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Core.Commands
 {
@@ -99,7 +106,7 @@ namespace Raven.Tests.Core.Commands
                         Name = "Name"
                     }),
                     new RavenJObject());
-                Assert.Equal(store.Url + "/databases/CanGetUrlForDocument/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
+                Assert.Equal(store.Url + "/databases/"+store.DefaultDatabase+"/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
             }
         }
 	}

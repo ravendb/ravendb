@@ -104,6 +104,7 @@
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="Commands\Batches.cs" />
+    <Compile Include="Commands\Querying.cs" />
     <Compile Include="Commands\Transformers.cs" />
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
