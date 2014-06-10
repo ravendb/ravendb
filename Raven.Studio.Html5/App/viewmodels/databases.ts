@@ -170,7 +170,7 @@ class databases extends viewModelBase {
                 .execute()
                 .done(() => {
                     var newDb = new database(databaseName);
-                    this.addNewDatabase(newDb);
+                    this.addNewDatabase(newDb, true);
 
                     var encryptionConfirmationDialogPromise = $.Deferred();
                     if (!jQuery.isEmptyObject(securedSettings)) {
@@ -303,10 +303,13 @@ class databases extends viewModelBase {
         }
     }
 
-    private addNewDatabase(db: database) {
+    private addNewDatabase(db: database, shouldSelectNewDatabase: boolean = true) {
         var databaseInList = this.databases.first((curDb: database) => curDb.name == db.name);
         if (!databaseInList) {
             this.databases.unshift(db);
+            if (shouldSelectNewDatabase) {
+                this.selectDatabase(db);
+            }
         }
     }
 
