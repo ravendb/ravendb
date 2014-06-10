@@ -107,9 +107,12 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsUpdated()
         {
-            var notificationTask = store.Changes().ForConfiguration()
-                                               .Timeout(TimeSpan.FromSeconds(2))
-                                               .Take(1).ToTask();
+            var changesApi = store.Changes();
+            await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
+
+            var notificationTask = changesApi.ForConfiguration()
+                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Take(1).ToTask();
 
             await client.Configuration.SetKeyAsync("Test", new RavenJObject());
 
@@ -122,9 +125,12 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
-            var notificationTask = store.Changes().ForConfiguration()
-                                                .Timeout(TimeSpan.FromSeconds(5))
-                                                .Take(1).ToTask();
+            var changesApi = store.Changes();
+            await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
+
+            var notificationTask = changesApi.ForConfiguration()
+                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Take(1).ToTask();
 
             await client.Configuration.DeleteKeyAsync("Test");
 

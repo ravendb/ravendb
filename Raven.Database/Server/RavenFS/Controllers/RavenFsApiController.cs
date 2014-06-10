@@ -54,7 +54,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 return (RequestManager)Configuration.Properties[typeof(RequestManager)];
             }
         }
-	    public RavenFileSystem RavenFileSystem
+	    public RavenFileSystem FileSystem
 		{
 			get
 			{
@@ -156,22 +156,22 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		public NotificationPublisher Publisher
 		{
-			get { return RavenFileSystem.Publisher; }
+			get { return FileSystem.Publisher; }
 		}
 
 		public BufferPool BufferPool
 		{
-			get { return RavenFileSystem.BufferPool; }
+			get { return FileSystem.BufferPool; }
 		}
 
 		public SigGenerator SigGenerator
 		{
-			get { return RavenFileSystem.SigGenerator; }
+			get { return FileSystem.SigGenerator; }
 		}
 
 		public Historian Historian
 		{
-			get { return RavenFileSystem.Historian; }
+			get { return FileSystem.Historian; }
 		}
 
 	    public override InMemoryRavenConfiguration SystemConfiguration
@@ -186,42 +186,42 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		protected ITransactionalStorage Storage
 		{
-			get { return RavenFileSystem.Storage; }
+			get { return FileSystem.Storage; }
 		}
 
 		protected IndexStorage Search
 		{
-			get { return RavenFileSystem.Search; }
+			get { return FileSystem.Search; }
 		}
 
 		protected FileLockManager FileLockManager
 		{
-			get { return RavenFileSystem.FileLockManager; }
+			get { return FileSystem.FileLockManager; }
 		}
 
 		protected ConflictArtifactManager ConflictArtifactManager
 		{
-			get { return RavenFileSystem.ConflictArtifactManager; }
+			get { return FileSystem.ConflictArtifactManager; }
 		}
 
 		protected ConflictDetector ConflictDetector
 		{
-			get { return RavenFileSystem.ConflictDetector; }
+			get { return FileSystem.ConflictDetector; }
 		}
 
 		protected ConflictResolver ConflictResolver
 		{
-			get { return RavenFileSystem.ConflictResolver; }
+			get { return FileSystem.ConflictResolver; }
 		}
 
 		protected SynchronizationTask SynchronizationTask
 		{
-			get { return RavenFileSystem.SynchronizationTask; }
+			get { return FileSystem.SynchronizationTask; }
 		}
 
 		protected StorageOperationsTask StorageOperationsTask
 		{
-			get { return RavenFileSystem.StorageOperationsTask; }
+			get { return FileSystem.StorageOperationsTask; }
 		}
 
 		protected PagingInfo Paging
@@ -420,7 +420,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
-	        RavenFileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
+	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
 	    }
 
         #region Metadata Headers Handling

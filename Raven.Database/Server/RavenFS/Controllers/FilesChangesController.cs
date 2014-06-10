@@ -32,13 +32,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
 
-            // TODO: Change this.RavenFileSystem to FileSystem
-            var connectionState = this.RavenFileSystem.TransportState.For(id, this);
+            var connectionState = this.FileSystem.TransportState.For(id, this);
 
             var cmd = GetQueryStringValue("command");
             if (Match(cmd, "disconnect"))
             {
-                RavenFileSystem.TransportState.Disconnect(id);
+                FileSystem.TransportState.Disconnect(id);
             }
             else if (Match(cmd, "watch-conflicts"))
             {
@@ -97,7 +96,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         {
             var eventsTransport = new ChangesPushContent(this);
             eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-            RavenFileSystem.TransportState.Register(eventsTransport);
+            FileSystem.TransportState.Register(eventsTransport);
             return new HttpResponseMessage { Content = eventsTransport };
         }
 

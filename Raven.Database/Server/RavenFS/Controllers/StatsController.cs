@@ -22,9 +22,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
             {
                 Name = FileSystemName,
                 FileCount = count,
-                Metrics = RavenFileSystem.CreateMetrics(),
-                ActiveSyncs = RavenFileSystem.SynchronizationTask.Queue.Active.ToList(),
-                PendingSyncs = RavenFileSystem.SynchronizationTask.Queue.Pending.ToList()
+                Metrics = FileSystem.CreateMetrics(),
+                ActiveSyncs = FileSystem.SynchronizationTask.Queue.Active.ToList(),
+                PendingSyncs = FileSystem.SynchronizationTask.Queue.Pending.ToList()
             };
 
             return this.GetMessageWithObject(stats).WithNoCache();
