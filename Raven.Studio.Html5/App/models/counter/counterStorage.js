@@ -7,9 +7,12 @@
 define(["require", "exports", "models/resource"], function(require, exports, resource) {
     var counterStorage = (function (_super) {
         __extends(counterStorage, _super);
-        function counterStorage(name) {
+        function counterStorage(name, isDisabled) {
+            if (typeof isDisabled === "undefined") { isDisabled = false; }
             _super.call(this, name, 'counterstorage');
             this.name = name;
+            this.isDisabled = isDisabled;
+            this.disabled(isDisabled);
             this.name = name;
         }
         counterStorage.prototype.activate = function () {
