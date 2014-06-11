@@ -30,11 +30,11 @@ class changesApi {
     private connect() {
         if ("WebSocket" in window) {
             var host = window.location.host;
-            var dbUrl = appUrl.forResourceQuery(this.rs);
+            var resourceUrl = appUrl.forResourceQuery(this.rs);
 
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            this.webSocket = new WebSocket("ws://" + host + dbUrl + '/changes/websocket?id=' + this.eventsId);
+            this.webSocket = new WebSocket("ws://" + host + resourceUrl + '/changes/websocket?id=' + this.eventsId);
 
             this.webSocket.onmessage = (e) => this.onEvent(e);
             this.webSocket.onerror = (e) => this.onError(e);

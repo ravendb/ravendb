@@ -86,7 +86,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateCounterStorageWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db, true); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.fetchFSStats(fs, true); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); this.fetchFSStats(fs, true); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
@@ -499,7 +499,7 @@ class shell extends viewModelBase {
         }
     }
     
-    updateFsChangesApi(newResource: resource) {
+    private updateFsChangesApi(newResource: resource) {
         if (shell.currentFsChangesApi()) {
             shell.currentFsChangesApi().dispose();
         }

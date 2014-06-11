@@ -367,7 +367,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 }                
 
 				NoSyncReason reason;
-                var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, baseUrl, out reason);
+                var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
 				if (work == null)
 				{
                     Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, baseUrl, reason.GetDescription());
