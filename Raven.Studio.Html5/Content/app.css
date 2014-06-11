@@ -218,6 +218,17 @@ body {
   cursor: default;
   text-decoration: line-through;
 }
+.resource-link {
+  padding-left: 5px;
+  overflow-x: hidden;
+  max-width: 130px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resource-link-disabled {
+  pointer-events: none;
+  cursor: default;
+}
 .document-collections li {
   outline: none;
 }
@@ -500,6 +511,12 @@ body {
 .popover {
   max-width: 30%;
 }
+#queryContainer .breadcrumb {
+  width: 100%;
+}
+#queryContainer .breadcrumb li {
+  overflow: visible!important;
+}
 #queryContainer .editor {
   height: 60px;
 }
@@ -686,7 +703,9 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*# sourceMappingURL=app.css.map */
+  /*#goToDocInput {
+        width: 10em;
+    }*/
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1023,6 +1042,12 @@ footer ul {
 }
 .quotas-settings-form .input-group {
   max-width: 300px;
+}
+.custom-functions-form .editor {
+  height: 500px;
+}
+.custom-functions-form .btn-toolbar {
+  margin-bottom: 10px;
 }
 .versioning-settings-form .versioning-card {
   display: inline-table;

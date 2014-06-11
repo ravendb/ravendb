@@ -43,6 +43,7 @@ class appUrl {
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
+        customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
 
         statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
         statusDebugChanges: ko.computed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
@@ -144,6 +145,16 @@ class appUrl {
         var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
         var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";       
         return resourceTag+"/edit?" + itemIdUrlPart + databaseUrlPart + pagedListInfo;
+    } 
+
+    static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
+        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+        var indexUrlPart = "&index=" + index;
+        var itemNumberUrlPart = "&item=" + itemNumber;
+        var queryInfoUrlPart = query? "&query=" + encodeURIComponent(query): "";
+        var sortInfoUrlPart = sort?"&sorts=" + sort:"";
+        var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";
+        return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
     } 
 
     static forNewDoc(db: database): string {
@@ -278,7 +289,11 @@ class appUrl {
         return "#databases/settings/scriptedIndex?" + appUrl.getEncodedDbPart(db);
     }
 
-	static forDocuments(collection: string, db: database): string {
+    static forCustomFunctionsEditor(db: database): string {
+        return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forDocuments(collection: string, db: database): string {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/documents?" + collectionPart + databasePart;
@@ -577,11 +592,11 @@ class appUrl {
     static forCurrentPage(rs: resource) {
         var routerInstruction = router.activeInstruction();
         if (routerInstruction) {
-            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
-            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== rs.name.toLowerCase();
+            var resourceNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
+            var isDifferentDbInAddress = !resourceNameInAddress || resourceNameInAddress !== rs.name.toLowerCase();
             if (isDifferentDbInAddress) {
                 var existingAddress = window.location.hash;
-                var existingDbQueryString = dbNameInAddress ? rs.type + "=" + encodeURIComponent(dbNameInAddress) : null;
+                var existingDbQueryString = resourceNameInAddress ? rs.type + "=" + encodeURIComponent(resourceNameInAddress) : null;
                 var newDbQueryString = rs.type + "=" + encodeURIComponent(rs.name);
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :

@@ -19,7 +19,10 @@ import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-
+import genUtils = require("common/generalUtils");
+import queryIndexCommand = require("commands/queryIndexCommand");
+import pagedResultSet = require("common/pagedResultSet");
+import querySort = require("models/querySort");
 class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
@@ -34,6 +37,8 @@ class editDocument extends viewModelBase {
     userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
+    queryResultList = ko.observable<pagedList>();
+    currentQueriedItemIndex:number;
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
@@ -44,7 +49,11 @@ class editDocument extends viewModelBase {
     isSaveEnabled: KnockoutComputed<Boolean>;
     textarea: any;
     documentSize: KnockoutComputed<string>;
+    isInDocMode = ko.observable(true);
+    queryIndex = ko.observable<String>();
 
+    docTitle: KnockoutComputed<string>;
+    
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
@@ -64,7 +73,7 @@ class editDocument extends viewModelBase {
         this.documentSize = ko.computed(() => {
             try {
                 var size: Number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
-                return this.formatAsCommaSeperatedString(size,2);    
+                return genUtils.formatAsCommaSeperatedString(size,2);    
             } catch (e) {
                 return "cannot compute";
             } 
@@ -92,23 +101,30 @@ class editDocument extends viewModelBase {
             },
             owner: this
         });
+
+
+        this.docTitle = ko.computed(() => {
+            if (this.isInDocMode() == true) {
+                //isCreatingNewDocument()===true?'New Document': editedDocId
+                if (this.isCreatingNewDocument() === true) {
+                    return 'New Document';
+                } else {
+                    return this.editedDocId();
+    }
+            } else {
+                return 'Projection';
+            }
+        });
     }
 
-    formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
-        var parts = input.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-        if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
-            parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
-        }
-        return parts.join(".");
-    }
+    
 
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
         super.canActivate(args);
+        var canActivateResult = $.Deferred();
         if (args && args.id) {
-            var canActivateResult = $.Deferred();
+            
             this.databaseForEditedDoc = appUrl.getDatabase();
             this.loadDocument(args.id)
                 .done(() => {
@@ -119,7 +135,46 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             return canActivateResult;
+        } else if (args && args.item && args.list) {
+            return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
+        }
+        else if (args && args.index ) {
+            this.isInDocMode(false);
+            var indexName: string = args.index;
+            var queryText: string = args.query;
+            var sorts: querySort[];
+            
+            if (args.sorts) {
+                sorts = args.sorts.split(',').map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
+                
         } else {
+                sorts = [];
+            }
+                
+            var resultsFetcher = (skip: number, take: number) => {
+                var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, queryText, sorts);
+                return command
+                    .execute();
+            };
+            var list = new pagedList(resultsFetcher);
+            var item = !!args.item && !isNaN(args.item) ? args.item : 0;
+            
+            list.getNthItem(item)
+                .done((doc: document) => {
+                    this.document(doc);
+                    this.lodaedDocumentName("");
+                    canActivateResult.resolve({ can: true });
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                });
+            this.currentQueriedItemIndex = item;
+            this.queryResultList(list);
+            this.queryIndex(indexName);
+            return canActivateResult;
+        }
+        else{
             return $.Deferred().resolve({ can: true });
         }
     }
@@ -158,7 +213,10 @@ class editDocument extends viewModelBase {
             this.appendRecentDocument(navigationArgs.id);
 
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-        } else {
+        } else if (navigationArgs && navigationArgs.index) {
+            //todo: implement SetRawJSONUrl for document from query
+        }
+        else{
             this.editNewDocument();
         }
     }
@@ -215,6 +273,7 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
         if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
             //the name of the document was changed and we have to save it as a new one
@@ -325,6 +384,7 @@ class editDocument extends viewModelBase {
 
     refreshDocument() {
         var meta = this.metadata();
+        if (this.isInDocMode()) {
         if (!this.isCreatingNewDocument()) {
             var docId = this.editedDocId();
             this.document(null);
@@ -335,6 +395,10 @@ class editDocument extends viewModelBase {
         } else {
             this.editNewDocument();
         }
+        } else {
+            this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
+            this.lodaedDocumentName("");
+    }
     }
 
     deleteDocument() {
@@ -397,9 +461,16 @@ class editDocument extends viewModelBase {
         if (list) {
             list.getNthItem(index)
                 .done((doc: document) => {
+                    if (this.isInDocMode() === true) {
                     this.loadDocument(doc.getId());
                     list.currentItemIndex(index);
                     this.updateUrl(doc.getId());
+                    }
+                    else {
+                        this.document(doc);
+                        this.lodaedDocumentName("");
+                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+                    }
                 });
         }
     }

@@ -638,7 +638,8 @@ namespace Raven.Client.Document
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
-                              meta.Value<string>(Constants.DocumentIdFieldName);
+                              meta.Value<string>(Constants.DocumentIdFieldName) ??
+                              enumerator.Current.Value<string>(Constants.DocumentIdFieldName);
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)

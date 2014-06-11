@@ -270,7 +270,7 @@
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
     <Compile Include="Counters\Controllers\CountersController.cs" />
-    <Compile Include="Server\Connections\WebSocketsTrasport.cs" />
+    <Compile Include="Server\Connections\WebSocketsTransport.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
@@ -1020,6 +1020,7 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
     <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
+    <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\BundlesHelper.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />

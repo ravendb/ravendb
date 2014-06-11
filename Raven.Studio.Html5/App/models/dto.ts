@@ -664,11 +664,19 @@ interface statusDebugIndexFieldsDto {
 
 interface debugDocumentStatsDto {
     Total: number;
+    TotalSize: number;
     Tombstones: number;
     System: number;
+    SystemSize: number;
     NoCollection: number;
-    Collections: dictionary<number>;
+    NoCollectionSize: number;
+    Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
+}
+
+interface collectionStats {
+    Quantity: number;
+    Size: number;
 }
 
 enum documentChangeType {
@@ -678,7 +686,9 @@ enum documentChangeType {
     Common= 3,
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
-    BulkInsertError = 16
+    BulkInsertError = 16,
+    SystemResourceEnabled = 32,
+    SystemResourceDisabled = 64
 }
 
 enum indexChangeType {
@@ -757,12 +767,16 @@ enum ImportItemType {
 }
 
 interface changesApiEventDto {
+    Time: string; // ISO date string
     Type: string;
-    Value: any;
+    Value?: any;
 }
 
-interface databaseDto
-{
+interface databaseDto {
     Name: string;
     Disabled: boolean;
+}
+
+interface customFunctionsDto {
+    Functions: string;
 }
