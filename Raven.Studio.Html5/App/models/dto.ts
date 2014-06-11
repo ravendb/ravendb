@@ -767,8 +767,9 @@ enum ImportItemType {
 }
 
 interface changesApiEventDto {
+    Time: string; // ISO date string
     Type: string;
-    Value: any;
+    Value?: any;
 }
 
 interface databaseDto {
