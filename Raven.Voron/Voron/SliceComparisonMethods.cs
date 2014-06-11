@@ -9,6 +9,60 @@
 	{
 		public static SliceComparer NativeMemCmpInstance = NativeMethods.memcmp;
 
+		public static int Compare(Slice x, Slice y, SliceComparer cmp, int size)
+		{
+			fixed (byte* p1 = x._array)
+			fixed (byte* p2 = y._array)
+			{
+				return cmp(p1 != null ? p1 : x._pointer, p2 != null ? p2 : y._pointer, size);
+			}
+		}
+
+		public static int Compare(Slice x, PrefixedSlice y, SliceComparer cmp, ushort size)
+		{
+			fixed (byte* p1 = x._array)
+			fixed (byte* p2 = y._nonPrefixedData._array)
+			{
+				var xPtr = p1 != null ? p1 : x._pointer;
+				var yPtr = p2 != null ? p2 : y._nonPrefixedData._pointer;
+
+				if (y.Header.PrefixId == PrefixedSlice.NonPrefixedId)
+					return Compare(null, 0, y.Prefix, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+
+				var prefixBytesToCompare = Math.Min(y.Header.PrefixUsage, x.KeyLength);
+
+				int r;
+
+				if (x.PrefixComparisonCache.TryGetCachedResult(y.Header.PrefixId, y._prefix.PageNumber, prefixBytesToCompare, out r) == false)
+				{
+					r = Compare(null, 0, y.Prefix, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
+						prefixBytesToCompare);
+
+					x.PrefixComparisonCache.SetPrefixComparisonResult(y.Header.PrefixId, y._prefix.PageNumber, prefixBytesToCompare, r);
+				}
+
+				if (r != 0)
+					return r;
+
+				size -= prefixBytesToCompare;
+
+				return Compare(null, 0, null, 0, xPtr + prefixBytesToCompare, (ushort)(x.KeyLength - prefixBytesToCompare), yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+			}
+		}
+
+		public static int Compare(PrefixedSlice x, PrefixedSlice y, SliceComparer cmp, ushort size)
+		{
+			fixed (byte* p1 = x._nonPrefixedData._array)
+			fixed (byte* p2 = y._nonPrefixedData._array)
+			{
+				var xPtr = p1 != null ? p1 : x._nonPrefixedData._pointer;
+				var yPtr = p2 != null ? p2 : y._nonPrefixedData._pointer;
+
+				return Compare(x.Prefix, x.Header.PrefixUsage, y.Prefix, y.Header.PrefixUsage, xPtr, x.Header.NonPrefixedDataSize,
+					yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+			}
+		}
+
 		public static int Compare(byte* prefix_x, ushort prefix_x_len, byte* prefix_y, ushort prefix_y_len, byte* x, ushort x_len, byte* y,
 		   ushort y_len, SliceComparer cmp, ushort size)
 		{
@@ -87,47 +141,6 @@
 				size -= toCompare;
 
 				return cmp(x + toCompare, y, size);
-			}
-		}
-
-		public static int Compare(Slice x, Slice y, SliceComparer cmp, int size)
-		{
-			fixed (byte* p1 = x._array)
-			fixed (byte* p2 = y._array)
-			{
-				return cmp(p1 != null ? p1 : x._pointer, p2 != null ? p2 : y._pointer, size);
-			}
-		}
-
-		public static int Compare(Slice x, PrefixedSlice y, SliceComparer cmp, ushort size)
-		{
-			fixed (byte* p1 = x._array)
-			fixed (byte* p2 = y._nonPrefixedData._array)
-			{
-				var xPtr = p1 != null ? p1 : x._pointer;
-				var yPtr = p2 != null ? p2 : y._nonPrefixedData._pointer;
-
-				if (y.Header.PrefixId == PrefixedSlice.NonPrefixedId)
-					return Compare(null, 0, y.Prefix, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
-
-				var prefixBytesToCompare = Math.Min(y.Header.PrefixUsage, x.KeyLength);
-
-				int r;
-
-				if (x.PrefixComparisonCache.TryGetCachedResult(y.Header.PrefixId, y._prefix.PageNumber, prefixBytesToCompare, out r) == false)
-				{
-					r = Compare(null, 0, y.Prefix, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
-						prefixBytesToCompare);
-
-					x.PrefixComparisonCache.SetPrefixComparisonResult(y.Header.PrefixId, y._prefix.PageNumber, prefixBytesToCompare, r);
-				}
-
-				if (r != 0)
-					return r;
-
-				size -= prefixBytesToCompare;
-
-				return Compare(null, 0, null, 0, xPtr + prefixBytesToCompare, (ushort) (x.KeyLength - prefixBytesToCompare), yPtr, y.Header.NonPrefixedDataSize, cmp, size);
 			}
 		}
 	}

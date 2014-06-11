@@ -21,7 +21,7 @@ namespace Voron.Impl
 		private readonly long _id;
 
 		private readonly WriteAheadJournal _journal;
-		private Dictionary<Tuple<Tree, IMemorySlice>, Tree> _multiValueTrees;
+		private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
 		private readonly HashSet<long> _dirtyPages = new HashSet<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -391,15 +391,15 @@ namespace Voron.Impl
 			_pagerStates.Add(state);
 		}
 
-		internal void AddMultiValueTree(Tree tree, IMemorySlice key, Tree mvTree)
+		internal void AddMultiValueTree(Tree tree, MemorySlice key, Tree mvTree)
 		{
 			if (_multiValueTrees == null)
-				_multiValueTrees = new Dictionary<Tuple<Tree, IMemorySlice>, Tree>(new TreeAndSliceComparer());
+				_multiValueTrees = new Dictionary<Tuple<Tree, MemorySlice>, Tree>(new TreeAndSliceComparer());
 			mvTree.IsMultiValueTree = true;
 			_multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
 		}
 
-		internal bool TryGetMultiValueTree(Tree tree, IMemorySlice key, out Tree mvTree)
+		internal bool TryGetMultiValueTree(Tree tree, MemorySlice key, out Tree mvTree)
 		{
 			mvTree = null;
 			if (_multiValueTrees == null)
@@ -407,7 +407,7 @@ namespace Voron.Impl
 			return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
 		}
 
-		internal bool TryRemoveMultiValueTree(Tree parentTree, IMemorySlice key)
+		internal bool TryRemoveMultiValueTree(Tree parentTree, MemorySlice key)
 		{
 			var keyToRemove = Tuple.Create(parentTree, key);
 			if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))

@@ -9,7 +9,7 @@ namespace Voron.Trees
     {
         private readonly Cursor _cursor;
         private readonly int _len;
-        private readonly IMemorySlice _newKey;
+        private readonly MemorySlice _newKey;
         private readonly NodeFlags _nodeType;
         private readonly ushort _nodeVersion;
         private readonly Page _page;
@@ -21,7 +21,7 @@ namespace Voron.Trees
 
         public PageSplitter(Transaction tx,
             Tree tree,
-            IMemorySlice newKey,
+            MemorySlice newKey,
             int len,
             long pageNumber,
             NodeFlags nodeType,
@@ -163,7 +163,7 @@ namespace Voron.Trees
 
             // here the current key is the separator key and can go either way, so 
             // use newPosition to decide if it stays on the left node or moves to the right
-            IMemorySlice seperatorKey;
+            MemorySlice seperatorKey;
             if (currentIndex == splitIndex && newPosition)
             {
                 seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
@@ -206,7 +206,7 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private void AddSeparatorToParentPage(long pageNumber, IMemorySlice seperatorKey)
+        private void AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
         {
 	        var prefixedSeparatorKey = _parentPage.ConvertToPrefixedKey(seperatorKey, _parentPage.LastSearchPosition);
 

@@ -291,7 +291,7 @@ namespace Voron.Trees
 			return new PageIterator(nestedPage);
 		}
 
-		private Tree OpenOrCreateMultiValueTree(Transaction tx, IMemorySlice key, NodeHeader* item)
+		private Tree OpenOrCreateMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
@@ -308,7 +308,7 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, IMemorySlice key, int len,
+		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, MemorySlice key, int len,
 														NodeFlags requestedNodeType, ushort? version,
 														out byte* pos)
 		{

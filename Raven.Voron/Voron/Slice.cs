@@ -1,41 +1,31 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Impl;
 
 namespace Voron
 {
-	public unsafe class Slice : AbstractMemorySlice
+	public unsafe class Slice : MemorySlice
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
 		public static Slice Empty = new Slice(new byte[0]);
 
-		private ushort _size;
 		internal readonly byte[] _array;
 		internal byte* _pointer;
-
-		public override ushort Size
-		{
-			get { return _size; }
-		}
-
-		public override ushort KeyLength
-		{
-			get { return _size; }
-		}
 
 		public Slice(SliceOptions options)
 		{
 			Options = options;
 			_pointer = null;
 			_array = null;
-			_size = 0;
+			Size = 0;
+			KeyLength = 0;
 		}
 
 		public Slice(byte* key, ushort size)
 		{
-			_size = size;
+			Size = size;
+			KeyLength = size;
 			Options = SliceOptions.Key;
 			_array = null;
 			_pointer = key;
@@ -54,13 +44,15 @@ namespace Voron
 				_pointer = other._pointer;
 
 			Options = other.Options;
-			_size = size;
+			Size = size;
+			KeyLength = size;
 		}
 
 		public Slice(byte[] key, ushort size)
 		{
 			if (key == null) throw new ArgumentNullException("key");
-			_size = size;
+			Size = size;
+			KeyLength = size;
 			Options = SliceOptions.Key;
 			_pointer = null;
 			_array = key;
@@ -88,7 +80,7 @@ namespace Voron
 				const int p = 16777619;
 				int hash = (int)2166136261;
 
-				for (int i = 0; i < _size; i++)
+				for (int i = 0; i < Size; i++)
 					hash = (hash ^ _pointer[i]) * p;
 
 				hash += hash << 13;
@@ -107,7 +99,7 @@ namespace Voron
 				const int p = 16777619;
 				int hash = (int)2166136261;
 
-				for (int i = 0; i < _size; i++)
+				for (int i = 0; i < Size; i++)
 					hash = (hash ^ _array[i]) * p;
 
 				hash += hash << 13;
@@ -126,9 +118,9 @@ namespace Voron
 				return Options.ToString();
 
 			if (_array != null)
-				return Encoding.UTF8.GetString(_array,0, _size);
+				return Encoding.UTF8.GetString(_array,0, Size);
 
-			return new string((sbyte*)_pointer, 0, _size, Encoding.UTF8);
+			return new string((sbyte*)_pointer, 0, Size, Encoding.UTF8);
 		}
 
 		public IDisposable GetPointer(out byte* ptr)
@@ -146,7 +138,7 @@ namespace Voron
 			return null;
 		}
 
-		protected override int CompareData(IMemorySlice other, SliceComparer cmp, ushort size)
+		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)
 		{
 			var otherSlice = other as Slice;
 
@@ -156,74 +148,9 @@ namespace Voron
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
-			{
 				return SliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
 
-				//fixed (byte* x = _array)
-				//{
-				//	return SliceComparisonMethods.Compare(null, 0, prefixedSlice.Prefix, prefixedSlice.Header.PrefixUsage,
-				//		x != null ? x : _pointer, KeyLength, prefixedSlice.NonPrefixed,
-				//		prefixedSlice.Header.NonPrefixedDataSize, cmp, size);
-				//}
-
-				//int r;
-				//ushort? prefixLength = null;
-
-				//if (PrefixComparisonCache.TryGetCachedResult(prefixedSlice.Header.PrefixId, 0, out r) == false)
-				//{
-				//	prefixLength = Math.Min(prefixedSlice.Header.PrefixUsage, size);
-
-				//	r = prefixedSlice.ComparePrefixWithNonPrefixedData(this, cmp, 0, prefixLength.Value);
-
-				//	if (r != 0)
-				//		r *= -1;
-
-				//	PrefixComparisonCache.AddResult(prefixedSlice.Header.PrefixId, 0, r);
-				//}
-
-				//if (r != 0)
-				//	return r;
-
-				//// compare non prefixed data
-
-				//if(prefixLength == null)
-				//	prefixLength = Math.Min(prefixedSlice.Header.PrefixUsage, size);
-
-				//size -= prefixLength.Value;
-
-				//r = prefixedSlice.CompareNonPrefixedData(0, this, prefixLength.Value, cmp, size);
-
-				//return r * -1;
-			}
-
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
-		}
-
-		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int CompareSlices(Slice otherSlice, SliceComparer cmp, int size, int offset = 0, int otherOffset = 0)
-		{
-			if (_array != null)
-			{
-				fixed (byte* a = _array)
-				{
-					if (otherSlice._array != null)
-					{
-						fixed (byte* b = otherSlice._array)
-						{
-							return cmp(a + offset, b + otherOffset, size);
-						}
-					}
-					return cmp(a + offset, otherSlice._pointer + otherOffset, size);
-				}
-			}
-			if (otherSlice._array != null)
-			{
-				fixed (byte* b = otherSlice._array)
-				{
-					return cmp(_pointer + offset, b + otherOffset, size);
-				}
-			}
-			return cmp(_pointer + offset, otherSlice._pointer + otherOffset, size);
 		}
 
 		public static implicit operator Slice(string s)
@@ -235,12 +162,12 @@ namespace Voron
 		{
 			if (_array == null)
 			{
-				NativeMethods.memcpy(dest, _pointer, _size);
+				NativeMethods.memcpy(dest, _pointer, Size);
 				return;
 			}
 			fixed (byte* a = _array)
 			{
-				NativeMethods.memcpy(dest, a, _size);
+				NativeMethods.memcpy(dest, a, Size);
 			}
 		}
 
@@ -254,10 +181,10 @@ namespace Voron
 			if (_array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p, _pointer, _size);
+					NativeMethods.memcpy(p, _pointer, Size);
 				return;
 			}
-			Buffer.BlockCopy(_array, 0, dest, 0, _size);
+			Buffer.BlockCopy(_array, 0, dest, 0, Size);
 		}
 
 		public void CopyTo(int from, byte[] dest, int offset, int count)
@@ -298,22 +225,23 @@ namespace Voron
 			{
 				fixed (byte* dest = buffer)
 				{
-					NativeMethods.memcpy(dest, _pointer, _size);
+					NativeMethods.memcpy(dest, _pointer, Size);
 				}
 			}
 			else
 			{
 				Buffer.BlockCopy(_array, 0, buffer, 0, Size);
 			}
+
 			return new Slice(buffer);
 		}
 
 	    public ValueReader CreateReader()
 	    {
             if(_array != null)
-                return new ValueReader(_array, _size);
+                return new ValueReader(_array, Size);
 
-	        return new ValueReader(_pointer, _size);
+	        return new ValueReader(_pointer, Size);
 	    }
 
 		public override Slice Skip(ushort bytesToSkip)
@@ -322,9 +250,9 @@ namespace Voron
 				return this;
 
 			if (_pointer != null)
-				return new Slice(_pointer + bytesToSkip, (ushort)(_size - bytesToSkip));
+				return new Slice(_pointer + bytesToSkip, (ushort)(Size - bytesToSkip));
 
-			var toAllocate = _size - bytesToSkip;
+			var toAllocate = Size - bytesToSkip;
 			var array = new byte[toAllocate];
 
 			Buffer.BlockCopy(_array, bytesToSkip, array, 0, toAllocate);

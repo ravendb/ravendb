@@ -5,29 +5,30 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
-using Voron.Impl;
 
 namespace Voron
 {
-	public unsafe abstract class AbstractMemorySlice : IMemorySlice
+	using System.Text;
+
+	public unsafe abstract class MemorySlice
 	{
-		public abstract ushort Size { get; }
-		public abstract ushort KeyLength { get; }
-		public SliceOptions Options { get; protected set; }
+		public ushort Size;
+		public ushort KeyLength;
+		public SliceOptions Options;
 		public PrefixComparisonCache PrefixComparisonCache = new PrefixComparisonCache();
 
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
 		public abstract Slice Skip(ushort bytesToSkip);
 
-		protected abstract int CompareData(IMemorySlice other, SliceComparer cmp, ushort size);
+		protected abstract int CompareData(MemorySlice other, SliceComparer cmp, ushort size);
 
-		public bool Equals(IMemorySlice other)
+		public bool Equals(MemorySlice other)
 		{
 			return Compare(other) == 0;
 		}
 
-		public int Compare(IMemorySlice other)
+		public int Compare(MemorySlice other)
 		{
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
@@ -39,14 +40,19 @@ namespace Voron
 			return KeyLength - other.KeyLength;
 		}
 
-		public bool StartsWith(IMemorySlice other)
+		public static implicit operator MemorySlice(string s)
+		{
+			return new Slice(Encoding.UTF8.GetBytes(s));
+		}
+
+		public bool StartsWith(MemorySlice other)
 		{
 			if (KeyLength < other.KeyLength)
 				return false;
 			return CompareData(other, SliceComparisonMethods.NativeMemCmpInstance, other.KeyLength) == 0;
 		}
 
-		public ushort FindPrefixSize(IMemorySlice other)
+		public ushort FindPrefixSize(MemorySlice other)
 		{
 			var maxPrefixLength = Math.Min(KeyLength, other.KeyLength);
 

@@ -54,14 +54,13 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractMemorySlice.cs" />
+    <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\DebugActionType.cs" />
     <Compile Include="Debugging\DebugJournal.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Exceptions\DiskFullException.cs" />
     <Compile Include="Exceptions\QuotaException.cs" />
-    <Compile Include="IMemorySlice.cs" />
     <Compile Include="Impl\Backup\FullBackup.cs" />
     <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
     <Compile Include="Impl\Backup\VoronBackupUtil.cs" />

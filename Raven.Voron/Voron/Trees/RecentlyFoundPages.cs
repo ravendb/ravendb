@@ -14,8 +14,8 @@ namespace Voron.Trees
         public class FoundPage
         {
             public long Number;
-            public IMemorySlice FirstKey;
-            public IMemorySlice LastKey;
+			public MemorySlice FirstKey;
+			public MemorySlice LastKey;
             public readonly long[] CursorPath;
 
             public FoundPage(int size)
@@ -59,7 +59,7 @@ namespace Voron.Trees
             _cache[0] = page;
         }
 
-        public FoundPage Find(IMemorySlice key)
+        public FoundPage Find(MemorySlice key)
         {
             for (int i = 0; i < _cache.Length; i++)
             {

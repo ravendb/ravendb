@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 using Voron.Trees;
@@ -25,22 +24,20 @@ namespace Voron
 		public ushort NonPrefixedDataSize;
 	}
 
-	public unsafe class PrefixedSlice : AbstractMemorySlice
+	public unsafe class PrefixedSlice : MemorySlice
 	{
 		public static PrefixedSlice AfterAllKeys = new PrefixedSlice(SliceOptions.AfterAllKeys);
 		public static PrefixedSlice BeforeAllKeys = new PrefixedSlice(SliceOptions.BeforeAllKeys);
 		public static PrefixedSlice Empty = new PrefixedSlice(Slice.Empty)
 		{
-			_size = 0,
-			_keyLength = 0
+			Size = 0,
+			KeyLength = 0
 		};
 
 		public const byte NonPrefixedId = 0xff;
 
 		private readonly PrefixedSliceHeader _header;
 		internal readonly Slice _nonPrefixedData;
-		private ushort _size;
-		private ushort _keyLength;
 
 		internal PrefixNode _prefix;
 
@@ -54,8 +51,8 @@ namespace Voron
 		public PrefixedSlice()
 		{
 			Options = SliceOptions.Key;
-			_size = 0;
-			_keyLength = 0;
+			Size = 0;
+			KeyLength = 0;
 			_header = new PrefixedSliceHeader();
 		}
 
@@ -76,8 +73,8 @@ namespace Voron
 			};
 
 			_nonPrefixedData = nonPrefixedValue;
-			_size = (ushort)(Constants.PrefixedSliceHeaderSize + nonPrefixedValue.KeyLength);
-			_keyLength = (ushort)(prefixUsage + nonPrefixedValue.KeyLength);
+			Size = (ushort)(Constants.PrefixedSliceHeaderSize + nonPrefixedValue.KeyLength);
+			KeyLength = (ushort)(prefixUsage + nonPrefixedValue.KeyLength);
 			Options = nonPrefixedValue.Options;
 		}
 
@@ -90,19 +87,19 @@ namespace Voron
 
 				_nonPrefixedData = new Slice((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, _header.NonPrefixedDataSize);
 
-				_size = node->KeySize;
-				_keyLength = (ushort) (_header.PrefixUsage + _header.NonPrefixedDataSize);
+				Size = node->KeySize;
+				KeyLength = (ushort) (_header.PrefixUsage + _header.NonPrefixedDataSize);
 			}
 			else
 			{
-				_size = 0;
-				_keyLength = 0;
+				Size = 0;
+				KeyLength = 0;
 			}
 
 			Options = SliceOptions.Key;
 		}
 
-		public PrefixedSlice(IMemorySlice key)
+		public PrefixedSlice(MemorySlice key)
 		{
 			_header = new PrefixedSliceHeader
 			{
@@ -113,23 +110,13 @@ namespace Voron
 
 			_nonPrefixedData = key.ToSlice();
 
-			_size = (ushort)(Constants.PrefixedSliceHeaderSize + key.KeyLength);
-			_keyLength = key.KeyLength;
+			Size = (ushort)(Constants.PrefixedSliceHeaderSize + key.KeyLength);
+			KeyLength = key.KeyLength;
 		}
 
 		public PrefixedSliceHeader Header
 		{
 			get { return _header; }
-		}
-
-		public override ushort Size
-		{
-			get { return _size; }
-		}
-
-		public override ushort KeyLength
-		{
-			get { return _keyLength; }
 		}
 
 		public override void CopyTo(byte* dest)
@@ -179,141 +166,21 @@ namespace Voron
 			return new Slice(sliceData);
 		}
 
-		protected override int CompareData(IMemorySlice other, SliceComparer cmp, ushort size)
+		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)
 		{
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
-			{
-				fixed (byte* x = _nonPrefixedData._array)
-				fixed (byte* y = prefixedSlice._nonPrefixedData._array)
-				{
-					var xPtr = x != null ? x : _nonPrefixedData._pointer;
-					var yPtr = y != null ? y : prefixedSlice._nonPrefixedData._pointer;
-
-					return SliceComparisonMethods.Compare(Prefix, Header.PrefixUsage, prefixedSlice.Prefix, prefixedSlice.Header.PrefixUsage, xPtr, Header.NonPrefixedDataSize, yPtr, prefixedSlice.Header.NonPrefixedDataSize, cmp, size);
-				}
-
-				//// compare prefixes
-				//var comparedPrefixBytes = Math.Min(_header.PrefixUsage, prefixedSlice._header.PrefixUsage);
-				//var r = ComparePrefixes(prefixedSlice, cmp, comparedPrefixBytes);
-
-				//if (r != 0)
-				//	return r;
-
-				//// compare prefix and non prefix bytes
-				//size -= comparedPrefixBytes;
-
-				//if (_header.PrefixUsage > comparedPrefixBytes)
-				//{
-				//	var remainingPrefix = Math.Min(Math.Min(_header.PrefixUsage - comparedPrefixBytes, prefixedSlice._header.NonPrefixedDataSize), size);
-
-				//	r = ComparePrefixWithNonPrefixedData(prefixedSlice._nonPrefixedData, cmp, comparedPrefixBytes, remainingPrefix);
-
-				//	if (r != 0)
-				//		return r;
-
-				//	// compare non prefixed data
-
-				//	size -= (ushort)remainingPrefix;
-
-				//	r = prefixedSlice.CompareNonPrefixedData(remainingPrefix, _nonPrefixedData, 0, cmp, size);
-
-				//	return r * -1;
-				//}
-
-				//if (prefixedSlice._header.PrefixUsage > comparedPrefixBytes)
-				//{
-				//	var remainingPrefix = Math.Min(Math.Min(prefixedSlice._header.PrefixUsage - comparedPrefixBytes, _header.NonPrefixedDataSize), size);
-
-				//	r = prefixedSlice.ComparePrefixWithNonPrefixedData(_nonPrefixedData, cmp, comparedPrefixBytes, remainingPrefix);
-
-				//	if (r != 0)
-				//		return r * -1;
-
-				//	// compare non prefixed data
-
-				//	size -= (ushort)remainingPrefix;
-
-				//	r = CompareNonPrefixedData(remainingPrefix, prefixedSlice._nonPrefixedData, 0, cmp, size);
-
-				//	return r;
-				//}
-
-				//// both prefixes were equal, now compare non prefixed data
-
-				//r = CompareNonPrefixedData(0, prefixedSlice._nonPrefixedData, 0, cmp, size);
-
-				//return r;
-			}
+				return SliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
 
 			var slice = other as Slice;
 
 			if (slice != null)
 			{
-				fixed (byte* x = slice._array)
-				fixed (byte* p2 = _nonPrefixedData._array)
-				{
-					var yPtr = p2 != null ? p2 : _nonPrefixedData._pointer;
-
-					return SliceComparisonMethods.Compare(Prefix, Header.PrefixUsage, null, 0, yPtr, Header.NonPrefixedDataSize,
-						x != null ? x : slice._pointer, slice.KeyLength, cmp, size);
-				}
-				//var prefixLength = Math.Min(_header.PrefixUsage, size);
-
-				//var r = ComparePrefixWithNonPrefixedData(slice, cmp, 0, prefixLength);
-
-				//if (r != 0)
-				//	return r;
-
-				//// compare non prefixed data
-
-				//size -= prefixLength;
-
-				//r = CompareNonPrefixedData(0, slice, prefixLength, cmp, size);
-
-				//return r;
+				return SliceComparisonMethods.Compare(slice, this, cmp, size) * -1;
 			}
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
-		}
-
-		public static int ComparePrefixesCount = 0;
-		public static int ComparePrefixWithNonPrefixedDataCount = 0;
-		public static int CompareNonPrefixedDataCount = 0;
-		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int ComparePrefixes(PrefixedSlice other, SliceComparer cmp, int count)
-		{
-			if (count == 0)
-				return 0;
-
-			ComparePrefixesCount++;
-
-			return _prefix.Value.CompareSlices(other._prefix.Value, cmp, count);
-		}
-
-		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int ComparePrefixWithNonPrefixedData(Slice other, SliceComparer cmp, int prefixOffset, int count)
-		{
-			if (count == 0)
-				return 0;
-
-			Debug.Assert(_prefix != null);
-
-			ComparePrefixWithNonPrefixedDataCount++;
-
-			return _prefix.Value.CompareSlices(other, cmp, count, prefixOffset);
-		}
-
-		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int CompareNonPrefixedData(int offset, Slice other, int otherOffset, SliceComparer cmp, int count)
-		{
-			if (count == 0)
-				return 0;
-
-			CompareNonPrefixedDataCount++;
-
-			return _nonPrefixedData.CompareSlices(other, cmp, count, offset, otherOffset);
 		}
 
 		public override string ToString()
@@ -326,58 +193,5 @@ namespace Voron
 
 			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header.PrefixId, _header.PrefixUsage, _nonPrefixedData);
 		}
-
-		
-
-		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int memoryCompare(byte* lhs, byte* rhs, int n)
-		{
-			uint* lp = (uint*) lhs;
-			uint* rp = (uint*) rhs;
-			uint l;
-			uint r;
-			int count = (n/sizeof (uint))/4;
-			n -= count * sizeof(uint) * 4;
-
-			while (count-- > 0)
-			{
-				if ((l = *lp++) != (r = *rp++))
-				{
-					return (l < r) ? -1 : 1;
-				}
-				if ((l = *lp++) != (r = *rp++))
-				{
-					return (l < r) ? -1 : 1;
-				}
-				if ((l = *lp++) != (r = *rp++))
-				{
-					return (l < r) ? -1 : 1;
-				}
-				if ((l = *lp++) != (r = *rp++))
-				{
-					return (l < r) ? -1 : 1;
-				}
-			}
-
-			if (n > 0)
-			{
-				byte* lpb = (byte*)lp;
-
-				byte* rpb = (byte*)rp;
-				byte lb;
-				byte rb;
-
-				while (n-- > 0)
-				{
-					if ((lb = *lpb++) != (rb = *rpb++))
-					{
-						return (lb < rb) ? -1 : 1;
-					}
-				}
-			}
-
-			return 0;
-		}
-
 	}
 }

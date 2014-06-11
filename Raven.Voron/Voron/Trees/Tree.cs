@@ -71,12 +71,7 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		public void Add(Slice key, Stream value, ushort? version = null)
-		{
-			Add((IMemorySlice) key, value, version);
-		}
-
-		internal void Add(IMemorySlice key, Stream value, ushort? version = null)
+		public void Add(MemorySlice key, Stream value, ushort? version = null)
 		{
 		    if (value == null) throw new ArgumentNullException("value");
 		    if (value.Length > int.MaxValue)
@@ -105,12 +100,7 @@ namespace Voron.Trees
 			return value;
 		}
 
-		public void Add(Slice key, byte[] value, ushort? version = null)
-		{
-			Add((IMemorySlice) key, value, version);
-		}
-
-		internal void Add(IMemorySlice key, byte[] value, ushort? version = null)
+		public void Add(MemorySlice key, byte[] value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 
@@ -123,12 +113,7 @@ namespace Voron.Trees
 			}
 		}
 
-		public void Add(Slice key, Slice value, ushort? version = null)
-		{
-			Add((IMemorySlice) key, value, version);
-		}
-
-		internal void Add(IMemorySlice key, Slice value, ushort? version = null)
+		public void Add(MemorySlice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 
@@ -156,7 +141,7 @@ namespace Voron.Trees
 			}
 		}
 
-		internal byte* DirectAdd(IMemorySlice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
+		internal byte* DirectAdd(MemorySlice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
 		{
 			Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
 
@@ -315,7 +300,7 @@ namespace Voron.Trees
 			}
 		}
 
-		internal Page FindPageFor(IMemorySlice key, out Lazy<Cursor> cursor)
+		internal Page FindPageFor(MemorySlice key, out Lazy<Cursor> cursor)
 		{
 			Page p;
 
@@ -327,7 +312,7 @@ namespace Voron.Trees
 			return SearchForPage(key, ref cursor);
 		}
 
-	    private Page SearchForPage(IMemorySlice key, ref Lazy<Cursor> cursor)
+	    private Page SearchForPage(MemorySlice key, ref Lazy<Cursor> cursor)
 	    {
 			var p = _tx.GetReadOnlyPage(State.RootPageNumber);
 	        var c = new Cursor();
@@ -411,7 +396,7 @@ namespace Voron.Trees
 			_tx.AddRecentlyFoundPage(this, foundPage);
 	    }
 
-	    private bool TryUseRecentTransactionPage(IMemorySlice key, out Lazy<Cursor> cursor, out Page page)
+	    private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<Cursor> cursor, out Page page)
 		{
 			page = null;
 			cursor = null;
@@ -480,12 +465,7 @@ namespace Voron.Trees
 			return page;
 		}
 
-		public void Delete(Slice key, ushort? version = null)
-		{
-			Delete((IMemorySlice) key, version);
-		}
-
-		internal void Delete(IMemorySlice key, ushort? version = null)
+		public void Delete(MemorySlice key, ushort? version = null)
 		{
 			if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot delete a value in a read only transaction");
@@ -628,7 +608,7 @@ namespace Voron.Trees
 		}
 
 
-		private void CheckConcurrency(IMemorySlice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
+		private void CheckConcurrency(MemorySlice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
 		{
 			if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
 				throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name));
@@ -653,7 +633,7 @@ namespace Voron.Trees
 		}
 
 		private bool TryOverwriteOverflowPages(TreeMutableState treeState, NodeHeader* updatedNode,
-													  IMemorySlice key, int len, ushort? version, out byte* pos)
+													  MemorySlice key, int len, ushort? version, out byte* pos)
 		{
 			if (updatedNode->Flags == NodeFlags.PageRef &&
 				_tx.Id <= _tx.Environment.OldestTransaction) // ensure MVCC - do not overwrite if there is some older active transaction that might read those overflows

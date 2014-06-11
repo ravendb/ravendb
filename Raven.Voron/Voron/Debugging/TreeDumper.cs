@@ -97,7 +97,7 @@ digraph structs {
 ", p.PageNumber, p.Flags, p.NumberOfEntries, p.IsLeaf ? "black" : "blue",
 	Math.Round(((AbstractPager.PageSize - p.SizeLeft) / (double)AbstractPager.PageSize), 2),
     Math.Round(((AbstractPager.PageSize - p.CalcSizeLeft()) / (double)AbstractPager.PageSize), 2));
-                    IMemorySlice key = new Slice(SliceOptions.Key);
+                    MemorySlice key = new Slice(SliceOptions.Key);
                     if (p.IsLeaf && showNodesEvery > 0)
                     {
                         writer.WriteLine("		p_{0}_nodes [label=\" Entries:", p.PageNumber);
@@ -164,7 +164,7 @@ digraph structs {
             return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
-        private static string GetBranchNodeString(int i, IMemorySlice key, Page p, NodeHeader* node)
+        private static string GetBranchNodeString(int i, MemorySlice key, Page p, NodeHeader* node)
         {
             string keyStr;
             if (i == 0 && key.Size == 0)

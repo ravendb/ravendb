@@ -51,7 +51,7 @@ namespace Voron.Trees
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
         }
 
-		public NodeHeader* Search(IMemorySlice key)
+		public NodeHeader* Search(MemorySlice key)
 		{
 			if (NumberOfEntries == 0)
 			{
@@ -74,7 +74,7 @@ namespace Voron.Trees
 				return GetNode(LastSearchPosition);
 			}
 
-			IMemorySlice pageKey = null;
+			MemorySlice pageKey = null;
 			if (NumberOfEntries == 1)
 			{
 				pageKey = GetNodeKey(0);
@@ -290,7 +290,7 @@ namespace Voron.Trees
                                  other->DataSize);
         }
 
-	    public PrefixedSlice ConvertToPrefixedKey(IMemorySlice key, int nodeIndex)
+	    public PrefixedSlice ConvertToPrefixedKey(MemorySlice key, int nodeIndex)
 	    {
 		    PrefixedSlice prefixedSlice;
 
@@ -306,7 +306,7 @@ namespace Voron.Trees
 			return new PrefixedSlice(key);
 	    }
 
-	    private bool TryUseExistingPrefix(IMemorySlice key, out PrefixedSlice prefixedSlice)
+	    private bool TryUseExistingPrefix(MemorySlice key, out PrefixedSlice prefixedSlice)
 	    {
 		    Tuple<byte, ushort> bestMatch = null;
 
@@ -346,7 +346,7 @@ namespace Voron.Trees
 			return false;
 	    }
 
-		private bool TryCreateNewPrefix(IMemorySlice key, int nodeIndex, out PrefixedSlice prefixedSlice)
+		private bool TryCreateNewPrefix(MemorySlice key, int nodeIndex, out PrefixedSlice prefixedSlice)
 		{
 			if (NextPrefixId >= PrefixCount || NumberOfEntries == 0)
 			{
@@ -526,7 +526,7 @@ namespace Voron.Trees
 			NextPrefixId = 0;
 	    }
 
-        public int NodePositionFor(IMemorySlice key)
+        public int NodePositionFor(MemorySlice key)
         {
             Search(key);
             return LastSearchPosition;
@@ -758,7 +758,7 @@ namespace Voron.Trees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
-		private static ushort MinPrefixLength(IMemorySlice key)
+		private static ushort MinPrefixLength(MemorySlice key)
 		{
 			return (ushort) Math.Max(key.KeyLength * 0.2, 2);
 		}
