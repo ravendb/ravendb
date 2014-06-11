@@ -273,6 +273,7 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -297,8 +298,14 @@
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
     <Content Include="App\commands\getVersioningsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveCustomFunctionsCommand.ts" />
     <Content Include="App\commands\saveDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\common\execJs.ts" />
+    <TypeScriptCompile Include="App\common\inputCursor.ts" />
+    <TypeScriptCompile Include="App\models\customFunctions.ts" />
+    <TypeScriptCompile Include="App\common\autoCompleterSupport.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyIndexDialog.html" />
@@ -310,6 +317,7 @@
     <Content Include="App\views\counter\editCounterDialog.html" />
     <Content Include="App\views\counter\deleteCounterStorageConfirm.html" />
     <Content Include="App\views\counter\editCounterStorage.html" />
+    <Content Include="App\views\customFunctionsEditor.html" />
     <Content Include="App\views\databaseSettingsDialog.html" />
     <Content Include="App\views\executePatchConfirm.html" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />

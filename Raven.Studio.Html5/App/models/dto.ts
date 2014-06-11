@@ -775,3 +775,7 @@ interface databaseDto {
     Name: string;
     Disabled: boolean;
 }
+
+interface customFunctionsDto {
+    Functions: string;
+}

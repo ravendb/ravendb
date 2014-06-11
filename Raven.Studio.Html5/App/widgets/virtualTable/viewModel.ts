@@ -14,6 +14,7 @@ import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
+import customFunctions = require('models/customFunctions');
 
 class ctor {
 
@@ -52,6 +53,7 @@ class ctor {
         contextMenuOptions: string[];
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
+        customFunctions: KnockoutObservable<customFunctions>;
     }
 
     activate(settings: any) {
@@ -68,10 +70,10 @@ class ctor {
             isCopyAllowed: true,
             contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
             selectionEnabled: true,
-            customColumns: ko.observable(customColumns.empty())
+            customColumns: ko.observable(customColumns.empty()),
+            customFunctions: ko.observable(customFunctions.empty())
         };
         this.settings = $.extend(defaults, settings);
-
 
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;

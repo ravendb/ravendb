@@ -14,7 +14,7 @@ class settings extends viewModelBase {
     appUrls: computedAppUrls;
 
     bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index"};
-    userDatabasePages = ko.observableArray(["Database Settings"]);
+    userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
     systemDatabasePages = ["API Keys", "Windows Authentication"];
 
     constructor() {
@@ -34,6 +34,7 @@ class settings extends viewModelBase {
         var versioningRoute = { route: 'databases/settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
         var periodicExportRoute = { route: 'databases/settings/periodicExports', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
+        var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
 
         this.router = durandalRouter.createChildRouter()
             .map([
@@ -45,7 +46,8 @@ class settings extends viewModelBase {
                 sqlReplicationsRoute,
                 versioningRoute,
                 periodicExportRoute,
-                scriptedIndexesRoute
+                scriptedIndexesRoute,
+                customFunctionsEditorRoute
             ])
             .buildNavigationModel();
 
@@ -77,7 +79,7 @@ class settings extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.userDatabasePages(["Database Settings"]);
+        this.userDatabasePages(["Database Settings", "Custom Functions"]);
         if (args) {
             var canActivateResult = $.Deferred();
             var db = this.activeDatabase();
