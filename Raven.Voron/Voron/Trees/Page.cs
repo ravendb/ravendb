@@ -136,7 +136,7 @@ namespace Voron.Trees
 		    if (prefixOffset == 0) // allocated but not written yet
 			    return null;
 
-		    return new PrefixNode(_base + prefixOffset);
+		    return new PrefixNode(_base + prefixOffset, PageNumber);
 	    }
 
 	    public bool IsLeaf

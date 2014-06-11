@@ -5,8 +5,6 @@ using Voron.Impl;
 
 namespace Voron
 {
-	public unsafe delegate int SliceComparer(byte* a, byte* b, int size);
-
 	public unsafe class Slice : AbstractMemorySlice
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
@@ -133,37 +131,75 @@ namespace Voron
 			return new string((sbyte*)_pointer, 0, _size, Encoding.UTF8);
 		}
 
+		public IDisposable GetPointer(out byte* ptr)
+		{
+			if (_array != null)
+			{
+				fixed (byte* a = _array)
+				{
+					ptr = a;
+				}
+			}
+
+			ptr = _pointer;
+
+			return null;
+		}
+
 		protected override int CompareData(IMemorySlice other, SliceComparer cmp, ushort size)
 		{
 			var otherSlice = other as Slice;
 
 			if (otherSlice != null)
-				return CompareSlices(otherSlice, cmp, size);
+				return SliceComparisonMethods.Compare(this, otherSlice, cmp, size);
 
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
 			{
-				var prefixLength = Math.Min(prefixedSlice.Header.PrefixUsage, size);
+				return SliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
 
-				var r = prefixedSlice.ComparePrefixWithNonPrefixedData(this, cmp, 0, prefixLength);
+				//fixed (byte* x = _array)
+				//{
+				//	return SliceComparisonMethods.Compare(null, 0, prefixedSlice.Prefix, prefixedSlice.Header.PrefixUsage,
+				//		x != null ? x : _pointer, KeyLength, prefixedSlice.NonPrefixed,
+				//		prefixedSlice.Header.NonPrefixedDataSize, cmp, size);
+				//}
 
-				if (r != 0)
-					return r * -1;
+				//int r;
+				//ushort? prefixLength = null;
 
-				// compare non prefixed data
+				//if (PrefixComparisonCache.TryGetCachedResult(prefixedSlice.Header.PrefixId, 0, out r) == false)
+				//{
+				//	prefixLength = Math.Min(prefixedSlice.Header.PrefixUsage, size);
 
-				size -= prefixLength;
+				//	r = prefixedSlice.ComparePrefixWithNonPrefixedData(this, cmp, 0, prefixLength.Value);
 
-				r = prefixedSlice.CompareNonPrefixedData(0, this, prefixLength, cmp, size);
+				//	if (r != 0)
+				//		r *= -1;
 
-				return r * -1;
+				//	PrefixComparisonCache.AddResult(prefixedSlice.Header.PrefixId, 0, r);
+				//}
+
+				//if (r != 0)
+				//	return r;
+
+				//// compare non prefixed data
+
+				//if(prefixLength == null)
+				//	prefixLength = Math.Min(prefixedSlice.Header.PrefixUsage, size);
+
+				//size -= prefixLength.Value;
+
+				//r = prefixedSlice.CompareNonPrefixedData(0, this, prefixLength.Value, cmp, size);
+
+				//return r * -1;
 			}
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int CompareSlices(Slice otherSlice, SliceComparer cmp, int size, int offset = 0, int otherOffset = 0)
 		{
 			if (_array != null)

@@ -14,6 +14,7 @@ namespace Voron
 		public abstract ushort Size { get; }
 		public abstract ushort KeyLength { get; }
 		public SliceOptions Options { get; protected set; }
+		public PrefixComparisonCache PrefixComparisonCache = new PrefixComparisonCache();
 
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
@@ -31,7 +32,7 @@ namespace Voron
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, NativeMethods.memcmp, Math.Min(KeyLength, other.KeyLength));
+			var r = CompareData(other, SliceComparisonMethods.NativeMemCmpInstance, Math.Min(KeyLength, other.KeyLength));
 			if (r != 0)
 				return r;
 
@@ -42,22 +43,23 @@ namespace Voron
 		{
 			if (KeyLength < other.KeyLength)
 				return false;
-			return CompareData(other, NativeMethods.memcmp, other.Size) == 0;
+			return CompareData(other, SliceComparisonMethods.NativeMemCmpInstance, other.KeyLength) == 0;
 		}
 
 		public ushort FindPrefixSize(IMemorySlice other)
 		{
 			var maxPrefixLength = Math.Min(KeyLength, other.KeyLength);
 
-			using (var slicePrefixMatcher = new SlicePrefixMatcher(maxPrefixLength))
+			using (PrefixComparisonCache != null ? PrefixComparisonCache.DisablePrefixCache() : null)
 			{
+				var slicePrefixMatcher = new SlicePrefixMatcher(maxPrefixLength);
 				CompareData(other, slicePrefixMatcher.MatchPrefix, maxPrefixLength);
 
 				return slicePrefixMatcher.MatchedBytes;
 			}
 		}
 
-		private class SlicePrefixMatcher : IDisposable
+		private class SlicePrefixMatcher
 		{
 			private readonly int _maxPrefixLength;
 
@@ -83,10 +85,6 @@ namespace Voron
 				}
 
 				return 0;
-			}
-
-			public void Dispose()
-			{
 			}
 		}
 	}
