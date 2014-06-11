@@ -22,6 +22,7 @@ namespace Raven.Database.Indexing
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
+// ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();

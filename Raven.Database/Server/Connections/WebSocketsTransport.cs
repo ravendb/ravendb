@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Connections
         bool, // end of message?
         int>; // count
 
-    public class WebSocketsTrasport : IEventsTransport
+    public class WebSocketsTransport : IEventsTransport
     {
         private readonly IOwinContext _context;
         private readonly RavenDBOptions _options;
@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Connections
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 
-        public WebSocketsTrasport(RavenDBOptions options, IOwinContext context)
+        public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
         {
             _options = options;
             _context = context;

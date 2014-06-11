@@ -277,6 +277,19 @@ html, body {
     text-decoration: line-through;
 }
 
+.resource-link{
+    padding-left: 5px;
+    overflow-x: hidden;
+    max-width: 130px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resource-link-disabled{
+    pointer-events: none;
+    cursor: default;
+}
+
 .document-collections {
         
     li {
@@ -621,6 +634,13 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
     }
 
 #queryContainer {
+
+    .breadcrumb {
+        width:100%;
+        li{
+            overflow: visible!important;             
+        }   
+    }
     .editor {
         height: 60px;
     }
@@ -1224,6 +1244,15 @@ footer {
 
 }
 
+.custom-functions-form {
+    .editor {
+        height: 500px;
+    }
+
+    .btn-toolbar {
+        margin-bottom: 10px;
+    }
+}
 
 .versioning-settings-form {
     .versioning-card {

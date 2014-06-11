@@ -16,7 +16,7 @@
             </div>
             <form class="form-inline  col-md-3">
                 <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+/)">
-            </formm>
+            </form>
         </div>
         <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: $data.disabled }">

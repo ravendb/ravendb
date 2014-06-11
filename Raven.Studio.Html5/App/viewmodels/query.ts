@@ -28,6 +28,8 @@ import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityN
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 import queryStatsDialog = require("viewmodels/queryStatsDialog");
+import customFunctions = require("models/customFunctions");
+import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 
 class query extends viewModelBase {
 
@@ -63,6 +65,17 @@ class query extends viewModelBase {
     didDynamicChangeIndex: KnockoutComputed<boolean>;
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+    currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
+
+    editItemSubscription = ko.postbox.subscribe("EditItem", (itemNumber: number) => {
+        //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
+        var queriess = this.recentQueries();
+        var recentq = this.recentQueries()[0];
+        var sorts = recentq.Sorts
+            .join(',');
+        //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
+        router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
+    });
 
     static containerSelector = "#queryContainer";
 
@@ -85,6 +98,7 @@ class query extends viewModelBase {
 
             return "";
         });
+       
 
         this.didDynamicChangeIndex = ko.computed(() => {
             if (this.queryStats()) {
@@ -108,6 +122,7 @@ class query extends viewModelBase {
         super.activate(indexNameOrRecentQueryHash);
 
         this.fetchAllTransformers();
+        this.fetchCustomFunctions();
         $.when(
             this.fetchAllCollections(),
             this.fetchAllIndexes(),
@@ -132,6 +147,9 @@ class query extends viewModelBase {
         this.focusOnQuery();
     }
 
+    detached() {
+        this.editItemSubscription.dispose();
+    }
     onIndexChanged(newIndexName: string) {
         var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
         this.contextName(command.docName);
@@ -496,13 +514,20 @@ class query extends viewModelBase {
     }
 
     selectColumns() {
-        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
+        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions().clone(), this.contextName(), this.activeDatabase());
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols: customColumns) => {
             this.currentColumnsParams(cols);
 
             this.runQuery();
             
+        });
+    }
+
+    fetchCustomFunctions() {
+        var task = new getCustomFunctionsCommand(this.activeDatabase()).execute();
+        task.done((cf: customFunctions) => {
+            this.currentCustomFunctions(cf);
         });
     }
 
