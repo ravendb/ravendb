@@ -19,11 +19,6 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<Guid, long> _currentlyUsedBatchSizesInBytes;
 		private readonly long memoryLimitForIndexingInBytes;
 
-		private readonly object batchTimingSyncObject = new object();
-
-		private ulong batchCount;
-		private ulong batchTimingsSumInMs;
-
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
@@ -32,17 +27,6 @@ namespace Raven.Database.Indexing
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
 			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
-			batchTimingsSumInMs = 0;
-			batchCount = 0;
-		}
-
-		public void ReportBatchTiming(long batchTimingInMs)
-		{
-			lock (batchTimingSyncObject)
-			{
-				batchCount++;
-				batchTimingsSumInMs += (ulong)batchTimingInMs;
-			}
 		}
 
 	    public void HandleLowMemory()
@@ -266,14 +250,5 @@ namespace Raven.Database.Indexing
 		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
 		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
-
-		public ulong BatchLoadFromDiskAverageTiming
-		{
-			get
-			{
-				lock(batchTimingSyncObject)
-					return (batchCount == 0) ? 0 : batchTimingsSumInMs / batchCount;
-			}
-		}
 	}
 }
