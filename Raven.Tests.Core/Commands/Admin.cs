@@ -49,6 +49,14 @@ namespace Raven.Tests.Core.Commands
                 globalAdmin.DeleteDatabase(databaseName, true);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(databaseDocument.Id));
+
+                globalAdmin.EnsureDatabaseExists(databaseName);
+
+                Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(databaseDocument.Id));
+
+                globalAdmin.DeleteDatabase(databaseName, true);
+
+                Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(databaseDocument.Id));
             }
         }
 
