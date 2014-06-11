@@ -1,3 +1,4 @@
+
 import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
@@ -10,6 +11,7 @@ import deleteDocumentCommand = require('commands/deleteDocumentCommand');
 import commandBase = require('commands/commandBase');
 import inputCursor = require('common/inputCursor');
 import customFunctions = require('models/customFunctions');
+import autoCompleterSupport = require('common/autoCompleterSupport');
 
 class selectColumns extends dialogViewModelBase {
 
@@ -22,12 +24,15 @@ class selectColumns extends dialogViewModelBase {
     private autoCompleteBase = ko.observableArray<KnockoutObservable<string>>([]);
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
+    private autoCompleterSupport: autoCompleterSupport;
+
 
     constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database) {
         super();
         this.generateCompletionBase();
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
+        this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults);
     }
 
     private generateCompletionBase() {
@@ -46,7 +51,7 @@ class selectColumns extends dialogViewModelBase {
         this.completionSearchSubscriptions = [];
         this.customColumns.columns().forEach((column: customColumnParams, index: number) =>
             this.completionSearchSubscriptions.push(
-                column.binding.subscribe(this.searchForCompletions.bind(this, index))
+                column.binding.subscribe(this.searchForCompletions.bind(this))
                 )
             );
     }
@@ -57,7 +62,7 @@ class selectColumns extends dialogViewModelBase {
             changes.forEach((change) => {
                 if (change.status === "added") {
                     this.completionSearchSubscriptions.push(
-                        change.value.binding.subscribe(this.searchForCompletions.bind(this, change.index))
+                        change.value.binding.subscribe(this.searchForCompletions.bind(this))
                         );
                 }
                 else if (change.status === "deleted") {
@@ -165,23 +170,6 @@ class selectColumns extends dialogViewModelBase {
         return 'binding-' + index;
     }
 
-    searchForCompletions(inputIndex: number, inputValue: string) {
-        this.activeInput = $("[id ^= 'binding-']:focus");
-        this.autoCompleteResults([]);
-
-        var input = $('#' + this.generateBindingInputId(inputIndex));
-        var typedWord = this.getWordUserIsTyping(input);
-
-        if (typedWord.length >= 1) {
-            this.autoCompleteResults(this.autoCompleteBase().filter((value) =>
-                this.wordMatches(typedWord, value()) &&
-                (value() !== this.activeInput.val()) &&
-                (value() !== typedWord) &&
-                (value().indexOf(' ') === -1)
-            ));
-        }
-    }
-
     enterKeyPressed():boolean {
         var focusedBindingInput = $("[id ^= 'binding-']:focus");
         if (focusedBindingInput.length) {
@@ -195,71 +183,15 @@ class selectColumns extends dialogViewModelBase {
         return super.enterKeyPressed();
     }
 
+    searchForCompletions() {
+        this.activeInput = $("[id ^= 'binding-']:focus");
+        this.autoCompleterSupport.searchForCompletions(this.activeInput);
+    }
+
     completeTheWord(selectedCompletion: string) {
         if (this.activeInput.length > 0) {
-            var inputValue: string = this.activeInput.val();
-            var typedWord = this.getWordUserIsTyping(this.activeInput);
-
-            var cursorPosition = inputCursor.getPosition(this.activeInput);
-            var beginIndex = this.findWordStartWithEndPosition(inputValue, cursorPosition - 1) + 1;
-
-            this.activeInput.val(
-                inputValue.substring(0, beginIndex) +
-                selectedCompletion +
-                inputValue.substring(cursorPosition)
-                );
-
-            inputCursor.setPosition(this.activeInput, beginIndex + selectedCompletion.length);
-            this.autoCompleteResults([]);
+            this.autoCompleterSupport.completeTheWord(this.activeInput, selectedCompletion);
         }
-    }
-
-    private findWordStartWithEndPosition(inputValue: string, endPosition: number): number {
-        var beginIndex = 0;
-        for (beginIndex = endPosition; beginIndex >= 0; beginIndex--) {
-            var charCode = inputValue.charCodeAt(beginIndex);
-            // going back skip every alphanumeric characters
-            if ((48 <= charCode && charCode <= 57) // char in range from '0' to '9'
-                || (65 <= charCode && charCode <= 90) // char in range from 'A' to 'Z'
-                || (97 <= charCode && charCode <= 122) // char in range from 'a' to 'z'
-                || (charCode == 95) // char is '_'
-                ) {
-                continue;
-            } else {
-                break;
-            }
-        }
-        return beginIndex;
-
-    }
-    private getWordUserIsTyping($input: JQuery) {
-        var cursorPosition = inputCursor.getPosition($input);
-        //var beginIndex = $input.val().lastIndexOf(' ', cursorPosition-1);
-        var beginIndex = this.findWordStartWithEndPosition($input.val(), cursorPosition - 1) + 1;
-
-        var endIndex = $input.val().indexOf(' ', cursorPosition);
-        if (endIndex === -1) {
-            endIndex = $input.val().length;
-        }
-        return $input.val().substring(beginIndex, cursorPosition).trim();
-    }
-
-    private wordMatches(toCheck: string, toMatch: string): boolean {
-        // ignore the case
-        toCheck = toCheck.toLowerCase();
-        toMatch = toMatch.toLowerCase();
-
-        // match as long as the letters are in correct order
-        var matchedChars = 0;
-        for (var i = 0; i < toMatch.length; i++) {
-            if (toCheck[matchedChars] === toMatch[i]) {
-                matchedChars++;
-            }
-            if (matchedChars >= toCheck.length) {
-                return true;
-            }
-        }
-        return false;
     }
 }
 
