@@ -393,7 +393,7 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false);
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false).ConfigureAwait(false);
 
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
