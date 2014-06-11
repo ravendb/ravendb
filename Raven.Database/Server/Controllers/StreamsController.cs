@@ -77,6 +77,7 @@ namespace Raven.Database.Server.Controllers
 							{
 								timeout.Delay();
 								doc.WriteTo(writer);
+                                writer.WriteRaw(Environment.NewLine);
 							});
 						else
 						{
@@ -86,6 +87,7 @@ namespace Raven.Database.Server.Controllers
 							{
 								timeout.Delay();
 								doc.WriteTo(writer);
+                                writer.WriteRaw(Environment.NewLine);
 							});
 
 							nextPageStart = nextPageStartInternal;
@@ -372,6 +374,7 @@ namespace Raven.Database.Server.Controllers
 			public void Write(RavenJObject result)
 			{
 				result.WriteTo(writer, Default.Converters);
+                writer.WriteRaw(Environment.NewLine);
 			}
 
 		    public void WriteError(Exception exception)
