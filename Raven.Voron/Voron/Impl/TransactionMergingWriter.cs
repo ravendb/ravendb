@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.SymbolStore;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -66,6 +70,15 @@ namespace Voron.Impl
 
 				mine.Wait();
 			}
+		}
+
+		private IEnumerable<WriteBatch.BatchOperation> GetBatchOperations(OutstandingWrite write)
+		{
+			var trees = write.Trees.ToList();
+
+			var operations = new List<WriteBatch.BatchOperation>();
+			trees.ForEach(tree => operations.AddRange(write.GetOperations(tree)));
+			return operations.Where(x => x != null);
 		}
 
 		private void EnsureValidBackgroundTaskState()
