@@ -98,7 +98,7 @@ namespace Owin
                 return;
             }
 
-            var webSocketsTrasport = new WebSocketsTrasport(options, context);
+            var webSocketsTrasport = new WebSocketsTransport(options, context);
             if (await webSocketsTrasport.TrySetupRequest())
                 accept(null, webSocketsTrasport.Run);
         }
