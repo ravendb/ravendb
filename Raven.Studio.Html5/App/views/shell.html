@@ -16,7 +16,7 @@
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }, css: { 'menu-item-disabled': isDatabaseDisabled }">Documents</a>
                         </li>
-                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents') }, css: { 'menu-item-disabled': isDatabaseDisabled }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents'), 'menu-item-disabled': isDatabaseDisabled }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
@@ -36,7 +36,7 @@
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
                             <a data-bind="attr: { href: appUrls.indexes }, css: { 'menu-item-disabled': isDatabaseDisabled }">Indexes</a>
                         </li>
-                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }, css: { 'menu-item-disabled': isDatabaseDisabled }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes'), 'menu-item-disabled': isDatabaseDisabled }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
@@ -52,7 +52,7 @@
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
                             <a data-bind="attr: { href: appUrls.query(null) }, css: { 'menu-item-disabled': isDatabaseDisabled }">Query</a>
                         </li>
-                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }, css: { 'menu-item-disabled': isDatabaseDisabled }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query'), 'menu-item-disabled': isDatabaseDisabled }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
