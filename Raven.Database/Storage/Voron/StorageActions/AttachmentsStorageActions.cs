@@ -60,7 +60,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var loweredKey = CreateKey(key);
 
 			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
-            var isUpdate = attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value);
+			ushort? version;
+			var isUpdate = attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value,out version);
 			if (isUpdate)
 			{
 				if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value)) //precaution
@@ -104,7 +105,7 @@ but the attachment itself was found. Data corruption?", key));
 				if (data.CanSeek)
 				{
 					data.Seek(0, SeekOrigin.Begin);
-					attachmentsTable.Add(writeBatch.Value, loweredKey, data);
+					attachmentsTable.Add(writeBatch.Value, loweredKey, data, version ?? 0);
 				}
 				else //handle streams like GzipStream
 				{
@@ -113,7 +114,7 @@ but the attachment itself was found. Data corruption?", key));
 					    var tempStream = CreateStream();
 						data.CopyTo(tempStream);
 						tempStream.Seek(0, SeekOrigin.Begin);
-						attachmentsTable.Add(writeBatch.Value, loweredKey, tempStream);
+						attachmentsTable.Add(writeBatch.Value, loweredKey, tempStream, version ?? 0);
 					}
 					finally
 					{

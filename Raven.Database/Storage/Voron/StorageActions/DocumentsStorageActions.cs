@@ -576,7 +576,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var dataStream = CreateStream();
 
-
 			using (var finalDataStream = documentCodecs.Aggregate((Stream) new UndisposableStream(dataStream),
 				(current, codec) => codec.Encode(loweredKey, data, metadata, current)))
 			{
@@ -585,7 +584,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
  
 			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch.Value, loweredKey, dataStream, existingVersion); 
+			tableStorage.Documents.Add(writeBatch.Value, loweredKey, dataStream, existingVersion ?? 0); 
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
