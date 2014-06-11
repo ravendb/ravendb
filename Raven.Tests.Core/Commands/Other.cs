@@ -109,5 +109,28 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(store.Url + "/databases/"+store.DefaultDatabase+"/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
             }
         }
+
+        [Fact]
+        public void CanDisableAllCaching()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+
+                store.JsonRequestFactory.DisableAllCaching();
+                store.JsonRequestFactory.ResetCache();
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+            }
+        }
 	}
 }
