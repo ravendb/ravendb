@@ -112,6 +112,7 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="IndexResestWithReplication.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
     <Compile Include="RaveDB-1279.cs" />
@@ -374,6 +375,10 @@
     <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
