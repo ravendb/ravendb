@@ -30,6 +30,7 @@
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />

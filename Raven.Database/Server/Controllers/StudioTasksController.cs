@@ -160,6 +160,28 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
+        public async Task<HttpResponseMessage> CreateSampleDataClass()
+        {
+            var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
+            if (results.Results.Count == 0)
+            {
+                return GetMessageWithString("You cannot create sample data classes in empty  database ", HttpStatusCode.BadRequest);
+            }
+            var fileName = "Northwind.txt";
+            var path = Assembly.GetExecutingAssembly().Location;
+            var directory =Path.GetDirectoryName(path);
+            var fullPath=directory+"\\"+ fileName;
+            if (!File.Exists(fullPath)) return GetEmptyMessage();
+            using (var sr = new StreamReader(fullPath))
+            {
+                var data = sr.ReadToEnd();
+                return GetMessageWithObject(data);
+            }
+        }
+
+        [HttpGet]
         [Route("studio-tasks/new-encryption-key")]
         public HttpResponseMessage GetNewEncryption(string path = null)
         {
