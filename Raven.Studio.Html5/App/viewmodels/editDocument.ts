@@ -37,7 +37,7 @@ class editDocument extends viewModelBase {
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
-    relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
+    relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
     lodaedDocumentName = ko.observable('');
@@ -255,9 +255,26 @@ class editDocument extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
             viewModelBase.dirtyFlag().reset(); //Resync Changes
-            this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
+
+            // add the new document to the paged list
+            var list: pagedList = this.docsList();
+            if (!!list) {
+                if (this.isCreatingNewDocument()) {
+                    var newTotalResultCount = list.totalResultCount() + 1;
+
+                    list.totalResultCount(newTotalResultCount);
+                    list.currentItemIndex(newTotalResultCount - 1);
+                    
+                } else {
+                    list.currentItemIndex(list.totalResultCount() - 1);
+                }
+
+                this.updateUrl(currentDocumentId);
+            }
+
+            this.isCreatingNewDocument(false);
         });
     }
 
@@ -324,7 +341,6 @@ class editDocument extends viewModelBase {
     }
 
     refreshDocument() {
-        var meta = this.metadata();
         if (!this.isCreatingNewDocument()) {
             var docId = this.editedDocId();
             this.document(null);
@@ -338,12 +354,26 @@ class editDocument extends viewModelBase {
     }
 
     deleteDocument() {
-        var doc = this.document();
+        var doc: document = this.document();
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
             viewModel.deletionTask.done(() => {
                 viewModelBase.dirtyFlag().reset(); //Resync Changes
-                this.nextDocumentOrFirst();
+
+                var list = this.docsList();
+                if (!!list) {
+                    this.docsList().invalidateCache();
+
+                    var newTotalResultCount = list.totalResultCount() - 1;
+                    list.totalResultCount(newTotalResultCount);
+
+                    var nextIndex = list.currentItemIndex();
+                    if (nextIndex >= newTotalResultCount) {
+                        nextIndex = 0;
+                    }
+
+                    this.pageToItem(nextIndex, newTotalResultCount);
+                }
             });
             app.showDialog(viewModel, editDocument.editDocSelector);
         } 
@@ -358,7 +388,7 @@ class editDocument extends viewModelBase {
     }
 
     nextDocumentOrFirst() {
-        var list = this.docsList(); 
+        var list = this.docsList();
         if (list) {
             var nextIndex = list.currentItemIndex() + 1;
             if (nextIndex >= list.totalResultCount()) {
@@ -392,7 +422,7 @@ class editDocument extends viewModelBase {
         this.pageToItem(0);
     }
 
-    pageToItem(index: number) {
+    pageToItem(index: number, newTotalResultCount?: number) {
         var list = this.docsList();
         if (list) {
             list.getNthItem(index)
@@ -400,6 +430,10 @@ class editDocument extends viewModelBase {
                     this.loadDocument(doc.getId());
                     list.currentItemIndex(index);
                     this.updateUrl(doc.getId());
+
+                    if (!!newTotalResultCount) {
+                        list.totalResultCount(newTotalResultCount);
+                    }
                 });
         }
     }
