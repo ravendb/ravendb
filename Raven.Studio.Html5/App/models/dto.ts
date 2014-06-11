@@ -664,11 +664,19 @@ interface statusDebugIndexFieldsDto {
 
 interface debugDocumentStatsDto {
     Total: number;
+    TotalSize: number;
     Tombstones: number;
     System: number;
+    SystemSize: number;
     NoCollection: number;
-    Collections: dictionary<number>;
+    NoCollectionSize: number;
+    Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
+}
+
+interface collectionStats {
+    Quantity: number;
+    Size: number;
 }
 
 enum documentChangeType {

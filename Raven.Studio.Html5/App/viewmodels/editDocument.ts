@@ -19,7 +19,7 @@ import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-
+import genUtils = require("common/generalUtils");
 class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
@@ -64,7 +64,7 @@ class editDocument extends viewModelBase {
         this.documentSize = ko.computed(() => {
             try {
                 var size: Number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
-                return this.formatAsCommaSeperatedString(size,2);    
+                return genUtils.formatAsCommaSeperatedString(size,2);    
             } catch (e) {
                 return "cannot compute";
             } 
@@ -94,15 +94,7 @@ class editDocument extends viewModelBase {
         });
     }
 
-    formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
-        var parts = input.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-        if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
-            parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
-        }
-        return parts.join(".");
-    }
+    
 
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
