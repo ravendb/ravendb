@@ -32,13 +32,12 @@ class dialogViewModelBase {
         }
     }
 
-   
-
-    enterKeyPressed() {
+    enterKeyPressed(): boolean {
         var acceptButton = <HTMLAnchorElement>$(".modal-footer:visible .btn-primary")[0];
         if (acceptButton && acceptButton.click) {
             acceptButton.click();
         }
+        return true;
     }
 
 }

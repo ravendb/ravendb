@@ -761,8 +761,11 @@ interface changesApiEventDto {
     Value: any;
 }
 
-interface databaseDto
-{
+interface databaseDto {
     Name: string;
     Disabled: boolean;
+}
+
+interface customFunctionsDto {
+    Functions: string;
 }
