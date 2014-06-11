@@ -686,7 +686,9 @@ enum documentChangeType {
     Common= 3,
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
-    BulkInsertError = 16
+    BulkInsertError = 16,
+    SystemResourceEnabled = 32,
+    SystemResourceDisabled = 64
 }
 
 enum indexChangeType {
@@ -769,8 +771,7 @@ interface changesApiEventDto {
     Value: any;
 }
 
-interface databaseDto
-{
+interface databaseDto {
     Name: string;
     Disabled: boolean;
 }

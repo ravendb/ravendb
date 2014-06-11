@@ -582,11 +582,11 @@ class appUrl {
     static forCurrentPage(rs: resource) {
         var routerInstruction = router.activeInstruction();
         if (routerInstruction) {
-            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
-            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== rs.name.toLowerCase();
+            var resourceNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
+            var isDifferentDbInAddress = !resourceNameInAddress || resourceNameInAddress !== rs.name.toLowerCase();
             if (isDifferentDbInAddress) {
                 var existingAddress = window.location.hash;
-                var existingDbQueryString = dbNameInAddress ? rs.type + "=" + encodeURIComponent(dbNameInAddress) : null;
+                var existingDbQueryString = resourceNameInAddress ? rs.type + "=" + encodeURIComponent(resourceNameInAddress) : null;
                 var newDbQueryString = rs.type + "=" + encodeURIComponent(rs.name);
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
