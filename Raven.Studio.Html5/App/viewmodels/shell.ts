@@ -72,10 +72,10 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
-    
+
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
-    
+
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -84,13 +84,14 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("ActivateCounterStorageWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db, true); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.fetchFSStats(fs, true); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
         this.currentConnectedDatabase = this.systemDb;
         this.appUrls = appUrl.forCurrentDatabase();
-        
+
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -150,7 +151,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
-            { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages},
+            { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
             { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
             { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
             { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
@@ -207,7 +208,7 @@ class shell extends viewModelBase {
 
     private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
         if (!!e.Id && (e.Type === documentChangeType.Delete ||
-                e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
             var receivedDatabaseName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
@@ -240,7 +241,7 @@ class shell extends viewModelBase {
 
     private changesApiFiredForFileSystems(e: documentChangeNotificationDto) {
         if (!!e.Id && (e.Type === documentChangeType.Delete ||
-                e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
             var receivedFileSystemName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
@@ -352,7 +353,7 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
-        });
+            });
 
         this.fileSystemsLoadedTask = new getFilesystemsCommand()
             .execute()
@@ -482,12 +483,10 @@ class shell extends viewModelBase {
 
     private updateChangesApi(newDb: database) {
         if (!newDb.disabled() && this.currentConnectedDatabase.name != newDb.name ||
-                newDb.name == "<system>" && this.currentConnectedDatabase.name == newDb.name) {
+            newDb.name == "<system>" && this.currentConnectedDatabase.name == newDb.name) {
             if (shell.currentDbChangesApi()) {
                 shell.currentDbChangesApi().dispose();
             }
-
-            this.fetchDbStats(newDb);
 
             shell.currentDbChangesApi(new changesApi(newDb));
 
@@ -499,15 +498,27 @@ class shell extends viewModelBase {
         }
     }
 
-    private fetchDbStats(db: database) {
-        if (db && !db.disabled()) {
-            new getDatabaseStatsCommand(db)
-                .execute()
-                .done(result => {
-                db.statistics(result);
-            });
-        }
+    private fetchDbStats(db: database, forceFetch: boolean = false) {
+        if (forceFetch)
+        {
+                if (db && !db.disabled()) {
+                    new getDatabaseStatsCommand(db).execute().done(result => {db.statistics(result);});}
+            
+        } else {
+            
+            if (!db.isInStatsFetchCoolDown) {
+                db.isInStatsFetchCoolDown = true;
 
+                setTimeout(() => db.isInStatsFetchCoolDown = false, 5000);
+                if (db && !db.disabled()) {
+                    new getDatabaseStatsCommand(db).execute().done(result => { db.statistics(result); });
+
+                }
+            }
+        }
+    }
+
+    private fetchFSStats(fs: filesystem, forceFetch: boolean = false) {
         var fs = this.activeFilesystem();
         if (fs) {
             new getFilesystemStatsCommand(fs)

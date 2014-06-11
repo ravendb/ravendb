@@ -13,6 +13,7 @@ class collection {
     documentCount: any = ko.observable(0);
     isAllDocuments = false;
     isSystemDocuments = false;
+    isUpToDate = ko.observable<boolean>(true); 
 
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
@@ -31,7 +32,7 @@ class collection {
 		ko.postbox.publish("ActivateCollection", this);
     }
 
-    fetchTotalDocumentCount() {
+    fetchTotalDocumentCount(){
         // AFAICT, there's no way to fetch just the total number of system 
         // documents, other than doing a full fetch for sys docs.
         if (this.isSystemDocuments) {
@@ -41,7 +42,9 @@ class collection {
         } else {
             new getCollectionInfoCommand(this)
                 .execute()
-                .done((info: collectionInfo) => this.documentCount(info.totalResults));
+                .done((info: collectionInfo) => {
+                    this.documentCount(info.totalResults);
+            });
         }
     }
 
