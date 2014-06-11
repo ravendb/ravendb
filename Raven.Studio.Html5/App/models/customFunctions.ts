@@ -27,6 +27,18 @@ class customFunctions {
         }
         return dto;
     }
+
+    clone(): customFunctions {
+        var copy = new customFunctions(this.toDto());
+        copy.functions = this.functions;
+        return copy;
+    }
+
+    static empty(): customFunctions {
+        return new customFunctions({
+            Functions: ""
+        });
+    }
 }
 
 export = customFunctions;

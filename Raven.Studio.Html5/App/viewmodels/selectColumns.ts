@@ -9,6 +9,7 @@ import saveDocumentCommand = require('commands/saveDocumentCommand');
 import deleteDocumentCommand = require('commands/deleteDocumentCommand');
 import commandBase = require('commands/commandBase');
 import inputCursor = require('common/inputCursor');
+import customFunctions = require('models/customFunctions');
 
 class selectColumns extends dialogViewModelBase {
 
@@ -22,7 +23,7 @@ class selectColumns extends dialogViewModelBase {
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
 
-    constructor(private customColumns: customColumns, private context, private database: database) {
+    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database) {
         super();
         this.generateCompletionBase();
         this.regenerateBindingSubscriptions();
@@ -32,6 +33,12 @@ class selectColumns extends dialogViewModelBase {
     private generateCompletionBase() {
         this.autoCompleteBase([]);
         this.customColumns.columns().forEach((column: customColumnParams) => this.autoCompleteBase().push(column.binding));
+
+        var moduleSource = "var exports = {}; " + this.customFunctions.functions + "; return exports;";
+        var exports = new Function(moduleSource)();
+        for (var funcName in exports) {
+            this.autoCompleteBase().push(ko.observable<string>(funcName + "()"));
+        }
     }
 
     private regenerateBindingSubscriptions() {
@@ -194,12 +201,7 @@ class selectColumns extends dialogViewModelBase {
             var typedWord = this.getWordUserIsTyping(this.activeInput);
 
             var cursorPosition = inputCursor.getPosition(this.activeInput);
-            var beginIndex = this.activeInput.val().lastIndexOf(' ', cursorPosition - 1);
-            if (beginIndex === -1) {
-                beginIndex = 0;
-            } else {
-                beginIndex += 1;
-            }
+            var beginIndex = this.findWordStartWithEndPosition(inputValue, cursorPosition - 1) + 1;
 
             this.activeInput.val(
                 inputValue.substring(0, beginIndex) +
@@ -212,14 +214,28 @@ class selectColumns extends dialogViewModelBase {
         }
     }
 
+    private findWordStartWithEndPosition(inputValue: string, endPosition: number): number {
+        var beginIndex = 0;
+        for (beginIndex = endPosition; beginIndex >= 0; beginIndex--) {
+            var charCode = inputValue.charCodeAt(beginIndex);
+            // going back skip every alphanumeric characters
+            if ((48 <= charCode && charCode <= 57) // char in range from '0' to '9'
+                || (65 <= charCode && charCode <= 90) // char in range from 'A' to 'Z'
+                || (97 <= charCode && charCode <= 122) // char in range from 'a' to 'z'
+                || (charCode == 95) // char is '_'
+                ) {
+                continue;
+            } else {
+                break;
+            }
+        }
+        return beginIndex;
+
+    }
     private getWordUserIsTyping($input: JQuery) {
         var cursorPosition = inputCursor.getPosition($input);
-        var beginIndex = $input.val().lastIndexOf(' ', cursorPosition-1);
-        if (beginIndex === -1) {
-            beginIndex = 0;
-        } else {
-            beginIndex += 1;
-        }
+        //var beginIndex = $input.val().lastIndexOf(' ', cursorPosition-1);
+        var beginIndex = this.findWordStartWithEndPosition($input.val(), cursorPosition - 1) + 1;
 
         var endIndex = $input.val().indexOf(' ', cursorPosition);
         if (endIndex === -1) {

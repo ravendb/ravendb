@@ -2,6 +2,7 @@ import document = require("models/document");
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
 import customColumns = require('models/customColumns');
+import customFunctions = require("models/customFunctions");
 import execJs = require('common/execJs');
 
 class row {
@@ -12,11 +13,19 @@ class row {
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
+    compiledCustomFunctions = {};
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
             this.addOrUpdateCellMap('Id', null);
         }
+
+        this.viewModel.settings.customFunctions.subscribe(this.extractCustomFunctions);
+        this.extractCustomFunctions(this.viewModel.settings.customFunctions());
+    }
+
+    extractCustomFunctions(newValue: customFunctions) {
+        this.compiledCustomFunctions = new Function("var exports = {}; " + newValue.functions + "; return exports;")();
     }
 
     resetCells() {
@@ -35,6 +44,7 @@ class row {
     }
 
     fillCells(rowData: documentBase) {
+        var customFunctions = this.viewModel.settings.customFunctions();
         var customColumns = this.viewModel.settings.customColumns();
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();
@@ -42,7 +52,16 @@ class row {
         if (customColumns.customMode()) {
             customColumns.columns().forEach((column, index) => {
                 var binding = column.binding();
-                var cellValueGenerator = execJs.createSimpleCallableCode(binding, rowData);
+                var context = {};
+                $.each(rowData, (name: string, value: any) => {
+                    context[name] = value;
+                });
+
+                for (var p in this.compiledCustomFunctions) {
+                    context[p] = this.compiledCustomFunctions[p];
+                }
+
+                var cellValueGenerator = execJs.createSimpleCallableCode("return " + binding + ";", context);
                 this.addOrUpdateCellMap(binding, cellValueGenerator());
             });
 

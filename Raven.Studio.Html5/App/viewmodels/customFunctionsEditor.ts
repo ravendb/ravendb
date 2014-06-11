@@ -25,7 +25,6 @@ class customFunctionsEditor extends viewModelBase {
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText]);
         this.isSaveEnabled = ko.computed<boolean>(() => {
-            console.log(viewModelBase.dirtyFlag().isDirty());
             return viewModelBase.dirtyFlag().isDirty();
             });
     }
