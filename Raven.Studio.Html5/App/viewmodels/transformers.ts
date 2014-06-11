@@ -111,14 +111,14 @@ class Transformers extends viewModelBase {
         this.promptDeleteTransformers([transformerToDelete]);
     }
 
-    promptDeleteTransformers(transformers: Array<transformer>) {
+    private promptDeleteTransformers(transformers: Array<transformer>) {
         var db = this.activeDatabase();
         var deleteViewmodel = new deleteTransformerConfirm(transformers.map(i => i.name()), db);
         deleteViewmodel.deleteTask.done(() => this.removeTransformersFromAllGroups(transformers));
         app.showDialog(deleteViewmodel);
     }
 
-    removeTransformersFromAllGroups(transformers: Array<transformer>) {
+    private removeTransformersFromAllGroups(transformers: Array<transformer>) {
         this.transformersGroups().forEach(transGroup => transGroup.transformers.removeAll(transformers));
         this.transformersGroups.remove((item: { entityName: string; transformers: KnockoutObservableArray<transformer> }) => item.transformers().length === 0);
     }
