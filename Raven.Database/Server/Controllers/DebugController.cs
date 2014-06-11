@@ -426,46 +426,7 @@ namespace Raven.Database.Server.Controllers
 				                            TotalCount = totalCount,
 											Identities = identities
 			                            });
-		}
-
-		[HttpGet]
-		[Route("debug/etags")]
-		[Route("databases/{databaseName}/debug/etags")]
-		public HttpResponseMessage Etags()
-		{
-			if (!Database.TransactionalStorage.FriendlyName.Equals("Voron", StringComparison.InvariantCultureIgnoreCase))
-				throw new InvalidOperationException("This endpoint is operational only for voron storage engine");
-
-			IEnumerable<KeyValuePair<string, Etag>> etagsFromMetadata = null;
-			IEnumerable<KeyValuePair<string, Etag>> etagsFromKeysByEtag = null;
-
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				etagsFromMetadata = ((DocumentsStorageActions)accessor.Documents).GetDocumentEtagsFromMetadata();
-				etagsFromKeysByEtag = ((DocumentsStorageActions)accessor.Documents).GetDocumentEtagsFromKeyByEtagIndice();
-			});
-
-			var results = 
-				(from etagFromMetadata in etagsFromMetadata
-				 join etagFromIndice in etagsFromKeysByEtag 
-					on etagFromMetadata.Key equals etagFromIndice.Key
-				select new
-				{
-					etagFromIndice.Key,
-					EtagFromIndice = etagFromIndice.Value,
-					EtagFromMetadata = etagFromMetadata.Value
-				}).ToList();
-
-			var badResults = results.Where(x => !x.EtagFromIndice.Equals(x.EtagFromMetadata)).ToList();
-
-			return GetMessageWithObject(new
-			{
-				ResultsWithDifferentEtag = badResults,
-				DuplicateEtagsFromMetadata = etagsFromMetadata.GroupBy(x => x.Key).Where(x => x.Count() > 1).ToList(),
-				DuplicateEtagsFromKeysByEtag = etagsFromKeysByEtag.GroupBy(x => x.Key).Where(x => x.Count() > 1).ToList()
-			});
-		}
-	
+		}	
 	}
 
 	public class RouteInfo
