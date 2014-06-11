@@ -46,52 +46,7 @@ class documents extends viewModelBase {
     }
 
 
-    updateCollections(receivedCollections: Array<collection>, db: database) {
-
-        var deletedCollections = [];
-        var curSelectedCollectionName = this.selectedCollection().name;
-        var collectionsChanged = false;
-
-        this.collections().forEach((col: collection) => {
-            if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
-                deletedCollections.push(col);
-                collectionsChanged = true;
-            }
-        });
-
-        this.collections.removeAll(deletedCollections);
-
-        receivedCollections.forEach((receivedCol: collection) => {
-            var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
-            if (!foundCollection) {
-                this.collections.push(receivedCol);
-                receivedCol.fetchTotalDocumentCount();
-                collectionsChanged = true;
-            }
-        });
-
-        this.collections.valueHasMutated();
-
-        var collectionToSelect = this.collections().first(c => c.name === curSelectedCollectionName) || this.allDocumentsCollection;
-        collectionToSelect.activate();
-    }
-
     
-
-    throttledFetchCollections() {
-        if (this.modelPollingTimeoutFlag === true) {
-            this.modelPollingTimeoutFlag = false;
-            setTimeout(() => {
-                var db = appUrl.getDatabase();
-                new getCollectionsCommand(db)
-                    .execute()
-                    .done(results => this.updateCollections(results, db)).always(() => {
-                        this.modelPollingTimeoutFlag = true;
-                        this.isDocumentsUpToDate = true;
-                    });
-            }, 5000);
-        }
-    }
 
 
     activate(args) {
@@ -262,13 +217,65 @@ class documents extends viewModelBase {
         }
     }
 
+    updateCollections(receivedCollections: Array<collection>, db: database) {
+
+        var deletedCollections = [];
+        var curSelectedCollectionName = this.selectedCollection().name;
+        var collectionsChanged = false;
+
+        this.collections().forEach((col: collection) => {
+            if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
+                deletedCollections.push(col);
+                collectionsChanged = true;
+            }
+        });
+
+        this.collections.removeAll(deletedCollections);
+
+        receivedCollections.forEach((receivedCol: collection) => {
+            var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
+            if (!foundCollection) {
+                this.collections.push(receivedCol);
+                receivedCol.fetchTotalDocumentCount();
+                collectionsChanged = true;
+            }
+        });
+
+        this.collections.valueHasMutated();
+
+        var collectionToSelect = this.collections().first(c => c.name === curSelectedCollectionName) || this.allDocumentsCollection;
+        collectionToSelect.activate();
+    }
+
+
+
+    throttledFetchCollections() {
+        if (this.modelPollingTimeoutFlag === true) {
+            this.modelPollingTimeoutFlag = false;
+            setTimeout(() => {
+                var db = appUrl.getDatabase();
+                new getCollectionsCommand(db)
+                    .execute()
+                    .done(results => this.updateCollections(results, db)).always(() => {
+                        this.modelPollingTimeoutFlag = true;
+                        this.isDocumentsUpToDate = true;
+                    });
+            }, 5000);
+        }
+    }
+
     refreshCollection() {
         var collection = this.selectedCollection();
         if (collection) {
             collection.fetchTotalDocumentCount();
+            collection.isUpToDate(true);
+            var notUpToDateCollections = this.collections().filter(col => col.isUpToDate() === false);
+            this.allDocumentsCollection.isUpToDate(!notUpToDateCollections || notUpToDateCollections.length == 1);
             this.selectedCollectionChanged(collection);
         }
     }
+
+    
 
     selectCollection(collection: collection) {
         collection.activate();
