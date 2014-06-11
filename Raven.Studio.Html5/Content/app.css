@@ -500,6 +500,12 @@ body {
 .popover {
   max-width: 30%;
 }
+#queryContainer .breadcrumb {
+  width: 100%;
+}
+#queryContainer .breadcrumb li {
+  overflow: visible!important;
+}
 #queryContainer .editor {
   height: 60px;
 }

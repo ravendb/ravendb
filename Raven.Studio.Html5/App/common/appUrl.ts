@@ -146,6 +146,16 @@ class appUrl {
         return resourceTag+"/edit?" + itemIdUrlPart + databaseUrlPart + pagedListInfo;
     } 
 
+    static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
+        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+        var indexUrlPart = "&index=" + index;
+        var itemNumberUrlPart = "&item=" + itemNumber;
+        var queryInfoUrlPart = query? "&query=" + encodeURIComponent(query): "";
+        var sortInfoUrlPart = sort?"&sorts=" + sort:"";
+        var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";
+        return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
+    } 
+
     static forNewDoc(db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
         return "#databases/edit?" + databaseUrlPart;

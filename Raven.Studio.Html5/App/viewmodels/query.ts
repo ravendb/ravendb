@@ -64,6 +64,16 @@ class query extends viewModelBase {
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
 
+    editItemSubscription = ko.postbox.subscribe("EditItem", (itemNumber: number) => {
+        //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
+        var queriess = this.recentQueries();
+        var recentq = this.recentQueries()[0];
+        var sorts = recentq.Sorts
+            .join(',');
+        //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
+        router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
+    });
+
     static containerSelector = "#queryContainer";
 
     constructor() {
@@ -85,6 +95,7 @@ class query extends viewModelBase {
 
             return "";
         });
+       
 
         this.didDynamicChangeIndex = ko.computed(() => {
             if (this.queryStats()) {
@@ -132,6 +143,9 @@ class query extends viewModelBase {
         this.focusOnQuery();
     }
 
+    detached() {
+        this.editItemSubscription.dispose();
+    }
     onIndexChanged(newIndexName: string) {
         var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
         this.contextName(command.docName);
