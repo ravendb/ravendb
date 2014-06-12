@@ -36,6 +36,7 @@ class ctor {
     firstVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
+    collections: KnockoutObservableArray<string>;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -54,6 +55,7 @@ class ctor {
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
         customFunctions: KnockoutObservable<customFunctions>;
+        collections: KnockoutObservableArray<collection>;
     }
 
     activate(settings: any) {
@@ -71,7 +73,8 @@ class ctor {
             contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
-            customFunctions: ko.observable(customFunctions.empty())
+            customFunctions: ko.observable(customFunctions.empty()),
+            collections: ko.observableArray<collection>([])
         };
         this.settings = $.extend(defaults, settings);
 
@@ -565,6 +568,12 @@ class ctor {
         } else {
             return "#";
         }
+    }
+
+    collectionExists(collectionName): boolean {
+        return this.settings.collections()
+            .map((c: collection) => (c.name === collectionName))
+            .reduce((p: boolean, c: boolean) => c || p, false);
     }
 }
 
