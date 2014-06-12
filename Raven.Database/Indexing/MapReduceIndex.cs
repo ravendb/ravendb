@@ -59,8 +59,8 @@ namespace Raven.Database.Indexing
 		}
 
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,
-							  AbstractViewGenerator viewGenerator, WorkContext context)
-			: base(directory, name, indexDefinition, viewGenerator, context)
+							  AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
+			: base(directory, name, indexDefinition, viewGenerator, context, indexStoragePath)
 		{
 			jsonSerializer = new JsonSerializer();
 			foreach (var jsonConverter in Default.Converters)
@@ -288,7 +288,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
 		{
 			// MapReduce index does not store and use any commit points
 		}

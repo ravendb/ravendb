@@ -71,6 +71,9 @@ namespace Raven.Database.Indexing
 
 		private readonly AbstractViewGenerator viewGenerator;
 		protected readonly WorkContext context;
+
+		private readonly string indexStoragePath;
+
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private RavenIndexWriter indexWriter;
@@ -82,7 +85,7 @@ namespace Raven.Database.Indexing
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 
-		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
 		{
 		    currentIndexSearcherHolder = new IndexSearcherHolder(name ,context);
 		    if (directory == null) throw new ArgumentNullException("directory");
@@ -94,6 +97,7 @@ namespace Raven.Database.Indexing
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
 			this.context = context;
+			this.indexStoragePath = indexStoragePath;
 			logIndexing.Debug("Creating index for {0}", name);
 			this.directory = directory;
 
@@ -345,6 +349,7 @@ namespace Raven.Database.Indexing
 
 			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
+			IndexSegmentsInfo segmentsInfo = null;
 
 			lock (writeLock)
 			{
@@ -403,7 +408,8 @@ namespace Raven.Database.Indexing
 			            {
 			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 			                Flush(); // just make sure changes are flushed to disk
-				            StoreChecksum();
+				            segmentsInfo = GetCurrentSegmentsInfo();
+							StoreChecksum(segmentsInfo);
 							UpdateIndexingStats(context, stats);
 			            }
 			        }
@@ -431,7 +437,7 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					HandleCommitPoints(itemsInfo);
+					HandleCommitPoints(itemsInfo, segmentsInfo);
 				}
 				catch (Exception e)
 				{
@@ -443,15 +449,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void StoreChecksum()
+		private void StoreChecksum(IndexSegmentsInfo segmentsInfo)
 		{
 			if (directory is RAMDirectory)
 				return;
 
-			context.IndexStorage.StoreChecksum(name, context.IndexStorage.GetCurrentSegmentsInfo(name, directory));
+			IndexStorage.StoreChecksum(indexStoragePath, name, segmentsInfo);
 		}
 
-		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo);
+		private IndexSegmentsInfo GetCurrentSegmentsInfo()
+		{
+			if (directory is RAMDirectory)
+				return null;
+
+			return IndexStorage.GetCurrentSegmentsInfo(name, directory);
+		}
+
+		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo);
 
 		protected void UpdateIndexingStats(WorkContext workContext, IndexingWorkStats stats)
 		{

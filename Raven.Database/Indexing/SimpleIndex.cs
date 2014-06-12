@@ -28,8 +28,8 @@ namespace Raven.Database.Indexing
 {
     public class SimpleIndex : Index
     {
-        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
-            : base(directory, name, indexDefinition, viewGenerator, context)
+        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
+            : base(directory, name, indexDefinition, viewGenerator, context, indexStoragePath)
         {
         }
 
@@ -204,7 +204,7 @@ namespace Raven.Database.Indexing
             return upToDate;
         }
 
-        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
         {
             if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
             {
@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing
                 {
                     HighestCommitedETag = itemsInfo.HighestETag,
                     TimeStamp = LastIndexTime,
-                    SegmentsInfo = context.IndexStorage.GetCurrentSegmentsInfo(name, directory)
+					SegmentsInfo = segmentsInfo ?? IndexStorage.GetCurrentSegmentsInfo(name, directory)
                 });
 
                 LastCommitPointStoreTime = SystemTime.UtcNow;

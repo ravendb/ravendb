@@ -500,10 +500,11 @@ namespace Raven.Database.Indexing
 			var hashFile = hashFiles.First();
 			var hash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
 
-			var segmentInfos = new SegmentInfos();
-			segmentInfos.Read(directory);
+			var segmentInfo = GetCurrentSegmentsInfo(indexName, directory);
+			if (segmentInfo.IsIndexCorrupted)
+				return false;
 
-			var currentSegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+			var currentSegmentsFileName = segmentInfo.SegmentsFileName;
 			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
 			using (var md5 = MD5.Create())
 			{
@@ -514,7 +515,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void StoreChecksum(string indexName, IndexSegmentsInfo segmentsInfo)
+		public static void StoreChecksum(string path, string indexName, IndexSegmentsInfo segmentsInfo)
 		{
 			if (segmentsInfo == null || segmentsInfo.IsIndexCorrupted)
 				return;
@@ -662,7 +663,10 @@ namespace Raven.Database.Indexing
 																				commitPointDirectoryName);
 
 					if (ValidateCommitPointChecksum(commitPointDirectory, out indexCommit) == false)
-						throw new InvalidOperationException("Commit point is invalid.");
+					{
+						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
+						continue; // checksum is invalid, try another commit point
+					}
 
 					var missingFile =
 						indexCommit.SegmentsInfo.ReferencedFiles.Any(
@@ -704,7 +708,7 @@ namespace Raven.Database.Indexing
 					if (File.Exists(commitPointDirectory.DeletedKeysFile))
 						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
 
-                    StoreChecksum(indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory));
+					StoreChecksum(indexStoragePath, indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory));
 
 					return true;
 				}
@@ -718,7 +722,7 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-        public IndexSegmentsInfo GetCurrentSegmentsInfo(string indexName, Lucene.Net.Store.Directory directory)
+        public static IndexSegmentsInfo GetCurrentSegmentsInfo(string indexName, Lucene.Net.Store.Directory directory)
         {
             var segmentInfos = new SegmentInfos();
             var result = new IndexSegmentsInfo();
@@ -804,8 +808,8 @@ namespace Raven.Database.Indexing
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext);
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext, path)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext, path);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 

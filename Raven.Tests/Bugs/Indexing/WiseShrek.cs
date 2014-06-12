@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs.Indexing
 			                                                        		{"f_License", SortOptions.Int},
 			                                                        	}
 
-			}, new MapOnlyView(), new WorkContext());
+			}, new MapOnlyView(), new WorkContext(), null);
 
 			var perFieldAnalyzerWrapper = simpleIndex.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), new List<Action>());
 
