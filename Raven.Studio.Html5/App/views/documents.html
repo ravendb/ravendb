@@ -11,7 +11,7 @@
                                 
                             </div>
                             <div class="collectionName pull-left">
-                                <span class="text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '(' + documentCount() + ($data.isUpToDate() === true?'':'?') + ')'"></span>
+                                <span class="text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '(' + documentCount() + ')'"></span>
                             </div>
                         </div>
                     </a>
@@ -62,6 +62,5 @@
 <div id="collections-context-menu">
     <ul class="dropdown-menu" role="menu">
         <li data-bind="click: $root.deleteCollection"><a tabindex="-1" href="#">Delete</a></li>
-        <li data-bind="click: $root.refreshCollection"><a tabindex="-1" href="#">Refresh</a></li>
     </ul>
 </div>
