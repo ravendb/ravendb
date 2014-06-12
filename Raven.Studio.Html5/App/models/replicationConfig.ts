@@ -3,6 +3,7 @@ class replicationConfig {
     private static DO_NOT_RESOLVE_AUTOMATICALLY = "None";
     private static RESOLVE_TO_LOCAL = "ResolveToLocal";
     private static RESOLVE_TO_REMOTE = "ResolveToRemote";
+    private static RESOLVE_TO_LATEST = "ResolveToLatest";
 
     documentConflictResolution = ko.observable<string>().extend({ required: true });
     attachmentConflictResolution = ko.observable<string>().extend({ required: true });
@@ -10,6 +11,9 @@ class replicationConfig {
     constructor(dto: replicationConfigDto) {
         this.documentConflictResolution(dto.DocumentConflictResolution);
         this.attachmentConflictResolution(dto.AttachmentConflictResolution);
+
+        this.documentConflictResolution.subscribe((val)=> this.attachmentConflictResolution(val)); // todo: remove that if decided to treat attachments differently
+
     }
 
     toDto(): replicationConfigDto {
@@ -19,29 +23,7 @@ class replicationConfig {
         };
     }
 
-    resolveDocumentsConflictsToLocal() {
-        this.documentConflictResolution(replicationConfig.RESOLVE_TO_LOCAL);
-    }
-
-    resolveDocumentsConflictsToRemote() {
-        this.documentConflictResolution(replicationConfig.RESOLVE_TO_REMOTE);
-    }
-
-    doNotResolveDocumentsConflictsAutomatically() {
-        this.documentConflictResolution(replicationConfig.DO_NOT_RESOLVE_AUTOMATICALLY);
-    }
-
-    resolveAttachmentsConflictsToLocal() {
-        this.attachmentConflictResolution(replicationConfig.RESOLVE_TO_LOCAL);
-    }
-
-    resolveAttachmentsConflictsToRemote() {
-        this.attachmentConflictResolution(replicationConfig.RESOLVE_TO_REMOTE);
-    }
-
-    doNotResolveAttachmentsConflictsAutomatically() {
-        this.attachmentConflictResolution(replicationConfig.DO_NOT_RESOLVE_AUTOMATICALLY);
-    }
+   
 }
 
 export = replicationConfig;
