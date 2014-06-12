@@ -70,7 +70,7 @@ class pagedList {
             }
         }
 
-        return this.items.slice(skip, skip + take)
+        return this.items.slice(skip, skip + take);
     }
 
     getNthItem(nth: number): JQueryPromise<any> {
@@ -121,7 +121,6 @@ class pagedList {
     hasIds(): boolean {
         return this.items && this.items.length > 0 && this.items[0] && this.items[0].getId && this.items[0].getId();
     }
-
 }
 
 export = pagedList;
