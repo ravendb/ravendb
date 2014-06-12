@@ -80,7 +80,7 @@ class editIndex extends viewModelBase {
         }
 
         var indexDef = this.editedIndex();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.luceneFields, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
         //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
