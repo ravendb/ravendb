@@ -13,22 +13,45 @@
 
 		public static int MemoryCompare(byte* lhs, byte* rhs, int n)
 		{
-			uint* lp = (uint*)lhs;
-			uint* rp = (uint*)rhs;
+			if (n == 0)
+				return 0;
 
-			while (n > Constants.SizeOfUInt)
+			if (n > Constants.SizeOfUInt)
 			{
-				if (*lp != *rp)
-					break;
+				var lUintAlignment = (long)lhs % Constants.SizeOfUInt;
+				var rUintAlignment = (long)rhs % Constants.SizeOfUInt;
 
-				lp++;
-				rp++;
+				if (lUintAlignment != 0 && lUintAlignment == rUintAlignment)
+				{
+					var toAlign = Constants.SizeOfUInt - lUintAlignment;
+					while (toAlign > 0)
+					{
+						var r = *lhs++ - *rhs++;
+						if (r != 0)
+							return r;
+						n--;
 
-				n -= Constants.SizeOfUInt;
+						toAlign--;
+					}
+				}
+
+				uint* lp = (uint*)lhs;
+				uint* rp = (uint*)rhs;
+
+				while (n > Constants.SizeOfUInt)
+				{
+					if (*lp != *rp)
+						break;
+
+					lp++;
+					rp++;
+
+					n -= Constants.SizeOfUInt;
+				}
+
+				lhs = (byte*) lp;
+				rhs = (byte*) rp;
 			}
-
-			lhs = (byte*)lp;
-			rhs = (byte*)rp;
 
 			while (n > 0)
 			{
@@ -37,25 +60,26 @@
 					return r;
 				n--;
 			}
+
 			return 0;
 		}
 
 		public static int Compare(Slice x, Slice y, SliceComparer cmp, int size)
 		{
-			fixed (byte* p1 = x._array)
-			fixed (byte* p2 = y._array)
+			fixed (byte* p1 = x.Array)
+			fixed (byte* p2 = y.Array)
 			{
-				return cmp(p1 != null ? p1 : x._pointer, p2 != null ? p2 : y._pointer, size);
+				return cmp(p1 != null ? p1 : x.Pointer, p2 != null ? p2 : y.Pointer, size);
 			}
 		}
 
 		public static int Compare(Slice x, PrefixedSlice y, SliceComparer cmp, ushort size)
 		{
-			fixed (byte* p1 = x._array)
-			fixed (byte* p2 = y._nonPrefixedData._array)
+			fixed (byte* p1 = x.Array)
+			fixed (byte* p2 = y.NonPrefixedData.Array)
 			{
-				var xPtr = p1 != null ? p1 : x._pointer;
-				var yPtr = p2 != null ? p2 : y._nonPrefixedData._pointer;
+				var xPtr = p1 != null ? p1 : x.Pointer;
+				var yPtr = p2 != null ? p2 : y.NonPrefixedData.Pointer;
 
 				if (y.Header.PrefixId == PrefixedSlice.NonPrefixedId)
 					return Compare(null, 0, null, 0, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
@@ -64,12 +88,12 @@
 
 				int r;
 
-				if (x.PrefixComparisonCache.TryGetCachedResult(y.Header.PrefixId, y._prefix.PageNumber, prefixBytesToCompare, out r) == false)
+				if (x.PrefixComparisonCache.TryGetCachedResult(y.Header.PrefixId, y.Prefix.PageNumber, prefixBytesToCompare, out r) == false)
 				{
-					r = Compare(null, 0, y.Prefix, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
+					r = Compare(null, 0, y.PrefixValue, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
 						prefixBytesToCompare);
 
-					x.PrefixComparisonCache.SetPrefixComparisonResult(y.Header.PrefixId, y._prefix.PageNumber, prefixBytesToCompare, r);
+					x.PrefixComparisonCache.SetPrefixComparisonResult(y.Header.PrefixId, y.Prefix.PageNumber, prefixBytesToCompare, r);
 				}
 
 				if (r != 0)
@@ -83,13 +107,13 @@
 
 		public static int Compare(PrefixedSlice x, PrefixedSlice y, SliceComparer cmp, ushort size)
 		{
-			fixed (byte* p1 = x._nonPrefixedData._array)
-			fixed (byte* p2 = y._nonPrefixedData._array)
+			fixed (byte* p1 = x.NonPrefixedData.Array)
+			fixed (byte* p2 = y.NonPrefixedData.Array)
 			{
-				var xPtr = p1 != null ? p1 : x._nonPrefixedData._pointer;
-				var yPtr = p2 != null ? p2 : y._nonPrefixedData._pointer;
+				var xPtr = p1 != null ? p1 : x.NonPrefixedData.Pointer;
+				var yPtr = p2 != null ? p2 : y.NonPrefixedData.Pointer;
 
-				return Compare(x.Prefix, x.Header.PrefixUsage, y.Prefix, y.Header.PrefixUsage, xPtr, x.Header.NonPrefixedDataSize,
+				return Compare(x.PrefixValue, x.Header.PrefixUsage, y.PrefixValue, y.Header.PrefixUsage, xPtr, x.Header.NonPrefixedDataSize,
 					yPtr, y.Header.NonPrefixedDataSize, cmp, size);
 			}
 		}

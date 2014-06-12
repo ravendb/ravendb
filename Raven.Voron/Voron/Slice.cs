@@ -10,14 +10,14 @@ namespace Voron
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
 		public static Slice Empty = new Slice(new byte[0]);
 
-		internal readonly byte[] _array;
-		internal byte* _pointer;
+		internal readonly byte[] Array;
+		internal byte* Pointer;
 
 		public Slice(SliceOptions options)
 		{
 			Options = options;
-			_pointer = null;
-			_array = null;
+			Pointer = null;
+			Array = null;
 			Size = 0;
 			KeyLength = 0;
 		}
@@ -27,8 +27,8 @@ namespace Voron
 			Size = size;
 			KeyLength = size;
 			Options = SliceOptions.Key;
-			_array = null;
-			_pointer = key;
+			Array = null;
+			Pointer = key;
 		}
 
 		public Slice(byte[] key) : this(key, (ushort)key.Length)
@@ -38,10 +38,10 @@ namespace Voron
 
 		public Slice(Slice other, ushort size)
 		{
-			if (other._array != null)
-				_array = other._array;
+			if (other.Array != null)
+				Array = other.Array;
 			else
-				_pointer = other._pointer;
+				Pointer = other.Pointer;
 
 			Options = other.Options;
 			Size = size;
@@ -54,8 +54,8 @@ namespace Voron
 			Size = size;
 			KeyLength = size;
 			Options = SliceOptions.Key;
-			_pointer = null;
-			_array = key;
+			Pointer = null;
+			Array = key;
 		}
 
 		public override bool Equals(object obj)
@@ -68,7 +68,7 @@ namespace Voron
 
 		public override int GetHashCode()
 		{
-			if (_array != null)
+			if (Array != null)
 				return ComputeHashArray();
 			return ComputeHashPointer();
 		}
@@ -81,7 +81,7 @@ namespace Voron
 				int hash = (int)2166136261;
 
 				for (int i = 0; i < Size; i++)
-					hash = (hash ^ _pointer[i]) * p;
+					hash = (hash ^ Pointer[i]) * p;
 
 				hash += hash << 13;
 				hash ^= hash >> 7;
@@ -100,7 +100,7 @@ namespace Voron
 				int hash = (int)2166136261;
 
 				for (int i = 0; i < Size; i++)
-					hash = (hash ^ _array[i]) * p;
+					hash = (hash ^ Array[i]) * p;
 
 				hash += hash << 13;
 				hash ^= hash >> 7;
@@ -117,23 +117,23 @@ namespace Voron
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
 
-			if (_array != null)
-				return Encoding.UTF8.GetString(_array,0, Size);
+			if (Array != null)
+				return Encoding.UTF8.GetString(Array,0, Size);
 
-			return new string((sbyte*)_pointer, 0, Size, Encoding.UTF8);
+			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
 		}
 
 		public IDisposable GetPointer(out byte* ptr)
 		{
-			if (_array != null)
+			if (Array != null)
 			{
-				fixed (byte* a = _array)
+				fixed (byte* a = Array)
 				{
 					ptr = a;
 				}
 			}
 
-			ptr = _pointer;
+			ptr = Pointer;
 
 			return null;
 		}
@@ -160,12 +160,12 @@ namespace Voron
 
 		public override void CopyTo(byte* dest)
 		{
-			if (_array == null)
+			if (Array == null)
 			{
-				NativeMethods.memcpy(dest, _pointer, Size);
+				NativeMethods.memcpy(dest, Pointer, Size);
 				return;
 			}
-			fixed (byte* a = _array)
+			fixed (byte* a = Array)
 			{
 				NativeMethods.memcpy(dest, a, Size);
 			}
@@ -178,13 +178,13 @@ namespace Voron
 
 		public void CopyTo(byte[] dest)
 		{
-			if (_array == null)
+			if (Array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p, _pointer, Size);
+					NativeMethods.memcpy(p, Pointer, Size);
 				return;
 			}
-			Buffer.BlockCopy(_array, 0, dest, 0, Size);
+			Buffer.BlockCopy(Array, 0, dest, 0, Size);
 		}
 
 		public void CopyTo(int from, byte[] dest, int offset, int count)
@@ -194,13 +194,13 @@ namespace Voron
 			if(offset + count > dest.Length)
 				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the buffer" +
 				                                              "");
-			if (_array == null)
+			if (Array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p + offset, _pointer + from, count);
+					NativeMethods.memcpy(p + offset, Pointer + from, count);
 				return;
 			}
-			Buffer.BlockCopy(_array, from, dest, offset, count);
+			Buffer.BlockCopy(Array, from, dest, offset, count);
 		}
 
 		public void CopyTo(int from, byte* dest, int offset, int count)
@@ -208,29 +208,29 @@ namespace Voron
 			if (from + count > Size)
 				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the slice");
 
-			if (_array == null)
+			if (Array == null)
 			{
-				NativeMethods.memcpy(dest + offset, _pointer + from, count);
+				NativeMethods.memcpy(dest + offset, Pointer + from, count);
 				return;
 			}
 
-			fixed (byte* p = _array)
+			fixed (byte* p = Array)
 				NativeMethods.memcpy(dest + offset, p + from, count);
 		}
 
 		public Slice Clone()
 		{
 			var buffer = new byte[Size];
-			if (_array == null)
+			if (Array == null)
 			{
 				fixed (byte* dest = buffer)
 				{
-					NativeMethods.memcpy(dest, _pointer, Size);
+					NativeMethods.memcpy(dest, Pointer, Size);
 				}
 			}
 			else
 			{
-				Buffer.BlockCopy(_array, 0, buffer, 0, Size);
+				Buffer.BlockCopy(Array, 0, buffer, 0, Size);
 			}
 
 			return new Slice(buffer);
@@ -238,10 +238,10 @@ namespace Voron
 
 	    public ValueReader CreateReader()
 	    {
-            if(_array != null)
-                return new ValueReader(_array, Size);
+            if(Array != null)
+                return new ValueReader(Array, Size);
 
-	        return new ValueReader(_pointer, Size);
+	        return new ValueReader(Pointer, Size);
 	    }
 
 		public override Slice Skip(ushort bytesToSkip)
@@ -249,13 +249,13 @@ namespace Voron
 			if (bytesToSkip == 0)
 				return this;
 
-			if (_pointer != null)
-				return new Slice(_pointer + bytesToSkip, (ushort)(Size - bytesToSkip));
+			if (Pointer != null)
+				return new Slice(Pointer + bytesToSkip, (ushort)(Size - bytesToSkip));
 
 			var toAllocate = Size - bytesToSkip;
 			var array = new byte[toAllocate];
 
-			Buffer.BlockCopy(_array, bytesToSkip, array, 0, toAllocate);
+			Buffer.BlockCopy(Array, bytesToSkip, array, 0, toAllocate);
 
 			return new Slice(array);
 		}
