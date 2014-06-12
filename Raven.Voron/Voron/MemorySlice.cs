@@ -107,5 +107,9 @@ namespace Voron
 				return 0;
 			}
 		}
+
+		public virtual void PrepareForSearching()
+		{
+		}
 	}
 }

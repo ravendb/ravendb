@@ -84,6 +84,9 @@
 				if (y.Header.PrefixId == PrefixedSlice.NonPrefixedId)
 					return Compare(null, 0, null, 0, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
 
+				if (x.PrefixComparisonCache == null)
+					return Compare(null, 0, y.PrefixValue, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+
 				var prefixBytesToCompare = Math.Min(y.Header.PrefixUsage, x.KeyLength);
 
 				int r;
