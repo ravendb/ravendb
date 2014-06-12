@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Test()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage: "esent", runInMemory: false))
+			using (var documentStore = NewDocumentStore(requestedStorage: "munin"))
 			{
 				documentStore.Initialize();
 				var ordersTotalByCustomerFor30Days = new Orders_TotalByCustomerFor30Days();
