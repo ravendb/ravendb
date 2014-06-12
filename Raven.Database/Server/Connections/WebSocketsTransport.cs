@@ -55,8 +55,7 @@ namespace Raven.Database.Server.Connections
         private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
-
-        public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
+        
         public string Id { get; private set; }
         public bool Connected { get; set; }
         public long CoolDownWithDataLossInMilisecods { get; set; }
@@ -64,7 +63,7 @@ namespace Raven.Database.Server.Connections
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
 
-        public WebSocketsTrasport(RavenDBOptions options, IOwinContext context)
+        public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
         {
             _options = options;
             _context = context;
