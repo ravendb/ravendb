@@ -94,7 +94,7 @@ class viewModelBase {
     canDeactivate(isClose): any {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['Yes', 'No']);
+            return app.showMessage('You have unsaved data. Are you sure you want to continue?', 'Unsaved Data', ['Yes', 'No']);
         }
         return true;
     }

@@ -51,8 +51,10 @@ class editDocument extends viewModelBase {
     documentSize: KnockoutComputed<string>;
     isInDocMode = ko.observable(true);
     queryIndex = ko.observable<String>();
-
     docTitle: KnockoutComputed<string>;
+
+    isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
+    isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -110,14 +112,39 @@ class editDocument extends viewModelBase {
                     return 'New Document';
                 } else {
                     return this.editedDocId();
-    }
+                }
             } else {
                 return 'Projection';
             }
         });
-    }
 
-    
+        this.isFirstDocumenNavtDisabled = ko.computed(() => {
+            var list = this.docsList();
+            if (list) {
+                var currentDocumentIndex = list.currentItemIndex();
+
+                if (currentDocumentIndex == 0) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        this.isLastDocumentNavDisabled = ko.computed(() => {
+            var list = this.docsList();
+            if (list) {
+                var currentDocumentIndex = list.currentItemIndex();
+                var totalDocuments = list.totalResultCount();
+
+                if (currentDocumentIndex == totalDocuments - 1) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+    }
 
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
@@ -456,23 +483,38 @@ class editDocument extends viewModelBase {
         this.pageToItem(0);
     }
 
-    pageToItem(index: number) {
-        var list = this.docsList();
-        if (list) {
-            list.getNthItem(index)
-                .done((doc: document) => {
-                    if (this.isInDocMode() === true) {
-                    this.loadDocument(doc.getId());
-                    list.currentItemIndex(index);
-                    this.updateUrl(doc.getId());
-                    }
-                    else {
-                        this.document(doc);
-                        this.lodaedDocumentName("");
-                        viewModelBase.dirtyFlag().reset(); //Resync Changes
-                    }
-                });
+    private pageToItem(index: number) {
+        this.canPageToItem().done(() => {
+            var list = this.docsList();
+            if (list) {
+                list.getNthItem(index)
+                    .done((doc: document) => {
+                        if (this.isInDocMode() === true) {
+                            this.loadDocument(doc.getId());
+                            list.currentItemIndex(index);
+                            this.updateUrl(doc.getId());
+                        } else {
+                            this.document(doc);
+                            this.lodaedDocumentName("");
+                            viewModelBase.dirtyFlag().reset(); //Resync Changes
+                        }
+                    });
+            }
+        });
+    }
+
+    private canPageToItem() {
+        var deferred = $.Deferred();
+
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            var confirmationMessageViewModel = this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
+            confirmationMessageViewModel.done(() => deferred.resolve());
+        } else {
+            deferred.resolve();
         }
+
+        return deferred;
     }
 
     navigateToCollection(collectionName: string) {
