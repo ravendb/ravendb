@@ -1,4 +1,23 @@
-﻿<div id="indexesContainer">
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li>
+        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+    </li>
+    <li class="active">
+        <span>All</span>
+    </li>
+</ul>
+
+<div id="indexesContainer">
     <div class="btn-toolbar" role="toolbar" data-bind="visible: sortedGroups().length > 0">
         <div class="btn-group">
             <a class="btn btn-primary" data-bind="attr: { href: newIndexUrl }" title="Add a new index (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>
@@ -106,7 +125,7 @@
                                         </label>
                                     </h4>
                                     <div class="pull-right">
-                                            <a class="btn btn-default indexes-controls"  data-placement="bottom" data-bind="attr: { href: editUrl }">
+                                            <a class="btn btn-default indexes-controls" data-placement="bottom" data-bind="attr: { href: editUrl }">
                                             <i class="fa fa-pencil"></i>
                                         </a>
                                         <div class="btn-group">

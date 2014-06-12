@@ -1,4 +1,26 @@
-﻿<section id="editIndex">
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li>
+        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+    </li>
+    <li class="active" data-bind="visible: indexName() != null">
+        <span data-bind="text: indexName"></span>
+    </li>
+    <li class="active" data-bind="visible: indexName() == null">
+        <span>New Index</span>
+    </li>
+</ul>
+
+<section id="editIndex">
     <div class="btn-toolbar">
         <div class="btn-group">
                  <button class="btn btn-primary"  data-bind="click: save" title="Save the index (Alt+S)" accesskey="S">

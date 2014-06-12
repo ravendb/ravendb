@@ -32,19 +32,23 @@ class editIndex extends viewModelBase {
     queryUrl = ko.observable<string>();
     editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
     indexErrorsList = ko.observableArray<string>();
+    appUrls: computedAppUrls;
+    indexName: KnockoutComputed<string>;
     
-
     constructor() {
         super();
       
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
+        this.appUrls = appUrl.forCurrentDatabase();
+
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
+        this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : null);
     }
     
     canActivate(indexToEditName: string) {
