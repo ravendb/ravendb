@@ -223,29 +223,6 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private IndexSegmentsInfo GetCurrentSegmentsInfo()
-        {
-            var segmentInfos = new SegmentInfos();
-            var result = new IndexSegmentsInfo();
-
-            try
-            {
-                segmentInfos.Read(directory);
-
-                result.Generation = segmentInfos.Generation;
-                result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
-                result.ReferencedFiles = segmentInfos.Files(directory, false);
-            }
-            catch (CorruptIndexException ex)
-            {
-                logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
-
-                result.IsIndexCorrupted = true;
-            }
-
-            return result;
-        }
-
         private bool ShouldStoreCommitPoint()
         {
             if (directory is RAMDirectory) // no point in trying to store commits for ram index

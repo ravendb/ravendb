@@ -403,6 +403,7 @@ namespace Raven.Database.Indexing
 			            {
 			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 			                Flush(); // just make sure changes are flushed to disk
+				            StoreChecksum();
 							UpdateIndexingStats(context, stats);
 			            }
 			        }
@@ -440,6 +441,37 @@ namespace Raven.Database.Indexing
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
 			}
+		}
+
+		private void StoreChecksum()
+		{
+			if (directory is RAMDirectory)
+				return;
+
+			context.IndexStorage.StoreChecksum(name, GetCurrentSegmentsInfo());
+		}
+
+		protected IndexSegmentsInfo GetCurrentSegmentsInfo()
+		{
+			var segmentInfos = new SegmentInfos();
+			var result = new IndexSegmentsInfo();
+
+			try
+			{
+				segmentInfos.Read(directory);
+
+				result.Generation = segmentInfos.Generation;
+				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+				result.ReferencedFiles = segmentInfos.Files(directory, false);
+			}
+			catch (CorruptIndexException ex)
+			{
+				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
+
+				result.IsIndexCorrupted = true;
+			}
+
+			return result;
 		}
 
 		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo);

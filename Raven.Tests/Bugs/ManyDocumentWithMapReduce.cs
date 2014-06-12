@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WouldBeIndexedProperly()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(runInMemory: false))
 			{
 				using (var session = store.OpenSession())
 				{
