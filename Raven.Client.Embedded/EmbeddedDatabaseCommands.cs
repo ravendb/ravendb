@@ -556,10 +556,10 @@ namespace Raven.Client.Embedded
 							waitForHeaders.Set();
 						throw;
 					}
-				}, TaskCreationOptions.LongRunning);
+				});
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
-				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+				return YieldUntilDone(items, task);
 			}
 		}
 
@@ -593,7 +593,7 @@ namespace Raven.Client.Embedded
 							database.GetDocumentsWithIdStartingWith(
 								startsWith,
 								matches,
-                                exclude,
+								exclude,
 								start,
 								pageSize,
 								CancellationToken.None,
@@ -605,30 +605,42 @@ namespace Raven.Client.Embedded
 					}
 				}
 			});
-			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+			return YieldUntilDone(items, task);
 		}
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
 		{
+			task.ContinueWith(_ => items.CompleteAdding(), TaskContinuationOptions.ExecuteSynchronously);
 			try
 			{
-				task.ContinueWith(_ => items.Add(null));
-				while (true)
+				while (items.IsCompleted == false)
 				{
-					var ravenJObject = items.Take();
-					if (ravenJObject == null)
+					RavenJObject item;
+					try
+					{
+						item = items.Take();
+					}
+					catch (InvalidOperationException)
+					{
 						break;
-					yield return ravenJObject;
+					}
+					yield return item;
 				}
 			}
 			finally
 			{
 				try
 				{
+					items.CompleteAdding();
 					task.Wait();
 				}
-				catch (ObjectDisposedException)
+				catch (AggregateException ae)
 				{
+					var e = ae.ExtractSingleInnerException();
+					if (e is InvalidOperationException == false) // complete adding was called
+					{
+						throw;
+					}
 				}
 			}
 			
