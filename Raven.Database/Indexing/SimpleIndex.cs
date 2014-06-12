@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing
                 {
                     HighestCommitedETag = itemsInfo.HighestETag,
                     TimeStamp = LastIndexTime,
-                    SegmentsInfo = GetCurrentSegmentsInfo()
+                    SegmentsInfo = context.IndexStorage.GetCurrentSegmentsInfo(name, directory)
                 });
 
                 LastCommitPointStoreTime = SystemTime.UtcNow;

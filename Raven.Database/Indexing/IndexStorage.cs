@@ -126,6 +126,10 @@ namespace Raven.Database.Indexing
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
+
+                    if (ValidateIndexChecksum(indexDefinitionStorage.FixupIndexName(indexDefinition.Name), luceneDirectory) == false)
+                        throw new InvalidOperationException("Index checksum is invalid.");
+
 					indexImplementation = CreateIndexImplementation(fixedName, indexDefinition, luceneDirectory);
 
 					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
@@ -326,9 +330,6 @@ namespace Raven.Database.Indexing
 						IndexWriter.Unlock(directory);
 						// for some reason, just calling unlock doesn't remove this file
 						directory.DeleteFile("write.lock");
-
-						if (configuration.ResetIndexOnUncleanShutdown && ValidateIndexChecksum(indexName, directory) == false)
-							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 					}
 					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
 					{
@@ -519,9 +520,7 @@ namespace Raven.Database.Indexing
 			var currentSegmentsFileName = segmentsInfo.SegmentsFileName;
 
 			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5");
-			foreach (var hashFile in hashFiles)
-				File.Delete(hashFile);
-
+			
 			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
 			using (var md5 = MD5.Create())
 			{
@@ -532,6 +531,9 @@ namespace Raven.Database.Indexing
 				{
 				}
 			}
+
+            foreach (var hashFile in hashFiles)
+                File.Delete(hashFile);
 		}
 
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
@@ -625,7 +627,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
+		private bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
 		{
 			indexCommit = null;
 			keysToDelete = null;
@@ -633,7 +635,9 @@ namespace Raven.Database.Indexing
 			if (indexDefinition.IsMapReduce)
 				return false;
 
-			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexDefinition.Name));
+		    var indexName = indexDefinitionStorage.FixupIndexName(indexDefinition.Name);
+
+			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexName));
 
 			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
 
@@ -651,7 +655,7 @@ namespace Raven.Database.Indexing
 			{
 				try
 				{
-					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexDefinition.Name,
+					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexName,
 																				commitPointDirectoryName);
 
 					if (ValidateCommitPointChecksum(commitPointDirectory, out indexCommit) == false)
@@ -697,6 +701,8 @@ namespace Raven.Database.Indexing
 					if (File.Exists(commitPointDirectory.DeletedKeysFile))
 						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
 
+                    StoreChecksum(indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory));
+
 					return true;
 				}
 				catch (Exception ex)
@@ -708,6 +714,29 @@ namespace Raven.Database.Indexing
 
 			return false;
 		}
+
+        public IndexSegmentsInfo GetCurrentSegmentsInfo(string indexName, Lucene.Net.Store.Directory directory)
+        {
+            var segmentInfos = new SegmentInfos();
+            var result = new IndexSegmentsInfo();
+
+            try
+            {
+                segmentInfos.Read(directory);
+
+                result.Generation = segmentInfos.Generation;
+                result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+                result.ReferencedFiles = segmentInfos.Files(directory, false);
+            }
+            catch (CorruptIndexException ex)
+            {
+                log.WarnException(string.Format("Could not read segment information for an index '{0}'", indexName), ex);
+
+                result.IsIndexCorrupted = true;
+            }
+
+            return result;
+        }
 
 		private static bool ValidateCommitPointChecksum(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
 		{
@@ -725,6 +754,9 @@ namespace Raven.Database.Indexing
 					var textReader = new JsonTextReader(new StreamReader(commitPointFile));
 
 					indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+
+				    if (indexCommit == null)
+				        return false;
 
 					commitPointFile.Position = 0;
 

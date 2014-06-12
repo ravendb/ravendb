@@ -448,30 +448,7 @@ namespace Raven.Database.Indexing
 			if (directory is RAMDirectory)
 				return;
 
-			context.IndexStorage.StoreChecksum(name, GetCurrentSegmentsInfo());
-		}
-
-		protected IndexSegmentsInfo GetCurrentSegmentsInfo()
-		{
-			var segmentInfos = new SegmentInfos();
-			var result = new IndexSegmentsInfo();
-
-			try
-			{
-				segmentInfos.Read(directory);
-
-				result.Generation = segmentInfos.Generation;
-				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
-				result.ReferencedFiles = segmentInfos.Files(directory, false);
-			}
-			catch (CorruptIndexException ex)
-			{
-				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
-
-				result.IsIndexCorrupted = true;
-			}
-
-			return result;
+			context.IndexStorage.StoreChecksum(name, context.IndexStorage.GetCurrentSegmentsInfo(name, directory));
 		}
 
 		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo);
