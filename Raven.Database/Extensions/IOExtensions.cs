@@ -156,7 +156,16 @@ namespace Raven.Database.Extensions
 				CopyDirectory(diSourceDir, nextTargetDir);
 			}
 		}
+
+		public static string GetMD5Hex(byte[] input)
+		{
+			var sb = new StringBuilder();
+			for (var i = 0; i < input.Length; i++)
+			{
+				sb.Append(input[i].ToString("x2"));
+			}
+
+			return sb.ToString();
+		}
 	}
-
-
 }

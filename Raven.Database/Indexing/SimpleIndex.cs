@@ -28,8 +28,8 @@ namespace Raven.Database.Indexing
 {
     public class SimpleIndex : Index
     {
-        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
-            : base(directory, name, indexDefinition, viewGenerator, context)
+        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
+            : base(directory, name, indexDefinition, viewGenerator, context, indexStoragePath)
         {
         }
 
@@ -204,7 +204,7 @@ namespace Raven.Database.Indexing
             return upToDate;
         }
 
-        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
         {
             if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
             {
@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing
                 {
                     HighestCommitedETag = itemsInfo.HighestETag,
                     TimeStamp = LastIndexTime,
-                    SegmentsInfo = GetCurrentSegmentsInfo()
+					SegmentsInfo = segmentsInfo ?? IndexStorage.GetCurrentSegmentsInfo(name, directory)
                 });
 
                 LastCommitPointStoreTime = SystemTime.UtcNow;
@@ -221,29 +221,6 @@ namespace Raven.Database.Indexing
             {
                 context.IndexStorage.AddDeletedKeysToCommitPoints(name, itemsInfo.DeletedKeys);
             }
-        }
-
-        private IndexSegmentsInfo GetCurrentSegmentsInfo()
-        {
-            var segmentInfos = new SegmentInfos();
-            var result = new IndexSegmentsInfo();
-
-            try
-            {
-                segmentInfos.Read(directory);
-
-                result.Generation = segmentInfos.Generation;
-                result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
-                result.ReferencedFiles = segmentInfos.Files(directory, false);
-            }
-            catch (CorruptIndexException ex)
-            {
-                logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
-
-                result.IsIndexCorrupted = true;
-            }
-
-            return result;
         }
 
         private bool ShouldStoreCommitPoint()
