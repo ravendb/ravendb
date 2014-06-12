@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.Threading;
 using Voron.Impl;
 
 namespace Voron
@@ -52,37 +53,51 @@ namespace Voron
 			return CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, other.KeyLength) == 0;
 		}
 
+		private ushort _matchedBytes;
+		private SliceComparer _matchPrefixInstance;
+
 		public virtual ushort FindPrefixSize(MemorySlice other)
 		{
-			var maxPrefixLength = Math.Min(KeyLength, other.KeyLength);
+			_matchedBytes = 0;
 
-			SlicePrefixMatcher.Init(maxPrefixLength);
-			CompareData(other, SlicePrefixMatcher.MatchPrefixMethodInstance, maxPrefixLength);
+			if (_matchPrefixInstance == null)
+				_matchPrefixInstance = MatchPrefix;
 
-			return SlicePrefixMatcher.MatchedBytes;
+			CompareData(other, _matchPrefixInstance, Math.Min(KeyLength, other.KeyLength));
+
+			return _matchedBytes;
 		}
 
-		private static class SlicePrefixMatcher
+		private int MatchPrefix(byte* lhs, byte* rhs, int size)
 		{
-			private static int _maxPrefixLength;
+			var n = size;
 
-			public static readonly SliceComparer MatchPrefixMethodInstance = MatchPrefix;
-			public static ushort MatchedBytes;
+			var sizeOfUInt = Constants.SizeOfUInt;
 
-			public static void Init(int maxPrefixLength)
+			if (n > sizeOfUInt)
 			{
-				_maxPrefixLength = maxPrefixLength;
-				MatchedBytes = 0;
-			}
+				var lUintAlignment = (long)lhs % sizeOfUInt;
+				var rUintAlignment = (long)rhs % sizeOfUInt;
 
-			private static int MatchPrefix(byte* a, byte* b, int size)
-			{
-				var n = Math.Min(_maxPrefixLength, size);
+				if (lUintAlignment != 0 && lUintAlignment == rUintAlignment)
+				{
+					var toAlign = sizeOfUInt - lUintAlignment;
+					while (toAlign > 0)
+					{
+						var r = *lhs++ - *rhs++;
+						if (r != 0)
+							return r;
+						n--;
+						_matchedBytes++;
 
-				uint* lp = (uint*)a;
-				uint* rp = (uint*)b;
+						toAlign--;
+					}
+				}
 
-				while (n > Constants.SizeOfUInt)
+				uint* lp = (uint*)lhs;
+				uint* rp = (uint*)rhs;
+
+				while (n > sizeOfUInt)
 				{
 					if (*lp != *rp)
 						break;
@@ -90,24 +105,24 @@ namespace Voron
 					lp++;
 					rp++;
 
-					n -= Constants.SizeOfUInt;
-					MatchedBytes += Constants.SizeOfUInt;
+					n -= sizeOfUInt;
+					_matchedBytes += sizeOfUInt;
 				}
 
-				a = (byte*)lp;
-				b = (byte*)rp;
-
-				while (n > 0)
-				{
-					var r = *a++ - *b++;
-					if (r != 0)
-						return r;
-					n--;
-					MatchedBytes++;
-				}
-
-				return 0;
+				lhs = (byte*)lp;
+				rhs = (byte*)rp;
 			}
+
+			while (n > 0)
+			{
+				var r = *lhs++ - *rhs++;
+				if (r != 0)
+					return r;
+				n--;
+				_matchedBytes++;
+			}
+
+			return 0;
 		}
 
 		public virtual void PrepareForSearching()

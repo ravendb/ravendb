@@ -17,14 +17,16 @@
 			if (n == 0)
 				return 0;
 
-			if (n > Constants.SizeOfUInt)
+			var sizeOfUInt = Constants.SizeOfUInt;
+
+			if (n > sizeOfUInt)
 			{
-				var lUintAlignment = (long)lhs % Constants.SizeOfUInt;
-				var rUintAlignment = (long)rhs % Constants.SizeOfUInt;
+				var lUintAlignment = (long)lhs % sizeOfUInt;
+				var rUintAlignment = (long)rhs % sizeOfUInt;
 
 				if (lUintAlignment != 0 && lUintAlignment == rUintAlignment)
 				{
-					var toAlign = Constants.SizeOfUInt - lUintAlignment;
+					var toAlign = sizeOfUInt - lUintAlignment;
 					while (toAlign > 0)
 					{
 						var r = *lhs++ - *rhs++;
@@ -39,7 +41,7 @@
 				uint* lp = (uint*)lhs;
 				uint* rp = (uint*)rhs;
 
-				while (n > Constants.SizeOfUInt)
+				while (n > sizeOfUInt)
 				{
 					if (*lp != *rp)
 						break;
@@ -47,7 +49,7 @@
 					lp++;
 					rp++;
 
-					n -= Constants.SizeOfUInt;
+					n -= sizeOfUInt;
 				}
 
 				lhs = (byte*) lp;
