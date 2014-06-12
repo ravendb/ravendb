@@ -385,7 +385,7 @@ class ctor {
                 });
                 if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
                     this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
-                } else {
+                }else {
                     this.settings.customColumns().columns.push(newCustomColumn);
                 }
             }

@@ -488,7 +488,7 @@ class shell extends viewModelBase {
                 shell.currentDbChangesApi().dispose();
             }
 
-            shell.currentDbChangesApi(new changesApi(newDb));
+            shell.currentDbChangesApi(new changesApi(newDb,5000));
 
             shell.currentDbChangesApi().watchAllDocs(() => this.fetchDbStats(newDb));
             shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDbStats(newDb));

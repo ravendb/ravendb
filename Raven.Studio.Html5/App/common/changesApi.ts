@@ -20,19 +20,19 @@ class changesApi {
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private commandBase = new commandBase();
 
-    constructor(private db: database) {
+    constructor(private db: database, coolDownWithDataLoss?:number) {
         this.eventsId = this.makeId();
-        this.connect();
+        this.connect(!coolDownWithDataLoss ? 0 : coolDownWithDataLoss);
     }
 
-    private connect() {
+    private connect(coolDownWithDataLoss:number) {
         if ("WebSocket" in window) {
             var host = window.location.host;
             var dbUrl = appUrl.forResourceQuery(this.db);
 
             console.log("Connecting to changes API (db = " + this.db.name + ")");
 
-            this.webSocket = new WebSocket("ws://" + host + dbUrl + '/changes/websocket?id=' + this.eventsId);
+            this.webSocket = new WebSocket("ws://" + host + dbUrl + '/changes/websocket?id=' + this.eventsId + "&cooldownwithdataloss=" + coolDownWithDataLoss);
 
             this.webSocket.onmessage = (e) => this.onEvent(e);
             this.webSocket.onerror = (e) => this.onError(e);
