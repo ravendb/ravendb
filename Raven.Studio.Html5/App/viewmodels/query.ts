@@ -28,11 +28,13 @@ import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityN
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 import queryStatsDialog = require("viewmodels/queryStatsDialog");
+import customFunctions = require("models/customFunctions");
+import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
-    indexes = ko.observableArray<{name:string; hasReduce:boolean}>();
+    indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
     editIndexUrl: KnockoutComputed<string>;
     termsUrl: KnockoutComputed<string>;
     statsUrl: KnockoutComputed<string>;
@@ -52,6 +54,7 @@ class query extends viewModelBase {
     recentQueries = ko.observableArray<storedQueryDto>();
     recentQueriesDoc = ko.observable<storedQueryContainerDto>();
     rawJsonUrl = ko.observable<string>();
+    collections = ko.observableArray<collection>([]);
     collectionNames = ko.observableArray<string>();
     selectedIndexLabel: KnockoutComputed<string>;
     appUrls: computedAppUrls;
@@ -63,6 +66,17 @@ class query extends viewModelBase {
     didDynamicChangeIndex: KnockoutComputed<boolean>;
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+    currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
+
+    editItemSubscription = ko.postbox.subscribe("EditItem", (itemNumber: number) => {
+        //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
+        var queriess = this.recentQueries();
+        var recentq = this.recentQueries()[0];
+        var sorts = recentq.Sorts
+            .join(',');
+        //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
+        router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
+    });
 
     static containerSelector = "#queryContainer";
 
@@ -76,7 +90,7 @@ class query extends viewModelBase {
         this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
         this.selectedIndexEditUrl = ko.computed(() => {
-            if (this.queryStats()){
+            if (this.queryStats()) {
                 var index = this.queryStats().IndexName;
                 if (index && index.indexOf("dynamic/") !== 0) {
                     return appUrl.forEditIndex(index, this.activeDatabase());
@@ -85,6 +99,7 @@ class query extends viewModelBase {
 
             return "";
         });
+       
 
         this.didDynamicChangeIndex = ko.computed(() => {
             if (this.queryStats()) {
@@ -95,8 +110,8 @@ class query extends viewModelBase {
                 return false;
             }
         });
-        
-        aceEditorBindingHandler.install();        
+
+        aceEditorBindingHandler.install();
     }
 
     openQueryStats() {
@@ -108,6 +123,7 @@ class query extends viewModelBase {
         super.activate(indexNameOrRecentQueryHash);
 
         this.fetchAllTransformers();
+        this.fetchCustomFunctions();
         $.when(
             this.fetchAllCollections(),
             this.fetchAllIndexes(),
@@ -132,6 +148,9 @@ class query extends viewModelBase {
         this.focusOnQuery();
     }
 
+    detached() {
+        this.editItemSubscription.dispose();
+    }
     onIndexChanged(newIndexName: string) {
         var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
         this.contextName(command.docName);
@@ -145,14 +164,14 @@ class query extends viewModelBase {
                 this.currentColumnsParams().columns.removeAll();
                 this.currentColumnsParams().customMode(false);
             }
-            
+
         });
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             this.setSelectedIndex(this.indexes.first().name);
-        } else if (this.indexes.first( i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
+        } else if (this.indexes.first(i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         }
         else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
@@ -182,17 +201,20 @@ class query extends viewModelBase {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
-            return {
-                name: i.PublicName,
-                hasReduce: !!i.LastReducedTimestamp
-            };
-        })));
+                return {
+                    name: i.PublicName,
+                    hasReduce: !!i.LastReducedTimestamp
+                };
+            })));
     }
 
     fetchAllCollections(): JQueryPromise<any> {
         return new getCollectionsCommand(this.activeDatabase())
             .execute()
-            .done((results: collection[]) => this.collectionNames(results.map(c => c.name)));
+            .done((results: collection[]) => {
+                this.collections(results);
+                this.collectionNames(results.map(c => c.name));
+            });
     }
 
     fetchRecentQueries(): JQueryPromise<any> {
@@ -263,9 +285,9 @@ class query extends viewModelBase {
 
         return null;
     }
-        
 
-    queryCompleter(editor: any, session: any,pos:AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+
+    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
 
         if (!currentToken || typeof currentToken.type == "string") {
@@ -280,7 +302,7 @@ class query extends viewModelBase {
 
                 // first, calculate and validate the column name
                 var currentColumnName: string = null;
-                var currentValue:string = "";
+                var currentValue: string = "";
 
                 if (currentToken.type == "keyword") {
                     currentColumnName = currentToken.value.substring(0, currentToken.value.length - 1);
@@ -294,7 +316,7 @@ class query extends viewModelBase {
                 }
 
                 // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                
+
                 if (!!currentColumnName && !!this.indexFields.first(x=> x === currentColumnName)) {
 
                     if (this.selectedIndex().indexOf("dynamic/") !== 0) {
@@ -306,7 +328,7 @@ class query extends viewModelBase {
                                         return { name: curVal, value: curVal, score: 10, meta: "value" };
                                     }));
                                 }
-                        });
+                            });
                     } else {
 
                         if (currentValue.length > 0) {
@@ -323,7 +345,7 @@ class query extends viewModelBase {
                             callback([{ error: "notext" }], null);
                         }
                     }
-            }
+                }
             }
         }
     }
@@ -402,14 +424,14 @@ class query extends viewModelBase {
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
                     .done((result: pagedResultSet) => {
-                        if (!!result && result.totalResultCount >0) {
+                        if (!!result && result.totalResultCount > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
                             if (!!dynamicIndexPattern) {
                                 this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
                             }
 
                         }
-                });
+                    });
             } else {
                 new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
                     .execute()
@@ -496,13 +518,20 @@ class query extends viewModelBase {
     }
 
     selectColumns() {
-        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
+        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions().clone(), this.contextName(), this.activeDatabase());
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols: customColumns) => {
             this.currentColumnsParams(cols);
 
             this.runQuery();
-            
+
+        });
+    }
+
+    fetchCustomFunctions() {
+        var task = new getCustomFunctionsCommand(this.activeDatabase()).execute();
+        task.done((cf: customFunctions) => {
+            this.currentCustomFunctions(cf);
         });
     }
 

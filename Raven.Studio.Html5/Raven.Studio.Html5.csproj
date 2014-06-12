@@ -36,6 +36,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncIncomingActivitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncOutgoingActivitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resolveConflictCommand.ts" />
@@ -119,6 +120,8 @@
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\generalUtils.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
@@ -166,6 +169,7 @@
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\createFolderInFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteConfigurationKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
@@ -272,6 +276,7 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -296,8 +301,14 @@
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
     <Content Include="App\commands\getVersioningsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveCustomFunctionsCommand.ts" />
     <Content Include="App\commands\saveDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\common\execJs.ts" />
+    <TypeScriptCompile Include="App\common\inputCursor.ts" />
+    <TypeScriptCompile Include="App\models\customFunctions.ts" />
+    <TypeScriptCompile Include="App\common\autoCompleterSupport.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyIndexDialog.html" />
@@ -309,6 +320,7 @@
     <Content Include="App\views\counter\editCounterDialog.html" />
     <Content Include="App\views\counter\deleteCounterStorageConfirm.html" />
     <Content Include="App\views\counter\editCounterStorage.html" />
+    <Content Include="App\views\customFunctionsEditor.html" />
     <Content Include="App\views\databaseSettingsDialog.html" />
     <Content Include="App\views\executePatchConfirm.html" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />
@@ -320,6 +332,7 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugIdentities.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystem\createFolderInFilesystem.html" />
     <Content Include="App\views\filesystem\status.html" />
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
@@ -461,7 +474,17 @@
     <Content Include="Content\images\ui-icons_888888_256x240.png" />
     <Content Include="Content\images\ui-icons_cd0a0a_256x240.png" />
     <Content Include="Content\jquery-ui-1.10.4.custom.min.css" />
+    <Content Include="Content\jquery.dynatree\custom-skin\custom.css" />
+    <Content Include="Content\jquery.dynatree\skin\icons-rtl.gif" />
+    <Content Include="Content\jquery.dynatree\skin\icons.gif" />
+    <Content Include="Content\jquery.dynatree\skin\loading.gif" />
+    <Content Include="Content\jquery.dynatree\skin\ui.dynatree.css" />
+    <Content Include="Content\jquery.dynatree\skin\vline-rtl.gif" />
+    <Content Include="Content\jquery.dynatree\skin\vline.gif" />
     <Content Include="Content\nprogress.css" />
+    <Content Include="Content\jquery.dynatree\skin-vista\icons.gif" />
+    <Content Include="Content\jquery.dynatree\skin-vista\loading.gif" />
+    <Content Include="Content\jquery.dynatree\skin-vista\ui.dynatree.css" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
@@ -1093,12 +1116,16 @@
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
+    <Content Include="Scripts\jquery.dynatree.js" />
+    <Content Include="Scripts\jquery.dynatree.min.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
-    <TypeScriptCompile Include="Scripts\typings\bootstrap.datetimepicker\bootstrap.datetimepicker.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
@@ -1408,9 +1435,6 @@
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
-  <ItemGroup>
-    <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
-  </ItemGroup>
   <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
@@ -1422,7 +1446,7 @@
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
         <WebProjectProperties>
-          <UseIIS>True</UseIIS>
+          <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>56397</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>

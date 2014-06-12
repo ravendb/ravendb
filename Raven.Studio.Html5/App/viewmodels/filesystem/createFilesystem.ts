@@ -5,7 +5,6 @@ import dialog = require("plugins/dialog");
 import commandBase = require("commands/commandBase");
 
 import filesystem = require("models/filesystem/filesystem");
-import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
 class createFilesystem extends dialogViewModelBase {
 

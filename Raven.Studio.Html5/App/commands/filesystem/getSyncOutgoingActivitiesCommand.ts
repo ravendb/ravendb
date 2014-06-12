@@ -2,7 +2,6 @@
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDetails = require("models/filesystem/synchronizationDetails");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getSyncOutgoingActivitiesCommand extends commandBase {
 
@@ -13,8 +12,8 @@ class getSyncOutgoingActivitiesCommand extends commandBase {
     execute(): JQueryPromise<synchronizationDetail[]> {
 
         // Outgoing: All the pending and active activities. 
-        var pendingTask = this.getPendingActivity(0, 1);
-        var activeTask = this.getActiveActivity(0, 1);
+        var pendingTask = this.getPendingActivity(0, 50);
+        var activeTask = this.getActiveActivity(0, 50);
 
         var doneTask = $.Deferred();
         var start = 0;
@@ -50,8 +49,8 @@ class getSyncOutgoingActivitiesCommand extends commandBase {
             }
         });
         combinedTask.fail(xhr => {
-            this.reportError("Failed to get synchronization outgoing activities.")
-            doneTask.reject(xhr)
+            this.reportError("Failed to get synchronization outgoing activities.");
+            doneTask.reject(xhr);
         });
 
         return doneTask;        

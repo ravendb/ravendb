@@ -270,7 +270,7 @@
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
     <Compile Include="Counters\Controllers\CountersController.cs" />
-    <Compile Include="Server\Connections\WebSocketsTrasport.cs" />
+    <Compile Include="Server\Connections\WebSocketsTransport.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
@@ -372,6 +372,7 @@
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
     <Compile Include="Server\RavenFS\Controllers\AdminFileSystemController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FilesChangesController.cs" />
     <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FoldersController.cs" />
@@ -408,8 +409,8 @@
     <Compile Include="Server\RavenFS\Storage\Exceptions\FileExistsException.cs" />
     <Compile Include="Server\RavenFS\Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\ITransactionalStorage.cs" />
-    <Compile Include="Server\RavenFS\Storage\FileAndPages.cs" />
-    <Compile Include="Server\RavenFS\Storage\FileHeader.cs" />
+    <Compile Include="Server\RavenFS\Storage\FileAndPagesInformation.cs" />
+    <Compile Include="Server\RavenFS\Storage\FileHeaderInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\PageInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\RenameFileOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\SchemaCreator.cs" />
@@ -1019,6 +1020,7 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
     <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
+    <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\BundlesHelper.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />

@@ -124,7 +124,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__directory:" + input));
+                .done((input: string) => this.addToSearchInput("__directory:/" + input));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }

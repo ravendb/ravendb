@@ -14,7 +14,7 @@ namespace Raven.Database.Server
 		private readonly DocumentDatabase systemDatabase;
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
-		private CountersLandlord countersLandlord;
+		private readonly CountersLandlord countersLandlord;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{

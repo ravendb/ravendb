@@ -17,6 +17,8 @@ import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
 import changeSubscription = require('models/changeSubscription');
 import changesApi = require("common/changesApi");
+import customFunctions = require("models/customFunctions");
+import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 
 class documents extends viewModelBase {
 
@@ -27,6 +29,7 @@ class documents extends viewModelBase {
     collectionToSelectName: string;
     currentCollectionPagedItems = ko.observable<pagedList>();
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+    currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
     selectedDocumentIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
@@ -51,6 +54,8 @@ class documents extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.fetchCustomFunctions();
 
         // treat document put/delete events
         this.currentDBDocChangesSubscription = shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
@@ -175,6 +180,14 @@ class documents extends viewModelBase {
         collectionsWithSysCollection.forEach(c => c.fetchTotalDocumentCount());
     }
 
+
+    fetchCustomFunctions() {
+        var customFunctionsCommand = new getCustomFunctionsCommand(this.activeDatabase()).execute();
+        customFunctionsCommand.done((cf: customFunctions) => {
+            this.currentCustomFunctions(cf);
+        });
+    }
+
     //TODO: this binding has notification leak!
     selectedCollectionChanged(selected: collection) {
         if (selected) {
@@ -267,7 +280,7 @@ class documents extends viewModelBase {
     }
 
     selectColumns() {
-        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
+        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);

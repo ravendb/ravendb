@@ -22,6 +22,12 @@ namespace Raven.Database.Storage.Esent.Backup
 		{
 		}
 
+
+		protected override bool IsValidBackup(string backupFilename)
+		{
+			return File.Exists(Path.Combine(backupLocation, backupFilename));
+		}
+
 		public override void Execute()
 		{
             ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");

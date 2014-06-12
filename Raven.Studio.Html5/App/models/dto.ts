@@ -505,6 +505,7 @@ interface conflictVersionsDto {
 
 interface documentBase {
     getId(): string;
+    getUrl(): string;
     getDocumentPropertyNames(): Array<string>;
 }
 
@@ -514,7 +515,6 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
-
 }
 
 interface customColumnParamsDto {
@@ -664,11 +664,19 @@ interface statusDebugIndexFieldsDto {
 
 interface debugDocumentStatsDto {
     Total: number;
+    TotalSize: number;
     Tombstones: number;
     System: number;
+    SystemSize: number;
     NoCollection: number;
-    Collections: dictionary<number>;
+    NoCollectionSize: number;
+    Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
+}
+
+interface collectionStats {
+    Quantity: number;
+    Size: number;
 }
 
 enum documentChangeType {
@@ -759,11 +767,16 @@ enum ImportItemType {
 }
 
 interface changesApiEventDto {
+    Time: string; // ISO date string
     Type: string;
-    Value: any;
+    Value?: any;
 }
 
 interface databaseDto {
     Name: string;
     Disabled: boolean;
+}
+
+interface customFunctionsDto {
+    Functions: string;
 }

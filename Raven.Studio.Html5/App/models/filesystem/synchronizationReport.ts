@@ -26,6 +26,10 @@
         return this.FileName;
     }
 
+    getUrl() {
+        return this.getId();
+    }
+
     getDocumentPropertyNames(): Array<string> {
         return ["Id", "Type"];
     }

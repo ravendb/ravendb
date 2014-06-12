@@ -90,7 +90,8 @@ namespace Raven.Database.Prefetching
 		{
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
-			int prefetchingQueueSize;
+			int prefetchingQueueSizeInBytes;
+			var prefetchingDurationTimer = Stopwatch.StartNew();
 			do
 			{
 				var nextEtagToIndex = GetNextDocEtag(etag);				
@@ -106,14 +107,14 @@ namespace Raven.Database.Prefetching
 
 				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result);
 
-				if (docsLoaded)
+				if (docsLoaded) 
 					etag = result[result.Count - 1].Etag;
 
-				prefetchingQueueSize = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
-			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
-					 (prefetchingQueueSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < context.Configuration.MemoryLimitForIndexingInMB);
+				prefetchingQueueSizeInBytes = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
+			 } while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
+						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
+						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024)));
 			
-
 			return result;
 		}
 
@@ -123,7 +124,7 @@ namespace Raven.Database.Prefetching
 
 			foreach (var jsonDocument in jsonDocs)
 				prefetchingQueue.Add(jsonDocument);
-		}
+			}
 
 		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items)
 		{
@@ -201,20 +202,20 @@ namespace Raven.Database.Prefetching
 			        Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
 			        1024*512);
 
-			    jsonDocs = actions.Documents
-			        .GetDocumentsAfter(
-			            etag,
-			            autoTuner.NumberOfItemsToIndexInSingleBatch,
-			            context.CancellationToken,
+				jsonDocs = actions.Documents
+					.GetDocumentsAfter(
+						etag,
+						autoTuner.NumberOfItemsToIndexInSingleBatch,
+						context.CancellationToken,
                         maxSize,
 			            untilEtag)
-			        .Where(x => x != null)
-			        .Select(doc =>
-			        {
-			            DocumentRetriever.EnsureIdInMetadata(doc);
-			            return doc;
-			        })
-			        .ToList();
+					.Where(x => x != null)
+					.Select(doc =>
+					{
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						return doc;
+					})
+					.ToList();
 			});
 
 			if (untilEtag == null)

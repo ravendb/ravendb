@@ -3,18 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 {
 	public class RemoteRdcManager
 	{
 		private readonly ISignatureRepository localSignatureRepository;
-        private readonly RavenFileSystemClient.SynchronizationClient ravenFileSystemClient;
+        private readonly IAsyncFilesSynchronizationCommands ravenFileSystemClient;
 		private readonly ISignatureRepository remoteCacheSignatureRepository;
 
-        public RemoteRdcManager(RavenFileSystemClient.SynchronizationClient ravenFileSystemClient, ISignatureRepository localSignatureRepository,
+        public RemoteRdcManager(IAsyncFilesSynchronizationCommands ravenFileSystemClient, ISignatureRepository localSignatureRepository,
 								ISignatureRepository remoteCacheSignatureRepository)
 		{
 			this.localSignatureRepository = localSignatureRepository;

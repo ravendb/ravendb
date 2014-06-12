@@ -58,7 +58,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Whatever the instance has been disposed
 		/// </summary>
-		public bool WasDisposed { get; protected set; }
+        public bool WasDisposed { get; protected set; }
 
 		/// <summary>
 		/// Subscribe to change notifications from the server

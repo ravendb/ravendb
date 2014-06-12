@@ -634,6 +634,13 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
     }
 
 #queryContainer {
+
+    .breadcrumb {
+        width:100%;
+        li{
+            overflow: visible!important;             
+        }   
+    }
     .editor {
         height: 60px;
     }
@@ -1212,6 +1219,46 @@ footer {
         margin-top: 5px;
     }
 }
+
+.upload-queue {
+    position: fixed;
+    width: 100%;
+    bottom: 50px;
+    left: 0;
+    height: 300px;
+    z-index: 9999;
+    margin-bottom: 0;
+    background-color: #f5f5f5;
+}
+
+.upload-queue-min {
+    height: 40px !important;
+}
+
+.upload-queue-collapsed {
+    padding: 0 0 0 10px;
+}
+
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 999px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+
 // End of Filesystems
 
 .quotas-settings-form {
@@ -1237,6 +1284,15 @@ footer {
 
 }
 
+.custom-functions-form {
+    .editor {
+        height: 500px;
+    }
+
+    .btn-toolbar {
+        margin-bottom: 10px;
+    }
+}
 
 .versioning-settings-form {
     .versioning-card {

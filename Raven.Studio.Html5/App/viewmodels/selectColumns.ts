@@ -1,3 +1,4 @@
+
 import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
@@ -8,6 +9,9 @@ import customColumnParams = require('models/customColumnParams');
 import saveDocumentCommand = require('commands/saveDocumentCommand');
 import deleteDocumentCommand = require('commands/deleteDocumentCommand');
 import commandBase = require('commands/commandBase');
+import inputCursor = require('common/inputCursor');
+import customFunctions = require('models/customFunctions');
+import autoCompleterSupport = require('common/autoCompleterSupport');
 
 class selectColumns extends dialogViewModelBase {
 
@@ -16,8 +20,60 @@ class selectColumns extends dialogViewModelBase {
     private newCommandBase = new commandBase();
     private form: JQuery;
 
-    constructor(private customColumns: customColumns, private context, private database: database) {
+    private activeInput: JQuery;
+    private autoCompleteBase = ko.observableArray<KnockoutObservable<string>>([]);
+    private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
+    private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
+    private autoCompleterSupport: autoCompleterSupport;
+
+
+    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database) {
         super();
+        this.generateCompletionBase();
+        this.regenerateBindingSubscriptions();
+        this.monitorForNewRows();
+        this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults);
+    }
+
+    private generateCompletionBase() {
+        this.autoCompleteBase([]);
+        this.customColumns.columns().forEach((column: customColumnParams) => this.autoCompleteBase().push(column.binding));
+
+        var moduleSource = "var exports = {}; " + this.customFunctions.functions + "; return exports;";
+        var exports = new Function(moduleSource)();
+        for (var funcName in exports) {
+            this.autoCompleteBase().push(ko.observable<string>(funcName + "()"));
+        }
+    }
+
+    private regenerateBindingSubscriptions() {
+        this.completionSearchSubscriptions.forEach((subscription) => subscription.dispose());
+        this.completionSearchSubscriptions = [];
+        this.customColumns.columns().forEach((column: customColumnParams, index: number) =>
+            this.completionSearchSubscriptions.push(
+                column.binding.subscribe(this.searchForCompletions.bind(this))
+                )
+            );
+    }
+
+    private monitorForNewRows() {
+        this.customColumns.columns.subscribe((changes: Array<{ index: number; status: string; value: customColumnParams }>) => {
+            var somethingRemoved: boolean = false;
+            changes.forEach((change) => {
+                if (change.status === "added") {
+                    this.completionSearchSubscriptions.push(
+                        change.value.binding.subscribe(this.searchForCompletions.bind(this))
+                        );
+                }
+                else if (change.status === "deleted") {
+                    somethingRemoved = true;
+                }
+            });
+
+            if (somethingRemoved) {
+                this.regenerateBindingSubscriptions();
+            }
+        }, null, "arrayChange");
     }
 
     attached() {
@@ -108,6 +164,34 @@ class selectColumns extends dialogViewModelBase {
 
     onConfigSaved() {
         this.newCommandBase.reportSuccess('Configuration saved!');
+    }
+
+    generateBindingInputId(index: number) {
+        return 'binding-' + index;
+    }
+
+    enterKeyPressed():boolean {
+        var focusedBindingInput = $("[id ^= 'binding-']:focus");
+        if (focusedBindingInput.length) {
+            // insert first completion
+            if (this.autoCompleteResults().length > 0) {
+                this.completeTheWord(this.autoCompleteResults()[0]());
+            }
+            // prevent submitting the form and closing dialog when accepting completion
+            return false;
+        }
+        return super.enterKeyPressed();
+    }
+
+    searchForCompletions() {
+        this.activeInput = $("[id ^= 'binding-']:focus");
+        this.autoCompleterSupport.searchForCompletions(this.activeInput);
+    }
+
+    completeTheWord(selectedCompletion: string) {
+        if (this.activeInput.length > 0) {
+            this.autoCompleterSupport.completeTheWord(this.activeInput, selectedCompletion);
+        }
     }
 }
 

@@ -33,7 +33,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class RavenBaseApiController : ApiController
+    public abstract class RavenBaseApiController : ApiController
 	{
 		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
 

@@ -1,9 +1,10 @@
 ﻿using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
@@ -24,9 +25,9 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	public class FilesController : RavenFsApiController
-	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class FilesController : RavenFsApiController
+    {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/files")]
@@ -35,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             int results;
             var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
 
-            var list = new List<FileHeader>();
+            var list = new List<FileHeaderInformation>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
             return this.GetMessageWithObject(list, HttpStatusCode.OK)
@@ -47,7 +48,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -137,7 +138,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -259,7 +260,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			try
 			{
-                RavenFileSystem.MetricsCounters.FilesPerSecond.Mark();
+                FileSystem.MetricsCounters.FilesPerSecond.Mark();
 
 				name = RavenFileNameHelper.RavenPath(name);
 

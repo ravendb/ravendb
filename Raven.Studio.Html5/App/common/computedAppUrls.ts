@@ -27,6 +27,7 @@ interface computedAppUrls {
     versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
+    customFunctionsEditor: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;
     statusDebugMetrics: KnockoutComputed<string>;

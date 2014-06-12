@@ -10,7 +10,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public async void HowToUseTheClient()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
             var uploadTask = client.UploadAsync("dragon.design", new RavenJObject
 			{
 				{"Customer", "Northwind"},

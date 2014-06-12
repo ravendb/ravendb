@@ -14,6 +14,7 @@ import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
+import customFunctions = require('models/customFunctions');
 
 class ctor {
 
@@ -35,6 +36,7 @@ class ctor {
     firstVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
+    collections: KnockoutObservableArray<string>;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -52,6 +54,8 @@ class ctor {
         contextMenuOptions: string[];
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
+        customFunctions: KnockoutObservable<customFunctions>;
+        collections: KnockoutObservableArray<collection>;
     }
 
     activate(settings: any) {
@@ -68,10 +72,11 @@ class ctor {
             isCopyAllowed: true,
             contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
             selectionEnabled: true,
-            customColumns: ko.observable(customColumns.empty())
+            customColumns: ko.observable(customColumns.empty()),
+            customFunctions: ko.observable(customFunctions.empty()),
+            collections: ko.observableArray<collection>([])
         };
         this.settings = $.extend(defaults, settings);
-
 
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;
@@ -194,12 +199,18 @@ class ctor {
             target: '#gridContextMenu',
             before: (e: MouseEvent) => {
 
+                var parentRow = $(e.target).parent(".ko-grid-row");
+                var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+
                 if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
-                    var parentRow = $(e.target).parent(".ko-grid-row");
-                    var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+                    
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
                         this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                    }
+                } else {
+                    if (rightClickedElement) {
+                        this.settings.selectedIndices([rightClickedElement.rowIndex()]);
                     }
                 }
                 return true;
@@ -246,7 +257,7 @@ class ctor {
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getId(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
+            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getUrl(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
@@ -255,7 +266,7 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditItem(selectedItem.getId(), appUrl.getResource(), itemIndex, collectionName));
+            router.navigate(appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName));
         }
     }
 
@@ -512,6 +523,15 @@ class ctor {
         return indices;
     }
 
+    editItem() {
+        var selectedDocs = this.getSelectedItems();
+
+        if (this.settings.selectedIndices().length >0) {
+            ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
+        }
+        
+    }
+
     copySelectedDocs() {
         this.showCopyDocDialog(false);
     }
@@ -563,6 +583,12 @@ class ctor {
         } else {
             return "#";
         }
+    }
+
+    collectionExists(collectionName: string): boolean {
+        return this.settings.collections()
+            .map((c: collection) => collectionName.toLowerCase().substr(0, c.name.length) === c.name.toLowerCase() )
+            .reduce((p: boolean, c: boolean) => c || p, false);
     }
 }
 

@@ -21,6 +21,12 @@ class conflictItem {
         }
         return item;
     }
+
+    static fromConflictNotificationDto(dto: synchronizationConflictNotification): conflictItem {
+        var item = new conflictItem(dto.FileName, dto.SourceServerUrl);
+
+        return item;
+    }
 }
 
 export = conflictItem;
