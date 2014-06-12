@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using Voron.Impl;
 
 namespace Voron
 {
@@ -15,7 +16,6 @@ namespace Voron
 		public ushort Size;
 		public ushort KeyLength;
 		public SliceOptions Options;
-		public PrefixComparisonCache PrefixComparisonCache = new PrefixComparisonCache();
 
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
@@ -33,7 +33,7 @@ namespace Voron
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, SliceComparisonMethods.NativeMemCmpInstance, Math.Min(KeyLength, other.KeyLength));
+			var r = CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, Math.Min(KeyLength, other.KeyLength));
 			if (r != 0)
 				return r;
 
@@ -49,20 +49,17 @@ namespace Voron
 		{
 			if (KeyLength < other.KeyLength)
 				return false;
-			return CompareData(other, SliceComparisonMethods.NativeMemCmpInstance, other.KeyLength) == 0;
+			return CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, other.KeyLength) == 0;
 		}
 
-		public ushort FindPrefixSize(MemorySlice other)
+		public virtual ushort FindPrefixSize(MemorySlice other)
 		{
 			var maxPrefixLength = Math.Min(KeyLength, other.KeyLength);
 
-			using (PrefixComparisonCache != null ? PrefixComparisonCache.DisablePrefixCache() : null)
-			{
-				var slicePrefixMatcher = new SlicePrefixMatcher(maxPrefixLength);
-				CompareData(other, slicePrefixMatcher.MatchPrefix, maxPrefixLength);
+			var slicePrefixMatcher = new SlicePrefixMatcher(maxPrefixLength);
+			CompareData(other, slicePrefixMatcher.MatchPrefix, maxPrefixLength);
 
-				return slicePrefixMatcher.MatchedBytes;
-			}
+			return slicePrefixMatcher.MatchedBytes;
 		}
 
 		private class SlicePrefixMatcher
@@ -72,22 +69,39 @@ namespace Voron
 			public SlicePrefixMatcher(int maxPrefixLength)
 			{
 				_maxPrefixLength = maxPrefixLength;
-				MatchedBytes = 0;
 			}
 
-			public ushort MatchedBytes { get; private set; }
+			public ushort MatchedBytes;
 
 			public int MatchPrefix(byte* a, byte* b, int size)
 			{
-				for (var i = 0; i < Math.Min(_maxPrefixLength, size); i++)
-				{
-					if (*a == *b)
-						MatchedBytes++;
-					else
-						return *a > *b ? 1 : -1;
+				var n = Math.Min(_maxPrefixLength, size);
 
-					a++;
-					b++;
+				uint* lp = (uint*)a;
+				uint* rp = (uint*)b;
+
+				while (n > Constants.SizeOfUInt)
+				{
+					if (*lp != *rp)
+						break;
+
+					lp++;
+					rp++;
+
+					n -= Constants.SizeOfUInt;
+					MatchedBytes += Constants.SizeOfUInt;
+				}
+
+				a = (byte*)lp;
+				b = (byte*)rp;
+
+				while (n > 0)
+				{
+					var r = *a++ - *b++;
+					if (r != 0)
+						return r;
+					n--;
+					MatchedBytes++;
 				}
 
 				return 0;

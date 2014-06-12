@@ -53,6 +53,11 @@ namespace Voron.Trees
 
 		public NodeHeader* Search(MemorySlice key)
 		{
+			var slice = key as Slice;
+
+			if (slice != null)
+				slice.PrefixComparisonCache.Clear();
+
 			if (NumberOfEntries == 0)
 			{
 				LastSearchPosition = 0;

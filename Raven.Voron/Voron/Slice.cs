@@ -259,5 +259,13 @@ namespace Voron
 
 			return new Slice(array);
 		}
+
+		public PrefixComparisonCache PrefixComparisonCache = new PrefixComparisonCache();
+
+		public override ushort FindPrefixSize(MemorySlice other)
+		{
+			using (PrefixComparisonCache.DisablePrefixCache())
+				return base.FindPrefixSize(other);
+		}
 	}
 }

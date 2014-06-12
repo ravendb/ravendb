@@ -25,6 +25,9 @@ namespace Voron.Impl
 		public static int PageNumberSize = sizeof(long);
 
 		public static int NodeOffsetSize = sizeof(ushort);
+
+		public static ushort SizeOfUInt = sizeof(uint);
+
 		public const int CurrentVersion = 2;
 
 		public const string RootTreeName = "Root";

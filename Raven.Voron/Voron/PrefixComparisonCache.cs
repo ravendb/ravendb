@@ -89,5 +89,10 @@ namespace Voron
 			_disabled = true;
 			return new DisposableAction(() => _disabled = tmp);
 		}
+
+		public void Clear()
+		{
+			_cachedItem = null;
+		}
 	}
 }

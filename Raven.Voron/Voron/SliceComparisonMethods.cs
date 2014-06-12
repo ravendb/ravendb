@@ -9,6 +9,37 @@
 	{
 		public static SliceComparer NativeMemCmpInstance = NativeMethods.memcmp;
 
+		public static SliceComparer OwnMemCmpInstane = MemoryCompare;
+
+		public static int MemoryCompare(byte* lhs, byte* rhs, int n)
+		{
+			uint* lp = (uint*)lhs;
+			uint* rp = (uint*)rhs;
+
+			while (n > Constants.SizeOfUInt)
+			{
+				if (*lp != *rp)
+					break;
+
+				lp++;
+				rp++;
+
+				n -= Constants.SizeOfUInt;
+			}
+
+			lhs = (byte*)lp;
+			rhs = (byte*)rp;
+
+			while (n > 0)
+			{
+				var r = *lhs++ - *rhs++;
+				if (r != 0)
+					return r;
+				n--;
+			}
+			return 0;
+		}
+
 		public static int Compare(Slice x, Slice y, SliceComparer cmp, int size)
 		{
 			fixed (byte* p1 = x._array)
@@ -27,7 +58,7 @@
 				var yPtr = p2 != null ? p2 : y._nonPrefixedData._pointer;
 
 				if (y.Header.PrefixId == PrefixedSlice.NonPrefixedId)
-					return Compare(null, 0, y.Prefix, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+					return Compare(null, 0, null, 0, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
 
 				var prefixBytesToCompare = Math.Min(y.Header.PrefixUsage, x.KeyLength);
 
