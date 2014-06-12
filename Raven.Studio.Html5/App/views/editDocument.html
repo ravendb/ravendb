@@ -13,7 +13,7 @@
             <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode() === true?ravenEntityName:$root.queryIndex, attr: {title:ravenEntityName, href: '#documents?collection=' + ravenEntityName }, click: $root.navigateToCollection.bind($root, ravenEntityName)"></a>
         </li>
         <!-- /ko -->
-        <li class="active" data-bind="text:docTitle, attr:{title:docTitle}" style="display: inline-block">
+        <li class="active" data-bind="text: docTitle, attr:{ title: docTitle }" style="display: inline-block">
         </li>
     </ul>
     <form data-bind="submit: saveDocument">

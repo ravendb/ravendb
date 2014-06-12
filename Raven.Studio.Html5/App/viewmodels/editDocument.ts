@@ -107,11 +107,19 @@ class editDocument extends viewModelBase {
 
         this.docTitle = ko.computed(() => {
             if (this.isInDocMode() == true) {
-                //isCreatingNewDocument()===true?'New Document': editedDocId
                 if (this.isCreatingNewDocument() === true) {
                     return 'New Document';
                 } else {
-                    return this.editedDocId();
+                    var editedDocId = this.editedDocId();
+
+                    if (!!editedDocId) {
+                        var lastIndexInEditedDocId = editedDocId.lastIndexOf('/') + 1;
+                        if (lastIndexInEditedDocId > 0) {
+                            editedDocId = editedDocId.slice(lastIndexInEditedDocId);
+                        }
+                    }
+
+                    return editedDocId;
                 }
             } else {
                 return 'Projection';
