@@ -570,9 +570,9 @@ class ctor {
         }
     }
 
-    collectionExists(collectionName): boolean {
+    collectionExists(collectionName: string): boolean {
         return this.settings.collections()
-            .map((c: collection) => (c.name === collectionName))
+            .map((c: collection) => collectionName.toLowerCase().substr(0, c.name.length) === c.name.toLowerCase() )
             .reduce((p: boolean, c: boolean) => c || p, false);
     }
 }
