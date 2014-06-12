@@ -673,8 +673,10 @@ namespace Raven.Client.Document
                 LogBatch(data);
 
                 var batchResults = DatabaseCommands.Batch(data.Commands);
-                UpdateBatchResults(batchResults, data);
-            }
+	            if (batchResults == null)
+		            throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
+				UpdateBatchResults(batchResults, data);
+			}
         }
 
         /// <summary>
