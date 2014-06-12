@@ -269,11 +269,18 @@ namespace Voron
 
 		public override ushort FindPrefixSize(MemorySlice other)
 		{
-			if (PrefixComparisonCache == null) 
+			if (PrefixComparisonCache == null)
 				return base.FindPrefixSize(other);
-			
-			using (PrefixComparisonCache.DisablePrefixCache())
+
+			PrefixComparisonCache.Disabled = true;
+			try
+			{
 				return base.FindPrefixSize(other);
+			}
+			finally
+			{
+				PrefixComparisonCache.Disabled = false;
+			}
 		}
 	}
 }

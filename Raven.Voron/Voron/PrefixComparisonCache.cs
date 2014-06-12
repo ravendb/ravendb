@@ -6,9 +6,6 @@
 
 namespace Voron
 {
-	using System;
-	using Util;
-
 	public class PrefixCompareResult
 	{
 		public long PageNumber;
@@ -20,11 +17,11 @@ namespace Voron
 	public class PrefixComparisonCache
 	{
 		private PrefixCompareResult _cachedItem;
-		private bool _disabled = false;
+		public bool Disabled = false;
 
 		public void SetPrefixComparisonResult(byte prefixId, long pageNumber, ushort comparedBytes, int cmpResult)
 		{
-			if(_disabled)
+			if(Disabled)
 				return;
 
 			if (_cachedItem == null)
@@ -48,7 +45,7 @@ namespace Voron
 
 		public bool TryGetCachedResult(byte prefixId, long pageNumber, ushort bytesToCompare, out int result)
 		{
-			if (_cachedItem == null || _disabled)
+			if (_cachedItem == null || Disabled)
 			{
 				result = int.MinValue;
 				return false;
@@ -81,13 +78,6 @@ namespace Voron
 
 			result = _cachedItem.CompareResult;
 			return true;
-		}
-
-		public IDisposable DisablePrefixCache()
-		{
-			var tmp = _disabled;
-			_disabled = true;
-			return new DisposableAction(() => _disabled = tmp);
 		}
 	}
 }

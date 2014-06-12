@@ -1,6 +1,7 @@
 ﻿namespace Voron
 {
 	using System;
+	using System.Runtime.CompilerServices;
 	using Impl;
 
 	public unsafe delegate int SliceComparer(byte* a, byte* b, int size);
@@ -64,6 +65,7 @@
 			return 0;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Compare(Slice x, Slice y, SliceComparer cmp, int size)
 		{
 			fixed (byte* p1 = x.Array)
@@ -73,6 +75,7 @@
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Compare(Slice x, PrefixedSlice y, SliceComparer cmp, ushort size)
 		{
 			fixed (byte* p1 = x.Array)
@@ -108,6 +111,7 @@
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Compare(PrefixedSlice x, PrefixedSlice y, SliceComparer cmp, ushort size)
 		{
 			fixed (byte* p1 = x.NonPrefixedData.Array)
@@ -121,6 +125,7 @@
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Compare(byte* prefix_x, ushort prefix_x_len, byte* prefix_y, ushort prefix_y_len, byte* x, ushort x_len, byte* y,
 		   ushort y_len, SliceComparer cmp, ushort size)
 		{

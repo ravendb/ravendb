@@ -56,24 +56,26 @@ namespace Voron
 		{
 			var maxPrefixLength = Math.Min(KeyLength, other.KeyLength);
 
-			var slicePrefixMatcher = new SlicePrefixMatcher(maxPrefixLength);
-			CompareData(other, slicePrefixMatcher.MatchPrefix, maxPrefixLength);
+			SlicePrefixMatcher.Init(maxPrefixLength);
+			CompareData(other, SlicePrefixMatcher.MatchPrefixMethodInstance, maxPrefixLength);
 
-			return slicePrefixMatcher.MatchedBytes;
+			return SlicePrefixMatcher.MatchedBytes;
 		}
 
-		private class SlicePrefixMatcher
+		private static class SlicePrefixMatcher
 		{
-			private readonly int _maxPrefixLength;
+			private static int _maxPrefixLength;
 
-			public SlicePrefixMatcher(int maxPrefixLength)
+			public static readonly SliceComparer MatchPrefixMethodInstance = MatchPrefix;
+			public static ushort MatchedBytes;
+
+			public static void Init(int maxPrefixLength)
 			{
 				_maxPrefixLength = maxPrefixLength;
+				MatchedBytes = 0;
 			}
 
-			public ushort MatchedBytes;
-
-			public int MatchPrefix(byte* a, byte* b, int size)
+			private static int MatchPrefix(byte* a, byte* b, int size)
 			{
 				var n = Math.Min(_maxPrefixLength, size);
 
