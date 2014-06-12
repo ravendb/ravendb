@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Linq;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 {

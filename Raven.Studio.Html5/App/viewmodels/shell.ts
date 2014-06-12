@@ -75,6 +75,7 @@ class shell extends viewModelBase {
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
+    static currentFsChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
@@ -85,7 +86,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateCounterStorageWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db, true); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.fetchFSStats(fs, true); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); this.fetchFSStats(fs, true); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
@@ -488,7 +489,7 @@ class shell extends viewModelBase {
                 shell.currentDbChangesApi().dispose();
             }
 
-            shell.currentDbChangesApi(new changesApi(newDb));
+             shell.currentDbChangesApi(new changesApi(newDb));
 
             shell.currentDbChangesApi().watchAllDocs(() => this.fetchDbStats(newDb));
             shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDbStats(newDb));
@@ -496,6 +497,13 @@ class shell extends viewModelBase {
 
             this.currentConnectedDatabase = newDb;
         }
+    }
+    
+    private updateFsChangesApi(newResource: resource) {
+        if (shell.currentFsChangesApi()) {
+            shell.currentFsChangesApi().dispose();
+        }
+        shell.currentFsChangesApi(new changesApi(newResource));
     }
 
     private fetchDbStats(db: database, forceFetch: boolean = false) {
@@ -505,7 +513,6 @@ class shell extends viewModelBase {
                     new getDatabaseStatsCommand(db).execute().done(result => {db.statistics(result);});}
             
         } else {
-            
             if (!db.isInStatsFetchCoolDown) {
                 db.isInStatsFetchCoolDown = true;
 

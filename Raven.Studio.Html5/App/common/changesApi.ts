@@ -1,7 +1,7 @@
 /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import database = require('models/database');
+import resource = require('models/resource');
 import appUrl = require('common/appUrl');
 import changeSubscription = require('models/changeSubscription');
 import changesCallback = require('common/changesCallback');
@@ -18,9 +18,11 @@ class changesApi {
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
+    private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
+    private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private commandBase = new commandBase();
 
-    constructor(private db: database) {
+        constructor(private rs: resource) {
         this.eventsId = this.makeId();
         this.connect();
     }
@@ -28,11 +30,11 @@ class changesApi {
     private connect() {
         if ("WebSocket" in window) {
             var host = window.location.host;
-            var dbUrl = appUrl.forResourceQuery(this.db);
+            var resourceUrl = appUrl.forResourceQuery(this.rs);
 
-            console.log("Connecting to changes API (db = " + this.db.name + ")");
+            console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            this.webSocket = new WebSocket("ws://" + host + dbUrl + '/changes/websocket?id=' + this.eventsId);
+            this.webSocket = new WebSocket("ws://" + host + resourceUrl + '/changes/websocket?id=' + this.eventsId);
 
             this.webSocket.onmessage = (e) => this.onEvent(e);
             this.webSocket.onerror = (e) => this.onError(e);
@@ -52,8 +54,8 @@ class changesApi {
             args["value"] = value;
         }
         //TODO: exception handling?
+        this.commandBase.query('/changes/config', args, this.rs);
 
-        this.commandBase.query('/changes/config', args, this.db);
     }
 
     private onError(e: any) {
@@ -86,6 +88,10 @@ class changesApi {
                 this.fireEvents(this.allTransformersHandlers(), value, (e) => true);
             } else if (type === "BulkInsertChangeNotification") {
                 this.fireEvents(this.allBulkInsertsHandlers(), value, (e) => true);
+            } else if (type === "SynchronizationUpdateNotification") {
+                this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
+            } else if (type === "ConflictNotification") {
+                this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
             } else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
@@ -179,6 +185,34 @@ class changesApi {
         });
     }
 
+    watchFsSync(onChange: (e: synchronizationUpdateNotification) => void) {
+        var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
+        if (this.allFsSyncHandlers().length == 0) {
+            this.send('watch-sync');
+        }
+        this.allFsSyncHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsSyncHandlers.remove(callback);
+            if (this.allFsSyncHandlers().length == 0) {
+                this.send('unwatch-sync');
+            }
+        });
+    }
+
+    watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) {
+        var callback = new changesCallback<synchronizationConflictNotification>(onChange);
+        if (this.allFsConflictsHandlers().length == 0) {
+            this.send('watch-conflicts');
+        }
+        this.allFsConflictsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsConflictsHandlers.remove(callback);
+            if (this.allFsConflictsHandlers().length == 0) {
+                this.send('unwatch-conflicts');
+            }
+        });
+    }
+
     dispose() {
         if (this.webSocket && !this.isConnectionClosed) {
             console.log("Disconnecting from changes API");
@@ -196,6 +230,7 @@ class changesApi {
 
         return text;
     }
+
 }
 
 export = changesApi;

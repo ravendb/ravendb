@@ -272,7 +272,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			return size;
 		}
 
-		public FileHeader ReadFile(string filename)
+		public FileHeaderInformation ReadFile(string filename)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -280,7 +280,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 				return null;
 
-			return new FileHeader
+			return new FileHeaderInformation
 				       {
 					       Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					       TotalSize = GetTotalSize(),
@@ -289,14 +289,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 				       };
 		}
 
-		public FileAndPages GetFile(string filename, int start, int pagesToLoad)
+		public FileAndPagesInformation GetFile(string filename, int start, int pagesToLoad)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 				throw new FileNotFoundException("Could not find file: " + filename);
 
-			var fileInformation = new FileAndPages
+			var fileInformation = new FileAndPagesInformation
 				                      {
 					                      TotalSize = GetTotalSize(),
 					                      UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
@@ -333,7 +333,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			return fileInformation;
 		}
 
-		public IEnumerable<FileHeader> ReadFiles(int start, int size)
+		public IEnumerable<FileHeaderInformation> ReadFiles(int start, int size)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			if (Api.TryMoveFirst(session, Files) == false)
@@ -354,7 +354,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 			do
 			{
-				yield return new FileHeader
+				yield return new FileHeaderInformation
 					             {
 						             Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						             TotalSize = GetTotalSize(),
@@ -374,19 +374,19 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             return metadata;
         }
 
-		public IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take)
+		public IEnumerable<FileHeaderInformation> GetFilesAfter(Guid etag, int take)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
-				return Enumerable.Empty<FileHeader>();
+				return Enumerable.Empty<FileHeaderInformation>();
 
-			var result = new List<FileHeader>();
+			var result = new List<FileHeaderInformation>();
 			var index = 0;
 
 			do
 			{
-				result.Add(new FileHeader
+				result.Add(new FileHeaderInformation
 					           {
 						           Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						           TotalSize = GetTotalSize(),

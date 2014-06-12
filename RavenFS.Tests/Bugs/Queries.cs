@@ -10,7 +10,7 @@ namespace RavenFS.Tests.Bugs
 		[Fact]
 		public void CanQueryMultipleFiles()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
 			var expected = new string('a', 1024);
@@ -42,7 +42,7 @@ namespace RavenFS.Tests.Bugs
 		[Fact]
 		public async void WillGetOneItemWhenSavingDocumentTwice()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
 			var expected = new string('a', 1024);
@@ -78,7 +78,7 @@ namespace RavenFS.Tests.Bugs
 		public void ShouldEncodeValues()
 		{
 
-			var client = NewClient(); 
+			var client = NewAsyncClient(); 
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
 			var expected = new string('a', 1024);

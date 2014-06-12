@@ -22,7 +22,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/static/id")]
 		public HttpResponseMessage Id()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, RavenFileSystem.Storage.Id);
+			return Request.CreateResponse(HttpStatusCode.OK, FileSystem.Storage.Id);
 		}
 	}
 }
