@@ -17,6 +17,12 @@ namespace Raven.Database.Storage.Voron.Backup
 		{
 		}
 
+		protected override bool IsValidBackup(string backupFilename)
+		{
+			return File.Exists(BackupFilenamePath(backupFilename));
+		}
+
+
         public override void Execute()
         {
 			ValidateRestorePreconditionsAndReturnLogsPath(BackupMethods.Filename);
