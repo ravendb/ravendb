@@ -68,7 +68,7 @@ class viewModelBase {
     activate(args) {
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
-        if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
+        if (!!db && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
         this.notifications = this.createNotifications();
@@ -94,7 +94,7 @@ class viewModelBase {
     canDeactivate(isClose): any {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to continue?', 'Unsaved Data', ['Yes', 'No']);
+            return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?', undefined, true);
         }
         return true;
     }
@@ -165,15 +165,17 @@ class viewModelBase {
         clearInterval(this.modelPollingHandle);
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No']): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
         var messageView = app.showMessage(confirmationMessage, title, options);
 
         messageView.done((answer) => {
             if (answer == options[0]) {
-                viewTask.resolve();
-            } else {
+                viewTask.resolve({ can: true });
+            } else if (!forceRejectWithResolve) {
                 viewTask.reject();
+            } else {
+                viewTask.resolve({ can: false });
             }
         });
 
