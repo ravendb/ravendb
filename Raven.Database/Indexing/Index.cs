@@ -401,9 +401,9 @@ namespace Raven.Database.Indexing
 
 			            if (itemsInfo.ChangedDocs > 0)
 			            {
-			                UpdateIndexingStats(context, stats);
 			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 			                Flush(); // just make sure changes are flushed to disk
+							UpdateIndexingStats(context, stats);
 			            }
 			        }
 			        finally
