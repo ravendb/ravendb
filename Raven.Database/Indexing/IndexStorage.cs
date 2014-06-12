@@ -494,7 +494,7 @@ namespace Raven.Database.Indexing
 			if (hashFile == null) 
 				return true; // backward compatibility
 
-			var hash = hashFile.Name.Substring(0, hashFile.Name.Length - 3);
+			var hash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
 
 			var segmentInfos = new SegmentInfos();
 			segmentInfos.Read(directory);
@@ -580,7 +580,7 @@ namespace Raven.Database.Indexing
 					.Select(file => new FileInfo(file))
 					.Single();
 
-				var currentSegmentChecksum = currentSegmentChecksumFile.Name.Substring(0, currentSegmentChecksumFile.Name.Length - 3);
+				var currentSegmentChecksum = currentSegmentChecksumFile.Name.Substring(0, currentSegmentChecksumFile.Name.Length - 4);
 				var currentSegmentChecksumBytes = Encoding.UTF8.GetBytes(currentSegmentChecksum);
 
 				md5.TransformBlock(currentSegmentChecksumBytes, 0, currentSegmentChecksumBytes.Length, null, 0);
@@ -738,13 +738,14 @@ namespace Raven.Database.Indexing
 					}				
 				}
 
-				var storedHash = hashFile.Name.Substring(0, hashFile.Name.Length - 3);
+				var storedHash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
 
 				var storedSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
 
 				using (var storedSegmentsFile = File.OpenRead(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFileName)))
+				using (var storeSegmentsFileMd5 = MD5.Create())
 				{
-					var hash = md5.ComputeHash(storedSegmentsFile);
+					var hash = storeSegmentsFileMd5.ComputeHash(storedSegmentsFile);
 					var hashBytes = Encoding.UTF8.GetBytes(IOExtensions.GetMD5Hex(hash));
 
 					md5.TransformBlock(hashBytes, 0, hashBytes.Length, null, 0);
