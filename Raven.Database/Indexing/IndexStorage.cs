@@ -485,6 +485,9 @@ namespace Raven.Database.Indexing
 
 		private bool ValidateIndexChecksum(string indexName, Lucene.Net.Store.Directory directory)
 		{
+			if (directory is RAMDirectory)
+				return true;
+
 			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
 
 			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5")
