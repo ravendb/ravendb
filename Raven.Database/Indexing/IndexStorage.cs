@@ -37,11 +37,10 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
+using System.Security.Cryptography;
 
 namespace Raven.Database.Indexing
 {
-	using System.Security.Cryptography;
-
 	/// <summary>
 	/// 	Thread safe, single instance for the entire application
 	/// </summary>
@@ -488,13 +487,17 @@ namespace Raven.Database.Indexing
 		{
 			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
 
-			var hashFile = Directory.GetFiles(indexFullPath, "*.md5")
+			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5")
 				.Select(file => new FileInfo(file))
-				.FirstOrDefault();
+				.ToList();
 
-			if (hashFile == null) 
+			if (hashFiles.Count == 0) 
 				return true; // backward compatibility
 
+			if (hashFiles.Count > 1) 
+				return false; // too many hash files
+
+			var hashFile = hashFiles.First();
 			var hash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
 
 			var segmentInfos = new SegmentInfos();
