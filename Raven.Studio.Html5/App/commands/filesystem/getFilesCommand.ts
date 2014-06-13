@@ -24,21 +24,17 @@ class getFilesystemFilesCommand extends commandBase {
     }
 
     private fetchFiles(): JQueryPromise<file[]> {
-        var level = 2;
-
+        var level = 1;
         if (this.directory) {
             var slashMatches = this.directory.count("/");
             if (slashMatches) {
                 level = level + slashMatches;
             }
         }
-        else {
-            level = 1;
-        }
 
         var levelQuery = "__level:" + level;
         var args = {
-            query: this.directory ? "__directory:/"+this.directory+" AND "+ levelQuery : levelQuery,
+            query: this.directory ? "__directory:"+this.directory+" AND "+ levelQuery : levelQuery,
             start: this.skip,
             pageSize: this.take
         };

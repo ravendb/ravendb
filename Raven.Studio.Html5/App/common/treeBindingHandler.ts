@@ -10,6 +10,8 @@ import getFoldersCommand = require("commands/filesystem/getFoldersCommand");
  */
 class treeBindingHandler {
 
+    static transientNodeStyle = "temp-folder";
+
     static install() {
         if (!ko.bindingHandlers["tree"]) {
             ko.bindingHandlers["tree"] = new treeBindingHandler();
@@ -30,18 +32,16 @@ class treeBindingHandler {
         } = <any>ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
-            children: [{ title: appUrl.getFilesystem().name, key: "#", isLazy: true, isFolder: true }],
+            children: [{ title: appUrl.getFilesystem().name, key: "/", isLazy: true, isFolder: true }],
             onLazyRead: function (node) {
-                var dir;
-                if (node.data && node.data.key) {
-                    dir = node.data.key;
+                treeBindingHandler.loadNodeChildren("#" + element.id, node, options);
+                node.activate();
+            },
+            onExpand: function (expanded, node) {
+                if (expanded) {
+                    treeBindingHandler.loadNodeChildren("#" + element.id, node, options);
+                    node.activate();
                 }
-                var command = new getFoldersCommand(appUrl.getFilesystem(), 0, 100, dir);
-                command.execute().done((results: folderNodeDto[]) => {
-                    node.setLazyNodeStatus(0);
-                    node.addChild(results);
-                    options.currentLevelNodes(results.map(x => x.key));
-                });
             },
             selectMode: 1,
             onSelect: function (flag, node) {
@@ -57,6 +57,40 @@ class treeBindingHandler {
         firstNode.expand(null);
     }
 
+    static loadNodeChildren(tree: string, node: DynaTreeNode, options : any) {
+        var dir;
+        if (node.data && node.data.key != "/") {
+            dir = node.data.key;
+        }
+        var command = new getFoldersCommand(appUrl.getFilesystem(), 0, 100, dir);
+        command.execute().done((results: folderNodeDto[]) => {
+            node.setLazyNodeStatus(0);
+            var transientNodes = [];
+            if (node.hasChildren()) {
+                for (var i = 0; i < node.getChildren().length; i++) {
+                    if (node.getChildren()[i].data.addClass === treeBindingHandler.transientNodeStyle) {
+                        transientNodes.push(results[i]);
+                    }
+
+                }
+            }
+            node.removeChildren();
+            node.addChild(results);
+            node.addChild(transientNodes);
+
+            if (options) {
+                options.currentLevelNodes(results.map(x => x.key));
+            }
+        });
+    }
+
+    static reloadNode(tree: string, nodeKey: string) {
+        var dynaTree = $(tree).dynatree("getTree");
+        var node = dynaTree.getNodeByKey(nodeKey);
+
+        treeBindingHandler.loadNodeChildren(tree, node, null)
+    }
+
     static onActivateAndSelect(node, valueAccessor: any) {
         var options: {
             selectedNode: KnockoutObservable<string>;
@@ -64,7 +98,7 @@ class treeBindingHandler {
             currentLevelNodes: KnockoutObservableArray<string>;
         } = <any>ko.utils.unwrapObservable(valueAccessor);
 
-        var selectedNode = node.data && node.data.key != "#" ? node.data.key : null;
+        var selectedNode = node.data && node.data.key != "/" ? node.data.key : null;
         options.selectedNode(selectedNode);
         if (node.data) {
             var siblings = [];
@@ -84,10 +118,18 @@ class treeBindingHandler {
             currentLevelNodes: KnockoutObservableArray<string>;
         } = <any>ko.utils.unwrapObservable(valueAccessor());
         if (options.addedNode()) {
+            var newNode = options.addedNode();
             var activeNode = <DynaTreeNode>$(element).dynatree("getActiveNode", []);
-            if (activeNode) {
-                activeNode.addChild(options.addedNode());
-                options.currentLevelNodes(activeNode.getChildren().map(x => x.data.title));
+            var parentOfNewNode = newNode.key.substring(0, newNode.key.lastIndexOf("/"));
+            if (parentOfNewNode === "") {
+                parentOfNewNode = "/";
+            }
+            var parentNode = $(element).dynatree("getTree").getNodeByKey(parentOfNewNode);
+            if (parentNode) {
+                parentNode.addChild(newNode);
+                if (parentNode == activeNode) {
+                    options.currentLevelNodes(activeNode.getChildren().map(x => x.data.title));
+                }
                 options.addedNode(null);
             }
         }
@@ -106,6 +148,24 @@ class treeBindingHandler {
 
             slashPosition = key.lastIndexOf("/");
         }
+    }
+
+    static nodeExists(tree: string, key: string) : boolean {
+        var dynaTree = $(tree).dynatree("getTree");
+        var node = dynaTree.getNodeByKey(key);
+
+        if (node) {
+            return true;
+        }
+
+        return false;
+    }
+
+    static isNodeExpanded(tree: string, key: string): boolean {
+        var dynaTree = $(tree).dynatree("getTree");
+        var node = dynaTree.getNodeByKey(key);
+
+        return node && node.isExpanded();
     }
 }
 

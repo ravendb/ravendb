@@ -6,6 +6,7 @@ import appUrl = require('common/appUrl');
 import changeSubscription = require('models/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
+import folder = require("models/filesystem/folder");
 
 class changesApi {
 
@@ -20,6 +21,7 @@ class changesApi {
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
+    private watchedFolders = {};
     private commandBase = new commandBase();
 
         constructor(private rs: resource) {
@@ -79,8 +81,8 @@ class changesApi {
             if (type === "DocumentChangeNotification") {
                 this.fireEvents(this.allDocsHandlers(), value, (e) => true);
                 for (var key in this.watchedPrefixes) {
-                    var callbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
-                    this.fireEvents(callbacks(), value, (e) => e.Id != null && e.Id.match("^" + key));
+                    var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
+                    this.fireEvents(docCallbacks(), value, (e) => e.Id != null && e.Id.match("^" + key));
                 }
             } else if (type === "IndexChangeNotification") {
                 this.fireEvents(this.allIndexesHandlers(), value, (e) => true);
@@ -92,6 +94,18 @@ class changesApi {
                 this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
             } else if (type === "ConflictNotification") {
                 this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
+            } else if (type == "FileChangeNotification") {
+                for (var key in this.watchedFolders) {
+                    var folderCallbacks = <KnockoutObservableArray<fileChangeNotification>> this.watchedFolders[key];
+                    this.fireEvents(folderCallbacks(), value, (e) => {
+                        var notifiedFolder = folder.getFolderFromFilePath(e.File);
+                        var match: string[] = null
+                        if (notifiedFolder && notifiedFolder.path) {
+                            match = notifiedFolder.path.match(key);
+                        }
+                        return match && match.length > 0;
+                    });
+                }
             } else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
@@ -185,7 +199,7 @@ class changesApi {
         });
     }
 
-    watchFsSync(onChange: (e: synchronizationUpdateNotification) => void) {
+    watchFsSync(onChange: (e: synchronizationUpdateNotification) => void): changeSubscription {
         var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
         if (this.allFsSyncHandlers().length == 0) {
             this.send('watch-sync');
@@ -199,7 +213,7 @@ class changesApi {
         });
     }
 
-    watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) {
+    watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) : changeSubscription {
         var callback = new changesCallback<synchronizationConflictNotification>(onChange);
         if (this.allFsConflictsHandlers().length == 0) {
             this.send('watch-conflicts');
@@ -209,6 +223,22 @@ class changesApi {
             this.allFsConflictsHandlers.remove(callback);
             if (this.allFsConflictsHandlers().length == 0) {
                 this.send('unwatch-conflicts');
+            }
+        });
+    }
+
+    watchFsFolders(folder: string, onChange: (e: fileChangeNotification) => void): changeSubscription {
+        var callback = new changesCallback<fileChangeNotification>(onChange);
+        if (typeof (this.watchedFolders[folder]) === "undefined") {
+            this.send('watch-folder', folder);
+            this.watchedFolders[folder] = ko.observableArray();
+        }
+        this.watchedFolders[folder].push(callback);
+        return new changeSubscription(() => {
+            this.watchedFolders[folder].remove(callback);
+            if (this.watchedFolders[folder].length == 0) {
+                delete this.watchedFolders[folder];
+                this.send('unwatch-folder', folder);
             }
         });
     }
