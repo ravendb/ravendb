@@ -77,8 +77,7 @@ namespace Voron.Trees
 			}
 
 			PrefixedSlice pageKey = null;
-			PrefixNode prefix = null;
-			NodeHeader* node = null;
+			NodeHeader* node;
 
 			if (NumberOfEntries == 1)
 			{
@@ -133,18 +132,12 @@ namespace Voron.Trees
             return nodeHeader;
         }
 
-	    private PrefixNode GetPrefixNode(byte n)
-	    {
-			Debug.Assert(n < PrefixCount, "Requested prefix number was: " + n);
-			Debug.Assert(n <= (NextPrefixId - 1), "Requested prefix number was: " + n + ", while the max available prefix id is " + (NextPrefixId - 1));
-
-		    var prefixOffset = PrefixOffsets[n];
-
-		    if (prefixOffset == 0) // allocated but not written yet
-			    return null;
-
-		    return new PrefixNode(_base + prefixOffset, PageNumber);
-	    }
+		[Conditional("DEBUG")]
+		private void AssertPrefixNode(byte prefixId)
+		{
+			Debug.Assert(prefixId < PrefixCount, "Requested prefix number was: " + prefixId);
+			Debug.Assert(prefixId <= (NextPrefixId - 1), "Requested prefix number was: " + prefixId + ", while the max available prefix id is " + (NextPrefixId - 1));
+		}
 
 	    public bool IsLeaf
         {
@@ -317,9 +310,16 @@ namespace Voron.Trees
 	    {
 		    Tuple<byte, ushort> bestMatch = null;
 
+		    PrefixNode prefix = null;
+
 			for (byte prefixId = 0; prefixId < NextPrefixId; prefixId++)
 			{
-				var prefix = GetPrefixNode(prefixId);
+				if(prefix == null)
+					prefix = new PrefixNode();
+
+				AssertPrefixNode(prefixId);
+
+				prefix.Set(_base + PrefixOffsets[prefixId], PageNumber);
 
 				var length = key.FindPrefixSize(new Slice(prefix.ValuePtr, prefix.PrefixLength));
 				if (length == 0)
@@ -591,12 +591,16 @@ namespace Voron.Trees
 				    KeysOffsets[i] = Upper;
 			    }
 
+			    PrefixNode prefixNode = null;
+
 			    for (byte i = 0; i < NextPrefixId; i++)
 			    {
-				    var prefixNode = tempPage.GetPrefixNode(i);
+					if(prefixNode == null)
+						prefixNode = new PrefixNode();
 
-					if (prefixNode == null)
-						continue;
+				    tempPage.AssertPrefixNode(i);
+
+					prefixNode.Set(tempPage._base + tempPage.PrefixOffsets[i], tempPage.PageNumber);
 
 					var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
@@ -666,9 +670,12 @@ namespace Voron.Trees
 			
 			Debug.Assert(slice.Header.PrefixId < PrefixCount);
 
-			var prefix = GetPrefixNode(slice.Header.PrefixId);
+			if(slice.Prefix == null)
+				slice.Prefix = new PrefixNode();
 
-			slice.Prefix = prefix;
+		    AssertPrefixNode(slice.Header.PrefixId);
+
+			slice.Prefix.Set(_base + PrefixOffsets[slice.Header.PrefixId], PageNumber);
 
 			return slice;
 	    }
@@ -745,12 +752,16 @@ namespace Voron.Trees
                 size += nodeSize + (nodeSize & 1);
             }
 
+	        PrefixNode prefixNode = null;
+
 			for (byte i = 0; i < NextPrefixId; i++)
 			{
-				var prefixNode = GetPrefixNode(i);
+				if(prefixNode == null)
+					prefixNode = new PrefixNode();
 
-				if (prefixNode == null) // allocated but not written yet
-					continue;
+				AssertPrefixNode(i);
+
+				prefixNode.Set(_base + PrefixOffsets[i], PageNumber);
 
 				var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				size += prefixNodeSize + (prefixNodeSize & 1);
