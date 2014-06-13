@@ -282,5 +282,12 @@ namespace Voron
 				PrefixComparisonCache.Disabled = false;
 			}
 		}
+
+		public void Set(byte* p, ushort size)
+		{
+			Pointer = p;
+			Size = size;
+			KeyLength = size;
+		}
 	}
 }

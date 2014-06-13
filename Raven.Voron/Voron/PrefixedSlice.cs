@@ -36,12 +36,11 @@ namespace Voron
 
 		public const byte NonPrefixedId = 0xff;
 
-		private readonly PrefixedSliceHeader _header;
-
 		public readonly Slice NonPrefixedData;
 
+		public PrefixedSliceHeader Header;
 		public PrefixNode Prefix;
-		public Slice NewPrefix = null;
+		public Slice NewPrefix;
 
 		public byte* PrefixValue
 		{
@@ -53,7 +52,7 @@ namespace Voron
 			Options = SliceOptions.Key;
 			Size = 0;
 			KeyLength = 0;
-			_header = new PrefixedSliceHeader();
+			Header = new PrefixedSliceHeader();
 		}
 
 		public PrefixedSlice(SliceOptions options)
@@ -65,7 +64,7 @@ namespace Voron
 
 		public PrefixedSlice(byte prefixId, ushort prefixUsage, Slice nonPrefixedValue)
 		{
-			_header = new PrefixedSliceHeader
+			Header = new PrefixedSliceHeader
 			{
 				PrefixId = prefixId,
 				PrefixUsage = prefixUsage,
@@ -83,12 +82,12 @@ namespace Voron
 			if (node->KeySize > 0)
 			{
 				var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);
-				_header = *prefixHeaderPtr;
+				Header = *prefixHeaderPtr;
 
-				NonPrefixedData = new Slice((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, _header.NonPrefixedDataSize);
+				NonPrefixedData = new Slice((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, Header.NonPrefixedDataSize);
 
 				Size = node->KeySize;
-				KeyLength = (ushort) (_header.PrefixUsage + _header.NonPrefixedDataSize);
+				KeyLength = (ushort) (Header.PrefixUsage + Header.NonPrefixedDataSize);
 			}
 			else
 			{
@@ -101,7 +100,7 @@ namespace Voron
 
 		public PrefixedSlice(MemorySlice key)
 		{
-			_header = new PrefixedSliceHeader
+			Header = new PrefixedSliceHeader
 			{
 				PrefixId = NonPrefixedId,
 				PrefixUsage = 0,
@@ -112,27 +111,29 @@ namespace Voron
 
 			Size = (ushort)(Constants.PrefixedSliceHeaderSize + key.KeyLength);
 			KeyLength = key.KeyLength;
+			Options = SliceOptions.Key;
 		}
 
-		public PrefixedSliceHeader Header
+		public void Set(NodeHeader* node)
 		{
-			get { return _header; }
+			var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);
+			Header = *prefixHeaderPtr;
+
+			NonPrefixedData.Set((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, Header.NonPrefixedDataSize);
+
+			Size = node->KeySize;
+			KeyLength = (ushort)(Header.PrefixUsage + Header.NonPrefixedDataSize);
 		}
 
 		public override void CopyTo(byte* dest)
 		{
 			var destHeader = (PrefixedSliceHeader*) dest;
 
-			destHeader->PrefixId = _header.PrefixId;
-			destHeader->PrefixUsage = _header.PrefixUsage;
-			destHeader->NonPrefixedDataSize = _header.NonPrefixedDataSize;
+			destHeader->PrefixId = Header.PrefixId;
+			destHeader->PrefixUsage = Header.PrefixUsage;
+			destHeader->NonPrefixedDataSize = Header.NonPrefixedDataSize;
 
 			NonPrefixedData.CopyTo(dest + Constants.PrefixedSliceHeaderSize);
-		}
-
-		internal void SetPrefix(PrefixNode prefix)
-		{
-			Prefix = prefix;
 		}
 
 		public override Slice ToSlice()
@@ -142,22 +143,22 @@ namespace Voron
 
 		public override Slice Skip(ushort bytesToSkip)
 		{
-			if (_header.PrefixId == NonPrefixedId)
+			if (Header.PrefixId == NonPrefixedId)
 				return NonPrefixedData.Skip(bytesToSkip);
 
-			if (bytesToSkip == _header.PrefixUsage)
+			if (bytesToSkip == Header.PrefixUsage)
 				return NonPrefixedData;
 
-			if (bytesToSkip > _header.PrefixUsage)
-				return NonPrefixedData.Skip((ushort)(bytesToSkip - _header.PrefixUsage));
+			if (bytesToSkip > Header.PrefixUsage)
+				return NonPrefixedData.Skip((ushort)(bytesToSkip - Header.PrefixUsage));
 
 			// bytesToSkip < _header.PrefixUsage
 
 			Debug.Assert(Prefix != null);
 
-			var prefixPart = _header.PrefixUsage - bytesToSkip;
+			var prefixPart = Header.PrefixUsage - bytesToSkip;
 
-			var sliceSize = prefixPart + _header.NonPrefixedDataSize;
+			var sliceSize = prefixPart + Header.NonPrefixedDataSize;
 			var sliceData = new byte[sliceSize];
 
 			Prefix.Value.CopyTo(bytesToSkip, sliceData, 0, prefixPart);
@@ -186,12 +187,12 @@ namespace Voron
 		public override string ToString()
 		{
 			if (Prefix != null)
-				return new Slice(Prefix.Value, _header.PrefixUsage) + NonPrefixedData.ToString();
+				return new Slice(Prefix.Value, Header.PrefixUsage) + NonPrefixedData.ToString();
 
-			if (_header.PrefixId == NonPrefixedId)
+			if (Header.PrefixId == NonPrefixedId)
 				return NonPrefixedData.ToString();
 
-			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", _header.PrefixId, _header.PrefixUsage, NonPrefixedData);
+			return string.Format("prefix_id: {0} [usage: {1}], non_prefixed: {2}", Header.PrefixId, Header.PrefixUsage, NonPrefixedData);
 		}
 	}
 }

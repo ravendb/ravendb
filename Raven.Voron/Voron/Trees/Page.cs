@@ -76,7 +76,10 @@ namespace Voron.Trees
 				return GetNode(LastSearchPosition);
 			}
 
-			MemorySlice pageKey = null;
+			PrefixedSlice pageKey = null;
+			PrefixNode prefix = null;
+			NodeHeader* node = null;
+
 			if (NumberOfEntries == 1)
 			{
 				pageKey = GetNodeKey(0);
@@ -93,7 +96,9 @@ namespace Voron.Trees
 			{
 				position = (low + high) >> 1;
 
-				pageKey = GetNodeKey(position);
+				node = GetNode(position);
+
+				pageKey = GetNodeKey(node, pageKey);
 
 				LastMatch = key.Compare(pageKey);
 				if (LastMatch == 0)
@@ -593,7 +598,7 @@ namespace Voron.Trees
 					if (prefixNode == null)
 						continue;
 
-				    var prefixNodeSize = prefixNode.Size;
+					var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
 
 					NativeMethods.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
@@ -637,25 +642,33 @@ namespace Voron.Trees
             get { return GetNodeKey(i).ToString(); }
         }
 
-	    public PrefixedSlice GetNodeKey(NodeHeader* node)
+	    public PrefixedSlice GetNodeKey(NodeHeader* node, PrefixedSlice prefixedSlice = null)
 	    {
 			if (node->KeySize == 0)
 				return PrefixedSlice.Empty;
 
-			var slice = new PrefixedSlice(node);
+		    PrefixedSlice slice;
 
-			if (slice.Header.PrefixUsage == 0)
+		    if (prefixedSlice != null)
+		    {
+			    prefixedSlice.Set(node);
+			    slice = prefixedSlice;
+		    }
+		    else
+			    slice = new PrefixedSlice(node);
+
+		    if (slice.Header.PrefixId == PrefixedSlice.NonPrefixedId)
 			{
-				Debug.Assert(slice.Header.PrefixId == PrefixedSlice.NonPrefixedId);
+				Debug.Assert(slice.Header.PrefixUsage == 0);
 
 				return slice;
 			}
-
+			
 			Debug.Assert(slice.Header.PrefixId < PrefixCount);
 
 			var prefix = GetPrefixNode(slice.Header.PrefixId);
 
-			slice.SetPrefix(prefix);
+			slice.Prefix = prefix;
 
 			return slice;
 	    }
@@ -739,7 +752,8 @@ namespace Voron.Trees
 				if (prefixNode == null) // allocated but not written yet
 					continue;
 
-				size += prefixNode.Size + (prefixNode.Size & 1);
+				var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
+				size += prefixNodeSize + (prefixNodeSize & 1);
 			}
  
 			Debug.Assert(size <= _pageSize);
