@@ -116,13 +116,21 @@ namespace Voron
 
 		public void Set(NodeHeader* node)
 		{
-			var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);
-			Header = *prefixHeaderPtr;
+			if (node->KeySize > 0)
+			{
+				var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);
+				Header = *prefixHeaderPtr;
 
-			NonPrefixedData.Set((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, Header.NonPrefixedDataSize);
+				NonPrefixedData.Set((byte*)prefixHeaderPtr + Constants.PrefixedSliceHeaderSize, Header.NonPrefixedDataSize);
 
-			Size = node->KeySize;
-			KeyLength = (ushort)(Header.PrefixUsage + Header.NonPrefixedDataSize);
+				Size = node->KeySize;
+				KeyLength = (ushort)(Header.PrefixUsage + Header.NonPrefixedDataSize);
+			}
+			else
+			{
+				Size = 0;
+				KeyLength = 0;
+			}
 		}
 
 		public override void CopyTo(byte* dest)

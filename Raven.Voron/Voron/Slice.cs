@@ -10,7 +10,7 @@ namespace Voron
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
 		public static Slice Empty = new Slice(new byte[0]);
 
-		internal readonly byte[] Array;
+		internal byte[] Array;
 		internal byte* Pointer;
 
 		public Slice(SliceOptions options)
@@ -288,6 +288,7 @@ namespace Voron
 			Pointer = p;
 			Size = size;
 			KeyLength = size;
+			Array = null;
 		}
 	}
 }
