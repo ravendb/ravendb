@@ -321,7 +321,7 @@ namespace Voron.Trees
 			{
 				var prefix = GetPrefixNode(prefixId);
 
-				var length = key.FindPrefixSize(prefix.Value);
+				var length = key.FindPrefixSize(new Slice(prefix.ValuePtr, prefix.PrefixLength));
 				if (length == 0)
 					continue;
 
@@ -601,7 +601,7 @@ namespace Voron.Trees
 					var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
 
-					NativeMethods.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
+				    NativeMethods.memcpy(Base + Upper - prefixNodeSize, (byte*) prefixNode.Header, prefixNodeSize);
 				    Upper -= (ushort) prefixNodeSize;
 				    PrefixOffsets[i] = Upper;
 			    }

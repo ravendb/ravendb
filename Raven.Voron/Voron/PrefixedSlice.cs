@@ -161,7 +161,9 @@ namespace Voron
 			var sliceSize = prefixPart + Header.NonPrefixedDataSize;
 			var sliceData = new byte[sliceSize];
 
-			Prefix.Value.CopyTo(bytesToSkip, sliceData, 0, prefixPart);
+			fixed (byte* slicePtr = sliceData)
+				NativeMethods.memcpy(slicePtr, Prefix.ValuePtr + bytesToSkip, prefixPart);
+
 			NonPrefixedData.CopyTo(0, sliceData, prefixPart, sliceSize - prefixPart);
 
 			return new Slice(sliceData);
@@ -187,7 +189,7 @@ namespace Voron
 		public override string ToString()
 		{
 			if (Prefix != null)
-				return new Slice(Prefix.Value, Header.PrefixUsage) + NonPrefixedData.ToString();
+				return new Slice(Prefix.ValuePtr, Header.PrefixUsage) + NonPrefixedData.ToString();
 
 			if (Header.PrefixId == NonPrefixedId)
 				return NonPrefixedData.ToString();
