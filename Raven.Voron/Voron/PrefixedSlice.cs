@@ -116,6 +116,8 @@ namespace Voron
 
 		public void Set(NodeHeader* node)
 		{
+			Debug.Assert(this != Empty, "Cannot call Set() on PrefixedSlice.Empty");
+
 			if (node->KeySize > 0)
 			{
 				var prefixHeaderPtr = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);

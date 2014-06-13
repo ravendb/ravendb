@@ -653,7 +653,7 @@ namespace Voron.Trees
 
 		    PrefixedSlice slice;
 
-		    if (prefixedSlice != null)
+		    if (prefixedSlice != null && prefixedSlice != PrefixedSlice.Empty)
 		    {
 			    prefixedSlice.Set(node);
 			    slice = prefixedSlice;
