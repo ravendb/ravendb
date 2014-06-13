@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Web.Http;
-using Raven.Client.RavenFS;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Controllers.Admin;
