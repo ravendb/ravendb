@@ -17,7 +17,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-	public class ClientUsage : RavenFsTestBase
+    public class CommandsUsage : RavenFsTestBase
 	{
 		[Fact]
 		public async Task Can_update_just_metadata()

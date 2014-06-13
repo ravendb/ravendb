@@ -114,6 +114,7 @@
     <Compile Include="Document\ResponseTimeInformation.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
+    <Compile Include="FileSystem\AsyncFilesSession.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
     <Compile Include="FileSystem\Changes\FilesConnectionState.cs" />
     <Compile Include="FileSystem\Connection\FilesReplicationInformer.cs" />
@@ -130,9 +131,9 @@
     <Compile Include="FileSystem\IAsyncFilesCommands.cs" />
     <Compile Include="FileSystem\IAsyncFilesSession.cs" />
     <Compile Include="FileSystem\IFilesChanges.cs" />
+    <Compile Include="FileSystem\InMemoryFilesSessionOperations.cs" />
     <Compile Include="FileSystem\Listeners\IFilesConflictListener.cs" />
     <Compile Include="FileSystem\Listeners\IFilesDeleteListener.cs" />
-    <Compile Include="FileSystem\IFilesSession.cs" />
     <Compile Include="FileSystem\IFilesStore.cs" />
     <Compile Include="FileSystem\Listeners\IFilesWriteListener.cs" />
     <Compile Include="FileSystem\Listeners\IMetadataChangeListener.cs" />
