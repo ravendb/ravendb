@@ -9,8 +9,6 @@ import saveVersioningCommand = require("commands/saveVersioningCommand");
 
 class versioning extends viewModelBase {
     versionings = ko.observableArray<versioningEntry>().extend({ required: true });
-    //versionings: KnockoutObservableArray<versioningEntry>;
-    numOfVersionings = ko.computed(() => this.versionings().length);
     toRemove: versioningEntry[];
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -19,16 +17,34 @@ class versioning extends viewModelBase {
         this.versionings = ko.observableArray<versioningEntry>();
     }
 
+    canActivate(args: any): any {
+        super.canActivate(args);
+
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            this.fetchVersioningEntries(db)
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        }
+        return deferred;
+    }
+
     activate(args) {
         super.activate(args);
-        this.fetchVersioningEntries();
 
         this.toRemove = [];
 
-        this.numOfVersionings = ko.computed(() => this.versionings().length);
-
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.versionings]);
         this.isSaveEnabled = ko.computed<boolean>(() => viewModelBase.dirtyFlag().isDirty());
+    }
+
+    private fetchVersioningEntries(db): JQueryPromise<any>{
+        var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(db).execute();
+
+        task.done((versionings: versioningEntry[]) => this.versioningsLoaded(versionings));
+
+        return task;
     }
 
     saveChanges() {
@@ -55,13 +71,6 @@ class versioning extends viewModelBase {
             this.toRemove.push(entry);
         }
         this.versionings.remove(entry);
-    }
-
-    fetchVersioningEntries() {
-        var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(this.activeDatabase()).execute();
-        task.done((versionings: versioningEntry[]) => {
-            this.versioningsLoaded(versionings);
-        });
     }
 
     versioningsLoaded(data: versioningEntry[]) {
