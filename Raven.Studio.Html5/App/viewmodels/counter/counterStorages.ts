@@ -48,15 +48,14 @@ class counterStorages extends viewModelBase {
     }
 
     private changesApiFiredForCounterStorages(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
             var receivedCounterStoragesName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
                 this.onCounterStorageDeleted(receivedCounterStoragesName);
             } else {
                 var existingCounterStorage = this.counterStorages.first((cs: counterStorage) => cs.name == receivedCounterStoragesName);
-                var receivedCounterStorageDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+                var receivedCounterStorageDisabled: boolean = (e.Type === documentChangeType.Put);
 
                 if (existingCounterStorage == null) {
                     this.addNewCounterStorage(receivedCounterStoragesName, receivedCounterStorageDisabled);

@@ -27,6 +27,7 @@ class databases extends viewModelBase {
     constructor() {
         super();
 
+        this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
@@ -34,11 +35,12 @@ class databases extends viewModelBase {
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
-        var result = $.Deferred();
+/*        var result = $.Deferred();
 
         this.fetchDatabases().always(() => result.resolve({ can: true }));
         
-        return result;
+        return result;*/
+        return true;
     }
 
     attached() {
@@ -53,20 +55,19 @@ class databases extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForDatabases(e))
+            //shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForDatabases(e))
         ];
     }
 
-    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-                e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+/*    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
             var receivedDatabaseName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
                 this.onDatabaseDeleted(receivedDatabaseName);
             } else {
                 var existingDatabase = this.databases.first((db: database) => db.name == receivedDatabaseName);
-                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.Put);
 
                 if (existingDatabase == null) {
                     this.addNewDatabase(receivedDatabaseName, receivedDatabaseDisabled);
@@ -76,7 +77,7 @@ class databases extends viewModelBase {
                 }
             }
         }
-    }
+    }*/
 
     private onDatabaseDeleted(databaseName: string) {
         var databaseInList = this.databases.first((db: database) => db.name == databaseName);
@@ -136,6 +137,28 @@ class databases extends viewModelBase {
         }
 
         this.isFirstLoad = false;
+    }
+
+    private loaded() {
+        // If we have no databases, show the "create a new database" screen.
+        if (this.databases().length === 0 && this.isFirstLoad) {
+            this.newDatabase();
+        } else {
+            // If we have just a few databases, grab the db stats for all of them.
+            // (Otherwise, we'll grab them when we click them.)
+            var few = 20;
+            if (this.databases().length < few && !this.initializedStats) {
+                this.initializedStats = true;
+
+                for (var i = 0; i < this.databases().length; i++) {
+                    var db: database = this.databases()[i];
+                    if (!db.disabled()) {
+                        this.fetchStats(db);
+                    }
+                }
+            }
+        }
+
     }
 
     private checkDifferentDatabases(newDatabases: database[]) {

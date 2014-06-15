@@ -36,11 +36,12 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
+import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 class shell extends viewModelBase {
     private router = router;
 
-    databases = ko.observableArray<database>();
+    static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     currentConnectedDatabase: database;
     systemDb: database;
@@ -106,9 +107,9 @@ class shell extends viewModelBase {
         this.listedDatabases = ko.computed(() => {
             var currentDatabase = this.activeDatabase();
             if (!!currentDatabase) {
-                return this.databases().filter(database => database.name != currentDatabase.name);
+                return shell.databases().filter(database => database.name != currentDatabase.name);
             }
-            return this.databases();
+            return shell.databases();
         }, this);
 
         this.listedFileSystems = ko.computed(() => {
@@ -201,22 +202,121 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForDatabases(e)),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForFileSystems(e)),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForCounterStorages(e))
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase(), "#databases")),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, this.filesystems, this.activeFilesystem(), "#filesystems")),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, this.counterStorages, this.activeCounterStorage(), "#counterstorages"))
         ];
     }
 
-    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+    private changesApiFiredForResource(e: documentChangeNotificationDto,
+            observableResourceArray: KnockoutObservableArray<any>,
+            activeResource: any, locationHash: string) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
+            var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+            var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+
+            if (e.Type === documentChangeType.Delete) {
+                if (!!existingResource) {
+                    observableResourceArray.remove(existingResource);
+
+                    if (observableResourceArray.contains(activeResource) === false) {
+                        this.selectResource(observableResourceArray().first(), locationHash);
+                    }
+                }
+            } else {
+                var getResourceDocumentTask = new getSystemDocumentCommand(e.Id).execute();
+                getResourceDocumentTask.done((dto: databaseDocumentDto) => {
+                    if (existingResource == null) {
+                        var newResource = this.createNewResource(locationHash, receivedResourceName, dto);
+                        observableResourceArray.unshift(newResource);
+                    } else {
+                        existingResource.disabled(dto.Disabled);
+                        if (locationHash == "#databases") {
+                            existingResource.activeBundles(dto.Settings["Raven/ActiveBundles"].split(";"));
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    private createNewResource(locationHash: string, receivedResourceName: string, dto: databaseDocumentDto) {
+        var newResource;
+
+        switch (locationHash) {
+            case ("#databases"):
+                newResource = new database(receivedResourceName, dto.Disabled, dto.Settings["Raven/ActiveBundles"].split(";"));
+                break;
+            case ("#filesystems"):
+                newResource = new filesystem(receivedResourceName, dto.Disabled);
+                break;
+            default: // case ("#counterstorages")
+                newResource = new counterStorage(receivedResourceName, dto.Disabled);
+        }
+
+        return newResource;
+    }
+
+    selectResource(rs, locationHash: string) {
+        rs.activate();
+
+        if (window.location.hash !== locationHash) {
+            var updatedUrl = appUrl.forCurrentPage(rs);
+            this.navigate(updatedUrl);
+        }
+    }
+
+/*    private onResourceAdded(observableResourceArray: KnockoutObservableArray<any>, receivedResourceName) {
+        var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+    }
+
+    private onResourceDeleted(resourceName: string, observableResourceArray: KnockoutObservableArray<any>, activeResource: any, locationHash: string) {
+        var resourceInArray = observableResourceArray.first((rs: resource) => rs.name == resourceName);
+        if (!!resourceInArray) {
+            observableResourceArray.remove(resourceInArray);
+
+            if (observableResourceArray.contains(activeResource) === false) {
+                this.selectResource(observableResourceArray().first(), locationHash);
+            }
+        }
+    }*/
+
+/*    selectDatabase(db: database) {
+        db.activate();
+
+        if (window.location.hash !== "#databases") {
+            var updatedUrl = appUrl.forCurrentPage(db);
+            this.navigate(updatedUrl);
+        }
+    }
+
+    selectFileSystem(fs: filesystem) {
+        fs.activate();
+
+        if (window.location.hash !== "#filesystems") {
+            var updatedUrl = appUrl.forCurrentPage(fs);
+            this.navigate(updatedUrl);
+        }
+    }
+
+    selectCounterStorage(cs: counterStorage) {
+        cs.activate();
+
+        if (window.location.hash !== "#counterstorages") {
+            var updatedUrl = appUrl.forCurrentPage(cs);
+            this.navigate(updatedUrl);
+        }
+    }*/
+
+/*    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
             var receivedDatabaseName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
                 this.onDatabaseDeleted(receivedDatabaseName);
             } else {
                 var existingDatabase = this.databases.first((db: database) => db.name == receivedDatabaseName);
-                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.Put);
 
                 if (existingDatabase == null) {
                     var newDatabase = new database(receivedDatabaseName, receivedDatabaseDisabled);
@@ -235,21 +335,20 @@ class shell extends viewModelBase {
             this.databases.remove(databaseInList);
 
             if (this.databases.contains(this.activeDatabase()) === false) {
-                this.selectDatabase(this.databases().first());
+                this.selectResource(this.databases().first(), "#databases");
             }
         }
-    }
+    }*/
 
-    private changesApiFiredForFileSystems(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+/*    private changesApiFiredForFileSystems(e: documentChangeNotificationDto) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
             var receivedFileSystemName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
                 this.onFileSystemDeleted(receivedFileSystemName);
             } else {
                 var existingFileSystem = this.filesystems.first((fs: filesystem) => fs.name == receivedFileSystemName);
-                var receivedFileSystemDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+                var receivedFileSystemDisabled: boolean = (e.Type === documentChangeType.Put);
 
                 if (existingFileSystem == null) {
                     var fileSystem = new filesystem(receivedFileSystemName, receivedFileSystemDisabled);
@@ -269,20 +368,19 @@ class shell extends viewModelBase {
         }
 
         if ((this.filesystems().length > 0) && (this.filesystems.contains(this.activeFilesystem()) === false)) {
-            this.selectFileSystem(this.filesystems().first());
+            this.selectResource(this.filesystems().first(), "#databases");
         }
-    }
+    }*/
 
-    private changesApiFiredForCounterStorages(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
+/*    private changesApiFiredForCounterStorages(e: documentChangeNotificationDto) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
             var receivedCounterStoragesName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
 
             if (e.Type === documentChangeType.Delete) {
                 this.onCounterStorageDeleted(receivedCounterStoragesName);
             } else {
                 var existingCounterStorage = this.counterStorages.first((cs: counterStorage) => cs.name == receivedCounterStoragesName);
-                var receivedCounterStorageDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+                var receivedCounterStorageDisabled: boolean = (e.Type === documentChangeType.Put);
 
                 if (existingCounterStorage == null) {
                     var newCounterStorage = new counterStorage(receivedCounterStoragesName, receivedCounterStorageDisabled);
@@ -301,25 +399,25 @@ class shell extends viewModelBase {
             this.counterStorages.remove(counterStoragesInList);
 
             if ((this.counterStorages().length > 0) && (this.counterStorages.contains(this.activeCounterStorage()) === false)) {
-                this.selectCounterStorage(this.counterStorages().first());
+                this.selectResource(this.counterStorages().first(), "123");
             }
         }
-    }
+    }*/
 
     databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
         systemDatabase.isVisible(false);
-        this.databases(databases.concat([systemDatabase]));
-        if (this.databases().length == 1) {
+        shell.databases(databases.concat([systemDatabase]));
+        if (shell.databases().length == 1) {
             systemDatabase.activate();
         } else {
             var urlDatabase = appUrl.getDatabase();
             var newSelectedDb;
-            if (urlDatabase != null && (newSelectedDb = this.databases.first(x => x.name == urlDatabase.name)) != null) {
+            if (urlDatabase != null && (newSelectedDb = shell.databases.first(x => x.name == urlDatabase.name)) != null) {
                 newSelectedDb.activate();
             } else {
-                this.databases.first(x => x.isVisible()).activate();
+                shell.databases.first(x => x.isVisible()).activate();
             }
         }
     }
@@ -452,7 +550,7 @@ class shell extends viewModelBase {
     private activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
-                var matchingDatabase = this.databases().first(db => db.name == databaseName);
+                var matchingDatabase = shell.databases().first(db => db.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
                     ko.postbox.publish("ActivateDatabase", matchingDatabase);
                 }
@@ -522,33 +620,6 @@ class shell extends viewModelBase {
             new getFilesystemStatsCommand(fs)
                 .execute()
                 .done(result=> fs.statistics(result));
-        }
-    }
-
-    selectDatabase(db: database) {
-        db.activate();
-
-        if (window.location.hash !== "#databases") {
-            var updatedUrl = appUrl.forCurrentPage(db);
-            this.navigate(updatedUrl);
-        }
-    }
-
-    selectFileSystem(fs: filesystem) {
-        fs.activate();
-
-        if (window.location.hash !== "#filesystems") {
-            var updatedUrl = appUrl.forCurrentPage(fs);
-            this.navigate(updatedUrl);
-        }
-    }
-
-    selectCounterStorage(cs: counterStorage) {
-        cs.activate();
-
-        if (window.location.hash !== "#counterstorages") {
-            var updatedUrl = appUrl.forCurrentPage(cs);
-            this.navigate(updatedUrl);
         }
     }
 
