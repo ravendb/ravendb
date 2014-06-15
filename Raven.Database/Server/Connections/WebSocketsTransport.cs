@@ -47,6 +47,7 @@ namespace Raven.Database.Server.Connections
 
     public class WebSocketsTransport : IEventsTransport
     {
+        
         private readonly IOwinContext _context;
         private readonly RavenDBOptions _options;
 
@@ -54,6 +55,13 @@ namespace Raven.Database.Server.Connections
         private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
+        
+        public string Id { get; private set; }
+        public bool Connected { get; set; }
+        public long CoolDownWithDataLossInMilisecods { get; set; }
+
+        private long lastMessageSentTick = 0;
+        private object lastMessageEnqueuedAndNotSent = null;
 
         public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
         {
@@ -61,14 +69,17 @@ namespace Raven.Database.Server.Connections
             _context = context;
             Connected = true;
             Id = context.Request.Query["id"];
+            long waitTimeBetweenMessages = 0;
+            long.TryParse( context.Request.Query["cooldownwithdataloss"], out waitTimeBetweenMessages);
+            CoolDownWithDataLossInMilisecods = waitTimeBetweenMessages;
         }
 
         public void Dispose()
         {
         }
 
-        public string Id { get; private set; }
-        public bool Connected { get; set; }
+        
+
 
         public event Action Disconnected;
 
@@ -92,6 +103,7 @@ namespace Raven.Database.Server.Connections
                 {
                     Converters = {new EtagJsonConverter()}
                 };
+                
                 while (callCancelled.IsCancellationRequested == false)
                 {
                     bool result = await manualResetEvent.WaitAsync(5000);
@@ -103,16 +115,30 @@ namespace Raven.Database.Server.Connections
                         await SendMessage(memoryStream, serializer,
                             new { Type = "Heartbeat", Time = SystemTime.UtcNow },
                             sendAsync, callCancelled);
+
+                        if (lastMessageEnqueuedAndNotSent != null)
+                        {
+                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, callCancelled);
+                        }
                         continue;
                     }
                     manualResetEvent.Reset();
                     object message;
                     while (msgs.TryDequeue(out message))
                     {
+                        if (CoolDownWithDataLossInMilisecods > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMilisecods)
+                        {
+                            lastMessageEnqueuedAndNotSent = message;
+                            continue;
+                        }
+                        
                         if (callCancelled.IsCancellationRequested)
                             break;
 
+                        lastMessageEnqueuedAndNotSent = null;
                         await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
+                        lastMessageSentTick = Environment.TickCount;
+                        
                     }
                 }
                 try
@@ -207,7 +233,7 @@ namespace Raven.Database.Server.Connections
             }
             else if (documentDatabase != null)
             {
-                documentDatabase.TransportState.Register(this);
+            documentDatabase.TransportState.Register(this);
             }
 
             return true;
@@ -282,6 +308,6 @@ namespace Raven.Database.Server.Connections
             if (indexOf == -1)
                 return null;
             return localPath.Substring(fsPrefix.Length, indexOf - fsPrefix.Length);
-        }
+    }
     }
 }

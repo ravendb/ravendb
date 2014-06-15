@@ -24,19 +24,19 @@ class changesApi {
     private watchedFolders = {};
     private commandBase = new commandBase();
 
-        constructor(private rs: resource) {
+    constructor(private rs: resource, coolDownWithDataLoss?:number) {
         this.eventsId = this.makeId();
-        this.connect();
+        this.connect(coolDownWithDataLoss);
     }
 
-    private connect() {
+    private connect(coolDownWithDataLoss:number = 0) {
         if ("WebSocket" in window) {
             var host = window.location.host;
             var resourceUrl = appUrl.forResourceQuery(this.rs);
 
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            this.webSocket = new WebSocket("ws://" + host + resourceUrl + '/changes/websocket?id=' + this.eventsId);
+            this.webSocket = new WebSocket("ws://" + host + resourceUrl + '/changes/websocket?id=' + this.eventsId + "&cooldownwithdataloss=" + coolDownWithDataLoss);
 
             this.webSocket.onmessage = (e) => this.onEvent(e);
             this.webSocket.onerror = (e) => this.onError(e);
