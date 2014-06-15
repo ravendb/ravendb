@@ -56,6 +56,7 @@ class ctor {
         customColumns: KnockoutObservable<customColumns>;
         customFunctions: KnockoutObservable<customFunctions>;
         collections: KnockoutObservableArray<collection>;
+        rowsAreLoading: KnockoutObservable<boolean>;
     }
 
     activate(settings: any) {
@@ -74,7 +75,8 @@ class ctor {
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),
-            collections: ko.observableArray<collection>([])
+            collections: ko.observableArray<collection>([]),
+            rowsAreLoading: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
 
@@ -159,6 +161,7 @@ class ctor {
     }
 
     onGridScrolled() {
+        this.settings.rowsAreLoading(true);
         this.ensureRowsCoverViewport();
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
@@ -172,6 +175,7 @@ class ctor {
     }
 
     onWindowHeightChanged() {
+        this.settings.rowsAreLoading(true);
         var newViewportHeight = this.gridViewport.height();
         this.viewportHeight(newViewportHeight);
         var desiredRowCount = this.calculateRecycleRowCount();
@@ -237,6 +241,7 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
+            this.settings.rowsAreLoading(true);
             var that = this;
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
@@ -248,6 +253,7 @@ class ctor {
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
                 }
+                this.settings.rowsAreLoading(false);
             });
         }
     }
@@ -586,9 +592,12 @@ class ctor {
     }
 
     collectionExists(collectionName: string): boolean {
-        return this.settings.collections()
-            .map((c: collection) => collectionName.toLowerCase().substr(0, c.name.length) === c.name.toLowerCase() )
+        var result = this.settings.collections()
+            .map((c: collection) =>
+                collectionName.toLowerCase().substr(0, c.name.length) === c.name.toLowerCase()
+            )
             .reduce((p: boolean, c: boolean) => c || p, false);
+        return result;
     }
 }
 

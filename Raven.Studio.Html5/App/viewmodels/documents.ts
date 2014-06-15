@@ -39,6 +39,7 @@ class documents extends viewModelBase {
     currentDBBulkInsertSubscription: changeSubscription;
     modelPollingTimeoutFlag: boolean = true;
     isDocumentsUpToDate:boolean = true;
+    showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
 
     static gridSelector = "#documentsGrid";
 

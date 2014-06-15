@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -1042,4 +1042,11 @@ footer ul {
   font-weight: normal!important;
   color: #0000ff;
 }
+.animated-loader {
+  background-image: url('images/animated-loader.gif');
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+}
+
 /*# sourceMappingURL=app.css.map */

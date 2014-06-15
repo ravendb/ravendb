@@ -47,9 +47,10 @@
                             <i class="fa fa-clipboard"></i>
                         </button>
                     </div>
+                    <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
                 </div>
             </div>
-            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections }"></div>
+            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator }"></div>
         </div>
     </div>
 </div>
