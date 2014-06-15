@@ -83,6 +83,8 @@ namespace Raven.Database.Config
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
+			BulkImportTimeoutInMs = ravenSettings.BulkImportTimeout.Value;
+
 			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 			
 			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
@@ -253,6 +255,15 @@ namespace Raven.Database.Config
 		public int EncryptionKeyBitsPreference
 		{
 		    get; set;
+		}
+
+		public int BulkImportTimeoutInMs
+		{
+			get
+			{
+				return Int32.Parse(Settings[Constants.BulkImportTimeout]);				
+			}
+			set { Settings[Constants.BulkImportTimeout] = value.ToString(CultureInfo.InvariantCulture); }
 		}
 
 		/// <summary>

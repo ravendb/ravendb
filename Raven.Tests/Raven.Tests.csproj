@@ -237,6 +237,7 @@
     <Compile Include="Bugs\CustomizingIndexQuery.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Document\BulkImportTimeout.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
@@ -252,15 +253,6 @@
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\RavenDB2408.cs" />
-    <Compile Include="Issues\RavenDB_2244.cs" />
-    <Compile Include="Issues\RavenDB_2314.cs" />
-    <Compile Include="Issues\RavenDB_2387.cs" />
-    <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
-    <Compile Include="Issues\RavenDB_1761.cs" />
-    <Compile Include="Issues\RavenDb-1934.cs" />
-    <Compile Include="Issues\RavenDB1508.cs" />
-    <Compile Include="Issues\RavenDB1519.cs" />
-    <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
     <Compile Include="Bugs\Facets\FacetErrors.cs" />

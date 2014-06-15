@@ -46,6 +46,9 @@ namespace Raven.Abstractions.Data
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
 
+		public const string BulkImportTimeout = "Raven/BulkImport/Timeout";
+		public const int BulkImportDefaultTimeoutInMs = 60000;
+
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
         public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
