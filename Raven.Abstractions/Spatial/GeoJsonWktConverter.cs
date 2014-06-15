@@ -37,13 +37,20 @@ namespace Raven.Abstractions.Spatial
 
         private bool TryParseTypeString(RavenJObject obj, out string result)
         {
-			RavenJToken type = null;
+            RavenJToken type = null;
+            result = null;
             if (obj != null)
+            {
                 obj.TryGetValue("type", out type);
-                
-            result = ((RavenJValue) type).Value as string;
-			
-            return type != null;
+
+                if (type == null)
+                    obj.TryGetValue("$type", out type);
+                if (type == null)
+                    result = null;
+                else
+                    result = ((RavenJValue)type).Value as string;
+            }
+             return type != null;
         }
 
 		//private bool TryParseFeatureCollection(RavenJObject obj, StringBuilder result)
