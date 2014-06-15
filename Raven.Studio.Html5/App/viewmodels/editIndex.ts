@@ -79,15 +79,43 @@ class editIndex extends viewModelBase {
             this.editedIndex(this.createNewIndexDefinition());
         }
 
-        var indexDef = this.editedIndex();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.luceneFields, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
-        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
+        this.initializeDirtyFlag();
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
+    }
+
+    private initializeDirtyFlag() {
+        var indexDef: indexDefinition = this.editedIndex();
+        var checkedFieldsArray = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.transformResults, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+
+        indexDef.luceneFields().forEach((lf: luceneField) => {
+            checkedFieldsArray.push(lf.name);
+            checkedFieldsArray.push(lf.stores);
+            checkedFieldsArray.push(lf.sort);
+            checkedFieldsArray.push(lf.termVector);
+            checkedFieldsArray.push(lf.indexing);
+            checkedFieldsArray.push(lf.analyzer);
+            checkedFieldsArray.push(lf.suggestionDistance);
+            checkedFieldsArray.push(lf.suggestionAccuracy);
+        });
+
+        indexDef.spatialFields().forEach((sf: spatialIndexField) => {
+            checkedFieldsArray.push(sf.name);
+            checkedFieldsArray.push(sf.type);
+            checkedFieldsArray.push(sf.strategy);
+            checkedFieldsArray.push(sf.minX);
+            checkedFieldsArray.push(sf.maxX);
+            checkedFieldsArray.push(sf.circleRadiusUnits);
+            checkedFieldsArray.push(sf.maxTreeLevel);
+            checkedFieldsArray.push(sf.minY);
+            checkedFieldsArray.push(sf.maxY);
+        });
+
+        viewModelBase.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
     }
 
     editExistingIndex(unescapedIndexName: string) {
@@ -154,8 +182,7 @@ class editIndex extends viewModelBase {
             saveCommand
                 .execute()
                 .done(() => {
-                    // Resync Changes
-                    viewModelBase.dirtyFlag().reset();
+                    viewModelBase.dirtyFlag().reset(); // Resync Changes
 
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
@@ -172,30 +199,30 @@ class editIndex extends viewModelBase {
     }
 
     refreshIndex() {
-        var existingIndex = this.editedIndex();
-        var existingIndexName = "";
-        if (existingIndex) {
-            this.editedIndex(null);
-            existingIndexName = existingIndex.name();
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+        canContinue.done(() => {
+            var existingIndex = this.editedIndex();
+            var existingIndexName = "";
+            if (existingIndex) {
+                this.editedIndex(null);
+                existingIndexName = existingIndex.name();
 
-            this.fetchIndexToEdit(existingIndexName)
-                .done(()=> {
-                    this.editExistingIndex(existingIndexName);
-                    
+                this.fetchIndexToEdit(existingIndexName)
+                    .done(() => {
+                        this.editExistingIndex(existingIndexName);
 
-                    viewModelBase.dirtyFlag().reset();
-                    if (existingIndexName.length > 0)
-                        this.updateUrl(existingIndexName);
-                }).fail(() => this.editedIndex(existingIndex));
 
-        } else {
-            // Resync Changes
-            viewModelBase.dirtyFlag().reset();
-            if (existingIndexName.length > 0)
-                this.updateUrl(existingIndexName);
-        }
+                        viewModelBase.dirtyFlag().reset();
+                        if (existingIndexName.length > 0)
+                            this.updateUrl(existingIndexName);
+                    }).fail(() => this.editedIndex(existingIndex));
 
-        
+            } else {
+                viewModelBase.dirtyFlag().reset(); // Resync Changes
+                if (existingIndexName.length > 0)
+                    this.updateUrl(existingIndexName);
+            }
+        });
     }
 
     deleteIndex() {

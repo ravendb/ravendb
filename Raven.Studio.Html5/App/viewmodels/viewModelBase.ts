@@ -182,6 +182,20 @@ class viewModelBase {
         return viewTask;
     }
 
+    canContinueIfNotDirty(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No']) {
+        var deferred = $.Deferred();
+
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage, options);
+            confirmationMessageViewModel.done(() => deferred.resolve());
+        } else {
+            deferred.resolve();
+        }
+
+        return deferred;
+    }
+
     private promptNavSystemDb(): any {
         if (!appUrl.warnWhenUsingSystemDatabase) {
             return true;

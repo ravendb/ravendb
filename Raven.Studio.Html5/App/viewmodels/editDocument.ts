@@ -492,7 +492,8 @@ class editDocument extends viewModelBase {
     }
 
     private pageToItem(index: number) {
-        this.canPageToItem().done(() => {
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
+        canContinue.done(() => {
             var list = this.docsList();
             if (list) {
                 list.getNthItem(index)
@@ -509,20 +510,6 @@ class editDocument extends viewModelBase {
                     });
             }
         });
-    }
-
-    private canPageToItem() {
-        var deferred = $.Deferred();
-
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
-        if (isDirty) {
-            var confirmationMessageViewModel = this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
-            confirmationMessageViewModel.done(() => deferred.resolve());
-        } else {
-            deferred.resolve();
-        }
-
-        return deferred;
     }
 
     navigateToCollection(collectionName: string) {

@@ -107,8 +107,7 @@ class editTransformer extends viewModelBase {
                 });
         }
 
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        viewModelBase.dirtyFlag().reset(); // Resync Changes
     }
 
     updateUrl(transformerName:string) {

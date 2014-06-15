@@ -143,7 +143,7 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="attr:{id:'fieldName' + $index()},value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="attr: { id:'fieldName' + $index() }, value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
                                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(),foreach: fieldNameAutocompletes">
                                         <li role="presentation" data-bind="click: $parent.setName.bind($parent,$data)">
                                             <a role="menuitem" tabindex="-1" href="#">

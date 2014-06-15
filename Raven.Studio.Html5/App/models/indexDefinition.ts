@@ -7,37 +7,30 @@ class indexDefinition {
     maps = ko.observableArray<KnockoutObservable<string>>().extend({ required: true });
     reduce = ko.observable<string>().extend({ required: true });
     transformResults = ko.observable<string>().extend({ required: true });
-    luceneFields = ko.observableArray<luceneField>().extend({ required: true });
+    luceneFields = ko.observableArray<luceneField>();
+    numOfLuceneFields = ko.computed(() => this.luceneFields().length).extend({ required: true });
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
     // Stored as multiple luceneFields for the sake of data binding.
     // Each luceneField corresponds to a Field box in the index editor UI.
-    spatialFields = ko.observableArray<spatialIndexField>().extend({ required: true });
+    spatialFields = ko.observableArray<spatialIndexField>();
+    numOfSpatialFields = ko.computed(() => this.spatialFields().length).extend({ required: true });
 
     maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
 
-
-
     analyzers: any;
-    fields = ko.observableArray<string>().extend({ required: true });
+    fields = ko.observableArray<string>();
     indexes: any;
     internalFieldsMapping: any;
     isCompiled: boolean;
     isMapReduce: boolean;
     lockMode: string;
-
-    
-    
     sortOptions: any;
     spatialIndexes: any;
     stores: any;
     suggestions: any;
     termVectors: any;
-    
     type: string;
-    
-
-
 
     constructor(dto: indexDefinitionDto) {
         this.analyzers = dto.Analyzers;
