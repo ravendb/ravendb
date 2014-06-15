@@ -18,10 +18,71 @@
         // regexps are ordered -> the first match is used
 
         this.$rules = {
+
+            "from.in.col.suffix": [
+                {
+                    token: "collectionName",
+                    regex: "[^\\n\\s\\t]*",
+                    next: "start"
+                }
+            ],
+
+            "from.in.col.prefix": [
+                {
+                    token: "docs",
+                    regex: "[\\s]*docs.",
+                    next:"from.in.col.suffix"
+                },
+                {
+                    token: "collections",
+                    regex: "\\S.",
+                    next: "from.in.col.suffix"
+                }
+            ],
+            "from.in": [
+                {
+                    token: "from.in",
+                    regex: "\s"
+                },
+                {
+                    token: "from.in",
+                    regex: "(?:in)",
+                    next: "from.in.col.prefix"
+                }
+            ],
+
+            "from.alias": [
+                
+                {
+                    token: "from.alias",
+                    regex: "[\\w]+",
+                    next:"from.in"
+                }
+                
+            ],
+            "data.prefix": [
+                {
+                    token: "data.suffix",
+                    regex: "[^\\s,]*",
+                    next:"start"
+                }
+            ],
             "start": [
                 {
                     token: "comment",
                     regex: "\\/\\/.*$"
+                },
+                {
+                    token: "from",
+                    regex: "from",
+                    next: "from.alias"
+                    
+                },
+                {
+                    token: "data.prefix",
+                    regex: "\\w+\\.",
+                    next: "data.prefix"
+
                 },
                 DocCommentHighlightRules.getStartRule("doc-start"),
                 {
