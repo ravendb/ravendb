@@ -62,7 +62,7 @@ class Transformers extends viewModelBase {
             if (this.transformersMutex == true) {
                 this.transformersMutex = false;
                 setTimeout(() => {
-                    this.fetchTransformers().always(() => this.transformersMutex = true);
+                    this.fetchTransformers(this.activeDatabase()).always(() => this.transformersMutex = true);
                 }, 5000);
             }
         }
