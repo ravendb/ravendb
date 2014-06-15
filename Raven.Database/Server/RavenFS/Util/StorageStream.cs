@@ -17,8 +17,8 @@ namespace Raven.Database.Server.RavenFS.Util
 
 		private long currentPageFrameOffset;
 		private bool disposed;
-		private FileAndPages fileAndPages;
-		private FileHeader fileHeader;
+		private FileAndPagesInformation fileAndPages;
+		private FileHeaderInformation fileHeader;
 
 		protected byte[] InnerBuffer;
 		protected int InnerBufferOffset = 0;

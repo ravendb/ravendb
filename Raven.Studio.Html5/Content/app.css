@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -238,10 +238,10 @@ body {
 .document-collections .collectionText {
   overflow: hidden!important;
   white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 90%;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+  max-width: 70%;
   margin-right: 0!important;
 }
 .document-collections .collectionName {
@@ -250,25 +250,7 @@ body {
   -ms-text-overflow: ellipsis !important;
   -o-text-overflow: ellipsis !important;
   text-overflow: ellipsis !important;
-  max-width: 70%;
-  margin-right: 0!important;
-}
-.document-collections li:first-child .outer {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 80%;
-  margin-right: 0!important;
-}
-.document-collections li:first-child .inner {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 80%;
+  max-width: 90%;
   margin-right: 0!important;
 }
 .document-collections li:not(:first-child) {
@@ -991,6 +973,41 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
+.upload-queue {
+  position: fixed;
+  width: 100%;
+  bottom: 50px;
+  left: 0;
+  height: 300px;
+  z-index: 9999;
+  margin-bottom: 0;
+  background-color: #f5f5f5;
+}
+.upload-queue-min {
+  height: 40px !important;
+}
+.upload-queue-collapsed {
+  padding: 0 0 0 10px;
+}
+.btn-file {
+  position: relative;
+  overflow: hidden;
+}
+.btn-file input[type=file] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 100%;
+  min-height: 100%;
+  font-size: 999px;
+  text-align: right;
+  filter: alpha(opacity=0);
+  opacity: 0;
+  outline: none;
+  background: white;
+  cursor: inherit;
+  display: block;
+}
 .quotas-settings-form .input-group-addon {
   min-width: 65px;
 }
@@ -1024,5 +1041,11 @@ footer ul {
 .ace-github .ace_null {
   font-weight: normal!important;
   color: #0000ff;
+}
+.animated-loader {
+  background-image: url('images/animated-loader.gif');
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
 }
 /*# sourceMappingURL=app.css.map */

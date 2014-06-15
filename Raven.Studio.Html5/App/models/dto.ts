@@ -505,6 +505,7 @@ interface conflictVersionsDto {
 
 interface documentBase {
     getId(): string;
+    getUrl(): string;
     getDocumentPropertyNames(): Array<string>;
 }
 
@@ -514,7 +515,6 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
-
 }
 
 interface customColumnParamsDto {

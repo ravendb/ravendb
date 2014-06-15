@@ -8,8 +8,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.Controllers;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.Connections
 {
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public ConnectionState For(string id, RavenDbApiController controller = null)
+        public ConnectionState For(string id, RavenBaseApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>
 			{

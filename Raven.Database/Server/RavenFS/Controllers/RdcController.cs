@@ -8,12 +8,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -47,8 +47,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                 var stats = new RdcStats
                 {
-                    CurrentVersion = rdcVersion.CurrentVersion,
-                    MinimumCompatibleAppVersion = rdcVersion.MinimumCompatibleAppVersion
+                    CurrentVersion = (int)rdcVersion.CurrentVersion,
+                    MinimumCompatibleAppVersion = (int)rdcVersion.MinimumCompatibleAppVersion
                 };
 
                 return this.GetMessageWithObject(stats, HttpStatusCode.OK)
@@ -61,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public async Task<HttpResponseMessage> Manifest(string id)
 		{
 			var filename = Uri.UnescapeDataString(id);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(filename, 0, 0));

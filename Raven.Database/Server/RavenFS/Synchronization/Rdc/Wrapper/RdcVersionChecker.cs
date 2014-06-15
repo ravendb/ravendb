@@ -52,14 +52,24 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 
 		public RdcVersion GetRdcVersion()
 		{
-			uint currentVersion, minimumCompatibileAppVersion;
-			var hr = _rdcLibrary.GetRDCVersion(out currentVersion, out minimumCompatibileAppVersion);
+            uint currentVersion, minimumCompatibleAppVersion;
+			var hr = _rdcLibrary.GetRDCVersion(out currentVersion, out minimumCompatibleAppVersion);
 			if (hr != 0)
 			{
 				throw new RdcException("Failed to get the rdc version", hr);
 			}
 
-			return new RdcVersion { CurrentVersion = currentVersion, MinimumCompatibleAppVersion = minimumCompatibileAppVersion };
+            if (currentVersion >= (uint)int.MaxValue)
+                throw new InvalidCastException("The CurrentVersion is higher than int.MaxValue. This shouldn't happen. If it happens we have bigger problems.");
+
+            if (minimumCompatibleAppVersion >= (uint)int.MaxValue)
+                throw new InvalidCastException("The minimumCompatibleAppVersion is higher than int.MaxValue. This shouldn't happen. If it happens we have bigger problems.");
+
+			return new RdcVersion 
+            { 
+                CurrentVersion = (int)currentVersion, 
+                MinimumCompatibleAppVersion = (int)minimumCompatibleAppVersion 
+            };
 		}
 
 		private void DisposeInternal()

@@ -4,13 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -42,11 +43,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			Cts.Cancel();
 		}
 
-        public override async Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination)
+        public override async Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var destinationMetadata = await destination.GetMetadataForAsync(FileName);
+            var destinationMetadata = await destination.Commands.GetMetadataForAsync(FileName);
 
 			if (destinationMetadata == null)
 			{
@@ -105,7 +106,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        private async Task<SynchronizationReport> SynchronizeTo(RavenFileSystemClient.SynchronizationClient destination,
+        private async Task<SynchronizationReport> SynchronizeTo(IAsyncFilesSynchronizationCommands destination,
 																ISignatureRepository localSignatureRepository,
 																ISignatureRepository remoteSignatureRepository,
 																SignatureManifest sourceSignatureManifest,
@@ -126,7 +127,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        public async Task<SynchronizationReport> UploadToAsync(RavenFileSystemClient.SynchronizationClient destination)
+        public async Task<SynchronizationReport> UploadToAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			using (var sourceFileStream = StorageStream.Reading(Storage, FileName))
 			{
@@ -146,7 +147,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        private Task<SynchronizationReport> PushByUsingMultipartRequest(RavenFileSystemClient.SynchronizationClient destination, Stream sourceFileStream,
+        private Task<SynchronizationReport> PushByUsingMultipartRequest(IAsyncFilesSynchronizationCommands destination, Stream sourceFileStream,
 																		IList<RdcNeed> needList)
 		{
 			Cts.Token.ThrowIfCancellationRequested();
@@ -164,7 +165,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		private DataInfo GetLocalFileDataInfo(string fileName)
 		{
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 
 			try
 			{

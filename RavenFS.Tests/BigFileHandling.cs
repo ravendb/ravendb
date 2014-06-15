@@ -21,7 +21,7 @@ namespace RavenFS.Tests
         [InlineData(1024 * 1024 * 8)]	// 8 mb
         public async void CanHandleBigFiles(int size)
 		{
-            var client = NewClient(1);
+            var client = NewAsyncClient(1);
             await client.UploadAsync("mb.bin", new RandomStream(size));
 
             var files = await client.BrowseAsync();
@@ -44,7 +44,7 @@ namespace RavenFS.Tests
             var buffer = new byte[size];
             new Random().NextBytes(buffer);
 
-            var client = NewClient(1);
+            var client = NewAsyncClient(1);
             await client.UploadAsync("mb.bin", new MemoryStream(buffer));
 
             var files = await client.BrowseAsync();

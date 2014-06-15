@@ -11,6 +11,7 @@ namespace Raven.Database.Server.Connections
 	{
 		string Id { get; }
 		bool Connected { get; set; }
+        long CoolDownWithDataLossInMilisecods { get; set; }
 
 		event Action Disconnected;
 		void SendAsync(object msg);

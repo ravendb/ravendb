@@ -1,61 +1,35 @@
 ﻿<div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <div class="pull-left panel-title">Automatic Conflict Resolution</div>
-            <div class="pull-right">
-                 <button type="button" class="btn btn-primary" data-bind="click: saveAutomaticConflictResolutionSettings, enable: isConfigSaveEnabled" title="Save changes"><i class="fa fa-save"></i></button>
-            </div>
-            <div class="clearfix"></div>
-        </div>
-        <div class="panel-body" data-bind="with: replicationConfig">
-            <form class="form-horizontal" role="form">
-                <div class="form-group">
-                    <label class="col-sm-2 control-label">Documents</label>
-                    <div class="col-sm-10">
-                        <div class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-primary" data-bind="click: doNotResolveDocumentsConflictsAutomatically, css: { active: documentConflictResolution() === 'None' }" title="Do not use the automatic conflict resolver">
-                                <input type="radio" name="options"> None
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: resolveDocumentsConflictsToLocal, css: { active: documentConflictResolution() === 'ResolveToLocal' }" title="Always resolve in favor of a local version">
-                                <input type="radio" name="options"> Resolve to local
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: resolveDocumentsConflictsToRemote, css: { active: documentConflictResolution() === 'ResolveToRemote' }" title="Always resolve in favor of a remote version">
-                                <input type="radio" name="options"> Resolve to remote
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </form>
-            <form class="form-horizontal" role="form">
-                <div class="form-group">
-                    <label class="col-sm-2 control-label">Attachments</label>
-                    <div class="col-sm-10">
-                        <div class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-primary" data-bind="click: doNotResolveAttachmentsConflictsAutomatically, css: { active: attachmentConflictResolution() === 'None' }" title="Do not use the automatic conflict resolver">
-                                <input type="radio" name="options"> None
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: resolveAttachmentsConflictsToLocal, css: { active: attachmentConflictResolution() === 'ResolveToLocal' }" title="Always resolve in favor of a local version">
-                                <input type="radio" name="options"> Resolve to local
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: resolveAttachmentsConflictsToRemote, css: { active: attachmentConflictResolution() === 'ResolveToRemote' }" title="Always resolve in favor of a remote version">
-                                <input type="radio" name="options"> Resolve to remote
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+   
     <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <div class="pull-left panel-title">Replication Destinations</div>
+                <div class="pull-left panel-title">Replication Configuration</div>
+                <div  data-bind="with: replicationConfig">
+                    <div class="col-md-4">
+                        <select class=" col-md-offset-12 form-control" id="replOptionsList" data-bind="value:documentConflictResolution">
+                            <option value="None">None Conflicts Resolution</option>
+                            <option value="ResolveToLocal"> Resolve to local Conflicts Resolution</option>
+                            <option value="ResolveToRemote">Resolve to remote Conflicts Resolution</option>
+                            <option value="ResolveToLatest">Resolve to latest Conflicts Resolution</option>
+                        </select>
+                    </div>
+
+                </div>
                 <div class="pull-right">
-                    <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
-                    <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-               </div>
+                   
+                        <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                        <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled()||isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+
+                    </div>
                 <div class="clearfix"></div>
             </div>
+
+    
+            <br/>
+
+            <label class="col-md-offset-1">Replication Destinations</label>
+
+
             <div class="panel-body" data-bind="with: replicationsSetup">
                 <div class="alert alert-warning" data-bind="visible: destinations().length === 0">
                     You've got no replication destinations set up.
