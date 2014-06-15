@@ -180,12 +180,12 @@
                                     </div>
                                     <label class="control-label col-md-5 fieldControl" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
                                     <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
-                                        <input type="text" class="form-control fieldControl" data-bind="value: analyzer, attr: { title: analyzer }" />
+                                        <input type="text" class="form-control fieldControl" data-bind="value: analyzer, valueUpdate: 'afterkeyup', attr: { title: analyzer }" />
                                     </div>
                                     <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm"  >Suggestion</label>
                                     <div class="col-md-7 fieldControl">
                                         <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
-                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0"  data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />
+                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="value: suggestionAccuracy, valueUpdate: 'afterkeyup', visible: suggestionDistance() !== 'None'" />
                                     </div>
                                 </div>
                             </div>
@@ -203,7 +203,7 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input type="text" class="form-control" data-bind="value: name" placeholder="spatial field name" />
+                                    <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeyup'" placeholder="spatial field name" />
                                 </div>
                                 <div>
                                     <button type="button" class="close"  data-bind="click: $root.removeSpatialField.bind($root, $index())" aria-hidden="true" title="Remove this spatial field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
@@ -222,11 +222,11 @@
                                     </div>
                                     <label class="control-label col-md-3">Min X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="value: minX, enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="value: minX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-3">Max X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="value: maxX, enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="value: maxX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-3">Precision</label>
                                     <div class="col-md-9">
@@ -240,15 +240,15 @@
                                     </div>
                                     <label class="control-label col-md-7" data-bind="visible: canSpecifyTreeLevel">Max Tree Level</label>
                                     <div class="col-md-5" data-bind="visible: canSpecifyTreeLevel">
-                                        <input type="number" class="form-control" data-bind="value: maxTreeLevel" />
+                                        <input type="number" class="form-control" data-bind="value: maxTreeLevel, valueUpdate: 'afterkeyup'" />
                                     </div>
                                     <label class="control-label col-md-7">Min Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="value: minY, enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="value: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-7">Max Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="value: maxY, enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="value: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                 </div>
                             </div>
@@ -260,7 +260,7 @@
 
                 <label class="col-sm-1 control-label">Max Index Outputs Per Document</label>
                 <div class="col-md-2">
-                    <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument" min="0" />
+                    <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument, valueUpdate: 'afterkeyup'" min="0" />
                 </div>
                 <div class="col-md-1">
                     <button type="button" class="close pull-left"  data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>

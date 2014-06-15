@@ -8,7 +8,9 @@ import getVersioningsCommand = require("commands/getVersioningsCommand");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
 
 class versioning extends viewModelBase {
-    versionings: KnockoutObservableArray<versioningEntry>;
+    versionings = ko.observableArray<versioningEntry>().extend({ required: true });
+    //versionings: KnockoutObservableArray<versioningEntry>;
+    numOfVersionings = ko.computed(() => this.versionings().length);
     toRemove: versioningEntry[];
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -23,17 +25,15 @@ class versioning extends viewModelBase {
 
         this.toRemove = [];
 
+        this.numOfVersionings = ko.computed(() => this.versionings().length);
+
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.versionings]);
-        this.isSaveEnabled = ko.computed<boolean>(() => {
-            var result = viewModelBase.dirtyFlag().isDirty();
-            return result;
-        });
+        this.isSaveEnabled = ko.computed<boolean>(() => viewModelBase.dirtyFlag().isDirty());
     }
 
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-
             var saveTask = new saveVersioningCommand(
                 db,
                 this.versionings().map((v) => { return v.toDto(true); }),
