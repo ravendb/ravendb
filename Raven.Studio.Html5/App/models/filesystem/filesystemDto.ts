@@ -157,13 +157,27 @@ enum synchronizationDirection {
 }
 
 interface synchronizationConflictNotification {
-    FileSystemName;
-    FileName;
-    SourceServerUrl;
+    FileSystemName: string;
+    FileName: string;
+    SourceServerUrl: string;
     Status: conflictStatus;
 }
 
 enum conflictStatus {
     Detected = 0,
     Resolved = 1
+}
+
+interface fileChangeNotification {
+    FileSystemName: string;
+    File: string;
+    Action: fileChangeAction;
+}
+
+enum fileChangeAction {
+    Add,
+    Delete,
+    Update,
+    Renaming,
+    Renamed
 }

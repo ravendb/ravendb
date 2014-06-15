@@ -472,6 +472,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                 StorageOperationsTask.RenameFile(new RenameFileOperation
                 {
+                    FileSystem = FileSystem.Name,
                     Name = fileName,
                     Rename = rename,
                     MetadataAfterOperation = sourceMetadata.WithETag(sourceFileETag).DropRenameMarkers()
@@ -724,6 +725,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Publisher.Publish(new FileChangeNotification
 			{
+                FileSystemName = FileSystem.Name,
 				File = FilePathTools.Cannoicalise(fileName),
 				Action = action
 			});
