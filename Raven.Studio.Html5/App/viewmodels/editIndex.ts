@@ -34,6 +34,7 @@ class editIndex extends viewModelBase {
     indexErrorsList = ko.observableArray<string>();
     appUrls: computedAppUrls;
     indexName: KnockoutComputed<string>;
+    isSaveEnabled: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -80,6 +81,7 @@ class editIndex extends viewModelBase {
         }
 
         this.initializeDirtyFlag();
+        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty());
     }
 
     attached() {
