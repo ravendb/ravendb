@@ -279,7 +279,6 @@ namespace Raven.Tests.Spatial
 	            var stats = documentStore.DatabaseCommands.GetStatistics();
 	            Assert.Empty(stats.Errors);	            
 	        }
-
 	    }
         [Fact]
         public void DefaultSpatialIndexWithoutException()
