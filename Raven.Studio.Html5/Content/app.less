@@ -293,7 +293,7 @@ html, body {
 .document-collections {
         
     li {
-        outline: none;                 
+        outline: none;                             
     }      
     .collection-color-strip{
         margin-right:5px;
@@ -302,10 +302,10 @@ html, body {
     .collectionText {
         overflow: hidden!important;
         white-space: nowrap !important;
-        -ms-text-overflow: clip !important;
-        -o-text-overflow: clip !important;
-        text-overflow: clip !important;          
-        max-width:90%;  
+        -ms-text-overflow: ellipsis !important;
+        -o-text-overflow: ellipsis !important;
+        text-overflow: ellipsis !important;          
+        max-width:70%;  
         margin-right:0!important;  
     }
     .collectionName {        
@@ -314,27 +314,9 @@ html, body {
         -ms-text-overflow: ellipsis !important;
         -o-text-overflow: ellipsis !important;
         text-overflow: ellipsis !important;          
-        max-width:70%;  
+        max-width:90%;  
         margin-right:0!important;              
-    }    
-
-      li:first-child {        
-        .outer {overflow: hidden!important;
-        white-space: nowrap !important;
-        -ms-text-overflow: clip !important;
-        -o-text-overflow: clip !important;
-        text-overflow: clip !important;          
-        max-width:80%;  
-        margin-right:0!important;       }
-        .inner {overflow: hidden!important;
-        white-space: nowrap !important;
-        -ms-text-overflow: clip !important;
-        -o-text-overflow: clip !important;
-        text-overflow: clip !important;          
-        max-width:80%;  
-        margin-right:0!important;       }
-
-    }
+    }             
     
     li:not(:first-child) {
         // All collections except the first one ("All Documents") are indented.

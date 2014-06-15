@@ -238,10 +238,10 @@ body {
 .document-collections .collectionText {
   overflow: hidden!important;
   white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 90%;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+  max-width: 70%;
   margin-right: 0!important;
 }
 .document-collections .collectionName {
@@ -250,25 +250,7 @@ body {
   -ms-text-overflow: ellipsis !important;
   -o-text-overflow: ellipsis !important;
   text-overflow: ellipsis !important;
-  max-width: 70%;
-  margin-right: 0!important;
-}
-.document-collections li:first-child .outer {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 80%;
-  margin-right: 0!important;
-}
-.document-collections li:first-child .inner {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 80%;
+  max-width: 90%;
   margin-right: 0!important;
 }
 .document-collections li:not(:first-child) {
@@ -703,9 +685,7 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*#goToDocInput {
-        width: 10em;
-    }*/
+  /*# sourceMappingURL=app.css.map */
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
