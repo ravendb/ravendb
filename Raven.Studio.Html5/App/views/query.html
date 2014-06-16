@@ -192,7 +192,7 @@
                     <div class="panel-heading">
                         <div class="btn-group col-md-11">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="text: transformer() ? transformer : 'Select a transformer'"></span> <span class="caret"></span>
+                                <span data-bind="text: transformer() && transformer().name() ? transformer().name() : 'Select a transformer'"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
                                 <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>

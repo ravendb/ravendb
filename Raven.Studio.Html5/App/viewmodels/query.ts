@@ -30,6 +30,7 @@ import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 import queryStatsDialog = require("viewmodels/queryStatsDialog");
 import customFunctions = require("models/customFunctions");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
+import transformerType = require("models/transformer");
 
 class query extends viewModelBase {
 
@@ -46,7 +47,7 @@ class query extends viewModelBase {
     selectedIndexEditUrl: KnockoutComputed<string>;
     sortBys = ko.observableArray<querySort>();
     indexFields = ko.observableArray<string>();
-    transformer = ko.observable<string>();
+    transformer = ko.observable<transformerType>();
     allTransformers = ko.observableArray<transformerDto>();
     isDefaultOperatorOr = ko.observable(true);
     showFields = ko.observable(false);
@@ -251,7 +252,7 @@ class query extends viewModelBase {
         this.showFields(query.ShowFields);
         this.indexEntries(query.IndexEntries);
         this.isDefaultOperatorOr(query.UseAndOperator === false);
-        this.transformer(query.TransformerName);
+        this.selectTransformer(this.findTransformerByName(query.TransformerName));
         this.sortBys(query.Sorts.map(s => querySort.fromQuerySortString(s)));
         this.runQuery();
     }
@@ -262,23 +263,23 @@ class query extends viewModelBase {
             var queryText = this.queryText();
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
-            var transformer = this.transformer();
+            var transformerName = this.transformer() ? this.transformer().name() : null;
             var showFields = this.showFields();
             var indexEntries = this.indexEntries();
 
             this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
             var useAndOperator = this.isDefaultOperatorOr() === false;
-            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
+            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformerName, showFields, indexEntries, useAndOperator).getUrl());
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformerName, showFields, indexEntries, useAndOperator);
                 return command
                     .execute()
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
-            this.recordQueryRun(selectedIndex, queryText, sorts.map(s => s.toQuerySortString()), transformer, showFields, indexEntries, useAndOperator);
+            this.recordQueryRun(selectedIndex, queryText, sorts.map(s => s.toQuerySortString()), transformerName, showFields, indexEntries, useAndOperator);
 
             return resultsList;
         }
@@ -463,11 +464,13 @@ class query extends viewModelBase {
     }
 
     addTransformer() {
-        this.transformer("");
+        this.transformer(new transformerType());
     }
 
-    selectTransformer(transformer: transformerDto) {
-        this.transformer(transformer.name);
+    selectTransformer(dto: transformerDto) {
+        var t = new transformerType();
+        t.initFromLoad(dto);
+        this.transformer(t);
         this.runQuery();
     }
 
@@ -533,6 +536,14 @@ class query extends viewModelBase {
         task.done((cf: customFunctions) => {
             this.currentCustomFunctions(cf);
         });
+    }
+
+    findTransformerByName(transformerName: string): transformerDto {
+        try {
+            return this.allTransformers().filter((dto: transformerDto) => dto.name === transformerName)[0];
+        } catch (e) {
+            return null;
+        }
     }
 
 }
