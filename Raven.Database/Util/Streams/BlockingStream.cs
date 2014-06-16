@@ -102,11 +102,14 @@ namespace Raven.Database.Util.Streams
 
 		protected override void Dispose(bool disposing)
 		{
-			base.Dispose(disposing);
-			if (disposing)
+			if (!_isDisposed)
 			{
-				_blocks.Dispose();
-				_isDisposed = true;
+				base.Dispose(disposing);
+				if (disposing)
+				{
+					_blocks.Dispose();
+					_isDisposed = true;
+				}
 			}
 		}
 
