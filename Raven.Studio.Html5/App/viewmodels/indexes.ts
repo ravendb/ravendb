@@ -14,7 +14,6 @@ import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
 
-
 class indexes extends viewModelBase {
 
     indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
@@ -23,6 +22,7 @@ class indexes extends viewModelBase {
     containerSelector = "#indexesContainer";
     recentQueries = ko.observableArray<storedQueryDto>();
     indexMutex = true;
+    appUrls: computedAppUrls;
 
     sortedGroups = ko.computed(()=> {
         var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
@@ -33,12 +33,11 @@ class indexes extends viewModelBase {
 
         return groups;
     });
-    
-    
 
     activate(args) {
         super.activate(args);
 
+        this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
 
         this.fetchIndexes();

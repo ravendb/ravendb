@@ -98,17 +98,8 @@ class databaseSettings extends viewModelBase {
     }
 
     refreshFromServer() {
-        var deferred = $.Deferred();
-
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
-        if (isDirty) {
-            var confirmationMessageViewModel = this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
-            confirmationMessageViewModel.done(() => deferred.resolve());
-        } else {
-            deferred.resolve();
-        }
-
-        deferred.done(() => {
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+        canContinue.done(() => {
             this.fetchDatabaseSettings(this.activeDatabase(), true)
                 .done(() => {
                     this.metadataText("{}");

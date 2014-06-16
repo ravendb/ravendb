@@ -8,7 +8,7 @@ import getVersioningsCommand = require("commands/getVersioningsCommand");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
 
 class versioning extends viewModelBase {
-    versionings: KnockoutObservableArray<versioningEntry>;
+    versionings = ko.observableArray<versioningEntry>().extend({ required: true });
     toRemove: versioningEntry[];
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -17,23 +17,39 @@ class versioning extends viewModelBase {
         this.versionings = ko.observableArray<versioningEntry>();
     }
 
+    canActivate(args: any): any {
+        super.canActivate(args);
+
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            this.fetchVersioningEntries(db)
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        }
+        return deferred;
+    }
+
     activate(args) {
         super.activate(args);
-        this.fetchVersioningEntries();
 
         this.toRemove = [];
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.versionings]);
-        this.isSaveEnabled = ko.computed<boolean>(() => {
-            var result = viewModelBase.dirtyFlag().isDirty();
-            return result;
-        });
+        this.isSaveEnabled = ko.computed<boolean>(() => viewModelBase.dirtyFlag().isDirty());
+    }
+
+    private fetchVersioningEntries(db): JQueryPromise<any>{
+        var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(db).execute();
+
+        task.done((versionings: versioningEntry[]) => this.versioningsLoaded(versionings));
+
+        return task;
     }
 
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-
             var saveTask = new saveVersioningCommand(
                 db,
                 this.versionings().map((v) => { return v.toDto(true); }),
@@ -55,13 +71,6 @@ class versioning extends viewModelBase {
             this.toRemove.push(entry);
         }
         this.versionings.remove(entry);
-    }
-
-    fetchVersioningEntries() {
-        var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(this.activeDatabase()).execute();
-        task.done((versionings: versioningEntry[]) => {
-            this.versioningsLoaded(versionings);
-        });
     }
 
     versioningsLoaded(data: versioningEntry[]) {
