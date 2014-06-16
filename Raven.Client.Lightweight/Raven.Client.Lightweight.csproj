@@ -122,6 +122,9 @@
     <Compile Include="FileSystem\Connection\IFilesReplicationInformer.cs" />
     <Compile Include="FileSystem\Extensions\FilesSynchronizationExtensions.cs" />
     <Compile Include="FileSystem\Extensions\FilesTenancyExtensions.cs" />
+    <Compile Include="FileSystem\Impl\DeleteDirectoryOperation.cs" />
+    <Compile Include="FileSystem\Impl\DeleteFileOperation.cs" />
+    <Compile Include="FileSystem\Impl\IFilesOperation.cs" />
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
     <Compile Include="FileSystem\FilesSessionListeners.cs" />
     <Compile Include="FileSystem\FilesConvention.cs" />
@@ -131,6 +134,8 @@
     <Compile Include="FileSystem\IAsyncFilesCommands.cs" />
     <Compile Include="FileSystem\IAsyncFilesSession.cs" />
     <Compile Include="FileSystem\IFilesChanges.cs" />
+    <Compile Include="FileSystem\Impl\RenameFileOperation.cs" />
+    <Compile Include="FileSystem\Impl\UploadFileOperation.cs" />
     <Compile Include="FileSystem\InMemoryFilesSessionOperations.cs" />
     <Compile Include="FileSystem\Listeners\IFilesConflictListener.cs" />
     <Compile Include="FileSystem\Listeners\IFilesDeleteListener.cs" />

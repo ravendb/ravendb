@@ -315,5 +315,17 @@ namespace RavenFS.Tests
                 }
             }
         }
+
+        protected Stream CreateUniformFileStream(int size, char value = 'a')
+        {
+            var ms = new MemoryStream();
+            var streamWriter = new StreamWriter(ms);
+            var expected = new string(value, size);
+            streamWriter.Write(expected);
+            streamWriter.Flush();
+            ms.Position = 0;
+
+            return ms;
+        }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
+using Raven.Client.FileSystem.Impl;
 using Raven.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -108,59 +110,72 @@ namespace Raven.Client.FileSystem
         public int MaxNumberOfRequestsPerSession { get; set; }
 
 
-        public void RegisterUploadAsync(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        private ConcurrentQueue<IFilesOperation> registeredOperations = new ConcurrentQueue<IFilesOperation>();
+        
+
+        public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        {                    
+            throw new NotImplementedException();
+        }
+
+        public void RegisterUpload(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
             throw new NotImplementedException();
         }
 
-        public void RegisterUploadAsync(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(string path, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            throw new NotImplementedException();
+            var operation = new UploadFileOperation(path, write, metadata, etag);
+            registeredOperations.Enqueue(operation);           
         }
 
-        public void RegisterUploadAsync(string path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            throw new NotImplementedException();
+            var operation = new UploadFileOperation(file.Path, write, metadata, etag);
+            registeredOperations.Enqueue(operation);     
         }
 
-        public void RegisterUploadAsync(FileHeader path, long start, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterFileDeletion(string path, Etag etag = null)
         {
-            throw new NotImplementedException();
+            var operation = new DeleteFileOperation(path, etag);
+            registeredOperations.Enqueue(operation); 
         }
 
-        public void RegisterFileDeletionAsync(string path, Etag etag = null)
+        public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
-            throw new NotImplementedException();
+            var operation = new DeleteFileOperation(file.Path, etag);
+            registeredOperations.Enqueue(operation); 
         }
 
-        public void RegisterFileDeletionAsync(FileHeader path, Etag etag = null)
+        public void RegisterDirectoryDeletion(string path, bool recurse = false)
         {
-            throw new NotImplementedException();
+            var operation = new DeleteDirectoryOperation(path, recurse);
+            registeredOperations.Enqueue(operation);   
         }
 
-        public void RegisterDirectoryDeletionAsync(string path, bool recurse = false)
+        public void RegisterDirectoryDeletion(DirectoryHeader directory, bool recurse = false)
         {
-            throw new NotImplementedException();
+            var operation = new DeleteDirectoryOperation(directory.Path, recurse);
+            registeredOperations.Enqueue(operation); 
         }
 
-        public void RegisterDirectoryDeletionAsync(DirectoryHeader path, bool recurse = false)
+        public void RegisterRename(string sourceFile, string destinationFile)
         {
-            throw new NotImplementedException();
+            var operation = new RenameFileOperation(sourceFile, destinationFile);
+            registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterRenameAsync(string sourceFile, string destinationFile)
+        public void RegisterRename(FileHeader sourceFile, string destinationFile)
         {
-            throw new NotImplementedException();
+            var operation = new RenameFileOperation(sourceFile.Path, destinationFile);
+            registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterRenameAsync(FileHeader sourceFile, string destinationFile)
+        public void RegisterRename(FileHeader sourceFile, DirectoryHeader destination, string destinationName)
         {
-            throw new NotImplementedException();
-        }
-
-        public void RegisterRenameAsync(FileHeader sourceFile, DirectoryHeader destinationPath, string destinationName)
-        {
-            throw new NotImplementedException();
+            //TODO Validate destinationName is a filename and not a directory.
+            var operation = new RenameFileOperation(sourceFile.Path, Path.Combine(destination.Path, destinationName));
+            registeredOperations.Enqueue(operation);
         }
 
         public Task SaveChangesAsync()

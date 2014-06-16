@@ -50,7 +50,7 @@ namespace Raven.Client.FileSystem
             throw new NotImplementedException();
         }
 
-        public Task<FileHeader[]> LoadFilesAsync(IEnumerable<string> path)
+        public Task<FileHeader[]> LoadFileAsync(IEnumerable<string> path)
         {
             throw new NotImplementedException();
         }
@@ -66,6 +66,16 @@ namespace Raven.Client.FileSystem
         }
 
         public Task<Stream> DownloadAsync(FileHeader path)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<FileHeader[]> LoadFilesAtDirectoryAsync(DirectoryHeader directory)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory)
         {
             throw new NotImplementedException();
         }
