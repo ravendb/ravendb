@@ -12,6 +12,7 @@
 
 		public static SliceComparer OwnMemCmpInstane = MemoryCompare;
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int MemoryCompare(byte* lhs, byte* rhs, int n)
 		{
 			if (n == 0)
