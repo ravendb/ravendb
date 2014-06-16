@@ -313,6 +313,10 @@
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyIndexDialog.html" />
+    <TypeScriptCompile Include="App\viewmodels\metrics.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\metrics.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
     <Content Include="App\views\counter\counterStorageStats.html" />
     <Content Include="App\views\counter\counterStorageReplication.html" />
@@ -486,6 +490,7 @@
     <Content Include="Content\jquery.dynatree\skin-vista\icons.gif" />
     <Content Include="Content\jquery.dynatree\skin-vista\loading.gif" />
     <Content Include="Content\jquery.dynatree\skin-vista\ui.dynatree.css" />
+    <Content Include="Content\nv.d3.css" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
@@ -1090,6 +1095,7 @@
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\d3.v3.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -1142,9 +1148,15 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
+    <Content Include="Scripts\nv.d3.js" />
+    <Content Include="Scripts\nvd3\models\timelines.js" />
+    <Content Include="Scripts\nvd3\models\timelinesChart.js" />
+    <Content Include="Scripts\nvd3\nv.d3.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\typings\d3\d3.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
+    <Content Include="Scripts\typings\nvd3\nvd3.d.ts" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
