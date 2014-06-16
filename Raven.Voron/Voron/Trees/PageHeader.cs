@@ -24,6 +24,6 @@ namespace Voron.Trees
 		public byte NextPrefixId;
 
 		[FieldOffset(18)]
-		public unsafe fixed ushort PrefixOffsets[8];
+		public unsafe fixed ushort PrefixOffsets[Page.PrefixCount];
 	}
 }
