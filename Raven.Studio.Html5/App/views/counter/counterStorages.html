@@ -30,7 +30,7 @@
             <br />
 
             <div class="filesystems-container" data-bind="foreach: counterStorages">
-                <div class="filesystem" data-bind="visible:isVisible,click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
+                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
                     <h4><a data-bind="text: name, attr: { href: $root.getCounterStorageUrl($data) }"></a></h4>
                     <!--<span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>-->
                 </div>
