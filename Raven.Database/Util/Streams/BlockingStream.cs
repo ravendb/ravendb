@@ -49,10 +49,13 @@ namespace Raven.Database.Util.Streams
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
-			if (_isDisposed)
+			if (_isDisposed || _cancellationToken.IsCancellationRequested)
+			{
+				Dispose(true);
 				return 0;
+			}
 
-			_cancellationToken.ThrowIfCancellationRequested();
+
 			ValidateBufferArgs(buffer, offset, count);
 
 			int bytesRead = 0;
@@ -82,10 +85,12 @@ namespace Raven.Database.Util.Streams
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{
-			if (_isDisposed)
+			if (_isDisposed || _cancellationToken.IsCancellationRequested)
+			{
+				Dispose(true);
 				return;
+			}
 
-			_cancellationToken.ThrowIfCancellationRequested();
 			ValidateBufferArgs(buffer, offset, count);
 
 			var newBuf = new byte[count];

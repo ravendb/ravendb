@@ -82,6 +82,18 @@ namespace Raven.Client.Document
 		}
 #endif
 
+		private bool isOperationActive;
+
+		private void ValidateIfStreamOpenTask(Stream stream)
+		{
+			while (isOperationActive)
+			{
+				if(!stream.CanWrite)
+					throw new TimeoutException("Operation stream has timed-out");
+				Thread.Sleep(100);
+			}
+		}
+
 		private async Task StartBulkInsertAsync(BulkInsertOptions options)
 		{
 			using (ConnectionOptions.Expect100Continue(operationClient.Url))
@@ -102,6 +114,8 @@ namespace Raven.Client.Document
 				var cancellationToken = CreateCancellationToken();
 				var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
 				{
+					isOperationActive = true;
+					var streamTimeoutValidationTask = Task.Run(() => ValidateIfStreamOpenTask(stream), cancellationToken);
 					try
 					{
 						WriteQueueToServer(stream, options, cancellationToken);
@@ -110,6 +124,11 @@ namespace Raven.Client.Document
 					catch (Exception e)
 					{
 						source.TrySetException(e);
+					}
+					finally
+					{
+						isOperationActive = false;
+						streamTimeoutValidationTask.Wait(1000,cancellationToken);
 					}
 				}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
