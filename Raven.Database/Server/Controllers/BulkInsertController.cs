@@ -64,28 +64,35 @@ namespace Raven.Database.Server.Controllers
 			var documents = 0;
 			var mre = new ManualResetEventSlim(false);
 
-			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
-			var currentDatabase = Database;
-			var task = Task.Factory.StartNew(() =>
+			//var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
+			var timeoutCancellationTokenSource = new CancellationTokenSource();
+			using (new Timer(state => timeoutCancellationTokenSource.Cancel(),null,Database.WorkContext.Configuration.BulkImportTimeoutInMs,Timeout.Infinite))
+			using (var inputStream = new BlockingStream(timeoutCancellationTokenSource.Token))
 			{
-				currentDatabase.Documents.BulkInsert(options, YieldBatches(inputStream , mre, batchSize => documents += batchSize), operationId);
-				status.Documents = documents;
-				status.Completed = true;
-			});
+				var inputTask = InnerRequest.Content.CopyToAsync(inputStream);
+				var currentDatabase = Database;
+				var task = Task.Factory.StartNew(() =>
+				{
+// ReSharper disable once AccessToDisposedClosure
+					currentDatabase.Documents.BulkInsert(options, YieldBatches(inputStream, mre, batchSize => documents += batchSize), operationId);
+					status.Documents = documents;
+					status.Completed = true;
+				}, timeoutCancellationTokenSource.Token);
 
-			long id;
-			Database.Tasks.AddTask(task, status, out id);
+				long id;
+				Database.Tasks.AddTask(task, status, out id);
 
-			mre.Wait(Database.WorkContext.CancellationToken);
+				inputTask.Wait(timeoutCancellationTokenSource.Token);
+				mre.Wait(Database.WorkContext.CancellationToken);
+				sp.Stop();
 
-            sp.Stop();
+				AddRequestTraceInfo(log => log.AppendFormat("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
 
-            AddRequestTraceInfo(log => log.AppendFormat("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
-
-			return GetMessageWithObject(new
-			{
-				OperationId = id
-			});
+				return GetMessageWithObject(new
+				{
+					OperationId = id
+				});
+			}
 		}
 
 		private Guid ExtractOperationId()
