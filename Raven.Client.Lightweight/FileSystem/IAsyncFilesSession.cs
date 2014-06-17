@@ -39,8 +39,8 @@ namespace Raven.Client.FileSystem
 
         void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null);
         void RegisterUpload(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null);
-        void RegisterUpload(string path, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
-        void RegisterUpload(FileHeader path, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
+        void RegisterUpload(string path, long fileSize, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
+        void RegisterUpload(FileHeader path, long fileSize, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
 
         void RegisterFileDeletion(string path, Etag etag = null);
         void RegisterFileDeletion(FileHeader path, Etag etag = null);

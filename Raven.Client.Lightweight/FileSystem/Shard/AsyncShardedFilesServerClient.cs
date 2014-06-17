@@ -290,14 +290,21 @@ namespace Raven.Client.FileSystem.Shard
 			return client.DownloadAsync(filename, destination, from, to);
 		}
 
-		public Task<string> UploadAsync(string filename, Stream source)
+
+        public Task<string> UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null)
 		{
-            return UploadAsync(filename, new RavenJObject(), source, null);
+            return UploadAsync(filename, new RavenJObject(), source, size, null);
 		}
 
-        public Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source)
+        public async Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source, long? size = null, Action<string, long> progress = null)
 		{
-			return UploadAsync(filename, metadata, source, null);
+            var resolutionResult = Strategy.ShardResolutionStrategy.GetShardIdForUpload(filename, metadata);
+
+            var client = TryGetClient(resolutionResult.ShardId);
+
+            await client.UploadAsync(resolutionResult.NewFileName, metadata, source, size, progress);
+
+            return resolutionResult.NewFileName;
 		}
 
         public Task UpdateMetadataAsync(string filename, RavenJObject metadata)
@@ -305,17 +312,6 @@ namespace Raven.Client.FileSystem.Shard
 			var client = TryGetClintFromFileName(filename);
 
 			return client.UpdateMetadataAsync(filename, metadata);
-		}
-
-        public async Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source, Action<string, long> progress)
-		{
-			var resolutionResult = Strategy.ShardResolutionStrategy.GetShardIdForUpload(filename, metadata);
-
-			var client = TryGetClient(resolutionResult.ShardId);
-
-			await client.UploadAsync(resolutionResult.NewFileName, metadata, source, progress);
-
-			return resolutionResult.NewFileName;
 		}
 
 		public async Task<string[]> GetFoldersAsync(string @from = null, int pageSize = 25, ShardPagingInfo pagingInfo = null)
