@@ -25,6 +25,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -139,13 +140,13 @@ namespace Raven.Database.Indexing
 					}
 
 					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
+
+				    IndexStats indexStats = null;
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						IndexStats indexStats = accessor.Indexing.GetIndexStats(fixedName);
+						indexStats = accessor.Indexing.GetIndexStats(fixedName);
 						if (indexStats != null)
-						{
 							indexImplementation.Priority = indexStats.Priority;
-						}
 
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", fixedName);
 						if (read == null)
@@ -166,6 +167,10 @@ namespace Raven.Database.Indexing
 						if (dateTime > latestPersistedQueryTime)
 							latestPersistedQueryTime = dateTime;
 					});
+
+                    if (indexStats != null && ValidateIndexStats(indexStats, indexImplementation) == false)
+                        throw new InvalidOperationException("Index stats are invalid.");
+
 					break;
 				}
 				catch (Exception e)
@@ -746,6 +751,37 @@ namespace Raven.Database.Indexing
             }
 
             return result;
+        }
+
+        private bool ValidateIndexStats(IndexStats indexStats, Index index)
+        {
+            if (configuration.ResetIndexOnUncleanShutdown == false)
+                return true;
+
+            IndexSearcher searcher;
+            using (index.GetSearcher(out searcher))
+            using (searcher)
+            {
+                int maxDoc;
+                JsonDocument doc = null;
+                for (maxDoc = searcher.MaxDoc - 1; maxDoc >= 0; maxDoc--)
+                {
+                    if (searcher.IndexReader.IsDeleted(maxDoc))
+                        continue;
+
+                    var document = searcher.Doc(maxDoc);
+                    var documentKey = document.Get(Constants.DocumentIdFieldName);
+
+                    doc = documentDatabase.Get(documentKey, null);
+                    if (doc != null) // doc could have been deleted, but not yet removed from index
+                        break;
+                }
+
+                if (doc == null) // no docs or all deleted, cant make decision
+                    return true;
+
+                return EtagUtil.IsGreaterThanOrEqual(doc.Etag, indexStats.LastIndexedEtag);
+            }
         }
 
 		private static bool ValidateCommitPointChecksum(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
