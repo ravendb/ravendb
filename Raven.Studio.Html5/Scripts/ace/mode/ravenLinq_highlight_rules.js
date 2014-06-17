@@ -30,22 +30,22 @@
             "from.in.col.prefix": [
                 {
                     token: "docs",
-                    regex: "[\\s]*docs.",
+                    regex: "[\\s]*(docs).",
                     next:"from.in.col.suffix"
                 },
                 {
                     token: "collections",
-                    regex: "\\S.",
+                    regex: "[\\s]*([\\w]+).",
                     next: "from.in.col.suffix"
                 }
             ],
             "from.in": [
                 {
-                    token: "from.in",
+                    token: "keyword",
                     regex: "\s"
                 },
                 {
-                    token: "from.in",
+                    token: "keyword",
                     regex: "(?:in)",
                     next: "from.in.col.prefix"
                 }
@@ -73,7 +73,7 @@
                     regex: "\\/\\/.*$"
                 },
                 {
-                    token: "from",
+                    token: "keyword",
                     regex: "from",
                     next: "from.alias"
                     

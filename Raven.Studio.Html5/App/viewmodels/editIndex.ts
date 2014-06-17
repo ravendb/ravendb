@@ -17,6 +17,11 @@ import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import app = require("durandal/app");
+import collection = require("models/collection");
+import getCollectionsCommand = require("commands/getCollectionsCommand");
+import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
+import pagedResultSet = require("common/pagedResultSet");
+import document = require("models/document");
 
 class editIndex extends viewModelBase { 
 
@@ -307,60 +312,90 @@ class editIndex extends viewModelBase {
         if (!currentToken || typeof currentToken.type == "string") {
             // if in beginning of text or in free text token
             if (!currentToken || currentToken.type == "text") {
-                callback(null, ["aa","bb","cc","dd"].map(curColumn => {
-                    return { name: curColumn, value: curColumn, score: 10, meta: "field" };
-                }));
+                callback(null, [{ name: "from", value: "from", score: 10, meta: "keyword" }]);
             }
-            // if right after, or a whitespace after keyword token ([column name]:)
-            else if (currentToken.type == "keyword" || currentToken.type == "value") {
+            // if it's a docs predicate, return all collections in the db
+            else if (currentToken.type == "docs" && !!currentToken.value) {
+                new getCollectionsCommand(this.activeDatabase())
+                    .execute()
+                    .done((collections:collection[]) =>{
+                        callback(null, collections.map((curCollection:collection) => {
+                            return { name: curCollection.name, value: curCollection.name, score: 10, meta: "collection" };
+                        }));
+                    })
+                    .fail(() => callback([{ error: "notext" }], null));
+            }
+            // if it's a general "collection" predicate, return all fields from first document in the collection
+            else if (currentToken.type == "collections"){
+                
+                // get the list of declared predicates in the statement(from [foo] .)
+                var predicates: { rowNum: number; alias: string }[] = [];
+                var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = [];
+                    
+                var curAliasKey = null;
+                var curAliasValuePrefix = null;
+                var curAliasValueSuffix = null;
 
-                // first, calculate and validate the column name
-                var currentColumnName: string = null;
-                var currentValue: string = "";
+                // get through all tokens in all rows and match aliases Keys to Values
+                for (var curRow = 0; curRow < session.getLength(); curRow++) {
+                    var curRowTokens = session.getTokens(curRow);
+                        
+                    for (var curTokenInRow = 0; curTokenInRow < curRowTokens.length; curTokenInRow++) {
+                        if (curRowTokens[curTokenInRow].type == "from.alias") {
+                            curAliasKey = curRowTokens[curTokenInRow].value.trim();
+                        }
+                        else if (!!curAliasKey)
+                        {
+                            if (curRowTokens[curTokenInRow].type == "docs" || curRowTokens[curTokenInRow].type == "collections") {
+                                curAliasValuePrefix = curRowTokens[curTokenInRow].value;
+                            }
+                            else if (curRowTokens[curTokenInRow].type == "collectionName") {
+                                curAliasValueSuffix = curRowTokens[curTokenInRow].value;
+                                aliases.push({ aliasKey: curAliasKey, aliasValuePrefix: curAliasValuePrefix.replace('.', '').trim(), aliasValueSuffix: curAliasValueSuffix.replace('.', '').trim() });
 
-                if (currentToken.type == "keyword") {
-                    currentColumnName = currentToken.value.substring(0, currentToken.value.length - 1);
-                } else {
-                    currentValue = currentToken.value.trim();
-                    var rowTokens: any[] = session.getTokens(pos.row);
-                    if (!!rowTokens && rowTokens.length > 1) {
-                        currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
-                        currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
+                                curAliasKey = null;
+                                curAliasValuePrefix = null;
+                                curAliasValueSuffix = null;
+                            }
+                        } 
                     }
                 }
 
-                // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-
-//                if (!!currentColumnName && !!this.["aa", "bb", "cc", "dd"].first(x=> x === currentColumnName)) {
-//
-//                    if (this.selectedIndex().indexOf("dynamic/") !== 0) {
-//                        new getIndexTermsCommand(this.selectedIndex(), currentColumnName, this.activeDatabase())
-//                            .execute()
-//                            .done(terms => {
-//                                if (!!terms && terms.length > 0) {
-//                                    callback(null, terms.map(curVal => {
-//                                        return { name: curVal, value: curVal, score: 10, meta: "value" };
-//                                    }));
-//                                }
-//                            });
-//                    } else {
-//
-//                        if (currentValue.length > 0) {
-//                            new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
-//                                .execute()
-//                                .done((results: string[]) => {
-//                                    if (!!results && results.length > 0) {
-//                                        callback(null, results.map(curVal => {
-//                                            return { name: curVal['@metadata']['@id'], value: curVal['@metadata']['@id'], score: 10, meta: "value" };
-//                                        }));
-//                                    }
-//                                });
-//                        } else {
-//                            callback([{ error: "notext" }], null);
-//                        }
-//                    }
-//                }
+                // find the matching alias and get list of fields
+                if (aliases.length > 0) {
+                    var matchingAliasKeyValue = aliases.first(x => x.aliasKey.replace('.', '').trim() === currentToken.value.replace('.', '').trim());
+                    if (!!matchingAliasKeyValue) {
+                        // get list of fields according to it's collection's first row
+                        if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
+                            new getDocumentsByEntityNameCommand(new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase()), 0, 1)
+                                .execute()
+                                .done((result: pagedResultSet) => {
+                                    if (!!result && result.totalResultCount > 0) {
+                                        var documentPattern: document = new document(result.items[0]);
+                                        callback(null, documentPattern.getDocumentPropertyNames().map(curField => {
+                                            return { name: curField, value: curField, score: 10, meta: "field" };
+                                        }));
+                                    } else {
+                                        callback([{ error: "notext" }], null);
+                                    }
+                                }).fail(() => callback([{ error: "notext" }], null));
+                        }
+                        // for now, we do not treat cases of nested types inside document
+                        else {
+                            callback([{ error: "notext" }], null);
+                        }
+                    }
+                }
             }
+            else if (currentToken.type == "data.suffix") {
+                callback(null, ["aa","bb","cc"].map(curField => {
+                    return { name: curField, value: curField, score: 10, meta: "field" };
+                }));
+            } else {
+                callback([{ error: "notext" }], null);
+            }
+               
+            
         }
     }
 }
