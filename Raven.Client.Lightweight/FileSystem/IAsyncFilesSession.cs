@@ -21,6 +21,8 @@ namespace Raven.Client.FileSystem
         /// </remarks>
         IAsyncAdvancedFilesSessionOperations Advanced { get; }
 
+        IAsyncFilesCommands Commands { get; }
+
 
         Task<FileHeader> LoadFileAsync(string path);
         Task<FileHeader> LoadFileAsync(DirectoryHeader directory, string filename);

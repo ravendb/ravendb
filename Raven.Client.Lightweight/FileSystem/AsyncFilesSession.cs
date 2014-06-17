@@ -21,18 +21,18 @@ namespace Raven.Client.FileSystem
 								 Guid id)
 			: base(filesStore, listeners, id)
 		{
-            AsyncFilesCommands = asyncFilesCommands;
+            Commands = asyncFilesCommands;
 		}
 
         /// <summary>
         /// Gets the async files commands.
         /// </summary>
         /// <value>The async files commands.</value>
-        public IAsyncFilesCommands AsyncFilesCommands { get; private set; }
+        public IAsyncFilesCommands Commands { get; private set; }
 
         public override string FileSystemName
         {
-            get { return AsyncFilesCommands.FileSystem; }
+            get { return Commands.FileSystem; }
         }
 
         public IAsyncAdvancedFilesSessionOperations Advanced
