@@ -28,8 +28,33 @@ class statusDebugMetrics extends viewModelBase {
         return null;
     });
 
+    gauges = ko.computed<any[]>(() => {
+        if (this.data()) {
+            return $.map(this.data().Gauges, (v, k) => {
+                return {
+                    key: k,
+                    values: $.map(v, (innerValue, innerKey) => {
+                        return {
+                            key: innerKey,
+                            value: innerValue
+                        }
+                    })
+                }
+            });
 
-    private extractPercentiles(input) {
+        }
+        return null;
+    });
+
+    replicationDestinations = ko.computed<string[]>(() => {
+        if (this.data()) {
+            // sample destinations using ReplicationDurationHistogram
+            return $.map(this.data().ReplicationBatchSizeHistogram, (v, key) => key);
+        }
+        return null;
+    });
+
+    extractPercentiles(input) {
         var result = [];
         for (var prop in input) {
             var v = input[prop];

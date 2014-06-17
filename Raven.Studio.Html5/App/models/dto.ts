@@ -566,6 +566,11 @@ interface statusDebugMetricsDto {
     RequestsDuration: histogramDataDto;
     StaleIndexMaps: histogramDataDto;
     StaleIndexReduces: histogramDataDto;
+    Gauges: any;
+    ReplicationBatchSizeMeter: dictionary<meterDataDto>;
+    ReplicationDurationMeter: dictionary<meterDataDto>;
+    ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
+    ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
 
 interface meterDataDto {
