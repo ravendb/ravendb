@@ -144,11 +144,13 @@ class filesystemFiles extends viewModelBase {
                                 break;
                             }
                             case fileChangeAction.Renaming: {
-                                //TODO: Rename not implemented yet
-                                break;
+                                //nothing to do here
                             }
                             case fileChangeAction.Renamed: {
-                                //TODO: Rename not implemented yet
+                                //reload files to load the new names
+                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                    this.loadFiles();
+                                }
                                 break;
                             }
                             case fileChangeAction.Update: {
