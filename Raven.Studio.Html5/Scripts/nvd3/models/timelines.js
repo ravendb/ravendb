@@ -87,9 +87,9 @@ nv.models.timelines = function() {
         x.range(xRange || [(availableWidth * padDataOuter +  availableWidth) / (2 *data[0].values.length), availableWidth - availableWidth * (1 + padDataOuter) / (2 * data[0].values.length)  ]);
         //x.range([availableWidth * .5 / data[0].values.length, availableWidth * (data[0].values.length - .5)  / data[0].values.length ]);
       else
-        x.range(xRange || [0, availableWidth]);
+        x.range(xRange || [0, availableWidth - minBarWidth - 5]);
 
-      y   .domain(yDomain || d3.extent(seriesData.map(function(d) { return d.y }).concat(forceY)))
+      y   .domain(yDomain || d3.extent(seriesData.map(function(d) { return d.y; }).concat(forceY)))
           .range(yRange || [availableHeight, 0]);
 
       // If scale's domain don't have a range, slightly adjust to make one... so a chart can show a single data point

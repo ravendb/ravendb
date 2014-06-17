@@ -165,6 +165,8 @@ nv.models.timelinesChart = function() {
           .attr('y', margin.top + availableHeight1 / 2)
           .text(function(d) { return d });
 
+          container.selectAll('.nv-wrap').remove();
+
         return chart;
       } else {
         container.selectAll('.nv-noData').remove();
