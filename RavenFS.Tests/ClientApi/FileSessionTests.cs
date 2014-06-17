@@ -42,11 +42,11 @@ namespace RavenFS.Tests.ClientApi
 
             using (var session = filesStore.OpenAsyncSession())
             {
-                session.RegisterUpload("test1.file", x =>
-                    {
-                        for (byte i = 0; i < 128; i++)
-                            x.WriteByte(i);                        
-                    });
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 128; i++)
+                        x.WriteByte(i);
+                });
 
                 await session.SaveChangesAsync();
 
@@ -55,13 +55,33 @@ namespace RavenFS.Tests.ClientApi
 
                 Assert.Equal(128, resultingStream.Length);
 
-                for (byte i = 0; i < 128; i++ )
+                for (byte i = 0; i < 128; i++)
                 {
                     int value = resultingStream.ReadByte();
                     Assert.True(value >= 0);
                     Assert.Equal(i, (byte)value);
 
                 }
+            }
+        }
+
+        [Fact]
+        public async void UploadActionWritesIncompleteStream()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 60; i++)
+                        x.WriteByte(i);
+                });
+
+                await session.SaveChangesAsync();
+
+                var resultingStream = await session.DownloadAsync("test1.file");
+                Assert.Equal(60, resultingStream.Length);
             }
         }
 

@@ -479,19 +479,17 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadAsync(string filename, Stream source)
+
+        public Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null)
         {
-            return UploadAsync(filename, new RavenJObject(), source, null);
+            return UploadAsync(filename, null, source, size, progress);
         }
 
-
-        public Task UploadAsync(string filename, RavenJObject metadata, Stream source)
+        public Task UploadAsync(string filename, RavenJObject metadata, Stream source, long? size = null, Action<string, long> progress = null)
         {
-            return UploadAsync(filename, metadata, source, null);
-        }
+            if (metadata == null)
+                metadata = new RavenJObject();
 
-        public Task UploadAsync(string filename, RavenJObject metadata, Stream source, Action<string, long> progress)
-        {
             return ExecuteWithReplication("PUT", async operation =>
             {
                 if (source.CanRead == false)
@@ -503,8 +501,8 @@ namespace Raven.Client.FileSystem
                                                                 "PUT", operation.Credentials, Conventions))
                                             .AddOperationHeaders(OperationsHeaders);
 
-                metadata["RavenFS-Size"] = new RavenJValue(source.Length);
-
+                metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
+                
                 AddHeaders(metadata, request);
 
                 var cts = new CancellationTokenSource();

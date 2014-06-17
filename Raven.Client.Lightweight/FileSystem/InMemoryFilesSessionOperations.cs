@@ -117,25 +117,25 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(path, x => { stream.CopyTo(x); }, metadata, etag); 
+            var operation = new UploadFileOperation(path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag); 
             registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterUpload(FileHeader file, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(file.Path, x => { stream.CopyTo(x); }, metadata, etag);
+            var operation = new UploadFileOperation(file.Path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
             registeredOperations.Enqueue(operation);   
         }
 
-        public void RegisterUpload(string path, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(path, write, metadata, etag);
+            var operation = new UploadFileOperation(path, size, write, metadata, etag);
             registeredOperations.Enqueue(operation);           
         }
 
-        public void RegisterUpload(FileHeader file, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(file.Path, write, metadata, etag);
+            var operation = new UploadFileOperation(file.Path, size, write, metadata, etag);
             registeredOperations.Enqueue(operation);     
         }
 
