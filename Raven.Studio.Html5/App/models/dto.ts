@@ -563,7 +563,9 @@ interface statusDebugMetricsDto {
     ReducedPerSecond: number;
     RequestsPerSecond: number;
     Requests: statusDebugMetricsRequestsDto;
-    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+    RequestsDuration: histogramDto;
+    StaleIndexMaps: histogramDto;
+    StaleIndexReduces: histogramDto;
 }
 
 interface statusDebugMetricsRequestsDto {
@@ -574,7 +576,7 @@ interface statusDebugMetricsRequestsDto {
     FifteenMinuteRate: number;
 }
 
-interface statusDebugMetricsRequestsDurationDto {
+interface histogramDto {
     Counter: number;
     Max: number;
     Min: number;
