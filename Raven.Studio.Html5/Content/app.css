@@ -238,10 +238,10 @@ body {
 .document-collections .collectionText {
   overflow: hidden!important;
   white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 90%;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+  max-width: 70%;
   margin-right: 0!important;
 }
 .document-collections .collectionName {
@@ -250,25 +250,7 @@ body {
   -ms-text-overflow: ellipsis !important;
   -o-text-overflow: ellipsis !important;
   text-overflow: ellipsis !important;
-  max-width: 70%;
-  margin-right: 0!important;
-}
-.document-collections li:first-child .outer {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 80%;
-  margin-right: 0!important;
-}
-.document-collections li:first-child .inner {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: clip !important;
-  -o-text-overflow: clip !important;
-  text-overflow: clip !important;
-  max-width: 80%;
+  max-width: 90%;
   margin-right: 0!important;
 }
 .document-collections li:not(:first-child) {
@@ -1059,5 +1041,22 @@ footer ul {
 .ace-github .ace_null {
   font-weight: normal!important;
   color: #0000ff;
+}
+.animated-loader {
+  background-image: url('images/animated-loader.gif');
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+}
+.metricsContainer .nv-point {
+  stroke-linecap: round;
+  stroke-width: 5px;
+}
+.metricsContainer svg {
+  overflow: hidden;
+}
+.metricsContainer div {
+  border: 0;
+  margin: 0;
 }
 /*# sourceMappingURL=app.css.map */

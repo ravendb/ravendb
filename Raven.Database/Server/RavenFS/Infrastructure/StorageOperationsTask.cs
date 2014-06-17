@@ -59,6 +59,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 			notificationPublisher.Publish(new FileChangeNotification
 			{
+                FileSystemName = operation.FileSystem,
 				File = FilePathTools.Cannoicalise(operation.Name),
 				Action = FileChangeAction.Renaming
 			});
@@ -91,6 +92,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			notificationPublisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
 			notificationPublisher.Publish(new FileChangeNotification
 			{
+                FileSystemName = operation.FileSystem,
 				File = FilePathTools.Cannoicalise(operation.Rename),
 				Action = FileChangeAction.Renamed
 			});

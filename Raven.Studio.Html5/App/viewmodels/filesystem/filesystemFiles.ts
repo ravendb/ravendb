@@ -1,6 +1,8 @@
 ﻿import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
+import shell = require("viewmodels/shell");
+
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
@@ -10,6 +12,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import file = require("models/filesystem/file");
+import folder = require("models/filesystem/folder");
 import uploadItem = require("models/uploadItem");
 import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -27,6 +30,8 @@ class filesystemFiles extends viewModelBase {
     currentLevelSubdirectories = ko.observableArray<string>();
     uploadFiles = ko.observable<FileList>();
     uploadQueue = ko.observableArray<uploadItem>();
+    folderNotificationSubscriptions = {};
+
     private activeFilesystemSubscription: any;
 
 
@@ -53,8 +58,8 @@ class filesystemFiles extends viewModelBase {
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
-        this.loadFiles(false);
-        this.selectedFolder.subscribe((newValue: string) => this.loadFiles(true));
+        this.loadFiles();
+        this.selectedFolder.subscribe((newValue: string) => this.folderChanged(newValue));
 
         var storageKeyForFs = uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name;
         if (window.localStorage.getItem(storageKeyForFs)) {
@@ -74,10 +79,93 @@ class filesystemFiles extends viewModelBase {
         this.activeFilesystemSubscription.dispose();
     }
 
-    loadFiles(force: boolean) {
+    loadFiles() {
         this.allFilesPagedItems(this.createPagedList(this.selectedFolder()));
 
         return this.allFilesPagedItems;
+    }
+
+    folderChanged(newFolder: string) {
+        this.loadFiles();
+
+        // treat notifications events
+        if (!newFolder) {
+            newFolder = "/";
+        }
+
+        if (!this.folderNotificationSubscriptions[newFolder]) {
+            this.folderNotificationSubscriptions[newFolder] = shell.currentFsChangesApi()
+                .watchFsFolders(newFolder, (e: fileChangeNotification) => {
+
+                    if (e.FileSystemName === this.activeFilesystem().name) {
+                        switch (e.Action) {
+
+                            case fileChangeAction.Add: {
+                                var callbackFolder = new folder(newFolder);
+                                var eventFolder = folder.getFolderFromFilePath(e.File);
+
+                                if (!callbackFolder || !eventFolder
+                                                || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
+                                    return;
+                                }
+
+                                //check if the file is new at the folder level to add it
+                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                    this.loadFiles();
+                                }
+                                else {
+                                    //check if a new folder at this level was added so we add it to the tree
+                                    var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
+                                    if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
+                                        var newNode = {
+                                            key: subPaths[1].path,
+                                            title: subPaths[1].name,
+                                            isLazy: true,
+                                            isFolder: true,
+                                        };
+                                        this.addedFolder(newNode);
+                                    }
+                                }
+
+                                break;
+                            }
+                            case fileChangeAction.Delete: {
+                                var callbackFolder = new folder(newFolder);
+                                var eventFolder = folder.getFolderFromFilePath(e.File);
+
+                                //check if the file is new at the folder level to remove it from the table
+                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                    this.loadFiles();
+                                }
+                                else {
+                                    //reload node and its children
+                                    treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
+                                }
+                                break;
+                            }
+                            case fileChangeAction.Renaming: {
+                                //nothing to do here
+                            }
+                            case fileChangeAction.Renamed: {
+                                //reload files to load the new names
+                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                    this.loadFiles();
+                                }
+                                break;
+                            }
+                            case fileChangeAction.Update: {
+                                //check if the file is new at the folder level to add it
+                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                    this.loadFiles();
+                                }
+                                break;
+                            }
+                            default:
+                                console.error("unknown notification action");
+                        }
+                    }
+                });
+        }
     }
 
     createPagedList(directory): pagedList {
@@ -97,7 +185,7 @@ class filesystemFiles extends viewModelBase {
             var filesystemFilesUrl = appUrl.forFilesystemFiles(fs);
             this.navigate(filesystemFilesUrl);
 
-            this.loadFiles(true);
+            this.loadFiles();
         }
     }
 
@@ -137,7 +225,7 @@ class filesystemFiles extends viewModelBase {
                 title: folderName,
                 isLazy: true,
                 isFolder: true,
-                addClass: "temp-folder"
+                addClass: treeBindingHandler.transientNodeStyle
             };
             this.addedFolder(newNode);
         });
@@ -176,13 +264,12 @@ class filesystemFiles extends viewModelBase {
     uploadSuccess(x: uploadItem) {
         ko.postbox.publish("UploadFileStatusChanged", x);
         uploadQueueHelper.updateQueueStatus(x.id(), "Uploaded", this.uploadQueue());
-        var lastSlash = x.fileName().lastIndexOf("/");
-        if (lastSlash > 0) {
-            var directory = x.fileName().substring(0, lastSlash);
-            treeBindingHandler.updateNodeHierarchyStyle(filesystemFiles.treeSelector, directory, "");
+        var persistedFolder = folder.getFolderFromFilePath(x.fileName());
+        if (persistedFolder) {
+            treeBindingHandler.updateNodeHierarchyStyle(filesystemFiles.treeSelector, persistedFolder.path, "");
         }
 
-        this.loadFiles(true);
+        this.loadFiles();
     }
 
     uploadFailed(x: uploadItem) {

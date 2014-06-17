@@ -21,7 +21,7 @@ class getFoldersStatsCommand extends commandBase {
         return this.query<folderNodeDto[]>(url, args, this.fs, (result: string[]) => result.map((x: string) =>
         { 
             return {
-                key: x.replace("/", ""),
+                key: x,
                 title: x.substring(x.lastIndexOf("/")+1),
                 isLazy: true,
                 isFolder: true

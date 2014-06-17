@@ -39,9 +39,9 @@ class replications extends viewModelBase {
         this.isConfigSaveEnabled = ko.computed(() => {
             return self.replicationConfigDirtyFlag().isDirty();
         });
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig]);
         this.isSetupSaveEnabled = ko.computed(() => {
-            return self.replicationsSetupDirtyFlag().isDirty();
+            return self.replicationsSetupDirtyFlag().isDirty() ;
         });
 
         var combinedFlag = ko.computed(() => {
@@ -86,16 +86,20 @@ class replications extends viewModelBase {
     }
 
     saveChanges() {
-        if (this.replicationsSetup().source()) {
-            this.saveReplicationSetup();
-        } else {
-            var db = this.activeDatabase();
-            if (db) {
-                new getDatabaseStatsCommand(db)
-                    .execute()
-                    .done(result=> {
-                        this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                });
+        if (this.isConfigSaveEnabled())
+            this.saveAutomaticConflictResolutionSettings();
+        if (this.isSetupSaveEnabled()) {
+            if (this.replicationsSetup().source()) {
+                this.saveReplicationSetup();
+            } else {
+                var db = this.activeDatabase();
+                if (db) {
+                    new getDatabaseStatsCommand(db)
+                        .execute()
+                        .done(result=> {
+                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                        });
+                }
             }
         }
     }

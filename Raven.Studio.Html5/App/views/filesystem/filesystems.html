@@ -1,11 +1,10 @@
 ﻿<section class="filesystem-page">
 
-    <div class="text-center" data-bind="visible: !hasFilesystems()">
+    <div class="text-center" data-bind="visible: fileSystems().length == 0">
         <h3 class="page-header text-info">No file systems are available. <small>Go ahead and <a href="#" data-bind="click: newFilesystem">create a distributed file system</a>.</small></h3>
     </div>
 
-    <div data-bind="visible: hasFilesystems()">
-
+    <div data-bind="visible: fileSystems().length > 0">
         <div style="position: relative">
             <ul class="breadcrumb">
                 <li>
@@ -32,13 +31,12 @@
             </div>
             <br />
 
-            <div class="filesystems-container" data-bind="foreach: filesystems">
-                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected }">
+            <div class="filesystems-container" data-bind="foreach: fileSystems">
+                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFileSystem($data); return true; }, css: { selected: isSelected }">
                     <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
                     <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>
                 </div>
             </div>
-
         </div>
 
     </div>

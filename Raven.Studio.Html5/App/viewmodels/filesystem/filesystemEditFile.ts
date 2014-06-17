@@ -104,8 +104,7 @@ class filesystemEditFile extends viewModelBase {
         var saveCommand = new updateFileMetadataCommand(this.fileName(), meta, this.activeFilesystem(), true);
         var saveTask = saveCommand.execute();
         saveTask.done(() => {
-            // Resync Changes
-            viewModelBase.dirtyFlag().reset();
+            viewModelBase.dirtyFlag().reset(); // Resync Changes
 
             this.loadFile(this.fileName());
             //this.updateUrl(idAndEtag.Key);
@@ -138,8 +137,7 @@ class filesystemEditFile extends viewModelBase {
             app.showDialog(viewModel, filesystemEditFile.editFileSelector);
         }
 
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        viewModelBase.dirtyFlag().reset(); // Resync Changes
     }
 
     metadataChanged(meta: fileMetadata) {
