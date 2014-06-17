@@ -70,7 +70,7 @@ class treeBindingHandler {
             var differenceSet: { [key: string]: DynaTreeNode; } = {};
 
 
-            //this is being done with creating a new dictionary to reduce complexity
+            //this is being done creating a new dictionary to reduce complexity
 
             for (var i = 0; i < results.length; i++) {
                 newSet[results[i].key] = results[i];
