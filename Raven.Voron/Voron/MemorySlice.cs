@@ -56,7 +56,7 @@ namespace Voron
 		private ushort _matchedBytes;
 		private SliceComparer _matchPrefixInstance;
 
-		public virtual ushort FindPrefixSize(MemorySlice other)
+		public ushort FindPrefixSize(MemorySlice other)
 		{
 			_matchedBytes = 0;
 

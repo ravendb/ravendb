@@ -306,17 +306,26 @@ namespace Voron.Trees
 			return new PrefixedSlice(key);
 	    }
 
+		private class BestPrefixMatch
+		{
+			public byte PrefixId;
+			public ushort PrefixUsage;
+		}
+
 	    private bool TryUseExistingPrefix(MemorySlice key, out PrefixedSlice prefixedSlice)
 	    {
-		    Tuple<byte, ushort> bestMatch = null;
+		    if (NextPrefixId < 1)
+		    {
+				prefixedSlice = null;
+				return false;
+		    }
 
-		    PrefixNode prefix = null;
+			var prefix = new PrefixNode();
+
+		    BestPrefixMatch bestMatch = null;
 
 			for (byte prefixId = 0; prefixId < NextPrefixId; prefixId++)
 			{
-				if(prefix == null)
-					prefix = new PrefixNode();
-
 				AssertPrefixNode(prefixId);
 
 				prefix.Set(_base + PrefixOffsets[prefixId], PageNumber);
@@ -335,17 +344,22 @@ namespace Voron.Trees
 
 				if (bestMatch == null)
 				{
-					bestMatch = new Tuple<byte, ushort>(prefixId, length);
-					continue;
+					bestMatch = new BestPrefixMatch
+					{
+						PrefixId = prefixId,
+						PrefixUsage = length
+					};
 				}
-
-				if (length > bestMatch.Item2)
-					bestMatch = new Tuple<byte, ushort>(prefixId, length);
+				else if (length > bestMatch.PrefixUsage)
+				{
+					bestMatch.PrefixId = prefixId;
+					bestMatch.PrefixUsage = length;
+				}
 			}
 
-		    if (bestMatch != null && bestMatch.Item2 > MinPrefixLength(key))
+		    if (bestMatch != null && bestMatch.PrefixUsage > MinPrefixLength(key))
 		    {
-			    prefixedSlice = new PrefixedSlice(bestMatch.Item1, bestMatch.Item2, key.Skip(bestMatch.Item2));
+			    prefixedSlice = new PrefixedSlice(bestMatch.PrefixId, bestMatch.PrefixUsage, key.Skip(bestMatch.PrefixUsage));
 			    return true;
 		    }
 

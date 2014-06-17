@@ -4,7 +4,7 @@ using Voron.Impl;
 
 namespace Voron
 {
-	public unsafe class Slice : MemorySlice
+	public sealed unsafe class Slice : MemorySlice
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
@@ -267,7 +267,7 @@ namespace Voron
 
 		public PrefixComparisonCache PrefixComparisonCache;
 
-		public override ushort FindPrefixSize(MemorySlice other)
+		public new ushort FindPrefixSize(MemorySlice other)
 		{
 			if (PrefixComparisonCache == null)
 				return base.FindPrefixSize(other);

@@ -24,7 +24,7 @@ namespace Voron
 		public ushort NonPrefixedDataSize;
 	}
 
-	public unsafe class PrefixedSlice : MemorySlice
+	public unsafe sealed class PrefixedSlice : MemorySlice
 	{
 		public static PrefixedSlice AfterAllKeys = new PrefixedSlice(SliceOptions.AfterAllKeys);
 		public static PrefixedSlice BeforeAllKeys = new PrefixedSlice(SliceOptions.BeforeAllKeys);
