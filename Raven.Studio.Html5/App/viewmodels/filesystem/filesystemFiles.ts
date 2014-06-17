@@ -130,11 +130,25 @@ class filesystemFiles extends viewModelBase {
                                 break;
                             }
                             case fileChangeAction.Delete: {
+                                var callbackFolder = new folder(newFolder);
+                                var eventFolder = folder.getFolderFromFilePath(e.File);
+
+                                //check if the file is new at the folder level to remove it from the table
+                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                    this.loadFiles();
+                                }
+                                else {
+                                    //reload node and its children
+                                    treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
+                                }
+                                break;
                             }
                             case fileChangeAction.Renaming: {
+                                //TODO: Rename not implemented yet
                                 break;
                             }
                             case fileChangeAction.Renamed: {
+                                //TODO: Rename not implemented yet
                                 break;
                             }
                             case fileChangeAction.Update: {
@@ -142,7 +156,6 @@ class filesystemFiles extends viewModelBase {
                                 if (callbackFolder.isFileAtFolderLevel(e.File)) {
                                     this.loadFiles();
                                 }
-
                                 break;
                             }
                             default:
