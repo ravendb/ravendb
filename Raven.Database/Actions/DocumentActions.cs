@@ -568,12 +568,6 @@ namespace Raven.Database.Actions
 			                            CollectionName = metadata.Value<string>(Constants.RavenEntityName),
 			                            Etag = newEtag
 		                            };
-
-								if (key.StartsWith("Raven/Databases/") || key.StartsWith("Raven/FileSystems/") || key.StartsWith("Raven/Counters/")) //it's a database/file system/counter document
-	                            {
-									var disabledStatus = document.Value<bool>("Disabled");
-		                            newDocumentChangeNotification.Type = disabledStatus ? DocumentChangeTypes.SystemResourceDisabled : DocumentChangeTypes.SystemResourceEnabled;
-	                            }
 	                            
 								Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });

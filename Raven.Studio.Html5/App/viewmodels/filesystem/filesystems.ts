@@ -2,100 +2,77 @@ import app = require("durandal/app");
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import database = require("models/database");
-import databases = require("viewmodels/databases");
 import filesystem = require("models/filesystem/filesystem");
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-
+import shell = require("viewmodels/shell");
 import createFilesystem = require("viewmodels/filesystem/createFilesystem");
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
 
 class filesystems extends viewModelBase {
 
-    filesystems = ko.observableArray<filesystem>();    
-    hasFilesystems = ko.computed(() => this.filesystems().length > 0);
+    fileSystems = ko.observableArray<filesystem>();    
     searchText = ko.observable("");
     selectedFilesystem = ko.observable<filesystem>();
     defaultFs: filesystem;
-    initializedStats: boolean;
 
     constructor() {
         super();
 
+        this.fileSystems = shell.fileSystems;
         this.defaultFs = appUrl.getDefaultFilesystem();
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterFilesystems(s));
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.selectFileSystem(fs, false));
     }
 
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any) {
         return true;
     }
 
-    modelPolling() {
-        new getFilesystemsCommand()
-            .execute()
-            .done((results: filesystem[]) => this.filesystemsLoaded(results));
+    attached() {
+        this.fileSystemsLoaded();
+    }
+
+    private fileSystemsLoaded() {
+        // If we have no file systems, show the "create a new file system" screen.
+        if (this.fileSystems().length === 0) {
+            this.newFilesystem();
+        } else {
+            // If we have just a few file systems, grab the fs stats for all of them.
+            // (Otherwise, we'll grab them when we click them.)
+            var few = 20;
+            var enabledFileSystems: filesystem[] = this.fileSystems().filter((fs: filesystem) => !fs.disabled());
+            if (enabledFileSystems.length < few) {
+                enabledFileSystems.forEach(fs => shell.fetchFsStats(fs, true));
+            }
+        }
     }
 
     filterFilesystems(filter: string) {
         var filterLower = filter.toLowerCase();
-        this.filesystems().forEach(d=> {
+        this.fileSystems().forEach(d=> {
             var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
             d.isVisible(isMatch);
         });
-    }
-
-    navigateToFiles(fs: filesystem) {
-        fs.activate();
-        router.navigate(appUrl.forFilesystemFiles(fs));
     }
 
     getFilesystemFilesUrl(fs: filesystem) {
         return appUrl.forFilesystemFiles(fs);
     }
 
-    filesystemsLoaded(results: Array<filesystem>) {
-        var filesystemsHaveChanged = this.checkDifferentFilesystems(results);
-        if (filesystemsHaveChanged) {            
-            this.filesystems(results);
-
-            // If we have just a few filesystems, grab the fs stats for all of them.
-            // (Otherwise, we'll grab them when we click them.)
-            var few = 20;
-            if (results.length < few && !this.initializedStats) {
-                this.initializedStats = true;
-                results.forEach(fs => this.fetchStats(fs));
-            }
+    selectFileSystem(fs: filesystem, activateFileSystem: boolean = true) {
+        this.fileSystems().forEach((f: filesystem) => f.isSelected(f.name === fs.name));
+        if (activateFileSystem) {
+            fs.activate();
         }
-    }
-
-    checkDifferentFilesystems(fss: filesystem[]) {
-        if (fss.length !== this.filesystems().length) {
-            return true;
-        }
-
-        var freshFsNames = fss.map(fs => fs.name);
-        var existingFsNames = this.filesystems().map(fs => fs.name);
-        return existingFsNames.some(existing => !freshFsNames.contains(existing));
-    }
-
-    fetchStats(fs: filesystem) {
-        new getFilesystemStatsCommand(fs)
-            .execute()
-            .done(result => fs.statistics(result));
-    }
-
-    selectFilesystem(fs: filesystem) {
-        this.filesystems().forEach(d=> d.isSelected(d === fs));
-        fs.activate();
         this.selectedFilesystem(fs);
     }
 
     newFilesystem() {
         require(["viewmodels/filesystem/createFilesystem"], createFilesystem => {
-            var createFilesystemViewModel: createFilesystem = new createFilesystem(this.filesystems);
+            var createFilesystemViewModel: createFilesystem = new createFilesystem(this.fileSystems);
             createFilesystemViewModel
                 .creationTask
                 .done((filesystemName: string, filesystemPath: string) => this.showCreationAdvancedStepsIfNecessary(filesystemName, filesystemPath));
@@ -103,10 +80,24 @@ class filesystems extends viewModelBase {
         });
     }
 
-    showCreationAdvancedStepsIfNecessary(filesystemName: string, filesystemPath: string) {
+    showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string) {
+        new createFilesystemCommand(fileSystemName, fileSystemPath).execute()
+            .done(() => {
+                var newFileSystem = this.addNewFileSystem(fileSystemName);
+                this.selectFileSystem(newFileSystem);
+        });
+    }
 
-        new createFilesystemCommand(filesystemName, filesystemPath).execute()
-            .done(() => { this.filesystems.unshift(new filesystem(filesystemName)); });
+    private addNewFileSystem(fileSystemName: string): filesystem {
+        var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
+
+        if (!fileSystemInArray) {
+            var newFileSystem = new filesystem(fileSystemName);
+            this.fileSystems.unshift(newFileSystem);
+            return newFileSystem;
+        }
+
+        return fileSystemInArray;
     }
 
     //deleteSelectedFilesystem() {

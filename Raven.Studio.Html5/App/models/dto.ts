@@ -689,8 +689,6 @@ enum documentChangeType {
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
     BulkInsertError = 16,
-    SystemResourceEnabled = 32,
-    SystemResourceDisabled = 64
 }
 
 enum indexChangeType {
