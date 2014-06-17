@@ -24,7 +24,7 @@ namespace Voron.Trees
 		public void Set(byte* p, long pageNumber)
 		{
 			Header = (PrefixNodeHeader*)p;
-			ValuePtr = (byte*)Header + Constants.PrefixNodeHeaderSize;
+			ValuePtr = p + Constants.PrefixNodeHeaderSize;
 			PageNumber = pageNumber;
 		}
 

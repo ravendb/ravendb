@@ -785,9 +785,9 @@ namespace Voron.Trees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
-		private static ushort MinPrefixLength(MemorySlice key)
+		private static int MinPrefixLength(MemorySlice key)
 		{
-			return (ushort) Math.Max(key.KeyLength * 0.2, 2);
+			return Math.Max(key.KeyLength  / 5, 2);
 		}
     }
 }
