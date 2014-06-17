@@ -15,80 +15,58 @@ class counterStorages extends viewModelBase {
 
     constructor() {
         super();
+
+        this.counterStorages = shell.counterStorages;
         this.searchCounterStorageByText.extend({ throttle: 200 }).subscribe(s => this.filterCounterStorages(s));
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.selectCounterStorage(cs, false));
     }
 
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
-        var deferred = $.Deferred();
-
-        this.fetchCounterStorages()
-            .done(() => deferred.resolve({ can: true }));
-
-        return deferred;
+        return true;
     }
 
-    activate(args) {
-        super.activate(args);
+    attached() {
+        this.counterStoragesLoaded();
+    }
 
-        if (this.counterStorages().length == 0) {
+    private counterStoragesLoaded() {
+        // If we have no counter storages, show the "create a new counter storage" screen.
+        if (this.counterStorages().length === 0) {
             this.createNewCountersStorage();
-        }
-    }
-
-    private fetchCounterStorages(): JQueryPromise<any> {
-        return new getCounterStoragesCommand()
-            .execute()
-            .done((results: counterStorage[]) => this.counterStorages(results));
-    }
-
-    createNotifications(): Array<changeSubscription> {
-        return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForCounterStorages(e))
-        ];
-    }
-
-    private changesApiFiredForCounterStorages(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
-            var receivedCounterStoragesName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
-
-            if (e.Type === documentChangeType.Delete) {
-                this.onCounterStorageDeleted(receivedCounterStoragesName);
-            } else {
-                var existingCounterStorage = this.counterStorages.first((cs: counterStorage) => cs.name == receivedCounterStoragesName);
-                var receivedCounterStorageDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
-
-                if (existingCounterStorage == null) {
-                    this.addNewCounterStorage(receivedCounterStoragesName, receivedCounterStorageDisabled);
-                }
-                else if (existingCounterStorage.disabled() != receivedCounterStorageDisabled) {
-                    existingCounterStorage.disabled(receivedCounterStorageDisabled);
-                }
+        } else {
+            // If we have just a few counter storages, grab the cs stats for all of them.
+            // (Otherwise, we'll grab them when we click them.)
+            var few = 20;
+            var enabledCounterStorages: counterStorage[] = this.counterStorages().filter((db: counterStorage) => !db.disabled());
+            if (enabledCounterStorages.length < few) {
+                enabledCounterStorages.forEach(cs => shell.fetchCsStats(cs, true));
             }
         }
     }
 
+    private addNewCounterStorage(counterStorageName: string): counterStorage {
+        var counterStorageInArray = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
+
+        if (!counterStorageInArray) {
+            var newCounterStorage = new counterStorage(counterStorageName);
+            this.counterStorages.unshift(newCounterStorage);
+            return newCounterStorage;
+        }
+
+        return counterStorageInArray;
+    }
+
     private onCounterStorageDeleted(counterStorageName: string) {
-        var counterStoragesInList = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
-        if (!!counterStoragesInList) {
-            this.counterStorages.remove(counterStoragesInList);
+        var counterStorageInArray = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
+
+        if (!!counterStorageInArray) {
+            this.counterStorages.remove(counterStorageInArray);
 
             if ((this.counterStorages().length > 0) && (this.counterStorages.contains(this.activeCounterStorage()) === false)) {
                 this.selectCounterStorage(this.counterStorages().first());
             }
         }
-    }
-
-    private addNewCounterStorage(counterStorageName: string, isCounterStorageDisabled: boolean = false): counterStorage {
-        var counterStorageInList = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
-
-        if (!counterStorageInList) {
-            var newCounterStorage = new counterStorage(counterStorageName, isCounterStorageDisabled);
-            this.counterStorages.unshift(newCounterStorage);
-            return newCounterStorage;
-        }
-
-        return counterStorageInList;
     }
 
     private filterCounterStorages(filterString: string) {
@@ -138,10 +116,12 @@ class counterStorages extends viewModelBase {
         }
     }
 
-    selectCounterStorage(storage: counterStorage) {
-        this.counterStorages().forEach(d=> d.isSelected(d == storage));
-        storage.activate();
-        this.selectedCounterStorage(storage);
+    selectCounterStorage(cs: counterStorage, activateCounterStorage: boolean = true) {
+        this.counterStorages().forEach((c: counterStorage)=> c.isSelected(c.name === cs.name));
+        if (activateCounterStorage) {
+            cs.activate();
+        }
+        this.selectedCounterStorage(cs);
     }
 
     getCounterStorageUrl(storage: counterStorage) {

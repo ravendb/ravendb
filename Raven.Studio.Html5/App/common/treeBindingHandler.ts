@@ -95,12 +95,13 @@ class treeBindingHandler {
                         newSet[nodeK.data.key] = null;
                     }
                 }
+
+                //remove deleted nodes
+                for (var m = 0; m < nodesToRemove.length; m++) {
+                    node.getChildren()[m].remove();
+                }
             }
 
-            //remove deleted nodes
-            for (var m = 0; m < nodesToRemove.length; m++) {
-                node.getChildren()[m].remove();
-            }
 
             //add new nodes
             for (var key in newSet) {
