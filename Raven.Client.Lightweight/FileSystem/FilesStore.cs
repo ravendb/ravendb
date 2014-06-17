@@ -320,15 +320,12 @@ namespace Raven.Client.FileSystem
         {
             get 
             {
-                throw new NotImplementedException();        
-                //return listeners; 
+                return listeners; 
             }
         }
         public void SetListeners(FilesSessionListeners newListeners)
         {
-            this.listeners = newListeners;
-
-            throw new NotImplementedException();            
+            this.listeners = newListeners;         
         }
 
 

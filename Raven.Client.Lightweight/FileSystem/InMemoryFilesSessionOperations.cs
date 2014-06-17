@@ -2,11 +2,13 @@
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem.Impl;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -111,16 +113,18 @@ namespace Raven.Client.FileSystem
 
 
         private ConcurrentQueue<IFilesOperation> registeredOperations = new ConcurrentQueue<IFilesOperation>();
-        
+
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
-        {                    
-            throw new NotImplementedException();
+        {
+            var operation = new UploadFileOperation(path, x => { stream.CopyTo(x); }, metadata, etag); 
+            registeredOperations.Enqueue(operation);   
         }
 
-        public void RegisterUpload(FileHeader path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            throw new NotImplementedException();
+            var operation = new UploadFileOperation(file.Path, x => { stream.CopyTo(x); }, metadata, etag);
+            registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterUpload(string path, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
@@ -178,9 +182,15 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);
         }
 
-        public Task SaveChangesAsync()
+        public async Task SaveChangesAsync()
         {
-            throw new NotImplementedException();
+            var session = this as IAsyncFilesSession;
+            if (session == null)
+                throw new InvalidCastException("This object does not implement IAsyncFilesSession.");
+
+
+            foreach (var op in registeredOperations)
+                await op.Execute(session);
         }
 
         /// <summary>

@@ -35,9 +35,38 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
+        [Fact]
+        public async void UploadWithDeferredAction()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", x =>
+                    {
+                        for (byte i = 0; i < 128; i++)
+                            x.WriteByte(i);                        
+                    });
+
+                await session.SaveChangesAsync();
+
+                var file = await session.LoadFileAsync("test1.file");
+                var resultingStream = await session.DownloadAsync(file);
+
+                Assert.Equal(128, resultingStream.Length);
+
+                for (byte i = 0; i < 128; i++ )
+                {
+                    int value = resultingStream.ReadByte();
+                    Assert.True(value >= 0);
+                    Assert.Equal(i, (byte)value);
+
+                }
+            }
+        }
 
         [Fact]
-        public async void UploadAndDeleteFile()
+        public async void UploadAndDeleteFileOnDifferentSessions()
         {
             var store = (FilesStore)filesStore;
 
@@ -51,7 +80,14 @@ namespace RavenFS.Tests.ClientApi
             using (var session = filesStore.OpenAsyncSession())
             {
                 session.RegisterFileDeletion("test1.file");
+
+                var file = await session.LoadFileAsync("test1.file");
+                Assert.NotNull(file);
+
                 await session.SaveChangesAsync();
+
+                file = await session.LoadFileAsync("test1.file");
+                Assert.Null(file);
             }
         }
 
