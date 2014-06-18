@@ -312,7 +312,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     headers["Content-MD5"] = readFileToDatabase.FileHash;
 
                     Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
-                    headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
+
+                    string totalSizeRead = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
+
+                    headers["Content-Length"] = totalSizeRead;
+                    headers["RavenFS-size"] = totalSizeRead;
+                    
                     Search.Index(name, headers);
                     Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 

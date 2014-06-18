@@ -83,8 +83,9 @@ namespace RavenFS.Tests.ClientApi
 
                 await session.SaveChangesAsync();
 
-                var resultingStream = await session.DownloadAsync("test1.file");
-                Assert.Equal(60, resultingStream.Length);
+                MemoryStream output = new MemoryStream();
+                await session.Commands.DownloadAsync("test1.file", output);
+                Assert.Equal(60, output.Length);
             }
         }
 

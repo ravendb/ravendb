@@ -37,7 +37,7 @@ namespace Raven.Client.FileSystem.Impl
             var commands = session.Commands;
 
             var pipe = new BlockingStream(10);
-            var upload = commands.UploadAsync(Path, Metadata, pipe, Size)
+            var upload = commands.UploadAsync(Path, Metadata, pipe, Size, null)
                                  .ContinueWith(x => (x.IsFaulted || x.IsCanceled) ? false : true)
                                  .ConfigureAwait(false);
             

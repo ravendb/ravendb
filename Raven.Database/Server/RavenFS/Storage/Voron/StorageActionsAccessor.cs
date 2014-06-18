@@ -363,7 +363,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException(filename);
 
             var totalSize = file.Value<long?>("total_size") ?? 0;
-            file["total_size"] = Math.Abs(totalSize);
+            var uploadedSize = file.Value<long?>("uploaded_size") ?? 0;
+
+            if (uploadedSize < totalSize )
+                file["total_size"] = Math.Abs(uploadedSize);
+            else
+                file["total_size"] = Math.Abs(totalSize);            
 
             storage.Files.Add(writeBatch.Value, key, file, version);
         }
