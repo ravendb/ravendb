@@ -50,7 +50,7 @@ namespace Raven.Tests.Core.Commands
 		{
 			using (var store = GetDocumentStore())
 			{
-				var names = await store.AsyncDatabaseCommands.ForSystemDatabase().GetDatabaseNamesAsync(25);
+				var names = await store.AsyncDatabaseCommands.GlobalAdmin.GetDatabaseNamesAsync(25);
 				Assert.Contains(store.DefaultDatabase, names);
 			}
 		}
