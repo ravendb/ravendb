@@ -44,9 +44,9 @@ namespace Raven.Client.Connection
 			asyncAdminServerClient.StopIndexingAsync().WaitUnwrap();
 		}
 
-		public void StartIndexing()
+        public void StartIndexing(int? maxNumberOfParallelIndexTasks)
 		{
-			asyncAdminServerClient.StartIndexingAsync().WaitUnwrap();
+            asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks).WaitUnwrap();
 		}
 
 		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)

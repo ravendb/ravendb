@@ -515,7 +515,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Sends an async command that enables indexing
 		/// </summary>
-		Task StartIndexingAsync();
+        Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status
