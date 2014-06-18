@@ -146,12 +146,6 @@ namespace Raven.Client.Connection
         void DeleteAttachment(string key, Etag etag);
 
 		/// <summary>
-		/// Returns the names of all tenant databases on the RavenDB server
-		/// </summary>
-		/// <returns>List of tenant database names</returns>
-		string[] GetDatabaseNames(int pageSize, int start = 0);
-
-		/// <summary>
 		/// Returns the names of all indexes that exist on the server
 		/// </summary>
 		/// <param name="start">Paging start</param>
@@ -493,6 +487,12 @@ namespace Raven.Client.Connection
 
 	public interface IGlobalAdminDatabaseCommands
 	{
+		/// <summary>
+		/// Returns the names of all tenant databases on the RavenDB server
+		/// </summary>
+		/// <returns>List of tenant database names</returns>
+		string[] GetDatabaseNames(int pageSize, int start = 0);
+
 		/// <summary>
 		/// Get admin statistics
 		/// </summary>

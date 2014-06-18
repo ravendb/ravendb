@@ -56,6 +56,11 @@ namespace Raven.Client.Connection.Async
 			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks).ExecuteRequestAsync());
 		}
 
+		public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
+		{
+			return innerAsyncServerClient.GetDatabaseNamesAsync(pageSize, start);
+		}
+
 		public async Task<AdminStatistics> GetStatisticsAsync()
 		{
 			var json = (RavenJObject) await adminRequest.AdminStats().ReadResponseJsonAsync();
