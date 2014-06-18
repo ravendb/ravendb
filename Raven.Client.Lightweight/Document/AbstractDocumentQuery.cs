@@ -86,7 +86,7 @@ namespace Raven.Client.Document
 
 		protected KeyValuePair<string, string> lastEquality;
 
-		protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+		protected Dictionary<string, RavenJToken> transformerParameters = new Dictionary<string, RavenJToken>();
 
 		/// <summary>
 		///   The list of fields to project directly from the results
@@ -365,7 +365,7 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
-		    queryInputs = other.queryInputs;
+		    transformerParameters = other.transformerParameters;
 			disableEntitiesTracking = other.disableEntitiesTracking;
 			disableCaching = other.disableCaching;
 			shouldExplainScores = other.shouldExplainScores;
@@ -1840,7 +1840,7 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                    QueryInputs  = queryInputs,
+                    TransformerParameters  = transformerParameters,
 					DisableCaching = disableCaching,
 					ExplainScores = shouldExplainScores
 				};
@@ -1863,7 +1863,7 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
-                QueryInputs = queryInputs,
+                TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				DisableCaching = disableCaching,
 				ExplainScores = shouldExplainScores

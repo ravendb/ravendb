@@ -47,7 +47,7 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
-	    IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
+	    IRavenQueryable<T> AddTransformerParameter(string name, RavenJToken value);
 
 		IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 	}

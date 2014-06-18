@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="TransformerQueryInputTests.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="TransformerParameterTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -14,10 +14,10 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.MailingList
 {
-    public class TransformerQueryInputTests : RavenTestBase
+    public class TransformerParameterTests : RavenTestBase
     {
         [Fact]
-        public void CanCastQueryInput()
+        public void CanCastTransformerParameter()
         {
             using (var store = NewDocumentStore())
             {
@@ -30,7 +30,7 @@ namespace Raven.Tests.MailingList
 
                     var results = session.Load<FooTransformer, FooTransformer.Result>(
                         "foos/1",
-                        configuration => configuration.AddQueryParam("take", 1)
+                        configuration => configuration.AddTransformerParameter("take", 1)
                         );
 
                     Assert.Equal(1, results.Keys.Count);
@@ -61,7 +61,7 @@ namespace Raven.Tests.MailingList
                 TransformResults = foos => from foo in foos
                                            select new
                                            {
-                                               Keys = foo.Things.Take(Query("take").Value<int>())
+                                               Keys = foo.Things.Take(Parameter("take").Value<int>())
                                            };
             }
         }
