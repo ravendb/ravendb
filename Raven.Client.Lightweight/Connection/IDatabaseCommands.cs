@@ -226,7 +226,7 @@ namespace Raven.Client.Connection
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
-		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
+		QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
 		
 		/// <summary>
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
