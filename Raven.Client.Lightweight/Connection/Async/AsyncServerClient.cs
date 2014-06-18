@@ -1250,7 +1250,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="includes">The include paths</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
 			var method = query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest ? "POST" : "GET";
 
