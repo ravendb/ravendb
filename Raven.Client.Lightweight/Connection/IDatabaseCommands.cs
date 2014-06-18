@@ -536,7 +536,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Enables indexing
 		/// </summary>
-		void StartIndexing();
+        void StartIndexing(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status
