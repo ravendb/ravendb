@@ -46,6 +46,17 @@ class transformer {
         };
     }
 
+    extractInputs(): Array<string> {
+        var matcher = /Query\(["'].*?["']\)/g;
+        if (this.transformResults()) {
+            var results: string[] = this.transformResults().match(matcher);
+            if (results !== null) {
+                return results.map((value: string) => value.substring(7, value.length - 2));
+            }
+        }
+        return [];
+    }
+    
     static empty(): transformer{
         return new transformer().initFromLoad({
             'name': "",

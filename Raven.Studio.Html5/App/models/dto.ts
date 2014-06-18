@@ -364,12 +364,22 @@ interface savedTransformerDto {
     }
 }
 
+interface transformerParamDto {
+    name: string;
+    value: string;
+}
+
+interface transformerQueryDto {
+    transformerName: string;
+    queryParams: Array<transformerParamDto>;
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
     QueryText: string;
     Sorts: string[];
-    TransformerName: string;
+    TransformerQuery: transformerQueryDto;
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;

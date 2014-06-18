@@ -31,6 +31,7 @@ import queryStatsDialog = require("viewmodels/queryStatsDialog");
 import customFunctions = require("models/customFunctions");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import transformerType = require("models/transformer");
+import transformerQueryType = require("models/transformerQuery");
 
 class query extends viewModelBase {
 
@@ -252,8 +253,9 @@ class query extends viewModelBase {
         this.showFields(query.ShowFields);
         this.indexEntries(query.IndexEntries);
         this.isDefaultOperatorOr(query.UseAndOperator === false);
-        this.selectTransformer(this.findTransformerByName(query.TransformerName));
         this.sortBys(query.Sorts.map(s => querySort.fromQuerySortString(s)));
+        this.selectTransformer(this.findTransformerByName(this.getStoredQueryTransformerName(query)));
+        this.applyTransformerParameters(query);
         this.runQuery();
     }
 
@@ -263,23 +265,34 @@ class query extends viewModelBase {
             var queryText = this.queryText();
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
-            var transformerName = this.transformer() ? this.transformer().name() : null;
             var showFields = this.showFields();
             var indexEntries = this.indexEntries();
+
+            var transformer: transformerQueryType = null;
+            if (this.transformer()) {
+                transformer = new transformerQueryType({
+                    transformerName: this.transformer().name(),
+                    queryParams: []
+                });
+
+                $("#transformerParams .transformer_param_flag").each((index: number, element: any) => {
+                    transformer.addParamByNameAndValue(element.name, element.value);
+                });
+            }
 
             this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
             var useAndOperator = this.isDefaultOperatorOr() === false;
-            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformerName, showFields, indexEntries, useAndOperator).getUrl());
+            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformerName, showFields, indexEntries, useAndOperator);
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
                     .execute()
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
-            this.recordQueryRun(selectedIndex, queryText, sorts.map(s => s.toQuerySortString()), transformerName, showFields, indexEntries, useAndOperator);
+            this.recordQueryRun(selectedIndex, queryText, sorts.map(s => s.toQuerySortString()), transformer, showFields, indexEntries, useAndOperator);
 
             return resultsList;
         }
@@ -351,7 +364,7 @@ class query extends viewModelBase {
         }
     }
 
-    recordQueryRun(indexName: string, queryText: string, sorts: string[], transformer: string, showFields: boolean, indexEntries: boolean, useAndOperator: boolean) {
+    recordQueryRun(indexName: string, queryText: string, sorts: string[], transformerQuery: transformerQueryType, showFields: boolean, indexEntries: boolean, useAndOperator: boolean) {
         var newQuery: storedQueryDto = {
             IndexEntries: indexEntries,
             IndexName: indexName,
@@ -359,9 +372,9 @@ class query extends viewModelBase {
             QueryText: queryText,
             ShowFields: showFields,
             Sorts: sorts,
-            TransformerName: transformer || null,
+            TransformerQuery: transformerQuery,
             UseAndOperator: useAndOperator,
-            Hash: (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformer || "") + showFields + indexEntries + useAndOperator).hashCode()
+            Hash: (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformerQuery ? transformerQuery.toUrl() : "") + showFields + indexEntries + useAndOperator).hashCode()
         };
 
         // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
@@ -468,10 +481,12 @@ class query extends viewModelBase {
     }
 
     selectTransformer(dto: transformerDto) {
-        var t = new transformerType();
-        t.initFromLoad(dto);
-        this.transformer(t);
-        this.runQuery();
+        if (dto !== null) {
+            var t = new transformerType();
+            t.initFromLoad(dto);
+            this.transformer(t);
+            this.runQuery();
+        }
     }
 
     removeTransformer() {
@@ -540,12 +555,36 @@ class query extends viewModelBase {
 
     findTransformerByName(transformerName: string): transformerDto {
         try {
-            return this.allTransformers().filter((dto: transformerDto) => dto.name === transformerName)[0];
+            return this.allTransformers().filter((dto: transformerDto) => transformerName === dto.name)[0];
         } catch (e) {
             return null;
         }
     }
 
+    getStoredQueryTransformerName(query: storedQueryDto): string {
+        if (query.TransformerQuery) {
+            return query.TransformerQuery.transformerName;
+        }
+        return "";
+    }
+
+    getStoredQueryTransformerParameters(query: storedQueryDto): string {
+        if (query.TransformerQuery) {
+            var params = "";
+            if (query.TransformerQuery.queryParams) {
+                return "(" + query.TransformerQuery.queryParams.map((param: transformerParamDto) => param.name + "=" + param.value).join(", ") + ")";
+            }
+        }
+        return "";
+    }
+
+    applyTransformerParameters(query: storedQueryDto) {
+        if (query.TransformerQuery && query.TransformerQuery.queryParams) {
+            query.TransformerQuery.queryParams.forEach((param: transformerParamDto) => {
+                $("#transformerParams input[name=" + param.name + "]").val(param.value);
+            });
+        }
+    }
 }
 
 export = query;

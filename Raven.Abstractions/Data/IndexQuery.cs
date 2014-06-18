@@ -14,138 +14,138 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
-	/// <summary>
-	/// All the information required to query a Raven index
-	/// </summary>
-	public class IndexQuery : IEquatable<IndexQuery>
-	{
-	    private int pageSize;
+    /// <summary>
+    /// All the information required to query a Raven index
+    /// </summary>
+    public class IndexQuery : IEquatable<IndexQuery>
+    {
+        private int pageSize;
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
-		/// </summary>
-		public IndexQuery()
-		{
-			TotalSize = new Reference<int>();
-			SkippedResults = new Reference<int>();
-			pageSize = 128;
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IndexQuery"/> class.
+        /// </summary>
+        public IndexQuery()
+        {
+            TotalSize = new Reference<int>();
+            SkippedResults = new Reference<int>();
+            pageSize = 128;
+        }
 
-		/// <summary>
-		/// Whatever the page size was explicitly set or still at its default value
-		/// </summary>
-		public bool PageSizeSet { get; private set; }
+        /// <summary>
+        /// Whatever the page size was explicitly set or still at its default value
+        /// </summary>
+        public bool PageSizeSet { get; private set; }
 
-		/// <summary>
-		/// Whatever we should apply distinct operation to the query on the server side
-		/// </summary>
-		public bool IsDistinct { get; set; }
+        /// <summary>
+        /// Whatever we should apply distinct operation to the query on the server side
+        /// </summary>
+        public bool IsDistinct { get; set; }
 
-		/// <summary>
-		/// Gets or sets the query.
-		/// </summary>
-		/// <value>The query.</value>
-		public string Query { get; set; }
+        /// <summary>
+        /// Gets or sets the query.
+        /// </summary>
+        /// <value>The query.</value>
+        public string Query { get; set; }
 
-		/// <summary>
-		/// Gets or sets the total size.
-		/// </summary>
-		/// <value>The total size.</value>
-		public Reference<int> TotalSize { get; private set; }
+        /// <summary>
+        /// Gets or sets the total size.
+        /// </summary>
+        /// <value>The total size.</value>
+        public Reference<int> TotalSize { get; private set; }
 
-		public Dictionary<string, SortOptions> SortHints { get; set; } 
+        public Dictionary<string, SortOptions> SortHints { get; set; }
 
         /// <summary>
         /// Additional query inputs
         /// </summary>
         public Dictionary<string, RavenJToken> QueryInputs { get; set; }
 
-		/// <summary>
-		/// Gets or sets the start of records to read.
-		/// </summary>
-		/// <value>The start.</value>
-		public int Start { get; set; }
+        /// <summary>
+        /// Gets or sets the start of records to read.
+        /// </summary>
+        /// <value>The start.</value>
+        public int Start { get; set; }
 
-		/// <summary>
-		/// Gets or sets the size of the page.
-		/// </summary>
-		/// <value>The size of the page.</value>
-		public int PageSize
-		{
-			get { return pageSize; }
-			set
-			{
-				pageSize = value;
-				PageSizeSet = true;
-			}
-		}
+        /// <summary>
+        /// Gets or sets the size of the page.
+        /// </summary>
+        /// <value>The size of the page.</value>
+        public int PageSize
+        {
+            get { return pageSize; }
+            set
+            {
+                pageSize = value;
+                PageSizeSet = true;
+            }
+        }
 
-		/// <summary>
-		/// Gets or sets the fields to fetch.
-		/// </summary>
-		/// <value>The fields to fetch.</value>
-		public string[] FieldsToFetch { get; set; }
+        /// <summary>
+        /// Gets or sets the fields to fetch.
+        /// </summary>
+        /// <value>The fields to fetch.</value>
+        public string[] FieldsToFetch { get; set; }
 
-		/// <summary>
-		/// Gets or sets the fields to sort by
-		/// </summary>
-		/// <value>The sorted fields.</value>
-		public SortedField[] SortedFields { get; set; }
+        /// <summary>
+        /// Gets or sets the fields to sort by
+        /// </summary>
+        /// <value>The sorted fields.</value>
+        public SortedField[] SortedFields { get; set; }
 
-		/// <summary>
-		/// Gets or sets the cutoff date
-		/// </summary>
-		/// <value>The cutoff.</value>
-		public DateTime? Cutoff { get; set; }
+        /// <summary>
+        /// Gets or sets the cutoff date
+        /// </summary>
+        /// <value>The cutoff.</value>
+        public DateTime? Cutoff { get; set; }
 
-		/// <summary>
-		/// Get or sets the WaitForNonStaleResultsAsOfNow
-		/// </summary>
-		public bool WaitForNonStaleResultsAsOfNow { get; set; }
+        /// <summary>
+        /// Get or sets the WaitForNonStaleResultsAsOfNow
+        /// </summary>
+        public bool WaitForNonStaleResultsAsOfNow { get; set; }
 
-		
-		/// <summary>
-		/// Get or sets the WaitForNonStaleResults
-		/// </summary>
-		public bool WaitForNonStaleResults { get; set; }
 
-		/// <summary>
-		/// Gets or sets the cutoff etag
-		/// </summary>
-		/// <remarks>
-		/// Cutoff etag is used to check if the index has already process a document with the given
-		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between
-		/// machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and 
-		/// can work without it.
-		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
-		/// etag belong to is actually considered for the results. 
-		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduce. 
-		/// Since map/reduce queries, by their nature,tend to be far less susceptible to issues with staleness, this is 
-		/// considered to be an acceptable tradeoff.
-		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
-		/// use the Cutoff date option, instead.
-		/// </remarks>
-		public Etag CutoffEtag { get; set; }
+        /// <summary>
+        /// Get or sets the WaitForNonStaleResults
+        /// </summary>
+        public bool WaitForNonStaleResults { get; set; }
 
-		/// <summary>
-		/// The default field to use when querying directly on the Lucene query
-		/// </summary>
-		public string DefaultField { get; set; }
+        /// <summary>
+        /// Gets or sets the cutoff etag
+        /// </summary>
+        /// <remarks>
+        /// Cutoff etag is used to check if the index has already process a document with the given
+        /// etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between
+        /// machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and 
+        /// can work without it.
+        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
+        /// etag belong to is actually considered for the results. 
+        /// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduce. 
+        /// Since map/reduce queries, by their nature,tend to be far less susceptible to issues with staleness, this is 
+        /// considered to be an acceptable tradeoff.
+        /// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
+        /// use the Cutoff date option, instead.
+        /// </remarks>
+        public Etag CutoffEtag { get; set; }
 
-		/// <summary>
-		/// Changes the default operator mode we use for queries.
-		/// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
-		///  Name:John OR Age:18
-		/// When set to And the query will be interpreted as:
-		///	 Name:John AND Age:18
-		/// </summary>
-		public QueryOperator DefaultOperator { get; set; }
+        /// <summary>
+        /// The default field to use when querying directly on the Lucene query
+        /// </summary>
+        public string DefaultField { get; set; }
 
-		/// <summary>
-		/// If set to true, RavenDB won't execute the transform results function
-		/// returning just the raw results instead
-		/// </summary>
-		public bool SkipTransformResults { get; set; }
+        /// <summary>
+        /// Changes the default operator mode we use for queries.
+        /// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
+        ///  Name:John OR Age:18
+        /// When set to And the query will be interpreted as:
+        ///	 Name:John AND Age:18
+        /// </summary>
+        public QueryOperator DefaultOperator { get; set; }
+
+        /// <summary>
+        /// If set to true, RavenDB won't execute the transform results function
+        /// returning just the raw results instead
+        /// </summary>
+        public bool SkipTransformResults { get; set; }
 
         /// <summary>
         /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
@@ -154,16 +154,16 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
-		/// <summary>
-		/// Gets or sets the number of skipped results.
-		/// </summary>
-		/// <value>The skipped results.</value>
-		public Reference<int> SkippedResults { get; set; }
+        /// <summary>
+        /// Gets or sets the number of skipped results.
+        /// </summary>
+        /// <value>The skipped results.</value>
+        public Reference<int> SkippedResults { get; set; }
 
-		/// <summary>
-		/// Whatever we should get the raw index queries
-		/// </summary>
-		public bool DebugOptionGetIndexEntries { get; set; }
+        /// <summary>
+        /// Whatever we should get the raw index queries
+        /// </summary>
+        public bool DebugOptionGetIndexEntries { get; set; }
 
         /// <summary>
         /// Gets or sets the options to highlight the fields
@@ -173,51 +173,51 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Gets or sets the highlighter pre tags
         /// </summary>
-	    public string[] HighlighterPreTags { get; set; }
+        public string[] HighlighterPreTags { get; set; }
 
         /// <summary>
         /// Gets or sets the highlighter post tags
         /// </summary>
-	    public string[] HighlighterPostTags { get; set; }
+        public string[] HighlighterPostTags { get; set; }
 
         /// <summary>
         /// Gets or sets the results transformer
         /// </summary>
-	    public string ResultsTransformer { get; set; }
+        public string ResultsTransformer { get; set; }
 
         /// <summary>
-		/// Whatever we should disable caching of query results
-		/// </summary>
-		public bool DisableCaching { get; set; }
+        /// Whatever we should disable caching of query results
+        /// </summary>
+        public bool DisableCaching { get; set; }
 
-		/// <summary>
-		/// Allow to skip duplicate checking during queries
-		/// </summary>
-		public bool SkipDuplicateChecking { get; set; }
+        /// <summary>
+        /// Allow to skip duplicate checking during queries
+        /// </summary>
+        public bool SkipDuplicateChecking { get; set; }
 
-		/// <summary>
-		/// Whatever a query result should contains an explanation about how docs scored against query
-		/// </summary>
-		public bool ExplainScores { get; set; }
+        /// <summary>
+        /// Whatever a query result should contains an explanation about how docs scored against query
+        /// </summary>
+        public bool ExplainScores { get; set; }
 
-		/// <summary>
-		/// Gets the index query URL.
-		/// </summary>
-		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
-		{
-			if (operationUrl.EndsWith("/"))
-				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
-			var path = new StringBuilder()
-				.Append(operationUrl)
-				.Append("/")
-				.Append(operationName)
-				.Append("/")
-				.Append(index);
+        /// <summary>
+        /// Gets the index query URL.
+        /// </summary>
+        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        {
+            if (operationUrl.EndsWith("/"))
+                operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
+            var path = new StringBuilder()
+                .Append(operationUrl)
+                .Append("/")
+                .Append(operationName)
+                .Append("/")
+                .Append(index);
 
-			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
+            AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
 
-			return path.ToString();
-		}
+            return path.ToString();
+        }
 
         public string GetMinimalQueryString()
         {
@@ -227,38 +227,38 @@ namespace Raven.Abstractions.Data
         }
 
 
-		public string GetQueryString()
-		{
-			var sb = new StringBuilder();
-			AppendQueryString(sb);
-			return sb.ToString();
-		}
+        public string GetQueryString()
+        {
+            var sb = new StringBuilder();
+            AppendQueryString(sb);
+            return sb.ToString();
+        }
 
-		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
-		{
-			path.Append("?");
+        public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        {
+            path.Append("?");
 
-			AppendMinimalQueryString(path, includeQuery);
+            AppendMinimalQueryString(path, includeQuery);
 
-			if (Start != 0)
-				path.Append("&start=").Append(Start);
+            if (Start != 0)
+                path.Append("&start=").Append(Start);
 
-			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
-				path.Append("&pageSize=").Append(PageSize);
+            if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
+                path.Append("&pageSize=").Append(PageSize);
 
 
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                 path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
 
-			if(IsDistinct)
-				path.Append("&distinct=true");
+            if (IsDistinct)
+                path.Append("&distinct=true");
 
-			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-			SortedFields.ApplyIfNotNull(
-				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+            SortedFields.ApplyIfNotNull(
+                field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
-			
-			
+
+
             if (SkipTransformResults)
             {
                 path.Append("&skipTransformResults=true");
@@ -269,104 +269,104 @@ namespace Raven.Abstractions.Data
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }
 
-			if (QueryInputs != null)
-			{
-				foreach (var input in QueryInputs)
-				{
-					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
-				}
-			}
+            if (QueryInputs != null)
+            {
+                foreach (var input in QueryInputs)
+                {
+                    path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+                }
+            }
 
-			if (Cutoff != null)
-			{
-				var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
-				path.Append("&cutOff=").Append(cutOffAsString);
-			}
-			if (CutoffEtag != null)
-			{
-				path.Append("&cutOffEtag=").Append(CutoffEtag);
-			}
+            if (Cutoff != null)
+            {
+                var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
+                path.Append("&cutOff=").Append(cutOffAsString);
+            }
+            if (CutoffEtag != null)
+            {
+                path.Append("&cutOffEtag=").Append(CutoffEtag);
+            }
             if (WaitForNonStaleResultsAsOfNow)
             {
                 path.Append("&waitForNonStaleResultsAsOfNow=true");
             }
 
-		    HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
-            HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
+            HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            HighlighterPreTags.ApplyIfNotNull(tag => path.Append("&preTags=").Append(tag));
+            HighlighterPostTags.ApplyIfNotNull(tag => path.Append("&postTags=").Append(tag));
 
-			if(DebugOptionGetIndexEntries)
-				path.Append("&debug=entries");
+            if (DebugOptionGetIndexEntries)
+                path.Append("&debug=entries");
 
-			if (ExplainScores)
-				path.Append("&explainScores=true");
-		}
+            if (ExplainScores)
+                path.Append("&explainScores=true");
+        }
 
-		private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
-		{
-			if (string.IsNullOrEmpty(Query) == false && appendQuery)
-			{
-				path.Append("&query=");
-				path.Append(EscapingHelper.EscapeLongDataString(Query));
-			}
-			
-			if (string.IsNullOrEmpty(DefaultField) == false)
-			{
-				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-			}
-			if (DefaultOperator != QueryOperator.Or)
-				path.Append("&operator=AND");
-			var vars = GetCustomQueryStringVariables();
-			if (!string.IsNullOrEmpty(vars))
-			{
-				path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
-			}
-		}
+        private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
+        {
+            if (string.IsNullOrEmpty(Query) == false && appendQuery)
+            {
+                path.Append("&query=");
+                path.Append(EscapingHelper.EscapeLongDataString(Query));
+            }
 
-		/// <summary>
-		/// Gets the custom query string variables.
-		/// </summary>
-		/// <returns></returns>
-		protected virtual string GetCustomQueryStringVariables()
-		{
-			return string.Empty;
-		}
+            if (string.IsNullOrEmpty(DefaultField) == false)
+            {
+                path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
+            }
+            if (DefaultOperator != QueryOperator.Or)
+                path.Append("&operator=AND");
+            var vars = GetCustomQueryStringVariables();
+            if (!string.IsNullOrEmpty(vars))
+            {
+                path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
+            }
+        }
 
-		public IndexQuery Clone()
-		{
-			return (IndexQuery)MemberwiseClone();
-		}
+        /// <summary>
+        /// Gets the custom query string variables.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual string GetCustomQueryStringVariables()
+        {
+            return string.Empty;
+        }
 
-		public override string ToString()
-		{
-			return Query;
-		}
+        public IndexQuery Clone()
+        {
+            return (IndexQuery)MemberwiseClone();
+        }
+
+        public override string ToString()
+        {
+            return Query;
+        }
 
         public bool Equals(IndexQuery other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return PageSizeSet.Equals(other.PageSizeSet) && 
-                   String.Equals(Query, other.Query) && 
-                   Equals(TotalSize, other.TotalSize) && 
-                   Equals(QueryInputs, other.QueryInputs) && 
-                   Start == other.Start && 
-                   Equals(IsDistinct, other.IsDistinct) && 
-                   Equals(FieldsToFetch, other.FieldsToFetch) && 
-                   Equals(SortedFields, other.SortedFields) && 
+            return PageSizeSet.Equals(other.PageSizeSet) &&
+                   String.Equals(Query, other.Query) &&
+                   Equals(TotalSize, other.TotalSize) &&
+                   Equals(QueryInputs, other.QueryInputs) &&
+                   Start == other.Start &&
+                   Equals(IsDistinct, other.IsDistinct) &&
+                   Equals(FieldsToFetch, other.FieldsToFetch) &&
+                   Equals(SortedFields, other.SortedFields) &&
                    Cutoff.Equals(other.Cutoff) &&
-				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
-				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-				   Equals(CutoffEtag, other.CutoffEtag) && 
-                   String.Equals(DefaultField, other.DefaultField) && 
-                   DefaultOperator == other.DefaultOperator && 
-                   SkipTransformResults.Equals(other.SkipTransformResults) && 
-                   Equals(SkippedResults, other.SkippedResults) && 
-                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
-                   Equals(HighlightedFields, other.HighlightedFields) && 
-                   Equals(HighlighterPreTags, other.HighlighterPreTags) && 
-                   Equals(HighlighterPostTags, other.HighlighterPostTags) && 
-                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
+                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
+                   Equals(CutoffEtag, other.CutoffEtag) &&
+                   String.Equals(DefaultField, other.DefaultField) &&
+                   DefaultOperator == other.DefaultOperator &&
+                   SkipTransformResults.Equals(other.SkipTransformResults) &&
+                   Equals(SkippedResults, other.SkippedResults) &&
+                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) &&
+                   Equals(HighlightedFields, other.HighlightedFields) &&
+                   Equals(HighlighterPreTags, other.HighlighterPreTags) &&
+                   Equals(HighlighterPostTags, other.HighlighterPostTags) &&
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) &&
                    DisableCaching.Equals(other.DisableCaching);
         }
 
@@ -416,11 +416,11 @@ namespace Raven.Abstractions.Data
             return !Equals(left, right);
         }
 
-	}
+    }
 
     public enum QueryOperator
-	{
-		Or,
-		And
-	}
+    {
+        Or,
+        And
+    }
 }

@@ -85,27 +85,27 @@
                 <li>
                     <a href="#" data-bind="click: $root.runRecentQuery.bind($root, $data)">
                         <span data-bind="text: IndexName === 'dynamic' ? 'All Documents' : IndexName"></span>
-                        <span data-bind="visible: QueryText">
+                        <span data-bind="visible: $data.QueryText">
                             <span class="text-muted">|</span>
                             <span data-bind="text: QueryText"></span>
                         </span>
-                        <span data-bind="visible: Sorts.length">
+                        <span data-bind="visible: $data.Sorts && $data.Sorts.length">
                             <span class="text-muted">| sort by</span>
                             <span data-bind="text: $root.getRecentQuerySortsText($index())"></span>
                         </span>
-                        <span data-bind="visible: TransformerName">
+                        <span data-bind="visible: $data.TransformerQuery">
                             <span class="text-muted">| transform by</span>
-                            <span data-bind="text: TransformerName"></span>
+                            <span data-bind="text: $root.getStoredQueryTransformerName($data) + $root.getStoredQueryTransformerParameters($data)"></span>
                         </span>
-                        <span data-bind="visible: ShowFields">
+                        <span data-bind="visible: $data.ShowFields">
                             <span class="text-muted">|</span>
                             <span>show fields</span>
                         </span>
-                        <span data-bind="visible: ShowFields">
+                        <span data-bind="visible: $data.ShowFields">
                             <span class="text-muted">|</span>
                             <span>index entries</span>
                         </span>
-                        <span data-bind="visible: ShowFields">
+                        <span data-bind="visible: $data.ShowFields">
                             <span class="text-muted">|</span>
                             <span>AND operator</span>
                         </span>
@@ -197,12 +197,26 @@
                             <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
                                 <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
                             </ul>
+                            
                         </div>
                         <div>
                             <button type="button" class="close"  data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                         </div>
                         <div class="clearfix"></div>
                     </div>
+                    <!-- ko if: typeof transformer() !== "undefined" && transformer() != null && transformer().extractInputs().length > 0 -->
+                    <div class="panel-body">
+                        <div class="btn-group col-md-12">
+                            <div class="clearfix"></div>
+                            <div id="transformerParams" data-bind="foreach: transformer().extractInputs()">
+                                <div class="form-group row">
+                                    <label data-bind="text: 'Parameter: '+$data" class="control-label"></label>
+                                    <input type="text" class="form-control transformer_param_flag" data-bind="attr: { name: $data }, event: { change: $root.runQuery.bind($root) }" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /ko -->
                 </div>
             </div>
         </div>
