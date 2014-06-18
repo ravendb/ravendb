@@ -476,17 +476,17 @@ namespace Raven.Client.Connection
 		/// <param name="txId">The tx id.</param>
 		void PrepareTransaction(string txId);
 
-		/// <summary>
-		/// Gets the build number
-		/// </summary>
-		BuildNumber GetBuildNumber();
-
 	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
         IndexMergeResults GetIndexMergeSuggestions();
 	}
 
 	public interface IGlobalAdminDatabaseCommands
 	{
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		BuildNumber GetBuildNumber();
+
 		/// <summary>
 		/// Returns the names of all tenant databases on the RavenDB server
 		/// </summary>
