@@ -275,9 +275,20 @@ class query extends viewModelBase {
                     queryParams: []
                 });
 
+                var canRunQuery = true;
                 $("#transformerParams .transformer_param_flag").each((index: number, element: any) => {
-                    transformer.addParamByNameAndValue(element.name, element.value);
+                    $(element).parent().removeClass("has-error");
+                    if (element.value) {
+                        transformer.addParamByNameAndValue(element.name, element.value);
+                    } else if (element.required) {
+                        canRunQuery = false;
+                        $(element).parent().addClass("has-error");
+                    }
                 });
+
+                if (!canRunQuery) {
+                    return; // Cannot run query without required parameters
+                }
             }
 
             this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);

@@ -210,8 +210,8 @@
                             <div class="clearfix"></div>
                             <div id="transformerParams" data-bind="foreach: transformer().extractInputs()">
                                 <div class="form-group row">
-                                    <label data-bind="text: 'Parameter: '+$data" class="control-label"></label>
-                                    <input type="text" class="form-control transformer_param_flag" data-bind="attr: { name: $data }, event: { change: $root.runQuery.bind($root) }" />
+                                    <label data-bind="text: 'Parameter: '+$data.name" class="control-label"></label>
+                                    <input type="text" class="form-control transformer_param_flag" data-bind="attr: { name: $data.name, required: $data.hasDefault ? null : '' }, event: { change: $root.runQuery.bind($root) }" />
                                 </div>
                             </div>
                         </div>

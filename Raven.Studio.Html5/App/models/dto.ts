@@ -364,6 +364,11 @@ interface savedTransformerDto {
     }
 }
 
+interface transformerParamInfo {
+  name: string;
+  hasDefault: boolean;
+}
+
 interface transformerParamDto {
     name: string;
     value: string;
