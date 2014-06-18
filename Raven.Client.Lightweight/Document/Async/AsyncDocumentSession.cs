@@ -351,7 +351,7 @@ namespace Raven.Client.Document.Async
 
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
 			                                             pagingInformation: pagingInformation, transformer: transformer,
-			                                             queryInputs: configuration.QueryInputs)
+			                                             transformerParameters: configuration.TransformerParameters)
 			                            .ContinueWith(
 				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
 		}
@@ -707,7 +707,7 @@ namespace Raven.Client.Document.Async
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.QueryInputs).ConfigureAwait(false);
+			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
 			return result;
 		}
 
@@ -717,7 +717,7 @@ namespace Raven.Client.Document.Async
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).ConfigureAwait(false);
+			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -727,7 +727,7 @@ namespace Raven.Client.Document.Async
 			if (configure != null)
 				configure(configuration);
 
-			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs).ConfigureAwait(false);
+			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 		}
 
 		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -738,7 +738,7 @@ namespace Raven.Client.Document.Async
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).ConfigureAwait(false);
+			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -750,10 +750,10 @@ namespace Raven.Client.Document.Async
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs).ConfigureAwait(false);
+			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 		}
 
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
 		{
 			if (ids.Length == 0)
 				return new T[0];
@@ -766,7 +766,7 @@ namespace Raven.Client.Document.Async
 			{
 				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
 				// With a single Id
-                var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false))
+                var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, transformerParameters).ConfigureAwait(false))
 											.Results
 											.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
 											.Select(values =>
@@ -786,7 +786,7 @@ namespace Raven.Client.Document.Async
 				return arrayOfArrays;
 			}
 
-            var getResponse = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false));
+            var getResponse = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, transformerParameters).ConfigureAwait(false));
 			var items = new List<T>();
 			foreach (var result in getResponse.Results)
 			{

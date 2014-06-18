@@ -97,7 +97,7 @@ namespace Raven.Database.Queries
 				HighlighterPostTags = query.HighlighterPostTags,
 				HighlightedFields = query.HighlightedFields,
 				ResultsTransformer = query.ResultsTransformer,
-				QueryInputs = query.QueryInputs,
+				TransformerParameters = query.TransformerParameters,
 				ExplainScores = query.ExplainScores,
 				SortHints = query.SortHints
 			};

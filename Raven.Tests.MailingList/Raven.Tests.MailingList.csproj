@@ -420,7 +420,7 @@
     <Compile Include="TransfomerLoadCaching.cs" />
     <Compile Include="transformedresults_customid_test.cs" />
     <Compile Include="TransformerDictionaryOrderTests.cs" />
-    <Compile Include="TransformerQueryInputTests.cs" />
+    <Compile Include="TransformerParameterTests.cs" />
     <Compile Include="TransformersAndEtags.cs" />
     <Compile Include="TransformWithConversionListener.cs" />
     <Compile Include="TransformWithLoad.cs" />
