@@ -87,8 +87,8 @@ namespace Raven.Database.Indexing
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
 		{
-		    currentIndexSearcherHolder = new IndexSearcherHolder(name ,context);
-		    if (directory == null) throw new ArgumentNullException("directory");
+			currentIndexSearcherHolder = new IndexSearcherHolder(name ,context);
+			if (directory == null) throw new ArgumentNullException("directory");
 			if (name == null) throw new ArgumentNullException("name");
 			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");
 			if (viewGenerator == null) throw new ArgumentNullException("viewGenerator");
@@ -268,6 +268,10 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.Info("Starting merge of {0}", name);
 					var sp = Stopwatch.StartNew();
+					if (indexWriter == null)
+					{
+						CreateIndexWriter();
+					}
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", name, sp.Elapsed);
 				}
@@ -358,70 +362,70 @@ namespace Raven.Database.Indexing
 				Analyzer searchAnalyzer = null;
 				var itemsInfo = new IndexedItemsInfo();
 
-			    try
-			    {
-			        waitReason = "Write";
-			        try
-			        {
-			            searchAnalyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
-			        }
-			        catch (Exception e)
-			        {
-			            context.AddError(name, "Creating Analyzer", e.ToString(), "Analyzer");
-			            throw;
-			        }
+				try
+				{
+					waitReason = "Write";
+					try
+					{
+						searchAnalyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
+					}
+					catch (Exception e)
+					{
+						context.AddError(name, "Creating Analyzer", e.ToString(), "Analyzer");
+						throw;
+					}
 
-			        if (indexWriter == null)
-			        {
-			            CreateIndexWriter();
-			        }
+					if (indexWriter == null)
+					{
+						CreateIndexWriter();
+					}
 
-			        var locker = directory.MakeLock("writing-to-index.lock");
-			        try
-			        {
-			            var stats = new IndexingWorkStats();
+					var locker = directory.MakeLock("writing-to-index.lock");
+					try
+					{
+						var stats = new IndexingWorkStats();
 
-			            try
-			            {
-			                if (locker.Obtain() == false)
-			                {
-			                    throw new InvalidOperationException(
-			                        string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-			                            name));
-			                }
+						try
+						{
+							if (locker.Obtain() == false)
+							{
+								throw new InvalidOperationException(
+									string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
+										name));
+							}
 
-			                itemsInfo = action(indexWriter, searchAnalyzer, stats);
-			                shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
-                            
-			                foreach (var indexExtension in indexExtensions.Values)
-			                {
-			                    indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
-			                }
-			            }
-			            catch (Exception e)
-			            {
-			                context.AddError(name, null, e.ToString(), "Write");
-			                throw;
-			            }
+							itemsInfo = action(indexWriter, searchAnalyzer, stats);
+							shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
+							
+							foreach (var indexExtension in indexExtensions.Values)
+							{
+								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
+							}
+						}
+						catch (Exception e)
+						{
+							context.AddError(name, null, e.ToString(), "Write");
+							throw;
+						}
 
-			            if (itemsInfo.ChangedDocs > 0)
-			            {
-			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-			                Flush(); // just make sure changes are flushed to disk
-				            segmentsInfo = GetCurrentSegmentsInfo();
+						if (itemsInfo.ChangedDocs > 0)
+						{
+							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
+							Flush(); // just make sure changes are flushed to disk
+							segmentsInfo = GetCurrentSegmentsInfo();
 							StoreChecksum(segmentsInfo);
 							UpdateIndexingStats(context, stats);
-			            }
-			        }
-			        finally
-			        {
-			            locker.Release();
-			        }
-			    }
-			    catch (Exception e)
-			    {
-			        throw new InvalidOperationException("Could not properly write to index " + name, e);
-			    }
+						}
+					}
+					finally
+					{
+						locker.Release();
+					}
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not properly write to index " + name, e);
+				}
 				finally
 				{
 					currentlyIndexDocuments.Clear();
@@ -487,9 +491,9 @@ namespace Raven.Database.Indexing
 		private void CreateIndexWriter()
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-		    IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-		                                                          ? new IndexReaderWarmersWrapper(name, context.IndexReaderWarmers)
-		                                                          : null;
+			IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+																  ? new IndexReaderWarmersWrapper(name, context.IndexReaderWarmers)
+																  : null;
 			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
 		}
 
@@ -849,42 +853,42 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-	    public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
-        {
-            if (string.IsNullOrWhiteSpace(indexQuery.Query))
-                return;
-            HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
-            foreach (string field in hashSet)
-            {
-                string f = field;
-                if (f.EndsWith("_Range"))
-                {
-                    f = f.Substring(0, f.Length - "_Range".Length);
-                }
-                if (viewGenerator.ContainsField(f) == false &&
-                    viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
-                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
-            }
+		public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
+		{
+			if (string.IsNullOrWhiteSpace(indexQuery.Query))
+				return;
+			HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
+			foreach (string field in hashSet)
+			{
+				string f = field;
+				if (f.EndsWith("_Range"))
+				{
+					f = f.Substring(0, f.Length - "_Range".Length);
+				}
+				if (viewGenerator.ContainsField(f) == false &&
+					viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+					throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
+			}
 
-            if (indexQuery.SortedFields == null)
-                return;
+			if (indexQuery.SortedFields == null)
+				return;
 
-            foreach (SortedField field in indexQuery.SortedFields)
-            {
-                string f = field.Field;
-                if (f == Constants.TemporaryScoreValue)
-                    continue;
-                if (f.EndsWith("_Range"))
-                {
-                    f = f.Substring(0, f.Length - "_Range".Length);
-                }
-                if (f.StartsWith(Constants.RandomFieldName))
-                    continue;
-                if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
-                    && viewGenerator.ContainsField("_") == false)// the catch all field name means that we have dynamic fields names
-                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
-            }
-        }
+			foreach (SortedField field in indexQuery.SortedFields)
+			{
+				string f = field.Field;
+				if (f == Constants.TemporaryScoreValue)
+					continue;
+				if (f.EndsWith("_Range"))
+				{
+					f = f.Substring(0, f.Length - "_Range".Length);
+				}
+				if (f.StartsWith(Constants.RandomFieldName))
+					continue;
+				if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
+					&& viewGenerator.ContainsField("_") == false)// the catch all field name means that we have dynamic fields names
+					throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+			}
+		}
 
 
 
@@ -926,7 +930,7 @@ namespace Raven.Database.Indexing
 					RavenJObject[] termsDocs;
 					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
 					{
-                        var luceneQuery = GetLuceneQuery();
+						var luceneQuery = GetLuceneQuery();
 
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
@@ -1106,7 +1110,7 @@ namespace Raven.Database.Indexing
 						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
 						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-                        var firstSubLuceneQuery = GetLuceneQuery(subQueries[0], indexQuery);
+						var firstSubLuceneQuery = GetLuceneQuery(subQueries[0], indexQuery);
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
 						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
@@ -1279,8 +1283,8 @@ namespace Raven.Database.Indexing
 					indexSearcher.Search(luceneQuery, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
-			    int absFullPage = Math.Abs(pageSize + start); // need to protect against ridicilously high values of pageSize + start that overflow
-			    var minPageSize = Math.Max(absFullPage, 1);
+				int absFullPage = Math.Abs(pageSize + start); // need to protect against ridicilously high values of pageSize + start that overflow
+				var minPageSize = Math.Max(absFullPage, 1);
 
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
@@ -1380,7 +1384,7 @@ namespace Raven.Database.Indexing
 						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 						if (indexQueryResult.Projection.Count > 0 && // we don't consider empty projections to be relevant for distinct operations
-                            alreadyReturned.Add(indexQueryResult.Projection) == false)
+							alreadyReturned.Add(indexQueryResult.Projection) == false)
 						{
 							min++; // we found a duplicate
 							itemsSkipped++;
@@ -1533,45 +1537,45 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-        protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
-            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
+		protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
+			ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
 			ConcurrentQueue<IDictionary<string, Etag>> missingReferencedDocs)
-        {
-            IDictionary<string, HashSet<string>> result;
-            while (allReferencedDocs.TryDequeue(out result))
-            {
-                foreach (var referencedDocument in result)
-                {
-                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
-                    actions.General.MaybePulseTransaction();
-                }
-            }
-            var task = new TouchReferenceDocumentIfChangedTask
-            {
-                Index = name, // so we will get IsStale properly
-                ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
-            };
+		{
+			IDictionary<string, HashSet<string>> result;
+			while (allReferencedDocs.TryDequeue(out result))
+			{
+				foreach (var referencedDocument in result)
+				{
+					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+					actions.General.MaybePulseTransaction();
+				}
+			}
+			var task = new TouchReferenceDocumentIfChangedTask
+			{
+				Index = name, // so we will get IsStale properly
+				ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
+			};
 
 			IDictionary<string, Etag> docs;
-            while (missingReferencedDocs.TryDequeue(out docs))
-            {
-                foreach (var doc in docs)
-                {
-                    Etag etag;
-                    if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
-                    {
-                        task.ReferencesToCheck[doc.Key] = doc.Value;
-                        continue;
-                    }
-                    if(etag == doc.Value)
-                        continue;
-                    task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
-                }
-            }
-            if (task.ReferencesToCheck.Count == 0)
-                return;
-            actions.Tasks.AddTask(task, SystemTime.UtcNow);
-        }
+			while (missingReferencedDocs.TryDequeue(out docs))
+			{
+				foreach (var doc in docs)
+				{
+					Etag etag;
+					if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
+					{
+						task.ReferencesToCheck[doc.Key] = doc.Value;
+						continue;
+					}
+					if(etag == doc.Value)
+						continue;
+					task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
+				}
+			}
+			if (task.ReferencesToCheck.Count == 0)
+				return;
+			actions.Tasks.AddTask(task, SystemTime.UtcNow);
+		}
 
 		public void ForceWriteToDisk()
 		{
