@@ -268,6 +268,10 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.Info("Starting merge of {0}", name);
 					var sp = Stopwatch.StartNew();
+					if (indexWriter == null)
+					{
+						CreateIndexWriter();
+					}
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", name, sp.Elapsed);
 				}
