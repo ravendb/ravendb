@@ -64,6 +64,11 @@ namespace Raven.Client.Connection
 			return asyncAdminServerClient.GetIndexingStatusAsync().ResultUnwrap();
 		}
 
+		public BuildNumber GetBuildNumber()
+		{
+			return asyncAdminServerClient.GetBuildNumberAsync().ResultUnwrap();
+		}
+
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
 			return asyncAdminServerClient.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();

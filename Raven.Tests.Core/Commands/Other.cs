@@ -26,7 +26,7 @@ namespace Raven.Tests.Core.Commands
 		{
 			using (var store = GetDocumentStore())
 			{
-				var buildNumber = await store.AsyncDatabaseCommands.GetBuildNumberAsync();
+				var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
 
 				Assert.NotNull(buildNumber);
 			}
