@@ -100,17 +100,25 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BackupRestore\BackupRestore.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
+    <Compile Include="Commands\Batches.cs" />
+    <Compile Include="Commands\Querying.cs" />
+    <Compile Include="Commands\Transformers.cs" />
+    <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
     <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Utils\Entities\Camera.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
+    <Compile Include="Utils\Entities\Headquater.cs" />
     <Compile Include="Utils\Entities\TShirt.cs" />
     <Compile Include="Utils\Entities\TShirtType.cs" />
     <Compile Include="Utils\Indexes\CameraCost.cs" />
     <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
+    <Compile Include="Utils\Entities\ISearchable.cs" />
+    <Compile Include="Utils\Indexes\MultiMapIndex.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
@@ -123,7 +131,6 @@
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Commands\Admin.cs" />
-    <Compile Include="Commands\GlobalAdmin.cs" />
     <Compile Include="Indexing\CustomAnalyzers.cs" />
     <Compile Include="Indexing\ResultTransformers.cs" />
     <Compile Include="Querying\Aggregating.cs" />
@@ -153,7 +160,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Auth\" />
-    <Folder Include="BackupRestore\" />
     <Folder Include="Patching\" />
   </ItemGroup>
   <ItemGroup>

@@ -9,12 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 
-#if NETFX_CORE
-[assembly: AssemblyTitle("RavenDB (for WinRT)")]
-#else
-[assembly: AssemblyTitle("RavenDB (for .NET 4.5)")]
-#endif
-
+[assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("3.0.0")]
 [assembly: AssemblyFileVersion("3.0.13.0")]
 [assembly: AssemblyInformationalVersion("3.0.0 / 6dce79a")]
