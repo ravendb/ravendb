@@ -14,13 +14,13 @@ namespace Raven.Client.FileSystem.Listeners
         /// <param name="instance">The file in conflict</param>
         /// <param name="sourceServerUri">The Destination Uri where the conflict appeared</param>
         /// <returns>A resolution strategy for this conflict</returns>
-        public ConflictResolutionStrategy ConflictDetected(FileHeader instance, String sourceServerUri);
+        ConflictResolutionStrategy ConflictDetected(FileHeader instance, String sourceServerUri);
 
         /// <summary>
         /// Invoked when a file conflict has been resolved.
         /// </summary>
         /// <param name="instance">The file with the resolved conflict</param>
-        public void ConflictResolved(FileHeader instance);
+        void ConflictResolved(FileHeader instance);
  
     }
 }

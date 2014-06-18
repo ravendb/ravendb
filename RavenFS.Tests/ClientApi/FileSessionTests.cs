@@ -18,9 +18,9 @@ namespace RavenFS.Tests.ClientApi
         private readonly IFilesStore filesStore;
 
         public FileSessionTests()
-		{
-			filesStore = this.NewStore();
-		}
+        {
+            filesStore = this.NewStore();
+        }
 
         [Fact]
         public void SessionLifecycle()
@@ -280,85 +280,6 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
-        [Fact]
-        public async void DoNotDeleteReadOnlyFiles()
-        {
-            var store = (FilesStore)filesStore;
-            var deleteListener = new DeleteNotReadOnlyFilesListener();                
-            store.Listeners.RegisterListener(deleteListener);
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("/b/test2.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                var file = await session.LoadFileAsync("test1.file");
-                file.Metadata.Add("Read-Only", true);
-                await session.SaveChangesAsync();
-
-                var directory = await session.LoadDirectoryAsync("/b");
-
-                session.RegisterDirectoryDeletion(directory, true);
-                await session.SaveChangesAsync();
-
-                Assert.Equal(1, deleteListener.DeletedFiles);
-                Assert.Equal(1, deleteListener.DeletedDirectories);
-            }
-        }
-
-        [Fact]
-        public async void DoNotDeleteReadOnlyFiles()
-        {
-            var store = (FilesStore)filesStore;
-            var deleteListener = new DeleteNotReadOnlyFilesListener();
-            store.Listeners.RegisterListener(deleteListener);
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("/b/test2.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                var file = await session.LoadFileAsync("test1.file");
-                file.Metadata.Add("Read-Only", true);
-                await session.SaveChangesAsync();
-
-                var directory = await session.LoadDirectoryAsync("/b");
-
-                session.RegisterDirectoryDeletion(directory, true);
-                await session.SaveChangesAsync();
-
-                Assert.Equal(1, deleteListener.DeletedFiles);
-                Assert.Equal(1, deleteListener.DeletedDirectories);
-            }
-        }
-
-        private class DeleteNotReadOnlyFilesListener : IFilesDeleteListener
-        {
-            public int DeletedDirectories {get; protected set;}
-            public int DeletedFiles { get; protected set; }
-
-            public bool BeforeDelete(FileHeader instance)
-            {
-                return !instance.Metadata.Value<bool>("Read-Only");
-            }
-
-            public bool BeforeDelete(DirectoryHeader instance)
-            {
-                return !instance.Metadata.Value<bool>("Read-Only");
-            }
-
-
-            public void AfterDelete(FileHeader instance)
-            {
-                DeletedFiles++;
-            }
-
-            public void AfterDelete(DirectoryHeader instance)
-            {
-                DeletedDirectories++;
-            }
-        }
+  
     }
 }
