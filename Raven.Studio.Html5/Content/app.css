@@ -572,6 +572,9 @@ body {
 .code-keyword {
   color: blue;
 }
+.code-string {
+  color: #c51111;
+}
 .help-cursor {
   cursor: help;
 }
@@ -685,7 +688,9 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*# sourceMappingURL=app.css.map */
+  /*#goToDocInput {
+        width: 10em;
+    }*/
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1048,4 +1053,3 @@ footer ul {
   background-position-x: center;
   background-position-y: center;
 }
-/*# sourceMappingURL=app.css.map */
