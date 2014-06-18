@@ -40,7 +40,7 @@ namespace Raven.Client.Linq
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
 		private string resultsTransformer;
-		private readonly Dictionary<string, RavenJToken> queryInputs;
+		private readonly Dictionary<string, RavenJToken> transformerParameters;
 
 		private LinqPathProvider linqPathProvider;
 		/// <summary>
@@ -67,8 +67,8 @@ namespace Raven.Client.Linq
 		/// <param name="fieldsTRename">The fields to rename for the results of this query</param>
 		/// <param name="isMapReduce"></param>
 		/// <param name="resultsTransformer"></param>
-		/// <param name="queryInputs"></param>
-		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> queryInputs)
+		/// <param name="transformerParameters"></param>
+		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -79,7 +79,7 @@ namespace Raven.Client.Linq
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
 			this.resultsTransformer = resultsTransformer;
-			this.queryInputs = queryInputs;
+			this.transformerParameters = transformerParameters;
 			linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
 		}
 
@@ -1618,7 +1618,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             //no reason to override a value that may or may not exist there
             if(!String.IsNullOrEmpty(resultsTransformer))
 			    finalQuery.SetResultTransformer(resultsTransformer);
-			finalQuery.SetQueryInputs(queryInputs);
+			finalQuery.SetTransformerParameters(transformerParameters);
 
 			if (FieldsToRename.Count > 0)
 				finalQuery.AfterQueryExecuted(RenameResults);

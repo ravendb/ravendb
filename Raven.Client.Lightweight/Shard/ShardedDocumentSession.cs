@@ -119,7 +119,7 @@ namespace Raven.Client.Shard
 			var configuration = new RavenLoadConfiguration();
 		    if (configure != null)
 		        configure(configuration);
-			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
 		}
 
 		public T Load<T>(string id)
@@ -191,7 +191,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			return LoadInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.QueryInputs);
+			return LoadInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters);
 		}
 
 		public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
@@ -200,7 +200,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
 		}
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
@@ -209,7 +209,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs);
+			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
 		}
 
 		public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -220,7 +220,7 @@ namespace Raven.Client.Shard
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
 		}
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -231,10 +231,10 @@ namespace Raven.Client.Shard
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs);
+			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
 		}
 
-		private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
@@ -256,7 +256,7 @@ namespace Raven.Client.Shard
 							{
 								// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
 								// With a single Id
-								var arrayOfArrays = (dbCmd.Get(currentShardIds, includePaths, transformer, queryInputs))
+								var arrayOfArrays = (dbCmd.Get(currentShardIds, includePaths, transformer, transformerParameters))
 															.Results
 															.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
 															.Select(values =>
@@ -287,7 +287,7 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						(dbCmd, i) =>
 						{
-							var items = (dbCmd.Get(currentShardIds, includePaths, transformer, queryInputs))
+							var items = (dbCmd.Get(currentShardIds, includePaths, transformer, transformerParameters))
 								.Results
 								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
 								.Select(JsonExtensions.ToJObject)
@@ -867,7 +867,7 @@ namespace Raven.Client.Shard
 			(dbCmd, i) =>
 			dbCmd.StartsWith(keyPrefix, matches, start, pageSize,
 							exclude: exclude, transformer: transformer,
-							queryInputs: configuration.QueryInputs));
+							transformerParameters: configuration.TransformerParameters));
 
 			return results.SelectMany(x => x).Select(TrackEntity<TResult>)
 						  .ToArray();

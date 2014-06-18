@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                          string exclude = null, string transformer = null,
-		                          Dictionary<string, RavenJToken> queryInputs = null);
+		                          Dictionary<string, RavenJToken> transformerParameters = null);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -68,10 +68,10 @@ namespace Raven.Client.Connection
 	    /// <param name="ids">The ids.</param>
 	    /// <param name="includes">The includes.</param>
 	    /// <param name="transformer"></param>
-	    /// <param name="queryInputs"></param>
+	    /// <param name="transformerParameters"></param>
 	    /// <param name="metadataOnly">Load just the document metadata</param>
 	    /// <returns></returns>
-	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
+	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Get documents from server

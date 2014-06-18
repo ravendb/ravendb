@@ -58,7 +58,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Additional query inputs
         /// </summary>
-        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
+        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
 
 		/// <summary>
 		/// Gets or sets the start of records to read.
@@ -269,11 +269,11 @@ namespace Raven.Abstractions.Data
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }
 
-			if (QueryInputs != null)
+			if (TransformerParameters != null)
 			{
-				foreach (var input in QueryInputs)
+				foreach (var input in TransformerParameters)
 				{
-					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+					path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
 				}
 			}
 
@@ -349,7 +349,7 @@ namespace Raven.Abstractions.Data
             return PageSizeSet.Equals(other.PageSizeSet) && 
                    String.Equals(Query, other.Query) && 
                    Equals(TotalSize, other.TotalSize) && 
-                   Equals(QueryInputs, other.QueryInputs) && 
+                   Equals(TransformerParameters, other.TransformerParameters) && 
                    Start == other.Start && 
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
@@ -384,7 +384,7 @@ namespace Raven.Abstractions.Data
                 var hashCode = PageSizeSet.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
