@@ -169,7 +169,7 @@
                             </a>
                             <ul class="dropdown-menu" data-bind="foreach: listedDatabases">
                                 <li>
-                                    <a href="#" data-bind="text: name, click: $root.selectDatabase.bind($root, $data)"></a>
+                                    <a href="#" data-bind="text: name, click: $root.selectResource.bind($root, $data, '#databases')"></a>
                                 </li>
                             </ul>
                         </li>
@@ -180,7 +180,7 @@
                             </a>
                             <ul class="dropdown-menu" data-bind="foreach: listedFileSystems">
                                 <li>
-                                    <a href="#" data-bind="text: name, click: $root.selectFileSystem.bind($root, $data), visible: isVisible"></a>
+                                    <a href="#" data-bind="text: name, click: $root.selectResource.bind($root, $data, '#filesystems'), visible: isVisible"></a>
                                 </li>
                             </ul>
                         </li>
@@ -191,7 +191,7 @@
                             </a>
                             <ul class="dropdown-menu" data-bind="foreach: listedCounterStorages">
                                 <li>
-                                    <a href="#" data-bind="text: name, click: $root.selectCounterStorage.bind($root, $data), visible: isVisible"></a>
+                                    <a href="#" data-bind="text: name, click: $root.selectResource.bind($root, $data, '#counterstorages'), visible: isVisible"></a>
                                 </li>
                             </ul>
                         </li>

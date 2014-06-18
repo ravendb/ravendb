@@ -14,6 +14,7 @@ interface computedAppUrls {
     reporting: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
+    metrics: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;
     alerts: KnockoutComputed<string>;

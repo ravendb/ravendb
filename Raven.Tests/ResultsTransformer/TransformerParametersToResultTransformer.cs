@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.ResultsTransformer
 {
-    public class QueryInputsToResultTransformer : RavenTest
+    public class TransformerParametersToResultTransformer : RavenTest
     {
         public class Product
         {
@@ -25,7 +25,7 @@ namespace Raven.Tests.ResultsTransformer
 			public string Name { get; set; }
 		}
 
-        public class ProductWithQueryInput: AbstractTransformerCreationTask<Product>
+        public class ProductWithParameter: AbstractTransformerCreationTask<Product>
         {
             public class Result
             {
@@ -33,19 +33,19 @@ namespace Raven.Tests.ResultsTransformer
                 public string ProductName { get; set; }
                 public string Input { get; set; }
             }
-            public ProductWithQueryInput()
+            public ProductWithParameter()
             {
                 TransformResults = docs => from product in docs
                                              select new
                                              {
                                                  ProductId = product.Id,
                                                  ProductName = product.Name,
-                                                 Input = Query("input")
+                                                 Input = Parameter("input")
                                              };
             }
         }
 
-		public class ProductWithQueryInputAndInclude : AbstractTransformerCreationTask<Product>
+		public class ProductWithParametersAndInclude : AbstractTransformerCreationTask<Product>
 		{
 			public class Result
 			{
@@ -53,7 +53,7 @@ namespace Raven.Tests.ResultsTransformer
 				public string ProductName { get; set; }
 				public string CategoryId { get; set; }
 			}
-			public ProductWithQueryInputAndInclude()
+			public ProductWithParametersAndInclude()
 			{
 				TransformResults = docs => from product in docs
 										   let _ = Include(product.CategoryId)
@@ -71,7 +71,7 @@ namespace Raven.Tests.ResultsTransformer
         {
             using (var store = NewRemoteDocumentStore())
             {
-                new ProductWithQueryInput().Execute(store);
+                new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id="products/1", Name = "Irrelevant"});
@@ -79,8 +79,8 @@ namespace Raven.Tests.ResultsTransformer
                 }
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Load<ProductWithQueryInput, ProductWithQueryInput.Result>("products/1", 
-                        configure => configure.AddQueryParam("input", "Foo"));
+                    var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1", 
+                        configure => configure.AddTransformerParameter("input", "Foo"));
                     Assert.Equal("Foo", result.Input);
                 }
             }
@@ -93,7 +93,7 @@ namespace Raven.Tests.ResultsTransformer
         {
             using (var store = NewRemoteDocumentStore())
             {
-                new ProductWithQueryInput().Execute(store);
+                new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
@@ -101,8 +101,8 @@ namespace Raven.Tests.ResultsTransformer
                 }
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Load<ProductWithQueryInput, ProductWithQueryInput.Result>("products/1", 
-                        configure => configure.AddQueryParam("input", "Foo"));
+                    var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1", 
+                        configure => configure.AddTransformerParameter("input", "Foo"));
                     Assert.Equal("Foo", result.Input);
                 }
             }
@@ -114,7 +114,7 @@ namespace Raven.Tests.ResultsTransformer
         {
             using (var store = NewRemoteDocumentStore())
             {
-                new ProductWithQueryInput().Execute(store);
+                new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Name = "Irrelevant" });
@@ -124,8 +124,8 @@ namespace Raven.Tests.ResultsTransformer
                 {
                     var result = session.Query<Product>()
                                 .Customize(x => x.WaitForNonStaleResults())
-                                .TransformWith<ProductWithQueryInput, ProductWithQueryInput.Result>()
-                                .AddQueryInput("input", "Foo")
+                                .TransformWith<ProductWithParameter, ProductWithParameter.Result>()
+                                .AddTransformerParameter("input", "Foo")
                                 .Single();
 
                     Assert.Equal("Foo", result.Input);
@@ -139,7 +139,7 @@ namespace Raven.Tests.ResultsTransformer
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				new ProductWithQueryInput().Execute(store);
+				new ProductWithParameter().Execute(store);
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Product() { Name = "Irrelevant" });
@@ -149,8 +149,8 @@ namespace Raven.Tests.ResultsTransformer
 				{
 					var result = session.Query<Product>()
 								.Customize(x => x.WaitForNonStaleResults())
-								.TransformWith<ProductWithQueryInput, ProductWithQueryInput.Result>()
-								.AddQueryInput("input", "Foo")
+								.TransformWith<ProductWithParameter, ProductWithParameter.Result>()
+								.AddTransformerParameter("input", "Foo")
 								.Single();
 
 					Assert.Equal("Irrelevant", result.ProductName);
@@ -164,7 +164,7 @@ namespace Raven.Tests.ResultsTransformer
         {
             using (var store = NewDocumentStore())
             {
-               new ProductWithQueryInput().Execute(store);
+               new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Name = "Irrelevant" });
@@ -174,8 +174,8 @@ namespace Raven.Tests.ResultsTransformer
                 {
                     var result = session.Query<Product>()
                                 .Customize(x=> x.WaitForNonStaleResults())
-                                .TransformWith<ProductWithQueryInput, ProductWithQueryInput.Result>()
-                                .AddQueryInput("input", "Foo")
+                                .TransformWith<ProductWithParameter, ProductWithParameter.Result>()
+                                .AddTransformerParameter("input", "Foo")
                                 .Single();
 
                     Assert.Equal("Foo", result.Input);
@@ -189,7 +189,7 @@ namespace Raven.Tests.ResultsTransformer
 		{
 			using (var store = NewDocumentStore())
 			{
-				new ProductWithQueryInputAndInclude().Execute(store);
+				new ProductWithParametersAndInclude().Execute(store);
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Product { Name = "Irrelevant", CategoryId = "Category/1"});
@@ -200,7 +200,7 @@ namespace Raven.Tests.ResultsTransformer
 				{
 					var result = session.Query<Product>()
 								.Customize(x => x.WaitForNonStaleResults())
-								.TransformWith<ProductWithQueryInputAndInclude, ProductWithQueryInputAndInclude.Result>()
+								.TransformWith<ProductWithParametersAndInclude, ProductWithParametersAndInclude.Result>()
 								.Single();
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 					Assert.NotNull(result);

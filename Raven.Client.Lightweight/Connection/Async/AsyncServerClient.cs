@@ -772,13 +772,13 @@ namespace Raven.Client.Connection.Async
 		/// Begins an async multi get operation
 		/// </summary>
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
-											  Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
+											  Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", operationMetadata => DirectGetAsync(operationMetadata, keys, includes, transformer, queryInputs, metadataOnly));
+			return ExecuteWithReplication("GET", operationMetadata => DirectGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, metadataOnly));
 		}
 
 		private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
-														   Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
+														   Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly)
 		{
 			var path = operationMetadata.Url + "/queries/?";
 			if (metadataOnly)
@@ -790,11 +790,11 @@ namespace Raven.Client.Connection.Async
 			if (string.IsNullOrEmpty(transformer) == false)
 				path += "&transformer=" + transformer;
 
-			if (queryInputs != null)
+			if (transformerParameters != null)
 			{
-				path = queryInputs.Aggregate(path,
-											 (current, queryInput) =>
-											 current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+				path = transformerParameters.Aggregate(path,
+											 (current, transformerParam) =>
+											 current + ("&" + string.Format("tp-{0}={1}", transformerParam.Key, transformerParam.Value)));
 			}
 
 			var metadata = new RavenJObject();
@@ -1144,7 +1144,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 									RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
-									string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
+									string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
@@ -1167,11 +1167,11 @@ namespace Raven.Client.Connection.Async
 				{
 					actualUrl += "&transformer=" + transformer;
 
-					if (queryInputs != null)
+					if (transformerParameters != null)
 					{
-						actualUrl = queryInputs.Aggregate(actualUrl,
-											 (current, queryInput) =>
-											 current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+						actualUrl = transformerParameters.Aggregate(actualUrl,
+											 (current, transformerParamater) =>
+											 current + ("&" + string.Format("tp-{0}={1}", transformerParamater.Key, transformerParamater.Value)));
 					}
 				}
 
@@ -1195,7 +1195,7 @@ namespace Raven.Client.Connection.Async
 																				.ToArray();
 				return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults,
 													() => StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation,
-														  metadataOnly, exclude, transformer, queryInputs),
+														  metadataOnly, exclude, transformer, transformerParameters),
 													conflictedResultId =>
 												   new ConflictException(
 													   "Conflict detected on " +
@@ -1250,7 +1250,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="includes">The include paths</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
 			var method = query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest ? "POST" : "GET";
 
