@@ -81,6 +81,7 @@ class shell extends viewModelBase {
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
     static currentFsChangesApi = ko.observable<changesApi>(null);
+    static currentCsChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
@@ -485,6 +486,7 @@ class shell extends viewModelBase {
             if (shell.currentFsChangesApi()) {
                 shell.currentFsChangesApi().dispose();
             }
+
             shell.currentFsChangesApi(new changesApi(fs));
 
             this.currentConnectedFileSystem = fs;
@@ -493,14 +495,15 @@ class shell extends viewModelBase {
 
     private updateCsChangesApi(cs: counterStorage) {
         //TODO: enable changes api for counter storages, server side
-/*        if (!cs.disabled() && this.currentConnectedCounterStorage.name != cs.name) {
-            if (shell.currentFsChangesApi()) {
-                shell.currentFsChangesApi().dispose();
+        if (!cs.disabled() && this.currentConnectedCounterStorage.name != cs.name) {
+            if (shell.currentCsChangesApi()) {
+                shell.currentCsChangesApi().dispose();
             }
-            shell.currentFsChangesApi(new changesApi(cs));
+
+            shell.currentCsChangesApi(new changesApi(cs));
 
             this.currentConnectedCounterStorage = cs;
-        }*/
+        }
     }
     
     static fetchDbStats(db: database, forceFetch: boolean = false) {
