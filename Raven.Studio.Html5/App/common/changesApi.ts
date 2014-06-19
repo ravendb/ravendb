@@ -25,12 +25,13 @@ class changesApi {
     private watchedFolders = {};
     private commandBase = new commandBase();
 
-    constructor(private rs: resource, coolDownWithDataLoss?:number) {
+    constructor(private rs: resource) {
         this.eventsId = this.makeId();
-        this.connect(coolDownWithDataLoss);
     }
 
-    private connect(coolDownWithDataLoss: number = 0) {
+    public connect(coolDownWithDataLoss: number = 0): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
         if ("WebSocket" in window) {
             var host = window.location.host;
             var resourceUrl = appUrl.forResourceQuery(this.rs);
@@ -38,19 +39,27 @@ class changesApi {
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
             var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
-            getTokenTask.done((tokenObject: singleAuthToken) => {
-                var token = tokenObject.Token;
+            getTokenTask
+                .done((tokenObject: singleAuthToken) => {
+                    var token = tokenObject.Token;
 
-                this.webSocket = new WebSocket('ws://' + host + resourceUrl + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
+                    this.webSocket = new WebSocket('ws://' + host + resourceUrl + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
 
-                this.webSocket.onmessage = (e) => this.onEvent(e);
-                this.webSocket.onerror = (e) => this.onError(e);
-                this.webSocket.onclose = (e) => this.isConnectionClosed = true;
-            });
+                    this.webSocket.onmessage = (e) => this.onEvent(e);
+                    this.webSocket.onerror = (e) => this.onError(e);
+                    this.webSocket.onclose = () => this.isConnectionClosed = true;
+                    this.webSocket.onopen = () => {
+                        deferred.resolve();
+                    }
+                })
+                .fail(() => deferred.reject());
         }
         else {
             console.log("WebSocket NOT supported by your Browser!"); // The browser doesn't support WebSocket
+            deferred.reject();
         }
+
+        return deferred;
     }
 
     private send(command: string, value?: string) {

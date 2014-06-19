@@ -210,13 +210,13 @@
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a data-bind="attr: { href: appUrls.databases } ,visible:!appUrls.isAreaActive('databases')() ">Databases</a>
+                                                <a data-bind="attr: { href: appUrls.databases } ,visible: !appUrls.isAreaActive('databases')() ">Databases</a>
                                             </li>
                                             <li>
-                                                <a data-bind="attr: { href: appUrls.filesystems } ,visible:!appUrls.isAreaActive('filesystems')()">File Systems</a>
+                                                <a data-bind="attr: { href: appUrls.filesystems } ,visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
                                             </li>
                                             <li>
-                                                <a data-bind="attr: { href: appUrls.couterStorages } ,visible:!appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
+                                                <a data-bind="attr: { href: appUrls.couterStorages } ,visible: !appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
                                             </li>
                                         </ul>
                                     </li>
@@ -250,7 +250,7 @@
 <footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases') && !isDatabaseDisabled()">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')() && !isDatabaseDisabled()">
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>

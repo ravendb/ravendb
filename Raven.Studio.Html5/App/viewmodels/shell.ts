@@ -106,6 +106,7 @@ class shell extends viewModelBase {
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+        shell.globalChangesApi.connect();
 
         this.isDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -246,7 +247,7 @@ class shell extends viewModelBase {
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
 
-                    if (existingResource == null) {
+                    if (existingResource == null) { // new database
                         var newResource = this.createNewResource(typeHash, receivedResourceName, dto);
                         observableResourceArray.unshift(newResource);
                     } else {
@@ -471,13 +472,16 @@ class shell extends viewModelBase {
                 shell.currentDbChangesApi().dispose();
             }
 
-            shell.currentDbChangesApi(new changesApi(db, 5000));
+            shell.currentDbChangesApi(new changesApi(db));
 
-            shell.currentDbChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentDbChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentDbChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            var connectWebSocketTask: JQueryPromise<any> = shell.currentDbChangesApi().connect(5000);
+            connectWebSocketTask.done(() => {
+                shell.currentDbChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
+                shell.currentDbChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
+                shell.currentDbChangesApi().watchBulks(() => shell.fetchDbStats(db));
 
-            this.currentConnectedDatabase = db;
+                this.currentConnectedDatabase = db;
+            });
         }
     }
 
@@ -489,7 +493,12 @@ class shell extends viewModelBase {
 
             shell.currentFsChangesApi(new changesApi(fs));
 
-            this.currentConnectedFileSystem = fs;
+            var connectWebSocketTask: JQueryPromise<any> = shell.currentDbChangesApi().connect(5000);
+            connectWebSocketTask.done(() => {
+                
+                this.currentConnectedFileSystem = fs;
+            });
+            
         }
     }
 
@@ -502,7 +511,11 @@ class shell extends viewModelBase {
 
             shell.currentCsChangesApi(new changesApi(cs));
 
-            this.currentConnectedCounterStorage = cs;
+            var connectWebSocketTask: JQueryPromise<any> = shell.currentDbChangesApi().connect(5000);
+            connectWebSocketTask.done(() => {
+
+                this.currentConnectedCounterStorage = cs;
+            });
         }
     }
     
