@@ -383,7 +383,7 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false,
+		public QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false,
 			bool indexEntriesOnly = false)
 		{
 			try

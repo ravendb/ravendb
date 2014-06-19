@@ -44,9 +44,9 @@ namespace Raven.Client.Connection
 			asyncAdminServerClient.StopIndexingAsync().WaitUnwrap();
 		}
 
-		public void StartIndexing()
+        public void StartIndexing(int? maxNumberOfParallelIndexTasks)
 		{
-			asyncAdminServerClient.StartIndexingAsync().WaitUnwrap();
+            asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks).WaitUnwrap();
 		}
 
 		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
@@ -61,12 +61,22 @@ namespace Raven.Client.Connection
 
 		public string GetIndexingStatus()
 		{
-			return asyncAdminServerClient.GetIndexingStatusAsync().Result;
+			return asyncAdminServerClient.GetIndexingStatusAsync().ResultUnwrap();
+		}
+
+		public BuildNumber GetBuildNumber()
+		{
+			return asyncAdminServerClient.GetBuildNumberAsync().ResultUnwrap();
+		}
+
+		public string[] GetDatabaseNames(int pageSize, int start = 0)
+		{
+			return asyncAdminServerClient.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
 		}
 
 		public AdminStatistics GetStatistics()
 		{
-			return asyncAdminServerClient.GetStatisticsAsync().Result;
+			return asyncAdminServerClient.GetStatisticsAsync().ResultUnwrap();
 		}
 	}
 }
