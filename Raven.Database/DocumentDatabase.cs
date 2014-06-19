@@ -91,7 +91,7 @@ namespace Raven.Database
             DocumentLock = new PutSerialLock();
             Name = configuration.DatabaseName;
             Configuration = configuration;
-            this.transportState = new TransportState();
+            transportState = new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))

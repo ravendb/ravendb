@@ -7,6 +7,7 @@ import changeSubscription = require('models/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 
 class changesApi {
 
@@ -29,18 +30,23 @@ class changesApi {
         this.connect(coolDownWithDataLoss);
     }
 
-    private connect(coolDownWithDataLoss:number = 0) {
+    private connect(coolDownWithDataLoss: number = 0) {
         if ("WebSocket" in window) {
             var host = window.location.host;
             var resourceUrl = appUrl.forResourceQuery(this.rs);
 
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            this.webSocket = new WebSocket("ws://" + host + resourceUrl + '/changes/websocket?id=' + this.eventsId + "&cooldownwithdataloss=" + coolDownWithDataLoss);
+            var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
+            getTokenTask.done((tokenObject: singleAuthToken) => {
+                var token = tokenObject.Token;
 
-            this.webSocket.onmessage = (e) => this.onEvent(e);
-            this.webSocket.onerror = (e) => this.onError(e);
-            this.webSocket.onclose = (e) => this.isConnectionClosed = true;
+                this.webSocket = new WebSocket('ws://' + host + resourceUrl + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
+
+                this.webSocket.onmessage = (e) => this.onEvent(e);
+                this.webSocket.onerror = (e) => this.onError(e);
+                this.webSocket.onclose = (e) => this.isConnectionClosed = true;
+            });
         }
         else {
             console.log("WebSocket NOT supported by your Browser!"); // The browser doesn't support WebSocket
@@ -61,6 +67,7 @@ class changesApi {
     }
 
     private onError(e: any) {
+        this.isConnectionClosed = true;
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
 
@@ -245,7 +252,7 @@ class changesApi {
 
     dispose() {
         if (this.webSocket && !this.isConnectionClosed) {
-            console.log("Disconnecting from changes API");
+            console.log("Disconnecting from changes API for " + this.rs.name);
             this.send('disconnect');
             this.webSocket.close();
         }

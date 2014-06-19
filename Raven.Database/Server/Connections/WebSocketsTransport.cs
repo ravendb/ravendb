@@ -10,6 +10,7 @@ using Microsoft.Owin;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Counters;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -70,7 +71,7 @@ namespace Raven.Database.Server.Connections
             Connected = true;
             Id = context.Request.Query["id"];
             long waitTimeBetweenMessages = 0;
-            long.TryParse( context.Request.Query["cooldownwithdataloss"], out waitTimeBetweenMessages);
+            long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
             CoolDownWithDataLossInMilisecods = waitTimeBetweenMessages;
         }
 
@@ -185,21 +186,24 @@ namespace Raven.Database.Server.Connections
             }
 
             var documentDatabase = await GetDatabase();
-            var fileSystem = await GetFilesystem();
+			var fileSystem = await GetFileSystem();
+	        var counterStorage = await GetCounterStorage();
 
-            if (documentDatabase == null && fileSystem == null)
+			if (documentDatabase == null && fileSystem == null && counterStorage == null)
             {
                 return false;
             }
 
-            var singleUseToken = _context.Request.Headers["Single-Use-Auth-Token"];
+			var singleUseToken = _context.Request.Query["singleUseAuthToken"];
 
             if (string.IsNullOrEmpty(singleUseToken) == false)
             {
                 object msg;
                 HttpStatusCode code;
                 IPrincipal user;
-                if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, documentDatabase.Name, out msg, out code, out user) == false)
+				var resourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : documentDatabase.Name;
+
+				if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, resourceName, out msg, out code, out user) == false)
                 {
                     _context.Response.StatusCode = (int) code;
                     _context.Response.ReasonPhrase = code.ToString();
@@ -231,35 +235,16 @@ namespace Raven.Database.Server.Connections
             {
                 fileSystem.TransportState.Register(this);
             }
+			else if (counterStorage != null)
+			{
+				counterStorage.TransportState.Register(this);
+			}
             else if (documentDatabase != null)
             {
-            documentDatabase.TransportState.Register(this);
+				documentDatabase.TransportState.Register(this);
             }
 
             return true;
-        }
-
-
-        private async Task<RavenFileSystem> GetFilesystem()
-        {
-            var fsName = GetFsName();
-
-            if (fsName == null)
-                return null;
-
-            RavenFileSystem ravenFileSystem;
-            try
-            {
-                ravenFileSystem = await _options.FileSystemLandlord.GetFileSystemInternal(fsName);
-            }
-            catch (Exception e)
-            {
-                _context.Response.StatusCode = 500;
-                _context.Response.ReasonPhrase = "InternalServerError";
-                _context.Response.Write(e.ToString());
-                return null;
-            }
-            return ravenFileSystem;
         }
 
         private async Task<DocumentDatabase> GetDatabase()
@@ -284,30 +269,82 @@ namespace Raven.Database.Server.Connections
             return documentDatabase;
         }
 
+		private async Task<RavenFileSystem> GetFileSystem()
+		{
+			var fsName = GetFileSystemName();
+
+			if (fsName == null)
+				return null;
+
+			RavenFileSystem ravenFileSystem;
+			try
+			{
+				ravenFileSystem = await _options.FileSystemLandlord.GetFileSystemInternal(fsName);
+			}
+			catch (Exception e)
+			{
+				_context.Response.StatusCode = 500;
+				_context.Response.ReasonPhrase = "InternalServerError";
+				_context.Response.Write(e.ToString());
+				return null;
+			}
+			return ravenFileSystem;
+		}
+
+		private async Task<CounterStorage> GetCounterStorage()
+		{
+			var csName = GetCounterStorageName();
+
+			if (csName == null)
+				return null;
+
+			CounterStorage counterStorage;
+			try
+			{
+				counterStorage = await _options.CountersLandlord.GetCounterInternal(csName);
+			}
+			catch (Exception e)
+			{
+				_context.Response.StatusCode = 500;
+				_context.Response.ReasonPhrase = "InternalServerError";
+				_context.Response.Write(e.ToString());
+				return null;
+			}
+			return counterStorage;
+		}
+
         private string GetDatabaseName()
         {
             var localPath = _context.Request.Uri.LocalPath;
-            const string databasesPrefix = "/databases/";
-            if (localPath.StartsWith(databasesPrefix) == false)
-                return null;
+			const string databasesPrefix = "/databases/";
 
-            var indexOf = localPath.IndexOf('/', databasesPrefix.Length+1);
-            if (indexOf == -1)
-                return null;
-            return localPath.Substring(databasesPrefix.Length, indexOf - databasesPrefix.Length);
+			return GetResourceName(localPath, databasesPrefix);
         }
 
-        private string GetFsName()
+        private string GetFileSystemName()
         {
             var localPath = _context.Request.Uri.LocalPath;
-            const string fsPrefix = "/fs/";
-            if (localPath.StartsWith(fsPrefix) == false)
-                return null;
+			const string fileSystemPrefix = "/fs/";
 
-            var indexOf = localPath.IndexOf('/', fsPrefix.Length + 1);
-            if (indexOf == -1)
-                return null;
-            return localPath.Substring(fsPrefix.Length, indexOf - fsPrefix.Length);
-    }
+			return GetResourceName(localPath, fileSystemPrefix);
+		}
+
+		private string GetCounterStorageName()
+		{
+			var localPath = _context.Request.Uri.LocalPath;
+			const string counterStoragePrefix = "/counters/";
+
+			return GetResourceName(localPath, counterStoragePrefix);
+		}
+
+	    private string GetResourceName(string localPath, string prefix)
+	    {
+			if (localPath.StartsWith(prefix) == false)
+				return null;
+
+			var indexOf = localPath.IndexOf('/', prefix.Length + 1);
+
+		    return (indexOf > -1) ? localPath.Substring(prefix.Length, indexOf - prefix.Length) : null;
+	    }
     }
 }
