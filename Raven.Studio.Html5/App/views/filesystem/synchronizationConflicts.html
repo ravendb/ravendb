@@ -1,4 +1,4 @@
-﻿<div class="synchronization-group panel panel-default" data-bind="visible: isConflictsVisible()">
+﻿<div class="synchronization-group panel panel-default" >
 
     <div class="panel-heading">
         <h4 class="panel-title">
@@ -23,11 +23,11 @@
                 <tbody data-bind="foreach: conflicts">
                     <tr>
                         <td style="padding:0px">
-                            <h5 class="pull-left">
-                                <a class="use-bootstrap-tooltip">
-                                    <input type="checkbox" data-bind="attr: { value: fileName }, checked: $root.selectedConflicts" />
-                                    <span data-bind="text: fileName"></span>
-                                </a>
+                            <h5 class="pull-left">                              
+                                    <a >
+                                        <input type="checkbox" data-bind="attr: { value: fileName }, checked: $root.selectedConflicts" />
+                                        <span data-bind="text: fileName"></span>
+                                    </a>
                             </h5>
                         </td>
                     </tr>

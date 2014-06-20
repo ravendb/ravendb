@@ -14,7 +14,7 @@ namespace Raven.Database.Server
 		private readonly DocumentDatabase systemDatabase;
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
-		private CountersLandlord countersLandlord;
+		private readonly CountersLandlord countersLandlord;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
@@ -33,8 +33,7 @@ namespace Raven.Database.Server
 				{
 					systemDatabase = db;
 				}
-				var transportState = systemDatabase.TransportState;
-			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase, transportState);
+			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);

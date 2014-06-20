@@ -329,14 +329,14 @@ namespace Raven.Client.Document
         }
 
 
-        private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+        private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             if (ids.Length == 0)
                 return new T[0];
 
             IncrementRequestCount();
 
-            var multiLoadResult = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs);
+            var multiLoadResult = DatabaseCommands.Get(ids, new string[] { }, transformer, transformerParameters);
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
         }
 
@@ -523,7 +523,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-            return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
         }
 
         public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
@@ -533,7 +533,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
 	    public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
@@ -542,7 +542,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-		    return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+		    return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
 	    }
 
 	    public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
@@ -551,7 +551,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
 	    }
 
 	    public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -562,7 +562,7 @@ namespace Raven.Client.Document
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
 	    }
 
 	    public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -573,7 +573,7 @@ namespace Raven.Client.Document
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
 	    }
 
 	    /// <summary>
@@ -638,7 +638,8 @@ namespace Raven.Client.Document
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
-                              meta.Value<string>(Constants.DocumentIdFieldName);
+                              meta.Value<string>(Constants.DocumentIdFieldName) ??
+                              enumerator.Current.Value<string>(Constants.DocumentIdFieldName);
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)
@@ -993,7 +994,7 @@ namespace Raven.Client.Document
 
 		    return
 			    DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
-			                                pagingInformation: pagingInformation, transformer: transformer, queryInputs: configuration.QueryInputs)
+			                                pagingInformation: pagingInformation, transformer: transformer, transformerParameters: configuration.TransformerParameters)
 			                    .Select(TrackEntity<TResult>)
 			                    .ToArray();
 	    }

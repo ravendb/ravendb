@@ -5,46 +5,67 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
 
+import viewModelBase = require("viewmodels/viewModelBase");
+import resource = require("models/resource");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
+import counterStorage = require("models/counter/counterStorage");
 import document = require("models/document");
-import appUrl = require("common/appUrl");
-import uploadQueueHelper = require("common/uploadQueueHelper");
 import collection = require("models/collection");
 import uploadItem = require("models/uploadItem");
+import changeSubscription = require("models/changeSubscription");
+
+import appUrl = require("common/appUrl");
+import uploadQueueHelper = require("common/uploadQueueHelper");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
+import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import changesApi = require("common/changesApi");
+
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
-
 import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
-import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
-import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
-import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import changesApi = require("common/changesApi");
-import changeSubscription = require("models/changeSubscription");
-
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
-
-import counterStorage = require("models/counter/counterStorage");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
+import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 class shell extends viewModelBase {
     private router = router;
 
-    databases = ko.observableArray<database>();
-    counterStorages = ko.observableArray<counterStorage>();
+    static databases = ko.observableArray<database>();
+    listedDatabases: KnockoutComputed<database[]>;
+    isDatabaseDisabled: KnockoutComputed<boolean>;
+    currentConnectedDatabase: database;
+    systemDb: database;
+    databasesLoadedTask: JQueryPromise<any>;
+    goToDocumentSearch = ko.observable<string>();
+    goToDocumentSearchResults = ko.observableArray<string>();
+
+    static fileSystems = ko.observableArray<filesystem>();
+    listedFileSystems: KnockoutComputed<filesystem[]>;
+    isFileSystemDisabled: KnockoutComputed<boolean>;
+    currentConnectedFileSystem: filesystem;
+    fileSystemsLoadedTask: JQueryPromise<any>;
+    canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
+
+    static counterStorages = ko.observableArray<counterStorage>();
+    listedCounterStorages: KnockoutComputed<counterStorage[]>;
+    isCounterStorageDisabled: KnockoutComputed<boolean>;
+    currentConnectedCounterStorage: counterStorage;
+    counterStoragesLoadedTask: JQueryPromise<any>;
+    canShowCountersNavbar = ko.computed(() => shell.counterStorages().length > 0 && this.appUrls.isAreaActive('counterstorages')());
+
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
-    databasesLoadedTask: JQueryPromise<any>;
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
@@ -53,59 +74,33 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-    filesystems = ko.observableArray<filesystem>();
-    filesystemsLoadedTask: JQueryPromise<any>;
-    canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
-    
-    coutersLoadedTask:JQueryPromise<any>;
     currentRawUrl = ko.observable<string>("");
-    canShowCountersNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('counterstorages'));
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
-    goToDocumentSearch = ko.observable<string>();
-    goToDocumentSearchResults = ko.observableArray<string>();
-    refreshTimeoutFlag: boolean = true;
-    isDatabaseDisabled: KnockoutComputed<boolean>;
-    listedDatabases: KnockoutComputed<database[]>;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
+    static currentFsChangesApi = ko.observable<changesApi>(null);
 
-    globalDocPrefixChangesSubscription: changeSubscription;
-
-    modelPollingTimeoutFlag: boolean = true;
-    
-    getCurrentActiveDBFeatureName() {
-        if (this.appUrls.isAreaActive('filesystems')() === true) {
-            return 'File Systems';
-        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
-            return 'Counter Storages';
-        } else {
-            return 'Databases';
-        }
-    }
-    getCurrentActiveDBFeatureHref () {
-        if (this.appUrls.isAreaActive('filesystems')() === true) {
-            return this.appUrls.filesystems();
-        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
-            return this.appUrls.counterStorageManagement();
-        } else {
-            return this.appUrls.databases();
-        }
-    }
-    
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
+        ko.postbox.subscribe("ActivateCounterStorageWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db, true); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs, true); });
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs, true); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
+        this.systemDb = appUrl.getSystemDatabase();
+        this.currentConnectedDatabase = this.systemDb;
+        this.currentConnectedFileSystem = new filesystem(null);
+        this.currentConnectedCounterStorage = new counterStorage(null);
         this.appUrls = appUrl.forCurrentDatabase();
-        
+
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -116,13 +111,39 @@ class shell extends viewModelBase {
             return !!activeDb ? activeDb.disabled() : false;
         });
 
-        this.listedDatabases = ko.computed(() => {
-            var currentDb = this.activeDatabase();
-            if (!!currentDb) {
-                return this.databases().filter(database => database.name != currentDb.name);
-            }
-            return this.databases();
+        this.isFileSystemDisabled = ko.computed(() => {
+            var activeFs = this.activeFilesystem();
+            return !!activeFs ? activeFs.disabled() : false;
         });
+
+        this.isCounterStorageDisabled = ko.computed(() => {
+            var activeCs = this.activeCounterStorage();
+            return !!activeCs ? activeCs.disabled() : false;
+        });
+
+        this.listedDatabases = ko.computed(() => {
+            var currentDatabase = this.activeDatabase();
+            if (!!currentDatabase) {
+                return shell.databases().filter(database => database.name != currentDatabase.name);
+            }
+            return shell.databases();
+        }, this);
+
+        this.listedFileSystems = ko.computed(() => {
+            var currentFileSystem = this.activeFilesystem();
+            if (!!currentFileSystem) {
+                return shell.fileSystems().filter(fileSystem => fileSystem.name != currentFileSystem.name);
+            }
+            return shell.fileSystems();
+        }, this);
+
+        this.listedCounterStorages = ko.computed(() => {
+            var currentCounterStorage = this.activeCounterStorage();
+            if (!!currentCounterStorage) {
+                return shell.counterStorages().filter(counterStorage => counterStorage.name != currentCounterStorage.name);
+            }
+            return shell.counterStorages();
+        }, this);
     }
 
     activate(args: any) {
@@ -149,7 +170,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
-            { route: ['', 'counterstorages'], title: 'File Systems', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages},
+            { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
             { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
             { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
             { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
@@ -180,31 +201,6 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-
-        shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
-            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
-                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
-
-                if (e.Type == documentChangeType.Delete) {
-                    var deletedDbName = e.Id.substring(16, e.Id.length);
-                    
-                    this.databases.remove((dbToRemove: database) => {
-                    
-                        return dbToRemove.name === deletedDbName;
-                    });
-                    
-                }
-
-                if (this.refreshTimeoutFlag) {
-                    setTimeout(() => this.modelPolling(), 5000);
-                }
-            }
-        }, "Raven/Databases");
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-        
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -223,32 +219,103 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases()),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase(), "#databases")),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem(), "#filesystems")),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage(), "#counterstorages"))
         ];
+    }
+
+    private changesApiFiredForResource(e: documentChangeNotificationDto,
+            observableResourceArray: KnockoutObservableArray<any>,
+            activeResource: any, typeHash: string) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
+            var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+            
+            if (e.Type === documentChangeType.Delete) {
+                var resourceToDelete = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+                if (!!resourceToDelete) {
+                    observableResourceArray.remove(resourceToDelete);
+
+                    if (observableResourceArray().length != 0 && !observableResourceArray.contains(activeResource)) {
+                        this.selectResource(observableResourceArray().first(), typeHash);
+                    }
+                }
+            } else { // e.Type === documentChangeType.Put
+                var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
+                getSystemDocumentTask.done((dto: databaseDocumentDto) => {
+                    var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+
+                    if (existingResource == null) {
+                        var newResource = this.createNewResource(typeHash, receivedResourceName, dto);
+                        observableResourceArray.unshift(newResource);
+                    } else {
+                        if (existingResource.disabled() != dto.Disabled) { //disable status change
+                            existingResource.disabled(dto.Disabled);
+                        }
+                        if (typeHash == "#databases") { //for databases, bundle change
+                            existingResource.activeBundles(dto.Settings["Raven/ActiveBundles"].split(";"));
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    private createNewResource(typeHash: string, resourceName: string, dto: databaseDocumentDto) {
+        var newResource;
+
+        switch (typeHash) {
+            case ("#databases"):
+                newResource = new database(resourceName, dto.Disabled, dto.Settings["Raven/ActiveBundles"].split(";"));
+                break;
+            case ("#filesystems"):
+                newResource = new filesystem(resourceName, dto.Disabled);
+                break;
+            default: // case ("#counterstorages")
+                newResource = new counterStorage(resourceName, dto.Disabled);
+        }
+
+        return newResource;
+    }
+
+    selectResource(rs, locationHash: string) {
+        rs.activate();
+
+        if (window.location.hash !== locationHash) {
+            var updatedUrl = appUrl.forCurrentPage(rs);
+            this.navigate(updatedUrl);
+        }
     }
 
     databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
         systemDatabase.isVisible(false);
-        this.databases(databases.concat([systemDatabase]));
-        if (this.databases().length == 1) {
+        shell.databases(databases.concat([systemDatabase]));
+        if (shell.databases().length == 1) {
             systemDatabase.activate();
         } else {
             var urlDatabase = appUrl.getDatabase();
             var newSelectedDb;
-            if (urlDatabase != null && (newSelectedDb = this.databases.first(x => x.name == urlDatabase.name)) != null) {
+            if (urlDatabase != null && (newSelectedDb = shell.databases.first(x => x.name == urlDatabase.name)) != null) {
                 newSelectedDb.activate();
             } else {
-                this.databases.first(x => x.isVisible()).activate();
+                shell.databases.first(x => x.isVisible()).activate();
             }
         }
     }
 
-    filesystemsLoaded(filesystems) {
-        this.filesystems(filesystems);
-        if (this.filesystems().length != 0) {
-            this.filesystems.first(x=> x.isVisible()).activate();
+    fileSystemsLoaded(filesystems) {
+        shell.fileSystems(filesystems);
+        if (shell.fileSystems().length != 0) {
+            shell.fileSystems.first(x=> x.isVisible()).activate();
+        }
+    }
+
+    counterStoragesLoaded(results: counterStorage[]) {
+        shell.counterStorages(results);
+        if (shell.counterStorages().length != 0) {
+            shell.counterStorages.first(x => x.isVisible()).activate();
         }
     }
 
@@ -268,38 +335,23 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
-        });
+            });
 
-        this.filesystemsLoadedTask = new getFilesystemsCommand()
+        this.fileSystemsLoadedTask = new getFilesystemsCommand()
             .execute()
-            .done(results => this.filesystemsLoaded(results));
+            .done((results: filesystem[]) => this.fileSystemsLoaded(results));
 
 
-        this.coutersLoadedTask = new getCounterStoragesCommand()
+        this.counterStoragesLoadedTask = new getCounterStoragesCommand()
             .execute()
             .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
-    }
-
-    counterStoragesLoaded(results: counterStorage[]) {
-        /*
-         * 
-         * this.filesystems(filesystems);
-        if (this.filesystems().length != 0) {
-            this.filesystems.first(x=> x.isVisible()).activate();
-        }
-         */
-        
-        this.counterStorages(results);
-        if (this.counterStorages().length != 0) {
-            this.counterStorages.first(x => x.isVisible()).activate();
-        }
     }
 
     fetchStudioConfig() {
         new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase())
             .execute()
             .done((doc: document) => {
-              appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
+                appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             });
     }
 
@@ -345,7 +397,9 @@ class shell extends viewModelBase {
             if (alert.type === alertType.danger || alert.type === alertType.warning) {
                 fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
             }
-            setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
+            setTimeout(() => {
+                this.closeAlertAndShowNext(alert);
+            }, fadeTime);
         }
     }
 
@@ -376,10 +430,10 @@ class shell extends viewModelBase {
         this.launchDocEditor(null);
     }
 
-    activateDatabaseWithName(databaseName: string) {
+    private activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
-                var matchingDatabase = this.databases().first(d => d.name == databaseName);
+                var matchingDatabase = shell.databases().first(db => db.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
                     ko.postbox.publish("ActivateDatabase", matchingDatabase);
                 }
@@ -387,100 +441,112 @@ class shell extends viewModelBase {
         }
     }
 
-    activateFilesystemWithName(filesystemName: string) {
-        if (this.filesystemsLoadedTask) {
-            this.filesystemsLoadedTask.done(() => {
-                var matchingFilesystem = this.filesystems().first(d => d.name == filesystemName);
-                if (matchingFilesystem && this.activeFilesystem() !== matchingFilesystem) {
-                    ko.postbox.publish("ActivateFilesystem", matchingFilesystem);
+    private activateFilesystemWithName(fileSystemName: string) {
+        if (this.fileSystemsLoadedTask) {
+            this.fileSystemsLoadedTask.done(() => {
+                var matchingFileSystem = shell.fileSystems().first(fs => fs.name == fileSystemName);
+                if (matchingFileSystem && this.activeFilesystem() !== matchingFileSystem) {
+                    ko.postbox.publish("ActivateFilesystem", matchingFileSystem);
                 }
             });
         }
     }
 
-    updateChangesApi(newDb: database) {
-        if (!newDb.disabled()) {
+    private activateCounterStorageWithName(counterStorageName: string) {
+        if (this.counterStoragesLoadedTask) {
+            this.counterStoragesLoadedTask.done(() => {
+                var matchingCounterStorage = shell.counterStorages().first(cs => cs.name == counterStorageName);
+                if (matchingCounterStorage && this.activeCounterStorage() !== matchingCounterStorage) {
+                    ko.postbox.publish("ActivateCounterStorage", matchingCounterStorage);
+                }
+            });
+        }
+    }
+
+    private updateDbChangesApi(db: database) {
+        if (!db.disabled() && this.currentConnectedDatabase.name != db.name ||
+            db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
             if (shell.currentDbChangesApi()) {
                 shell.currentDbChangesApi().dispose();
             }
 
-            shell.currentDbChangesApi(new changesApi(newDb));
+            shell.currentDbChangesApi(new changesApi(db, 5000));
 
-            shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-                if (this.modelPollingTimeoutFlag === true) {
-                    this.modelPollingTimeoutFlag = false;
-                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                    this.modelPolling();
-                }
-            });
+            shell.currentDbChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
+            shell.currentDbChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
+            shell.currentDbChangesApi().watchBulks(() => shell.fetchDbStats(db));
 
-            shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
-                if (this.modelPollingTimeoutFlag === true) {
-                    this.modelPollingTimeoutFlag = false;
-                    this.modelPolling();
-                } else {
-                    setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-                }
-            });
+            this.currentConnectedDatabase = db;
         }
     }
 
-    reloadDatabases() {
-        new getDatabasesCommand()
-            .execute()
-            .done(results => {
-                ko.utils.arrayForEach(results, (result:database) => {
-                    var existingDb = this.databases().first(d=> {
-                        return d.name == result.name;
-                    });
-                if (!existingDb ) {
-                    this.databases.unshift(result);
-                    }
-                });
-            });
-                
-        new getFilesystemsCommand()
-            .execute()
-            .done(results => {
-                ko.utils.arrayForEach(results, (result: filesystem) => {
-                    var existingFs = this.filesystems().first(d=> {
-                        return d.name == result.name;
-                });
-                    if (!existingFs) {
-                        this.filesystems.unshift(result);
-                    }
-                });
-        });
+    private updateFsChangesApi(fs: filesystem) {
+        if (!fs.disabled() && this.currentConnectedFileSystem.name != fs.name) {
+            if (shell.currentFsChangesApi()) {
+                shell.currentFsChangesApi().dispose();
+            }
+            shell.currentFsChangesApi(new changesApi(fs));
+
+            this.currentConnectedFileSystem = fs;
+        }
     }
 
-    fetchDbStats(db: database) {
-        if (db && !db.disabled()) {
-            new getDatabaseStatsCommand(db)
-                .execute()
-                .done(result=> db.statistics(result));
-        }
+    private updateCsChangesApi(cs: counterStorage) {
+        //TODO: enable changes api for counter storages, server side
+/*        if (!cs.disabled() && this.currentConnectedCounterStorage.name != cs.name) {
+            if (shell.currentFsChangesApi()) {
+                shell.currentFsChangesApi().dispose();
+            }
+            shell.currentFsChangesApi(new changesApi(cs));
 
-        var fs = this.activeFilesystem();
-        if (fs) {
+            this.currentConnectedCounterStorage = cs;
+        }*/
+    }
+    
+    static fetchDbStats(db: database, forceFetch: boolean = false) {
+        if (db && !db.disabled() && (!db.isInStatsFetchCoolDown || forceFetch)) {
+            if (!db.isInStatsFetchCoolDown) {
+                db.isInStatsFetchCoolDown = true;
+                setTimeout(() => db.isInStatsFetchCoolDown = false, 5000);
+            }
+
+            new getDatabaseStatsCommand(db).execute().done(result => db.statistics(result));
+        }
+    }
+
+    static fetchFsStats(fs: filesystem, forceFetch: boolean = false) {
+        if (fs && !fs.disabled()) {
             new getFilesystemStatsCommand(fs)
                 .execute()
                 .done(result=> fs.statistics(result));
         }
     }
 
-    selectDatabase(db: database) {
-        if (db.name != this.activeDatabase().name) {
-            db.activate();
-            var updatedUrl = appUrl.forCurrentPage(db);
-            this.navigate(updatedUrl);
+    static fetchCsStats(cs: counterStorage, forceFetch: boolean = false) {
+        if (cs && !cs.disabled()) {
+            //TODO: implememnt fetching of counter storage stats
+/*            new getCounterStorageStatsCommand(cs)
+                .execute()
+                .done(result=> cs.statistics(result));*/
         }
     }
 
-    selectFilesystem(fs: filesystem) {
-        if (fs.name != this.activeFilesystem().name) {
-            fs.activate();
-            var updatedUrl = appUrl.forCurrentPage(fs);
-            this.navigate(updatedUrl);
+    getCurrentActiveFeatureName() {
+        if (this.appUrls.isAreaActive('filesystems')() === true) {
+            return 'File Systems';
+        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+            return 'Counter Storages';
+        } else {
+            return 'Databases';
+        }
+    }
+    getCurrentActiveFeatureHref() {
+        if (this.appUrls.isAreaActive('filesystems')() === true) {
+            return this.appUrls.filesystems();
+        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+            return this.appUrls.counterStorageManagement();
+        } else {
+            return this.appUrls.databases();
         }
     }
 
@@ -544,8 +610,6 @@ class shell extends viewModelBase {
             app.showDialog(dialog);
         });
     }
-
-    
 }
 
 export = shell;

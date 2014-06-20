@@ -1,9 +1,10 @@
 ﻿using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
@@ -24,9 +25,9 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	public class FilesController : RavenFsApiController
-	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class FilesController : RavenFsApiController
+    {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/files")]
@@ -35,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             int results;
             var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
 
-            var list = new List<FileHeader>();
+            var list = new List<FileHeaderInformation>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
             return this.GetMessageWithObject(list, HttpStatusCode.OK)
@@ -47,7 +48,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -124,7 +125,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
-			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
+			Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
 			StartSynchronizeDestinationsInBackground();
@@ -137,7 +138,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -187,7 +188,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             Search.Index(name, headers);
 
-            Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+            Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
             StartSynchronizeDestinationsInBackground();
 
@@ -229,6 +230,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                         var operation = new RenameFileOperation
                         {
+                            FileSystem = FileSystem.Name,
                             Name = name,
                             Rename = rename,
                             MetadataAfterOperation = metadata
@@ -259,7 +261,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			try
 			{
-                RavenFileSystem.MetricsCounters.FilesPerSecond.Mark();
+                FileSystem.MetricsCounters.FilesPerSecond.Mark();
 
 				name = RavenFileNameHelper.RavenPath(name);
 
@@ -312,7 +314,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
                     headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
                     Search.Index(name, headers);
-                    Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+                    Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
                     log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
 

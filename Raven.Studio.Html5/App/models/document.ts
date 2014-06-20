@@ -19,6 +19,10 @@ class document implements documentBase {
         return this.__metadata.id;
     }
 
+    getUrl() {
+        return this.getId();
+    }
+
     getDocumentPropertyNames(): Array<string> {
         var propertyNames = [];
         for (var property in this) {

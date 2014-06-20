@@ -92,6 +92,47 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromKeyByEtagIndice()
+		{
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+				.Iterate(Snapshot, writeBatch.Value))
+			{
+				if (!iterator.Seek(Slice.AfterAllKeys))
+					yield break;
+				do
+				{
+					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
+						continue;
+
+					var key = GetKeyFromCurrent(iterator);
+					var etag = Etag.Parse(iterator.CurrentKey.ToString());
+
+					yield return new KeyValuePair<string, Etag>(key,etag);
+				} while (iterator.MovePrev());
+			}
+		}
+
+		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromMetadata()
+		{			
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+				.Iterate(Snapshot, writeBatch.Value))
+			{
+				if (!iterator.Seek(Slice.AfterAllKeys))
+					yield break;
+				do
+				{
+					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
+						continue;
+
+					var key = GetKeyFromCurrent(iterator);
+					var documentMetadata = DocumentMetadataByKey(key, null);
+					yield return new KeyValuePair<string, Etag>(key, documentMetadata.Etag);
+
+				} while (iterator.MovePrev());
+			}
+		}
+
+
 		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null)
 		{
 			if (take < 0)
@@ -535,7 +576,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var dataStream = CreateStream();
 
-
 			using (var finalDataStream = documentCodecs.Aggregate((Stream) new UndisposableStream(dataStream),
 				(current, codec) => codec.Encode(loweredKey, data, metadata, current)))
 			{
@@ -544,7 +584,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
  
 			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch.Value, loweredKey, dataStream, existingVersion); 
+			tableStorage.Documents.Add(writeBatch.Value, loweredKey, dataStream, existingVersion ?? 0); 
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
@@ -599,25 +639,41 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = GetKeyFromCurrent(iterator);
-					if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-						stat.System++;
+                    var doc = DocumentByKey(key, null);
+                    var size = doc.SerializedSizeOnDisk;
+				    stat.TotalSize += size;
+				    if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+				    {
+                        stat.System++;
+				        stat.SystemSize += size;
+				    }
+						
 
 					var metadata = ReadDocumentMetadata(key);
 
 					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
-					if (string.IsNullOrEmpty(entityName))
-						stat.NoCollection++;
-					else
-						stat.IncrementCollection(entityName);
+				    if (string.IsNullOrEmpty(entityName))
+				    {
+                        stat.NoCollection++;
+				        stat.NoCollectionSize += size;
+				    }
+				        
+				    else
+				    {
+  
+                        stat.IncrementCollection(entityName, size);
+ 				    }
+						
 
 					if (metadata.Metadata.ContainsKey(Constants.RavenDeleteMarker))
 						stat.Tombstones++;
 
 				}
 				while (iterator.MoveNext());
-
-				stat.TimeToGenerate = sp.Elapsed;
-				return stat;
+                var sortedStat = stat.Collections.OrderByDescending(x => x.Value.Size).ToDictionary(x => x.Key, x => x.Value);
+                stat.TimeToGenerate = sp.Elapsed;
+			    stat.Collections = sortedStat;
+                return stat;
 			}
 		}
 	}

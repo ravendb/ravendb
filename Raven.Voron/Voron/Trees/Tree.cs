@@ -153,7 +153,8 @@ namespace Voron.Trees
 					"Key size is too big, must be at most " + _tx.DataPager.MaxNodeSize + " bytes, but was " + key.Size, "key");
 
 			Lazy<Cursor> lazy;
-			var foundPage = FindPageFor(key, out lazy);
+			NodeHeader* node;
+			var foundPage = FindPageFor(key, out node, out lazy);
 
 			var page = _tx.ModifyPage(foundPage.PageNumber, foundPage);
 
@@ -161,7 +162,7 @@ namespace Voron.Trees
 			bool? shouldGoToOverflowPage = null;
 			if (page.LastMatch == 0) // this is an update operation
 			{
-				var node = page.GetNode(page.LastSearchPosition);
+				node = page.GetNode(page.LastSearchPosition);
 
 				Debug.Assert(page.GetNodeKey(node).Equals(key));
 
@@ -207,7 +208,7 @@ namespace Voron.Trees
 			{
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
-			    
+
 				var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 			    dataPos = pageSplitter.Execute();
 
@@ -300,19 +301,19 @@ namespace Voron.Trees
 			}
 		}
 
-		internal Page FindPageFor(MemorySlice key, out Lazy<Cursor> cursor)
+		internal Page FindPageFor(MemorySlice key, out NodeHeader* node, out Lazy<Cursor> cursor)
 		{
 			Page p;
 
-			if (TryUseRecentTransactionPage(key, out cursor, out p))
+			if (TryUseRecentTransactionPage(key, out cursor, out p, out node))
 		    {
 		        return p;
 		    }
 
-			return SearchForPage(key, ref cursor);
+			return SearchForPage(key, ref cursor, ref node);
 		}
 
-	    private Page SearchForPage(MemorySlice key, ref Lazy<Cursor> cursor)
+	    private Page SearchForPage(MemorySlice key, ref Lazy<Cursor> cursor, ref NodeHeader* node)
 	    {
 			var p = _tx.GetReadOnlyPage(State.RootPageNumber);
 	        var c = new Cursor();
@@ -358,10 +359,10 @@ namespace Voron.Trees
 	                }
 	            }
 
-	            var node = p.GetNode(nodePos);
-				p = _tx.GetReadOnlyPage(node->PageNumber);
-	            Debug.Assert(node->PageNumber == p.PageNumber,
-	                string.Format("Requested Page: #{0}. Got Page: #{1}", node->PageNumber, p.PageNumber));
+	            var pageNode = p.GetNode(nodePos);
+				p = _tx.GetReadOnlyPage(pageNode->PageNumber);
+	            Debug.Assert(pageNode->PageNumber == p.PageNumber,
+	                string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
 
 	            c.Push(p);
 	        }
@@ -369,7 +370,7 @@ namespace Voron.Trees
 	        if (p.IsLeaf == false)
 	            throw new DataException("Index points to a non leaf page");
 
-	        p.Search(key); // will set the LastSearchPosition
+	        node = p.Search(key); // will set the LastSearchPosition
 
 	        AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
 
@@ -396,8 +397,9 @@ namespace Voron.Trees
 			_tx.AddRecentlyFoundPage(this, foundPage);
 	    }
 
-	    private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<Cursor> cursor, out Page page)
+	    private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<Cursor> cursor, out Page page, out NodeHeader* node)
 		{
+		    node = null;
 			page = null;
 			cursor = null;
 
@@ -417,7 +419,7 @@ namespace Voron.Trees
 			if (page.IsLeaf == false)
 				throw new DataException("Index points to a non leaf page");
 
-			page.NodePositionFor(key); // will set the LastSearchPosition
+			node = page.Search(key); // will set the LastSearchPosition
 
 			var cursorPath = foundPage.CursorPath;
 			var pageCopy = page;
@@ -472,9 +474,9 @@ namespace Voron.Trees
 
 			State.IsModified = true;
 			Lazy<Cursor> lazy;
-			var page = FindPageFor(key, out lazy);
+			NodeHeader* node;
+			var page = FindPageFor(key, out node, out lazy);
 
-			page.NodePositionFor(key);
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
 
@@ -504,12 +506,11 @@ namespace Voron.Trees
 		public ReadResult Read(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			var p = FindPageFor(key, out lazy);
+			NodeHeader* node;
+			var p = FindPageFor(key, out node, out lazy);
 
             if (p.LastMatch != 0)
 		        return null;
-
-		    var node = p.GetNode(p.LastSearchPosition);
 
 			return new ReadResult(NodeHeader.Reader(_tx, node), node->Version);
 		}
@@ -517,8 +518,10 @@ namespace Voron.Trees
 		public int GetDataSize(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			var p = FindPageFor(key, out lazy);
-			var node = p.Search(key);
+			NodeHeader* node;
+			var p = FindPageFor(key, out node, out lazy);
+			if (p == null || p.LastMatch != 0)
+				return -1;
 
 			if (node == null || p.GetNodeKey(node).Compare(key) != 0)
 				return -1;
@@ -529,8 +532,10 @@ namespace Voron.Trees
 		public ushort ReadVersion(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			var p = FindPageFor(key, out lazy);
-			var node = p.Search(key);
+			NodeHeader* node;
+			var p = FindPageFor(key, out node, out lazy);
+			if (p == null || p.LastMatch != 0)
+				return 0;
 
 			if (node == null || p.GetNodeKey(node).Compare(key) != 0)
 				return 0;
@@ -541,16 +546,12 @@ namespace Voron.Trees
 		internal byte* DirectRead(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			var p = FindPageFor(key, out lazy);
-			var node = p.Search(key);
-
-			if (node == null)
+			NodeHeader* node;
+			var p = FindPageFor(key, out node, out lazy);
+			if (p == null || p.LastMatch != 0)
 				return null;
 
-			var foundKey = p.GetNodeKey(node);
-
-			if (foundKey.Compare(key) != 0)
-				return null;
+			Debug.Assert(node != null);
 
 			if (node->Flags == (NodeFlags.PageRef))
 			{

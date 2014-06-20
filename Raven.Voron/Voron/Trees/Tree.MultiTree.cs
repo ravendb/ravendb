@@ -50,7 +50,8 @@ namespace Voron.Trees
 			State.IsModified = true;
 
 			Lazy<Cursor> lazy;
-			var page = FindPageFor(key, out lazy);
+			NodeHeader* node;
+			var page = FindPageFor(key, out node, out lazy);
 			if ((page == null || page.LastMatch != 0))
 			{
 				MultiAddOnNewValue(_tx, key, value, version, maxNodeSize);
@@ -58,7 +59,6 @@ namespace Voron.Trees
 			}
 
 			page = _tx.ModifyPage(page.PageNumber, page);
-
 			var item = page.GetNode(page.LastSearchPosition);
 
 			// already was turned into a multi tree, not much to do here
@@ -206,7 +206,8 @@ namespace Voron.Trees
 		{
 			State.IsModified = true;
 			Lazy<Cursor> lazy;
-			var page = FindPageFor(key, out lazy);
+			NodeHeader* node;
+			var page = FindPageFor(key, out node, out lazy);
 			if (page == null || page.LastMatch != 0)
 			{
 				return; //nothing to delete - key not found
@@ -264,29 +265,27 @@ namespace Voron.Trees
 		public IIterator MultiRead(Slice key)
 		{
 			Lazy<Cursor> lazy;
-			var page = FindPageFor(key, out lazy);
-
+			NodeHeader* node;
+			var page = FindPageFor(key, out node, out lazy);
 			if (page == null || page.LastMatch != 0)
-			{
 				return new EmptyIterator();
-			}
 
-			var item = page.Search(key);
+			Debug.Assert(node != null);
 
-			var fetchedNodeKey = page.GetNodeKey(item);
+			var fetchedNodeKey = page.GetNodeKey(node);
 			if (fetchedNodeKey.Compare(key) != 0)
 			{
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
 			}
 
-			if (item->Flags == NodeFlags.MultiValuePageRef)
+			if (node->Flags == NodeFlags.MultiValuePageRef)
 			{
-				var tree = OpenOrCreateMultiValueTree(_tx, key, item);
+				var tree = OpenOrCreateMultiValueTree(_tx, key, node);
 
 				return tree.Iterate();
 			}
 
-			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
+			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
 				
 			return new PageIterator(nestedPage);
 		}

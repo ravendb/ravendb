@@ -22,16 +22,25 @@ namespace Raven.Database.Server.Connections
 		public bool Connected { get; set; }
 
 		public event Action Disconnected = delegate { };
+        public long CoolDownWithDataLossInMilisecods { get; set; }
+
+        private long lastMessageSentTick = 0;
+        private object lastMessageEnqueuedAndNotSent = null;
 
 		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
 
-		public ChangesPushContent(RavenDbApiController controller)
+        public ChangesPushContent(RavenBaseApiController controller)
 		{
 			Connected = true;
 			Id = controller.GetQueryStringValue("id");
+            
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
+
+            long coolDownWithDataLossInMilisecods = 0;
+            long.TryParse(controller.GetQueryStringValue("cooldownwithdataloss"), out coolDownWithDataLossInMilisecods);
+            CoolDownWithDataLossInMilisecods = coolDownWithDataLossInMilisecods;
 		}
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -53,13 +62,27 @@ namespace Raven.Database.Server.Connections
 						{
                             await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
 							await writer.FlushAsync();
+
+                            if (lastMessageEnqueuedAndNotSent != null)
+                            {
+                                var obj = JsonConvert.SerializeObject(lastMessageEnqueuedAndNotSent, Formatting.None, new EtagJsonConverter());
+                                await writer.WriteAsync("data: ");
+                                await writer.WriteAsync(obj);
+                                await writer.WriteAsync("\r\n\r\n");
+                                await writer.FlushAsync();
+                            }
 							continue;
 						}
 						manualResetEvent.Reset();
 						object message;
 						while (msgs.TryDequeue(out message))
 						{
-							var obj = JsonConvert.SerializeObject(message, Formatting.None, new EtagJsonConverter());
+                            if (CoolDownWithDataLossInMilisecods > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMilisecods)
+                            {
+                                lastMessageEnqueuedAndNotSent = message;
+                                continue;
+                            }
+                            var obj = JsonConvert.SerializeObject(message, Formatting.None, new EtagJsonConverter());
 							await writer.WriteAsync("data: ");
 							await writer.WriteAsync(obj);
 							await writer.WriteAsync("\r\n\r\n");

@@ -5,12 +5,11 @@
 
 <section class="filesystem-page">
 
-    <div class="text-center" data-bind="visible: !hasCounterStorages()">
+    <div class="text-center" data-bind="visible: counterStorages().length == 0">
         <h3 class="page-header text-info">No counter storages are available. <small>Go ahead and <a href="#" data-bind="click: createNewCountersStorage">create a distributed counter storage</a>.</small></h3>
     </div>
 
-    <div data-bind="visible: hasCounterStorages()">
-
+    <div data-bind="visible: counterStorages().length > 0">
         <div style="position: relative">
             <ul class="breadcrumb">
                 <li>
@@ -26,12 +25,12 @@
                 <form class="form-inline" style="display: inline-block; vertical-align: middle;">
                     <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchCounterStorageByText, valueUpdate: 'afterkeydown'" title="Search for a file system (Alt+S)">
                 </form>
-                <button class="btn btn-danger" data-bind="visible:!!selectedCounterStorage(), click:deleteSelectedCounterStorage"><i class="fa fa-trash-o"></i></button>
+                <button class="btn btn-danger" data-bind="visible: !!selectedCounterStorage(), click: deleteSelectedCounterStorage"><i class="fa fa-trash-o"></i></button>
             </div>
             <br />
 
-            <div class="filesystems-container" data-bind="foreach: storages">
-                <div class="filesystem" data-bind="visible:isVisible,click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
+            <div class="filesystems-container" data-bind="foreach: counterStorages">
+                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
                     <h4><a data-bind="text: name, attr: { href: $root.getCounterStorageUrl($data) }"></a></h4>
                     <!--<span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>-->
                 </div>

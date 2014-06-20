@@ -33,7 +33,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class RavenBaseApiController : ApiController
+    public abstract class RavenBaseApiController : ApiController
 	{
 		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -534,7 +534,7 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage EmbeddedFileNotFound(string docPath)
 		{
 			var message = "The following embedded file was not available: " + docPath +
-			              ". Please make sure that the Raven.Studio.Html.zip file exist in the main directory (near to the Raven.Database.dll).";
+			              ". Please make sure that the Raven.Studio.Html5.zip file exist in the main directory (near to the Raven.Database.dll).";
 			return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
 		}
 

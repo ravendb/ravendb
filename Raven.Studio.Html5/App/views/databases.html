@@ -14,45 +14,51 @@
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
             </div>
-            <form class="form-inline col-md-3 col-sm-3">
-                <div class="input-group">
-                    <input type="text" accesskey="s" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
-                    <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                </div>
+            <form class="form-inline  col-md-3">
+                <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+/)">
             </form>
-                <div class="btn-group" data-bind="visible: selectedDatabase() != null">
-                    <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-bind="click: deleteSelectedDatabase" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
+        </div>
+        <div class="databases-container" data-bind="foreach: databases">
+            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: $data.disabled }">
+                <div class="database-name">
+                    <h4>
+                        <!-- ko ifnot: $data.disabled -->
+                        <a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
+                        <!-- /ko -->
+                        <!-- ko if: $data.disabled -->
+                        <a data-bind="text: name"></a>
+                        <!-- /ko -->
+                    </h4>
                 </div>
-                <div class="btn-group" data-bind="visible: selectedDatabase() != null">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <i class="fa fa-cogs"></i>
                     </button>
                     <ul class="dropdown-menu col-sm-3" role="menu">
-                        <li role="presentation" data-bind="visible: selectedDatabase() != null && !selectedDatabase().disabled()">
-                            <a class="btn use-bootstrap-tooltip" title="Disable the Database" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleSelectedDatabase">
-                                <i class="fa fa-lock"></i>
+                        <li role="presentation" data-bind="visible: !$data.disabled()">
+                            <a class="btn" title="Disable selected Database" data-bind="click: function () { $root.toggleSelectedDatabase($data); return true; }">
+                                <i class="fa fa-lock"></i>&nbsp;
                                 Disable
                             </a>
                         </li>
-                        <li role="presentation" data-bind="visible: selectedDatabase() != null && selectedDatabase().disabled">
-                            <a class="btn use-bootstrap-tooltip" title="Enable the Database" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleSelectedDatabase">
-                                <i class="fa fa-unlock"></i>
+                        <li role="presentation" data-bind="visible: $data.disabled">
+                            <a class="btn" title="Enable selected Database" data-bind="click: function () { $root.toggleSelectedDatabase($data); return true; }">
+                                <i class="fa fa-unlock"></i>&nbsp;
                                 Enable
+                            </a>
+                        </li>
+                        <li class="divider"></li>
+                        <li role="presentation">
+                            <a class="btn" title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabase($data); return true; }">
+                                <i class="fa fa-trash-o text-danger"></i>&nbsp;
+                                Delete Database
                             </a>
                         </li>
                     </ul>
                 </div>
-        </div>
-        <div class="databases-container" data-bind="foreach: databases">
-            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: $data.disabled }">
-                <h4>
-                    <!-- ko ifnot: $data.disabled -->
-                    <a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
-                    <!-- /ko -->
-                    <!-- ko if: $data.disabled -->
-                    <a data-bind="text: name"></a>
-                    <!-- /ko -->
-                </h4>
+
+                <span class="margin"></span>
                 <!-- ko ifnot: $data.disabled -->
                 <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCount() + ' documents'"></span>
                 <!-- /ko -->

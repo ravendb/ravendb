@@ -10,7 +10,7 @@ namespace RavenFS.Tests.Bugs
 		[Fact]
 		public async void CanUpdateMetadata()
 		{
-			var client = NewClient(); 
+			var client = NewAsyncClient(); 
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
 			var expected = new string('a', 1024);

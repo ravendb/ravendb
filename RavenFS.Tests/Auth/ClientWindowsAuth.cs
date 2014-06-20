@@ -3,6 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.Security.Windows;
+using Raven.Json.Linq;
+using Raven.Server;
+using RavenFS.Tests.Synchronization.IO;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,15 +22,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.Security.Windows;
-using Raven.Json.Linq;
-using Raven.Server;
-using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 
 namespace RavenFS.Tests.Auth
@@ -58,7 +61,7 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task CanWorkWithWinAuthEnabled()
         {
-            var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 
             var ms = new MemoryStream(new byte[]{1, 2, 4});
 
@@ -74,7 +77,7 @@ namespace RavenFS.Tests.Auth
             Assert.Equal(ms.GetMD5Hash(), result.GetMD5Hash());
             await client.RenameAsync("/dir/ms.bin", "/dir/sm.bin");
 
-            var searchResults = await client.GetFilesAsync("/dir");
+            var searchResults = await client.GetFilesFromAsync("/dir");
 
             Assert.Equal(1, searchResults.FileCount);
 
@@ -90,7 +93,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.True(searchFields.Length > 0);
 
-            var guid = await client.GetServerId();
+            var guid = await client.GetServerIdAsync();
 
             Assert.NotEqual(Guid.Empty, guid);
 
@@ -100,7 +103,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.Equal(1, results.FileCount);
 
-            var stats = await client.StatsAsync();
+            var stats = await client.GetStatisticsAsync();
 
             Assert.Equal(1, stats.FileCount);
         }
@@ -108,10 +111,10 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task AdminClientWorkWithWinAuthEnabled()
         {
-	        var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 	        var adminClient = client.Admin;
 
-            await adminClient.CreateFileSystemAsync(new DatabaseDocument
+            await adminClient.CreateFileSystemAsync(new FileSystemDocument
             {
                 Id = "Raven/FileSystem/" + "testName",
                 Settings =
@@ -120,22 +123,22 @@ namespace RavenFS.Tests.Auth
                  }
             }, "testName");
 
-			using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, "testName", new NetworkCredential(username, password, domain)))
+            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", new NetworkCredential(username, password, domain)))
 	        {
 		        await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
 	        }
 
-            var names = await adminClient.GetFileSystemsNames();
+            var names = await adminClient.GetNamesAsync();
 
             Assert.Contains("testName", names);
 
-            var stats = await adminClient.GetFileSystemsStats();
+            var stats = await adminClient.GetStatisticsAsync();
 
 			Assert.NotNull(stats.FirstOrDefault(x => x.Name == "testName"));
 
 	        await adminClient.DeleteFileSystemAsync("testName");
 
-			names = await adminClient.GetFileSystemsNames();
+			names = await adminClient.GetNamesAsync();
 
 			Assert.DoesNotContain("testName", names);
         }
@@ -143,33 +146,31 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task ConfigClientCanWorkWithWinAuthEnabled()
         {
-            var configClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Config;
+            var configClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
 
-            await configClient.SetConfig("test-conf", new NameValueCollection() { { "key", "value" } });
+            await configClient.SetKeyAsync("test-conf", new NameValueCollection() { { "key", "value" } });
 
-            var config = await configClient.GetConfig<NameValueCollection>("test-conf");
+            var config = await configClient.GetKeyAsync<NameValueCollection>("test-conf");
 
             Assert.Equal("value", config["key"]);
 
-            var names = await configClient.GetConfigNames();
+            var names = await configClient.GetKeyNamesAsync();
 
             Assert.Contains("test-conf", names);
 
             var configSearch = await configClient.SearchAsync("test");
 
-            Assert.Equal(1, configSearch.TotalCount);
-
-            await configClient.SetDestinationsConfig(new SynchronizationDestination() { ServerUrl = "http://local:123", FileSystem = "test" });
+            Assert.Equal(1, configSearch.TotalCount);            
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task StorageClientCanWorkWithWinAuthEnabled()
         {
-            var storageClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Storage;
+            var storageClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Storage;
 
-            await storageClient.RetryRenaming();
+            await storageClient.RetryRenamingAsync();
 
-            await storageClient.CleanUp();
+            await storageClient.CleanUpAsync();
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
@@ -177,12 +178,12 @@ namespace RavenFS.Tests.Auth
         {
             // in this test be careful if the specified credentials belong to admin user or not
 
-            var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
             var server = GetServer();
 
             await client.UploadAsync("abc.bin", new RandomStream(3));
 
-            using (var anotherClient = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_WindowsDocumentDoesnContainsThisFS", 
+            using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_WindowsDocumentDoesnContainsThisFS", 
                 credentials: new NetworkCredential(username, password, domain)))
             {
                 await anotherClient.EnsureFileSystemExistsAsync(); // will pass because by using this api key we have access to <system> database

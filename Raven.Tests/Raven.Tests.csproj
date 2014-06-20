@@ -251,6 +251,7 @@
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\RavenDB2408.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
@@ -605,7 +606,7 @@
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
-    <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
@@ -731,7 +732,6 @@
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
-    <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\OldIndexRunWhileNewIndexesAreRunning.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />

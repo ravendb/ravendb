@@ -7,13 +7,13 @@
         <br />
         <br />
         <div class="btn-toolbar">
-            <div class="btn-group">
+            <div >
                 <button class="btn btn-primary" data-bind="click: startExport">
                     <div class="glyphicon glyphicon-import"></div>
                     Export Database
                 </button>
                 
-                <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="_blank">
+                <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}">
                     <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
                 </form>
             </div>

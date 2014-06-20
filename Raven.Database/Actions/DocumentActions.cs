@@ -95,17 +95,17 @@ namespace Raven.Database.Actions
 
         public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
                                                           int pageSize, CancellationToken token, ref int nextStart,
-                                                          string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
+                                                          string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             var list = new RavenJArray();
             GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
-                                           transformer, queryInputs);
+                                           transformer, transformerParameters);
             return list;
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
                                                    CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
-                                                   string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
+                                                   string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -134,7 +134,7 @@ namespace Raven.Database.Actions
                     {
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
-                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
+                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -453,14 +453,14 @@ namespace Raven.Database.Actions
         }
 
 
-        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs, out HashSet<string> itemsToInclude)
+        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> transformerParameters, out HashSet<string> itemsToInclude)
         {
             JsonDocument result = null;
             DocumentRetriever docRetriever = null;
             TransactionalStorage.Batch(
             actions =>
             {
-                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
+                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
                 using (new CurrentTransformationScope(docRetriever))
                 {
                     var document = Get(key, transactionInformation);
@@ -558,14 +558,18 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-                                Database.Notifications.RaiseNotifications(new DocumentChangeNotification
-                                {
-                                    Id = key,
-                                    Type = DocumentChangeTypes.Put,
-                                    TypeName = metadata.Value<string>(Constants.RavenClrType),
-                                    CollectionName = metadata.Value<string>(Constants.RavenEntityName),
-                                    Etag = newEtag,
-                                }, metadata);
+	                            
+								var newDocumentChangeNotification =
+		                            new DocumentChangeNotification
+		                            {
+			                            Id = key,
+			                            Type = DocumentChangeTypes.Put,
+			                            TypeName = metadata.Value<string>(Constants.RavenClrType),
+			                            CollectionName = metadata.Value<string>(Constants.RavenEntityName),
+			                            Etag = newEtag
+		                            };
+	                            
+								Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });
 
                         WorkContext.ShouldNotifyAboutWork(() => "PUT " + key);

@@ -55,12 +55,6 @@ namespace Raven.Database.Tasks
             {
                 foreach (var docWithMissingRef in MissingReferences)
                 {
-                    foreach (var index in context.IndexStorage.Indexes)
-                    {
-                        var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-                        set.Add(docWithMissingRef.Key);
-                    }
-
 	                bool foundReference = false;
 
 					using (context.TransactionalStorage.DisableBatchNesting())

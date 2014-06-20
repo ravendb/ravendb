@@ -19,7 +19,10 @@ import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-
+import genUtils = require("common/generalUtils");
+import queryIndexCommand = require("commands/queryIndexCommand");
+import pagedResultSet = require("common/pagedResultSet");
+import querySort = require("models/querySort");
 class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
@@ -34,17 +37,25 @@ class editDocument extends viewModelBase {
     userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
+    queryResultList = ko.observable<pagedList>();
+    currentQueriedItemIndex:number;
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
-    relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
+    relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
     lodaedDocumentName = ko.observable('');
     isSaveEnabled: KnockoutComputed<Boolean>;
     textarea: any;
     documentSize: KnockoutComputed<string>;
+    isInDocMode = ko.observable(true);
+    queryIndex = ko.observable<String>();
+    docTitle: KnockoutComputed<string>;
 
+    isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
+    isLastDocumentNavDisabled: KnockoutComputed<boolean>;
+    
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
@@ -64,7 +75,7 @@ class editDocument extends viewModelBase {
         this.documentSize = ko.computed(() => {
             try {
                 var size: Number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
-                return this.formatAsCommaSeperatedString(size,2);    
+                return genUtils.formatAsCommaSeperatedString(size,2);    
             } catch (e) {
                 return "cannot compute";
             } 
@@ -92,23 +103,63 @@ class editDocument extends viewModelBase {
             },
             owner: this
         });
-    }
 
-    formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
-        var parts = input.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-        if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
-            parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
-        }
-        return parts.join(".");
+        this.docTitle = ko.computed(() => {
+            if (this.isInDocMode() == true) {
+                if (this.isCreatingNewDocument() === true) {
+                    return 'New Document';
+                } else {
+                    var editedDocId = this.editedDocId();
+
+                    if (!!editedDocId) {
+                        var lastIndexInEditedDocId = editedDocId.lastIndexOf('/') + 1;
+                        if (lastIndexInEditedDocId > 0) {
+                            editedDocId = editedDocId.slice(lastIndexInEditedDocId);
+                        }
+                    }
+
+                    return editedDocId;
+                }
+            } else {
+                return 'Projection';
+            }
+        });
+
+        this.isFirstDocumenNavtDisabled = ko.computed(() => {
+            var list = this.docsList();
+            if (list) {
+                var currentDocumentIndex = list.currentItemIndex();
+
+                if (currentDocumentIndex == 0) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        this.isLastDocumentNavDisabled = ko.computed(() => {
+            var list = this.docsList();
+            if (list) {
+                var currentDocumentIndex = list.currentItemIndex();
+                var totalDocuments = list.totalResultCount();
+
+                if (currentDocumentIndex == totalDocuments - 1) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
     }
 
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
         super.canActivate(args);
+        var canActivateResult = $.Deferred();
         if (args && args.id) {
-            var canActivateResult = $.Deferred();
+            
             this.databaseForEditedDoc = appUrl.getDatabase();
             this.loadDocument(args.id)
                 .done(() => {
@@ -119,7 +170,46 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             return canActivateResult;
+        } else if (args && args.item && args.list) {
+            return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
+        }
+        else if (args && args.index ) {
+            this.isInDocMode(false);
+            var indexName: string = args.index;
+            var queryText: string = args.query;
+            var sorts: querySort[];
+            
+            if (args.sorts) {
+                sorts = args.sorts.split(',').map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
+                
         } else {
+                sorts = [];
+            }
+                
+            var resultsFetcher = (skip: number, take: number) => {
+                var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, queryText, sorts);
+                return command
+                    .execute();
+            };
+            var list = new pagedList(resultsFetcher);
+            var item = !!args.item && !isNaN(args.item) ? args.item : 0;
+            
+            list.getNthItem(item)
+                .done((doc: document) => {
+                    this.document(doc);
+                    this.lodaedDocumentName("");
+                    canActivateResult.resolve({ can: true });
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                });
+            this.currentQueriedItemIndex = item;
+            this.queryResultList(list);
+            this.queryIndex(indexName);
+            return canActivateResult;
+        }
+        else{
             return $.Deferred().resolve({ can: true });
         }
     }
@@ -158,7 +248,10 @@ class editDocument extends viewModelBase {
             this.appendRecentDocument(navigationArgs.id);
 
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-        } else {
+        } else if (navigationArgs && navigationArgs.index) {
+            //todo: implement SetRawJSONUrl for document from query
+        }
+        else{
             this.editNewDocument();
         }
     }
@@ -181,12 +274,14 @@ class editDocument extends viewModelBase {
     setupKeyboardShortcuts() {        
         this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("/", () => this.docsList(), editDocument.editDocSelector);
     }
 
     focusOnMetadata() {
@@ -213,6 +308,7 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
         if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
             //the name of the document was changed and we have to save it as a new one
@@ -253,9 +349,26 @@ class editDocument extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
             viewModelBase.dirtyFlag().reset(); //Resync Changes
-            this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
+
+            // add the new document to the paged list
+            var list: pagedList = this.docsList();
+            if (!!list) {
+                if (this.isCreatingNewDocument()) {
+                    var newTotalResultCount = list.totalResultCount() + 1;
+
+                    list.totalResultCount(newTotalResultCount);
+                    list.currentItemIndex(newTotalResultCount - 1);
+                    
+                } else {
+                    list.currentItemIndex(list.totalResultCount() - 1);
+                }
+
+                this.updateUrl(currentDocumentId);
+            }
+
+            this.isCreatingNewDocument(false);
         });
     }
 
@@ -322,7 +435,7 @@ class editDocument extends viewModelBase {
     }
 
     refreshDocument() {
-        var meta = this.metadata();
+        if (this.isInDocMode()) {
         if (!this.isCreatingNewDocument()) {
             var docId = this.editedDocId();
             this.document(null);
@@ -333,15 +446,33 @@ class editDocument extends viewModelBase {
         } else {
             this.editNewDocument();
         }
+        } else {
+            this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
+            this.lodaedDocumentName("");
+    }
     }
 
     deleteDocument() {
-        var doc = this.document();
+        var doc: document = this.document();
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
             viewModel.deletionTask.done(() => {
                 viewModelBase.dirtyFlag().reset(); //Resync Changes
-                this.nextDocumentOrFirst();
+
+                var list = this.docsList();
+                if (!!list) {
+                    this.docsList().invalidateCache();
+
+                    var newTotalResultCount = list.totalResultCount() - 1;
+                    list.totalResultCount(newTotalResultCount);
+
+                    var nextIndex = list.currentItemIndex();
+                    if (nextIndex >= newTotalResultCount) {
+                        nextIndex = 0;
+                    }
+
+                    this.pageToItem(nextIndex, newTotalResultCount);
+                }
             });
             app.showDialog(viewModel, editDocument.editDocSelector);
         } 
@@ -356,7 +487,7 @@ class editDocument extends viewModelBase {
     }
 
     nextDocumentOrFirst() {
-        var list = this.docsList(); 
+        var list = this.docsList();
         if (list) {
             var nextIndex = list.currentItemIndex() + 1;
             if (nextIndex >= list.totalResultCount()) {
@@ -390,16 +521,30 @@ class editDocument extends viewModelBase {
         this.pageToItem(0);
     }
 
-    pageToItem(index: number) {
-        var list = this.docsList();
-        if (list) {
-            list.getNthItem(index)
-                .done((doc: document) => {
-                    this.loadDocument(doc.getId());
-                    list.currentItemIndex(index);
-                    this.updateUrl(doc.getId());
-                });
-        }
+    pageToItem(index: number, newTotalResultCount?: number) {
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
+        canContinue.done(() => {
+	        var list = this.docsList();
+	        if (list) {
+	            list.getNthItem(index)
+	                .done((doc: document) => {
+	                    if (this.isInDocMode() === true) {
+		                    this.loadDocument(doc.getId());
+		                    list.currentItemIndex(index);
+		                    this.updateUrl(doc.getId());
+	                    }
+	                    else {
+	                        this.document(doc);
+	                        this.lodaedDocumentName("");
+	                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+	                    }
+
+	                    if (!!newTotalResultCount) {
+	                        list.totalResultCount(newTotalResultCount);
+	                    }
+	                });
+	        }
+		});
     }
 
     navigateToCollection(collectionName: string) {

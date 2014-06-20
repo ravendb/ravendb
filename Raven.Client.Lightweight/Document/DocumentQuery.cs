@@ -94,9 +94,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
 	    {
-	        this.queryInputs = queryInputs;
+	        this.transformerParameters = transformerParameters;
 	    }
 
 		public bool IsDistinct { get { return isDistinct; } }
@@ -155,7 +155,7 @@ namespace Raven.Client.Document
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
                 resultsTransformer = resultsTransformer,
-                queryInputs = queryInputs,
+                transformerParameters = transformerParameters,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
                 lastEquality = lastEquality,

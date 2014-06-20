@@ -2,16 +2,11 @@ import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import getDatabasesCommand = require("commands/getDatabasesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createDefaultSettingsCommand = require("commands/createDefaultSettingsCommand");
-import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
-import changeSubscription = require('models/changeSubscription');
 import databaseSettingsDialog = require("viewmodels/databaseSettingsDialog");
 
 class databases extends viewModelBase {
@@ -20,17 +15,16 @@ class databases extends viewModelBase {
     searchText = ko.observable("");
     selectedDatabase = ko.observable<database>();
     systemDb: database;
-    initializedStats: boolean;
     docsForSystemUrl: string;
-    databasesChangeSubscription: changeSubscription;
-    isFirstLoad = true;
 
     constructor() {
         super();
 
+        this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.selectDatabase(db, false));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -40,73 +34,34 @@ class databases extends viewModelBase {
 
     attached() {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
-        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => this.changesApiFiredForDatabases(e), "Raven/Databases");
+        this.databasesLoaded();
     }
 
-    deactivate() {
-        super.deactivate();
-        this.databasesChangeSubscription.off();
-    }
-
-    modelPolling(): JQueryPromise<database[]> {
-        return new getDatabasesCommand()
-            .execute()
-            .done((results: database[]) => this.databasesLoaded(results));
-    }
-
-    navigateToDocuments(db: database) {
-        db.activate();
-        router.navigate(appUrl.forDocuments(null, db));
+    private databasesLoaded() {
+        // If we have no databases (except system db), show the "create a new database" screen.
+        if (this.databases().length === 1) {
+            this.newDatabase();
+        } else {
+            // If we have just a few databases, grab the db stats for all of them.
+            // (Otherwise, we'll grab them when we click them.)
+            var few = 20;
+            var enabledDatabases: database[] = this.databases().filter((db: database) => !db.disabled());
+            if (enabledDatabases.length < few) {
+                enabledDatabases.forEach(db => shell.fetchDbStats(db, true));
+            }
+        }
     }
 
     getDocumentsUrl(db: database) {
         return appUrl.forDocuments(null, db);
     }
 
-    databasesLoaded(results: Array<database>) {
-        // If we have no databases, show the "create a new database" screen.
-        if (results.length === 0 && this.isFirstLoad) {
-            this.newDatabase();
+    selectDatabase(db: database, activateDatabase: boolean = true) {
+        this.databases().forEach((d: database)=> d.isSelected(d.name === db.name));
+        if (activateDatabase) {
+            db.activate();
         }
-
-        var databasesHaveChanged = this.checkDifferentDatabases(results);
-        if (databasesHaveChanged) {            
-            this.databases(results);
-
-            // If we have just a few databases, grab the db stats for all of them.
-            // (Otherwise, we'll grab them when we click them.)
-            var few = 20;
-            if (results.length < few && !this.initializedStats) {
-                this.initializedStats = true;
-
-                for (var i = 0; i < results.length; i++) {
-                    var db: database = results[i];
-                    if (!db.disabled()) {
-                        this.fetchStats(db);
-                    }
-                }
-            }
-        }
-
-        this.isFirstLoad = false;
-    }
-
-    private checkDifferentDatabases(newDatabases: database[]) {
-        if (newDatabases.length !== this.databases().length) {
-            return true;
-        }
-
-        var existingDbs = this.databases();
-        return existingDbs.some(existingDb => !this.containsObject(newDatabases, existingDb));
-    }
-
-    private containsObject(dbs: database[], db: database) {
-        for (var i = 0; i < dbs.length; i++) {
-            if (dbs[i].name == db.name && dbs[i].disabled() == db.disabled()) {
-                return true;
-            }
-        }
-        return false;
+        this.selectedDatabase(db);
     }
 
     newDatabase() {
@@ -140,55 +95,58 @@ class databases extends viewModelBase {
         var savedKey;
 
         var encryptionDeferred = $.Deferred();
-        var settingsDeferred = $.Deferred();
 
         if (bundles.contains("Encryption")) {
-            var createEncryptionViewModel = new createEncryption();
-            createEncryptionViewModel
-                .creationEncryption
-                .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
-                    savedKey = key;
-                    securedSettings = {
-                        'Raven/Encryption/Key': key,
-                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                        'Raven/Encryption/KeyBitsPreference': encryptionBits,
-                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                    };
-                    encryptionDeferred.resolve(securedSettings);
-                });
-            app.showDialog(createEncryptionViewModel);
+            require(["viewmodels/createEncryption"], createEncryption => {
+                var createEncryptionViewModel = new createEncryption();
+                createEncryptionViewModel
+                    .creationEncryption
+                    .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
+                        savedKey = key;
+                        securedSettings = {
+                            'Raven/Encryption/Key': key,
+                            'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                            'Raven/Encryption/KeyBitsPreference': encryptionBits,
+                            'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                        };
+                        encryptionDeferred.resolve(securedSettings);
+                    });
+                app.showDialog(createEncryptionViewModel);
+            });
         } else {
             encryptionDeferred.resolve();
         }
 
-        encryptionDeferred.done((encryptionResult) => {
-            new createDatabaseCommand(databaseName, settings, securedSettings)
-                .execute()
-                .done(() => {
-                    var newDb = new database(databaseName);
-                    this.databases.unshift(newDb);
+        encryptionDeferred.done(() => {
+            require(["commands/createDatabaseCommand"], createDatabaseCommand => {
+                new createDatabaseCommand(databaseName, settings, securedSettings)
+                    .execute()
+                    .done(() => {
+                        var newDatabase = this.addNewDatabase(databaseName);
+                        this.selectDatabase(newDatabase);
 
-                    var encryptionConfirmationDialogPromise = $.Deferred();
-                    if (!jQuery.isEmptyObject(securedSettings)) {
-                        var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
-                        createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
-                        createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                        app.showDialog(createEncryptionConfirmationViewModel);
-                    } else {
-                        encryptionConfirmationDialogPromise.resolve();
-                    }
+                        var encryptionConfirmationDialogPromise = $.Deferred();
+                        if (!jQuery.isEmptyObject(securedSettings)) {
+                            require(["viewmodels/createEncryptionConfirmation"], createEncryptionConfirmation => {
+                                var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
+                                createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
+                                createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
+                                app.showDialog(createEncryptionConfirmationViewModel);
+                            });
+                        } else {
+                            encryptionConfirmationDialogPromise.resolve();
+                        }
 
-                    this.selectDatabase(newDb);
-
-                    this.createDefaultSettings(newDb, bundles).always(() => {
-                      if (bundles.contains("Quotas") || bundles.contains("Versioning")) {
-                        encryptionConfirmationDialogPromise.always(() => {
-                          var settingsDialog = new databaseSettingsDialog(bundles);
-                          app.showDialog(settingsDialog);
+                        this.createDefaultSettings(newDatabase, bundles).always(() => {
+                            if (bundles.contains("Quotas") || bundles.contains("Versioning")) {
+                                encryptionConfirmationDialogPromise.always(() => {
+                                    var settingsDialog = new databaseSettingsDialog(bundles);
+                                    app.showDialog(settingsDialog);
+                                });
+                            }
                         });
-                      }
                     });
-                });
+            });
         });
     }
 
@@ -218,29 +176,13 @@ class databases extends viewModelBase {
         return fullEncryptionName;
     }
 
-    private fetchStats(db: database) {
-        new getDatabaseStatsCommand(db)
-            .execute()
-            .done(result=> db.statistics(result));
-    }
-
-    selectDatabase(db: database) {
-        this.databases().forEach(d=> d.isSelected(d.name === db.name));
-        db.activate();
-        this.selectedDatabase(db);
-    }
-
-    goToDocuments(db: database) {
-        router.navigate(appUrl.forDocuments(null, db));
-    }
-
     deleteSelectedDatabase() {
         var db = this.selectedDatabase();
         if (db) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(db, this.systemDb);
-                confirmDeleteViewModel.deleteTask.done(()=> {
-                    this.onDatabaseDeleted(db);
+                confirmDeleteViewModel.deleteTask.done(() => {
+                    this.onDatabaseDeleted(db.name);
                 });
                 app.showDialog(confirmDeleteViewModel);
             });
@@ -252,20 +194,47 @@ class databases extends viewModelBase {
         if (db) {
             var desiredAction = db.disabled() ? "enable" : "disable";
             var desiredActionCapitalized = desiredAction.charAt(0).toUpperCase() + desiredAction.slice(1);
+            var action = !db.disabled();
 
             var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' the database?');
             confirmationMessageViewModel
                 .done(() => {
+                    if (shell.currentDbChangesApi()) {
+                        shell.currentDbChangesApi().dispose();
+                    }
                     require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
                         new toggleDatabaseDisabledCommand(db)
                             .execute()
                             .done(() => {
                                 db.isSelected(false);
-                                db.disabled(!db.disabled());
+                                db.disabled(action);
                                 this.selectDatabase(db);
                             });
                     });
                 });
+        }
+    }
+
+    private addNewDatabase(databaseName: string): database {
+        var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
+
+        if (!databaseInArray) {
+            var newDatabase = new database(databaseName);
+            this.databases.unshift(newDatabase);
+            return newDatabase;
+        }
+
+        return databaseInArray;
+    }
+
+    private onDatabaseDeleted(databaseName: string) {
+        var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
+        if (!!databaseInArray) {
+            this.databases.remove(databaseInArray);
+
+            if ((this.databases().length > 0) && (this.databases.contains(this.selectedDatabase()) === false)) {
+                this.selectDatabase(this.databases().first());
+            }
         }
     }
 
@@ -282,26 +251,6 @@ class databases extends viewModelBase {
             this.selectedDatabase(null);
         }
     }
-
-    private onDatabaseDeleted(db: database) {
-        this.databases.remove(db);
-        if (this.databases().length === 0)
-            this.selectDatabase(this.systemDb);
-        else if (this.databases.contains(this.selectedDatabase()) === false) {
-            this.selectDatabase(this.databases().first());
-        }
-    }
-
-    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
-        if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
-            (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
-            if (e.Type === documentChangeType.Delete) {
-                this.onDatabaseDeleted(new database(e.Id));
-            }
-
-            this.modelPolling();
-        }
-    }
 }
 
-export = databases; 
+export = databases;

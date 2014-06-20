@@ -33,7 +33,7 @@ namespace Voron.Tests
 
 				using (var writeBatch = new WriteBatch())
 				{
-					var valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("testing testing 1!"));
+					var valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("{ \"title\": \"foo\",\"name\":\"bar\"}"));
 					writeBatch.Add("foo", valueBuffer, "test-tree");
 
 					valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("testing testing 1 2!"));
@@ -83,7 +83,7 @@ namespace Voron.Tests
 
 				using (var snapshot = env.CreateSnapshot())
 				{
-				    Assert.Equal("testing testing 1!",snapshot.Read("test-tree", "foo").Reader.ToStringValue());
+					Assert.Equal("{ \"title\": \"foo\",\"name\":\"bar\"}", snapshot.Read("test-tree", "foo").Reader.ToStringValue());
 				    Assert.Equal("testing testing 1 2!", snapshot.Read("test-tree", "bar").Reader.ToStringValue());
 
 				    Assert.Equal("testing testing 1!", snapshot.Read("test-tree2", "foo").Reader.ToStringValue());
