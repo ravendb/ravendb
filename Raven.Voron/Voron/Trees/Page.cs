@@ -550,6 +550,9 @@ namespace Voron.Trees
 
 	    public void ClearPrefixInfo()
 	    {
+			if(_keysPrefixed == false)
+				return;
+
 		    NativeMethods.memset((byte*) PrefixOffsets, 0, sizeof (ushort)*PrefixCount);
 			NextPrefixId = 0;
 	    }
