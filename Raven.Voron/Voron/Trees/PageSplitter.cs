@@ -175,7 +175,7 @@ namespace Voron.Trees
 
             AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey);
 
-	        PrefixedSlice instance = null;
+	        MemorySlice instance = null;
             // move the actual entries from page to right page
             ushort nKeys = _page.NumberOfEntries;
             for (int i = splitIndex; i < nKeys; i++)
@@ -188,7 +188,8 @@ namespace Voron.Trees
                 else
                 {
 	                instance = _page.GetNodeKey(node, instance);
-					rightPage.CopyNodeDataToEndOfPage(node, rightPage.ConvertToPrefixedKey(instance, rightPage.NumberOfEntries));
+	                var key = rightPage.ConvertToPrefixedKey(instance, rightPage.NumberOfEntries);
+					rightPage.CopyNodeDataToEndOfPage(node, key);
                 }
             }
             _page.Truncate(_tx, splitIndex);

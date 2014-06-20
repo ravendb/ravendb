@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using Voron.Impl;
+using Voron.Trees;
 
 namespace Voron
 {
@@ -56,6 +57,12 @@ namespace Voron
 			Options = SliceOptions.Key;
 			Pointer = null;
 			Array = key;
+		}
+
+		public Slice(NodeHeader* node)
+		{
+			Options = SliceOptions.Key;
+			Set(node);
 		}
 
 		public override bool Equals(object obj)
@@ -289,6 +296,11 @@ namespace Voron
 			Size = size;
 			KeyLength = size;
 			Array = null;
+		}
+
+		public override void Set(NodeHeader* node)
+		{
+			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
 		}
 	}
 }

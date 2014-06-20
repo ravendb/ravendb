@@ -153,7 +153,7 @@ namespace Voron.Trees
 
 				newNestedPage.ClearPrefixInfo();
 
-				PrefixedSlice nodeKey = null;
+				MemorySlice nodeKey = null;
 				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 				{
 					var nodeHeader = nestedPage.GetNode(i);
@@ -169,7 +169,7 @@ namespace Voron.Trees
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
-			var prefixedValue = new PrefixedSlice(value); // first item is never prefixed
+			var prefixedValue = KeysPrefixing ? (MemorySlice) new PrefixedSlice(value) : value; // first item is never prefixed
 
 			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, prefixedValue, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)

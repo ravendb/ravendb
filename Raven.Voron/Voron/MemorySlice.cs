@@ -5,8 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
-using System.Threading;
 using Voron.Impl;
+using Voron.Trees;
 
 namespace Voron
 {
@@ -21,6 +21,7 @@ namespace Voron
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
 		public abstract Slice Skip(ushort bytesToSkip);
+		public abstract void Set(NodeHeader* node);
 
 		protected abstract int CompareData(MemorySlice other, SliceComparer cmp, ushort size);
 
@@ -127,6 +128,6 @@ namespace Voron
 
 		public virtual void PrepareForSearching()
 		{
-		}
+		}	
 	}
 }

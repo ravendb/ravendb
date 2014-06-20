@@ -36,6 +36,8 @@ namespace Voron.Trees
 			_state = state;
 		}
 
+		public bool KeysPrefixing { get; set; }
+
 		public static Tree Open(Transaction tx, TreeRootHeader* header)
 		{
 			return new Tree(tx, header->RootPageNumber)
@@ -322,7 +324,7 @@ namespace Voron.Trees
 	        bool rightmostPage = true;
 	        bool leftmostPage = true;
 
-	        while (p.Flags == (PageFlags.Branch))
+	        while (p.Flags.HasFlag(PageFlags.Branch))
 	        {
 	            int nodePos;
 	            if (key.Options == SliceOptions.BeforeAllKeys)

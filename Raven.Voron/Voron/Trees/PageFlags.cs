@@ -1,9 +1,13 @@
-﻿namespace Voron.Trees
+﻿using System;
+
+namespace Voron.Trees
 {
+	[Flags]
 	public enum PageFlags : byte
 	{
 		Branch = 1,
 		Leaf = 2,
-		Overflow = 3,
+		Overflow = 4,
+		KeysPrefixed = 8,
 	}
 }

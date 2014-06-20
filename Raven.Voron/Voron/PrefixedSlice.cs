@@ -114,7 +114,7 @@ namespace Voron
 			Options = SliceOptions.Key;
 		}
 
-		public void Set(NodeHeader* node)
+		public override void Set(NodeHeader* node)
 		{
 			Debug.Assert(this != Empty, "Cannot call Set() on PrefixedSlice.Empty");
 

@@ -231,10 +231,10 @@ namespace Voron.Trees
 	            var implicitLeftNode = to.GetNode(0);
 				var leftPageNumber = implicitLeftNode->PageNumber;
 
-	            PrefixedSlice implicitLeftPrefixedKey;
+	            MemorySlice implicitLeftPrefixedKey;
 
 	            if (implicitLeftNode == actualKeyNode) // no need to create a prefix, just use the existing prefixed key from the node
-					implicitLeftPrefixedKey = new PrefixedSlice(actualKeyNode);
+					implicitLeftPrefixedKey = _tree.KeysPrefixing ? (MemorySlice) new PrefixedSlice(actualKeyNode) : new Slice(actualKeyNode);
 				else
 					implicitLeftPrefixedKey = to.ConvertToPrefixedKey(implicitLeftKey, 1);
 	            
