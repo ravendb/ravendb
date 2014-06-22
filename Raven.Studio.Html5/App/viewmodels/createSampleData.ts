@@ -2,6 +2,8 @@
 import createSampleDataCommand = require("commands/createSampleDataCommand");
 import createSampleDataClassCommand = require("commands/createSampleDataClassCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import app = require("durandal/app");
+import showSampleDataDialog = require("viewmodels/showSampleDataDialog");
 
 class createSampleData extends viewModelBase{
 
@@ -19,15 +21,13 @@ class createSampleData extends viewModelBase{
             .always(() => this.isBusy(false));
     }
     showSampleDataClass() {
-        var fileDisplayArea = document.getElementById('fileDisplayArea');
-        
  
         new createSampleDataClassCommand(this.activeDatabase())
             .execute()
             .done((results: string) => {
-              //  this.classData(results);
                 this.isVisible(true);
-                fileDisplayArea.innerHTML = results.replace("\r\n", "</br>");
+                var data = results.replace("\r\n", "");
+                app.showDialog(new showSampleDataDialog(data, this.activeDatabase(), false)); //new copyIndexDialog(i.name, this.activeDatabase(), false));
             })
             .always(() => this.isBusy(false));
         

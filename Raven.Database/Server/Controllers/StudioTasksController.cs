@@ -164,20 +164,20 @@ namespace Raven.Database.Server.Controllers
         [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
         public async Task<HttpResponseMessage> CreateSampleDataClass()
         {
-            var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
-            if (results.Results.Count == 0)
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
             {
-                return GetMessageWithString("You cannot create sample data classes in empty  database ", HttpStatusCode.BadRequest);
-            }
-            var fileName = "Northwind.txt";
-            var path = Assembly.GetExecutingAssembly().Location;
-            var directory =Path.GetDirectoryName(path);
-            var fullPath=directory+"\\"+ fileName;
-            if (!File.Exists(fullPath)) return GetEmptyMessage();
-            using (var sr = new StreamReader(fullPath))
-            {
-                var data = sr.ReadToEnd();
-                return GetMessageWithObject(data);
+                if (sampleData == null)
+                    return GetEmptyMessage();
+                   
+                sampleData.Position = 0;
+                using (var reader = new StreamReader(sampleData, Encoding.UTF8))
+                {
+                   var data = reader.ReadToEnd();
+                   return GetMessageWithObject(data);
+                }
+                 
+                
+               
             }
         }
 
