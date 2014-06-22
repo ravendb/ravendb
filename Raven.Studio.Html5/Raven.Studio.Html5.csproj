@@ -309,6 +309,8 @@
     <TypeScriptCompile Include="App\common\inputCursor.ts" />
     <TypeScriptCompile Include="App\models\customFunctions.ts" />
     <TypeScriptCompile Include="App\common\autoCompleterSupport.ts" />
+    <TypeScriptCompile Include="App\models\transformerQuery.ts" />
+    <Content Include="App\models\transformerParam.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
