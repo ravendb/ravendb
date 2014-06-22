@@ -201,6 +201,7 @@ class databases extends viewModelBase {
                 .done(() => {
                     if (shell.currentDbChangesApi()) {
                         shell.currentDbChangesApi().dispose();
+                        shell.currentDbChangesApi(null);
                     }
                     require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
                         new toggleDatabaseDisabledCommand(db)

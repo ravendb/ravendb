@@ -29,7 +29,7 @@ class deleteItems extends dialogViewModelBase {
             deleteCommand = new deleteDocumentsCommand(deleteItemsIds, appUrl.getDatabase());
         }
         else if (this.documents()[0] instanceof file) {
-            deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFilesystem());
+            deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
         }
         var deleteCommandTask = deleteCommand.execute();
 

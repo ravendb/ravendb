@@ -14,6 +14,7 @@ class changesApi {
     private eventsId: string;
     private webSocket: WebSocket;
     private isConnectionClosed: boolean = false;
+    connectWebSocketTask: JQueryDeferred<any>;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
@@ -25,13 +26,13 @@ class changesApi {
     private watchedFolders = {};
     private commandBase = new commandBase();
 
-    constructor(private rs: resource) {
+    constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
         this.eventsId = this.makeId();
+        this.connectWebSocketTask = $.Deferred();
+        this.connect(coolDownWithDataLoss);
     }
 
-    public connect(coolDownWithDataLoss: number = 0): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
+    public connect(coolDownWithDataLoss: number = 0) {
         if ("WebSocket" in window) {
             var host = window.location.host;
             var resourceUrl = appUrl.forResourceQuery(this.rs);
@@ -49,30 +50,29 @@ class changesApi {
                     this.webSocket.onerror = (e) => this.onError(e);
                     this.webSocket.onclose = () => this.isConnectionClosed = true;
                     this.webSocket.onopen = () => {
-                        deferred.resolve();
+                        this.connectWebSocketTask.resolve();
                     }
                 })
-                .fail(() => deferred.reject());
+                .fail(() => this.connectWebSocketTask.reject());
         }
         else {
             console.log("WebSocket NOT supported by your Browser!"); // The browser doesn't support WebSocket
-            deferred.reject();
+            this.connectWebSocketTask.reject();
         }
-
-        return deferred;
     }
 
     private send(command: string, value?: string) {
-        var args = {
-            id: this.eventsId,
-            command: command
-        };
-        if (value !== undefined) {
-            args["value"] = value;
-        }
-        //TODO: exception handling?
-        this.commandBase.query('/changes/config', args, this.rs);
-
+        this.connectWebSocketTask.done(() => {
+            var args = {
+                id: this.eventsId,
+                command: command
+            };
+            if (value !== undefined) {
+                args["value"] = value;
+            }
+            //TODO: exception handling?
+            this.commandBase.query('/changes/config', args, this.rs);
+        });
     }
 
     private onError(e: any) {
@@ -261,7 +261,7 @@ class changesApi {
 
     dispose() {
         if (this.webSocket && !this.isConnectionClosed) {
-            console.log("Disconnecting from changes API for " + this.rs.name);
+            console.log("Disconnecting from changes API for (rs = " + this.rs.name + ")");
             this.send('disconnect');
             this.webSocket.close();
         }

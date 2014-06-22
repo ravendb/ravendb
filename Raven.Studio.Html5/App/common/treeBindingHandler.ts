@@ -32,7 +32,7 @@ class treeBindingHandler {
         } = <any>ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
-            children: [{ title: appUrl.getFilesystem().name, key: "/", isLazy: true, isFolder: true }],
+            children: [{ title: appUrl.getFileSystem().name, key: "/", isLazy: true, isFolder: true }],
             onLazyRead: function (node) {
                 treeBindingHandler.loadNodeChildren("#" + element.id, node, options);
                 node.activate();
@@ -62,7 +62,7 @@ class treeBindingHandler {
         if (node.data && node.data.key != "/") {
             dir = node.data.key;
         }
-        var command = new getFoldersCommand(appUrl.getFilesystem(), 0, 100, dir);
+        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 100, dir);
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
 
