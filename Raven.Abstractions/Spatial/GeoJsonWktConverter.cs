@@ -43,8 +43,6 @@ namespace Raven.Abstractions.Spatial
             {
                 obj.TryGetValue("type", out type);
 
-                //if (type == null)
-                //    obj.TryGetValue("$type", out type);
                 if (type == null)
                     result = null;
                 else
