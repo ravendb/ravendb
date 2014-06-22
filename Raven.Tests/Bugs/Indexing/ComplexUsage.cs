@@ -134,6 +134,11 @@ namespace Raven.Tests.Bugs.Indexing
 				index.Indexes["AccountName"] = FieldIndexing.Analyzed;
 				index.Indexes["DesignName"] = FieldIndexing.Analyzed;
 				index.Indexes["UserName"] = FieldIndexing.Analyzed;
+
+                index.Stores["AccountId"] = FieldStorage.Yes;
+                index.Stores["AccountName"] = FieldStorage.Yes;
+                index.Stores["DesignName"] = FieldStorage.Yes;
+                index.Stores["UserName"] = FieldStorage.Yes;
 				return index;
 			}
 		}

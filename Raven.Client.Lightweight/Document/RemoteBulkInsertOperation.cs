@@ -194,7 +194,7 @@ namespace Raven.Client.Document
 
 				var batch = new List<RavenJObject>();
 				RavenJObject document;
-				while (queue.TryTake(out document, 200))
+				while (queue.TryTake(out document, millisecondsTimeout: 200))
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
