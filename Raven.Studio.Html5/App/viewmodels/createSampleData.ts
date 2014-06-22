@@ -8,8 +8,7 @@ import showSampleDataDialog = require("viewmodels/showSampleDataDialog");
 class createSampleData extends viewModelBase{
 
     isBusy = ko.observable(false);
-   // isEnable = ko.observable(false);
-    isEnable = ko.observable(true);
+     isEnable = ko.observable(true);
     isVisible =  ko.observable(false);
     classData = ko.observable<string>();
     generateSampleData() {
@@ -17,7 +16,6 @@ class createSampleData extends viewModelBase{
         
         new createSampleDataCommand(this.activeDatabase())
             .execute()
-          //  .done(() => this.isEnable(true))
             .always(() => this.isBusy(false));
     }
     showSampleDataClass() {
@@ -27,7 +25,7 @@ class createSampleData extends viewModelBase{
             .done((results: string) => {
                 this.isVisible(true);
                 var data = results.replace("\r\n", "");
-                app.showDialog(new showSampleDataDialog(data, this.activeDatabase(), false)); //new copyIndexDialog(i.name, this.activeDatabase(), false));
+                app.showDialog(new showSampleDataDialog(data, this.activeDatabase(), false)); 
             })
             .always(() => this.isBusy(false));
         
