@@ -85,18 +85,17 @@ namespace Raven.Tests.Bugs
 							   }
 			}.ToIndexDefinition(new DocumentConvention());
 
-			var mapInstance = new DynamicViewCompiler("testView",
-													  indexDefinition, ".").
-				GenerateInstance();
+			var mapInstance = new DynamicViewCompiler("testView",indexDefinition, ".").GenerateInstance();
 
 			var conventions = new DocumentConvention();
 			var o = RavenJObject.FromObject(page,conventions.CreateSerializer());
+			o["__document_id"] = "foo/bar";
 			o["@metadata"] = new RavenJObject {{"Raven-Entity-Name", "Pages"}};
 			dynamic dynamicObject = new DynamicJsonObject(o);
 
 			var result = mapInstance.MapDefinitions[0](new[] { dynamicObject }).ToList<object>();
-			Assert.Equal("{ Id = 0, CoAuthorUserID = 1, __document_id =  }", result[0].ToString());
-			Assert.Equal("{ Id = 0, CoAuthorUserID = 2, __document_id =  }", result[1].ToString());
+			Assert.Equal("{ Id = foo/bar, CoAuthorUserID = 1, __document_id = foo/bar }", result[0].ToString());
+			Assert.Equal("{ Id = foo/bar, CoAuthorUserID = 2, __document_id = foo/bar }", result[1].ToString());
 		}
 
 		private class Page

@@ -339,9 +339,9 @@ namespace Raven.Client
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
-			
-			ravenQueryInspector.FieldsToFetch(ReflectionUtil.GetPropertiesAndFieldsFor<TResult>().Select(x => x.Name));
-			
+
+			var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
+			ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));			
 			return (IRavenQueryable<TResult>)results;
 		}
 #endif

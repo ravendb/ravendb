@@ -1,4 +1,5 @@
 using System.Linq;
+using FizzWare.NBuilder.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Linq;
@@ -50,7 +51,8 @@ namespace Raven.Tests.Bugs.Indexing
 				}
 
 				new Accounts_Search().Execute(store);
-				WaitForIndexing(store);
+				WaitForIndexing(store);			
+				
 				using (var session = store.OpenSession())
 				{
 					var objects = session.Query<object, Accounts_Search>()
@@ -134,6 +136,12 @@ namespace Raven.Tests.Bugs.Indexing
 				index.Indexes["AccountName"] = FieldIndexing.Analyzed;
 				index.Indexes["DesignName"] = FieldIndexing.Analyzed;
 				index.Indexes["UserName"] = FieldIndexing.Analyzed;
+
+				index.Stores.Add("AccountId", FieldStorage.Yes);
+				index.Stores.Add("AccountName", FieldStorage.Yes);
+				index.Stores.Add("DesignName", FieldStorage.Yes);
+				index.Stores.Add("UserName", FieldStorage.Yes);
+
 				return index;
 			}
 		}
