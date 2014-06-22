@@ -148,8 +148,7 @@ class configuration extends viewModelBase {
         var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
         var saveTask = saveCommand.execute();
         saveTask.done((result) => {
-            // Resync Changes
-            viewModelBase.dirtyFlag().reset();
+            viewModelBase.dirtyFlag().reset(); // Resync Changes
         });
     }
 

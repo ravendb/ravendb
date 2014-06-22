@@ -725,7 +725,7 @@ namespace Raven.Client.Document
 											highlighterPreTags = highlighterPreTags,
 											highlighterPostTags = highlighterPostTags,
 											resultsTransformer = resultsTransformer,
-											queryInputs = queryInputs,
+											transformerParameters = transformerParameters,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
 											lastEquality = lastEquality,

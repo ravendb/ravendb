@@ -7,7 +7,7 @@
                         <div class="collectionName">
                             <div class="collectionText pull-left collection-color-strip" data-bind="css: colorClass"></div>
                             <span class="collectionText pull-left collection-name-part" data-bind=" text: name, attr:{title:name}"></span>
-                            <span class="collectionText pull-left text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '(' + documentCount() + ($data.isUpToDate() === true?'':'?') + ')'"></span>
+                            <span class="collectionText pull-left text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '(' + documentCount() + ')'"></span>
                         </div>
                     </a>
                 </li>

@@ -51,8 +51,10 @@ class editDocument extends viewModelBase {
     documentSize: KnockoutComputed<string>;
     isInDocMode = ko.observable(true);
     queryIndex = ko.observable<String>();
-
     docTitle: KnockoutComputed<string>;
+
+    isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
+    isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -105,19 +107,52 @@ class editDocument extends viewModelBase {
 
         this.docTitle = ko.computed(() => {
             if (this.isInDocMode() == true) {
-                //isCreatingNewDocument()===true?'New Document': editedDocId
                 if (this.isCreatingNewDocument() === true) {
                     return 'New Document';
                 } else {
-                    return this.editedDocId();
-    }
+                    var editedDocId = this.editedDocId();
+
+                    if (!!editedDocId) {
+                        var lastIndexInEditedDocId = editedDocId.lastIndexOf('/') + 1;
+                        if (lastIndexInEditedDocId > 0) {
+                            editedDocId = editedDocId.slice(lastIndexInEditedDocId);
+                        }
+                    }
+
+                    return editedDocId;
+                }
             } else {
                 return 'Projection';
             }
         });
-    }
 
-    
+        this.isFirstDocumenNavtDisabled = ko.computed(() => {
+            var list = this.docsList();
+            if (list) {
+                var currentDocumentIndex = list.currentItemIndex();
+
+                if (currentDocumentIndex == 0) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        this.isLastDocumentNavDisabled = ko.computed(() => {
+            var list = this.docsList();
+            if (list) {
+                var currentDocumentIndex = list.currentItemIndex();
+                var totalDocuments = list.totalResultCount();
+
+                if (currentDocumentIndex == totalDocuments - 1) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+    }
 
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
@@ -487,26 +522,29 @@ class editDocument extends viewModelBase {
     }
 
     pageToItem(index: number, newTotalResultCount?: number) {
-        var list = this.docsList();
-        if (list) {
-            list.getNthItem(index)
-                .done((doc: document) => {
-                    if (this.isInDocMode() === true) {
-	                    this.loadDocument(doc.getId());
-	                    list.currentItemIndex(index);
-	                    this.updateUrl(doc.getId());
-                    }
-                    else {
-                        this.document(doc);
-                        this.lodaedDocumentName("");
-                        viewModelBase.dirtyFlag().reset(); //Resync Changes
-                    }
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
+        canContinue.done(() => {
+	        var list = this.docsList();
+	        if (list) {
+	            list.getNthItem(index)
+	                .done((doc: document) => {
+	                    if (this.isInDocMode() === true) {
+		                    this.loadDocument(doc.getId());
+		                    list.currentItemIndex(index);
+		                    this.updateUrl(doc.getId());
+	                    }
+	                    else {
+	                        this.document(doc);
+	                        this.lodaedDocumentName("");
+	                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+	                    }
 
-                    if (!!newTotalResultCount) {
-                        list.totalResultCount(newTotalResultCount);
-                    }
-                });
-        }
+	                    if (!!newTotalResultCount) {
+	                        list.totalResultCount(newTotalResultCount);
+	                    }
+	                });
+	        }
+		});
     }
 
     navigateToCollection(collectionName: string) {

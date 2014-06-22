@@ -562,11 +562,18 @@ interface statusDebugMetricsDto {
     IndexedPerSecond: number;
     ReducedPerSecond: number;
     RequestsPerSecond: number;
-    Requests: statusDebugMetricsRequestsDto;
-    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+    Requests: meterDataDto;
+    RequestsDuration: histogramDataDto;
+    StaleIndexMaps: histogramDataDto;
+    StaleIndexReduces: histogramDataDto;
+    Gauges: any;
+    ReplicationBatchSizeMeter: dictionary<meterDataDto>;
+    ReplicationDurationMeter: dictionary<meterDataDto>;
+    ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
+    ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
 
-interface statusDebugMetricsRequestsDto {
+interface meterDataDto {
     Count: number;
     MeanRate: number;
     OneMinuteRate: number;
@@ -574,7 +581,7 @@ interface statusDebugMetricsRequestsDto {
     FifteenMinuteRate: number;
 }
 
-interface statusDebugMetricsRequestsDurationDto {
+interface histogramDataDto {
     Counter: number;
     Max: number;
     Min: number;
@@ -687,8 +694,6 @@ enum documentChangeType {
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
     BulkInsertError = 16,
-    SystemResourceEnabled = 32,
-    SystemResourceDisabled = 64
 }
 
 enum indexChangeType {

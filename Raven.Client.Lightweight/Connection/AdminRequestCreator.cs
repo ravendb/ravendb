@@ -54,9 +54,15 @@ namespace Raven.Client.Connection
 			return createReplicationAwareRequest(serverUrl, "/admin/StopIndexing", "POST");
 		}
 
-		public HttpJsonRequest StartIndexing(string serverUrl)
-		{
-			return createReplicationAwareRequest(serverUrl, "/admin/StartIndexing", "POST");
+        public HttpJsonRequest StartIndexing(string serverUrl, int? maxNumberOfParallelIndexTasks)
+        {
+            var url = "/admin/StartIndexing";
+            if (maxNumberOfParallelIndexTasks.HasValue)
+            {
+                url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
+            }
+
+			return createReplicationAwareRequest(serverUrl, url, "POST");
 		}
 
 		public HttpJsonRequest AdminStats()

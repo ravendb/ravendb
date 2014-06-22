@@ -1,12 +1,13 @@
 class luceneField {
-    name = ko.observable<string>();
-    stores = ko.observable<string>();
-    indexing = ko.observable<string>();
-    sort = ko.observable<string>();
-    analyzer = ko.observable<string>();
-    suggestionDistance = ko.observable<string>();
-    suggestionAccuracy = ko.observable<number>();
-    termVector = ko.observable<string>();
+    name = ko.observable<string>().extend({ required: true });
+    stores = ko.observable<string>().extend({ required: true });
+    sort = ko.observable<string>().extend({ required: true });
+    termVector = ko.observable<string>().extend({ required: true });
+    indexing = ko.observable<string>().extend({ required: true });
+    analyzer = ko.observable<string>().extend({ required: true });
+    suggestionDistance = ko.observable<string>().extend({ required: true });
+    suggestionAccuracy = ko.observable<number>().extend({ required: true });
+    
     fieldNameAutocompletes = ko.observableArray<string>();
 
     constructor(name: string, stores: string = "No", indexing: string = "Default", sort: string = "None", analyzer: string = null, suggestionDistance: string = "None", suggestionAccuracy: number = 0.5, termVector: string = "No", public indexFieldNames?:string[]) {
@@ -31,11 +32,9 @@ class luceneField {
         }
     }
 
-
     setName(curName: string) {
         this.name(curName);
     }
-
 
     toSuggestionDto(): spatialIndexSuggestionDto {
         return {

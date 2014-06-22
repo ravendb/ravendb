@@ -164,7 +164,7 @@ class changesApi {
 
         return new changeSubscription(() => {
             this.watchedPrefixes[docIdPrefix].remove(callback);
-            if (this.watchedPrefixes[docIdPrefix].length == 0) {
+            if (this.watchedPrefixes[docIdPrefix]().length == 0) {
                 delete this.watchedPrefixes[docIdPrefix];
                 this.send('unwatch-prefix', docIdPrefix);
             }
