@@ -1,0 +1,16 @@
+﻿<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: close" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" data-bind="text: 'Sample Data classes'"></h4>
+    </div>
+    <div class="modal-body">
+        <!--<h4><strong data-bind="text:isPaste === true?'CTRL+V, Enter ':'CTRL+C, Enter '"></strong><span data-bind="text:isPaste === true?'to save':'to copy'"></span></h4>-->
+        <h4><strong data-bind="text:'CTRL+C '"></strong><span data-bind="text:'to copy'"></span></h4>
+        <div>
+            <textarea data-bind="text: data, event: { focus: function () { $(this).select(); } }" id="classData" rows="10" style="width: 450px;" class="form-control" autofocus="autofocus"></textarea>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+     </div>
+</div>

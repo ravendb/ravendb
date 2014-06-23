@@ -160,6 +160,28 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
+        public async Task<HttpResponseMessage> CreateSampleDataClass()
+        {
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
+            {
+                if (sampleData == null)
+                    return GetEmptyMessage();
+                   
+                sampleData.Position = 0;
+                using (var reader = new StreamReader(sampleData, Encoding.UTF8))
+                {
+                   var data = reader.ReadToEnd();
+                   return GetMessageWithObject(data);
+                }
+                 
+                
+               
+            }
+        }
+
+        [HttpGet]
         [Route("studio-tasks/new-encryption-key")]
         public HttpResponseMessage GetNewEncryption(string path = null)
         {
