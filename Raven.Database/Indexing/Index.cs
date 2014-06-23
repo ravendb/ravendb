@@ -449,7 +449,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public virtual void StoreChecksum(IndexSegmentsInfo segmentsInfo, Etag highestETagInIndex)
+		private void StoreChecksum(IndexSegmentsInfo segmentsInfo, Etag highestETagInIndex)
 		{
 			if (directory is RAMDirectory)
 				return;

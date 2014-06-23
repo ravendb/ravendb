@@ -141,10 +141,9 @@ namespace Raven.Database.Indexing
 
 					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
 
-				    IndexStats indexStats = null;
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						indexStats = accessor.Indexing.GetIndexStats(fixedName);
+						var indexStats = accessor.Indexing.GetIndexStats(fixedName);
 						if (indexStats != null)
 							indexImplementation.Priority = indexStats.Priority;
 
