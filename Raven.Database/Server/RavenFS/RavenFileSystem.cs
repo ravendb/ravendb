@@ -65,7 +65,7 @@ namespace Raven.Database.Server.RavenFS
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
-			this.transportState = new TransportState();
+			transportState = new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			fileLockManager = new FileLockManager();
 			storage.Initialize();

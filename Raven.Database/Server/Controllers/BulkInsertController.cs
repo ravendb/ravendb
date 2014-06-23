@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Controllers
 
 				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-				var token = authorizer.GenerateSingleUseAuthToken(Database, User, this);
+				var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);
 				return GetMessageWithObject(new
 				{
 					Token = token

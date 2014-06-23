@@ -800,3 +800,7 @@ interface databaseDto {
 interface customFunctionsDto {
     Functions: string;
 }
+
+interface singleAuthToken {
+    Token: string;
+}

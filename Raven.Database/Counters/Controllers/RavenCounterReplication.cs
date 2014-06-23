@@ -462,7 +462,7 @@ namespace Raven.Database.Counters.Controllers
 				}
 				try
 				{
-					var url = connectionStringOptions.Url + "/counters/" + storage.CounterStorageName + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
+					var url = connectionStringOptions.Url + "/counters/" + storage.Name + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
 					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
 					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
