@@ -272,7 +272,6 @@
     <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Server\Connections\WebSocketsTransport.cs" />
     <EmbeddedResource Include="Server\Assets\EmbeddedData\NorthwindHelpData.cs" />
-    <Compile Include="Server\Connections\WebSocketsTrasport.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
