@@ -24,7 +24,7 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
-		readonly PrefetchingBehavior prefetchingBehavior;
+		private readonly PrefetchingBehavior prefetchingBehavior;
 
 		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
 			: base(context)
@@ -32,6 +32,11 @@ namespace Raven.Database.Indexing
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
 		}
+
+		public PrefetchingBehavior PrefetchingBehavior
+ 		{
+ 			get { return prefetchingBehavior; }
+ 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
