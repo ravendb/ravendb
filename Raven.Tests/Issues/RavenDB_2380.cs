@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			configuration.BulkImportTimeoutInMs = 5000;
+			configuration.BulkImportBatchTimeout = TimeSpan.FromMilliseconds(250);
 		}
 
         [Fact]
@@ -51,18 +51,19 @@ namespace Raven.Tests.Issues
                 using (var bulkInsertOp = store.BulkInsert("TestDB", new BulkInsertOptions { BatchSize = 1 }))
                 {
                     var flushEvent = new CountdownEvent(3);
-                    bulkInsertOp.Report += reportString => { if (reportString.StartsWith("Wrote")) flushEvent.Signal(); };
+                    bulkInsertOp.Report += reportString => { if (reportString.StartsWith("Wrote") && flushEvent.CurrentCount > 0) flushEvent.Signal(); };
 
                     bulkInsertOp.Store(new Foo { Name = "bar1" }, "foo/bar/1");
                     bulkInsertOp.Store(new Foo { Name = "bar2" }, "foo/bar/2");
 
+                    Thread.Sleep(5000);
 
-                    Thread.Sleep(TimeSpan.FromSeconds(6));
-
+                    bulkInsertOp.Store(new Foo { Name = "bar3" }, "foo/bar/3");
+                    flushEvent.Wait(10000); //10 sec is more than enough time to flush the batch
+                    
                     Assert.Throws<InvalidOperationException>(() =>
                     {
-                        bulkInsertOp.Store(new Foo { Name = "bar3" }, "foo/bar/3");
-                        flushEvent.Wait(10000); //10 sec is more than enough time to flush the batch
+                        bulkInsertOp.Store(new Foo { Name = "bar4" }, "foo/bar/4");
                     });
 
                     Assert.Equal(true, bulkInsertOp.IsAborted);

@@ -83,7 +83,7 @@ namespace Raven.Database.Config
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
-			BulkImportTimeoutInMs = ravenSettings.BulkImportTimeout.Value;
+			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 
@@ -261,14 +261,7 @@ namespace Raven.Database.Config
 		    get; set;
 		}
 
-		public int BulkImportTimeoutInMs
-		{
-			get
-			{
-				return Int32.Parse(Settings[Constants.BulkImportTimeout]);				
-			}
-			set { Settings[Constants.BulkImportTimeout] = value.ToString(CultureInfo.InvariantCulture); }
-		}
+		public TimeSpan BulkImportBatchTimeout { get; set; }
 
 		/// <summary>
         /// This limits the number of concurrent multi get requests,
