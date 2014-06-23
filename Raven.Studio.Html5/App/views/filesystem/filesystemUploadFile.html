@@ -6,7 +6,7 @@
         <li>
             <h3>
                 <a href="#filesystems" data-bind="click: navigateToFiles">
-                    Files
+                    Filesystems
                 </a>
             </h3>
         </li>
@@ -14,7 +14,10 @@
             <a data-bind="text: name"></a>
         </li>
         <li>
-            <a>Upload Files</a>
+            <a>Files</a>
+        </li>
+        <li>
+            <a>Upload</a>
         </li>
     </ul>
 
@@ -22,7 +25,7 @@
         <br />
         <br />
         <form>
-            <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: files, fileUpload: { files: files, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
+            <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: files, fileUpload: { files: files, directory: selectedDirectory, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
         </form>
         <br />
         <br />

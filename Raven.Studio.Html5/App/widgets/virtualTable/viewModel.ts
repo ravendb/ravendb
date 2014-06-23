@@ -36,6 +36,7 @@ class ctor {
     firstVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
+    collections: KnockoutObservableArray<string>;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -54,6 +55,8 @@ class ctor {
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
         customFunctions: KnockoutObservable<customFunctions>;
+        collections: KnockoutObservableArray<collection>;
+        rowsAreLoading: KnockoutObservable<boolean>;
     }
 
     activate(settings: any) {
@@ -71,7 +74,9 @@ class ctor {
             contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
-            customFunctions: ko.observable(customFunctions.empty())
+            customFunctions: ko.observable(customFunctions.empty()),
+            collections: ko.observableArray<collection>([]),
+            rowsAreLoading: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
 
@@ -156,6 +161,7 @@ class ctor {
     }
 
     onGridScrolled() {
+        this.settings.rowsAreLoading(true);
         this.ensureRowsCoverViewport();
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
@@ -169,6 +175,7 @@ class ctor {
     }
 
     onWindowHeightChanged() {
+        this.settings.rowsAreLoading(true);
         var newViewportHeight = this.gridViewport.height();
         this.viewportHeight(newViewportHeight);
         var desiredRowCount = this.calculateRecycleRowCount();
@@ -234,6 +241,7 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
+            this.settings.rowsAreLoading(true);
             var that = this;
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
@@ -245,6 +253,7 @@ class ctor {
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
                 }
+                this.settings.rowsAreLoading(false);
             });
         }
     }
@@ -254,7 +263,7 @@ class ctor {
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getId(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
+            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getUrl(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
@@ -263,7 +272,7 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditItem(selectedItem.getId(), appUrl.getResource(), itemIndex, collectionName));
+            router.navigate(appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName));
         }
     }
 
@@ -393,7 +402,7 @@ class ctor {
                 });
                 if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
                     this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
-                } else {
+                }else {
                     this.settings.customColumns().columns.push(newCustomColumn);
                 }
             }
@@ -580,6 +589,15 @@ class ctor {
         } else {
             return "#";
         }
+    }
+
+    collectionExists(collectionName: string): boolean {
+        var result = this.settings.collections()
+            .map((c: collection) =>
+                collectionName.toLowerCase().substr(0, c.name.length) === c.name.toLowerCase()
+            )
+            .reduce((p: boolean, c: boolean) => c || p, false);
+        return result;
     }
 }
 

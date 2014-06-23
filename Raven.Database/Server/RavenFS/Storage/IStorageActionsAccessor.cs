@@ -25,13 +25,13 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         int ReadPage(int pageId, byte[] buffer);
 
-        FileHeader ReadFile(string filename);
+        FileHeaderInformation ReadFile(string filename);
 
-        FileAndPages GetFile(string filename, int start, int pagesToLoad);
+        FileAndPagesInformation GetFile(string filename, int start, int pagesToLoad);
 
-        IEnumerable<FileHeader> ReadFiles(int start, int size);
+        IEnumerable<FileHeaderInformation> ReadFiles(int start, int size);
 
-        IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take);
+        IEnumerable<FileHeaderInformation> GetFilesAfter(Guid etag, int take);
 
         void Delete(string filename);
        

@@ -41,8 +41,8 @@ namespace Raven.Client
 		/// <summary>
 		/// Sets user defined inputs to the query
 		/// </summary>
-		/// <param name="queryInputs"></param>
-		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+		/// <param name="transformerParameters"></param>
+		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
 
 		/// <summary>
 		/// Gets the query result

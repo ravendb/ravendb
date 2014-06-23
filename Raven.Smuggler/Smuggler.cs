@@ -349,7 +349,7 @@ namespace Raven.Smuggler
 
         private static async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(DocumentStore store)
         {
-            var buildNumber = await store.AsyncDatabaseCommands.GetBuildNumberAsync();
+            var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
             if (buildNumber == null || string.IsNullOrEmpty(buildNumber.ProductVersion))
             {
                 ShowProgress("Server version is not available. Running in legacy mode which does not support transformers and documents streaming.");

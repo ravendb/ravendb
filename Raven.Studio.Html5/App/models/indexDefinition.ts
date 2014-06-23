@@ -2,31 +2,35 @@ import luceneField = require("models/luceneField");
 import spatialIndexField = require("models/spatialIndexField");
 
 class indexDefinition {
+    name = ko.observable<string>().extend({ required: true });
+    map = ko.observable<string>().extend({ required: true });
+    maps = ko.observableArray<KnockoutObservable<string>>().extend({ required: true });
+    reduce = ko.observable<string>().extend({ required: true });
+    transformResults = ko.observable<string>().extend({ required: true });
+    luceneFields = ko.observableArray<luceneField>();
+    numOfLuceneFields = ko.computed(() => this.luceneFields().length).extend({ required: true });
+
+    // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
+    // Stored as multiple luceneFields for the sake of data binding.
+    // Each luceneField corresponds to a Field box in the index editor UI.
+    spatialFields = ko.observableArray<spatialIndexField>();
+    numOfSpatialFields = ko.computed(() => this.spatialFields().length).extend({ required: true });
+
+    maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
+
     analyzers: any;
-    fields = ko.observableArray<string>().extend({ required: true });
+    fields = ko.observableArray<string>();
     indexes: any;
     internalFieldsMapping: any;
     isCompiled: boolean;
     isMapReduce: boolean;
     lockMode: string;
-    map = ko.observable<string>().extend({ required: true });
-    maps = ko.observableArray<KnockoutObservable<string>>().extend({ required: true });
-    name = ko.observable<string>().extend({ required: true });
-    reduce = ko.observable<string>().extend({ required: true });
     sortOptions: any;
     spatialIndexes: any;
     stores: any;
     suggestions: any;
     termVectors: any;
-    transformResults = ko.observable<string>().extend({ required: true });
     type: string;
-    maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
-
-    // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
-    // Stored as multiple luceneFields for the sake of data binding.
-    // Each luceneField corresponds to a Field box in the index editor UI.
-    luceneFields = ko.observableArray<luceneField>();
-    spatialFields = ko.observableArray<spatialIndexField>().extend({ required: true });
 
     constructor(dto: indexDefinitionDto) {
         this.analyzers = dto.Analyzers;

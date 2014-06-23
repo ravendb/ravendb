@@ -261,7 +261,7 @@ namespace Raven.Database.Server.Controllers
 				HighlighterPreTags = GetQueryStringValues("preTags"),
 				HighlighterPostTags = GetQueryStringValues("postTags"),
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
-				QueryInputs = ExtractQueryInputs(),
+				TransformerParameters = ExtractTransformerParameters(),
 				ExplainScores = GetExplainScores(),
 				SortHints = GetSortHints(),
 				IsDistinct = IsDistinct()
@@ -402,13 +402,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public Dictionary<string, RavenJToken> ExtractQueryInputs()
+		public Dictionary<string, RavenJToken> ExtractTransformerParameters()
 		{
 			var result = new Dictionary<string, RavenJToken>();
 			foreach (var key in InnerRequest.GetQueryNameValuePairs().Select(pair => pair.Key))
 			{
 				if (string.IsNullOrEmpty(key)) continue;
-				if (key.StartsWith("qp-"))
+				if (key.StartsWith("qp-") || key.StartsWith("tp-"))
 				{
 					var realkey = key.Substring(3);
 					result[realkey] = GetQueryStringValue(key);

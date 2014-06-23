@@ -7,8 +7,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
 using Xunit;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {
@@ -19,14 +20,14 @@ namespace RavenFS.Tests.Auth
         {
             var server = CreateRavenDbServer(Ports[0], fileSystemName: "WillUseDefaultCredentials", enableAuthentication: true); // enable authentication
 
-            using (var client = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
+            using (var client = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {
-                await client.Admin.CreateFileSystemAsync(new DatabaseDocument()
+                await client.Admin.CreateFileSystemAsync(new FileSystemDocument()
                 {
-                    Id = "Raven/FileSystem/" + client.FileSystemName,
+                    Id = "Raven/FileSystem/" + client.FileSystem,
                     Settings =
                     {
-                        {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", client.FileSystemName)}
+                        {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", client.FileSystem)}
                     }
                 });
 

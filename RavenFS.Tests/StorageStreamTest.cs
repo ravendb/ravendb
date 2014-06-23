@@ -2,7 +2,6 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
@@ -11,6 +10,7 @@ using Raven.Database.Server.RavenFS.Util;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
@@ -35,7 +35,7 @@ namespace RavenFS.Tests
 				stream.Write(buffer, 0, 1);
 			}
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 
 			transactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile("file", 0, 10));
 
@@ -63,7 +63,7 @@ namespace RavenFS.Tests
 				stream.PreventUploadComplete = false;
 			}
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 
 			transactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile("file", 0, 10));
 

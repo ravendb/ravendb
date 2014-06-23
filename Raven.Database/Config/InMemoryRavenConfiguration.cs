@@ -86,7 +86,9 @@ namespace Raven.Database.Config
 			BulkImportTimeoutInMs = ravenSettings.BulkImportTimeout.Value;
 
 			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
-			
+
+			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
+
 			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
@@ -251,6 +253,8 @@ namespace Raven.Database.Config
 
 			PostInit();
 		}
+
+		public int PrefetchingDurationLimit { get; private set; }
 
 		public int EncryptionKeyBitsPreference
 		{

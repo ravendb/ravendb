@@ -4,15 +4,10 @@
             <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
                 <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                     <a href="javascript:void(0)">
-                        <div class="collectionText">
-                            <div class="inner pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                            <div class="inner pull-left collection-name-part">
-                                <span data-bind="text: name, attr:{title:name}"></span>
-                                
-                            </div>
-                            <div class="collectionName pull-left">
-                                <span class="text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '(' + documentCount() + ($data.isUpToDate() === true?'':'?') + ')'"></span>
-                            </div>
+                        <div class="collectionName">
+                            <div class="collectionText pull-left collection-color-strip" data-bind="css: colorClass"></div>
+                            <span class="collectionText pull-left collection-name-part" data-bind=" text: name, attr:{title:name}"></span>
+                            <span class="collectionText pull-left text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '(' + documentCount() + ')'"></span>
                         </div>
                     </a>
                 </li>
@@ -52,9 +47,10 @@
                             <i class="fa fa-clipboard"></i>
                         </button>
                     </div>
+                    <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
                 </div>
             </div>
-            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions }"></div>
+            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator }"></div>
         </div>
     </div>
 </div>
@@ -62,6 +58,5 @@
 <div id="collections-context-menu">
     <ul class="dropdown-menu" role="menu">
         <li data-bind="click: $root.deleteCollection"><a tabindex="-1" href="#">Delete</a></li>
-        <li data-bind="click: $root.refreshCollection"><a tabindex="-1" href="#">Refresh</a></li>
     </ul>
 </div>

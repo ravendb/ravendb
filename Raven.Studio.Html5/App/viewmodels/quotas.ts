@@ -15,24 +15,38 @@ class quotas extends viewModelBase {
  
     isSaveEnabled: KnockoutComputed<boolean>;
 
+    canActivate(args: any): any {
+        super.canActivate(args);
+
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            // fetch current quotas from the database
+            this.fetchQuotas(db)
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        }
+        return deferred;
+    }
+
     activate(args) {
         super.activate(args);
 
-        // fetch current quotas from the database
-        var deferred = $.Deferred();
-        var db = this.activeDatabase();
-        this.fetchQuotas(db)
-            .done(() => {
-                deferred.resolve({ can: true });
-                viewModelBase.dirtyFlag().reset();
-            })
-            .fail(() => deferred.resolve({ redirect: appUrl.forStatus(db) }));
-
         this.initializeDirtyFlag();
 
-        this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed(() => viewModelBase.dirtyFlag().isDirty());
+    }
+
+    private fetchQuotas(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
+        return new getDatabaseSettingsCommand(db, reportFetchProgress)
+            .execute()
+            .done((document: documentModel) => {
+                this.settingsDocument(document);
+                this.maximumSize((document["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024).toString());
+                this.warningLimitThreshold((document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024).toString());
+                this.maxNumberOfDocs(document["Settings"]["Raven/Quotas/Documents/HardLimit"]);
+                this.warningThresholdForDocs(document["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
+            });
     }
 
     initializeDirtyFlag() {
@@ -58,18 +72,6 @@ class quotas extends viewModelBase {
                 viewModelBase.dirtyFlag().reset();
             });
         }
-    }
-
-    private fetchQuotas(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
-        return new getDatabaseSettingsCommand(db, reportFetchProgress)
-            .execute()
-            .done((document: documentModel) => {
-                this.settingsDocument(document);
-                this.maximumSize((document["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024).toString());
-                this.warningLimitThreshold((document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024).toString());
-                this.maxNumberOfDocs(document["Settings"]["Raven/Quotas/Documents/HardLimit"]);
-                this.warningThresholdForDocs(document["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
-            });
     }
 }
 

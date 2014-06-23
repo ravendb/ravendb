@@ -23,6 +23,8 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
+
 			BulkImportTimeout = new IntegerSetting(settings[Constants.BulkImportTimeout], Constants.BulkImportDefaultTimeoutInMs);
 
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
@@ -183,6 +185,10 @@ namespace Raven.Database.Config
 		}
 
 		public IntegerSetting BulkImportTimeout { get; private set; }
+
+		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
+
+		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
 		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 

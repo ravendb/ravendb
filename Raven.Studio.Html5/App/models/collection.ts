@@ -13,7 +13,6 @@ class collection {
     documentCount: any = ko.observable(0);
     isAllDocuments = false;
     isSystemDocuments = false;
-    isUpToDate = ko.observable<boolean>(true); 
 
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";

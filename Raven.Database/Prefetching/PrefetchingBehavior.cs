@@ -91,6 +91,7 @@ namespace Raven.Database.Prefetching
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
 			int prefetchingQueueSizeInBytes;
+			var prefetchingDurationTimer = Stopwatch.StartNew();
 			do
 			{
 				var nextEtagToIndex = GetNextDocEtag(etag);				
@@ -111,6 +112,7 @@ namespace Raven.Database.Prefetching
 
 				prefetchingQueueSizeInBytes = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
 			 } while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
+						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
 						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024)));
 			
 			return result;

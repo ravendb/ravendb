@@ -30,6 +30,7 @@ class appUrl {
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
+        metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
         alerts: ko.computed(() => appUrl.forAlerts(appUrl.currentDatabase())),
@@ -162,12 +163,16 @@ class appUrl {
         return "#databases/edit?" + databaseUrlPart;
     }
 
-	/**
-	* Gets the URL for status page.
-	* @param database The database to use in the URL. If null, the current database will be used.
-	*/
-	static forStatus(db: database): string {
+    /**
+    * Gets the URL for status page.
+    * @param database The database to use in the URL. If null, the current database will be used.
+    */
+    static forStatus(db: database): string {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forMetrics(db: database): string {
+        return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebug(db: database): string {
@@ -479,9 +484,14 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
-    static forFilesystemUploadFile(fs: filesystem): string {
+    static forFilesystemUploadFile(fs: filesystem, folderName: string): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
-        return "#filesystems/upload?" + filesystemPart;
+        var url = "#filesystems/upload?" + filesystemPart;
+        if (folderName) {
+            url += "&folderName=" + encodeURIComponent(folderName);
+        }
+
+        return url;
     }
 
     /**

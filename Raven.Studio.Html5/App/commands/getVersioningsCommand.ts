@@ -10,7 +10,7 @@ class getVersioningsCommand extends commandBase {
     execute(): JQueryPromise<Array<versioningEntry>> {
         var documentResult = $.Deferred();
         var resultsSelector = (result: versioningEntryDto[]) =>
-            result.map( (dto: versioningEntryDto) => new versioningEntry(dto, true) )
+            result.map((dto: versioningEntryDto) => new versioningEntry(dto, true));
         var url = "/docs";
         var args = {
             startsWith: "Raven/Versioning",
@@ -20,9 +20,7 @@ class getVersioningsCommand extends commandBase {
 
         var postResult = this.query(url, args, this.db, resultsSelector);
         postResult.fail(xhr => documentResult.fail(xhr));
-        postResult.done((entries: versioningEntry[]) => {
-            documentResult.resolve(entries);
-        });
+        postResult.done((entries: versioningEntry[]) => documentResult.resolve(entries));
         return documentResult;
     }
 }
