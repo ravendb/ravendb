@@ -45,6 +45,10 @@ namespace Raven.Abstractions.Data
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string RavenAlerts = "Raven/Alerts";
 
+		// Server
+		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
+		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+
 		// Indexing
 		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 		//Paths

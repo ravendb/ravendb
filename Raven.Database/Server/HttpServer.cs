@@ -13,7 +13,6 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -21,7 +20,6 @@ using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
 using Jint;
-using Lucene.Net.QueryParsers;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
@@ -49,11 +47,6 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private readonly ConcurrentDictionary<string, DateTime> lastWriteRequest = new ConcurrentDictionary<string, DateTime>();
-		
-		// Important! this value is syncronized with the max sessions number in esent
-		// since we cannot have more reqquests in the system than we have sessions for them
-		// and we also need to allow sessions for background operations and for multi get requests
-		private const int MaxConcurrentRequests = 512;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -114,7 +107,7 @@ namespace Raven.Database.Server
 
 		// concurrent requests
 		// we set 1/4 aside for handling background tasks
-		private readonly SemaphoreSlim concurrentRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
+		private readonly SemaphoreSlim concurrentRequestSemaphore;
 		private Timer serverTimer;
 		private int physicalRequestsCount;
 
@@ -124,7 +117,7 @@ namespace Raven.Database.Server
 
 		public bool HasPendingRequests
 		{
-			get { return concurrentRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
+			get { return concurrentRequestSemaphore.CurrentCount != SystemConfiguration.MaxConcurrentServerRequests; }
 		}
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
@@ -145,6 +138,8 @@ namespace Raven.Database.Server
 
 			SystemDatabase = resourceStore;
 			SystemConfiguration = configuration;
+
+			concurrentRequestSemaphore = new SemaphoreSlim(SystemConfiguration.MaxConcurrentServerRequests);
 
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
