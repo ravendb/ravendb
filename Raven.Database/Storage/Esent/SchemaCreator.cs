@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-	    public const string SchemaVersion = "4.9";
+	    public const string SchemaVersion = "5.0";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)

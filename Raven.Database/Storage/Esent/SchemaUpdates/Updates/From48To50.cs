@@ -23,7 +23,7 @@ using Raven.Storage.Esent.SchemaUpdates;
 
 namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 {
-    public class From48To49 : ISchemaUpdate
+    public class From48To50 : ISchemaUpdate
     {
         private InMemoryRavenConfiguration configuration;
 
@@ -274,7 +274,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 
 
             filesToDelete.ForEach(File.Delete);
-            SchemaCreator.UpdateVersion(session, dbid, "4.9");
+            SchemaCreator.UpdateVersion(session, dbid, "5.0");
         }
 
         private void UpdateLastIdentityForIndexes(Session session, JET_DBID dbid, int lastIdentity)
