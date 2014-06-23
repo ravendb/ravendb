@@ -265,6 +265,8 @@ namespace Raven.Database.Config
 
 		public int MaxConcurrentMultiGetRequests { get; set; }
 
+		public int PrefetchingDurationLimit { get; private set; }
+
 		public int EncryptionKeyBitsPreference { get; set; }
 
 		/// <summary>

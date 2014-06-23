@@ -191,8 +191,6 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxConcurrentMultiGetRequests { get; private set; }
 
-		public IntegerSetting MemoryLimitForIndexing { get; private set; }
-
 		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
 		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }

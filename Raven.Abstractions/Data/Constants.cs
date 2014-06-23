@@ -148,9 +148,6 @@ namespace Raven.Abstractions.Data
 
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
-		//Indexing
-		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
-
 		//Counters
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
