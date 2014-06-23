@@ -49,6 +49,7 @@ namespace Raven.Client.Document
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 	{
+		private readonly BulkInsertOptions options;
 		private CancellationTokenSource cancellationTokenSource;
 		private readonly AsyncServerClient operationClient;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
@@ -58,10 +59,11 @@ namespace Raven.Client.Document
 		private readonly Task operationTask;
 		private int total;
 	    private bool aborted;
-
+		private readonly Timer flushTimeoutTimer;
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
+			this.options = options;
 			using (NoSynchronizationContext.Scope())
 			{
 				OperationId = Guid.NewGuid();
@@ -69,6 +71,8 @@ namespace Raven.Client.Document
 				queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
 				operationTask = StartBulkInsertAsync(options);
+				flushTimeoutTimer = new Timer(state => Abort(), null, options.FlushingTimeout, Timeout.InfiniteTimeSpan);
+
 #if !MONO
 				SubscribeToBulkInsertNotifications(changes);
 #endif
@@ -189,60 +193,35 @@ namespace Raven.Client.Document
 			return requestUrl;
 		}
 
-		private bool isCheckingActive;
-
-		private void CheckIfRequestStreamWriteable(Stream stream)
-		{
-			while (isCheckingActive)
-			{				
-				if(stream.CanWrite == false)
-					throw new OperationCanceledException("request stream was closed");
-				Thread.Sleep(10);
-			}
-		}
-
 		private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
 		{
-			isCheckingActive = true;
-			var checkIfRequestStreamWriteableTask = Task.Run(() => CheckIfRequestStreamWriteable(stream));
-			try
+			while (true)
 			{
-				while (true)
+				cancellationToken.ThrowIfCancellationRequested();
+
+				var batch = new List<RavenJObject>();
+				RavenJObject document;
+				while (queue.TryTake(out document, 200))
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
-					var batch = new List<RavenJObject>();
-					RavenJObject document;
-					while (queue.TryTake(out document, 200))
+					if (document == null) // marker
 					{
-						if (checkIfRequestStreamWriteableTask.IsFaulted)
-							cancellationTokenSource.Cancel();
-
-						cancellationToken.ThrowIfCancellationRequested();
-
-						if (document == null) // marker
-						{
-							FlushBatch(stream, batch);
-							return;
-						}
-						if (ReferenceEquals(AbortMarker, document)) // abort immediately
-						{
-							return;
-						}
-
-						batch.Add(document);
-
-						if (batch.Count >= options.BatchSize)
-							break;
+						FlushBatch(stream, batch);
+						return;
+					}
+					if (ReferenceEquals(AbortMarker, document)) // abort immediately
+					{
+						return;
 					}
 
-					FlushBatch(stream, batch);
+					batch.Add(document);
+
+					if (batch.Count >= options.BatchSize)
+						break;
 				}
-			}
-			finally
-			{
-				isCheckingActive = false;
-				checkIfRequestStreamWriteableTask.Wait(11);
+
+				FlushBatch(stream, batch);
 			}
 		}
 
@@ -257,13 +236,19 @@ namespace Raven.Client.Document
 			if (data == null) throw new ArgumentNullException("data");
 		    if (aborted) throw new InvalidOperationException("Operation has been aborted");
 
-			if (operationTask.IsCanceled || operationTask.IsFaulted)
-				operationTask.Wait(); // error early if we have  any error
 
 			metadata["@id"] = id;
 			data[Constants.Metadata] = metadata;
 
-			queue.Add(data);
+			var hasAddedToQueue = false;
+			do
+			{
+				if (operationTask.IsCanceled || operationTask.IsFaulted)
+					operationTask.Wait(); // error early if we have  any error
+
+				if (queue.TryAdd(data, millisecondsTimeout: 500))
+					hasAddedToQueue = true;
+			} while (hasAddedToQueue == false);
 		}
 
 		private async Task<bool> IsOperationCompleted(long operationId)
@@ -310,12 +295,12 @@ namespace Raven.Client.Document
 				return;
 			disposed = true;
 			queue.Add(null);
-            if (subscription != null)
-            {
-                subscription.Dispose();
-               
-            }
-           
+			if (subscription != null)
+			{
+				subscription.Dispose();
+
+			}
+
 			// The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
 			try
 			{
@@ -335,8 +320,7 @@ namespace Raven.Client.Document
 			}
 			catch (Exception e)
 			{
-				ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : " + e);
-				throw new InvalidOperationException("Something happened to the server, failed to finish writing results.",e);
+				ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : {0}", e);
 			}
 
 		}
@@ -346,6 +330,7 @@ namespace Raven.Client.Document
 			if (disposed)
 				return;
 
+			flushTimeoutTimer.Dispose();
 			using (NoSynchronizationContext.Scope())
 			{
 				var disposeAsync = DisposeAsync().ConfigureAwait(false);
@@ -359,29 +344,24 @@ namespace Raven.Client.Document
 				return;
 			if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
 
-			try
-			{
-				bufferedStream.SetLength(0);
-				WriteToBuffer(localBatch);
+			bufferedStream.SetLength(0);
+			WriteToBuffer(localBatch);
 
-				var requestBinaryWriter = new BinaryWriter(requestStream);
-				requestBinaryWriter.Write((int)bufferedStream.Position);
-				bufferedStream.WriteTo(requestStream);
-				requestStream.Flush();
+			var requestBinaryWriter = new BinaryWriter(requestStream);
+			requestBinaryWriter.Write((int) bufferedStream.Position);
+			bufferedStream.WriteTo(requestStream);
+			requestStream.Flush();
 
-				total += localBatch.Count;
-				Action<string> report = Report;
-				if (report != null)
-				{
-					report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
-						localBatch.Count,
-						bufferedStream.Position / 1024,
-						total));
-				}
-			}
-			catch (Exception)
+			flushTimeoutTimer.Change(options.FlushingTimeout, Timeout.InfiniteTimeSpan);
+
+			total += localBatch.Count;
+			Action<string> report = Report;
+			if (report != null)
 			{
-				Abort();
+				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
+					localBatch.Count,
+					bufferedStream.Position/1024,
+					total));
 			}
 		}
 
