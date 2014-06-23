@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                          string exclude = null, string transformer = null,
-		                          Dictionary<string, RavenJToken> queryInputs = null);
+		                          Dictionary<string, RavenJToken> transformerParameters = null);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -68,10 +68,10 @@ namespace Raven.Client.Connection
 	    /// <param name="ids">The ids.</param>
 	    /// <param name="includes">The includes.</param>
 	    /// <param name="transformer"></param>
-	    /// <param name="queryInputs"></param>
+	    /// <param name="transformerParameters"></param>
 	    /// <param name="metadataOnly">Load just the document metadata</param>
 	    /// <returns></returns>
-	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
+	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Get documents from server
@@ -144,12 +144,6 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
         void DeleteAttachment(string key, Etag etag);
-
-		/// <summary>
-		/// Returns the names of all tenant databases on the RavenDB server
-		/// </summary>
-		/// <returns>List of tenant database names</returns>
-		string[] GetDatabaseNames(int pageSize, int start = 0);
 
 		/// <summary>
 		/// Returns the names of all indexes that exist on the server
@@ -226,7 +220,7 @@ namespace Raven.Client.Connection
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
-		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
+		QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
 		
 		/// <summary>
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
@@ -482,17 +476,23 @@ namespace Raven.Client.Connection
 		/// <param name="txId">The tx id.</param>
 		void PrepareTransaction(string txId);
 
-		/// <summary>
-		/// Gets the build number
-		/// </summary>
-		BuildNumber GetBuildNumber();
-
 	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
         IndexMergeResults GetIndexMergeSuggestions();
 	}
 
 	public interface IGlobalAdminDatabaseCommands
 	{
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		BuildNumber GetBuildNumber();
+
+		/// <summary>
+		/// Returns the names of all tenant databases on the RavenDB server
+		/// </summary>
+		/// <returns>List of tenant database names</returns>
+		string[] GetDatabaseNames(int pageSize, int start = 0);
+
 		/// <summary>
 		/// Get admin statistics
 		/// </summary>
@@ -536,7 +536,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Enables indexing
 		/// </summary>
-		void StartIndexing();
+        void StartIndexing(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status

@@ -15,13 +15,11 @@ class filesystems extends viewModelBase {
     fileSystems = ko.observableArray<filesystem>();    
     searchText = ko.observable("");
     selectedFilesystem = ko.observable<filesystem>();
-    defaultFs: filesystem;
 
     constructor() {
         super();
 
         this.fileSystems = shell.fileSystems;
-        this.defaultFs = appUrl.getDefaultFilesystem();
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterFilesystems(s));
         ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.selectFileSystem(fs, false));
     }

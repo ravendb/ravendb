@@ -154,7 +154,8 @@ namespace Owin
 
 				if (context != null)
 				{
-					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase))
+					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
+						context.Request.Uri.LocalPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase))
 						return false;
 				}
 

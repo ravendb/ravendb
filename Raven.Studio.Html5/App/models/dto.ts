@@ -364,12 +364,27 @@ interface savedTransformerDto {
     }
 }
 
+interface transformerParamInfo {
+  name: string;
+  hasDefault: boolean;
+}
+
+interface transformerParamDto {
+    name: string;
+    value: string;
+}
+
+interface transformerQueryDto {
+    transformerName: string;
+    queryParams: Array<transformerParamDto>;
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
     QueryText: string;
     Sorts: string[];
-    TransformerName: string;
+    TransformerQuery: transformerQueryDto;
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;
@@ -562,13 +577,18 @@ interface statusDebugMetricsDto {
     IndexedPerSecond: number;
     ReducedPerSecond: number;
     RequestsPerSecond: number;
-    Requests: statusDebugMetricsRequestsDto;
-    RequestsDuration: histogramDto;
-    StaleIndexMaps: histogramDto;
-    StaleIndexReduces: histogramDto;
+    Requests: meterDataDto;
+    RequestsDuration: histogramDataDto;
+    StaleIndexMaps: histogramDataDto;
+    StaleIndexReduces: histogramDataDto;
+    Gauges: any;
+    ReplicationBatchSizeMeter: dictionary<meterDataDto>;
+    ReplicationDurationMeter: dictionary<meterDataDto>;
+    ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
+    ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
 
-interface statusDebugMetricsRequestsDto {
+interface meterDataDto {
     Count: number;
     MeanRate: number;
     OneMinuteRate: number;
@@ -576,7 +596,7 @@ interface statusDebugMetricsRequestsDto {
     FifteenMinuteRate: number;
 }
 
-interface histogramDto {
+interface histogramDataDto {
     Counter: number;
     Max: number;
     Min: number;
@@ -779,4 +799,8 @@ interface databaseDto {
 
 interface customFunctionsDto {
     Functions: string;
+}
+
+interface singleAuthToken {
+    Token: string;
 }

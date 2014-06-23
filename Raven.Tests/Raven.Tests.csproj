@@ -258,6 +258,7 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Issues\RavenDB_2380.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -606,7 +607,7 @@
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
-    <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />

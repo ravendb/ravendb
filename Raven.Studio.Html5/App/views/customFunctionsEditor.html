@@ -1,12 +1,14 @@
-﻿<div data-bind="text: console.log('BINDING TO: ', $root)"></div>
-<form class="custom-functions-form" id="customFunctionsContainer">
+﻿<form class="custom-functions-form" id="customFunctionsContainer">
     <nav class="navbar navbar-default" role="navigation">
         <div class="collapse navbar-collapse">
-            <div class="navbar-form navbar-right">
-                <button type="submit" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <div class="navbar-form">
                 <span style="margin-left: 10px">
-                  You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
+                    You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
                 </span>
+                <span id="customFunctionsExample" class="help-cursor">
+                    See the example. <i class="fa fa-info-circle text-info"></i>
+                </span>
+                <button type="submit" class="btn btn-primary use-bootstrap-tooltip pull-right" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </div>
         </div>
     </nav>

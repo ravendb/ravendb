@@ -175,7 +175,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getFilesystemFilesCommand(appUrl.getFilesystem(), directory, skip, take).execute();
+        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
 
         return task;
     }

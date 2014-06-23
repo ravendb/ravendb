@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
 			public string Name { get; set; }
 		}
 
-		public class ProductWithQueryInput : AbstractTransformerCreationTask<Product>
+		public class ProductWithTransformerParameters : AbstractTransformerCreationTask<Product>
 		{
 			public class Result
 			{
@@ -32,14 +32,14 @@ namespace Raven.Tests.Issues
 				public string ProductName { get; set; }
 				public string Input { get; set; }
 			}
-			public ProductWithQueryInput()
+			public ProductWithTransformerParameters()
 			{
 				TransformResults = docs => from product in docs
 										   select new
 										   {
 											   ProductId = product.Id,
 											   ProductName = product.Name,
-											   Input = Query("input")
+											   Input = Parameter("input")
 										   };
 			}
 		}
@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 			{
 				using (var documentStore = NewRemoteDocumentStore())
 				{
-					new ProductWithQueryInput().Execute(documentStore);
+					new ProductWithTransformerParameters().Execute(documentStore);
 
 					var smugglerApi = new SmugglerApi();
 
@@ -86,7 +86,7 @@ namespace Raven.Tests.Issues
 
 					Assert.NotNull(transformers);
 					Assert.Equal(1, transformers.Length);
-					Assert.Equal("ProductWithQueryInput", transformers[0].Name);
+					Assert.Equal("ProductWithTransformerParameters", transformers[0].Name);
 				}
 			}
 			finally

@@ -69,24 +69,24 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void Reset_index_from_debug_journal_should_not_corrupt_database()
-		{
-			var lines = File.ReadAllLines("failed_index_repro.djrs", Encoding.UTF8);
-			var badLines = lines.Where(x => x.Count(c => c == ',') != 3).ToList();
-			Assert.Empty(badLines);
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-			{
-				env.DebugJournal = DebugJournal.FromFile("failed_index_repro", env);
-				env.DebugJournal.Replay();
-
-				using (var tableStorage = new Raven.Database.Storage.Voron.Impl.TableStorage(env, new BufferPool(1024 * 1024 * 1024, 1024 * 32)))
-				{
-					var documentNumberFromCount = tableStorage.GetEntriesCount(tableStorage.Documents);
-					var documentNumberFromIndex = tableStorage.GetEntriesCount(tableStorage.IndexingMetadata);					
-				}
-			}
-		}
+//		[Fact]
+//		public void Reset_index_from_debug_journal_should_not_corrupt_database()
+//		{
+//			var lines = File.ReadAllLines("failed_index_repro.djrs", Encoding.UTF8);
+//			var badLines = lines.Where(x => x.Count(c => c == ',') != 3).ToList();
+//			Assert.Empty(badLines);
+//
+//			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+//			{
+//				env.DebugJournal = DebugJournal.FromFile("failed_index_repro", env);
+//				env.DebugJournal.Replay();
+//
+//				using (var tableStorage = new Raven.Database.Storage.Voron.Impl.TableStorage(env, new BufferPool(1024 * 1024 * 1024, 1024 * 32)))
+//				{
+//					var documentNumberFromCount = tableStorage.GetEntriesCount(tableStorage.Documents);
+//					var documentNumberFromIndex = tableStorage.GetEntriesCount(tableStorage.IndexingMetadata);					
+//				}
+//			}
+//		}
 	}
 }

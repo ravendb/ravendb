@@ -2,7 +2,7 @@
 
 namespace Raven.Tests.Core.Utils.Entities
 {
-	public class Company
+    public class Company : ISearchable
 	{
 		public decimal AccountsReceivable { get; set; }
 		public string Id { get; set; }

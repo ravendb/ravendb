@@ -26,7 +26,7 @@ namespace Raven.Tests.Core.Utils.Transformers
 										{
 											user.Name,
 											user.AddressId,
-											CustomData = Query("customData")
+											CustomData = Parameter("customData")
 										};
 		}
 	}
