@@ -25,6 +25,8 @@ namespace Raven.Database.Config
 		{
 			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
 
+			BulkImportTimeout = new IntegerSetting(settings[Constants.BulkImportTimeout], Constants.BulkImportDefaultTimeoutInMs);
+
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
 				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
@@ -181,6 +183,10 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting BulkImportTimeout { get; private set; }
+
+		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 
 		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 

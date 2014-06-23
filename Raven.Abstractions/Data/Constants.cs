@@ -47,6 +47,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenAlerts = "Raven/Alerts";
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
 		public const int DefaultPrefetchingDurationLimit = 5000;
+		public const string BulkImportTimeout = "Raven/BulkImport/Timeout";
+		public const int BulkImportDefaultTimeoutInMs = 60000;
+
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
         public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
