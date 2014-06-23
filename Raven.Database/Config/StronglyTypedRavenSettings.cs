@@ -190,8 +190,6 @@ namespace Raven.Database.Config
 
 		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
-		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
-
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 
 		public IntegerSetting MemoryCacheLimitMegabytes { get; private set; }

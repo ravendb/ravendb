@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues
 		{
 			using(var store = NewRemoteDocumentStore(databaseName:"TestDB"))
 			{
-				using (var bulkInsertOp = store.BulkInsert("TestDB", new BulkInsertOptions { FlushingTimeout = TimeSpan.FromSeconds(2)}))
+				using (var bulkInsertOp = store.BulkInsert("TestDB", new BulkInsertOptions { WriteTimeoutMilliseconds = 2*1000}))
 				{
 					bulkInsertOp.Store(new Foo { Name = "bar1" }, "foo/bar/1");
 					bulkInsertOp.Store(new Foo { Name = "bar2" }, "foo/bar/2");
