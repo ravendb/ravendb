@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Indexing;
 using Raven.Database.Server.Security;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -60,30 +62,33 @@ namespace Raven.Database.Server.Controllers
 			var sp = Stopwatch.StartNew();
 
 			var status = new BulkInsertStatus();
+			status.IsTimedOut = false;
 
 			var documents = 0;
 			var mre = new ManualResetEventSlim(false);
-
-			//var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
-			var timeoutCancellationTokenSource = new CancellationTokenSource();
-			using (new Timer(state => timeoutCancellationTokenSource.Cancel(),null,Database.WorkContext.Configuration.BulkImportTimeoutInMs,Timeout.Infinite))
-			using (var inputStream = new BlockingStream(timeoutCancellationTokenSource.Token))
+			var tre = new ManualResetEventSlim(false);			
+			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
+			using (var timeoutTimer = new Timer(state => tre.Set(),null,Database.WorkContext.Configuration.BulkImportTimeoutInMs,Timeout.Infinite))
 			{
-				var inputTask = InnerRequest.Content.CopyToAsync(inputStream);
 				var currentDatabase = Database;
 				var task = Task.Factory.StartNew(() =>
 				{
 // ReSharper disable once AccessToDisposedClosure
-					currentDatabase.Documents.BulkInsert(options, YieldBatches(inputStream, mre, batchSize => documents += batchSize), operationId);
+					currentDatabase.Documents.BulkInsert(options, YieldBatches(timeoutTimer,inputStream, mre, tre, batchSize => documents += batchSize), operationId);
+
 					status.Documents = documents;
 					status.Completed = true;
-				}, timeoutCancellationTokenSource.Token);
+					if (tre.IsSet)
+						status.IsTimedOut = true;
+				});
 
 				long id;
 				Database.Tasks.AddTask(task, status, out id);
 
-				inputTask.Wait(timeoutCancellationTokenSource.Token);
-				mre.Wait(Database.WorkContext.CancellationToken);
+				task.Wait(Database.WorkContext.CancellationToken);
+				if (status.IsTimedOut)
+					throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
+
 				sp.Stop();
 
 				AddRequestTraceInfo(log => log.AppendFormat("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
@@ -102,15 +107,21 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(Stream inputStream,ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
+		private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(Timer timeoutTimer, Stream inputStream, ManualResetEventSlim mre, ManualResetEventSlim tre, Action<int> increaseDocumentsCount)
 		{
 			try
 			{
 				using (inputStream)
 				{
 					var binaryReader = new BinaryReader(inputStream);
+					
 					while (true)
 					{
+						if (tre.IsSet)
+						{
+							inputStream.Close();
+							break;
+						}
 						int size;
 						try
 						{
@@ -122,7 +133,7 @@ namespace Raven.Database.Server.Controllers
 						}
 						using (var stream = new PartialStream(inputStream, size))
 						{
-							yield return YieldDocumentsInBatch(stream, increaseDocumentsCount);
+							yield return YieldDocumentsInBatch(timeoutTimer ,stream, increaseDocumentsCount, tre);
 						}
 					}
 				}
@@ -130,10 +141,11 @@ namespace Raven.Database.Server.Controllers
 			finally
 			{
 				mre.Set();
+				inputStream.Close();
 			}
 		}
 
-		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(Stream partialStream, Action<int> increaseDocumentsCount)
+		private IEnumerable<JsonDocument> YieldDocumentsInBatch(Timer timeoutTimer, Stream partialStream, Action<int> increaseDocumentsCount, ManualResetEventSlim tre)
 		{
 			using (var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen: true))
 			{
@@ -142,6 +154,9 @@ namespace Raven.Database.Server.Controllers
 
 				for (var i = 0; i < count; i++)
 				{
+					if (tre.IsSet)
+						break;
+					timeoutTimer.Change(Database.WorkContext.Configuration.BulkImportTimeoutInMs, Timeout.Infinite);
 					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader)
 					                                             {
 						                                             DateTimeKindHandling = DateTimeKind.Unspecified
@@ -174,6 +189,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			public int Documents { get; set; }
 			public bool Completed { get; set; }
+
+			public bool IsTimedOut { get; set; }
 		}
 	}
 }

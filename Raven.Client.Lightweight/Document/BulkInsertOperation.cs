@@ -81,6 +81,9 @@ namespace Raven.Client.Document
 
 		public void Store(object entity, string id)
 		{
+			if(Operation.IsAborted)
+				throw new InvalidOperationException("Bulk insert has been aborted or the operation was timed out");
+
 			var metadata = new RavenJObject();
 
 			var tag = documentStore.Conventions.GetDynamicTagName(entity);

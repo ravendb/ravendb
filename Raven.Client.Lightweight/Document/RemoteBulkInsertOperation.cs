@@ -34,6 +34,8 @@ namespace Raven.Client.Document
 	{
 		Guid OperationId { get; }
 
+		bool IsAborted { get; }
+
 		void Write(string id, RavenJObject metadata, RavenJObject data);
 
 		Task DisposeAsync();
@@ -82,18 +84,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-		private bool isOperationActive;
-
-		private void ValidateIfStreamOpenTask(Stream stream)
-		{
-			while (isOperationActive)
-			{
-				if(!stream.CanWrite)
-					throw new TimeoutException("Operation stream has timed-out");
-				Thread.Sleep(100);
-			}
-		}
-
 		private async Task StartBulkInsertAsync(BulkInsertOptions options)
 		{
 			using (ConnectionOptions.Expect100Continue(operationClient.Url))
@@ -114,8 +104,6 @@ namespace Raven.Client.Document
 				var cancellationToken = CreateCancellationToken();
 				var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
 				{
-					isOperationActive = true;
-					var streamTimeoutValidationTask = Task.Run(() => ValidateIfStreamOpenTask(stream), cancellationToken);
 					try
 					{
 						WriteQueueToServer(stream, options, cancellationToken);
@@ -125,11 +113,7 @@ namespace Raven.Client.Document
 					{
 						source.TrySetException(e);
 					}
-					finally
-					{
-						isOperationActive = false;
-						streamTimeoutValidationTask.Wait(1000,cancellationToken);
-					}
+
 				}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
 				long operationId;
@@ -205,35 +189,60 @@ namespace Raven.Client.Document
 			return requestUrl;
 		}
 
+		private bool isCheckingActive;
+
+		private void CheckIfRequestStreamWriteable(Stream stream)
+		{
+			while (isCheckingActive)
+			{				
+				if(stream.CanWrite == false)
+					throw new OperationCanceledException("request stream was closed");
+				Thread.Sleep(10);
+			}
+		}
+
 		private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
 		{
-			while (true)
+			isCheckingActive = true;
+			var checkIfRequestStreamWriteableTask = Task.Run(() => CheckIfRequestStreamWriteable(stream));
+			try
 			{
-				cancellationToken.ThrowIfCancellationRequested();
-
-				var batch = new List<RavenJObject>();
-				RavenJObject document;
-				while (queue.TryTake(out document, 200))
+				while (true)
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
-					if (document == null) // marker
+					var batch = new List<RavenJObject>();
+					RavenJObject document;
+					while (queue.TryTake(out document, 200))
 					{
-						FlushBatch(stream, batch);
-						return;
+						if (checkIfRequestStreamWriteableTask.IsFaulted)
+							cancellationTokenSource.Cancel();
+
+						cancellationToken.ThrowIfCancellationRequested();
+
+						if (document == null) // marker
+						{
+							FlushBatch(stream, batch);
+							return;
+						}
+						if (ReferenceEquals(AbortMarker, document)) // abort immediately
+						{
+							return;
+						}
+
+						batch.Add(document);
+
+						if (batch.Count >= options.BatchSize)
+							break;
 					}
-				    if (ReferenceEquals(AbortMarker, document)) // abort immediately
-				    {
-				        return;
-				    }
 
-					batch.Add(document);
-
-					if (batch.Count >= options.BatchSize)
-						break;
+					FlushBatch(stream, batch);
 				}
-
-				FlushBatch(stream, batch);
+			}
+			finally
+			{
+				isCheckingActive = false;
+				checkIfRequestStreamWriteableTask.Wait(11);
 			}
 		}
 
@@ -308,20 +317,27 @@ namespace Raven.Client.Document
             }
            
 			// The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
-			await operationTask.ConfigureAwait(false);
-			operationTask.AssertNotFailed();
-
-			ReportInternal("Finished writing all results to server");
-
-			while (true)
+			try
 			{
-				if (await IsOperationCompleted(responseOperationId))
-					break;
+				await operationTask.ConfigureAwait(false);
+				operationTask.AssertNotFailed();
 
-				Thread.Sleep(500);
+				ReportInternal("Finished writing all results to server");
+
+				while (true)
+				{
+					if (await IsOperationCompleted(responseOperationId))
+						break;
+
+					Thread.Sleep(500);
+				}
+				ReportInternal("Done writing to server");
 			}
-
-			ReportInternal("Done writing to server");
+			catch (Exception e)
+			{
+				ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : " + e);
+				throw new InvalidOperationException("Something happened to the server, failed to finish writing results.",e);
+			}
 
 		}
 
@@ -341,22 +357,31 @@ namespace Raven.Client.Document
 		{
 			if (localBatch.Count == 0)
 				return;
-			bufferedStream.SetLength(0);
-			WriteToBuffer(localBatch);
+			if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
 
-			var requestBinaryWriter = new BinaryWriter(requestStream);
-			requestBinaryWriter.Write((int)bufferedStream.Position);
-			bufferedStream.WriteTo(requestStream);
-			requestStream.Flush();
-
-			total += localBatch.Count;
-			Action<string> report = Report;
-			if (report != null)
+			try
 			{
-				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
-									 localBatch.Count,
-									 bufferedStream.Position / 1024,
-									 total));
+				bufferedStream.SetLength(0);
+				WriteToBuffer(localBatch);
+
+				var requestBinaryWriter = new BinaryWriter(requestStream);
+				requestBinaryWriter.Write((int)bufferedStream.Position);
+				bufferedStream.WriteTo(requestStream);
+				requestStream.Flush();
+
+				total += localBatch.Count;
+				Action<string> report = Report;
+				if (report != null)
+				{
+					report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
+						localBatch.Count,
+						bufferedStream.Position / 1024,
+						total));
+				}
+			}
+			catch (Exception)
+			{
+				Abort();
 			}
 		}
 
@@ -409,8 +434,13 @@ namespace Raven.Client.Document
 	    {
 	        aborted = true;
             queue.Add(AbortMarker);
-
 	    }
+
+
+		public bool IsAborted
+		{
+			get { return aborted; }
+		}
 	}
 }
 #endif
