@@ -59,7 +59,6 @@ namespace Raven.Client.Document
 		private readonly Task operationTask;
 		private int total;
 	    private bool aborted;
-		private readonly Timer flushTimeoutTimer;
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
@@ -71,7 +70,6 @@ namespace Raven.Client.Document
 				queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
 				operationTask = StartBulkInsertAsync(options);
-				flushTimeoutTimer = new Timer(state => Abort(), null, options.FlushingTimeout, Timeout.InfiniteTimeSpan);
 
 #if !MONO
 				SubscribeToBulkInsertNotifications(changes);
@@ -240,15 +238,19 @@ namespace Raven.Client.Document
 			metadata["@id"] = id;
 			data[Constants.Metadata] = metadata;
 
-			var hasAddedToQueue = false;
-			do
-			{
-				if (operationTask.IsCanceled || operationTask.IsFaulted)
-					operationTask.Wait(); // error early if we have  any error
+		    for (int i = 0; i < 2; i++)
+		    {
+                if (operationTask.IsCanceled || operationTask.IsFaulted)
+                    operationTask.Wait(); // error early if we have  any error
 
-				if (queue.TryAdd(data, millisecondsTimeout: 500))
-					hasAddedToQueue = true;
-			} while (hasAddedToQueue == false);
+                if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
+                    return;
+		    }
+
+            if (operationTask.IsCanceled || operationTask.IsFaulted)
+                operationTask.Wait(); // error early if we have  any error
+
+		    throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
 		}
 
 		private async Task<bool> IsOperationCompleted(long operationId)
@@ -330,7 +332,6 @@ namespace Raven.Client.Document
 			if (disposed)
 				return;
 
-			flushTimeoutTimer.Dispose();
 			using (NoSynchronizationContext.Scope())
 			{
 				var disposeAsync = DisposeAsync().ConfigureAwait(false);
@@ -351,8 +352,6 @@ namespace Raven.Client.Document
 			requestBinaryWriter.Write((int) bufferedStream.Position);
 			bufferedStream.WriteTo(requestStream);
 			requestStream.Flush();
-
-			flushTimeoutTimer.Change(options.FlushingTimeout, Timeout.InfiniteTimeSpan);
 
 			total += localBatch.Count;
 			Action<string> report = Report;
