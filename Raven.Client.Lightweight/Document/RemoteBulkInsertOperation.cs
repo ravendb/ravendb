@@ -357,9 +357,9 @@ namespace Raven.Client.Document
 			Action<string> report = Report;
 			if (report != null)
 			{
-				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
+				report(string.Format("Wrote {0:#,#} (total {2:#,#}) documents to server gzipped to {1:#,#.##;;0} kb",
 					localBatch.Count,
-					bufferedStream.Position/1024,
+					bufferedStream.Position/1024d,
 					total));
 			}
 		}

@@ -24,7 +24,10 @@ namespace Raven.Database.Extensions
         private readonly long dueTime;
         private bool isTimerDisposed;
 
-        public bool Cancelled { get { return source.IsCancellationRequested; } }
+        public void ThrowIfCancellationRequested()
+        {
+            source.Token.ThrowIfCancellationRequested();
+        }
 
         public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
         {

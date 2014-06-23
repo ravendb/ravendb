@@ -74,13 +74,25 @@ namespace Raven.Database.Server.Controllers
             var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkImportBatchTimeout);
             var task = Task.Factory.StartNew(() =>
             {
-                // ReSharper disable once AccessToDisposedClosure
-                currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId);
-
-                status.Documents = documents;
-                status.Completed = true;
-                if (tre.IsCancellationRequested)
+                try
+                {
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId);
+                }
+                catch (OperationCanceledException)
+                {
+                    // happens on timeout
+                    currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+                    {
+                        OperationId = operationId,
+                        Message = "Operation cancelled, likely because of a batch timeout",
+                        Type = DocumentChangeTypes.BulkInsertError
+                    });
+                    status.Completed = true;
                     status.IsTimedOut = true;
+                    throw;
+                }
+                status.Completed = true;
+                status.Documents = documents;
             });
 
             long id;
@@ -117,11 +129,7 @@ namespace Raven.Database.Server.Controllers
 
                     while (true)
                     {
-                        if (timeout.Cancelled)
-                        {
-                            inputStream.Close();
-                            break;
-                        }
+                        timeout.ThrowIfCancellationRequested();
                         int size;
                         try
                         {

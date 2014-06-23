@@ -40,35 +40,7 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			configuration.BulkImportBatchTimeout = TimeSpan.FromMilliseconds(250);
+		    configuration.Settings[Constants.BulkImportBatchTimeout] = TimeSpan.FromMilliseconds(250).ToString();
 		}
-
-        [Fact]
-        public void Serverside_timeout_aborts_operation_on_next_flush()
-        {
-            using (var store = NewRemoteDocumentStore(databaseName: "TestDB"))
-            {
-                using (var bulkInsertOp = store.BulkInsert("TestDB", new BulkInsertOptions { BatchSize = 1 }))
-                {
-                    var flushEvent = new CountdownEvent(3);
-                    bulkInsertOp.Report += reportString => { if (reportString.StartsWith("Wrote") && flushEvent.CurrentCount > 0) flushEvent.Signal(); };
-
-                    bulkInsertOp.Store(new Foo { Name = "bar1" }, "foo/bar/1");
-                    bulkInsertOp.Store(new Foo { Name = "bar2" }, "foo/bar/2");
-
-                    Thread.Sleep(5000);
-
-                    bulkInsertOp.Store(new Foo { Name = "bar3" }, "foo/bar/3");
-                    flushEvent.Wait(10000); //10 sec is more than enough time to flush the batch
-                    
-                    Assert.Throws<InvalidOperationException>(() =>
-                    {
-                        bulkInsertOp.Store(new Foo { Name = "bar4" }, "foo/bar/4");
-                    });
-
-                    Assert.Equal(true, bulkInsertOp.IsAborted);
-                }
-            }
-        }
 	}
 }
