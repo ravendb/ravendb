@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.FileSystem;
+﻿using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Listeners;
 using Raven.Json.Linq;
@@ -63,13 +64,12 @@ namespace RavenFS.Tests.ClientApi
                     int value = resultingStream.ReadByte();
                     Assert.True(value >= 0);
                     Assert.Equal(i, (byte)value);
-
                 }
             }
         }
 
         [Fact]
-        public async void UploadActionWritesIncompleteStream()
+        public void UploadActionWritesIncompleteStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -81,11 +81,47 @@ namespace RavenFS.Tests.ClientApi
                         x.WriteByte(i);
                 });
 
-                await session.SaveChangesAsync();
+                Assert.Throws<BadRequestException>(() =>
+                {
+                    try
+                    {
+                        session.SaveChangesAsync().Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
+            }
+        }
 
-                MemoryStream output = new MemoryStream();
-                await session.Commands.DownloadAsync("test1.file", output);
-                Assert.Equal(60, output.Length);
+        [Fact]
+        public void UploadActionWritesIncompleteWithErrorStream()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 60; i++)
+                        x.WriteByte(i);
+                    
+                    // We are throwing to break the upload. RavenFS client should detect this case and cancel the upload. 
+                    throw new Exception();
+                });
+
+                Assert.Throws<BadRequestException>(() =>
+                {
+                    try
+                    {
+                        session.SaveChangesAsync().Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
             }
         }
 

@@ -11,6 +11,6 @@ namespace Raven.Client.FileSystem.Impl
 {
     internal interface IFilesOperation
     {
-        Task<bool> Execute(IAsyncFilesSession session);
+        Task Execute(IAsyncFilesSession session);
     }
 }

@@ -16,7 +16,7 @@ namespace Raven.Client.FileSystem.Impl
             this.Source = sourcePath;
             this.Destination = destinationPath;
         }
-        public Task<bool> Execute(IAsyncFilesSession session)
+        public Task Execute(IAsyncFilesSession session)
         {
             throw new NotImplementedException();
         }

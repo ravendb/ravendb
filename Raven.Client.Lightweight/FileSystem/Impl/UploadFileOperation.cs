@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Raven.Client.FileSystem.Impl
 {
@@ -32,20 +34,17 @@ namespace Raven.Client.FileSystem.Impl
             this.Size = size;
         }
 
-        public async Task<bool> Execute(IAsyncFilesSession session)
+        public async Task Execute(IAsyncFilesSession session)
         {
             var commands = session.Commands;
 
-            var pipe = new BlockingStream(10);
-            var upload = commands.UploadAsync(Path, Metadata, pipe, Size, null)
-                                 .ContinueWith(x => (x.IsFaulted || x.IsCanceled) ? false : true)
-                                 .ConfigureAwait(false);
-            
+            var pipe = new BlockingStream(10);           
             var task = Task.Run(() => StreamWriter(pipe))
                            .ContinueWith(x => { pipe.CompleteWriting(); })
                            .ConfigureAwait(false);
 
-            return await upload;
+            await commands.UploadAsync(Path, Metadata, pipe, Size, null)
+                          .ConfigureAwait(false);
         }
     }
 }

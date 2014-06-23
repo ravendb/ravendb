@@ -18,7 +18,7 @@ namespace Raven.Client.FileSystem.Impl
             this.Recurse = recurse;
         }
 
-        public Task<bool> Execute(IAsyncFilesSession session)
+        public Task Execute(IAsyncFilesSession session)
         {
             throw new NotImplementedException();
         }

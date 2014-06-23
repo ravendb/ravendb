@@ -24,6 +24,16 @@ namespace Raven.Abstractions.FileSystem
         public DateTimeOffset LastModified { get; private set; }
 
         public Etag Etag { get; private set; }
+
+        public FileHeader( RavenJObject metadata )
+        {
+            this.Metadata = metadata;
+        }
+
+        protected FileHeader()
+        {
+
+        }
     }
 
 }

@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
@@ -512,6 +513,8 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     await request.WriteAsync(source);
+                    if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
+                        throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
                 }
                 catch (Exception e)
                 {

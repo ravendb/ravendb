@@ -469,6 +469,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
                     innerEsentMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
                 }
 
+                if (existingMetadata.ContainsKey("RavenFS-Size"))
+                {
+                    innerEsentMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
+                }
+
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], etag.TransformToValueForEsentSorting());
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], ToQueryString(innerEsentMetadata), Encoding.Unicode);
 

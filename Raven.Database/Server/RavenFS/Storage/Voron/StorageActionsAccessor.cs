@@ -337,8 +337,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             innerMetadata.Remove("ETag");
 
             var existingMetadata = (RavenJObject) file["metadata"];
+
             if (existingMetadata.ContainsKey("Content-MD5"))
                 innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
+            if (existingMetadata.ContainsKey("RavenFS-Size"))
+                innerMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
 
             var oldEtag = file.Value<Guid>("etag");
 
