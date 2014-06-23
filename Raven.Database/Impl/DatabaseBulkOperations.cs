@@ -22,9 +22,9 @@ namespace Raven.Database.Impl
 		private readonly DocumentDatabase database;
 		private readonly TransactionInformation transactionInformation;
 		private readonly CancellationToken token;
-		private readonly CancellationTokenSourceExtensions.CancellationTimeout timeout;
+		private readonly CancellationTimeout timeout;
 
-		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationToken token, CancellationTokenSourceExtensions.CancellationTimeout timeout)
+		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationToken token, CancellationTimeout timeout)
 		{
 			this.database = database;
 			this.transactionInformation = transactionInformation;

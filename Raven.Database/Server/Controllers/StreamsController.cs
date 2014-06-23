@@ -169,10 +169,10 @@ namespace Raven.Database.Server.Controllers
 			private readonly HttpRequestMessage req;
 			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
-		    private readonly CancellationTokenSourceExtensions.CancellationTimeout _timeout;
+		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTokenSourceExtensions.CancellationTimeout timeout, Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;

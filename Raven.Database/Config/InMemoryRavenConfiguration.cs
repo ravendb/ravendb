@@ -83,6 +83,8 @@ namespace Raven.Database.Config
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
+			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
+
 			// Important! this value is synchronized with the max sessions number in esent
 			// since we cannot have more requests in the system than we have sessions for them
 			// and we also need to allow sessions for background operations and for multi get requests
@@ -268,6 +270,8 @@ namespace Raven.Database.Config
 		public int PrefetchingDurationLimit { get; private set; }
 
 		public int EncryptionKeyBitsPreference { get; set; }
+
+		public TimeSpan BulkImportBatchTimeout { get; set; }
 
 		/// <summary>
         /// This limits the number of concurrent multi get requests,

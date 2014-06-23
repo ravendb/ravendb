@@ -364,12 +364,27 @@ interface savedTransformerDto {
     }
 }
 
+interface transformerParamInfo {
+  name: string;
+  hasDefault: boolean;
+}
+
+interface transformerParamDto {
+    name: string;
+    value: string;
+}
+
+interface transformerQueryDto {
+    transformerName: string;
+    queryParams: Array<transformerParamDto>;
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
     QueryText: string;
     Sorts: string[];
-    TransformerName: string;
+    TransformerQuery: transformerQueryDto;
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;
@@ -784,4 +799,8 @@ interface databaseDto {
 
 interface customFunctionsDto {
     Functions: string;
+}
+
+interface singleAuthToken {
+    Token: string;
 }
