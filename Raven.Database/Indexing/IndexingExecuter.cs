@@ -24,13 +24,18 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
-		readonly PrefetchingBehavior prefetchingBehavior;
+		private readonly PrefetchingBehavior prefetchingBehavior;
 
 		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+		}
+
+		public PrefetchingBehavior PrefetchingBehavior
+		{
+			get { return prefetchingBehavior; }
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -105,7 +110,7 @@ namespace Raven.Database.Indexing
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
 			
 			List<JsonDocument> jsonDocs;
-	        using (prefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForAllIndexes, out jsonDocs))
+	        using (PrefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForAllIndexes, out jsonDocs))
 	        {
 		        try
 		        {
@@ -134,11 +139,11 @@ namespace Raven.Database.Indexing
 		        {
 			        if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 			        {
-				        prefetchingBehavior.CleanupDocuments(lastEtag);
-				        prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+				        PrefetchingBehavior.CleanupDocuments(lastEtag);
+				        PrefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
 			        }
 
-			        prefetchingBehavior.BatchProcessingComplete();
+			        PrefetchingBehavior.BatchProcessingComplete();
 			        indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
 		        }
 	        }
@@ -239,7 +244,7 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
-					if (prefetchingBehavior.FilterDocuments(item.Doc) == false)
+					if (PrefetchingBehavior.FilterDocuments(item.Doc) == false)
 						continue;
 
 					// did we already indexed this document in this index?
@@ -254,7 +259,7 @@ namespace Raven.Database.Indexing
 						continue;
 					}
 
-					batch.Add(item.Doc, item.Json, prefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
+					batch.Add(item.Doc, item.Json, PrefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
@@ -340,7 +345,7 @@ namespace Raven.Database.Indexing
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not dispose of IndexingExecuter");
 
-			exceptionAggregator.Execute(prefetchingBehavior.Dispose);
+			exceptionAggregator.Execute(PrefetchingBehavior.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
 		}

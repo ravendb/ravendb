@@ -109,7 +109,7 @@ namespace Raven.Database.Prefetching
 					}
 				}
 
-				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, ref result);
+				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result);
 
 				if (docsLoaded)
 					etag = result[result.Count - 1].Etag;
@@ -133,7 +133,7 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, ref List<JsonDocument> items)
+		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items)
 		{
 			JsonDocument result;
 
@@ -142,6 +142,8 @@ namespace Raven.Database.Prefetching
 
 			while (items.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && 
 				prefetchingQueue.TryPeek(out result) && 
+				// we compare to current or _smaller_ so we will remove from the queue old versions
+				// of documents that we have already loaded
 				nextDocEtag.CompareTo(result.Etag) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
@@ -164,6 +166,11 @@ namespace Raven.Database.Prefetching
 			}
 
 			return hasDocs;
+		}
+
+		public IEnumerable<JsonDocument> DebugGetDocumentsInPrefetchingQueue()
+		{
+			return prefetchingQueue.Clone();
 		}
 
 		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
@@ -469,8 +476,13 @@ namespace Raven.Database.Prefetching
 		{
 			if (nextEtag != prefetchingQueue.NextDocumentETag())
 			{
-				nextEtag = SkipDeletedEtags(nextEtag);
-				nextEtag = SkipUpdatedEtags(nextEtag);
+				var etag = SkipDeletedEtags(nextEtag);
+				etag = SkipUpdatedEtags(etag);
+
+				if (etag == nextEtag)
+					etag = GetNextDocumentEtagFromDisk(nextEtag.IncrementBy(-1));
+
+				nextEtag = etag;
 			}
 
 			return nextEtag;
