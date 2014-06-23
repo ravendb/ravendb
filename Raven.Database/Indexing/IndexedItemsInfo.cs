@@ -14,6 +14,8 @@ namespace Raven.Database.Indexing
 
 		public Etag HighestETag { get; set; }
 
+		public Etag HighestETagInIndex { get; set; }
+
 		public string[] DeletedKeys { get; set; }
 	}
 }

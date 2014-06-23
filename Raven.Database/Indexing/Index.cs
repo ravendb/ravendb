@@ -409,7 +409,7 @@ namespace Raven.Database.Indexing
 			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 			                Flush(); // just make sure changes are flushed to disk
 				            segmentsInfo = GetCurrentSegmentsInfo();
-							StoreChecksum(segmentsInfo);
+							StoreChecksum(segmentsInfo, itemsInfo.HighestETagInIndex);
 							UpdateIndexingStats(context, stats);
 			            }
 			        }
@@ -449,12 +449,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void StoreChecksum(IndexSegmentsInfo segmentsInfo)
+		public virtual void StoreChecksum(IndexSegmentsInfo segmentsInfo, Etag highestETagInIndex)
 		{
 			if (directory is RAMDirectory)
 				return;
 
-			IndexStorage.StoreChecksum(indexStoragePath, name, segmentsInfo);
+			IndexStorage.StoreChecksum(indexStoragePath, name, segmentsInfo, highestETagInIndex);
 		}
 
 		private IndexSegmentsInfo GetCurrentSegmentsInfo()

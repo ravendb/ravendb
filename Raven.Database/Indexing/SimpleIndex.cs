@@ -178,7 +178,8 @@ namespace Raven.Database.Indexing
                 return new IndexedItemsInfo
                 {
                     ChangedDocs = sourceCount,
-                    HighestETag = batch.HighestEtagInBatch
+                    HighestETag = batch.HighestEtagBeforeFiltering,
+					HighestETagInIndex = batch.HighestEtagAfterFiltering
                 };
             });
 
