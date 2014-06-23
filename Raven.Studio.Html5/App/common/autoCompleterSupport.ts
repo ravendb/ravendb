@@ -33,7 +33,11 @@ class autoCompleterSupport {
         inputValue.substring(cursorPosition)
         );
 
-      inputCursor.setPosition(input, beginIndex + selectedCompletion.length);
+      var positionCorrection = 0;
+      if (selectedCompletion[selectedCompletion.length-1] === ")" ) {
+        positionCorrection = -1;
+      }
+      inputCursor.setPosition(input, beginIndex + selectedCompletion.length + positionCorrection);
       this.autoCompleteResults([]);
     }
   }

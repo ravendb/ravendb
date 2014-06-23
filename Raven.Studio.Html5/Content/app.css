@@ -572,6 +572,9 @@ body {
 .code-keyword {
   color: blue;
 }
+.code-string {
+  color: #c51111;
+}
 .help-cursor {
   cursor: help;
 }

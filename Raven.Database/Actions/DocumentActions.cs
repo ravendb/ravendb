@@ -322,6 +322,7 @@ namespace Raven.Database.Actions
 
                         WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                         WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                        WorkContext.UpdateFoundWork();
                     }
                 }
 

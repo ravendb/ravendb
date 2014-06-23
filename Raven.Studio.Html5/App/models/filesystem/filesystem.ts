@@ -1,7 +1,7 @@
 ﻿import resource = require("models/resource");
 
 class filesystem extends resource {
-    isDefault = false;
+    //isDefault = false;
     statistics = ko.observable<filesystemStatisticsDto>();    
     files = ko.observableArray<filesystemFileHeaderDto>();
 

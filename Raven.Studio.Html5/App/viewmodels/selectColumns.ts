@@ -211,6 +211,14 @@ class selectColumns extends dialogViewModelBase {
         return super.enterKeyPressed();
     }
 
+    consumeUpDownArrowKeys(columnParams, event: KeyboardEvent): boolean {
+        if (event.keyCode === 38 || event.keyCode === 40) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
     searchForCompletions() {
         this.activeInput = $("[id ^= 'binding-']:focus");
         this.autoCompleterSupport.searchForCompletions(this.activeInput);

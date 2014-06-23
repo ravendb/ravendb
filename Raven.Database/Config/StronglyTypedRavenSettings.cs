@@ -23,7 +23,14 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+
 			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
+
+            BulkImportBatchTimeout = new TimeSpanSetting(settings[Constants.BulkImportBatchTimeout], TimeSpan.FromMilliseconds(Constants.BulkImportDefaultTimeoutInMs), TimeSpanArgumentType.FromParse);
+
+			MaxConcurrentServerRequests = new IntegerSetting(settings[Constants.MaxConcurrentServerRequests], 512);
+
+			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
 
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
@@ -182,9 +189,17 @@ namespace Raven.Database.Config
 			return val;
 		}
 
+		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
+
+		public IntegerSetting MaxConcurrentMultiGetRequests { get; private set; }
+
 		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
+		public TimeSpanSetting BulkImportBatchTimeout { get; private set; }
+
 		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
+
+		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 

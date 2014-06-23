@@ -127,5 +127,11 @@ namespace Raven.Smuggler.Client
 				disposeAsync.GetAwaiter().GetResult();
 			}
 		}
+
+
+		public bool IsAborted
+		{
+			get { return current.IsAborted; }
+		}
 	}
 }
