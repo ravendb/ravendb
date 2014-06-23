@@ -25,6 +25,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -139,13 +140,12 @@ namespace Raven.Database.Indexing
 					}
 
 					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
+
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						IndexStats indexStats = accessor.Indexing.GetIndexStats(fixedName);
+						var indexStats = accessor.Indexing.GetIndexStats(fixedName);
 						if (indexStats != null)
-						{
 							indexImplementation.Priority = indexStats.Priority;
-						}
 
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", fixedName);
 						if (read == null)
@@ -166,6 +166,10 @@ namespace Raven.Database.Indexing
 						if (dateTime > latestPersistedQueryTime)
 							latestPersistedQueryTime = dateTime;
 					});
+
+                    if (ValidateIndexStats(indexDefinitionStorage.FixupIndexName(indexName), indexDefinition, indexImplementation) == false)
+                        throw new InvalidOperationException("Index stats are invalid.");
+
 					break;
 				}
 				catch (Exception e)
@@ -232,7 +236,7 @@ namespace Raven.Database.Indexing
 															   out commitUsedToRestore,
 															   out keysToDeleteAfterRecovery))
 				{
-					ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
+					ResetLastIndexedEtag(indexDefinition, commitUsedToRestore.HighestCommitedETag, commitUsedToRestore.TimeStamp);
 				}
 			}
 			else
@@ -401,13 +405,11 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private void ResetLastIndexedEtagAccordingToRestoredCommitPoint(IndexDefinition indexDefinition,
-																		IndexCommitPoint lastCommitPoint)
+		private void ResetLastIndexedEtag(IndexDefinition indexDefinition, Etag lastIndexedEtag, DateTime timestamp)
 		{
 			documentDatabase.TransactionalStorage.Batch(
 				accessor =>
-				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
-													lastCommitPoint.TimeStamp));
+				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastIndexedEtag, timestamp));
 		}
 
 		public static string IndexVersionFileName(IndexDefinition indexDefinition)
@@ -518,7 +520,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public static void StoreChecksum(string path, string indexName, IndexSegmentsInfo segmentsInfo)
+		public static void StoreChecksum(string path, string indexName, IndexSegmentsInfo segmentsInfo, Etag highestETagInIndex)
 		{
 			if (segmentsInfo == null || segmentsInfo.IsIndexCorrupted)
 				return;
@@ -527,7 +529,8 @@ namespace Raven.Database.Indexing
 			var currentSegmentsFileName = segmentsInfo.SegmentsFileName;
 
 			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5");
-			
+			var etagFiles = Directory.GetFiles(indexFullPath, "*.etag");
+
 			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
 			using (var md5 = MD5.Create())
 			{
@@ -539,7 +542,17 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-            foreach (var hashFile in hashFiles)
+			if (highestETagInIndex != null)
+			{
+				using (File.Create(Path.Combine(indexFullPath, string.Format("{0}.etag", highestETagInIndex))))
+				{
+				}
+
+				foreach (var etagFile in etagFiles)
+					File.Delete(etagFile);
+			}
+
+			foreach (var hashFile in hashFiles)
                 File.Delete(hashFile);
 		}
 
@@ -711,7 +724,7 @@ namespace Raven.Database.Indexing
 					if (File.Exists(commitPointDirectory.DeletedKeysFile))
 						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
 
-					StoreChecksum(indexStoragePath, indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory));
+					StoreChecksum(indexStoragePath, indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory), indexCommit.HighestCommitedETag);
 
 					return true;
 				}
@@ -746,6 +759,61 @@ namespace Raven.Database.Indexing
             }
 
             return result;
+        }
+
+        private bool ValidateIndexStats(string indexName, IndexDefinition indexDefinition, Index index)
+        {
+            if (configuration.ResetIndexOnUncleanShutdown == false)
+                return true;
+
+			if (indexDefinition.IsMapReduce)
+				return true;
+
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+
+			var etagFiles = Directory.GetFiles(indexFullPath, "*.etag")
+					.Select(file => new FileInfo(file))
+					.ToList();
+
+			if (etagFiles.Count == 0)
+				return true; // backward compatibility
+
+			if (etagFiles.Count > 1)
+				return false;
+
+			var etagFile = etagFiles.First();
+			var etag = Etag.Parse(etagFile.Name.Substring(0, etagFile.Name.Length - 5));
+
+            IndexSearcher searcher;
+            using (index.GetSearcher(out searcher))
+            using (searcher)
+            {
+                int maxDoc;
+                JsonDocument doc = null;
+                for (maxDoc = searcher.MaxDoc - 1; maxDoc >= 0; maxDoc--)
+                {
+                    if (searcher.IndexReader.IsDeleted(maxDoc))
+                        continue;
+
+                    var document = searcher.Doc(maxDoc);
+                    var documentKey = document.Get(Constants.DocumentIdFieldName);
+
+                    doc = documentDatabase.Get(documentKey, null);
+                    if (doc != null) // doc could have been deleted, but not yet removed from index
+                        break;
+                }
+
+                if (doc == null) // no docs or all deleted, cant make decision
+                    return true;
+
+				if (doc.Etag.Equals(etag))
+					return true;
+
+	            var minEtag = EtagUtil.IsGreaterThan(doc.Etag, etag) ? etag : doc.Etag;
+				ResetLastIndexedEtag(indexDefinition, minEtag, SystemTime.UtcNow);
+
+	            return true;
+            }
         }
 
 		private static bool ValidateCommitPointChecksum(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
