@@ -45,10 +45,18 @@ namespace Raven.Abstractions.Data
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
+
+		// Server
+		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
+		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+
+		// Indexing
+		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
 		public const int DefaultPrefetchingDurationLimit = 5000;
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
+		public const string RavenLogsPath = "Raven/Esent/LogsPath";
         public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
