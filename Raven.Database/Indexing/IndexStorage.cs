@@ -37,6 +37,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
+using System.Security.Cryptography;
 
 namespace Raven.Database.Indexing
 {
@@ -124,6 +125,10 @@ namespace Raven.Database.Indexing
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
+
+                    if (ValidateIndexChecksum(indexDefinitionStorage.FixupIndexName(indexDefinition.Name), luceneDirectory) == false)
+                        throw new InvalidOperationException("Index checksum is invalid.");
+
 					indexImplementation = CreateIndexImplementation(fixedName, indexDefinition, luceneDirectory);
 
 					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
@@ -478,6 +483,66 @@ namespace Raven.Database.Indexing
 			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
 		}
 
+		private bool ValidateIndexChecksum(string indexName, Lucene.Net.Store.Directory directory)
+		{
+			if (directory is RAMDirectory)
+				return true;
+
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+
+			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5")
+				.Select(file => new FileInfo(file))
+				.ToList();
+
+			if (hashFiles.Count == 0) 
+				return true; // backward compatibility
+
+			if (hashFiles.Count > 1) 
+				return false; // too many hash files
+
+			var hashFile = hashFiles.First();
+			var hash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
+
+			var segmentInfo = GetCurrentSegmentsInfo(indexName, directory);
+			if (segmentInfo.IsIndexCorrupted)
+				return false;
+
+			var currentSegmentsFileName = segmentInfo.SegmentsFileName;
+			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
+			using (var md5 = MD5.Create())
+			{
+				var currentHash = md5.ComputeHash(segmentFile);
+				var hex = IOExtensions.GetMD5Hex(currentHash);
+
+				return hash.Equals(hex, StringComparison.OrdinalIgnoreCase);
+			}
+		}
+
+		public static void StoreChecksum(string path, string indexName, IndexSegmentsInfo segmentsInfo)
+		{
+			if (segmentsInfo == null || segmentsInfo.IsIndexCorrupted)
+				return;
+
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+			var currentSegmentsFileName = segmentsInfo.SegmentsFileName;
+
+			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5");
+			
+			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
+			using (var md5 = MD5.Create())
+			{
+				var hash = md5.ComputeHash(segmentFile);
+				var hex = IOExtensions.GetMD5Hex(hash);
+
+				using (File.Create(Path.Combine(indexFullPath, string.Format("{0}.md5", hex))))
+				{
+				}
+			}
+
+            foreach (var hashFile in hashFiles)
+                File.Delete(hashFile);
+		}
+
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
 		{
 			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted)
@@ -493,24 +558,48 @@ namespace Raven.Database.Indexing
 
 			Directory.CreateDirectory(commitPointDirectory.FullPath);
 
-			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
+			using (var md5 = MD5.Create())
 			{
+				var buffer = new byte[1024];
+
+				using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
 				using (var sw = new StreamWriter(commitPointFile))
 				{
 					var jsonSerializer = new JsonSerializer();
 					var textWriter = new JsonTextWriter(sw);
 
 					jsonSerializer.Serialize(textWriter, indexCommit);
-
 					sw.Flush();
+
+					commitPointFile.Position = 0;
+					int read;
+					while ((read = commitPointFile.Read(buffer, 0, buffer.Length)) > 0)
+					{
+						md5.TransformBlock(buffer, 0, read, null, 0);
+					}
+				}
+
+				var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+
+				File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
+						  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
+						  overwrite: true);
+
+				var currentSegmentChecksumFile = Directory.GetFiles(commitPointDirectory.IndexFullPath, "*.md5")
+					.Select(file => new FileInfo(file))
+					.Single();
+
+				var currentSegmentChecksum = currentSegmentChecksumFile.Name.Substring(0, currentSegmentChecksumFile.Name.Length - 4);
+				var currentSegmentChecksumBytes = Encoding.UTF8.GetBytes(currentSegmentChecksum);
+
+				md5.TransformBlock(currentSegmentChecksumBytes, 0, currentSegmentChecksumBytes.Length, null, 0);
+				md5.TransformFinalBlock(new byte[0], 0, 0);
+				var hex = IOExtensions.GetMD5Hex(md5.Hash);
+
+				using (File.Create(Path.Combine(commitPointDirectory.FullPath, string.Format("{0}.md5", hex))))
+				{
 				}
 			}
-
-			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
-
-			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
-					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
-					  overwrite: true);
 
 			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
@@ -545,7 +634,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
+		private bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
 		{
 			indexCommit = null;
 			keysToDelete = null;
@@ -553,7 +642,9 @@ namespace Raven.Database.Indexing
 			if (indexDefinition.IsMapReduce)
 				return false;
 
-			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexDefinition.Name));
+		    var indexName = indexDefinitionStorage.FixupIndexName(indexDefinition.Name);
+
+			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexName));
 
 			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
 
@@ -571,15 +662,13 @@ namespace Raven.Database.Indexing
 			{
 				try
 				{
-					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexDefinition.Name,
+					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexName,
 																				commitPointDirectoryName);
 
-					using (var commitPointFile = File.Open(commitPointDirectory.FileFullPath, FileMode.Open))
+					if (ValidateCommitPointChecksum(commitPointDirectory, out indexCommit) == false)
 					{
-						var jsonSerializer = new JsonSerializer();
-						var textReader = new JsonTextReader(new StreamReader(commitPointFile));
-
-						indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
+						continue; // checksum is invalid, try another commit point
 					}
 
 					var missingFile =
@@ -622,6 +711,8 @@ namespace Raven.Database.Indexing
 					if (File.Exists(commitPointDirectory.DeletedKeysFile))
 						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
 
+					StoreChecksum(indexStoragePath, indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory));
+
 					return true;
 				}
 				catch (Exception ex)
@@ -632,6 +723,81 @@ namespace Raven.Database.Indexing
 			}
 
 			return false;
+		}
+
+        public static IndexSegmentsInfo GetCurrentSegmentsInfo(string indexName, Lucene.Net.Store.Directory directory)
+        {
+            var segmentInfos = new SegmentInfos();
+            var result = new IndexSegmentsInfo();
+
+            try
+            {
+                segmentInfos.Read(directory);
+
+                result.Generation = segmentInfos.Generation;
+                result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+                result.ReferencedFiles = segmentInfos.Files(directory, false);
+            }
+            catch (CorruptIndexException ex)
+            {
+                log.WarnException(string.Format("Could not read segment information for an index '{0}'", indexName), ex);
+
+                result.IsIndexCorrupted = true;
+            }
+
+            return result;
+        }
+
+		private static bool ValidateCommitPointChecksum(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
+		{
+			using (var md5 = MD5.Create())
+			{
+				var buffer = new byte[1024];
+
+				var hashFile = Directory.GetFiles(commitPointDirectory.FullPath, "*.md5")
+					.Select(file => new FileInfo(file))
+					.FirstOrDefault();
+
+				using (var commitPointFile = File.OpenRead(commitPointDirectory.FileFullPath))
+				{
+					var jsonSerializer = new JsonSerializer();
+					var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+					indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+
+				    if (indexCommit == null)
+				        return false;
+
+					commitPointFile.Position = 0;
+
+					if (hashFile == null)
+						return true; // backward compatibility
+
+					int read;
+					while ((read = commitPointFile.Read(buffer, 0, buffer.Length)) > 0)
+					{
+						md5.TransformBlock(buffer, 0, read, null, 0);
+					}				
+				}
+
+				var storedHash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
+
+				var storedSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+
+				using (var storedSegmentsFile = File.OpenRead(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFileName)))
+				using (var storeSegmentsFileMd5 = MD5.Create())
+				{
+					var hash = storeSegmentsFileMd5.ComputeHash(storedSegmentsFile);
+					var hashBytes = Encoding.UTF8.GetBytes(IOExtensions.GetMD5Hex(hash));
+
+					md5.TransformBlock(hashBytes, 0, hashBytes.Length, null, 0);
+					md5.TransformFinalBlock(new byte[0], 0, 0);
+
+					var hex = IOExtensions.GetMD5Hex(md5.Hash);
+
+					return hex.Equals(storedHash, StringComparison.OrdinalIgnoreCase);
+				}
+			}
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
@@ -645,8 +811,8 @@ namespace Raven.Database.Indexing
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext);
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext, path)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext, path);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 
