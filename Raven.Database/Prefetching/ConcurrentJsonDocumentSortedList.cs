@@ -22,6 +22,19 @@ namespace Raven.Database.Prefetching
 			innerList = new List<JsonDocument>();
 		}
 
+		public IEnumerable<JsonDocument> Clone()
+		{
+			try
+			{
+				slim.EnterReadLock();
+				return new List<JsonDocument>(innerList);
+			}
+			finally
+			{
+				slim.ExitReadLock();
+			}
+		}
+
 		public int Count
 		{
 			get
