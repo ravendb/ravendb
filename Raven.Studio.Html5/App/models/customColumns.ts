@@ -9,7 +9,6 @@ class customColumns {
 
     constructor(dto: customColumnsDto) {
         this.columns($.map(dto.Columns, c => new customColumnParams(c)));
-        this.customMode(true);
     }
 
     static empty() {
