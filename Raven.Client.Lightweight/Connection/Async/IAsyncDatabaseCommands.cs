@@ -358,11 +358,6 @@ namespace Raven.Client.Connection.Async
 		Task<LicensingStatus> GetLicenseStatusAsync();
 
 		/// <summary>
-		/// Gets the build number
-		/// </summary>
-		Task<BuildNumber> GetBuildNumberAsync();
-
-		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
@@ -463,6 +458,11 @@ namespace Raven.Client.Connection.Async
 
 	public interface IAsyncGlobalAdminDatabaseCommands
 	{
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		Task<BuildNumber> GetBuildNumberAsync();
+
 		/// <summary>
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
