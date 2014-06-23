@@ -59,7 +59,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins an async get operation for documents
@@ -80,7 +80,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="includes">The include paths</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <param name="indexEntriesOnly"></param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -258,11 +258,6 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
-		/// <summary>
-		/// Gets the list of databases from the server asynchronously
-		/// </summary>
-		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
-
         /// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
@@ -363,17 +358,12 @@ namespace Raven.Client.Connection.Async
 		Task<LicensingStatus> GetLicenseStatusAsync();
 
 		/// <summary>
-		/// Gets the build number
-		/// </summary>
-		Task<BuildNumber> GetBuildNumberAsync();
-
-		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 		                                     RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                                     string exclude = null, string transformer = null,
-		                                     Dictionary<string, RavenJToken> queryInputs = null);
+		                                     Dictionary<string, RavenJToken> transformerParameters = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
@@ -469,6 +459,16 @@ namespace Raven.Client.Connection.Async
 	public interface IAsyncGlobalAdminDatabaseCommands
 	{
 		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		Task<BuildNumber> GetBuildNumberAsync();
+
+		/// <summary>
+		/// Gets the list of databases from the server asynchronously
+		/// </summary>
+		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
+
+		/// <summary>
 		/// Get admin statistics
 		/// </summary>
 		/// <returns></returns>
@@ -515,7 +515,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Sends an async command that enables indexing
 		/// </summary>
-		Task StartIndexingAsync();
+        Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status

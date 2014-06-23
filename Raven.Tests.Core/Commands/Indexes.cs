@@ -11,6 +11,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
+using Raven.Tests.Core.Utils.Indexes;
 
 namespace Raven.Tests.Core.Commands
 {
@@ -46,36 +47,6 @@ namespace Raven.Tests.Core.Commands
 
 				await store.AsyncDatabaseCommands.DeleteIndexAsync(usersByname);
 				Assert.Null(await store.AsyncDatabaseCommands.GetIndexAsync(usersByname));
-			}
-		}
-
-		[Fact]
-		public async Task CanPutUpdateAndDeleteTransformer()
-		{
-			using (var store = GetDocumentStore())
-			{
-				const string usersSelectNames = "users/selectName";
-
-				await store.AsyncDatabaseCommands.PutTransformerAsync(usersSelectNames, new TransformerDefinition()
-				{
-					Name = usersSelectNames,
-					TransformResults = "from user in results select new { user.FirstName, user.LastName }"
-				});
-
-				await store.AsyncDatabaseCommands.PutTransformerAsync(usersSelectNames, new TransformerDefinition()
-				{
-					Name = usersSelectNames,
-					TransformResults = "from user in results select new { Name = user.Name }"
-				});
-
-				var transformer = await store.AsyncDatabaseCommands.GetTransformerAsync(usersSelectNames);
-				Assert.Equal("from user in results select new { Name = user.Name }", transformer.TransformResults);
-
-				var transformers = await store.AsyncDatabaseCommands.GetTransformersAsync(0, 5);
-				Assert.Equal(1, transformers.Length);
-
-				await store.AsyncDatabaseCommands.DeleteTransformerAsync(usersSelectNames);
-				Assert.Null(await store.AsyncDatabaseCommands.GetTransformerAsync(usersSelectNames));
 			}
 		}
 
@@ -193,5 +164,42 @@ namespace Raven.Tests.Core.Commands
 				}
 			}
 		}
+
+        [Fact]
+        public async Task CanGetIndexNames()
+        {
+            var index1 = new Users_ByName();
+            var index2 = new Posts_Recurse();
+            using (var store = GetDocumentStore())
+            {
+                index1.Execute(store);
+                index2.Execute(store);
+
+                var indexes = await store.AsyncDatabaseCommands.GetIndexNamesAsync(0, 10);
+                Assert.Equal(2, indexes.Length);
+                Assert.Equal(index1.IndexName, indexes[1]);
+                Assert.Equal(index2.IndexName, indexes[0]);
+            }
+        }
+
+        [Fact]
+        public async Task CanResetIndex()
+        {
+            var index = new Users_ByName();
+            using (var store = GetDocumentStore())
+            {
+                index.Execute(store);
+                for (var i = 0; i < 20; i++)
+                {
+                    await store.AsyncDatabaseCommands.PutAsync("users/" + i, null, RavenJObject.FromObject(new User { }), new RavenJObject());
+                }
+                WaitForIndexing(store);
+
+                await store.AsyncDatabaseCommands.ResetIndexAsync(index.IndexName);
+                var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                Assert.Equal(1, stats.StaleIndexes.Length);
+                Assert.Equal(index.IndexName, stats.StaleIndexes[0]);
+            }
+        }
 	}
 }

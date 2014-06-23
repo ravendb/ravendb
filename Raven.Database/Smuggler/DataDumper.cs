@@ -172,7 +172,12 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
-		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)
+	    protected override JsonDocument GetDocument(string key)
+	    {
+	        return database.Documents.Get(key, null);
+	    }
+
+	    protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)
 		{
 			const int dummy = 0;
 			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)

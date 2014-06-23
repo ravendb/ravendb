@@ -213,6 +213,11 @@ namespace Raven.Smuggler
             return s;
         }
 
+        protected override JsonDocument GetDocument(string key)
+        {
+            return store.DatabaseCommands.Get(key);
+        }
+
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)
 		{
 			if (IsDocsStreamingSupported)
