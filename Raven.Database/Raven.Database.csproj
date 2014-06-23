@@ -958,7 +958,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From48To49.cs">
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From48To50.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
