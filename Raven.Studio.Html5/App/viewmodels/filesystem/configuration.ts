@@ -232,8 +232,6 @@ class configuration extends viewModelBase {
         });
     }
 
-    modelPolling() {
-    }
 } 
 
 export = configuration;
