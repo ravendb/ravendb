@@ -246,9 +246,6 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    modelPolling() {
-    }
-
     clearUploadQueue() {
         window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);
         this.uploadQueue.removeAll();

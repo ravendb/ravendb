@@ -38,7 +38,7 @@ namespace Raven.Tests.MailingList
 
 		private bool FindGuidIdentityProperty(MemberInfo memberInfo)
 		{
-			var found = memberInfo.Name == memberInfo.Type().Name + "Guid";
+			var found = memberInfo.Name == memberInfo.DeclaringType.Name + "Guid";
 			return found;
 		}
 

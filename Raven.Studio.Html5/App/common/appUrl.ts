@@ -31,6 +31,9 @@ class appUrl {
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
+        metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
+        metricsIndexBatchSize: ko.computed(() => appUrl.forMetricsIndexBatchSize(appUrl.currentDatabase())),
+        metricsPrefetches: ko.computed(() => appUrl.forMetricsPrefetches(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
         alerts: ko.computed(() => appUrl.forAlerts(appUrl.currentDatabase())),
@@ -173,6 +176,18 @@ class appUrl {
 
     static forMetrics(db: database): string {
         return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forMetricsRequests(db: database): string {
+        return "#databases/status/metrics/requests?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forMetricsIndexBatchSize(db: database): string {
+        return "#databases/status/metrics/indexBatchSize?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forMetricsPrefetches(db: database): string {
+        return "#databases/status/metrics/prefetches?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebug(db: database): string {

@@ -45,6 +45,16 @@ namespace Raven.Tests.Core.Commands
 			}
 		}
 
+        [Fact]
+        public async Task CanGetBuildVersion()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var build = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+                Assert.NotNull(build);
+            }
+        }
+
 		[Fact]
 		public async Task CanGetAListOfDatabasesAsync()
 		{

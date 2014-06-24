@@ -94,6 +94,11 @@ namespace Raven.Abstractions.Data
 		public Dictionary<string, string> ScoreExplanations { get; set; }
 
 		/// <summary>
+		/// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results)
+		/// </summary>
+		public Dictionary<string, double> TimingsInMilliseconds { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()
