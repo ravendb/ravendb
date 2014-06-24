@@ -23,7 +23,7 @@ namespace Voron.Trees
 		[FieldOffset(17)]
 		public byte NextPrefixId;
 
-		[FieldOffset(18)]
-		public unsafe fixed ushort PrefixOffsets[Page.PrefixCount];
+		//[FieldOffset(18)] TODO arek
+		//public unsafe fixed ushort PrefixOffsets[Page.PrefixCount];
 	}
 }

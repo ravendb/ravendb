@@ -17,7 +17,7 @@ namespace Voron.Trees
 
 	    public readonly string Source;
 	    private readonly ushort _pageSize;
-	    private readonly bool _keysPrefixed;
+	    private bool _keysPrefixed;
 
 	    public int LastMatch;
 	    public int LastSearchPosition;
@@ -34,7 +34,15 @@ namespace Voron.Trees
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
 
-        public PageFlags Flags { get { return _header->Flags; } set { _header->Flags = value; } }
+	    public PageFlags Flags
+	    {
+		    get { return _header->Flags; }
+		    set
+		    {
+			    _header->Flags = value;
+				_keysPrefixed = value.HasFlag(PageFlags.KeysPrefixed);
+		    }
+	    }
 
         public ushort Lower { get { return _header->Lower; } set { _header->Lower = value; } }
 
@@ -42,7 +50,7 @@ namespace Voron.Trees
 
         public int OverflowSize { get { return _header->OverflowSize; } set { _header->OverflowSize = value; } }
 
-		private ushort* PrefixOffsets { get { return _header->PrefixOffsets; } }
+		private ushort* PrefixOffsets { get { throw new NotImplementedException("TODO arek");} }
 
 		private byte NextPrefixId { get { return _header->NextPrefixId; } set { _header->NextPrefixId = value; }}
 
@@ -532,15 +540,18 @@ namespace Voron.Trees
 									 copy._base + Constants.PageHeaderSize,
 									 _pageSize - Constants.PageHeaderSize);
 
-				ClearPrefixInfo();
-				NextPrefixId = copy.NextPrefixId;
-
-				for (var prefixId = 0; prefixId < NextPrefixId; prefixId++)
+		        if (_keysPrefixed)
 		        {
-					PrefixOffsets[prefixId] = copy.PrefixOffsets[prefixId];
+			        ClearPrefixInfo();
+			        NextPrefixId = copy.NextPrefixId;
+
+			        for (var prefixId = 0; prefixId < NextPrefixId; prefixId++)
+			        {
+				        PrefixOffsets[prefixId] = copy.PrefixOffsets[prefixId];
+			        }
 		        }
 
-				Upper = copy.Upper;
+		        Upper = copy.Upper;
 				Lower = copy.Lower;
 	        }
 
