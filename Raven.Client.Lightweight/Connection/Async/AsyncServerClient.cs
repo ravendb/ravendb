@@ -1468,18 +1468,6 @@ namespace Raven.Client.Connection.Async
 			return json.Deserialize<DatabaseStatistics>(convention);
 		}
 
-		/// <summary>
-		/// Gets the list of databases from the server asynchronously
-		/// </summary>
-		public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
-		{
-			var result = await url.Databases(pageSize, start)
-				.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-								  .ReadResponseJsonAsync().ConfigureAwait(false);
-			var json = (RavenJArray)result;
-			return json.Select(x => x.ToString())
-				.ToArray();
-		}
 
 		public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
 		{
