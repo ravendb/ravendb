@@ -94,7 +94,7 @@ namespace Raven.Client.FileSystem
             var result = new List<FileHeader>();
             foreach ( var file in filenames )
             {
-                object obj;
+                object obj = null;
                 entitiesByKey.TryGetValue(file, out obj);
                 result.Add( obj as FileHeader );
             }
