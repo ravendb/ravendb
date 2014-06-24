@@ -265,6 +265,9 @@ namespace Raven.Database.Actions
                         {
                             try
                             {
+                                if (string.IsNullOrEmpty(doc.Key))
+                                    throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
+
                                 RemoveReservedProperties(doc.DataAsJson);
                                 RemoveMetadataReservedProperties(doc.Metadata);
 
