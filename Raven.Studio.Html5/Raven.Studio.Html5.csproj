@@ -1104,7 +1104,7 @@
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
-    <Content Include="Scripts\d3.v3.js" />
+    <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -1157,15 +1157,16 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\nv.d3.js" />
     <Content Include="Scripts\nvd3\models\timelines.js" />
     <Content Include="Scripts\nvd3\models\timelinesChart.js" />
-    <Content Include="Scripts\nvd3\nv.d3.js" />
+    <Content Include="Scripts\nvd3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\d3\d3.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
-    <Content Include="Scripts\typings\nvd3\nvd3.d.ts" />
+    <Content Include="Scripts\typings\d3\nv.d.ts" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
