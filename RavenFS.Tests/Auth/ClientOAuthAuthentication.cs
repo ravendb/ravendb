@@ -73,7 +73,7 @@ namespace RavenFS.Tests.Auth
 
             await client.RenameAsync("/dir/abc.txt", "/dir/cba.txt");
 
-            var searchResults = await client.GetFilesFromAsync("/dir");
+            var searchResults = await client.SearchOnDirectoryAsync("/dir");
 
             Assert.Equal(1, searchResults.FileCount);
 
@@ -81,7 +81,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.NotNull(metadata);
 
-            var folders = await client.GetFoldersAsync();
+            var folders = await client.GetDirectoriesAsync();
 
             Assert.Equal(1, folders.Length);
 

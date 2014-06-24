@@ -37,6 +37,22 @@ namespace Raven.Client.FileSystem
         private readonly FilesStore filesStore;
 
 
+
+        /// <summary>
+        /// Translate between a key and its associated entity
+        /// </summary>
+        protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// The files waiting to be deleted
+        /// </summary>
+        protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+
+        /// <summary>
+        /// Entities whose filename we already know do not exists, because they are missing load, etc.
+        /// </summary>
+        protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// all the listeners for this session
         /// </summary>
@@ -180,6 +196,24 @@ namespace Raven.Client.FileSystem
             //TODO Validate destinationName is a filename and not a directory.
             var operation = new RenameFileOperation(sourceFile.Path, Path.Combine(destination.Path, destinationName));
             registeredOperations.Enqueue(operation);
+        }
+
+        /// <summary>
+        /// Returns whatever a filename with the specified id is loaded in the 
+        /// current session
+        /// </summary>
+        public bool IsLoaded(string id)
+        {
+            return entitiesByKey.ContainsKey(id);
+        }
+
+        /// <summary>
+        /// Returns whatever a filename with the specified id is deleted 
+        /// or known to be missing
+        /// </summary>
+        public bool IsDeleted(string id)
+        {
+            return knownMissingIds.Contains(id);
         }
 
         public async Task SaveChangesAsync()

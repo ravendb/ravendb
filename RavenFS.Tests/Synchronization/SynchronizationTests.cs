@@ -561,7 +561,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Null(testMetadata);
 			Assert.NotNull(renamedMetadata);
 
-			var result = await destinationClient.GetFilesFromAsync("/");
+			var result = await destinationClient.SearchOnDirectoryAsync("/");
 
 			Assert.Equal(1, result.FileCount);
 			Assert.Equal("renamed.bin", result.Files[0].Name);

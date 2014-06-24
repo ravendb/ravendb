@@ -13,5 +13,7 @@ namespace Raven.Abstractions.FileSystem
 
         public string Name { get; set; }
         public string Path { get; private set; }
+
+        public int Files { get; private set; }
     }
 }

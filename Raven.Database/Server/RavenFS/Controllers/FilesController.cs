@@ -281,13 +281,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     var contentLength = Request.Content.Headers.ContentLength;
                     var sizeHeader = GetHeader("RavenFS-size");
 
-                    //long sizeForParse;
-                    //if (!long.TryParse(sizeHeader, out sizeForParse))
-                    //    throw new Exception();
-
-                    //accessor.PutFile(name, sizeForParse, headers);
-
-
                     long sizeForParse;
                     if (contentLength == 0 || long.TryParse(sizeHeader, out sizeForParse) == false)
                     {

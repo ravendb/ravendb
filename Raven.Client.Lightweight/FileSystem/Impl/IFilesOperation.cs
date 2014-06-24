@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Impl
 {
-    internal interface IFilesOperation
+    internal interface IFilesOperation 
     {
         Task Execute(IAsyncFilesSession session);
     }
