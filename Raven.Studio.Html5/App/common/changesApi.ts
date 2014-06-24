@@ -23,6 +23,7 @@ class changesApi {
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
+    private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
     private commandBase = new commandBase();
 
@@ -122,6 +123,8 @@ class changesApi {
                         return match && match.length > 0;
                     });
                 }
+            } else if (type == "ConfigurationChangeNotification") {
+                this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
             } else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
@@ -255,6 +258,20 @@ class changesApi {
             if (this.watchedFolders[folder].length == 0) {
                 delete this.watchedFolders[folder];
                 this.send('unwatch-folder', folder);
+            }
+        });
+    }
+
+    watchFsConfig(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
+        var callback = new changesCallback<filesystemConfigNotification>(onChange);
+        if (this.allFsConfigHandlers().length == 0) {
+            this.send('watch-config');
+        }
+        this.allFsConfigHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsConfigHandlers.remove(callback);
+            if (this.allFsConfigHandlers().length == 0) {
+                this.send('unwatch-config');
             }
         });
     }

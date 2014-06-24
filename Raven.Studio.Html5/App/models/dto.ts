@@ -66,6 +66,7 @@ interface databaseStatisticsDto {
     LastDocEtag: string;
     Prefetches: Array<any>;
     StaleIndexes: Array<any>;
+    ActualIndexingBatchSize: Array<any>;
     Triggers: Array<any>;
 }
 

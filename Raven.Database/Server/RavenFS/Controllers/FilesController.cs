@@ -125,7 +125,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
-			Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
+			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
 			StartSynchronizeDestinationsInBackground();
@@ -188,7 +188,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             Search.Index(name, headers);
 
-            Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+            Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
             StartSynchronizeDestinationsInBackground();
 
@@ -332,7 +332,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
                     
                     Search.Index(name, headers);
-                    Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+                    Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
                     log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
 

@@ -275,6 +275,10 @@ namespace Raven.Database.Server.Controllers
             if (query.WaitForNonStaleResultsAsOfNow)
                 query.Cutoff = SystemTime.UtcNow;
 
+			var showTimingsAsString = GetQueryStringValue("showTimings");
+			bool showTimings;
+			if (string.IsNullOrEmpty(showTimingsAsString) == false && bool.TryParse(showTimingsAsString, out showTimings) && showTimings)
+				query.ShowTimings = true;
 
 			var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
 			var queryShape = GetQueryStringValue("queryShape");
