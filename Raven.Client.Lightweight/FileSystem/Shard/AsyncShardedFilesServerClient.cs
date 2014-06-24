@@ -342,7 +342,7 @@ namespace Raven.Client.FileSystem.Shard
 			var applyAsync =
 			   await
 			   Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), new ShardRequestData(),
-															(client, i) => client.GetFoldersAsync(from, indexes[i], pageSize));
+															(client, i) => client.GetDirectoriesAsync(from, indexes[i], pageSize));
 
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			while (results.Count < pageSize)

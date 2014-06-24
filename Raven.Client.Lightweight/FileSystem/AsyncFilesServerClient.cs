@@ -367,6 +367,27 @@ namespace Raven.Client.FileSystem
             return ExecuteWithReplication("HEAD", operation => GetMetadataForAsyncImpl(filename, operation));
         }
 
+        public Task<FileHeader[]> GetAsync(string[] filename)
+        {
+            return ExecuteWithReplication("GET", operation => GetAsyncImpl(filename, operation));
+        }
+        private async Task<FileHeader[]> GetAsyncImpl(string[] filename, OperationMetadata operation)
+        {
+            var request = RequestFactory.CreateHttpJsonRequest(
+                                new CreateHttpJsonRequestParams(this, operation.Url + "/files/metadata", "GET", operation.Credentials, Conventions))
+                            .AddOperationHeaders(OperationsHeaders);
+
+            try
+            {
+                var response = (RavenJArray)await request.ReadResponseJsonAsync();
+                return response.JsonDeserialization<FileHeader>();
+            }
+            catch ( Exception e )
+            {
+                throw e.SimplifyException();
+            }
+        }
+
         private async Task<RavenJObject> GetMetadataForAsyncImpl(string filename, OperationMetadata operation)
         {
             var request = RequestFactory.CreateHttpJsonRequest(
@@ -589,7 +610,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public Task<string[]> GetFoldersAsync(string from = null, int start = 0, int pageSize = 25)
+        public Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -616,8 +637,8 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task<SearchResults> GetFilesFromAsync(string folder, FilesSortOptions options = FilesSortOptions.Default,
-                                                 string fileNameSearchPattern = "", int start = 0, int pageSize = 25)
+        public Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default,
+                                                     string fileNameSearchPattern = "", int start = 0, int pageSize = 25)
         {
             var folderQueryPart = GetFolderQueryPart(folder);
 

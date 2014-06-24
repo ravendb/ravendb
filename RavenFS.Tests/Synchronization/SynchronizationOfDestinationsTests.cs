@@ -138,7 +138,7 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 			await sourceClient.Synchronization.SynchronizeAsync();
 
-			var destinationFiles = await destinationClient.GetFilesFromAsync("/");
+			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(2, destinationFiles.FileCount);
 			Assert.Equal(2, destinationFiles.Files.Length);
 			Assert.NotEqual(destinationFiles.Files[0].Name, destinationFiles.Files[1].Name);

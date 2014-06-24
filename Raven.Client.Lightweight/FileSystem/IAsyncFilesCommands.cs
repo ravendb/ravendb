@@ -73,13 +73,14 @@ namespace Raven.Client.FileSystem
 
         Task<RavenJObject> DownloadAsync(string filename, Stream destination, long? from = null, long? to = null);
 
-        Task<SearchResults> GetFilesFromAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
-        Task<string[]> GetFoldersAsync(string from = null, int start = 0, int pageSize = 25);        
+        Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25);
 
-        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25);
         Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25);
+        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25);
+        Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
 
-        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);                
+        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);
+        Task<FileHeader[]> GetAsync(string[] filename);
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation
