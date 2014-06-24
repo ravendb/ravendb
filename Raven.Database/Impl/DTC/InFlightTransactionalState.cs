@@ -109,13 +109,6 @@ namespace Raven.Database.Impl.DTC
 			if (changedInTransaction.TryGetValue(key, out existing) == false || (tx != null && tx.Id == existing.transactionId))
 				return null;
 
-			TransactionState value;
-			if (transactionStates.TryGetValue(existing.transactionId, out value) == false ||
-				SystemTime.UtcNow > value.lastSeen.Value)
-			{
-				Rollback(existing.transactionId);
-				return null;
-			}
 			return document =>
 			{
 				if (document == null)
@@ -196,22 +189,6 @@ namespace Raven.Database.Impl.DTC
 							EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 							existing.currentEtag = item.Etag;
 							return existing;
-						}
-
-						TransactionState transactionState;
-						if (transactionStates.TryGetValue(existing.transactionId, out transactionState) == false ||
-							SystemTime.UtcNow > transactionState.lastSeen.Value)
-						{
-							Rollback(existing.transactionId);
-
-							EnsureValidEtag(key, etag, committedEtag, currentTxVal);
-
-							return new ChangedDoc
-							{
-								transactionId = transactionInformation.Id,
-								committedEtag = committedEtag,
-								currentEtag = item.Etag
-							};
 						}
 
 						throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
