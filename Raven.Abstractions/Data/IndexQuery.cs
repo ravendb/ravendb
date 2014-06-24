@@ -201,6 +201,11 @@ namespace Raven.Abstractions.Data
 		public bool ExplainScores { get; set; }
 
 		/// <summary>
+		/// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		public bool ShowTimings { get; set; }
+
+		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
@@ -252,6 +257,9 @@ namespace Raven.Abstractions.Data
 
 			if(IsDistinct)
 				path.Append("&distinct=true");
+
+			if (ShowTimings)
+				path.Append("&showTimings=true");
 
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
@@ -366,7 +374,8 @@ namespace Raven.Abstractions.Data
                    Equals(HighlightedFields, other.HighlightedFields) && 
                    Equals(HighlighterPreTags, other.HighlighterPreTags) && 
                    Equals(HighlighterPostTags, other.HighlighterPostTags) && 
-                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) &&
+				   ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching);
         }
 
@@ -401,6 +410,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
                 return hashCode;
             }
