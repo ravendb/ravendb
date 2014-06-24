@@ -324,6 +324,9 @@ namespace Raven.Abstractions.Smuggler
 			                    var document = documents.Current;
                                 
 			                    var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+
+				                Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
+
                                 if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
                                 {
                                     reachedMaxEtag = true;
@@ -390,6 +393,7 @@ namespace Raven.Abstractions.Smuggler
                             JsonDocument doc = GetDocument("Raven/Hilo/" + collectionName);
                             if (doc != null)
                             {
+	                            doc.Metadata["@id"] = doc.Key;
                                 doc.ToJson().WriteTo(jsonWriter);
                                 totalCount++;
                             }
