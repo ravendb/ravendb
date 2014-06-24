@@ -260,7 +260,7 @@ namespace Raven.Client.Connection
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-			return asyncServerClient.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
+			return asyncServerClient.GlobalAdmin.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
 		}
 
 		/// <summary>
