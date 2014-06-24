@@ -6,6 +6,7 @@
 using System;
 using System.Globalization;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -68,8 +69,7 @@ namespace Raven.Tests.Issues
 				}
 				catch (Exception e)
 				{
-					Assert.True(e.GetBaseException().Message.StartsWith("Illegal duplicate key") || //esent
-                        e.GetBaseException().Message.StartsWith("InsertDocument() - overwriteExisting is false")); 
+					Assert.IsType<ConcurrencyException>(e); 
 				}
 			}
 

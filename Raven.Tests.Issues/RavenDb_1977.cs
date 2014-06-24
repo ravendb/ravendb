@@ -255,23 +255,23 @@ namespace Raven.Tests.Issues
                     var supposedChanges = new DocumentsChanges
                     {
                         Change = DocumentsChanges.ChangeType.FieldChanged,
-                        FieldName = "Id",
-                        FieldNewType = "Integer",
+						FieldName = "Salary",
+                        FieldNewType = "Float",
                         FieldNewValue = "556",
-                        FieldOldType = "Integer",
-                        FieldOldValue = "1234"
+                        FieldOldType = "Float",
+						FieldOldValue = "12.51"
                     };
-                    DocumentsChanges[] data2 = { };
+                    DocumentsChanges[] data2;
                     if (changes3.TryGetValue("UserDatas/2", out data2))
                     {
                         Assert.Equal(data2.Length, 1);
                         Assert.Equal(data2[0], supposedChanges);
                     }
 
-                    DocumentsChanges[] data1 = { };
+                    DocumentsChanges[] data1;
                     if (changes3.TryGetValue("UserDatas/1", out data1))
                     {
-                        Assert.Equal(data1.Length, 4);
+                        Assert.Equal(data1.Length, 3);
                     }
 
                     session.SaveChanges();
