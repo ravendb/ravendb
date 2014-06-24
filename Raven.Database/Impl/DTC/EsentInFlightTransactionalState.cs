@@ -162,7 +162,17 @@ namespace Raven.Database.Impl.DTC
 			if (transactionContexts.TryRemove(id, out context) == false)
 				return;
 
-			context.Dispose();
+			var lockTaken = false;
+			Monitor.Enter(context, ref lockTaken);
+			try
+			{
+				context.Dispose();
+			}
+			finally
+			{
+				if (lockTaken)
+					Monitor.Exit(context);
+			}
 		}
 
 		public void Dispose()
