@@ -30,6 +30,11 @@ namespace Raven.Client.Document
 
 		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
 
+		public bool IsAborted
+		{
+			get { return Operation.IsAborted; }
+		}
+
 	    public void Abort()
 	    {
 	        Operation.Abort();
@@ -81,6 +86,9 @@ namespace Raven.Client.Document
 
 		public void Store(object entity, string id)
 		{
+			if(Operation.IsAborted)
+				throw new InvalidOperationException("Bulk insert has been aborted or the operation was timed out");
+
 			var metadata = new RavenJObject();
 
 			var tag = documentStore.Conventions.GetDynamicTagName(entity);

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
@@ -234,7 +235,7 @@ namespace Raven.Tests.Core.Commands
                    false
                ).WaitForCompletion();
 
-                Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString());
+                Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString(Formatting.None));
             }
         }
 

@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
-            if (!this.Request.Content.IsMimeMultipartContent())
+            if (!Request.Content.IsMimeMultipartContent())
             {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
@@ -158,6 +158,28 @@ namespace Raven.Database.Server.Controllers
 
 			return GetEmptyMessage();
 		}
+
+        [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
+        public async Task<HttpResponseMessage> CreateSampleDataClass()
+        {
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
+            {
+                if (sampleData == null)
+                    return GetEmptyMessage();
+                   
+                sampleData.Position = 0;
+                using (var reader = new StreamReader(sampleData, Encoding.UTF8))
+                {
+                   var data = reader.ReadToEnd();
+                   return GetMessageWithObject(data);
+                }
+                 
+                
+               
+            }
+        }
 
         [HttpGet]
         [Route("studio-tasks/new-encryption-key")]

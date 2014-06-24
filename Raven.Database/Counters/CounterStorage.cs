@@ -11,6 +11,7 @@ using Raven.Abstractions.Counters;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Connections;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -35,16 +36,18 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-	    public readonly string CounterStorageName;
+	    public readonly string Name;
 
 		private const int ServerId = 0; // local is always 0
 
         private readonly CountersMetricsManager metricsCounters;
 
-		public CounterStorage(string serverUrl, string counterStorageStorageName, InMemoryRavenConfiguration configuration)
+		private readonly TransportState transportState;
+
+		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration)
 		{
-            CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, counterStorageStorageName);
-            CounterStorageName = counterStorageStorageName;
+            CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
+            Name = storageName;
                 
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
@@ -56,6 +59,7 @@ namespace Raven.Database.Counters
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
             metricsCounters = new CountersMetricsManager();
+			transportState = new TransportState();
             Initialize();
 		}
 
@@ -64,13 +68,18 @@ namespace Raven.Database.Counters
             get { return metricsCounters; }
         }
 
+		public TransportState TransportState
+		{
+			get { return transportState; }
+		}
+
 	    public CounterStorageStats CreateStats()
 	    {
 	        using (var reader = CreateReader())
 	        {
 	            var stats = new CounterStorageStats()
 	            {
-	                Name = CounterStorageName,
+	                Name = Name,
                     Url = CounterStorageUrl,
 	                CountersCount = reader.GetCountersCount(),
                     LastCounterEtag = LastEtag,
@@ -174,7 +183,7 @@ namespace Raven.Database.Counters
 
 					Id = Guid.NewGuid();
 					metadata.Add("id", Id.ToByteArray());
-					metadata.Add("name", Encoding.UTF8.GetBytes(CounterStorageName));
+					metadata.Add("name", Encoding.UTF8.GetBytes(Name));
 
 					tx.Commit();
 				}
@@ -187,8 +196,8 @@ namespace Raven.Database.Counters
 						throw new InvalidOperationException("Could not read name from the store, something bad happened");
 					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
 
-					if (storedName != CounterStorageName)
-						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageName);
+					if (storedName != Name)
+						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + Name);
 
 					using (var it = etags.Iterate())
 					{

@@ -26,6 +26,9 @@ class selectColumns extends dialogViewModelBase {
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
     private autoCompleterSupport: autoCompleterSupport;
 
+    maxTableHeight = ko.observable<number>();
+    lineHeight: number = 51;
+    isScrollNeeded: KnockoutComputed<boolean>;
 
     constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database) {
         super();
@@ -33,6 +36,24 @@ class selectColumns extends dialogViewModelBase {
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
         this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults);
+
+        this.maxTableHeight(Math.floor($(window).height() * 0.43));
+        
+        $(window).resize(() => {
+            this.maxTableHeight(Math.floor($(window).height() * 0.43));
+            this.alignBoxVertically();
+        });
+
+        this.isScrollNeeded = ko.computed(() => {
+            var currentColumnsCount = this.customColumns.columns().length;
+            var currentColumnHeight = currentColumnsCount * this.lineHeight;
+
+            if (currentColumnHeight > this.maxTableHeight()) {
+                return true;
+            }
+
+            return false;
+        });
     }
 
     private generateCompletionBase() {
@@ -68,11 +89,11 @@ class selectColumns extends dialogViewModelBase {
                 else if (change.status === "deleted") {
                     somethingRemoved = true;
                 }
-            });
 
-            if (somethingRemoved) {
-                this.regenerateBindingSubscriptions();
-            }
+                if (somethingRemoved) {
+                    this.regenerateBindingSubscriptions();
+                }
+            });
         }, null, "arrayChange");
     }
 
@@ -97,7 +118,6 @@ class selectColumns extends dialogViewModelBase {
         return this.nextTask.promise();
     }
 
-
     changeCurrentColumns() {
         this.nextTaskStarted = true;
         this.nextTask.resolve(this.customColumns);
@@ -106,12 +126,18 @@ class selectColumns extends dialogViewModelBase {
 
     insertNewRow() {
         this.customColumns.columns.push(customColumnParams.empty());
-        this.alignBoxVertically();
+
+        if (!this.isScrollNeeded()) {
+            this.alignBoxVertically();
+        }
     }
 
     deleteRow(row: customColumnParams) {
         this.customColumns.columns.remove(row);
-        this.alignBoxVertically();
+
+        if (!this.isScrollNeeded()) {
+             this.alignBoxVertically();
+        }
     }
 
     moveUp(row: customColumnParams) {
@@ -131,11 +157,13 @@ class selectColumns extends dialogViewModelBase {
     }
 
     customScheme(val: boolean) {
-        this.customColumns.customMode(val);
-        this.alignBoxVertically();
+        if (this.customColumns.customMode() != val) {
+            this.customColumns.customMode(val);
+            this.alignBoxVertically();
+        }
     }
 
-    alignBoxVertically() {
+    private alignBoxVertically() {
         var messageBoxHeight = parseInt($(".messageBox").css('height'), 10);
         var windowHeight = $(window).height();
         var messageBoxMarginTop = parseInt($(".messageBox").css('margin-top'), 10);
@@ -181,6 +209,14 @@ class selectColumns extends dialogViewModelBase {
             return false;
         }
         return super.enterKeyPressed();
+    }
+
+    consumeUpDownArrowKeys(columnParams, event: KeyboardEvent): boolean {
+        if (event.keyCode === 38 || event.keyCode === 40) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
     }
 
     searchForCompletions() {

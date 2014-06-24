@@ -653,6 +653,11 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
     }
 }
 
+#gridContextMenu {
+    z-index: 100;
+    position: relative;
+}
+
 .ko-grid {
     &:focus {
         outline: 0;
@@ -671,6 +676,18 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
             -ms-text-overflow: ellipsis;
             -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
+
+            .ko-grid-column-handle {
+              width: 8px;
+              display: block;
+              height: 20px;
+              float: right;
+              cursor: col-resize;
+              position: relative;
+              z-index: 1;
+              background-color: hsl(0, 0%, 80%);
+              box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
+            }
         }
     }
 
@@ -716,6 +733,10 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
 
 .code-keyword {
     color: blue;
+}
+
+.code-string {
+    color: hsl(0, 84%, 42%);
 }
 
 .help-cursor {
@@ -1319,3 +1340,13 @@ footer {
 	}
 }
 
+
+.custom-table{
+    height: 43vh;
+}
+
+.custom-table-tbody{
+    overflow-y: scroll;
+    height: 43vh;
+    position: absolute;
+}

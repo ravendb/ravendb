@@ -159,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Auth\" />
+    <Folder Include="BackupRestore\" />
     <Folder Include="Patching\" />
   </ItemGroup>
   <ItemGroup>

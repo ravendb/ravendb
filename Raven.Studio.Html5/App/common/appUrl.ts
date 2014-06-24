@@ -96,10 +96,6 @@ class appUrl {
         return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
     }
 
-    static forCounterStorages(): string {
-        return "#counterstorages";
-    }
-
     static forCounterStorageCounters(counterStorage: counterStorage) {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/counters?" + counterStroragePart;
@@ -126,6 +122,10 @@ class appUrl {
 
     static forFilesystems(): string {
         return "#filesystems";
+    }
+
+    static forCounterStorages(): string {
+        return "#counterstorages";
     }
 
     /**
@@ -441,7 +441,7 @@ class appUrl {
 
     static forCounterStorage(cs: counterStorage): string {
         var counterStoragePart = appUrl.getEncodedCounterPart(cs);
-        return "#filesystems?" + counterStoragePart;
+        return "#counterstorages?" + counterStoragePart;
     }
 
     static forIndexesRawData(db: database): string {
@@ -513,9 +513,14 @@ class appUrl {
     * Gets the resource from the current web browser address. Returns the system database if no resource name is found.
     */
     static getResource(): resource {
-        var appFilesystem = appUrl.getFilesystem()
-        if (!appFilesystem.isDefault) {
-            return appFilesystem;
+        var appFileSystem = appUrl.getFileSystem();
+        var appCounterStorage = appUrl.getCounterStorage();
+
+        if (!!appFileSystem) {
+            return appFileSystem;
+        }
+        else if (!!appCounterStorage) {
+            return appCounterStorage;
         }
         else {
             return appUrl.getDatabase();
@@ -523,7 +528,7 @@ class appUrl {
     }
 
 	/**
-	* Gets the database from the current web browser address. Returns the system database if no database name is found.
+	* Gets the database from the current web browser address. Returns the system database if no database name was found.
 	*/
     static getDatabase(): database {
 
@@ -557,15 +562,15 @@ class appUrl {
     }
 
     /**
-    * Gets the filesystem from the current web browser address. Returns the no filesystem if no name is found.
+    * Gets the file system from the current web browser address. Returns null if no file system name was found.
     */
-    static getFilesystem(): filesystem {
+    static getFileSystem(): filesystem {
 
         // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
 
-        var filesystemIndicator = "filesystem=";
+        var fileSystemIndicator = "filesystem=";
         var hash = window.location.hash;
-        var fsIndex = hash.indexOf(filesystemIndicator);
+        var fsIndex = hash.indexOf(fileSystemIndicator);
         if (fsIndex >= 0) {
             // A database is specified in the address.
             var fsSegmentEnd = hash.indexOf("&", fsIndex);
@@ -573,23 +578,43 @@ class appUrl {
                 fsSegmentEnd = hash.length;
             }
 
-            var filesystemName = hash.substring(fsIndex + filesystemIndicator.length, fsSegmentEnd);
-            var unescapedDatabaseName = decodeURIComponent(filesystemName);
-            var fs = new filesystem(unescapedDatabaseName);
-            fs.isDefault = unescapedDatabaseName === "<default>";
+            var fileSystemName = hash.substring(fsIndex + fileSystemIndicator.length, fsSegmentEnd);
+            var unescapedFileSystemName = decodeURIComponent(fileSystemName);
+            var fs = new filesystem(unescapedFileSystemName);
             return fs;
         } else {
-            // No filesystem is specified in the URL. Assume it's the system database.
-            return this.getDefaultFilesystem();
+            // No file system is specified in the URL.
+            return null;
+        }
+    }
+ 
+    /**
+    * Gets the counter storage from the current web browser address. Returns null if no counter storage name was found.
+    */
+    static getCounterStorage(): counterStorage {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+
+        var counterStorageIndicator = "counterstorage=";
+        var hash = window.location.hash;
+        var csIndex = hash.indexOf(counterStorageIndicator);
+        if (csIndex >= 0) {
+            // A database is specified in the address.
+            var csSegmentEnd = hash.indexOf("&", csIndex);
+            if (csSegmentEnd === -1) {
+                csSegmentEnd = hash.length;
+            }
+
+            var counterStorageName = hash.substring(csIndex + counterStorageIndicator.length, csSegmentEnd);
+            var unescapedCounterStorageName = decodeURIComponent(counterStorageName);
+            var cs = new counterStorage(unescapedCounterStorageName);
+            return cs;
+        } else {
+            // No counter storage is specified in the URL.
+            return null;
         }
     }
 
-    static getDefaultFilesystem(): filesystem {
-        var fs = new filesystem("<default>");
-        fs.isDefault = true;
-        return fs;
-    }
- 
     /**
     * Gets the server URL.
     */
