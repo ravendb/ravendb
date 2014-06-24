@@ -114,7 +114,7 @@ nv.models.timelinesChart = function() {
   };
 
   var controlsData = [
-    { key: 'Auto-update', disabled: true }
+    { key: 'Allow zooming', disabled: true }
   ];
 
   //============================================================
@@ -205,7 +205,7 @@ nv.models.timelinesChart = function() {
       focusEnter.append('g').attr('class', 'nv-legendWrap');
       focusEnter.append('g').attr('class', 'nv-controlsWrap');
 
-      var contextEnter = gEnter.append('g').attr('class', 'nv-context');
+      var contextEnter = gEnter.append('g').attr('class', 'nv-context').style('opacity', controlsData[0].disabled ? 0 : 1).style('display', controlsData[0].disabled ? 'none' : 'block')
       contextEnter.append('g').attr('class', 'nv-x nv-axis');
       contextEnter.append('g').attr('class', 'nv-y nv-axis');
       contextEnter.append('g').attr('class', 'nv-scatterWrap');
@@ -448,11 +448,14 @@ nv.models.timelinesChart = function() {
         d.disabled = !d.disabled;
 
         if (d.disabled) {
-            g.select('.nv-context').transition().duration(transitionDuration).style('opacity', 1);
-        } else {
-            g.select('.nv-context').transition().duration(transitionDuration).style('opacity', 0);
+            g.select('.nv-context').transition().duration(transitionDuration).style('opacity', 0).each('end', function () {
+                d3.select(this).style('display', 'none');
+            });
             brushExtent = null;
             brush.clear();
+        } else {
+            g.select('.nv-context').style('display', 'block').transition().duration(transitionDuration).style('opacity', 1);
+           
         }
         chart.update();
       });

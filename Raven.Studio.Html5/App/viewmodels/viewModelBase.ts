@@ -21,7 +21,7 @@ class viewModelBase {
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
 
     private keyboardShortcutDomContainers: string[] = [];
-    private modelPollingHandle: number;
+    static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     static dirtyFlag = new ko.DirtyFlag([]);
     private static isConfirmedUsingSystemDatabase: boolean;
@@ -150,13 +150,18 @@ class viewModelBase {
 
     modelPollingStart() {
         this.modelPolling();
-        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
+        // clear previous pooling handle (if any)
+        if (viewModelBase.modelPollingHandle) {
+            this.modelPollingStop();
+            viewModelBase.modelPollingHandle = null;
+        }
+        viewModelBase.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
 
     modelPollingStop() {
-        clearInterval(this.modelPollingHandle);
+        clearInterval(viewModelBase.modelPollingHandle);
     }
 
     confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
