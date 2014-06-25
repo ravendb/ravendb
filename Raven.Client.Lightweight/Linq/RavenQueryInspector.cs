@@ -140,9 +140,14 @@ namespace Raven.Client.Linq
             return (IRavenQueryable<TResult>)this.As<TResult>();
         }
 
-	    public IRavenQueryable<T> AddTransformerParameter(string input, RavenJToken foo)
+		public IRavenQueryable<T> AddQueryInput(string input, RavenJToken value)
+		{
+			return AddTransformerParameter(input, value);
+		}
+
+		public IRavenQueryable<T> AddTransformerParameter(string input, RavenJToken value)
 	    {
-	        provider.AddTransformerParameter(input, foo);
+			provider.AddTransformerParameter(input, value);
 	        return this;
 	    }
 
