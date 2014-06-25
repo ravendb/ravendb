@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Connections
     using WebSocketReceiveAsync =
         Func<ArraySegment<byte> /* data */,
             CancellationToken /* cancel */,
-            Task<Tuple<int /* messageType */,
+			Task<Tuple<int /* messageType */,
                 bool /* endOfMessage */,
                 int /* count */>>>;
     using WebSocketSendAsync =
@@ -57,6 +57,7 @@ namespace Raven.Database.Server.Connections
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 
+		private const int WebSocketCloseMessageType = 8;
 		private const int NormalClosureCode = 1000;
 		private const string NormalClosureMessage = "CLOSE_NORMAL";
         
@@ -95,7 +96,6 @@ namespace Raven.Database.Server.Connections
             try
             {
                 var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
-                
                 var callCancelled = (CancellationToken) websocketContext["websocket.CallCancelled"];
 
                 var memoryStream = new MemoryStream();
@@ -163,18 +163,21 @@ namespace Raven.Database.Server.Connections
 				{
 					try
 					{
-						await receiveAsync(buffer, callCancelled);
+						WebSocketReceiveResult receiveResult = await receiveAsync(buffer, callCancelled);
 
-						var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
-						var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
-
-						if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
+						if (receiveResult.Item1 == WebSocketCloseMessageType)
 						{
-							await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
-						}
+							var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
+							var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
 
-						//At this point the WebSocket is in a 'CloseReceived' state, so there is no need to continue waiting for messages
-						break;
+							if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
+							{
+								await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
+							}
+
+							//At this point the WebSocket is in a 'CloseReceived' state, so there is no need to continue waiting for messages
+							break;
+						}
 					}
 					catch (Exception e) { }
 				}

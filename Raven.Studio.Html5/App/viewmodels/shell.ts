@@ -179,6 +179,13 @@ class shell extends viewModelBase {
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
         this.connectToRavenServer();
+
+        window.onbeforeunload = (e: any) => this.q(e);
+    }
+
+    q(e: any) {
+        shell.currentDbChangesApi().dispose();
+        shell.globalChangesApi.dispose();
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -351,6 +358,14 @@ class shell extends viewModelBase {
                 observableResourceArray.first(x => x.isVisible()).activate();
             }
         }
+    }
+
+    /*
+     * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
+     */
+    deactivate() {
+        this.activeDatabase.unsubscribeFrom("ActivateDatabase");
+        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
     }
 
     navigateToResourceGroup(resourceHash) {

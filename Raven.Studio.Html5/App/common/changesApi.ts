@@ -38,16 +38,16 @@ class changesApi {
     private connect(coolDownWithDataLoss: number = 0) {
         if ("WebSocket" in window) {
             var host = window.location.host;
-            var resourceUrl = appUrl.forResourceQuery(this.rs);
+            var resourcePath = appUrl.forResourceQuery(this.rs);
 
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
+            var getTokenTask = new getSingleAuthTokenCommand(resourcePath).execute();
             getTokenTask
                 .done((tokenObject: singleAuthToken) => {
                     var token = tokenObject.Token;
 
-                    this.webSocket = new WebSocket('ws://' + host + resourceUrl + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
+                    this.webSocket = new WebSocket('ws://' + host + resourcePath + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
 
                     this.webSocket.onmessage = (e) => {
                         this.onEvent(e)
@@ -288,8 +288,7 @@ class changesApi {
         this.connectWebSocketTask.done(() => {
             if (this.webSocket && !this.isConnectionClosed) {
                 console.log("Disconnecting from changes API for (rs = " + this.rs.name + ")");
-                this.webSocket.close(this.normalClosureCode);
-                //this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
+                this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
                 this.send('disconnect');
             }
         });

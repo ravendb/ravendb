@@ -74,7 +74,7 @@ class viewModelBase {
         this.notifications = this.createNotifications();
 
         this.modelPollingStart();
-        window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
+        //window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -99,6 +99,7 @@ class viewModelBase {
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
+        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
         this.cleanupNotifications();
