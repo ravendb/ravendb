@@ -199,6 +199,11 @@ namespace Raven.Client.Document
 		protected bool disableCaching;
 
 		/// <summary>
+		/// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		protected bool showQueryTimings;
+
+		/// <summary>
 		/// Determine if scores of query results should be explained
 		/// </summary>
 		protected bool shouldExplainScores;
@@ -368,6 +373,7 @@ namespace Raven.Client.Document
 		    transformerParameters = other.transformerParameters;
 			disableEntitiesTracking = other.disableEntitiesTracking;
 			disableCaching = other.disableCaching;
+			showQueryTimings = other.showQueryTimings;
 			shouldExplainScores = other.shouldExplainScores;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
@@ -865,6 +871,12 @@ namespace Raven.Client.Document
 		public IDocumentQueryCustomization NoCaching()
 		{
 			disableCaching = true;
+			return this;
+		}
+
+		public IDocumentQueryCustomization ShowTimings()
+		{
+			showQueryTimings = true;
 			return this;
 		}
 
@@ -1842,6 +1854,7 @@ If you really want to do in memory filtering on the data returned from the query
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     TransformerParameters  = transformerParameters,
 					DisableCaching = disableCaching,
+					ShowTimings = showQueryTimings,
 					ExplainScores = shouldExplainScores
 				};
 			}
@@ -1866,6 +1879,7 @@ If you really want to do in memory filtering on the data returned from the query
                 TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				DisableCaching = disableCaching,
+				ShowTimings = showQueryTimings,
 				ExplainScores = shouldExplainScores
 			};
 
