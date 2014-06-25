@@ -21,7 +21,7 @@ class indexErrors extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentDbChangesApi().watchAllIndexes((e) => this.fetchIndexErrors()),
+            shell.currentReourceChangesApi().watchAllIndexes((e) => this.fetchIndexErrors()),
         ];
     }
 

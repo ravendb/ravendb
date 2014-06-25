@@ -199,9 +199,9 @@ class databases extends viewModelBase {
             var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' the database?');
             confirmationMessageViewModel
                 .done(() => {
-                    if (shell.currentDbChangesApi()) {
-                        shell.currentDbChangesApi().dispose();
-                        shell.currentDbChangesApi(null);
+                    if (shell.currentReourceChangesApi()) {
+                        shell.currentReourceChangesApi().dispose();
+                        shell.currentReourceChangesApi(null);
                     }
                     require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
                         new toggleDatabaseDisabledCommand(db)

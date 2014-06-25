@@ -54,7 +54,7 @@ class documents extends viewModelBase {
         this.fetchCustomFunctions();
 
         // treat document put/delete events
-        this.currentDBDocChangesSubscription = shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+        this.currentDBDocChangesSubscription = shell.currentReourceChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
             this.isDocumentsUpToDate = false;
             var collections = this.collections();
             var curCollection = this.collections.first(x => x.name === e.CollectionName);
@@ -77,7 +77,7 @@ class documents extends viewModelBase {
         });
         
         // treat bulk Insert events
-        this.currentDBBulkInsertSubscription = shell.currentDbChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
+        this.currentDBBulkInsertSubscription = shell.currentReourceChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
             if (e.Type == documentChangeType.BulkInsertEnded) {
                 this.isDocumentsUpToDate = false;
 

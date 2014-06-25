@@ -94,7 +94,7 @@ class filesystemFiles extends viewModelBase {
         }
 
         if (!this.folderNotificationSubscriptions[newFolder]) {
-            this.folderNotificationSubscriptions[newFolder] = shell.currentFsChangesApi()
+            this.folderNotificationSubscriptions[newFolder] = shell.currentReourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
 
                     if (e.FileSystemName === this.activeFilesystem().name) {

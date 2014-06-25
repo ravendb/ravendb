@@ -75,7 +75,12 @@ class viewModelBase {
         oauthContext.enterApiKeyTask.done(() => this.notifications = this.createNotifications());
 
         this.modelPollingStart();
-        //window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
+
+        if (!!args) {
+            window.addEventListener("beforeunload", this.beforeUnloadListener, false);
+        }
+
+        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -94,6 +99,9 @@ class viewModelBase {
         return true;
     }
 
+    detached() {
+        var x = 4;
+    }
     /*
      * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
      */
@@ -104,6 +112,8 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
         this.cleanupNotifications();
+
+        window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
     }
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
@@ -216,7 +226,7 @@ class viewModelBase {
         return canNavTask;
     }
 
-    private beforeUnload(e: any) {
+    private beforeUnloadListener: EventListener = (e: any): any => {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
             var message = "You have unsaved data.";

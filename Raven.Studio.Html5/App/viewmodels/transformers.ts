@@ -52,7 +52,7 @@ class Transformers extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentDbChangesApi().watchAllTransformers(e => this.processTransformerEvent(e))];
+        return [shell.currentReourceChangesApi().watchAllTransformers(e => this.processTransformerEvent(e))];
     }
 
     processTransformerEvent(e: transformerChangeNotificationDto) {

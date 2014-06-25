@@ -37,8 +37,8 @@ class statistics extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentDbChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
-            shell.currentDbChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))
+            shell.currentReourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
+            shell.currentReourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))
         ];
     }
 
