@@ -81,7 +81,7 @@ class editIndex extends viewModelBase {
         }
 
         this.initializeDirtyFlag();
-        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.editedIndex().maps().every(m => m().trim().length > 0) && viewModelBase.dirtyFlag().isDirty());
     }
 
     attached() {
