@@ -268,6 +268,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
+                headers["Creation-Date"] = headers["Last-Modified"];
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);

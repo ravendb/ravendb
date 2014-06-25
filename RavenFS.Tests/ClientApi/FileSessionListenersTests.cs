@@ -33,7 +33,7 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("/b/test2.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();
 
-                var file = await session.LoadFileAsync("test1.file");
+                var file = await session.LoadFileAsync("/b/test1.file");
                 file.Metadata.Add("Read-Only", true);
                 await session.SaveChangesAsync();
 

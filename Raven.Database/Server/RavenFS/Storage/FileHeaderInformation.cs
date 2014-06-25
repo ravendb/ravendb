@@ -2,6 +2,8 @@
 using System.Collections.Specialized;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
+using System.IO;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
@@ -20,6 +22,61 @@ namespace Raven.Database.Server.RavenFS.Storage
 		{
 			get { return Humane(UploadedSize); }
 		}
+
+        public DateTimeOffset LastModified 
+        {
+            get 
+            {
+                var lastModified = new DateTimeOffset();
+                if (this.Metadata.Keys.Contains("Creation-Date")) 
+                {
+                    lastModified = this.Metadata["Last-Modified"].Value<DateTimeOffset>(); 
+                }
+                return lastModified;
+            }
+        }
+
+        public DateTimeOffset CreationDate
+        {
+            get {
+                var creationDate = new DateTimeOffset();
+                if (this.Metadata.Keys.Contains("Creation-Date"))
+                {
+                    creationDate = this.Metadata["Creation-Date"].Value<DateTimeOffset>();
+                }
+                return creationDate;
+            }
+        }
+
+        public Etag Etag 
+        { 
+            get 
+            { 
+                Etag parsedEtag = null;
+                if (this.Metadata.Keys.Contains("ETag"))
+                {
+                    Etag.TryParse(this.Metadata["ETag"].Value<string>(), out parsedEtag);
+                }
+
+                return parsedEtag;
+            }
+        }
+
+        public string Extension
+        {
+            get
+            {
+                return System.IO.Path.GetExtension(this.Name);
+            }
+        }
+
+        public string Path
+        {
+            get 
+            {
+                return System.IO.Path.GetDirectoryName(this.Name);
+            }
+        }
 
 		public RavenJObject Metadata { get; set; }
 

@@ -54,7 +54,7 @@ namespace Raven.Client.FileSystem
             IncrementRequestCount();
 
             var metadata = await Commands.GetMetadataForAsync(filename);
-            var fileHeader = new FileHeader(metadata);
+            var fileHeader = new FileHeader(filename, metadata);
 
             entitiesByKey.Add(filename, fileHeader);
 
