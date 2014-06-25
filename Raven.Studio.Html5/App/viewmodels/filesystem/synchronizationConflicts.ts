@@ -42,7 +42,6 @@ class synchronizationConflicts extends viewModelBase {
                     default:
                         console.error("unknown notification action");
                 }
-            }
         });
 
         this.loadConflicts();

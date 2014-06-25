@@ -46,10 +46,6 @@ class status extends viewModelBase {
         this.activitiesSubscription = shell.currentReourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
 
-            if (e.FileSystemName != this.activeFilesystem().name) {
-                return;
-            }
-
             if (e.Action != synchronizationAction.Finish) {
                 this.addOrUpdateActivity(e);
             }
