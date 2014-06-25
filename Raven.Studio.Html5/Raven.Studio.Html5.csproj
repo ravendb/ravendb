@@ -321,6 +321,7 @@
     <TypeScriptCompile Include="App\models\transformerQuery.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
+    <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
@@ -329,6 +330,7 @@
     <Content Include="App\views\metricsRequests.html" />
     <Content Include="App\views\metricsIndexBatchSize.html" />
     <Content Include="App\views\metrics.html" />
+    <Content Include="App\views\enterApiKey.html" />
     <Content Include="App\views\copyIndexDialog.html" />
     <TypeScriptCompile Include="App\viewmodels\metricsIndexing.ts" />
     <Content Include="App\views\alerts.html" />

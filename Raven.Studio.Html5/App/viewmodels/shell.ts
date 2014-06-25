@@ -5,6 +5,7 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
 
+import forge = require("forge/forge_custom.min");
 import viewModelBase = require("viewmodels/viewModelBase");
 import resource = require("models/resource");
 import database = require("models/database");
@@ -38,6 +39,7 @@ import getFilesystemsCommand = require("commands/filesystem/getFilesystemsComman
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+import enterApiKey = require("viewmodels/enterApiKey");
 
 class shell extends viewModelBase {
     private router = router;
@@ -79,6 +81,8 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
 
+    apiKeyPromise: JQueryPromise<any>;
+
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
     static currentFsChangesApi = ko.observable<changesApi>(null);
@@ -86,7 +90,7 @@ class shell extends viewModelBase {
 
     constructor() {
         super();
-        this.setupApiKey();
+        this.apiKeyPromise = this.setupApiKey();
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
@@ -146,6 +150,7 @@ class shell extends viewModelBase {
             }
             return shell.counterStorages();
         }, this);
+
     }
 
     activate(args: any) {
@@ -181,7 +186,7 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        this.connectToRavenServer();
+        this.apiKeyPromise.then(() => this.connectToRavenServer());
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -206,7 +211,15 @@ class shell extends viewModelBase {
     }
 
     setupApiKey() {
-        oauthContext.apiKey("key1/kdPWRpuH93L");
+        // try to find api key as studio parameter
+        var queryVars = forge.util.getQueryVariables();
+        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
+            oauthContext.apiKey(queryVars['api-key'][0]);
+        }
+        if ('has-api-key' in queryVars) {
+            return this.showApiKeyDialog();
+        }
+        return $.Deferred().resolve();
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -606,6 +619,11 @@ class shell extends viewModelBase {
         } else if (query.length == 0) {
             this.goToDocumentSearchResults.removeAll();
         }
+    }
+
+    showApiKeyDialog() {
+        var dialog = new enterApiKey();
+        return app.showDialog(dialog);
     }
 
     showErrorsDialog() {
