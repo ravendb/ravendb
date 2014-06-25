@@ -57,6 +57,24 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Sorts(secondary) the elements of a sequence in ascending order according to a key.
+		/// </summary>
+		public static IRavenQueryable<T> ThenBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
+		{
+			return (IRavenQueryable<T>)Queryable.ThenBy(source, keySelector);
+		}
+
+
+		/// <summary>
+		/// Sorts(secondary) the elements of a sequence in descending order according to a key.
+		/// </summary>
+		public static IRavenQueryable<T> ThenByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
+		{
+			return (IRavenQueryable<T>)Queryable.ThenByDescending(source, keySelector);
+		}
+
+
+		/// <summary>
 		/// Projects each element of a sequence into a new form.
 		/// </summary>
 		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource, TResult>> selector)

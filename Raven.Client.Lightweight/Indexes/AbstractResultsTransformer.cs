@@ -33,6 +33,18 @@ namespace Raven.Client.Indexes
 		/// <value>The name of the index.</value>
 		public virtual string TransformerName { get { return GetType().Name.Replace("_", "/"); } }
 
+		[Obsolete("Use Parameter instead.")]
+		protected RavenJToken Query(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		[Obsolete("Use ParameterOrDefault instead.")]
+		protected RavenJToken QueryOrDefault(string key, object defaultVal)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
         protected RavenJToken Parameter(string key)
         {
             throw new NotSupportedException("This can only be run on the server side");

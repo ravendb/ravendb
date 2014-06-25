@@ -11,7 +11,7 @@ class metrics extends viewModelBase {
     currentRouteTitle: KnockoutComputed<string>;
     appUrls: computedAppUrls;
 
-	constructor() {
+    constructor() {
         super();
         
         this.appUrls = appUrl.forCurrentDatabase();
@@ -24,7 +24,7 @@ class metrics extends viewModelBase {
                 { route: 'databases/status/metrics/prefetches',       moduleId: 'viewmodels/metricsPrefetches',            title: 'Prefetches',            tooltip: "TODO", nav: true, hash: appUrl.forCurrentDatabase().metricsPrefetches },
             ])
             .buildNavigationModel();
-
+       
 
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?

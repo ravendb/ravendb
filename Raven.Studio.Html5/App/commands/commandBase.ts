@@ -1,9 +1,14 @@
+/// <reference path="../models/dto.ts" />
+
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
 import appUrl = require("common/appUrl");
+import shell = require("viewmodels/shell");
+import oauthContext = require("common/oauthContext");
+import forge = require("forge/forge_custom.min");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
@@ -129,6 +134,7 @@ class commandBase {
     }
 
     private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        var originalArguments = arguments;
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
@@ -158,16 +164,143 @@ class commandBase {
         if (commandBase.loadingCounter == 0) {
             commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000);
         }
+
+        if (oauthContext.apiKey()) {
+            if (!defaultOptions.headers) {
+                defaultOptions.headers = {}
+            }
+            defaultOptions.headers["Has-Api-Key"] = "True";
+        }
+
+        if (oauthContext.authHeader()) {
+            if (!defaultOptions.headers) {
+                defaultOptions.headers = {}
+            }
+            defaultOptions.headers["Authorization"] = oauthContext.authHeader();
+        }
+
+        var ajaxTask = $.Deferred();
+
         commandBase.loadingCounter++;
-        return $.ajax(defaultOptions).always(() => {
+        $.ajax(defaultOptions).always(() => {
             --commandBase.loadingCounter;
             if (commandBase.loadingCounter == 0) {
                 clearTimeout(commandBase.splashTimerHandle);
                 commandBase.hideSpin();
             }
+        }).done((results, status, xhr) => {
+                ajaxTask.resolve(results, status, xhr);
+        }).fail((request, status, error) => {
+            if (request.status == 412 && oauthContext.apiKey()) {
+                this.handleOAuth(ajaxTask, request, originalArguments);
+            } else {
+                ajaxTask.reject(request, status, error);
+            }
+        });
+
+        return ajaxTask.promise();
+    }
+
+    handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, originalArguments: IArguments) {
+        var oauthSource = request.getResponseHeader('OAuth-Source');
+
+        // issue request to oauth source endpoint to get RSA exponent and modulus
+        $.ajax({
+            type: 'POST',
+            url: oauthSource,
+            headers: {
+                grant_type: 'client_credentials'
+            }
+        }).fail((request, status, error) => {
+                if (request.status != 412) {
+                    task.reject(request, status, error);
+                } else {
+                    var wwwAuth:string = request.getResponseHeader('WWW-Authenticate');
+                    var tokens = wwwAuth.split(',');
+                    var authRequest:any = {};
+                    tokens.forEach(token => {
+                        var eqPos = token.indexOf("=");
+                        var kv = [token.substring(0, eqPos), token.substring(eqPos + 1)];
+                        var m = kv[0].match(/[a-zA-Z]+$/g);
+                        if (m) {
+                            authRequest[m[0]] = kv[1];
+                        } else {
+                            authRequest[kv[0]] = kv[1];
+                        }
+                    });
+
+                    // form oauth request
+
+                    var data = this.objectToString({
+                        exponent: authRequest.exponent,
+                        modulus: authRequest.modulus,
+                        data: this.encryptAsymmetric(authRequest.exponent, authRequest.modulus, this.objectToString({
+                            "api key name": oauthContext.apiKeyName(),
+                            "challenge": authRequest.challenge,
+                            "response": this.prepareResponse(authRequest.challenge)
+                        }))
+                    });
+
+                    $.ajax({
+                        type: 'POST',
+                        url: oauthSource,
+                        data: data,
+                        headers: {
+                            grant_type: 'client_credentials'
+                        }
+                    }).done((results, status, xhr) => {
+                        oauthContext.authHeader("Bearer " + results);
+                        this.retryOriginalRequest(task, originalArguments);
+                    }).fail((request, status, error) => {
+                        task.reject(request, status, error);
+                    });
+                }
+            });
+    }
+
+    retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
+        this.ajax.apply(this, orignalArguments).done((results, status, xhr) => {
+            task.resolve(results, status, xhr);
+        }).fail((request, status, error) => {
+                task.reject(request, status, error);
         });
     }
-    
+
+    prepareResponse(challenge: string) {
+        var input = challenge + ";" + oauthContext.apiKeySecret();
+        var md = forge.md.sha1.create();
+        md.update(input);
+        return forge.util.encode64(md.digest().getBytes());
+    }
+
+    objectToString(input: any) {
+        return $.map(input, (value, key) => key + "=" + value).join(',');
+    }
+
+    base64ToBigInt(input) {
+        input = forge.util.decode64(input);
+        var hex = forge.util.bytesToHex(input);
+        return new forge.jsbn.BigInteger(hex, 16);
+    }
+
+    encryptAsymmetric(exponent, modulus, data) {
+        var e = this.base64ToBigInt(exponent);
+        var n = this.base64ToBigInt(modulus);
+        var rsa = forge.pki.rsa;
+        var publicKey = rsa.setPublicKey(n, e);
+
+        var key = forge.random.getBytesSync(32);
+        var iv = forge.random.getBytesSync(16);
+
+        var keyAndIvEncrypted = publicKey.encrypt(key + iv, 'RSA-OAEP');
+
+        var cipher = forge.cipher.createCipher('AES-CBC', key);
+        cipher.start({ iv: iv });
+        cipher.update(forge.util.createBuffer(data));
+        cipher.finish();
+        var encrypted = cipher.output;
+        return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
+	}
 
     private static showSpin() {
         ko.postbox.publish("LoadProgress", alertType.warning);
@@ -180,7 +313,6 @@ class commandBase {
 
     private static  hideSpin() {
         ko.postbox.publish("LoadProgress", null);
-
     }
 
     private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {

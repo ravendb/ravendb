@@ -94,6 +94,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+	    {
+	        SetTransformerParameters(queryInputs);
+	    }
+
 		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
 	    {
 	        this.transformerParameters = transformerParameters;
@@ -158,6 +163,7 @@ namespace Raven.Client.Document
                 transformerParameters = transformerParameters,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
+				showQueryTimings = showQueryTimings,
                 lastEquality = lastEquality,
                 defaultOperator = defaultOperator,
 				shouldExplainScores = shouldExplainScores
@@ -345,6 +351,12 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
 		{
 			NoCaching();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ShowTimings()
+		{
+			ShowTimings();
 			return this;
 		}
 

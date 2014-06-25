@@ -320,6 +320,8 @@
     <TypeScriptCompile Include="App\viewmodels\metricsPrefetches.ts" />
     <TypeScriptCompile Include="App\models\transformerQuery.ts" />
     <Content Include="App\models\transformerParam.ts" />
+    <TypeScriptCompile Include="App\common\oauthContext.ts" />
+    <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
@@ -328,6 +330,7 @@
     <Content Include="App\views\metricsRequests.html" />
     <Content Include="App\views\metricsIndexBatchSize.html" />
     <Content Include="App\views\metrics.html" />
+    <Content Include="App\views\enterApiKey.html" />
     <Content Include="App\views\copyIndexDialog.html" />
     <TypeScriptCompile Include="App\viewmodels\metricsIndexing.ts" />
     <Content Include="App\views\alerts.html" />
@@ -1112,7 +1115,7 @@
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
-    <Content Include="Scripts\d3.v3.js" />
+    <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -1137,6 +1140,7 @@
       <DependentUpon>app.css</DependentUpon>
     </Content>
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
+    <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
@@ -1165,15 +1169,17 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\nv.d3.js" />
     <Content Include="Scripts\nvd3\models\timelines.js" />
     <Content Include="Scripts\nvd3\models\timelinesChart.js" />
-    <Content Include="Scripts\nvd3\nv.d3.js" />
+    <Content Include="Scripts\nvd3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\d3\d3.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
-    <Content Include="Scripts\typings\nvd3\nvd3.d.ts" />
+    <Content Include="Scripts\typings\d3\nv.d.ts" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
