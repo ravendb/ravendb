@@ -25,6 +25,7 @@ import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import changesApi = require("common/changesApi");
+import oauthContext = require("common/oauthContext");
 
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
@@ -85,6 +86,8 @@ class shell extends viewModelBase {
 
     constructor() {
         super();
+        this.setupApiKey();
+
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
@@ -200,6 +203,10 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
+    }
+
+    setupApiKey() {
+        oauthContext.apiKey("key1/kdPWRpuH93L");
     }
 
     showNavigationProgress(isNavigating: boolean) {

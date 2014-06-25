@@ -320,6 +320,7 @@
     <TypeScriptCompile Include="App\viewmodels\metricsPrefetches.ts" />
     <TypeScriptCompile Include="App\models\transformerQuery.ts" />
     <Content Include="App\models\transformerParam.ts" />
+    <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
@@ -1137,6 +1138,7 @@
       <DependentUpon>app.css</DependentUpon>
     </Content>
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
+    <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
@@ -1173,6 +1175,7 @@
     <Content Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="Scripts\typings\d3\nv.d.ts" />
     <Content Include="web.config">
