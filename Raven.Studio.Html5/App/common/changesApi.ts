@@ -14,7 +14,9 @@ class changesApi {
     private eventsId: string;
     private webSocket: WebSocket;
     private isConnectionClosed: boolean = false;
-    connectWebSocketTask: JQueryDeferred<any>;
+    private connectWebSocketTask: JQueryDeferred<any>;
+    private normalClosureCode = 1000;
+    private normalClosureMessage = "CLOSE_NORMAL";
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
@@ -33,7 +35,7 @@ class changesApi {
         this.connect(coolDownWithDataLoss);
     }
 
-    public connect(coolDownWithDataLoss: number = 0) {
+    private connect(coolDownWithDataLoss: number = 0) {
         if ("WebSocket" in window) {
             var host = window.location.host;
             var resourceUrl = appUrl.forResourceQuery(this.rs);
@@ -47,9 +49,15 @@ class changesApi {
 
                     this.webSocket = new WebSocket('ws://' + host + resourceUrl + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
 
-                    this.webSocket.onmessage = (e) => this.onEvent(e);
-                    this.webSocket.onerror = (e) => this.onError(e);
-                    this.webSocket.onclose = () => this.isConnectionClosed = true;
+                    this.webSocket.onmessage = (e) => {
+                        this.onEvent(e)
+                    };
+                    this.webSocket.onerror = (e) => {
+                        this.onError(e)
+                    };
+                    this.webSocket.onclose = (e) => {
+                        this.isConnectionClosed = true
+                    };
                     this.webSocket.onopen = () => {
                         this.connectWebSocketTask.resolve();
                     }
@@ -277,11 +285,14 @@ class changesApi {
     }
 
     dispose() {
-        if (this.webSocket && !this.isConnectionClosed) {
-            console.log("Disconnecting from changes API for (rs = " + this.rs.name + ")");
-            this.send('disconnect');
-            this.webSocket.close();
-        }
+        this.connectWebSocketTask.done(() => {
+            if (this.webSocket && !this.isConnectionClosed) {
+                console.log("Disconnecting from changes API for (rs = " + this.rs.name + ")");
+                this.webSocket.close(this.normalClosureCode);
+                //this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
+                this.send('disconnect');
+            }
+        });
     }
 
     private makeId() {

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.WebSockets;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,10 +53,12 @@ namespace Raven.Database.Server.Connections
         private readonly IOwinContext _context;
         private readonly RavenDBOptions _options;
 
-
         private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
+
+		private const int NormalClosureCode = 1000;
+		private const string NormalClosureMessage = "CLOSE_NORMAL";
         
         public string Id { get; private set; }
         public bool Connected { get; set; }
@@ -79,9 +82,6 @@ namespace Raven.Database.Server.Connections
         {
         }
 
-        
-
-
         public event Action Disconnected;
 
         public void SendAsync(object msg)
@@ -95,8 +95,7 @@ namespace Raven.Database.Server.Connections
             try
             {
                 var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
-                //var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
-                var closeAsync = (WebSocketCloseAsync) websocketContext["websocket.CloseAsync"];
+                
                 var callCancelled = (CancellationToken) websocketContext["websocket.CallCancelled"];
 
                 var memoryStream = new MemoryStream();
@@ -104,12 +103,14 @@ namespace Raven.Database.Server.Connections
                 {
                     Converters = {new EtagJsonConverter()}
                 };
-                
-                while (callCancelled.IsCancellationRequested == false)
+
+				CreateWaitForClientCloseTask(websocketContext, callCancelled);
+
+				while (callCancelled.IsCancellationRequested == false)
                 {
                     bool result = await manualResetEvent.WaitAsync(5000);
                     if (callCancelled.IsCancellationRequested)
-                        return;
+                        break;
 
                     if (result == false)
                     {
@@ -123,38 +124,63 @@ namespace Raven.Database.Server.Connections
                         }
                         continue;
                     }
+
                     manualResetEvent.Reset();
+
                     object message;
                     while (msgs.TryDequeue(out message))
                     {
+						if (callCancelled.IsCancellationRequested)
+							break;
+
                         if (CoolDownWithDataLossInMilisecods > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMilisecods)
                         {
                             lastMessageEnqueuedAndNotSent = message;
                             continue;
                         }
-                        
-                        if (callCancelled.IsCancellationRequested)
-                            break;
 
                         lastMessageEnqueuedAndNotSent = null;
                         await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
                         lastMessageSentTick = Environment.TickCount;
-                        
                     }
-                }
-                try
-                {
-                    await closeAsync((int) websocketContext["websocket.ClientCloseStatus"], (string) websocketContext["websocket.ClientCloseDescription"], callCancelled);
-                }
-                catch (Exception)
-                {
                 }
             }
             finally
             {
-                OnDisconnection();
+				OnDisconnection();
             }
         }
+
+		private void CreateWaitForClientCloseTask(IDictionary<string, object> websocketContext, CancellationToken callCancelled)
+	    {
+			new Task(async () =>
+			{
+				var buffer = new ArraySegment<byte>(new byte[1024]);
+				var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
+				var closeAsync = (WebSocketCloseAsync) websocketContext["websocket.CloseAsync"];
+
+				while (callCancelled.IsCancellationRequested == false)
+				{
+					try
+					{
+						await receiveAsync(buffer, callCancelled);
+
+						var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
+						var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
+
+						if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
+						{
+							await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
+						}
+
+						//At this point the WebSocket is in a 'CloseReceived' state, so there is no need to continue waiting for messages
+						break;
+					}
+					catch (Exception e) { }
+				}
+
+			}).Start();
+	    }
 
         private static async Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
         {
