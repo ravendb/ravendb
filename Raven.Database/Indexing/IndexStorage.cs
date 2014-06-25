@@ -313,7 +313,7 @@ namespace Raven.Database.Indexing
 				if (!IndexReader.IndexExists(directory))
 				{
 					if (createIfMissing == false)
-						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
+						throw new InvalidOperationException(string.Format("Index directory '{0}' does not exists for '{1}' index.", indexFullPath, indexDefinition.Name));
 
 					WriteIndexVersion(directory, indexDefinition);
 
@@ -332,7 +332,7 @@ namespace Raven.Database.Indexing
 					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
 					{
 						if (configuration.ResetIndexOnUncleanShutdown)
-							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
+							throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
 
                         CheckIndexAndTryToFix(directory, indexDefinition);
 						directory.DeleteFile("writing-to-index.lock");

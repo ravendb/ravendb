@@ -5,6 +5,7 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
 
+import forge = require("forge/forge_custom.min");
 import viewModelBase = require("viewmodels/viewModelBase");
 import resource = require("models/resource");
 import database = require("models/database");
@@ -25,6 +26,7 @@ import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import changesApi = require("common/changesApi");
+import oauthContext = require("common/oauthContext");
 
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
@@ -36,28 +38,34 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
+import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+import enterApiKey = require("viewmodels/enterApiKey");
 
 class shell extends viewModelBase {
     private router = router;
 
-    databases = ko.observableArray<database>();
+    static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
+    isDatabaseDisabled: KnockoutComputed<boolean>;
     currentConnectedDatabase: database;
     systemDb: database;
-    isDatabaseDisabled: KnockoutComputed<boolean>;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
 
-    filesystems = ko.observableArray<filesystem>();
+    static fileSystems = ko.observableArray<filesystem>();
     listedFileSystems: KnockoutComputed<filesystem[]>;
+    isFileSystemDisabled: KnockoutComputed<boolean>;
+    currentConnectedFileSystem: filesystem;
     fileSystemsLoadedTask: JQueryPromise<any>;
-    canShowFileSystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
+    canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
 
-    counterStorages = ko.observableArray<counterStorage>();
+    static counterStorages = ko.observableArray<counterStorage>();
     listedCounterStorages: KnockoutComputed<counterStorage[]>;
+    isCounterStorageDisabled: KnockoutComputed<boolean>;
+    currentConnectedCounterStorage: counterStorage;
     counterStoragesLoadedTask: JQueryPromise<any>;
-    canShowCountersNavbar = ko.computed(() => this.counterStorages().length > 0 && this.appUrls.isAreaActive('counterstorages')());
+    canShowCountersNavbar = ko.computed(() => shell.counterStorages().length > 0 && this.appUrls.isAreaActive('counterstorages')());
 
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
@@ -76,56 +84,72 @@ class shell extends viewModelBase {
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
     static currentFsChangesApi = ko.observable<changesApi>(null);
+    static currentCsChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
+        oauthContext.enterApiKeyTask = this.setupApiKey();
+
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
-        ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
-        ko.postbox.subscribe("ActivateCounterStorageWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db, true); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); this.fetchFSStats(fs, true); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db, true); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs, true); });
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs, true); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
         this.currentConnectedDatabase = this.systemDb;
+        this.currentConnectedFileSystem = new filesystem(null);
+        this.currentConnectedCounterStorage = new counterStorage(null);
         this.appUrls = appUrl.forCurrentDatabase();
 
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
         this.isDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
             return !!activeDb ? activeDb.disabled() : false;
         });
 
+        this.isFileSystemDisabled = ko.computed(() => {
+            var activeFs = this.activeFilesystem();
+            return !!activeFs ? activeFs.disabled() : false;
+        });
+
+        this.isCounterStorageDisabled = ko.computed(() => {
+            var activeCs = this.activeCounterStorage();
+            return !!activeCs ? activeCs.disabled() : false;
+        });
+
         this.listedDatabases = ko.computed(() => {
             var currentDatabase = this.activeDatabase();
             if (!!currentDatabase) {
-                return this.databases().filter(database => database.name != currentDatabase.name);
+                return shell.databases().filter(database => database.name != currentDatabase.name);
             }
-            return this.databases();
+            return shell.databases();
         }, this);
 
         this.listedFileSystems = ko.computed(() => {
             var currentFileSystem = this.activeFilesystem();
             if (!!currentFileSystem) {
-                return this.filesystems().filter(fileSystem => fileSystem.name != currentFileSystem.name);
+                return shell.fileSystems().filter(fileSystem => fileSystem.name != currentFileSystem.name);
             }
-            return this.filesystems();
+            return shell.fileSystems();
         }, this);
 
         this.listedCounterStorages = ko.computed(() => {
             var currentCounterStorage = this.activeCounterStorage();
             if (!!currentCounterStorage) {
-                return this.counterStorages().filter(counterStorage => counterStorage.name != currentCounterStorage.name);
+                return shell.counterStorages().filter(counterStorage => counterStorage.name != currentCounterStorage.name);
             }
-            return this.counterStorages();
+            return shell.counterStorages();
         }, this);
+
     }
 
     activate(args: any) {
@@ -161,7 +185,7 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        this.connectToRavenServer();
+        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -185,6 +209,18 @@ class shell extends viewModelBase {
         });
     }
 
+    setupApiKey() {
+        // try to find api key as studio parameter
+        var queryVars = forge.util.getQueryVariables();
+        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
+            oauthContext.apiKey(queryVars['api-key'][0]);
+        }
+        if ('has-api-key' in queryVars) {
+            return this.showApiKeyDialog();
+        }
+        return $.Deferred().resolve();
+    }
+
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
             NProgress.start();
@@ -201,141 +237,85 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForDatabases(e)),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForFileSystems(e)),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForCounterStorages(e))
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase(), "#databases")),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem(), "#filesystems")),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage(), "#counterstorages"))
         ];
     }
 
-    private changesApiFiredForDatabases(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
-            var receivedDatabaseName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
-
+    private changesApiFiredForResource(e: documentChangeNotificationDto,
+            observableResourceArray: KnockoutObservableArray<any>,
+            activeResource: any, typeHash: string) {
+        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
+            var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+            
             if (e.Type === documentChangeType.Delete) {
-                this.onDatabaseDeleted(receivedDatabaseName);
-            } else {
-                var existingDatabase = this.databases.first((db: database) => db.name == receivedDatabaseName);
-                var receivedDatabaseDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
+                var resourceToDelete = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+                if (!!resourceToDelete) {
+                    observableResourceArray.remove(resourceToDelete);
 
-                if (existingDatabase == null) {
-                    var newDatabase = new database(receivedDatabaseName, receivedDatabaseDisabled);
-                    this.databases.unshift(newDatabase);
+                    if (observableResourceArray().length != 0 && !observableResourceArray.contains(activeResource)) {
+                        this.selectResource(observableResourceArray().first());
+                    }
                 }
-                else if (existingDatabase.disabled() != receivedDatabaseDisabled) {
-                    existingDatabase.disabled(receivedDatabaseDisabled);
-                }
+            } else { // e.Type === documentChangeType.Put
+                var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
+                getSystemDocumentTask.done((dto: databaseDocumentDto) => {
+                    var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+
+                    if (existingResource == null) { // new database
+                        var newResource = this.createNewResource(typeHash, receivedResourceName, dto);
+                        observableResourceArray.unshift(newResource);
+                    } else {
+                        if (existingResource.disabled() != dto.Disabled) { //disable status change
+                            existingResource.disabled(dto.Disabled);
+                        }
+                        if (typeHash == "#databases") { //for databases, bundle change
+                            existingResource.activeBundles(dto.Settings["Raven/ActiveBundles"].split(";"));
+                        }
+                    }
+                });
             }
         }
     }
 
-    private onDatabaseDeleted(databaseName: string) {
-        var databaseInList = this.databases.first((db: database) => db.name == databaseName);
-        if (!!databaseInList) {
-            this.databases.remove(databaseInList);
+    private createNewResource(typeHash: string, resourceName: string, dto: databaseDocumentDto) {
+        var newResource;
 
-            if (this.databases.contains(this.activeDatabase()) === false) {
-                this.selectDatabase(this.databases().first());
-            }
+        switch (typeHash) {
+            case ("#databases"):
+                newResource = new database(resourceName, dto.Disabled, dto.Settings["Raven/ActiveBundles"].split(";"));
+                break;
+            case ("#filesystems"):
+                newResource = new filesystem(resourceName, dto.Disabled);
+                break;
+            default: // case ("#counterstorages")
+                newResource = new counterStorage(resourceName, dto.Disabled);
         }
+
+        return newResource;
     }
 
-    private changesApiFiredForFileSystems(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
-            var receivedFileSystemName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+    selectResource(rs) {
+        rs.activate();
 
-            if (e.Type === documentChangeType.Delete) {
-                this.onFileSystemDeleted(receivedFileSystemName);
-            } else {
-                var existingFileSystem = this.filesystems.first((fs: filesystem) => fs.name == receivedFileSystemName);
-                var receivedFileSystemDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
-
-                if (existingFileSystem == null) {
-                    var fileSystem = new filesystem(receivedFileSystemName, receivedFileSystemDisabled);
-                    this.filesystems.unshift(fileSystem);
-                }
-                else if (existingFileSystem.disabled() != receivedFileSystemDisabled) {
-                    existingFileSystem.disabled(receivedFileSystemDisabled);
-                }
-            }
-        }
+        var updatedUrl = appUrl.forCurrentPage(rs);
+        this.navigate(updatedUrl);
     }
 
-    private onFileSystemDeleted(fileSystemName: string) {
-        var fileSystemInList = this.filesystems.first((fs: filesystem) => fs.name == fileSystemName);
-        if (!!fileSystemInList) {
-            this.filesystems.remove(fileSystemInList);
-        }
-
-        if ((this.filesystems().length > 0) && (this.filesystems.contains(this.activeFilesystem()) === false)) {
-            this.selectFileSystem(this.filesystems().first());
-        }
-    }
-
-    private changesApiFiredForCounterStorages(e: documentChangeNotificationDto) {
-        if (!!e.Id && (e.Type === documentChangeType.Delete ||
-            e.Type === documentChangeType.SystemResourceEnabled || e.Type === documentChangeType.SystemResourceDisabled)) {
-            var receivedCounterStoragesName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
-
-            if (e.Type === documentChangeType.Delete) {
-                this.onCounterStorageDeleted(receivedCounterStoragesName);
-            } else {
-                var existingCounterStorage = this.counterStorages.first((cs: counterStorage) => cs.name == receivedCounterStoragesName);
-                var receivedCounterStorageDisabled: boolean = (e.Type === documentChangeType.SystemResourceDisabled);
-
-                if (existingCounterStorage == null) {
-                    var newCounterStorage = new counterStorage(receivedCounterStoragesName, receivedCounterStorageDisabled);
-                    this.counterStorages.unshift(newCounterStorage);
-                }
-                else if (existingCounterStorage.disabled() != receivedCounterStorageDisabled) {
-                    existingCounterStorage.disabled(receivedCounterStorageDisabled);
-                }
-            }
-        }
-    }
-
-    private onCounterStorageDeleted(counterStorageName: string) {
-        var counterStoragesInList = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
-        if (!!counterStoragesInList) {
-            this.counterStorages.remove(counterStoragesInList);
-
-            if ((this.counterStorages().length > 0) && (this.counterStorages.contains(this.activeCounterStorage()) === false)) {
-                this.selectCounterStorage(this.counterStorages().first());
-            }
-        }
-    }
-
-    databasesLoaded(databases) {
+    private databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
         systemDatabase.isVisible(false);
-        this.databases(databases.concat([systemDatabase]));
-        if (this.databases().length == 1) {
-            systemDatabase.activate();
-        } else {
-            var urlDatabase = appUrl.getDatabase();
-            var newSelectedDb;
-            if (urlDatabase != null && (newSelectedDb = this.databases.first(x => x.name == urlDatabase.name)) != null) {
-                newSelectedDb.activate();
-            } else {
-                this.databases.first(x => x.isVisible()).activate();
-            }
-        }
+        shell.databases(databases.concat([systemDatabase]));
     }
 
-    filesystemsLoaded(filesystems) {
-        this.filesystems(filesystems);
-        if (this.filesystems().length != 0) {
-            this.filesystems.first(x=> x.isVisible()).activate();
-        }
+    private fileSystemsLoaded(filesystems) {
+        shell.fileSystems(filesystems);
     }
 
-    counterStoragesLoaded(results: counterStorage[]) {
-        this.counterStorages(results);
-        if (this.counterStorages().length != 0) {
-            this.counterStorages.first(x => x.isVisible()).activate();
-        }
+    private counterStoragesLoaded(results: counterStorage[]) {
+        shell.counterStorages(results);
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
@@ -358,12 +338,53 @@ class shell extends viewModelBase {
 
         this.fileSystemsLoadedTask = new getFilesystemsCommand()
             .execute()
-            .done((results: filesystem[]) => this.filesystemsLoaded(results));
+            .done((results: filesystem[]) => this.fileSystemsLoaded(results));
 
 
         this.counterStoragesLoadedTask = new getCounterStoragesCommand()
             .execute()
             .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+
+        $.when(this.databasesLoadedTask, this.fileSystemsLoadedTask, this.counterStoragesLoadedTask)
+            .done(() => {
+                var locationHash = window.location.hash;
+
+                if (locationHash.indexOf("#filesystems") == 0) {
+                    this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
+                }
+                else if (locationHash.indexOf("#counterstorages") == 0 && shell.counterStorages().length > 0) {
+                    this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
+                } else {
+                    this.activateResource(appUrl.getDatabase(), shell.databases);
+                }
+        });
+    }
+
+    private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
+        var newResource;
+
+        if (observableResourceArray().length > 0) {
+            if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
+                newResource.activate();
+            } else {
+                observableResourceArray.first(x => x.isVisible()).activate();
+            }
+        }
+    }
+
+    navigateToResourceGroup(resourceHash) {
+        this.disconnectFromChangesApi();
+
+        if (resourceHash == this.appUrls.databases()) {
+            this.activateResource(appUrl.getDatabase(), shell.databases);
+        }
+        else if (resourceHash == this.appUrls.filesystems()) {
+            this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
+        } else {
+            this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
+        }
+
+        this.navigate(resourceHash);
     }
 
     fetchStudioConfig() {
@@ -452,7 +473,7 @@ class shell extends viewModelBase {
     private activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
-                var matchingDatabase = this.databases().first(db => db.name == databaseName);
+                var matchingDatabase = shell.databases().first(db => db.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
                     ko.postbox.publish("ActivateDatabase", matchingDatabase);
                 }
@@ -460,104 +481,82 @@ class shell extends viewModelBase {
         }
     }
 
-    private activateFilesystemWithName(fileSystemName: string) {
-        if (this.fileSystemsLoadedTask) {
-            this.fileSystemsLoadedTask.done(() => {
-                var matchingFileSystem = this.filesystems().first(fs => fs.name == fileSystemName);
-                if (matchingFileSystem && this.activeFilesystem() !== matchingFileSystem) {
-                    ko.postbox.publish("ActivateFilesystem", matchingFileSystem);
-                }
-            });
+    private updateDbChangesApi(db: database) {
+        if (!db.disabled() && (this.currentConnectedDatabase.name != db.name || !this.appUrls.isAreaActive('databases')()) ||
+                db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
+            this.disconnectFromChangesApi();
+
+            shell.currentDbChangesApi(new changesApi(db, 5000));
+
+            shell.currentDbChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
+            shell.currentDbChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
+            shell.currentDbChangesApi().watchBulks(() => shell.fetchDbStats(db));
+
+            this.currentConnectedDatabase = db;
         }
     }
 
-    private activateCounterStorageWithName(counterStorageName: string) {
-        if (this.counterStoragesLoadedTask) {
-            this.counterStoragesLoadedTask.done(() => {
-                var matchingCounterStorage = this.counterStorages().first(cs => cs.name == counterStorageName);
-                if (matchingCounterStorage && this.activeCounterStorage() !== matchingCounterStorage) {
-                    ko.postbox.publish("ActivateCounterStorage", matchingCounterStorage);
-                }
-            });
+    private updateFsChangesApi(fs: filesystem) {
+        if (!fs.disabled() && (this.currentConnectedFileSystem.name != fs.name || !this.appUrls.isAreaActive('filesystems')())) {
+            this.disconnectFromChangesApi();
+
+            shell.currentFsChangesApi(new changesApi(fs, 5000));
+
+            this.currentConnectedFileSystem = fs;
         }
     }
 
-    private updateChangesApi(newDb: database) {
-        if (!newDb.disabled() && this.currentConnectedDatabase.name != newDb.name ||
-            newDb.name == "<system>" && this.currentConnectedDatabase.name == newDb.name) {
-            if (shell.currentDbChangesApi()) {
-                shell.currentDbChangesApi().dispose();
-            }
+    private updateCsChangesApi(cs: counterStorage) {
+        //TODO: enable changes api for counter storages, server side
+        if (!cs.disabled() && (this.currentConnectedCounterStorage.name != cs.name || !this.appUrls.isAreaActive('counterstorages')())) {
+            this.disconnectFromChangesApi();
 
-            shell.currentDbChangesApi(new changesApi(newDb, 5000));
+            shell.currentCsChangesApi(new changesApi(cs, 5000));
 
-            shell.currentDbChangesApi().watchAllDocs(() => this.fetchDbStats(newDb));
-            shell.currentDbChangesApi().watchAllIndexes(() => this.fetchDbStats(newDb));
-            shell.currentDbChangesApi().watchBulks(() => this.fetchDbStats(newDb));
-
-            this.currentConnectedDatabase = newDb;
+            this.currentConnectedCounterStorage = cs;
         }
     }
 
-    private updateFsChangesApi(newResource: resource) {
-        if (shell.currentFsChangesApi()) {
+    private disconnectFromChangesApi() {
+        if (shell.currentDbChangesApi()) {
+            shell.currentDbChangesApi().dispose();
+            shell.currentDbChangesApi(null);
+        }
+        else if (shell.currentFsChangesApi()) {
             shell.currentFsChangesApi().dispose();
+            shell.currentFsChangesApi(null);
         }
-        shell.currentFsChangesApi(new changesApi(newResource));
+        else if (shell.currentCsChangesApi()) {
+            shell.currentCsChangesApi().dispose();
+            shell.currentCsChangesApi(null);
+        }
     }
-
-    private fetchDbStats(db: database, forceFetch: boolean = false) {
-        if (forceFetch)
-        {
-                if (db && !db.disabled()) {
-                    new getDatabaseStatsCommand(db).execute().done(result => {db.statistics(result);});}
-            
-        } else {
+    
+    static fetchDbStats(db: database, forceFetch: boolean = false) {
+        if (db && !db.disabled() && (!db.isInStatsFetchCoolDown || forceFetch)) {
             if (!db.isInStatsFetchCoolDown) {
                 db.isInStatsFetchCoolDown = true;
-
                 setTimeout(() => db.isInStatsFetchCoolDown = false, 5000);
-                if (db && !db.disabled()) {
-                    new getDatabaseStatsCommand(db).execute().done(result => { db.statistics(result); });
-
-                }
             }
+
+            new getDatabaseStatsCommand(db).execute().done(result => db.statistics(result));
         }
     }
 
-    private fetchFSStats(fs: filesystem, forceFetch: boolean = false) {
-        var fs = this.activeFilesystem();
-        if (fs) {
+    static fetchFsStats(fs: filesystem, forceFetch: boolean = false) {
+        if (fs && !fs.disabled()) {
             new getFilesystemStatsCommand(fs)
                 .execute()
                 .done(result=> fs.statistics(result));
         }
     }
 
-    selectDatabase(db: database) {
-        db.activate();
-
-        if (window.location.hash !== "#databases") {
-            var updatedUrl = appUrl.forCurrentPage(db);
-            this.navigate(updatedUrl);
-        }
-    }
-
-    selectFileSystem(fs: filesystem) {
-        fs.activate();
-
-        if (window.location.hash !== "#filesystems") {
-            var updatedUrl = appUrl.forCurrentPage(fs);
-            this.navigate(updatedUrl);
-        }
-    }
-
-    selectCounterStorage(cs: counterStorage) {
-        cs.activate();
-
-        if (window.location.hash !== "#counterstorages") {
-            var updatedUrl = appUrl.forCurrentPage(cs);
-            this.navigate(updatedUrl);
+    static fetchCsStats(cs: counterStorage, forceFetch: boolean = false) {
+        if (cs && !cs.disabled()) {
+            //TODO: implememnt fetching of counter storage stats
+/*            new getCounterStorageStatsCommand(cs)
+                .execute()
+                .done(result=> cs.statistics(result));*/
         }
     }
 
@@ -621,9 +620,14 @@ class shell extends viewModelBase {
         }
     }
 
+    showApiKeyDialog() {
+        var dialog = new enterApiKey();
+        return app.showDialog(dialog);
+    }
+
     showErrorsDialog() {
-        require(["viewmodels/recentErrors"], ErrorDetails => {
-            var dialog = new ErrorDetails(this.recordedErrors);
+        require(["viewmodels/recentErrors"], errorDetails => {
+            var dialog = new errorDetails(this.recordedErrors);
             app.showDialog(dialog);
         });
     }

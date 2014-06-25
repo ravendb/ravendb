@@ -34,6 +34,7 @@ namespace Raven.Abstractions.Smuggler
         public SmugglerOptions SmugglerOptions { get; set; }
 
 		protected abstract Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount);
+	    protected abstract JsonDocument GetDocument(string key);
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit);
 		protected abstract Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag);
         protected abstract Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start);
@@ -323,6 +324,9 @@ namespace Raven.Abstractions.Smuggler
 			                    var document = documents.Current;
                                 
 			                    var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+
+				                Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
+
                                 if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
                                 {
                                     reachedMaxEtag = true;
@@ -378,6 +382,24 @@ namespace Raven.Abstractions.Smuggler
                         LastEtag = lastEtag,
                     };
                 }
+
+                // Load HiLo documents for selected collections
+			    options.Filters.ForEach(filter =>
+			    {
+                    if (filter.Path == "@metadata.Raven-Entity-Name")
+                    {
+                        filter.Values.ForEach(collectionName =>
+                        {
+                            JsonDocument doc = GetDocument("Raven/Hilo/" + collectionName);
+                            if (doc != null)
+                            {
+	                            doc.Metadata["@id"] = doc.Key;
+                                doc.ToJson().WriteTo(jsonWriter);
+                                totalCount++;
+                            }
+                        });
+                    }
+			    });
 
 			    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;

@@ -4,6 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -54,9 +57,15 @@ namespace Raven.Client.Connection
 			return createReplicationAwareRequest(serverUrl, "/admin/StopIndexing", "POST");
 		}
 
-		public HttpJsonRequest StartIndexing(string serverUrl)
-		{
-			return createReplicationAwareRequest(serverUrl, "/admin/StartIndexing", "POST");
+        public HttpJsonRequest StartIndexing(string serverUrl, int? maxNumberOfParallelIndexTasks)
+        {
+            var url = "/admin/StartIndexing";
+            if (maxNumberOfParallelIndexTasks.HasValue)
+            {
+                url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
+            }
+
+			return createReplicationAwareRequest(serverUrl, url, "POST");
 		}
 
 		public HttpJsonRequest AdminStats()
@@ -88,5 +97,18 @@ namespace Raven.Client.Connection
 		{
 			return createRequestForSystemDatabase("/admin/compact?database=" + databaseName, "POST");
 		}
+
+
+        /// <summary>
+        /// Gets the list of databases from the server asynchronously
+        /// </summary>
+        public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
+        {
+            var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture,"/databases?pageSize={0}&start={1}", pageSize, start), "GET");
+            var result = await requestForSystemDatabase.ReadResponseJsonAsync();
+            var json = (RavenJArray)result;
+            return json.Select(x => x.ToString())
+                .ToArray();
+        }
 	}
 }

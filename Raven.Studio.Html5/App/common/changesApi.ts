@@ -7,12 +7,14 @@ import changeSubscription = require('models/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 
 class changesApi {
 
     private eventsId: string;
     private webSocket: WebSocket;
     private isConnectionClosed: boolean = false;
+    connectWebSocketTask: JQueryDeferred<any>;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
@@ -21,46 +23,61 @@ class changesApi {
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
+    private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
     private commandBase = new commandBase();
 
-    constructor(private rs: resource, coolDownWithDataLoss?:number) {
+    constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
         this.eventsId = this.makeId();
+        this.connectWebSocketTask = $.Deferred();
         this.connect(coolDownWithDataLoss);
     }
 
-    private connect(coolDownWithDataLoss:number = 0) {
+    public connect(coolDownWithDataLoss: number = 0) {
         if ("WebSocket" in window) {
             var host = window.location.host;
             var resourceUrl = appUrl.forResourceQuery(this.rs);
 
             console.log("Connecting to changes API (rs = " + this.rs.name + ")");
 
-            this.webSocket = new WebSocket("ws://" + host + resourceUrl + '/changes/websocket?id=' + this.eventsId + "&cooldownwithdataloss=" + coolDownWithDataLoss);
+            var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
+            getTokenTask
+                .done((tokenObject: singleAuthToken) => {
+                    var token = tokenObject.Token;
 
-            this.webSocket.onmessage = (e) => this.onEvent(e);
-            this.webSocket.onerror = (e) => this.onError(e);
-            this.webSocket.onclose = (e) => this.isConnectionClosed = true;
+                    this.webSocket = new WebSocket('ws://' + host + resourceUrl + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
+
+                    this.webSocket.onmessage = (e) => this.onEvent(e);
+                    this.webSocket.onerror = (e) => this.onError(e);
+                    this.webSocket.onclose = () => this.isConnectionClosed = true;
+                    this.webSocket.onopen = () => {
+                        this.connectWebSocketTask.resolve();
+                    }
+                })
+                .fail(() => this.connectWebSocketTask.reject());
         }
         else {
             console.log("WebSocket NOT supported by your Browser!"); // The browser doesn't support WebSocket
+            this.connectWebSocketTask.reject();
         }
     }
 
     private send(command: string, value?: string) {
-        var args = {
-            id: this.eventsId,
-            command: command
-        };
-        if (value !== undefined) {
-            args["value"] = value;
-        }
-        //TODO: exception handling?
-        this.commandBase.query('/changes/config', args, this.rs);
-
+        this.connectWebSocketTask.done(() => {
+            var args = {
+                id: this.eventsId,
+                command: command
+            };
+            if (value !== undefined) {
+                args["value"] = value;
+            }
+            //TODO: exception handling?
+            this.commandBase.query('/changes/config', args, this.rs);
+        });
     }
 
     private onError(e: any) {
+        this.isConnectionClosed = true;
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
 
@@ -106,6 +123,8 @@ class changesApi {
                         return match && match.length > 0;
                     });
                 }
+            } else if (type == "ConfigurationChangeNotification") {
+                this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
             } else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
@@ -164,7 +183,7 @@ class changesApi {
 
         return new changeSubscription(() => {
             this.watchedPrefixes[docIdPrefix].remove(callback);
-            if (this.watchedPrefixes[docIdPrefix].length == 0) {
+            if (this.watchedPrefixes[docIdPrefix]().length == 0) {
                 delete this.watchedPrefixes[docIdPrefix];
                 this.send('unwatch-prefix', docIdPrefix);
             }
@@ -243,9 +262,23 @@ class changesApi {
         });
     }
 
+    watchFsConfig(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
+        var callback = new changesCallback<filesystemConfigNotification>(onChange);
+        if (this.allFsConfigHandlers().length == 0) {
+            this.send('watch-config');
+        }
+        this.allFsConfigHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsConfigHandlers.remove(callback);
+            if (this.allFsConfigHandlers().length == 0) {
+                this.send('unwatch-config');
+            }
+        });
+    }
+
     dispose() {
         if (this.webSocket && !this.isConnectionClosed) {
-            console.log("Disconnecting from changes API");
+            console.log("Disconnecting from changes API for (rs = " + this.rs.name + ")");
             this.send('disconnect');
             this.webSocket.close();
         }

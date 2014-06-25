@@ -531,6 +531,10 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#gridContextMenu {
+  z-index: 100;
+  position: relative;
+}
 .ko-grid:focus {
   outline: 0;
 }
@@ -547,6 +551,17 @@ body {
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
+}
+.ko-grid .ko-grid-column-container .ko-grid-column-header .ko-grid-column-handle {
+  width: 8px;
+  display: block;
+  height: 20px;
+  float: right;
+  cursor: col-resize;
+  position: relative;
+  z-index: 1;
+  background-color: #cccccc;
+  box-shadow: #999999 0px 0px 5px inset;
 }
 .ko-grid .ko-grid-viewport-container {
   position: relative;
@@ -581,6 +596,9 @@ body {
 }
 .code-keyword {
   color: blue;
+}
+.code-string {
+  color: #c51111;
 }
 .help-cursor {
   cursor: help;
@@ -1057,5 +1075,24 @@ footer ul {
   background-repeat: no-repeat;
   background-position-x: center;
   background-position-y: center;
+}
+.metricsContainer .nv-point {
+  stroke-linecap: round;
+  stroke-width: 5px;
+}
+.metricsContainer svg {
+  overflow: hidden;
+}
+.metricsContainer div {
+  border: 0;
+  margin: 0;
+}
+.custom-table {
+  height: 43vh;
+}
+.custom-table-tbody {
+  overflow-y: scroll;
+  height: 43vh;
+  position: absolute;
 }
 /*# sourceMappingURL=app.css.map */

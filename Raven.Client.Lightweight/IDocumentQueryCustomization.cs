@@ -225,5 +225,10 @@ namespace Raven.Client
 		/// Disables caching for query results.
 		/// </summary>
 		IDocumentQueryCustomization NoCaching();
+
+		/// <summary>
+		/// Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		IDocumentQueryCustomization ShowTimings();
 	}
 }

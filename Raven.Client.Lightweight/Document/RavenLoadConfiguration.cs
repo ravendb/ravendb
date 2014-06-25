@@ -5,16 +5,21 @@ namespace Raven.Client.Document
 {
     public class RavenLoadConfiguration : ILoadConfiguration
     {
-        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
+        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
 
         public RavenLoadConfiguration()
         {
-            QueryInputs = new Dictionary<string, RavenJToken>();
+            TransformerParameters = new Dictionary<string, RavenJToken>();
         }
 
-        public void AddQueryParam(string name, RavenJToken value)
+	    public void AddQueryParam(string name, RavenJToken value)
+	    {
+		    AddTransformerParameter(name, value);
+	    }
+
+	    public void AddTransformerParameter(string name, RavenJToken value)
         {
-            QueryInputs[name] = value;
+            TransformerParameters[name] = value;
         }
     }
 }

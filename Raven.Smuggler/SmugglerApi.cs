@@ -140,6 +140,9 @@ namespace Raven.Smuggler
 			{
 				var metadata = document.Value<RavenJObject>("@metadata");
 				var id = metadata.Value<string>("@id");
+				if(String.IsNullOrWhiteSpace(id))
+					throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
+
 				document.Remove("@metadata");
 
 				operation.Store(document, metadata, id);
@@ -211,6 +214,11 @@ namespace Raven.Smuggler
             s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
 
             return s;
+        }
+
+        protected override JsonDocument GetDocument(string key)
+        {
+            return store.DatabaseCommands.Get(key);
         }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)

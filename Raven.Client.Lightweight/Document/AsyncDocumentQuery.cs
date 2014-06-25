@@ -725,9 +725,10 @@ namespace Raven.Client.Document
 											highlighterPreTags = highlighterPreTags,
 											highlighterPostTags = highlighterPostTags,
 											resultsTransformer = resultsTransformer,
-											queryInputs = queryInputs,
+											transformerParameters = transformerParameters,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
+											showQueryTimings = showQueryTimings,
 											lastEquality = lastEquality,
 											shouldExplainScores = shouldExplainScores
 										};
@@ -933,6 +934,12 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoCaching()
 		{
 			NoCaching();
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ShowTimings()
+		{
+			ShowTimings();
 			return this;
 		}
 

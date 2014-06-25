@@ -86,7 +86,7 @@ namespace Raven.Client.Document
 
 		protected KeyValuePair<string, string> lastEquality;
 
-		protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+		protected Dictionary<string, RavenJToken> transformerParameters = new Dictionary<string, RavenJToken>();
 
 		/// <summary>
 		///   The list of fields to project directly from the results
@@ -197,6 +197,11 @@ namespace Raven.Client.Document
 		/// Determine if query results should be cached.
 		/// </summary>
 		protected bool disableCaching;
+
+		/// <summary>
+		/// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		protected bool showQueryTimings;
 
 		/// <summary>
 		/// Determine if scores of query results should be explained
@@ -365,9 +370,10 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
-		    queryInputs = other.queryInputs;
+		    transformerParameters = other.transformerParameters;
 			disableEntitiesTracking = other.disableEntitiesTracking;
 			disableCaching = other.disableCaching;
+			showQueryTimings = other.showQueryTimings;
 			shouldExplainScores = other.shouldExplainScores;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
@@ -865,6 +871,12 @@ namespace Raven.Client.Document
 		public IDocumentQueryCustomization NoCaching()
 		{
 			disableCaching = true;
+			return this;
+		}
+
+		public IDocumentQueryCustomization ShowTimings()
+		{
+			showQueryTimings = true;
 			return this;
 		}
 
@@ -1840,8 +1852,9 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                    QueryInputs  = queryInputs,
+                    TransformerParameters  = transformerParameters,
 					DisableCaching = disableCaching,
+					ShowTimings = showQueryTimings,
 					ExplainScores = shouldExplainScores
 				};
 			}
@@ -1863,9 +1876,10 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
-                QueryInputs = queryInputs,
+                TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				DisableCaching = disableCaching,
+				ShowTimings = showQueryTimings,
 				ExplainScores = shouldExplainScores
 			};
 

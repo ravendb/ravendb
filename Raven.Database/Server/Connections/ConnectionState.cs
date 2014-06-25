@@ -162,16 +162,13 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
 		{
-			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
-
-		    if (matchingBulkInserts.Contains(string.Empty) || matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()))
-		    {
-                Enqueue(value);
-		    }
-			return;
+		    if (!matchingBulkInserts.Contains(string.Empty) && 
+                !matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString())) 
+                return;
+		    Enqueue(new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" });
 		}
 
-		public void Send(DocumentChangeNotification documentChangeNotification)
+	    public void Send(DocumentChangeNotification documentChangeNotification)
 		{
 			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
 			if (watchAllDocuments > 0)
@@ -223,40 +220,34 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
-			var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
-
-			if (watchAllIndexes > 0)
+		    if (watchAllIndexes > 0)
 			{
-				Enqueue(value);
+				Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
 				return;
 			}
 
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
-			Enqueue(value);
+			Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
 		}
 
         public void Send(TransformerChangeNotification transformerChangeNotification)
         {
-            var value = new { Value = transformerChangeNotification, Type = "TransformerChangeNotification" };
-
             if (watchAllTransformers > 0)
             {
-                Enqueue(value);
+                Enqueue(new { Value = transformerChangeNotification, Type = "TransformerChangeNotification" });
             }
         }
 
 		public void Send(ReplicationConflictNotification replicationConflictNotification)
 		{
-			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
-
-			if (watchAllReplicationConflicts <= 0)
+		    if (watchAllReplicationConflicts <= 0)
 			{
 				return;
 			}
 
-			Enqueue(value);
+			Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
 		}
 
 		public void Send(Notification notification)

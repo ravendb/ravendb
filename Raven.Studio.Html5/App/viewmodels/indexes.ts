@@ -14,7 +14,6 @@ import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
 
-
 class indexes extends viewModelBase {
 
     indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
@@ -23,6 +22,10 @@ class indexes extends viewModelBase {
     containerSelector = "#indexesContainer";
     recentQueries = ko.observableArray<storedQueryDto>();
     indexMutex = true;
+    appUrls: computedAppUrls;
+    btnState = ko.observable<boolean>(false);
+    btnStateTooltip = ko.observable<string>("ExpandAll");
+    btnTitle=ko.computed(() => this.btnState() === true?"ExpandAll":"CollapseAll");
 
     sortedGroups = ko.computed(()=> {
         var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
@@ -33,12 +36,11 @@ class indexes extends viewModelBase {
 
         return groups;
     });
-    
-    
 
     activate(args) {
         super.activate(args);
 
+        this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
 
         this.fetchIndexes();
@@ -48,7 +50,7 @@ class indexes extends viewModelBase {
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
-        ko.postbox.publish("SetRawJSONUrl",  appUrl.forIndexesRawData(this.activeDatabase()));
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
     }
 
     fetchIndexes() {
@@ -151,8 +153,17 @@ class indexes extends viewModelBase {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
     
+    
+   
     toggleExpandAll() {
-        $(".index-group-content").collapse('toggle');
+       if (this.btnState() === true) {
+           $(".index-group-content").collapse('show');
+       } else {
+           $(".index-group-content").collapse('hide');
+        }
+        
+        
+        this.btnState.toggle();
     }
 
     deleteIdleIndexes() {

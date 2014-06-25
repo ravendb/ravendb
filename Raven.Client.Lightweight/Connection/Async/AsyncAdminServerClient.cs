@@ -51,9 +51,20 @@ namespace Raven.Client.Connection.Async
 			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StopIndexing(operationMetadata.Url).ExecuteRequestAsync());
 		}
 
-		public Task StartIndexingAsync()
+		public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null)
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StartIndexing(operationMetadata.Url).ExecuteRequestAsync());
+			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks).ExecuteRequestAsync());
+		}
+
+		public Task<BuildNumber> GetBuildNumberAsync()
+		{
+			return innerAsyncServerClient.GetBuildNumberAsync();
+		}
+
+		public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
+		{
+            
+			return adminRequest.GetDatabaseNamesAsync(pageSize, start);
 		}
 
 		public async Task<AdminStatistics> GetStatisticsAsync()

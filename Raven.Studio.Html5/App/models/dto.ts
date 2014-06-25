@@ -66,6 +66,7 @@ interface databaseStatisticsDto {
     LastDocEtag: string;
     Prefetches: Array<any>;
     StaleIndexes: Array<any>;
+    ActualIndexingBatchSize: Array<any>;
     Triggers: Array<any>;
 }
 
@@ -364,12 +365,27 @@ interface savedTransformerDto {
     }
 }
 
+interface transformerParamInfo {
+  name: string;
+  hasDefault: boolean;
+}
+
+interface transformerParamDto {
+    name: string;
+    value: string;
+}
+
+interface transformerQueryDto {
+    transformerName: string;
+    queryParams: Array<transformerParamDto>;
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
     QueryText: string;
     Sorts: string[];
-    TransformerName: string;
+    TransformerQuery: transformerQueryDto;
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;
@@ -562,11 +578,18 @@ interface statusDebugMetricsDto {
     IndexedPerSecond: number;
     ReducedPerSecond: number;
     RequestsPerSecond: number;
-    Requests: statusDebugMetricsRequestsDto;
-    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+    Requests: meterDataDto;
+    RequestsDuration: histogramDataDto;
+    StaleIndexMaps: histogramDataDto;
+    StaleIndexReduces: histogramDataDto;
+    Gauges: any;
+    ReplicationBatchSizeMeter: dictionary<meterDataDto>;
+    ReplicationDurationMeter: dictionary<meterDataDto>;
+    ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
+    ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
 
-interface statusDebugMetricsRequestsDto {
+interface meterDataDto {
     Count: number;
     MeanRate: number;
     OneMinuteRate: number;
@@ -574,7 +597,7 @@ interface statusDebugMetricsRequestsDto {
     FifteenMinuteRate: number;
 }
 
-interface statusDebugMetricsRequestsDurationDto {
+interface histogramDataDto {
     Counter: number;
     Max: number;
     Min: number;
@@ -687,8 +710,6 @@ enum documentChangeType {
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
     BulkInsertError = 16,
-    SystemResourceEnabled = 32,
-    SystemResourceDisabled = 64
 }
 
 enum indexChangeType {
@@ -779,4 +800,8 @@ interface databaseDto {
 
 interface customFunctionsDto {
     Functions: string;
+}
+
+interface singleAuthToken {
+    Token: string;
 }

@@ -9,74 +9,24 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using System.Collections.Generic;
+using Raven.Client.Connection;
+using Raven.Database.Server.Security;
+using System.Net;
+using Raven.Database.Server;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Core.Commands
 {
 	public class Other : RavenCoreTestBase
 	{
 		[Fact]
-		public async Task CanDoBatchOperations()
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					await session.StoreAsync(new User { Name = "John" });
-					await session.StoreAsync(new User { Name = "Dave" });
-					await session.SaveChangesAsync();
-				}
-
-				await store.AsyncDatabaseCommands.BatchAsync(new ICommandData[]
-				{
-					new PutCommandData
-					{
-						Document = new RavenJObject {{"Name", "James"}},
-						Metadata = new RavenJObject(),
-						Key = "users/3"
-					},
-					new PatchCommandData()
-					{
-						Key = "users/1",
-						Patches = new[]
-						{
-							new PatchRequest
-							{
-								Name = "Name",
-								Type = PatchCommandType.Set,
-								Value = "Nhoj"
-							}
-						}
-					},
-					new DeleteCommandData()
-					{
-						Key = "users/2"
-					},
-				});
-
-
-				var multiLoadResult = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2", "users/3" }, null);
-
-				Assert.Equal(3, multiLoadResult.Results.Count);
-
-				var user1 = multiLoadResult.Results[0];
-				var user2 = multiLoadResult.Results[1];
-				var user3 = multiLoadResult.Results[2];
-
-				Assert.NotNull(user1);
-				Assert.Null(user2);
-				Assert.NotNull(user3);
-
-				Assert.Equal("Nhoj", user1.Value<string>("Name"));
-				Assert.Equal("James", user3.Value<string>("Name"));
-			}
-		}
-
-		[Fact]
 		public async Task CanGetBuildNumber()
 		{
 			using (var store = GetDocumentStore())
 			{
-				var buildNumber = await store.AsyncDatabaseCommands.GetBuildNumberAsync();
+				var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
 
 				Assert.NotNull(buildNumber);
 			}
@@ -95,14 +45,102 @@ namespace Raven.Tests.Core.Commands
 			}
 		}
 
+        [Fact]
+        public async Task CanGetBuildVersion()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var build = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+                Assert.NotNull(build);
+            }
+        }
+
 		[Fact]
 		public async Task CanGetAListOfDatabasesAsync()
 		{
 			using (var store = GetDocumentStore())
 			{
-				var names = await store.AsyncDatabaseCommands.ForSystemDatabase().GetDatabaseNamesAsync(25);
+				var names = await store.AsyncDatabaseCommands.GlobalAdmin.GetDatabaseNamesAsync(25);
 				Assert.Contains(store.DefaultDatabase, names);
 			}
 		}
+
+        [Fact]
+        public void CanSwitchDatabases()
+        {
+            using (var store1 = GetDocumentStore("store1"))
+            using (var store2 = GetDocumentStore("store2"))
+            {
+                store1.DatabaseCommands.Put(
+                    "items/1",
+                    null,
+                    RavenJObject.FromObject(new
+                    {
+                        Name = "For store1"
+                    }),
+                    new RavenJObject());
+                store2.DatabaseCommands.Put(
+                    "items/2",
+                    null,
+                    RavenJObject.FromObject(new
+                    {
+                        Name = "For store2"
+                    }),
+                    new RavenJObject());
+
+                var doc = store1.DatabaseCommands.ForDatabase("store2").Get("items/2");
+                Assert.NotNull(doc);
+                Assert.Equal("For store2", doc.DataAsJson.Value<string>("Name"));
+
+                doc = store1.DatabaseCommands.ForDatabase("store1").Get("items/1");
+                Assert.NotNull(doc);
+                Assert.Equal("For store1", doc.DataAsJson.Value<string>("Name"));
+
+                var docs = store1.DatabaseCommands.ForSystemDatabase().GetDocuments(0, 20);
+                Assert.Equal(2, docs.Length);
+                Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
+                Assert.NotNull(docs[1].DataAsJson.Value<RavenJObject>("Settings"));
+            }
+        }
+
+        [Fact]
+        public void CanGetUrlForDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    "items/1",
+                    null,
+                    RavenJObject.FromObject(new Company 
+                    {
+                        Name = "Name"
+                    }),
+                    new RavenJObject());
+                Assert.Equal(store.Url + "/databases/"+store.DefaultDatabase+"/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
+            }
+        }
+
+        [Fact]
+        public void CanDisableAllCaching()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+
+                store.JsonRequestFactory.DisableAllCaching();
+                store.JsonRequestFactory.ResetCache();
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                store.DatabaseCommands.Get("companies/1");
+                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+            }
+        }
 	}
 }

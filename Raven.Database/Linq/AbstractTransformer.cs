@@ -34,25 +34,37 @@ namespace Raven.Database.Linq
 			return CurrentTransformationScope.Current.Load(key);
 		}
 
-	    protected RavenJToken Query(string key)
+		[Obsolete("Use Parameter instead.")]
+		protected RavenJToken Query(string key)
+		{
+			return Parameter(key);
+		}
+
+		[Obsolete("Use ParameterOrDefault instead.")]
+		protected RavenJToken QueryOrDefault(string key, object val)
+		{
+			return ParameterOrDefault(key, val);
+		}
+
+	    protected RavenJToken Parameter(string key)
 	    {
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
 	        RavenJToken value;
-	        if(CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+	        if(CurrentTransformationScope.Current.TransformerParameters.TryGetValue(key, out value) == false)
                 throw new InvalidOperationException("Query parameter "+key+ " was accessed, but it wasn't provided for this query.");
 	        return value;
 
 	    }
 
-        protected RavenJToken QueryOrDefault(string key, object val)
+        protected RavenJToken ParameterOrDefault(string key, object val)
         {
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
             RavenJToken value;
-            if (CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+            if (CurrentTransformationScope.Current.TransformerParameters.TryGetValue(key, out value) == false)
                 return RavenJToken.FromObject(val);
             return value;
 

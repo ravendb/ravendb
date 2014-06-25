@@ -83,6 +83,17 @@ namespace Raven.Database.Config
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
+			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
+
+			// Important! this value is synchronized with the max sessions number in esent
+			// since we cannot have more requests in the system than we have sessions for them
+			// and we also need to allow sessions for background operations and for multi get requests
+			MaxConcurrentServerRequests = ravenSettings.MaxConcurrentServerRequests.Value;
+
+			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
+			if (ConcurrentMultiGetRequests == null)
+				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
+
 			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 
 			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
@@ -252,19 +263,22 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
+		public int MaxConcurrentServerRequests { get; set; }
+
+		public int MaxConcurrentMultiGetRequests { get; set; }
+
 		public int PrefetchingDurationLimit { get; private set; }
 
-		public int EncryptionKeyBitsPreference
-		{
-		    get; set;
-		}
+		public int EncryptionKeyBitsPreference { get; set; }
+
+		public TimeSpan BulkImportBatchTimeout { get; set; }
 
 		/// <summary>
         /// This limits the number of concurrent multi get requests,
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
         /// </summary>
-        public SemaphoreSlim ConcurrentMultiGetRequests = new SemaphoreSlim(192);
+		public SemaphoreSlim ConcurrentMultiGetRequests;
 
 		/// <summary>
 		/// The time to wait before canceling a database operation such as load (many) or query
@@ -301,6 +315,19 @@ namespace Raven.Database.Config
 				return BundlesHelper.ProcessActiveBundles(activeBundles)
 					.GetSemicolonSeparatedValues()
 					.Distinct();
+			}
+		}
+
+		private HashSet<string> headersToIgnore;
+		public HashSet<string> HeadersToIgnore
+		{
+			get
+			{
+				if (headersToIgnore != null)
+					return headersToIgnore;
+
+				var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
+				return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
 			}
 		}
 

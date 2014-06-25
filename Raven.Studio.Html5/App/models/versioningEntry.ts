@@ -1,15 +1,16 @@
 ﻿import documentMetadata = require("models/documentMetadata");
 
 class versioningEntry {
-    collection = ko.observable<string>();
-    maxRevisions = ko.observable<number>();
-    exclude = ko.observable<boolean>();
+    collection = ko.observable<string>().extend({ required: true });
+    maxRevisions = ko.observable<string>().extend({ required: true });
+    exclude = ko.observable<boolean>().extend({ required: true });
+
     fromDatabase = ko.observable<boolean>();
 
     removable: KnockoutComputed<boolean>;
     isValid: KnockoutComputed<boolean>;
     disabled: KnockoutComputed<boolean>;
-    __metadata: documentMetadata; 
+    __metadata: documentMetadata;
 
     constructor(dto?: versioningEntryDto, fromDatabse: boolean = false) {
         if (!dto) {
@@ -24,10 +25,10 @@ class versioningEntry {
             this.__metadata = new documentMetadata(dto["@metadata"]);
         }
 
-        this.fromDatabase = ko.observable<boolean>(fromDatabse);
-        this.collection = ko.observable<string>(dto.Id);
-        this.maxRevisions = ko.observable<number>(dto.MaxRevisions);
-        this.exclude = ko.observable<boolean>(dto.Exclude);
+        this.fromDatabase(fromDatabse);
+        this.collection(dto.Id);
+        this.maxRevisions(dto.MaxRevisions.toString());
+        this.exclude(dto.Exclude);
         this.removable = ko.computed<boolean>(() => {
             return (this.collection() !== "DefaultConfiguration");
         });
@@ -36,10 +37,7 @@ class versioningEntry {
             return this.collection() != null && this.collection().length > 0 && this.collection().indexOf(' ') === -1;
         });
 
-        this.disabled = ko.computed(() => {
-            return this.exclude();
-        });
-
+        this.disabled = ko.computed(() => this.exclude());
     }
 
     makeExcluded() {
@@ -54,7 +52,7 @@ class versioningEntry {
         var dto = {
             '@metadata': undefined,
             Id: this.collection(),
-            MaxRevisions: this.maxRevisions(),
+            MaxRevisions: parseInt(this.maxRevisions()),
             Exclude: this.exclude()
         };
 

@@ -109,14 +109,22 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Gets the query inputs being supplied to
         /// </summary>
-        Dictionary<string, RavenJToken> QueryInputs { get; } 
-	    
+        Dictionary<string, RavenJToken> TransformerParameters { get; }
+
+		/// <summary>
+		/// Adds input to transformer via a key/value pair
+		/// </summary>
+		/// <param name="input"></param>
+		/// <param name="value"></param>
+		[Obsolete("Use AddTransformerParameter instead.")]
+		void AddQueryInput(string input, RavenJToken value);
+
         /// <summary>
-        /// Adds input to this query via a key/value pair
+        /// Adds input to transformer via a key/value pair
         /// </summary>
         /// <param name="input"></param>
-        /// <param name="foo"></param>
-        void AddQueryInput(string input, RavenJToken foo);
+        /// <param name="value"></param>
+        void AddTransformerParameter(string input, RavenJToken value);
 
 	}
 }

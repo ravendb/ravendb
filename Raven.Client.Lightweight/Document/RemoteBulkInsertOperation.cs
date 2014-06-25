@@ -34,6 +34,8 @@ namespace Raven.Client.Document
 	{
 		Guid OperationId { get; }
 
+		bool IsAborted { get; }
+
 		void Write(string id, RavenJObject metadata, RavenJObject data);
 
 		Task DisposeAsync();
@@ -47,6 +49,7 @@ namespace Raven.Client.Document
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 	{
+		private readonly BulkInsertOptions options;
 		private CancellationTokenSource cancellationTokenSource;
 		private readonly AsyncServerClient operationClient;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
@@ -57,9 +60,9 @@ namespace Raven.Client.Document
 		private int total;
 	    private bool aborted;
 
-
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
+			this.options = options;
 			using (NoSynchronizationContext.Scope())
 			{
 				OperationId = Guid.NewGuid();
@@ -67,6 +70,7 @@ namespace Raven.Client.Document
 				queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
 				operationTask = StartBulkInsertAsync(options);
+
 #if !MONO
 				SubscribeToBulkInsertNotifications(changes);
 #endif
@@ -111,6 +115,7 @@ namespace Raven.Client.Document
 					{
 						source.TrySetException(e);
 					}
+
 				}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
 				long operationId;
@@ -194,7 +199,7 @@ namespace Raven.Client.Document
 
 				var batch = new List<RavenJObject>();
 				RavenJObject document;
-				while (queue.TryTake(out document, 200))
+				while (queue.TryTake(out document, millisecondsTimeout: 200))
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
@@ -203,10 +208,10 @@ namespace Raven.Client.Document
 						FlushBatch(stream, batch);
 						return;
 					}
-				    if (ReferenceEquals(AbortMarker, document)) // abort immediately
-				    {
-				        return;
-				    }
+					if (ReferenceEquals(AbortMarker, document)) // abort immediately
+					{
+						return;
+					}
 
 					batch.Add(document);
 
@@ -229,13 +234,23 @@ namespace Raven.Client.Document
 			if (data == null) throw new ArgumentNullException("data");
 		    if (aborted) throw new InvalidOperationException("Operation has been aborted");
 
-			if (operationTask.IsCanceled || operationTask.IsFaulted)
-				operationTask.Wait(); // error early if we have  any error
 
 			metadata["@id"] = id;
 			data[Constants.Metadata] = metadata;
 
-			queue.Add(data);
+		    for (int i = 0; i < 2; i++)
+		    {
+                if (operationTask.IsCanceled || operationTask.IsFaulted)
+                    operationTask.Wait(); // error early if we have  any error
+
+                if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
+                    return;
+		    }
+
+            if (operationTask.IsCanceled || operationTask.IsFaulted)
+                operationTask.Wait(); // error early if we have  any error
+
+		    throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
 		}
 
 		private async Task<bool> IsOperationCompleted(long operationId)
@@ -282,27 +297,36 @@ namespace Raven.Client.Document
 				return;
 			disposed = true;
 			queue.Add(null);
-            if (subscription != null)
-            {
-                subscription.Dispose();
-               
-            }
-           
-			// The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
-			await operationTask.ConfigureAwait(false);
-			operationTask.AssertNotFailed();
-
-			ReportInternal("Finished writing all results to server");
-
-			while (true)
+			if (subscription != null)
 			{
-				if (await IsOperationCompleted(responseOperationId))
-					break;
+				subscription.Dispose();
 
-				Thread.Sleep(500);
 			}
 
-			ReportInternal("Done writing to server");
+			// The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
+			try
+			{
+				await operationTask.ConfigureAwait(false);
+				operationTask.AssertNotFailed();
+
+				ReportInternal("Finished writing all results to server");
+
+				while (true)
+				{
+					if (await IsOperationCompleted(responseOperationId))
+						break;
+
+					Thread.Sleep(500);
+				}
+				ReportInternal("Done writing to server");
+			}
+			catch (Exception e)
+			{
+				ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : {0}", e);
+				if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
+					throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message,e);				
+				throw;
+			}
 
 		}
 
@@ -322,11 +346,13 @@ namespace Raven.Client.Document
 		{
 			if (localBatch.Count == 0)
 				return;
+			if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
+
 			bufferedStream.SetLength(0);
 			WriteToBuffer(localBatch);
 
 			var requestBinaryWriter = new BinaryWriter(requestStream);
-			requestBinaryWriter.Write((int)bufferedStream.Position);
+			requestBinaryWriter.Write((int) bufferedStream.Position);
 			bufferedStream.WriteTo(requestStream);
 			requestStream.Flush();
 
@@ -334,10 +360,10 @@ namespace Raven.Client.Document
 			Action<string> report = Report;
 			if (report != null)
 			{
-				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
-									 localBatch.Count,
-									 bufferedStream.Position / 1024,
-									 total));
+				report(string.Format("Wrote {0:#,#} (total {2:#,#}) documents to server gzipped to {1:#,#.##;;0} kb",
+					localBatch.Count,
+					bufferedStream.Position/1024d,
+					total));
 			}
 		}
 
@@ -390,8 +416,13 @@ namespace Raven.Client.Document
 	    {
 	        aborted = true;
             queue.Add(AbortMarker);
-
 	    }
+
+
+		public bool IsAborted
+		{
+			get { return aborted; }
+		}
 	}
 }
 #endif

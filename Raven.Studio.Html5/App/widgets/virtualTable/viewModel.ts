@@ -107,6 +107,8 @@ class ctor {
 
             this.refreshIdAndCheckboxColumn();
         });
+
+        this.registerColumnResizing();
     }
 
 
@@ -136,6 +138,8 @@ class ctor {
         if (this.itemsSourceSubscription) {
             this.itemsSourceSubscription.dispose();
         }
+
+        this.unregisterColumnResizing();
     }
 
     calculateRecycleRowCount() {
@@ -598,6 +602,43 @@ class ctor {
             )
             .reduce((p: boolean, c: boolean) => c || p, false);
         return result;
+    }
+
+    registerColumnResizing() {
+        var resizingColumn = false;
+        var startX = 0;
+        var startingWidth = 0;
+        var columnIndex = 0;
+        $(document).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
+            columnIndex = parseInt( $(e.currentTarget).attr("column"));
+            startingWidth = this.columns()[columnIndex].width();
+            startX = e.pageX;
+            resizingColumn = true;
+        });
+
+        $(document).on("mouseup.virtualTableColumnResize", "", (e: any) => {
+            resizingColumn = false;
+        });
+
+        $(document).on("mousemove.virtualTableColumnResize", "", (e: any) => {
+            if (resizingColumn) {
+                var targetColumnSize = startingWidth + e.pageX - startX;
+                this.columns()[columnIndex].width(targetColumnSize);
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+                return false;
+            }
+        });
+    }
+
+    unregisterColumnResizing() {
+        $(document).off("mousedown.virtualTableColumnResize");
+        $(document).off("mouseup.virtualTableColumnResize");
+        $(document).off("mousemove.virtualTableColumnResize");
     }
 }
 

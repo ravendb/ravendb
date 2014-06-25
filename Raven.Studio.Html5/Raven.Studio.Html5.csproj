@@ -10,7 +10,7 @@
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
-    <UseIISExpress>true</UseIISExpress>
+    <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
@@ -30,6 +30,7 @@
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
@@ -62,9 +63,11 @@
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
@@ -227,6 +230,9 @@
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
+    <TypeScriptCompile Include="App\viewmodels\showSampleDataDialog.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
     <TypeScriptCompile Include="App\viewmodels\toggleIndexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
@@ -309,11 +315,28 @@
     <TypeScriptCompile Include="App\common\inputCursor.ts" />
     <TypeScriptCompile Include="App\models\customFunctions.ts" />
     <TypeScriptCompile Include="App\common\autoCompleterSupport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\metrics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\metricsIndexBatchSize.ts" />
+    <TypeScriptCompile Include="App\viewmodels\metricsRequests.ts" />
+    <TypeScriptCompile Include="App\viewmodels\metricsPrefetches.ts" />
+    <TypeScriptCompile Include="App\models\transformerQuery.ts" />
+    <Content Include="App\models\transformerParam.ts" />
+    <TypeScriptCompile Include="App\common\oauthContext.ts" />
+    <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\metricsPrefetches.html" />
+    <Content Include="App\views\metricsRequests.html" />
+    <Content Include="App\views\metricsIndexBatchSize.html" />
+    <Content Include="App\views\metrics.html" />
+    <Content Include="App\views\enterApiKey.html" />
     <Content Include="App\views\copyIndexDialog.html" />
+    <TypeScriptCompile Include="App\viewmodels\metricsIndexing.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\metricsIndexing.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
     <Content Include="App\views\counter\counterStorageStats.html" />
     <Content Include="App\views\counter\counterStorageReplication.html" />
@@ -339,6 +362,7 @@
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\quotas.html" />
+    <Content Include="App\views\showSampleDataDialog.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
     <Content Include="App\views\filesystem\createConfigurationKey.html" />
     <Content Include="App\views\filesystem\deleteConfigurationKeys.html" />
@@ -487,6 +511,7 @@
     <Content Include="Content\jquery.dynatree\skin-vista\icons.gif" />
     <Content Include="Content\jquery.dynatree\skin-vista\loading.gif" />
     <Content Include="Content\jquery.dynatree\skin-vista\ui.dynatree.css" />
+    <Content Include="Content\nv.d3.css" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
@@ -1093,6 +1118,7 @@
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -1117,6 +1143,7 @@
       <DependentUpon>app.css</DependentUpon>
     </Content>
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
+    <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
@@ -1145,9 +1172,17 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
+    <Content Include="Scripts\nvd3\models\timelines.js" />
+    <Content Include="Scripts\nvd3\models\timelinesChart.js" />
+    <Content Include="Scripts\nvd3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\typings\d3\d3.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
+    <Content Include="Scripts\typings\d3\nv.d.ts" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>

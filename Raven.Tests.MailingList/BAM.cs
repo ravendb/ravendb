@@ -17,13 +17,13 @@ namespace Raven.Tests.MailingList
 			using (var server = GetNewServer(databaseName: Constants.SystemDatabase))
 			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
-				var dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
+				var dbNames = docStore.DatabaseCommands.GlobalAdmin.GetDatabaseNames(25, 0);
 
 				Assert.Empty(dbNames);
 
 				docStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 
-				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
+				dbNames = docStore.DatabaseCommands.GlobalAdmin.GetDatabaseNames(25, 0);
 
 				Assert.NotEmpty(dbNames);
 

@@ -1,4 +1,20 @@
-﻿<div id="transformersContainer">
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li class ="active">
+        Transformers
+    </li>
+</ul>
+
+<div id="transformersContainer">
     <div class="btn-toolbar" role="toolbar" data-bind="visible: transformersGroups().length > 0">
         <div class="btn-group">
             <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }" title="Add a new transformer (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>

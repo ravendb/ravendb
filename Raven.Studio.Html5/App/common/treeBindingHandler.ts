@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 import getFoldersCommand = require("commands/filesystem/getFoldersCommand");
 
 /*
- * A custom Knockout binding handler transforms the target element (a <div>) into a tree, powered by jquery-dynatree
+ * A custom Knockout binding handler transforms the target element (a <div>) into a directory tree, powered by jquery-dynatree
  * Usage: data-bind="tree: { value: someObservableTreeObject }"
  */
 class treeBindingHandler {
@@ -32,7 +32,7 @@ class treeBindingHandler {
         } = <any>ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
-            children: [{ title: appUrl.getFilesystem().name, key: "/", isLazy: true, isFolder: true }],
+            children: [{ title: appUrl.getFileSystem().name, key: "/", isLazy: true, isFolder: true }],
             onLazyRead: function (node) {
                 treeBindingHandler.loadNodeChildren("#" + element.id, node, options);
                 node.activate();
@@ -62,24 +62,56 @@ class treeBindingHandler {
         if (node.data && node.data.key != "/") {
             dir = node.data.key;
         }
-        var command = new getFoldersCommand(appUrl.getFilesystem(), 0, 100, dir);
+        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 100, dir);
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
-            var transientNodes = [];
-            if (node.hasChildren()) {
-                for (var i = 0; i < node.getChildren().length; i++) {
-                    if (node.getChildren()[i].data.addClass === treeBindingHandler.transientNodeStyle) {
-                        transientNodes.push(results[i]);
-                    }
 
+            var newSet: { [key: string]: folderNodeDto; } = {};
+            var differenceSet: { [key: string]: DynaTreeNode; } = {};
+
+
+            //this is being done creating a new dictionary to reduce complexity
+
+            for (var i = 0; i < results.length; i++) {
+                newSet[results[i].key] = results[i];
+            }
+
+            if (node.hasChildren()) {
+                //calculate deleted and transient nodes
+                for (var j = 0; j < node.getChildren().length; j++) {
+                    if (!newSet[node.getChildren()[j].data.key]) {
+                        differenceSet[node.getChildren()[j].data.key] = node.getChildren()[j];
+                    }
+                }
+
+                var nodesToRemove = [];
+                //mark deleted nodes filtering transient
+                for (var k = 0; k < node.getChildren().length; k++) {
+                    var nodeK = node.getChildren()[k];
+                    if (!newSet[nodeK.data.key] && differenceSet[nodeK.data.key] && differenceSet[nodeK.data.key].data.addClass != treeBindingHandler.transientNodeStyle) {
+                        nodesToRemove.push(nodeK.data.key);
+                    }
+                    else {
+                        newSet[nodeK.data.key] = null;
+                    }
+                }
+
+                //remove deleted nodes
+                for (var m = 0; m < nodesToRemove.length; m++) {
+                    node.getChildren()[m].remove();
                 }
             }
-            node.removeChildren();
-            node.addChild(results);
-            node.addChild(transientNodes);
 
-            if (options) {
-                options.currentLevelNodes(results.map(x => x.key));
+
+            //add new nodes
+            for (var key in newSet) {
+                if (newSet[key]) {
+                    node.addChild(newSet[key]);
+                }
+            }
+
+            if (options && node.hasChildren()) {
+                options.currentLevelNodes.push(node.getChildren().map(x => x.data.key));
             }
         });
     }

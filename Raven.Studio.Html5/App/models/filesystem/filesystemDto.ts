@@ -181,3 +181,14 @@ enum fileChangeAction {
     Renaming,
     Renamed
 }
+
+interface filesystemConfigNotification {
+    FileSystemName: string;
+    Name: string;
+    Action: filesystemConfigurationChangeAction;
+}
+
+enum filesystemConfigurationChangeAction {
+    Set,
+    Delete
+}

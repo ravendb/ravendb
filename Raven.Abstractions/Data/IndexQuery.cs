@@ -58,7 +58,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Additional query inputs
         /// </summary>
-        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
+        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
 
 		/// <summary>
 		/// Gets or sets the start of records to read.
@@ -201,6 +201,11 @@ namespace Raven.Abstractions.Data
 		public bool ExplainScores { get; set; }
 
 		/// <summary>
+		/// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		public bool ShowTimings { get; set; }
+
+		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
@@ -253,6 +258,9 @@ namespace Raven.Abstractions.Data
 			if(IsDistinct)
 				path.Append("&distinct=true");
 
+			if (ShowTimings)
+				path.Append("&showTimings=true");
+
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
@@ -269,11 +277,11 @@ namespace Raven.Abstractions.Data
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }
 
-			if (QueryInputs != null)
+			if (TransformerParameters != null)
 			{
-				foreach (var input in QueryInputs)
+				foreach (var input in TransformerParameters)
 				{
-					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+					path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
 				}
 			}
 
@@ -349,7 +357,7 @@ namespace Raven.Abstractions.Data
             return PageSizeSet.Equals(other.PageSizeSet) && 
                    String.Equals(Query, other.Query) && 
                    Equals(TotalSize, other.TotalSize) && 
-                   Equals(QueryInputs, other.QueryInputs) && 
+                   Equals(TransformerParameters, other.TransformerParameters) && 
                    Start == other.Start && 
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
@@ -366,7 +374,8 @@ namespace Raven.Abstractions.Data
                    Equals(HighlightedFields, other.HighlightedFields) && 
                    Equals(HighlighterPreTags, other.HighlighterPreTags) && 
                    Equals(HighlighterPostTags, other.HighlighterPostTags) && 
-                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) &&
+				   ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching);
         }
 
@@ -384,7 +393,7 @@ namespace Raven.Abstractions.Data
                 var hashCode = PageSizeSet.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
@@ -401,6 +410,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
                 return hashCode;
             }

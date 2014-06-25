@@ -106,11 +106,11 @@ namespace Raven.Client.Connection
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                                 string exclude = null, string transformer = null,
-		                                 Dictionary<string, RavenJToken> queryInputs = null)
+		                                 Dictionary<string, RavenJToken> transformerParameters = null)
 		{
 			return
 				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude,
-				                                  transformer, queryInputs)
+				                                  transformer, transformerParameters)
 				                 .ResultUnwrap();
 		}
 
@@ -260,7 +260,7 @@ namespace Raven.Client.Connection
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-			return asyncServerClient.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
+			return asyncServerClient.GlobalAdmin.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -383,7 +383,7 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false,
+		public QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false,
 			bool indexEntriesOnly = false)
 		{
 			try
@@ -438,13 +438,13 @@ namespace Raven.Client.Connection
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
 		/// <param name="transformer"></param>
-		/// <param name="queryInputs"></param>
+		/// <param name="transformerParameters"></param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
 		public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null,
-			Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
+			Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false)
 		{
-			return asyncServerClient.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).ResultUnwrap();
+			return asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly).ResultUnwrap();
 		}
 
 		/// <summary>

@@ -1,13 +1,14 @@
 class spatialIndexField {
-    name = ko.observable<string>();
-    type = ko.observable<string>();
-    strategy = ko.observable<string>();
-    circleRadiusUnits = ko.observable<string>();
-    maxTreeLevel = ko.observable<number>();
-    minX = ko.observable<number>();
-    maxX = ko.observable<number>();
-    minY = ko.observable<number>();
-    maxY = ko.observable<number>();
+    name = ko.observable<string>().extend({ required: true });
+    type = ko.observable<string>().extend({ required: true });
+    strategy = ko.observable<string>().extend({ required: true });
+    minX = ko.observable<number>().extend({ required: true });
+    maxX = ko.observable<number>().extend({ required: true });
+    circleRadiusUnits = ko.observable<string>().extend({ required: true });
+    maxTreeLevel = ko.observable<number>().extend({ required: true });
+    minY = ko.observable<number>().extend({ required: true });
+    maxY = ko.observable<number>().extend({ required: true });
+
     units = ko.observable<string>();
     precision: KnockoutComputed<string>;
     availableStrategies = ko.observableArray<string>();

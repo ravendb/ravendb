@@ -96,7 +96,12 @@ namespace Raven.Client.Document
 
 		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
-	        this.queryInputs = queryInputs;
+	        SetTransformerParameters(queryInputs);
+	    }
+
+		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+	    {
+	        this.transformerParameters = transformerParameters;
 	    }
 
 		public bool IsDistinct { get { return isDistinct; } }
@@ -155,9 +160,10 @@ namespace Raven.Client.Document
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
                 resultsTransformer = resultsTransformer,
-                queryInputs = queryInputs,
+                transformerParameters = transformerParameters,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
+				showQueryTimings = showQueryTimings,
                 lastEquality = lastEquality,
                 defaultOperator = defaultOperator,
 				shouldExplainScores = shouldExplainScores
@@ -345,6 +351,12 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
 		{
 			NoCaching();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ShowTimings()
+		{
+			ShowTimings();
 			return this;
 		}
 
