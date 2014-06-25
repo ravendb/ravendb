@@ -10,6 +10,7 @@ namespace Raven.Database.Config
 			// Common
 			{"Raven/MaxPageSize", "int", null, "The maximum page size that can be specified on this server, default: 1,024."},
 			{"Raven/RunInMemory", "bool", "true,false", "Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing. Default: false."},
+			{"Raven/Headers/Ignore", "string", null, "Semicolon separated list of headers that server should ignore. e.g. Header-To-Ignore-1;Header-To-Ignore-2"},
 			
 			// Studio
 			{"Raven/RedirectStudioUrl", "string", null, "The url to redirect the user to when then try to access the local studio"},
