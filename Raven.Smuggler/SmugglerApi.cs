@@ -106,6 +106,7 @@ namespace Raven.Smuggler
 				{
 					operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 					{
+						UseAdaptiveBatchSize = true,
 						BatchSize = options.BatchSize,
 						OverwriteExisting = true
                     }, store.Changes(), options.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);

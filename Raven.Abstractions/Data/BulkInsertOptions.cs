@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Data
 		{
 			BatchSize = 512;
 		    WriteTimeoutMilliseconds = 15*1000;
-			UseAdaptiveBatchSize = true; 
+			UseAdaptiveBatchSize = false; 
 		}
 
 		public bool OverwriteExisting { get; set; }
