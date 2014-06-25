@@ -111,6 +111,7 @@ namespace Raven.Client.Document
 				highlighterPostTags = highlighterPostTags,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
+				showQueryTimings = showQueryTimings,
 				shouldExplainScores = shouldExplainScores
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
