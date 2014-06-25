@@ -63,7 +63,7 @@ namespace Raven.Client.Document
 		private int total;
 	    private bool aborted;
 
-		private const int MinimalDocumentSizeForBatchInBytes = 250 * 1024;		
+		private const int BigDocumentSize = 64 * 1024;		
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
@@ -213,6 +213,10 @@ namespace Raven.Client.Document
 						FlushBatch(stream, batch);
 						return;
 					}
+					if (ReferenceEquals(SkipMarker, document)) // ignore this, just filling the queue
+					{
+						continue;
+					}
 					if (ReferenceEquals(AbortMarker, document)) // abort immediately
 					{
 						return;
@@ -253,12 +257,16 @@ namespace Raven.Client.Document
 				    if (options.UseAdaptiveBatchSize)
 				    {
 					    var dataSize = DocumentHelpers.GetRoughSize(data);
-						if(dataSize >= MinimalDocumentSizeForBatchInBytes)
-							//essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
-							// --> BatchSize = 1024 / (dataSize = 1024/MinimalDocumentSizeForBatchInBytes = 250) * 2 == 128
-							for (int skipDocIndex = 0; skipDocIndex < (dataSize/MinimalDocumentSizeForBatchInBytes) * 2; skipDocIndex++)
-								if (!queue.TryAdd(SkipMarker, options.WriteTimeoutMilliseconds/2)) //if queue is full just stop adding dummy docs
-									break;
+					    if (dataSize >= BigDocumentSize)
+					    {
+						    //essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
+						    // --> BatchSize = 1024 / (dataSize = 1024/BigDocumentSize = 250) * 2 == 128
+						    for (int skipDocIndex = 0; skipDocIndex < (dataSize/BigDocumentSize)*2; skipDocIndex++)
+						    {
+							    if (!queue.TryAdd(SkipMarker)) //if queue is full just stop adding dummy docs
+								    break;
+						    }
+					    }
 				    }
 				    return;				    
 			    }
@@ -365,7 +373,6 @@ namespace Raven.Client.Document
 				return;
 			if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
 
-			localBatch = localBatch.Where(doc => !ReferenceEquals(doc, SkipMarker)).ToList();
 			bufferedStream.SetLength(0);
 			WriteToBuffer(localBatch);
 
