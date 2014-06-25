@@ -94,6 +94,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+	    {
+	        SetTransformerParameters(queryInputs);
+	    }
+
 		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
 	    {
 	        this.transformerParameters = transformerParameters;
