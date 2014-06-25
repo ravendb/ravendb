@@ -118,27 +118,26 @@ namespace Raven.Tests.Issues
                 using (IDocumentSession session = store.OpenSession())
                 {
                     var userdata2 = session.Load<UserData>("UserDatas/2");
-                    userdata2.Id = 556;
+                    userdata2.Salary = 556;
 
                     var userdata1 = session.Load<UserData>("UserDatas/1");
                     userdata1.Exam1Marks[0] = 56;
-                    userdata1.Id = 13;
                     userdata1.Salary = 54.7;
 
                     IDictionary<string, DocumentsChanges[]> changes3 = session.Advanced.WhatChanged();
 
-                    int supposedChangesNumber = 2;
-                    Assert.Equal(supposedChangesNumber, changes3.Count);
+                    int ExpectedChangesCount = 2;
+                    Assert.Equal(ExpectedChangesCount, changes3.Count);
                     Assert.True(changes3.ContainsKey("UserDatas/1"));
                     Assert.True(changes3.ContainsKey("UserDatas/2"));
                     var supposedChanges = new DocumentsChanges
                     {
                         Change  = DocumentsChanges.ChangeType.FieldChanged,
-                        FieldName = "Id",
-                        FieldNewType = "Integer",
+						FieldName = "Salary",
+                        FieldNewType = "Float",
                         FieldNewValue = "556",
-                        FieldOldType = "Integer",
-                        FieldOldValue = "1234"
+                        FieldOldType = "Float",
+                        FieldOldValue = "12.51"
                     };
                     DocumentsChanges[] data2 = { };
                     if (changes3.TryGetValue("UserDatas/2", out data2))
@@ -150,7 +149,7 @@ namespace Raven.Tests.Issues
                     DocumentsChanges[] data1 = { };
                     if (changes3.TryGetValue("UserDatas/1", out data1))
                     {
-                        Assert.Equal(data1.Length, 3);
+						Assert.Equal(data1.Length, ExpectedChangesCount); //UserDatas/1 was changed twice
                     }
 
                     session.SaveChanges();
@@ -190,10 +189,9 @@ namespace Raven.Tests.Issues
                         Date = new DateTime(2014, 2, 2)
                     }, "UserDatas/4");
 
-
+	                ExpectedChangesCount = 3;
                     IDictionary<string, DocumentsChanges[]> changes7 = session.Advanced.WhatChanged();
-                    supposedChangesNumber = 3;
-                    Assert.Equal(supposedChangesNumber, changes7.Count);
+                    Assert.Equal(ExpectedChangesCount, changes7.Count);
                     Assert.True(changes7.ContainsKey("UserDatas/1"));
                     Assert.True(changes7.ContainsKey("UserDatas/3"));
                     Assert.True(changes7.ContainsKey("UserDatas/4"));
