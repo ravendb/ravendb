@@ -210,17 +210,17 @@ namespace Raven.Database.Actions
                 nextStart = actualStart;
         }
 
-        private static void RemoveMetadataReservedProperties(RavenJObject metadata)
+        private void RemoveMetadataReservedProperties(RavenJObject metadata)
         {
             RemoveReservedProperties(metadata);
             metadata.Remove("Raven-Last-Modified");
             metadata.Remove("Last-Modified");
         }
 
-        private static void RemoveReservedProperties(RavenJObject document)
+        private void RemoveReservedProperties(RavenJObject document)
         {
             document.Remove(string.Empty);
-            var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || HeadersToIgnoreServer.Contains(propertyName)).ToList();
+            var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || HeadersToIgnoreServer.Contains(propertyName) || Database.Configuration.HeadersToIgnore.Contains(propertyName)).ToList();
             foreach (var propertyName in toRemove)
             {
                 document.Remove(propertyName);
