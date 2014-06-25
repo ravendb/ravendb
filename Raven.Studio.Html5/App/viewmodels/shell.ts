@@ -272,11 +272,6 @@ class shell extends viewModelBase {
                     } else {
                         if (existingResource.disabled() != dto.Disabled) { //disable status change
                             existingResource.disabled(dto.Disabled);
-                            if (dto.Disabled) {
-                                this.disconnectFromResourceChangesApi();
-                            } else {
-                                existingResource.activate();
-                            }
                         }
                         if (typeHash == "#databases") { //for databases, bundle change
                             existingResource.activeBundles(dto.Settings["Raven/ActiveBundles"].split(";"));
