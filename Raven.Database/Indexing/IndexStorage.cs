@@ -786,7 +786,6 @@ namespace Raven.Database.Indexing
 
             IndexSearcher searcher;
             using (index.GetSearcher(out searcher))
-            using (searcher)
             {
                 int maxDoc;
                 JsonDocument doc = null;
