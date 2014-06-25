@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Owin;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Counters;
 using Raven.Imports.Newtonsoft.Json;
@@ -49,6 +50,7 @@ namespace Raven.Database.Server.Connections
 
     public class WebSocketsTransport : IEventsTransport
     {
+	    private static ILog log = LogManager.GetCurrentClassLogger();
         
         private readonly IOwinContext _context;
         private readonly RavenDBOptions _options;
@@ -167,8 +169,8 @@ namespace Raven.Database.Server.Connections
 
 						if (receiveResult.Item1 == WebSocketCloseMessageType)
 						{
-							var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
-							var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
+							var clientCloseStatus = (int) websocketContext["websocket.ClientCloseStatus"];
+							var clientCloseDescription = (string) websocketContext["websocket.ClientCloseDescription"];
 
 							if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
 							{
@@ -179,7 +181,11 @@ namespace Raven.Database.Server.Connections
 							break;
 						}
 					}
-					catch (Exception e) { }
+					catch (Exception e)
+					{
+						log.WarnException("Error when recieving message from web socket transport", e);
+						return;
+					}
 				}
 
 			}).Start();
