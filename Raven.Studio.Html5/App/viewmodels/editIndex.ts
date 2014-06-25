@@ -371,7 +371,7 @@ class editIndex extends viewModelBase {
         }
     }
 
-    indexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+    indexMapCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
         var completedToken: AceAjax.TokenInfo;
         var TokenIterator = require("ace/token_iterator").TokenIterator;
@@ -449,9 +449,7 @@ class editIndex extends viewModelBase {
                     }
                 }
                 else{
-                    callback(null, ["aa","bb","cc"].map(curField => {
-                        return { name: curField, value: curField, score: 100, meta: "field" };
-                    }));
+                    callback(null, [{ name: "Methodical Syntax Not Supported", value: "", score: 100, meta: "alert" }]);
                 }
             } else {
                 callback([{ error: "notext" }], null);
@@ -460,6 +458,31 @@ class editIndex extends viewModelBase {
             
         }
     }
+
+    indexReduceCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        var firstMapSrting = this.editedIndex().map();
+        
+        var dotPrefixes = firstMapSrting.match(/[.]\w*/g);
+        var equalPrefixes = firstMapSrting.match(/\w*\s*=\s*/g);
+
+        var autoCompletes = [];
+
+        if (!!dotPrefixes) {
+            dotPrefixes.forEach(curPrefix => {
+                autoCompletes.push(curPrefix.replace(".", "").trim());
+            });
+        }
+        if (!!equalPrefixes) {
+            equalPrefixes.forEach(curPrefix => {
+                autoCompletes.push(curPrefix.replace("=", "").trim());
+            });
+        }
+        
+        callback(null, autoCompletes.map(curField => {
+            return { name: curField, value: curField, score: 100, meta: "field" };
+        }));
+    }
+
 }
 
 export = editIndex; 

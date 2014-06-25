@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -89,6 +89,16 @@ body {
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
+}
+.ace_docs {
+  font-style: italic!important;
+  font-color: red;
+  font-weight: bold;
+}
+.ace_prefix {
+  font-style: italic!important;
+  font-color: red;
+  font-weight: bold;
 }
 /*
 .ace_editor {
@@ -1048,5 +1058,4 @@ footer ul {
   background-position-x: center;
   background-position-y: center;
 }
-
 /*# sourceMappingURL=app.css.map */

@@ -5,10 +5,10 @@
     var DocCommentHighlightRules = require("./doc_comment_highlight_rules").DocCommentHighlightRules;
     var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-    var RavenLinqHighlightRules = function () {
+    var RavenReduceLinqHighlightRules = function () {
         var keywordMapper = this.createKeywordMapper({
             "variable.language": "this|docs|results|" + 
-                "byte|fixed|float|uint|char|ulong|int|sbyte|short|is|sizeof|double|long|string|String|decimal",
+                "byte|fixed|float|uint|char|ulong|int|sbyte|short|is|sizeof|double|long|string|String|decimal|Key|Sum|MultiSelect",
             "keyword": "group|by|from|let|select|new|into|null|object|this|bool|out|if|unsafe|ushort|in|decimal|else",
             "constant.language": "null",
             "constant.language.boolean": "true|false"
@@ -18,65 +18,11 @@
         // regexps are ordered -> the first match is used
 
         this.$rules = {
-
-            "from.in.col.suffix": [
-                {
-                    token: "collectionName",
-                    regex: "[^\\n\\s\\t]*",
-                    next: "start"
-                }
-            ],
-
-            "from.in.col.prefix": [
-                {
-                    token: "docs",
-                    regex: "[\\s]*(docs).",
-                    next:"from.in.col.suffix"
-                },
-                {
-                    token: "collections",
-                    regex: "[\\s]*([\\w]+).",
-                    next: "from.in.col.suffix"
-                }
-            ],
-            "from.in": [
-                {
-                    token: "keyword",
-                    regex: "\s"
-                },
-                {
-                    token: "keyword",
-                    regex: "(?:in)",
-                    next: "from.in.col.prefix"
-                }
-            ],
-
-            "from.alias": [
-                
-                {
-                    token: "from.alias",
-                    regex: "[\\w]+",
-                    next:"from.in"
-                }
-                
-            ],
-            "data.prefix": [
-                {
-                    token: "data.suffix",
-                    regex: "[^\\s,]*",
-                    next:"start"
-                }
-            ],
+           
             "start": [
                 {
                     token: "comment",
                     regex: "\\/\\/.*$"
-                },
-                {
-                    token: "keyword",
-                    regex: "from",
-                    next: "from.alias"
-                    
                 },
                 {
                     token: "data.prefix",
@@ -153,7 +99,7 @@
         this.normalizeRules();
     };
 
-    oop.inherits(RavenLinqHighlightRules, TextHighlightRules);
+    oop.inherits(RavenReduceLinqHighlightRules, TextHighlightRules);
 
-    exports.RavenLinqHighlightRules = RavenLinqHighlightRules;
+    exports.RavenReduceLinqHighlightRules = RavenReduceLinqHighlightRules;
 });
