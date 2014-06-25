@@ -146,6 +146,7 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReport.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
+    <TypeScriptCompile Include="App\models\indexAceAutoCompleteProvider.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
     <TypeScriptCompile Include="App\models\luceneField.ts" />

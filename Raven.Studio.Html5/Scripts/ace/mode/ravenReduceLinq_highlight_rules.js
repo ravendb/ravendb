@@ -26,9 +26,7 @@
                 },
                 {
                     token: "data.prefix",
-                    regex: "\\w+\\.",
-                    next: "data.prefix"
-
+                    regex: "\\w+\\."
                 },
                 DocCommentHighlightRules.getStartRule("doc-start"),
                 {
