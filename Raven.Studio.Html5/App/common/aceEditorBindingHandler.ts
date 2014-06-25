@@ -84,14 +84,14 @@ class aceEditorBindingHandler {
 
     static currentEditor;
 
-    static customCompleters: { editorType: string; containingViewModel: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
+    static customCompleters: { editorType: string; completerHostObject: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
 
     static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
         var curEditorType = editor.getOption("editorType");
         var completerThreesome = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
 
         if (!!completerThreesome) {
-            completerThreesome.completer.call(completerThreesome.containingViewModel, editor, session, pos, prefix, callback);
+            completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
         }
     }
 
@@ -106,7 +106,7 @@ class aceEditorBindingHandler {
             readOnly?: boolean;
             completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
-            containigViewModel?: any;
+            completerHostObject?: any;
         },
         allBindings,
         viewModel,
@@ -119,7 +119,7 @@ class aceEditorBindingHandler {
         var typeName = bindingValues.typeName;
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         var langTools = null;
-        var containingViewModel = bindingValues.containigViewModel;
+        var completerHostObject = bindingValues.completerHostObject;
 
 
         if (typeof code !== "function") {
@@ -146,7 +146,7 @@ class aceEditorBindingHandler {
 
             if (!!langTools) {
                 if (!aceEditorBindingHandler.customCompleters.first(x=> x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, containingViewModel: containingViewModel, completer: bindingValues.completer });
+                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
                 }
                 if (!!aceEditor.completers) {
                     var completersList: { getComplitions: any; moduleId?: string }[] = aceEditor.completers;

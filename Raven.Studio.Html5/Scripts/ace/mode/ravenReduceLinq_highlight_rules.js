@@ -5,10 +5,10 @@
     var DocCommentHighlightRules = require("./doc_comment_highlight_rules").DocCommentHighlightRules;
     var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-    var RavenLinqHighlightRules = function () {
+    var RavenReduceLinqHighlightRules = function () {
         var keywordMapper = this.createKeywordMapper({
             "variable.language": "this|docs|results|" + 
-                "byte|fixed|float|uint|char|ulong|int|sbyte|short|is|sizeof|double|long|string|String|decimal",
+                "byte|fixed|float|uint|char|ulong|int|sbyte|short|is|sizeof|double|long|string|String|decimal|Key|Sum|MultiSelect",
             "keyword": "group|by|from|let|select|new|into|null|object|this|bool|out|if|unsafe|ushort|in|decimal|else",
             "constant.language": "null",
             "constant.language.boolean": "true|false"
@@ -18,10 +18,15 @@
         // regexps are ordered -> the first match is used
 
         this.$rules = {
+           
             "start": [
                 {
                     token: "comment",
                     regex: "\\/\\/.*$"
+                },
+                {
+                    token: "data.prefix",
+                    regex: "\\w+\\."
                 },
                 DocCommentHighlightRules.getStartRule("doc-start"),
                 {
@@ -92,7 +97,7 @@
         this.normalizeRules();
     };
 
-    oop.inherits(RavenLinqHighlightRules, TextHighlightRules);
+    oop.inherits(RavenReduceLinqHighlightRules, TextHighlightRules);
 
-    exports.RavenLinqHighlightRules = RavenLinqHighlightRules;
+    exports.RavenReduceLinqHighlightRules = RavenReduceLinqHighlightRules;
 });

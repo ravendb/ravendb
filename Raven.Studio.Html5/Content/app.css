@@ -90,6 +90,16 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+.ace_docs {
+  font-style: italic!important;
+  font-color: red;
+  font-weight: bold;
+}
+.ace_prefix {
+  font-style: italic!important;
+  font-color: red;
+  font-weight: bold;
+}
 /*
 .ace_editor {
 		border: 1px solid lightgray;

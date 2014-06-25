@@ -4,13 +4,13 @@
     var oop = require("../lib/oop");
     var TextMode = require("./text").Mode;
     var Tokenizer = require("../tokenizer").Tokenizer;
-    var RavenLinqHighlightRules = require("./ravenLinq_highlight_rules").RavenLinqHighlightRules;
+    var RavenMapLinqHighlightRules = require("./ravenMapLinq_highlight_rules").RavenMapLinqHighlightRules;
     var MatchingBraceOutdent = require("./matching_brace_outdent").MatchingBraceOutdent;
     var CstyleBehaviour = require("./behaviour/cstyle").CstyleBehaviour;
     var CStyleFoldMode = require("./folding/csharp").FoldMode;
 
     var Mode = function () {
-        this.HighlightRules = RavenLinqHighlightRules;
+        this.HighlightRules = RavenMapLinqHighlightRules;
         this.$outdent = new MatchingBraceOutdent();
         this.$behaviour = new CstyleBehaviour();
         this.foldingRules = new CStyleFoldMode();

@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Http;
+using Microsoft.VisualBasic.CompilerServices;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection.Async;
@@ -55,10 +57,13 @@ namespace Raven.Client.Document
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly BlockingCollection<RavenJObject> queue;
         private static readonly RavenJObject AbortMarker = new RavenJObject();
+		private static readonly RavenJObject SkipMarker = new RavenJObject();
 		private HttpJsonRequest operationRequest;
 		private readonly Task operationTask;
 		private int total;
 	    private bool aborted;
+
+		private const int BigDocumentSize = 64 * 1024;		
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
@@ -208,6 +213,10 @@ namespace Raven.Client.Document
 						FlushBatch(stream, batch);
 						return;
 					}
+					if (ReferenceEquals(SkipMarker, document)) // ignore this, just filling the queue
+					{
+						continue;
+					}
 					if (ReferenceEquals(AbortMarker, document)) // abort immediately
 					{
 						return;
@@ -237,14 +246,30 @@ namespace Raven.Client.Document
 
 			metadata["@id"] = id;
 			data[Constants.Metadata] = metadata;
-
+			
 		    for (int i = 0; i < 2; i++)
 		    {
                 if (operationTask.IsCanceled || operationTask.IsFaulted)
                     operationTask.Wait(); // error early if we have  any error
 
-                if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
-                    return;
+			    if (queue.TryAdd(data, options.WriteTimeoutMilliseconds/2))
+			    {
+				    if (options.UseAdaptiveBatchSize)
+				    {
+					    var dataSize = DocumentHelpers.GetRoughSize(data);
+					    if (dataSize >= BigDocumentSize)
+					    {
+						    //essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
+						    // --> BatchSize = 1024 / (dataSize = 1024/BigDocumentSize = 250) * 2 == 128
+						    for (int skipDocIndex = 0; skipDocIndex < (dataSize/BigDocumentSize)*2; skipDocIndex++)
+						    {
+							    if (!queue.TryAdd(SkipMarker)) //if queue is full just stop adding dummy docs
+								    break;
+						    }
+					    }
+				    }
+				    return;				    
+			    }
 		    }
 
             if (operationTask.IsCanceled || operationTask.IsFaulted)

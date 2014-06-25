@@ -17,6 +17,8 @@ import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import app = require("durandal/app");
+import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
+
 
 class editIndex extends viewModelBase { 
 
@@ -35,6 +37,7 @@ class editIndex extends viewModelBase {
     appUrls: computedAppUrls;
     indexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
+    indexAutoCompleter: indexAceAutoCompleteProvider;
     
     constructor() {
         super();
@@ -82,6 +85,7 @@ class editIndex extends viewModelBase {
 
         this.initializeDirtyFlag();
         this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.editedIndex().maps().every(m => m().trim().length > 0) && viewModelBase.dirtyFlag().isDirty());
+        this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
     }
 
     attached() {
@@ -203,27 +207,27 @@ class editIndex extends viewModelBase {
     refreshIndex() {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
         canContinue.done(() => {
-            var existingIndex = this.editedIndex();
-            var existingIndexName = "";
-            if (existingIndex) {
-                this.editedIndex(null);
-                existingIndexName = existingIndex.name();
+        var existingIndex = this.editedIndex();
+        var existingIndexName = "";
+        if (existingIndex) {
+            this.editedIndex(null);
+            existingIndexName = existingIndex.name();
 
-                this.fetchIndexToEdit(existingIndexName)
-                    .done(() => {
-                        this.editExistingIndex(existingIndexName);
+            this.fetchIndexToEdit(existingIndexName)
+                .done(()=> {
+                    this.editExistingIndex(existingIndexName);
+                    
 
+                    viewModelBase.dirtyFlag().reset();
+                    if (existingIndexName.length > 0)
+                        this.updateUrl(existingIndexName);
+                }).fail(() => this.editedIndex(existingIndex));
 
-                        viewModelBase.dirtyFlag().reset();
-                        if (existingIndexName.length > 0)
-                            this.updateUrl(existingIndexName);
-                    }).fail(() => this.editedIndex(existingIndex));
-
-            } else {
+        } else {
                 viewModelBase.dirtyFlag().reset(); // Resync Changes
-                if (existingIndexName.length > 0)
-                    this.updateUrl(existingIndexName);
-            }
+            if (existingIndexName.length > 0)
+                this.updateUrl(existingIndexName);
+        }
         });
     }
 
@@ -332,6 +336,9 @@ class editIndex extends viewModelBase {
     copyIndex() {
         app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
+
+
+    
 }
 
 export = editIndex; 
