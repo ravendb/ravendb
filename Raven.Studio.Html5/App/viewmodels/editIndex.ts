@@ -306,13 +306,81 @@ class editIndex extends viewModelBase {
     }
 
 
+    getAliasesInsideIndexText(session: any): { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] {
+        var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = [];
+
+        var curAliasKey = null;
+        var curAliasValuePrefix = null;
+        var curAliasValueSuffix = null;
+
+        for (var curRow = 0; curRow < session.getLength(); curRow++) {
+            var curRowTokens = session.getTokens(curRow);
+
+            for (var curTokenInRow = 0; curTokenInRow < curRowTokens.length; curTokenInRow++) {
+                if (curRowTokens[curTokenInRow].type == "from.alias") {
+                    curAliasKey = curRowTokens[curTokenInRow].value.trim();
+                }
+                else if (!!curAliasKey) {
+                    if (curRowTokens[curTokenInRow].type == "docs" || curRowTokens[curTokenInRow].type == "collections") {
+                        curAliasValuePrefix = curRowTokens[curTokenInRow].value;
+                    }
+                    else if (curRowTokens[curTokenInRow].type == "collectionName") {
+                        curAliasValueSuffix = curRowTokens[curTokenInRow].value;
+                        aliases.push({ aliasKey: curAliasKey, aliasValuePrefix: curAliasValuePrefix.replace('.', '').trim(), aliasValueSuffix: curAliasValueSuffix.replace('.', '').trim() });
+
+                        curAliasKey = null;
+                        curAliasValuePrefix = null;
+                        curAliasValueSuffix = null;
+                    }
+                }
+            }
+        }
+
+        return aliases;
+    }
+
+    indexMapCollectionMemberAutoComplete(session: any,
+        callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void,
+        currentToken: AceAjax.TokenInfo) {
+        
+        var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = this.getAliasesInsideIndexText(session);
+        // find the matching alias and get list of fields
+        if (aliases.length > 0) {
+            var matchingAliasKeyValue = aliases.first(x => x.aliasKey.replace('.', '').trim() === currentToken.value.replace('.', '').trim());
+            if (!!matchingAliasKeyValue) {
+                // get list of fields according to it's collection's first row
+                if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
+                    new getDocumentsByEntityNameCommand(new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase()), 0, 1)
+                        .execute()
+                        .done((result: pagedResultSet) => {
+                            if (!!result && result.totalResultCount > 0) {
+                                var documentPattern: document = new document(result.items[0]);
+                                callback(null, documentPattern.getDocumentPropertyNames().map(curField => {
+                                    return { name: curField, value: curField, score: 100, meta: "field" };
+                                }));
+                            } else {
+                                callback([{ error: "notext" }], null);
+                            }
+                        }).fail(() => callback([{ error: "notext" }], null));
+                }
+                // for now, we do not treat cases of nested types inside document
+                else {
+                    callback([{ error: "notext" }], null);
+                }
+            }
+        }
+    }
+
     indexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
-
+        var completedToken: AceAjax.TokenInfo;
+        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var curPosIterator = new TokenIterator(editor.getSession(), pos.row, pos.column);
+        // validation: if is null or it's type is represented by a string
         if (!currentToken || typeof currentToken.type == "string") {
             // if in beginning of text or in free text token
             if (!currentToken || currentToken.type == "text") {
-                callback(null, [{ name: "from", value: "from", score: 10, meta: "keyword" }]);
+                callback(null, [{ name: "from", value: "from", score: 100, meta: "keyword" }, { name: "docs", value: "docs", score: 100, meta: "keyword" }]);
             }
             // if it's a docs predicate, return all collections in the db
             else if (currentToken.type == "docs" && !!currentToken.value) {
@@ -320,77 +388,71 @@ class editIndex extends viewModelBase {
                     .execute()
                     .done((collections:collection[]) =>{
                         callback(null, collections.map((curCollection:collection) => {
-                            return { name: curCollection.name, value: curCollection.name, score: 10, meta: "collection" };
+                            return { name: curCollection.name, value: curCollection.name, score: 100, meta: "collection" };
                         }));
                     })
                     .fail(() => callback([{ error: "notext" }], null));
             }
             // if it's a general "collection" predicate, return all fields from first document in the collection
-            else if (currentToken.type == "collections"){
+            else if (currentToken.type == "collections" || currentToken.type == "collectionName") {
+                if (currentToken.type == "collections") {
+                    completedToken = currentToken;
+                } else {
+                    var prevToken = curPosIterator.stepBackward();
+                    completedToken = prevToken;
+                }
                 
-                // get the list of declared predicates in the statement(from [foo] .)
-                var predicates: { rowNum: number; alias: string }[] = [];
-                var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = [];
-                    
-                var curAliasKey = null;
-                var curAliasValuePrefix = null;
-                var curAliasValueSuffix = null;
+                this.indexMapCollectionMemberAutoComplete(session, callback, completedToken);
+            }
+            else if (currentToken.type == "data.prefix" || currentToken.type == "data.suffix" ) {
 
-                // get through all tokens in all rows and match aliases Keys to Values
-                for (var curRow = 0; curRow < session.getLength(); curRow++) {
-                    var curRowTokens = session.getTokens(curRow);
-                        
-                    for (var curTokenInRow = 0; curTokenInRow < curRowTokens.length; curTokenInRow++) {
-                        if (curRowTokens[curTokenInRow].type == "from.alias") {
-                            curAliasKey = curRowTokens[curTokenInRow].value.trim();
-                        }
-                        else if (!!curAliasKey)
-                        {
-                            if (curRowTokens[curTokenInRow].type == "docs" || curRowTokens[curTokenInRow].type == "collections") {
-                                curAliasValuePrefix = curRowTokens[curTokenInRow].value;
-                            }
-                            else if (curRowTokens[curTokenInRow].type == "collectionName") {
-                                curAliasValueSuffix = curRowTokens[curTokenInRow].value;
-                                aliases.push({ aliasKey: curAliasKey, aliasValuePrefix: curAliasValuePrefix.replace('.', '').trim(), aliasValueSuffix: curAliasValueSuffix.replace('.', '').trim() });
-
-                                curAliasKey = null;
-                                curAliasValuePrefix = null;
-                                curAliasValueSuffix = null;
-                            }
-                        } 
-                    }
+                if (currentToken.type == "data.prefix") {
+                    completedToken = currentToken;
+                } else {
+                    var prevToken = curPosIterator.stepBackward();
+                    completedToken = prevToken;
                 }
 
-                // find the matching alias and get list of fields
-                if (aliases.length > 0) {
-                    var matchingAliasKeyValue = aliases.first(x => x.aliasKey.replace('.', '').trim() === currentToken.value.replace('.', '').trim());
-                    if (!!matchingAliasKeyValue) {
-                        // get list of fields according to it's collection's first row
-                        if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
-                            new getDocumentsByEntityNameCommand(new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase()), 0, 1)
-                                .execute()
-                                .done((result: pagedResultSet) => {
-                                    if (!!result && result.totalResultCount > 0) {
-                                        var documentPattern: document = new document(result.items[0]);
-                                        callback(null, documentPattern.getDocumentPropertyNames().map(curField => {
-                                            return { name: curField, value: curField, score: 10, meta: "field" };
-                                        }));
-                                    } else {
-                                        callback([{ error: "notext" }], null);
-                                    }
-                                }).fail(() => callback([{ error: "notext" }], null));
+                var firstToken = session.getTokenAt(0, 0);
+                // treat a "from [foo] in [bar] type of index syntax
+                if (firstToken.value == "from") {
+                    var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = this.getAliasesInsideIndexText(session);    
+
+                    if (aliases.length > 0) {
+                        var matchingAliasKeyValue = aliases.first(x => x.aliasKey.replace('.', '').trim() === completedToken.value.replace('.', '').trim());
+                        if (!!matchingAliasKeyValue) {
+                            // get list of fields according to it's collection's first row
+                            if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
+                                new getDocumentsByEntityNameCommand(new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase()), 0, 1)
+                                    .execute()
+                                    .done((result: pagedResultSet) => {
+                                        if (!!result && result.totalResultCount > 0) {
+                                            var documentPattern: document = new document(result.items[0]);
+                                            callback(null, documentPattern.getDocumentPropertyNames().map(curField => {
+                                                return { name: curField, value: curField, score: 100, meta: "field" };
+                                            }));
+                                        } else {
+                                            callback([{ error: "notext" }], null);
+                                        }
+                                    }).fail(() => callback([{ error: "notext" }], null));
+                            }
+                            // for now, we do not treat cases of nested types inside document
+                            else {
+                                callback([{ error: "notext" }], null);
+                            }
                         }
-                        // for now, we do not treat cases of nested types inside document
                         else {
                             callback([{ error: "notext" }], null);
                         }
+                    } else {
+                        callback([{ error: "notext" }], null);
                     }
                 }
-            }
-            else if (currentToken.type == "data.suffix") {
-                callback(null, ["aa","bb","cc"].map(curField => {
-                    return { name: curField, value: curField, score: 10, meta: "field" };
-                }));
+                else{
+                    callback(null, ["aa","bb","cc"].map(curField => {
+                        return { name: curField, value: curField, score: 100, meta: "field" };
+                    }));
+                }
             } else {
                 callback([{ error: "notext" }], null);
             }
