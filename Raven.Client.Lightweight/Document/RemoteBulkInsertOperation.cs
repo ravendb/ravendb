@@ -323,6 +323,9 @@ namespace Raven.Client.Document
 			catch (Exception e)
 			{
 				ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : {0}", e);
+				if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
+					throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message,e);				
+				throw;
 			}
 
 		}

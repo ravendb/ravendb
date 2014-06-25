@@ -12,7 +12,12 @@ namespace Raven.Client.Document
             TransformerParameters = new Dictionary<string, RavenJToken>();
         }
 
-        public void AddTransformerParameter(string name, RavenJToken value)
+	    public void AddQueryParam(string name, RavenJToken value)
+	    {
+		    AddTransformerParameter(name, value);
+	    }
+
+	    public void AddTransformerParameter(string name, RavenJToken value)
         {
             TransformerParameters[name] = value;
         }

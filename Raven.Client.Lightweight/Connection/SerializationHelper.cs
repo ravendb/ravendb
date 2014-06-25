@@ -144,7 +144,8 @@ namespace Raven.Client.Connection
 				Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
 					.JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
 				ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
-				.JsonDeserialization<Dictionary<string, string>>()
+				.JsonDeserialization<Dictionary<string, string>>(),
+				TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>()
 			};
 
 			foreach (var r in ((RavenJArray)json["Results"]))
