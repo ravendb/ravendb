@@ -81,8 +81,6 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
 
-    apiKeyPromise: JQueryPromise<any>;
-
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
     static currentFsChangesApi = ko.observable<changesApi>(null);
@@ -90,7 +88,7 @@ class shell extends viewModelBase {
 
     constructor() {
         super();
-        this.apiKeyPromise = this.setupApiKey();
+        oauthContext.enterApiKeyTask = this.setupApiKey();
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
@@ -110,7 +108,8 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
         this.isDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -186,7 +185,7 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        this.apiKeyPromise.then(() => this.connectToRavenServer());
+        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
     }
 
     // Called by Durandal when shell.html has been put into the DOM.

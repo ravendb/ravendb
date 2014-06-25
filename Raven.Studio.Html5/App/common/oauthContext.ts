@@ -6,6 +6,8 @@ class oauthContext {
 
     static authHeader = ko.observable<string>(null);
 
+    static enterApiKeyTask: JQueryPromise<any>;
+
     static apiKeyName = ko.computed(() => {
         var key = oauthContext.apiKey();
         if (key === null) {

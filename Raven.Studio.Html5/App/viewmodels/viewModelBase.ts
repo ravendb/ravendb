@@ -11,6 +11,7 @@ import changesCallback = require("common/changesCallback");
 import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
 import ace = require("ace/ace");
+import oauthContext = require("common/oauthContext");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -71,7 +72,7 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
-        this.notifications = this.createNotifications();
+        oauthContext.enterApiKeyTask.done(() => this.notifications = this.createNotifications());
 
         this.modelPollingStart();
         window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
