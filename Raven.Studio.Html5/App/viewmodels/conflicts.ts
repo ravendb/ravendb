@@ -31,9 +31,7 @@ class conflicts extends viewModelBase {
 
     currentColumnsParams = ko.observable(customColumns.empty());
 
-    //TODO: subscribe to databases and remove item from list once user delete DB.
     static performedIndexChecks: Array<string> = [];
-
     static conflictsIndexName = "Raven/ConflictDocuments";
     static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
 
