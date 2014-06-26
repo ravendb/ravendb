@@ -12,6 +12,7 @@ namespace Raven.Abstractions.Data
 
 		public bool OverwriteExisting { get; set; }
 		public bool CheckReferencesInIndexes { get; set; }
+		
 		public int BatchSize { get; set; }
 
 		public int WriteTimeoutMilliseconds { get; set; }

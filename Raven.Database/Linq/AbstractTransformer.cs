@@ -34,6 +34,18 @@ namespace Raven.Database.Linq
 			return CurrentTransformationScope.Current.Load(key);
 		}
 
+		[Obsolete("Use Parameter instead.")]
+		protected RavenJToken Query(string key)
+		{
+			return Parameter(key);
+		}
+
+		[Obsolete("Use ParameterOrDefault instead.")]
+		protected RavenJToken QueryOrDefault(string key, object val)
+		{
+			return ParameterOrDefault(key, val);
+		}
+
 	    protected RavenJToken Parameter(string key)
 	    {
             if (CurrentTransformationScope.Current == null)

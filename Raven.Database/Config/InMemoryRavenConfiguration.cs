@@ -318,6 +318,19 @@ namespace Raven.Database.Config
 			}
 		}
 
+		private HashSet<string> headersToIgnore;
+		public HashSet<string> HeadersToIgnore
+		{
+			get
+			{
+				if (headersToIgnore != null)
+					return headersToIgnore;
+
+				var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
+				return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
+			}
+		}
+
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
 			if (catalogs.Count != 1)

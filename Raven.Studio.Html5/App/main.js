@@ -6,7 +6,8 @@
         transitions: '../Scripts/durandal/transitions',
         ace: '../Scripts/ace',        
         moment: '../Scripts/moment',
-        'd3': '../Scripts/nvd3'
+        'd3': '../Scripts/nvd3',
+        forge: '../Scripts/forge'
     }
 });
 

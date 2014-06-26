@@ -44,6 +44,12 @@ namespace Raven.Client.Linq
 	    /// <returns></returns>
 	    IRavenQueryable<TResult> TransformWith<TResult>(string transformerName);
 
+		/// <summary>
+		/// Inputs a key and value to the query (accessible by the transformer)
+		/// </summary>
+		[Obsolete("Use AddTransformerParameter instead.")]
+		IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
+
         /// <summary>
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>

@@ -102,11 +102,11 @@ namespace Raven.Client.Document
 			Operation.Write(id, metadata, data);
 		}
 
-		public void Store(RavenJObject document, RavenJObject metadata, string id)
+		public void Store(RavenJObject document, RavenJObject metadata, string id, int? dataSize = null)
 		{
 			OnBeforeEntityInsert(id, document, metadata);
 
-			Operation.Write(id, metadata, document);
+			Operation.Write(id, metadata, document, dataSize);
 		}
 
 		private string GetId(object entity)
