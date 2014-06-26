@@ -29,19 +29,17 @@ class synchronizationConflicts extends viewModelBase {
 
         // treat notifications events
         this.conflictsSubscription = shell.currentFsChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => {
-            if (e.FileSystemName === this.activeFilesystem().name) {
-                switch (e.Status) {
-                    case conflictStatus.Detected: {
-                        this.addConflict(e);
-                        break;
-                    }
-                    case conflictStatus.Resolved: {
-                        this.removeResolvedConflict(e);
-                        break;
-                    }
-                    default:
-                        console.error("unknown notification action");
+            switch (e.Status) {
+                case conflictStatus.Detected: {
+                    this.addConflict(e);
+                    break;
                 }
+                case conflictStatus.Resolved: {
+                    this.removeResolvedConflict(e);
+                    break;
+                }
+                default:
+                    console.error("unknown notification action");
             }
         });
 

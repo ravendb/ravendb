@@ -157,7 +157,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        FileSystemName = FileSystemName,
                         Status = ConflictStatus.Resolved
                     });
                 }
@@ -239,7 +238,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					FileName = fileName,
 					SourceServerUrl = sourceServer.FileSystemUrl,
-                    FileSystemName = FileSystemName,
                     Status = ConflictStatus.Detected
 				});
 
@@ -306,7 +304,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        FileSystemName = FileSystemName,
                         Status = ConflictStatus.Resolved
                     });
                 }
@@ -461,7 +458,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        FileSystemName = FileSystemName,
                         Status = ConflictStatus.Detected
                     });
 				}
@@ -667,7 +663,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				FileName = filename,
 				SourceServerUrl = remoteServerUrl,
-                FileSystemName = FileSystemName,
                 Status = ConflictStatus.Detected
 			});
 
@@ -721,7 +716,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Publisher.Publish(new FileChangeNotification
 			{
-                FileSystemName = FileSystem.Name,
 				File = FilePathTools.Cannoicalise(fileName),
 				Action = action
 			});
@@ -731,7 +725,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Publisher.Publish(new SynchronizationUpdateNotification
 			{
-                FileSystemName = fileSystemName,
 				FileName = fileName,
 				SourceFileSystemUrl = sourceServer.FileSystemUrl,
 				SourceServerId = sourceServer.Id,
@@ -764,7 +757,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 Publisher.Publish(new ConflictNotification 
                 { 
                     FileName = fileName,
-                    FileSystemName = FileSystemName,
                     Status = ConflictStatus.Resolved
                 });
 			});

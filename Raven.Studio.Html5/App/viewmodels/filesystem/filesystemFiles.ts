@@ -96,73 +96,70 @@ class filesystemFiles extends viewModelBase {
         if (!this.folderNotificationSubscriptions[newFolder]) {
             this.folderNotificationSubscriptions[newFolder] = shell.currentFsChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
+                    switch (e.Action) {
 
-                    if (e.FileSystemName === this.activeFilesystem().name) {
-                        switch (e.Action) {
+                        case fileChangeAction.Add: {
+                            var callbackFolder = new folder(newFolder);
+                            var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            case fileChangeAction.Add: {
-                                var callbackFolder = new folder(newFolder);
-                                var eventFolder = folder.getFolderFromFilePath(e.File);
-
-                                if (!callbackFolder || !eventFolder
-                                                || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
-                                    return;
-                                }
-
-                                //check if the file is new at the folder level to add it
-                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                    this.loadFiles();
-                                }
-                                else {
-                                    //check if a new folder at this level was added so we add it to the tree
-                                    var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
-                                    if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
-                                        var newNode = {
-                                            key: subPaths[1].path,
-                                            title: subPaths[1].name,
-                                            isLazy: true,
-                                            isFolder: true,
-                                        };
-                                        this.addedFolder(newNode);
-                                    }
-                                }
-
-                                break;
+                            if (!callbackFolder || !eventFolder
+                                            || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
+                                return;
                             }
-                            case fileChangeAction.Delete: {
-                                var callbackFolder = new folder(newFolder);
-                                var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                                //check if the file is new at the folder level to remove it from the table
-                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                    this.loadFiles();
-                                }
-                                else {
-                                    //reload node and its children
-                                    treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
-                                }
-                                break;
+                            //check if the file is new at the folder level to add it
+                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                this.loadFiles();
                             }
-                            case fileChangeAction.Renaming: {
-                                //nothing to do here
-                            }
-                            case fileChangeAction.Renamed: {
-                                //reload files to load the new names
-                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                    this.loadFiles();
+                            else {
+                                //check if a new folder at this level was added so we add it to the tree
+                                var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
+                                if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
+                                    var newNode = {
+                                        key: subPaths[1].path,
+                                        title: subPaths[1].name,
+                                        isLazy: true,
+                                        isFolder: true,
+                                    };
+                                    this.addedFolder(newNode);
                                 }
-                                break;
                             }
-                            case fileChangeAction.Update: {
-                                //check if the file is new at the folder level to add it
-                                if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                    this.loadFiles();
-                                }
-                                break;
-                            }
-                            default:
-                                console.error("unknown notification action");
+
+                            break;
                         }
+                        case fileChangeAction.Delete: {
+                            var callbackFolder = new folder(newFolder);
+                            var eventFolder = folder.getFolderFromFilePath(e.File);
+
+                            //check if the file is new at the folder level to remove it from the table
+                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                this.loadFiles();
+                            }
+                            else {
+                                //reload node and its children
+                                treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
+                            }
+                            break;
+                        }
+                        case fileChangeAction.Renaming: {
+                            //nothing to do here
+                        }
+                        case fileChangeAction.Renamed: {
+                            //reload files to load the new names
+                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                this.loadFiles();
+                            }
+                            break;
+                        }
+                        case fileChangeAction.Update: {
+                            //check if the file is new at the folder level to add it
+                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                                this.loadFiles();
+                            }
+                            break;
+                        }
+                        default:
+                            console.error("unknown notification action");
                     }
                 });
         }
