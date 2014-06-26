@@ -17,9 +17,33 @@
                     <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }">
                         <h3 class="panel-title">
                             <span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span>
-                            <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication"></span>
                         </h3>
                     </a>
+                    <div class="sqlRepActions pull-right">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
+                                <i class="fa fa-cogs"></i>
+                            </button>
+                            <ul class="dropdown-menu index-dropdown" role="menu">
+                                <li role="presentation">
+                                    <a class="btn" title="Delete the replication" data-bind="click: $root.removeSqlReplication.bind($root)">
+                                        Delete Replication
+                                    </a>
+                                </li>
+                                <li role="presentation">
+                                    <a class="btn" title="Show replication stats dialog" data-bind="click: $root.showStats.bind($root,Name)">
+                                        Show Stats
+                                    </a>
+                                </li>
+                                <li role="presentation">
+                                    <a class="btn" title="Reset current replication" data-bind="click: function(){ alert('Resetting: ' + Name)}">
+                                        Reset
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
                 </div>
                 <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.firstIndex()), 'in': ($index() === $parent.firstIndex()) }" class="panel-collapse collapse">
                     <div class="panel-body">
