@@ -805,3 +805,17 @@ interface customFunctionsDto {
 interface singleAuthToken {
     Token: string;
 }
+
+interface suggestionsDto {
+    Suggestions: Array<string>;
+}
+
+interface queryFieldInfo {
+    Index: number;
+    FieldName: string;
+    FieldValue: string;
+}
+
+interface indexSuggestion extends queryFieldInfo {
+    Suggestion: string;
+}
