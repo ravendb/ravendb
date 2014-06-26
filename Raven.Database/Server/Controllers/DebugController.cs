@@ -63,6 +63,14 @@ namespace Raven.Database.Server.Controllers
 			});
 		}
 
+        [HttpGet]
+        [Route("debug/plugins")]
+        [Route("databases/{databaseName}/debug/plugins")]
+        public HttpResponseMessage Plugins()
+        {
+            return GetMessageWithObject(Database.PluginsInfo);
+        }
+
 		[HttpGet]
 		[Route("debug/changes")]
 		[Route("databases/{databaseName}/debug/changes")]
