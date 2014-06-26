@@ -18,6 +18,8 @@ namespace Raven.Database.Prefetching
 
 		private readonly IList<JsonDocument> innerList;
 
+	    private int loadedSize;
+
 		public ConcurrentJsonDocumentSortedList()
 		{
 			innerList = new List<JsonDocument>();
@@ -59,6 +61,7 @@ namespace Raven.Database.Prefetching
 				slim.EnterWriteLock();
 				var index = CalculateEtagIndex(value.Etag);
 				innerList.Insert(index, value);
+			    loadedSize += value.SerializedSizeOnDisk;
 			}
 			finally
 			{
@@ -87,8 +90,11 @@ namespace Raven.Database.Prefetching
 			{
 				slim.EnterWriteLock();
 				result = innerList.FirstOrDefault();
-				if (result != null)
-					innerList.RemoveAt(0);
+			    if (result != null)
+			    {
+			        innerList.RemoveAt(0);
+			        loadedSize -= result.SerializedSizeOnDisk;
+			    }
 
 				return result != null;
 			}
@@ -117,34 +123,21 @@ namespace Raven.Database.Prefetching
 			return i;
 		}
 
-		public Etag GetFirstETagGap()
-		{
-			slim.EnterReadLock();
-
-			try
-			{
-				if (innerList.Count == 0)
-				{
-					return null;
-				}
-
-				// look for the first gap of etag
-				for (var i = 0; i < innerList.Count - 1; i++)
-				{
-					var oneUp = innerList[i].Etag.IncrementBy(1);
-					if (oneUp.Equals(innerList[i + 1].Etag) == false)
-					{
-						return oneUp;
-					}
-				}
-
-				return innerList[innerList.Count - 1].Etag; // take the last one
-			}
-			finally
-			{
-				slim.ExitReadLock();
-			}
-		}
+	    public int LoadedSize
+	    {
+	        get
+	        {
+                slim.EnterReadLock();
+	            try
+	            {
+                    return loadedSize;
+	            }
+	            finally
+	            {
+	                slim.ExitReadLock();
+	            }
+	        }
+	    }
 
 	    public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
 	    {

@@ -235,6 +235,8 @@ namespace Raven.Database.Prefetching
 				return;
 			if (past.Count == 0)
 				return;
+		    if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorage)
+		        return; // already have too much in memory
             // don't keep _too_ much in memory
 		    if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 2)
 		        return;
