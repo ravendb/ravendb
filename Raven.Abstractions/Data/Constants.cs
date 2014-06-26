@@ -43,7 +43,12 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string ActiveBundles = "Raven/ActiveBundles";
+		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
+
+		// Server
+		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
+		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
 
 		// Indexing
 		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";

@@ -23,6 +23,10 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			MaxConcurrentServerRequests = new IntegerSetting(settings[Constants.MaxConcurrentServerRequests], 512);
+
+			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
+
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
                 Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75))); 
@@ -171,6 +175,10 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
+
+		public IntegerSetting MaxConcurrentMultiGetRequests { get; private set; }
 
 		public IntegerSetting MemoryLimitForIndexing { get; private set; }
 
