@@ -1350,7 +1350,7 @@ namespace Raven.Database
                                     TotalResults = query.TotalSize.Value
                                 });
                             }
-                            using (new CurrentTransformationScope(docRetriever))
+                            using (new CurrentTransformationScope(this, docRetriever))
                             {
                                 foreach (var result in results)
                                 {
@@ -2576,7 +2576,7 @@ namespace Raven.Database
             actions =>
             {
                 var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, queryInputs);
-                using (new CurrentTransformationScope(docRetriever))
+                using (new CurrentTransformationScope(this, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
                     if (document == null)
