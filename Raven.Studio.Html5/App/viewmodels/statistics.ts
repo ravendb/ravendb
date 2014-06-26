@@ -8,6 +8,7 @@ import changeSubscription = require('models/changeSubscription');
 class statistics extends viewModelBase {
 
     stats = ko.observable<databaseStatisticsDto>();
+    indexes = ko.observableArray<KnockoutObservable<indexStatisticsDto>>();
 
     private refreshStatsObservable = ko.observable<number>();
     
@@ -54,7 +55,23 @@ class statistics extends viewModelBase {
       i['LastReducedTimestampText'] = this.createHumanReadableTimeDuration(i.LastReducedTimestamp);
     });
 
-    this.stats(results);
+      this.stats(results);
+
+      var existingIndexes = this.indexes().map(i => i().PublicName);
+      var newIndexes = results.Indexes.map(i => i.PublicName);
+
+      var enteringIndexes = newIndexes.filter(i => !existingIndexes.contains(i));
+      var exitIndexes = existingIndexes.filter(i => !newIndexes.contains(i));
+      var sameIndexes = newIndexes.filter(i => existingIndexes.contains(i));
+
+      this.indexes.pushAll(enteringIndexes.map(idx => ko.observable(results.Indexes.first(item => item.PublicName == idx))));
+      this.indexes.removeAll(exitIndexes.map(idx => this.indexes().first(item => item().PublicName == idx)));
+
+      sameIndexes.forEach(idx => {
+          var newData = results.Indexes.first(item => item.PublicName == idx);
+          this.indexes().first(item => item().PublicName == idx)(newData);
+      });
+
   }
 
   createHumanReadableTimeDuration(aspnetJsonDate: string): string {

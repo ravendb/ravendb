@@ -308,9 +308,9 @@
     <TypeScriptCompile Include="App\models\versioningEntry.ts" />
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexSuggestionsCommand.ts" />
     <Content Include="App\commands\getVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCustomFunctionsCommand.ts" />
-    <Content Include="App\commands\saveDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\common\execJs.ts" />
     <TypeScriptCompile Include="App\common\inputCursor.ts" />
     <TypeScriptCompile Include="App\models\customFunctions.ts" />
@@ -325,8 +325,6 @@
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\metricsPrefetches.html" />
     <Content Include="App\views\metricsRequests.html" />
     <Content Include="App\views\metricsIndexBatchSize.html" />
@@ -334,8 +332,6 @@
     <Content Include="App\views\enterApiKey.html" />
     <Content Include="App\views\copyIndexDialog.html" />
     <TypeScriptCompile Include="App\viewmodels\metricsIndexing.ts" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\metricsIndexing.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
     <Content Include="App\views\counter\counterStorageStats.html" />
@@ -355,8 +351,6 @@
     <TypeScriptCompile Include="App\models\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugSlowDocCounts.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugIdentities.ts" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\filesystem\createFolderInFilesystem.html" />
     <Content Include="App\views\filesystem\status.html" />
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
@@ -383,12 +377,8 @@
     <TypeScriptCompile Include="App\models\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugTasks.ts" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\statusDebugTasks.html" />
     <Content Include="App\views\statusDebugQueries.html" />
     <Content Include="App\views\statusDebugCurrentlyIndexing.html" />
@@ -412,11 +402,8 @@
     <Content Include="App\views\filesystem\searchLastModifiedBetweenClause.html" />
     <Content Include="App\views\filesystem\searchSingleInputClause.html" />
     <Content Include="App\views\licensingStatus.html" />
-    <Content Include="App\views\loadPatch.html" />
-    <Content Include="App\views\savePatch.html" />
     <Content Include="App\views\queryStatsDialog.html" />
     <Content Include="App\views\selectColumns.html" />
-    <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\patch.html" />
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
