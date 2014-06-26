@@ -307,6 +307,7 @@
     <TypeScriptCompile Include="App\models\versioningEntry.ts" />
     <TypeScriptCompile Include="App\commands\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexSuggestionsCommand.ts" />
     <Content Include="App\commands\getVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCustomFunctionsCommand.ts" />
     <Content Include="App\commands\saveDefaultSettingsCommand.ts" />

@@ -32,6 +32,8 @@ import customFunctions = require("models/customFunctions");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import transformerType = require("models/transformer");
 import transformerQueryType = require("models/transformerQuery");
+import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand");
+
 
 class query extends viewModelBase {
 
@@ -70,6 +72,9 @@ class query extends viewModelBase {
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
 
+    indexSuggestions = ko.observableArray<indexSuggestion>([]);
+    showSuggestions: KnockoutComputed<boolean>;
+
     editItemSubscription = ko.postbox.subscribe("EditItem", (itemNumber: number) => {
         //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
         var queriess = this.recentQueries();
@@ -101,7 +106,10 @@ class query extends viewModelBase {
 
             return "";
         });
-       
+
+        this.showSuggestions = ko.computed<boolean>(() => {
+            return this.indexSuggestions().length > 0;
+        });
 
         this.didDynamicChangeIndex = ko.computed(() => {
             if (this.queryStats()) {
@@ -262,6 +270,7 @@ class query extends viewModelBase {
     runQuery(): pagedList {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
+
             var queryText = this.queryText();
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
@@ -299,7 +308,16 @@ class query extends viewModelBase {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
                     .execute()
-                    .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
+                    .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo))
+                    .done((queryResults: pagedResultSet) => {
+                        this.indexSuggestions([]);
+                        if (queryResults.totalResultCount == 0) {
+                            var queryFields = this.extractQueryFields();
+                            for(var i=0; i < queryFields.length; i++) {
+                                this.getIndexSuggestions(selectedIndex, queryFields[i]);
+                            }
+                        }
+                    });
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
@@ -595,6 +613,47 @@ class query extends viewModelBase {
                 $("#transformerParams input[name=" + param.name + "]").val(param.value);
             });
         }
+    }
+
+    extractQueryFields(): Array<queryFieldInfo> {
+        var query = this.queryText();
+        var luceneSimpleFieldRegex = /(\w+):\s*("((?:[^"\\]|\\.)*)"|(\w+))/g;
+
+        var queryFields: Array<queryFieldInfo> = [];
+        var match: RegExpExecArray = null;
+        while ( (match = luceneSimpleFieldRegex.exec(query)) ) {
+            var value = match[3] || match[4];
+            queryFields.push({
+                FieldName: match[1],
+                FieldValue: value,
+                Index: match.index
+            });
+        }
+        return queryFields;
+    }
+
+    getIndexSuggestions(indexName: string, info: queryFieldInfo) {
+        if (this.indexFields().contains(info.FieldName)) {
+            var task = new getIndexSuggestionsCommand(this.activeDatabase(), indexName, info.FieldName, info.FieldValue).execute();
+            task.done((result: suggestionsDto) => {
+                for (var index = 0; index < result.Suggestions.length; index++) {
+                    this.indexSuggestions.push({
+                        Index: info.Index,
+                        FieldName: info.FieldName,
+                        FieldValue: info.FieldValue,
+                        Suggestion: result.Suggestions[index]
+                    });
+                }
+            });
+        }
+    }
+
+    applySuggestion(suggestion: indexSuggestion) {
+        var value = this.queryText();
+        var startIndex = value.indexOf(suggestion.FieldValue, suggestion.Index);
+        this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex+suggestion.FieldValue.length));
+        this.indexSuggestions([]);
+        this.runQuery();
     }
 }
 
