@@ -441,55 +441,71 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
 		{
-			JsonDocumentsToReplicate documentsToReplicate;
-			using (var scope = recorder.StartRecording("Get"))
-			{
-				documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, scope);
-				if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
-				{
-					if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
-					{
-						// we don't notify remote server about updates to system docs, see: RavenDB-715
-						if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
-						    || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
-						    || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
-						{
-							using (scope.StartRecording("Notify"))
-							{
-								SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
-								scope.Record(new RavenJObject
+		    JsonDocumentsToReplicate documentsToReplicate = null;
+            Stopwatch sp = Stopwatch.StartNew();
+		    try
+		    {
+                using (var scope = recorder.StartRecording("Get"))
+                {
+                    documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, scope);
+                    if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
+                    {
+                        if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
+                        {
+                            // we don't notify remote server about updates to system docs, see: RavenDB-715
+                            if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
+                                || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
+                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
+                            {
+                                using (scope.StartRecording("Notify"))
+                                {
+                                    SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+                                    scope.Record(new RavenJObject
 								             {
 									             { "LastDocEtag", documentsToReplicate.LastEtag.ToString() }
 								             });
-							}
-						}
-					}
-					RecordLastEtagChecked(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag);
-					return null;
-				}
-			}
+                                }
+                            }
+                        }
+                        RecordLastEtagChecked(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag);
+                        return null;
+                    }
+                }
 
-			using (var scope = recorder.StartRecording("Send"))
-			{
-				string lastError;
-				if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false) // failed to replicate, start error handling strategy
-				{
-					if (IsFirstFailure(destination.ConnectionStringOptions.Url))
-					{
-						log.Info(
-							"This is the first failure for {0}, assuming transient failure and trying again",
-							destination);
-						if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError)) // success on second fail
-						{
-							RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
-							return true;
-						}
-					}
-					scope.RecordError(lastError);
-					RecordFailure(destination.ConnectionStringOptions.Url, lastError);
-					return false;
-				}
-			}
+                // if the db is idling in all respect except sending out replication, let us keep it that way.
+                docDb.WorkContext.UpdateFoundWork(); 
+
+                using (var scope = recorder.StartRecording("Send"))
+                {
+                    string lastError;
+                    if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false) // failed to replicate, start error handling strategy
+                    {
+                        if (IsFirstFailure(destination.ConnectionStringOptions.Url))
+                        {
+                            log.Info(
+                                "This is the first failure for {0}, assuming transient failure and trying again",
+                                destination);
+                            if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError)) // success on second fail
+                            {
+                                RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+                                return true;
+                            }
+                        }
+                        // if we had an error sending to this endpoint, it might be because we are sending too much data, or because
+                        // the request timed out. This will let us know that the next time we try, we'll use just the initial doc counts
+                        // and we'll be much more conservative with increasing the sizes
+                        prefetchingBehavior.OutOfMemoryExceptionHappened();
+                        scope.RecordError(lastError);
+                        RecordFailure(destination.ConnectionStringOptions.Url, lastError);
+                        return false;
+                    }
+                }
+		    }
+		    finally
+		    {
+		        if (documentsToReplicate != null)
+		            prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
+		    }
 
 			RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
 			return true;
@@ -642,8 +658,9 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl()
-						  + "&dbid=" + docDb.TransactionalStorage.Id;
+			    var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl()
+			              + "&dbid=" + docDb.TransactionalStorage.Id +
+			              "&count=" + jsonDocuments.Length;
 
 				var sp = Stopwatch.StartNew();
 
@@ -695,111 +712,119 @@ namespace Raven.Bundles.Replication.Tasks
 			public RavenJArray Documents { get; set; }
 			public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
 			public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
+		    public List<JsonDocument> LoadedDocs { get; set; }
 		}
 
 		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var result = new JsonDocumentsToReplicate();
-			try
-			{
-				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+		    try
+		    {
+		        var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
 
-				docDb.TransactionalStorage.Batch(actions =>
-				{
-				    var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+		        docDb.TransactionalStorage.Batch(actions =>
+		        {
+		            var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
-					int docsSinceLastReplEtag = 0;
-					List<JsonDocument> docsToReplicate;
-					List<JsonDocument> filteredDocsToReplicate;
-					result.LastEtag = lastEtag;
+		            int docsSinceLastReplEtag = 0;
+		            List<JsonDocument> docsToReplicate;
+		            List<JsonDocument> filteredDocsToReplicate;
+		            result.LastEtag = lastEtag;
 
-					while (true)
-					{
-						docsToReplicate = GetDocsToReplicate(actions, result);
+		            while (true)
+		            {
+		                docsToReplicate = GetDocsToReplicate(actions, result);
 
-						filteredDocsToReplicate =
-							docsToReplicate
-								.Where(document =>
-								{
-									var info = docDb.GetRecentTouchesFor(document.Key);
-									if (info != null)
-									{
-										if (info.TouchedEtag.CompareTo(result.LastEtag) > 0)
-										{
-                                            log.Debug("Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches", document.Key, destinationId, info.TouchedEtag);
-											return false;
-										}
-									}
+		                filteredDocsToReplicate =
+		                    docsToReplicate
+		                        .Where(document =>
+		                        {
+		                            var info = docDb.GetRecentTouchesFor(document.Key);
+		                            if (info != null)
+		                            {
+		                                if (info.TouchedEtag.CompareTo(result.LastEtag) > 0)
+		                                {
+		                                    log.Debug(
+		                                        "Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
+		                                        document.Key, destinationId, info.TouchedEtag);
+		                                    return false;
+		                                }
+		                            }
 
-									return destination.FilterDocuments(destinationId, document.Key, document.Metadata) && prefetchingBehavior.FilterDocuments(document);
-								})
-								.ToList();
+		                            return destination.FilterDocuments(destinationId, document.Key, document.Metadata) &&
+		                                   prefetchingBehavior.FilterDocuments(document);
+		                        })
+		                        .ToList();
 
-						docsSinceLastReplEtag += docsToReplicate.Count;
-						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
-						result.CountOfFilteredDocumentsWhichOriginFromDestination +=
-							docsToReplicate.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
+		                docsSinceLastReplEtag += docsToReplicate.Count;
+		                result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
+		                    docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
+		                result.CountOfFilteredDocumentsWhichOriginFromDestination +=
+		                    docsToReplicate.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
 
-						if (docsToReplicate.Count > 0)
-						{
-							var lastDoc = docsToReplicate.Last();
-							Debug.Assert(lastDoc.Etag != null);
-							result.LastEtag = lastDoc.Etag;
-							if (lastDoc.LastModified.HasValue)
-								result.LastLastModified = lastDoc.LastModified.Value;
-						}
+		                if (docsToReplicate.Count > 0)
+		                {
+		                    var lastDoc = docsToReplicate.Last();
+		                    Debug.Assert(lastDoc.Etag != null);
+		                    result.LastEtag = lastDoc.Etag;
+		                    if (lastDoc.LastModified.HasValue)
+		                        result.LastLastModified = lastDoc.LastModified.Value;
+		                }
 
-						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
-						{
-							break;
-						}
+		                if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
+		                {
+		                    break;
+		                }
 
-						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", result.LastEtag);
-					}
+		                log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", result.LastEtag);
+		            }
 
-					log.Debug(() =>
-					{
-						if (docsSinceLastReplEtag == 0)
-							return string.Format("No documents to replicate to {0} - last replicated etag: {1}", destination,
-												 lastEtag);
+		            log.Debug(() =>
+		            {
+		                if (docsSinceLastReplEtag == 0)
+		                    return string.Format("No documents to replicate to {0} - last replicated etag: {1}", destination,
+		                        lastEtag);
 
-						if (docsSinceLastReplEtag == filteredDocsToReplicate.Count)
-							return string.Format("Replicating {0} docs [>{1}] to {2}.",
-											 docsSinceLastReplEtag,
-											 lastEtag,
-											 destination);
+		                if (docsSinceLastReplEtag == filteredDocsToReplicate.Count)
+		                    return string.Format("Replicating {0} docs [>{1}] to {2}.",
+		                        docsSinceLastReplEtag,
+		                        lastEtag,
+		                        destination);
 
-						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
-						return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
-											 docsSinceLastReplEtag,
-											 filteredDocsToReplicate.Count,
-											 destination,
-											 string.Join(", ", diff),
-											 lastEtag);
-					});
+		                var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
+		                return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
+		                    docsSinceLastReplEtag,
+		                    filteredDocsToReplicate.Count,
+		                    destination,
+		                    string.Join(", ", diff),
+		                    lastEtag);
+		            });
 
-					scope.Record(new RavenJObject
-					             {
-						             {"StartEtag", lastEtag.ToString()},
-									 {"EndEtag", result.LastEtag.ToString()},
-									 {"Count", docsSinceLastReplEtag},
-									 {"FilteredCount", filteredDocsToReplicate.Count}
-					             });
+		            scope.Record(new RavenJObject
+		            {
+		                {"StartEtag", lastEtag.ToString()},
+		                {"EndEtag", result.LastEtag.ToString()},
+		                {"Count", docsSinceLastReplEtag},
+		                {"FilteredCount", filteredDocsToReplicate.Count}
+		            });
 
-					result.Documents = new RavenJArray(filteredDocsToReplicate
-														.Select(x =>
-														{
-															DocumentRetriever.EnsureIdInMetadata(x);
-															return x;
-														})
-														.Select(x => x.ToJson()));
-				});
-			}
-			catch (Exception e)
-			{
-				scope.RecordError(e);
-				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
-			}
+		            result.LoadedDocs = filteredDocsToReplicate;
+		            result.Documents = new RavenJArray(filteredDocsToReplicate
+		                .Select(x =>
+		                {
+		                    DocumentRetriever.EnsureIdInMetadata(x);
+		                    return x;
+		                })
+		                .Select(x => x.ToJson()));
+		        });
+		    }
+		    catch (Exception e)
+		    {
+		        scope.RecordError(e);
+		        log.WarnException(
+		            "Could not get documents to replicate after: " +
+		            destinationsReplicationInformationForSource.LastDocumentEtag, e);
+		    }
 			return result;
 		}
 
