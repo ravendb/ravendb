@@ -50,7 +50,9 @@ namespace Raven.Storage.Managed
 				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null, 
+            /* this value is ignored in Munin */
+            TimeSpan? timeout = null)
 		{
 			var docs = storage.Documents["ByEtag"].SkipAfter(new RavenJObject { { "etag", etag.ToByteArray() } })
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))

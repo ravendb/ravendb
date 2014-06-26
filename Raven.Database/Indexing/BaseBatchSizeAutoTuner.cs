@@ -102,6 +102,11 @@ namespace Raven.Database.Indexing
             return true;
         }
 
+        public TimeSpan FetchingDocumentsFromDiskTimeout
+        {
+            get { return TimeSpan.FromSeconds(15); }
+        }
+
         public long MaximumSizeAllowedToFetchFromStorage
         {
             get

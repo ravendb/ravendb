@@ -209,8 +209,9 @@ namespace Raven.Database.Prefetching
 					.GetDocumentsAfter(
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
-						autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: untilEtag)
+						maxSize: autoTuner.MaximumSizeAllowedToFetchFromStorage,
+						untilEtag: untilEtag,
+                        timeout: autoTuner.FetchingDocumentsFromDiskTimeout)
 					.Where(x => x != null)
 					.Select(doc =>
 					{

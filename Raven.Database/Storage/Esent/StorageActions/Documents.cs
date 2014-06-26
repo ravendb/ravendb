@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -195,7 +196,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -203,6 +204,11 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 			long totalSize = 0;
 			int count = 0;
+		    Stopwatch duration = null;
+		    if (timeout != null)
+		    {
+		        duration = Stopwatch.StartNew();
+		    }
 			do
 			{
 				if (untilEtag != null && count > 0)
@@ -220,6 +226,11 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				yield return readCurrentDocument;
 				count++;
+			    if (timeout != null)
+			    {
+			        if (duration.Elapsed > timeout.Value)
+			            yield break;
+			    }
 			} while (Api.TryMoveNext(session, Documents) && count < take);
 		}
 
