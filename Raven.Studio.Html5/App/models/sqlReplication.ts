@@ -34,6 +34,8 @@ class sqlReplication extends document {
     collections = ko.observableArray<string>();
     searchResults = ko.observableArray<string>();
 
+    showReplicationConfiguration = ko.observable<boolean>(false);
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 

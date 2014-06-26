@@ -59,6 +59,34 @@ body {
 .replicationError {
   color: red;
 }
+#sqlReplications .sqlRepActions {
+  margin-top: -25px !important;
+}
+#sqlReplications .panel {
+  overflow: visible!important;
+}
+#sqlReplications label {
+  text-align: left;
+}
+.sqlReplication-Stats {
+  width: 60vw;
+  max-height: 60vh!important;
+  overflow-x: hidden!important;
+  overflow-y: hidden!important;
+}
+@media (max-width: 767px) {
+  .sqlReplication-Stats {
+    width: 80vw;
+  }
+}
+.sqlReplication-Stats .modal-header {
+  max-height: 20%;
+}
+.sqlReplication-Stats .replicationStatsData {
+  max-height: 35vh!important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 .query-stats {
   width: 600px;
   margin: -250px 0 0 -450px;

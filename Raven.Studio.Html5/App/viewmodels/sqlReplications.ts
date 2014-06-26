@@ -10,6 +10,8 @@ import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import appUrl = require("common/appUrl");
 import ace = require("ace/ace");
+import sqlReplicationStatsDialog = require("viewmodels/sqlReplicationStatsDialog");
+import app = require("durandal/app");
 
 
 class sqlReplications extends viewModelBase {
@@ -29,6 +31,11 @@ class sqlReplications extends viewModelBase {
         this.firstIndex = ko.computed(function () {
             return !this.isFirstLoad() ? 0 : -1;
         }, this);
+    }
+
+    showStats(replicationName:string) {
+        var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), replicationName);
+        app.showDialog(viewModel);
     }
 
     canActivate(args: any): JQueryPromise<any> {
