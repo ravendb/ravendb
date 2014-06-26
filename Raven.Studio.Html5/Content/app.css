@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -531,6 +531,18 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#queryContainer .suggestion-box {
+  position: absolute;
+  display: table-cell;
+  z-index: 200;
+  left: 30px;
+  right: 30px;
+  top: 60px;
+  bottom: 30px;
+  text-align: center;
+  vertical-align: middle;
+  padding-top: 40px;
+}
 #gridContextMenu {
   z-index: 100;
   position: relative;
@@ -713,7 +725,9 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*# sourceMappingURL=app.css.map */
+  /*#goToDocInput {
+        width: 10em;
+    }*/
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1095,4 +1109,3 @@ footer ul {
   height: 43vh;
   position: absolute;
 }
-/*# sourceMappingURL=app.css.map */
