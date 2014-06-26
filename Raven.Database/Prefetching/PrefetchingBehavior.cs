@@ -235,6 +235,9 @@ namespace Raven.Database.Prefetching
 				return;
 			if (past.Count == 0)
 				return;
+            // don't keep _too_ much in memory
+		    if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 2)
+		        return;
 
 		    var size = 1024;
 		    var count = context.LastActualIndexingBatchInfo.Count;
@@ -570,5 +573,10 @@ namespace Raven.Database.Prefetching
 				futureSize + jsonDocs.Sum(x => (long)x.SerializedSizeOnDisk),
 			    indexingDuration);
 		}
+
+        public void OutOfMemoryExceptionHappened()
+	    {
+	        autoTuner.OutOfMemoryExceptionHappened();
+	    }
 	}
 }
