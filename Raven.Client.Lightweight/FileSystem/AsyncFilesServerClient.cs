@@ -371,10 +371,18 @@ namespace Raven.Client.FileSystem
         {
             return ExecuteWithReplication("GET", operation => GetAsyncImpl(filename, operation));
         }
-        private async Task<FileHeader[]> GetAsyncImpl(string[] filename, OperationMetadata operation)
+        private async Task<FileHeader[]> GetAsyncImpl(string[] filenames, OperationMetadata operation)
         {
+            StringBuilder requestUriBuilder = new StringBuilder("/files/metadata?");
+            for( int i = 0; i < filenames.Length; i++ )
+            {
+                requestUriBuilder.Append("fileNames=" + Uri.EscapeDataString(filenames[i]));
+                if (i < filenames.Length - 1)
+                    requestUriBuilder.Append("&");
+            }
+
             var request = RequestFactory.CreateHttpJsonRequest(
-                                new CreateHttpJsonRequestParams(this, operation.Url + "/files/metadata", "GET", operation.Credentials, Conventions))
+                                new CreateHttpJsonRequestParams(this, operation.Url + requestUriBuilder.ToString(), "GET", operation.Credentials, Conventions))
                             .AddOperationHeaders(OperationsHeaders);
 
             try

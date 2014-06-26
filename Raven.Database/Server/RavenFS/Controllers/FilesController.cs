@@ -160,6 +160,25 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return httpResponseMessage;
 		}
 
+        [HttpGet]
+        [Route("fs/{fileSystemName}/files/metadata")]
+        public HttpResponseMessage Metadata([FromUri] string[] fileNames)
+        {
+            if (fileNames == null || fileNames.Length == 0)
+            {
+                log.Debug("'fileNames' parameter should have a value.");
+                return GetEmptyMessage(HttpStatusCode.BadRequest);
+            }
+
+            var ravenPaths = fileNames.Where(x => x != null).Select(x => RavenFileNameHelper.RavenPath(x));
+
+            var list = new List<FileHeaderInformation>();
+            Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
+
+            return this.GetMessageWithObject(list, HttpStatusCode.OK)
+                       .WithNoCache();
+        }
+
 		[HttpPost]
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
