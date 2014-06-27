@@ -4,10 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
@@ -97,9 +99,16 @@ namespace Raven.Database.Indexing
 			return indexWriter.GetReader();
 		}
 
-		public void Commit()
+		public void Commit(Etag lastEtag)
 		{
-			indexWriter.Commit();
+		    Dictionary<string, string> commitData = null;
+		    if (lastEtag != null)
+		        commitData = new Dictionary<string, string>
+		        {
+		            { "LastEtag", lastEtag }
+		        };
+
+			indexWriter.Commit(commitData);
 			RecreateIfNecessary();
 		}
 

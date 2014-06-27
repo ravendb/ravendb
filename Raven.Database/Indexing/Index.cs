@@ -72,9 +72,7 @@ namespace Raven.Database.Indexing
 		private readonly AbstractViewGenerator viewGenerator;
 		protected readonly WorkContext context;
 
-		private readonly string indexStoragePath;
-
-		private readonly object writeLock = new object();
+	    private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private RavenIndexWriter indexWriter;
 		private SnapshotDeletionPolicy snapshotter;
@@ -85,7 +83,7 @@ namespace Raven.Database.Indexing
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 
-		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
+		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 		    currentIndexSearcherHolder = new IndexSearcherHolder(name ,context);
 		    if (directory == null) throw new ArgumentNullException("directory");
@@ -97,8 +95,7 @@ namespace Raven.Database.Indexing
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
 			this.context = context;
-			this.indexStoragePath = indexStoragePath;
-			logIndexing.Debug("Creating index for {0}", name);
+		    logIndexing.Debug("Creating index for {0}", name);
 			this.directory = directory;
 
 			RecreateSearcher();
@@ -251,7 +248,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void Flush()
+		public void Flush(Etag highestETag)
 		{
 			lock (writeLock)
 			{
@@ -263,7 +260,7 @@ namespace Raven.Database.Indexing
 				try
 				{
 					waitReason = "Flush";
-					indexWriter.Commit();
+                    indexWriter.Commit(highestETag);
 				}
 				finally
 				{
@@ -366,14 +363,13 @@ namespace Raven.Database.Indexing
 
 			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
-			IndexSegmentsInfo segmentsInfo = null;
 
 			lock (writeLock)
 			{
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
-				var itemsInfo = new IndexedItemsInfo();
+				var itemsInfo = new IndexedItemsInfo(null);
 
 			    try
 			    {
@@ -424,9 +420,8 @@ namespace Raven.Database.Indexing
 			            if (itemsInfo.ChangedDocs > 0)
 			            {
 			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-			                Flush(); // just make sure changes are flushed to disk
-				            segmentsInfo = GetCurrentSegmentsInfo();
-							StoreChecksum(segmentsInfo, itemsInfo.HighestETagInIndex);
+			                Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
+				            
 							UpdateIndexingStats(context, stats);
 			            }
 			        }
@@ -454,7 +449,7 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					HandleCommitPoints(itemsInfo, segmentsInfo);
+					HandleCommitPoints(itemsInfo, GetCurrentSegmentsInfo());
 				}
 				catch (Exception e)
 				{
@@ -464,14 +459,6 @@ namespace Raven.Database.Indexing
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
 			}
-		}
-
-		private void StoreChecksum(IndexSegmentsInfo segmentsInfo, Etag highestETagInIndex)
-		{
-			if (directory is RAMDirectory)
-				return;
-
-			IndexStorage.StoreChecksum(indexStoragePath, name, segmentsInfo, highestETagInIndex);
 		}
 
 		private IndexSegmentsInfo GetCurrentSegmentsInfo()
@@ -525,7 +512,7 @@ namespace Raven.Database.Indexing
 
 			if (forceWriteToDisk || toobig || !stale)
 			{
-				indexWriter.Commit();
+				indexWriter.Commit(highestETag);
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
 				IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
 				directory = fsDir;
@@ -1425,7 +1412,7 @@ namespace Raven.Database.Indexing
 				Write((writer, analyzer, stats) =>
 				{
 					ForceWriteToDisk();
-					return new IndexedItemsInfo { ChangedDocs = 1 };
+					return new IndexedItemsInfo(GetLastEtagFromStats()) { ChangedDocs = 1 };
 				});
 			}
 
@@ -1467,7 +1454,7 @@ namespace Raven.Database.Indexing
 								allFilesWriter.WriteLine(fileName);
 								neededFilesWriter.WriteLine(fileName);
 							}
-							return new IndexedItemsInfo();
+							return new IndexedItemsInfo(null);
 						});
 					}
 					catch (CorruptIndexException e)
@@ -1539,7 +1526,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static void TryDelete(string neededFilePath)
+	    public Etag GetLastEtagFromStats()
+	    {
+	        return context.IndexStorage.GetLastEtagForIndex(this);
+	    }
+
+	    private static void TryDelete(string neededFilePath)
 		{
 			try
 			{
