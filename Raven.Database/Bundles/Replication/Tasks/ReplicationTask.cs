@@ -503,7 +503,7 @@ namespace Raven.Bundles.Replication.Tasks
 		    }
 		    finally
 		    {
-		        if (documentsToReplicate != null)
+		        if (documentsToReplicate != null && documentsToReplicate.LoadedDocs != null)
 		            prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
 		    }
 
