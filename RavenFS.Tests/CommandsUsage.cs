@@ -652,7 +652,7 @@ namespace RavenFS.Tests
         }
 
         [Fact]
-        public async Task CanGetFilesMetadata()
+        public async Task Can_get_files_metadata()
         {
             var client = NewAsyncClient();
             await client.UploadAsync("1.txt", new RavenJObject
@@ -670,10 +670,11 @@ namespace RavenFS.Tests
             Assert.Equal(128, fileMetadata[1].TotalSize);
             Assert.NotNull(fileMetadata[0].Etag);
             Assert.NotNull(fileMetadata[1].Etag);
+
             Assert.NotNull(fileMetadata[0].LastModified);
-            Assert.NotNull(fileMetadata[1].LastModified);
+            Assert.Equal(fileMetadata[0].Metadata["Last-Modified"].Value<DateTimeOffset>(), fileMetadata[0].LastModified);
             Assert.NotNull(fileMetadata[0].CreationDate);
-            Assert.NotNull(fileMetadata[1].CreationDate);
+            Assert.Equal(fileMetadata[1].Metadata["Creation-Date"].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
             Assert.Equal(".txt", fileMetadata[0].Extension);
             Assert.Equal(".txt", fileMetadata[1].Extension);
             Assert.Equal("", fileMetadata[0].Path);
