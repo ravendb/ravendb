@@ -9,33 +9,30 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
+	using System.Linq;
+
 	public class Prefetcher
 	{
 		private readonly WorkContext workContext;
-		private IDictionary<PrefetchingUser, PrefetchingBehavior> prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>();
+		private List<PrefetchingBehavior> prefetchingBehaviors = new List<PrefetchingBehavior>();
 
 		public Prefetcher(WorkContext workContext)
 		{
 			this.workContext = workContext;
 		}
 
-		public PrefetchingBehavior GetPrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
+		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
 		{
-			PrefetchingBehavior value;
-			if (prefetchingBehaviors.TryGetValue(user, out value))
-				return value;
 			lock (this)
 			{
-				if (prefetchingBehaviors.TryGetValue(user, out value))
-					return value;
+				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext));
 
-				value = new PrefetchingBehavior(workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext));
-
-				prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>(prefetchingBehaviors)
+				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
 				{
-					{user, value}
+					newPrefetcher
 				};
-				return value;
+
+				return newPrefetcher;
 			}
 		}
 
@@ -43,7 +40,7 @@ namespace Raven.Database.Prefetching
 		{
 			foreach (var behavior in prefetchingBehaviors)
 			{
-				behavior.Value.AfterDelete(key, deletedEtag);
+				behavior.AfterDelete(key, deletedEtag);
 			}
 		}
 
@@ -51,24 +48,24 @@ namespace Raven.Database.Prefetching
 		{
 			foreach (var behavior in prefetchingBehaviors)
 			{
-				behavior.Value.AfterUpdate(key, etagBeforeUpdate);
+				behavior.AfterUpdate(key, etagBeforeUpdate);
 			}
 		}
 
 		public int GetInMemoryIndexingQueueSize(PrefetchingUser user)
 		{
-			PrefetchingBehavior value;
-			if (prefetchingBehaviors.TryGetValue(user, out value))
+			var value = prefetchingBehaviors.FirstOrDefault(x => x.PrefetchingUser == user);
+			if (value != null)
 				return value.InMemoryIndexingQueueSize;
 			return -1;
 		}
 
 		public void AfterStorageCommitBeforeWorkNotifications(PrefetchingUser user, JsonDocument[] documents)
 		{
-			PrefetchingBehavior value;
-			if (prefetchingBehaviors.TryGetValue(user, out value) == false)
-				return;
-			value.AfterStorageCommitBeforeWorkNotifications(documents);
+			foreach (var prefetcher in prefetchingBehaviors.Where(x => x.PrefetchingUser == user))
+			{
+				prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
+			}
 		}
 	}
 }

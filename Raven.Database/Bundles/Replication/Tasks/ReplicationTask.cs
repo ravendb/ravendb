@@ -71,12 +71,10 @@ namespace Raven.Bundles.Replication.Tasks
 		private int workCounter;
 		private HttpRavenRequestFactory httpRavenRequestFactory;
 
-		private PrefetchingBehavior prefetchingBehavior;
+		private ConcurrentDictionary<string, PrefetchingBehavior> prefetchingBehaviors = new ConcurrentDictionary<string, PrefetchingBehavior>();
 
 		public void Execute(DocumentDatabase database)
 		{
-			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Replicator, null);
-
 			docDb = database;
 			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
@@ -175,17 +173,20 @@ namespace Raven.Bundles.Replication.Tasks
 								TaskEx
 #endif								
 									.WhenAll(startedTasks.ToArray()).ContinueWith(t =>
-								{
-									if (destinationStats.Count != 0)
 									{
-										var minLastReplicatedEtag = destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
-										                                            .Select(x => x.Value.LastReplicatedEtag)
-										                                            .Min(x => new ComparableByteArray(x.ToByteArray()));
-										                            
-                						if(minLastReplicatedEtag != null)
-											prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
-									}
-								}).AssertNotFailed();
+										if (destinationStats.Count == 0) 
+											return;
+
+										foreach (var stats in destinationStats.Where(stats => stats.Value.LastReplicatedEtag != null))
+										{
+											PrefetchingBehavior prefetchingBehavior;
+
+											if (prefetchingBehaviors.TryGetValue(stats.Key, out prefetchingBehavior))
+											{
+												prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
+											}
+										}
+									}).AssertNotFailed();
 							}
 						}
 					}
@@ -443,11 +444,15 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 		    JsonDocumentsToReplicate documentsToReplicate = null;
             Stopwatch sp = Stopwatch.StartNew();
+
+			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
+				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, null));
+
 		    try
 		    {
                 using (var scope = recorder.StartRecording("Get"))
                 {
-                    documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, scope);
+                    documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, prefetchingBehavior, scope);
                     if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
                     {
                         if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
@@ -715,7 +720,7 @@ namespace Raven.Bundles.Replication.Tasks
 		    public List<JsonDocument> LoadedDocs { get; set; }
 		}
 
-		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
+		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var result = new JsonDocumentsToReplicate();
 		    try
@@ -733,7 +738,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		            while (true)
 		            {
-		                docsToReplicate = GetDocsToReplicate(actions, result);
+		                docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result);
 
 		                filteredDocsToReplicate =
 		                    docsToReplicate
@@ -828,7 +833,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
-		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
+		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, JsonDocumentsToReplicate result)
 		{
 			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
 			Etag lastEtag = null;
@@ -1142,7 +1147,10 @@ namespace Raven.Bundles.Replication.Tasks
 				task.Wait();
 			}
 
-			prefetchingBehavior.Dispose();
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
+				prefetchingBehavior.Value.Dispose();
+			}
 		}
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}
