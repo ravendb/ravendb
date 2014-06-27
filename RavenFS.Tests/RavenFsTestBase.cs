@@ -200,7 +200,6 @@ namespace RavenFS.Tests
 
         public static string StreamToString(Stream stream)
         {
-            stream.Position = 0;
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
                 return reader.ReadToEnd();

@@ -66,12 +66,14 @@ namespace Raven.Client.FileSystem
         Task RenameAsync(string currentName, string newName);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
+        RavenJObject GetMetadataForLastDownload(string filename);
+
         Task UpdateMetadataAsync(string filename, RavenJObject metadata);
 
         Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null);
-        Task UploadAsync(string filename, RavenJObject metadata, Stream source, long? size = null, Action<string, long> progress = null);
+        Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null);
 
-        Task<RavenJObject> DownloadAsync(string filename, Stream destination, long? from = null, long? to = null);
+        Task<Stream> DownloadAsync(string filename, long? from = null, long? to = null);
 
         Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25);
 

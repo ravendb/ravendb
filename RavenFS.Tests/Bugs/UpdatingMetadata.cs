@@ -18,10 +18,10 @@ namespace RavenFS.Tests.Bugs
 			streamWriter.Flush();
 			ms.Position = 0;
 
-            await client.UploadAsync("abc.txt", new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 			                                        {
 				                                        {"test", "1"}
-			                                        }, ms);
+			                                        });
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject
 			                                                {
@@ -46,10 +46,10 @@ namespace RavenFS.Tests.Bugs
             streamWriter.Flush();
             ms.Position = 0;
 
-            await client.UploadAsync("abc.txt", new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 			                                        {
 				                                        {"Test", "1"},
-			                                        }, ms);
+			                                        });
             
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject
 			                                                {

@@ -44,24 +44,22 @@ namespace RavenFS.Tests.Synchronization
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
 
-			await destinationClient.UploadAsync("test.txt", destinationMetadata, destinationContent);
+            await destinationClient.UploadAsync("test.txt", destinationContent, destinationMetadata);
 			sourceContent.Position = 0;
-			await sourceClient.UploadAsync("test.txt", sourceMetadata, sourceContent);
+            await sourceClient.UploadAsync("test.txt", sourceContent, sourceMetadata);
 
 			var result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.txt");
 
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
 
-			string resultMd5;
-			using (var resultFileContent = new MemoryStream())
-			{
-				var metadata = destinationClient.DownloadAsync("test.txt", resultFileContent).Result;
+			string resultMd5;            
 
-                // REVIEW: (Oren) The xxx-yyy-zzz headers are being transformed to: Xxx-Yyy-Zzz by the underlying implementation of HTTP Client. Is that OK? The old test was able to handle it "case insensitively".
+			using (var resultFileContent = await destinationClient.DownloadAsync("test.txt"))
+			{
+				var metadata = await destinationClient.GetMetadataForAsync("test.txt");
+                
 				Assert.Equal("some-value", metadata.Value<string>("SomeTest-Metadata"));
-				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
-				resultFileContent.Position = 0;
 			}
 
 			sourceContent.Position = 0;
@@ -73,7 +71,7 @@ namespace RavenFS.Tests.Synchronization
 		[Theory]
 		[InlineData(1)]
 		[InlineData(5000)]
-		public void Synchronize_file_with_appended_data(int size)
+		public async void Synchronize_file_with_appended_data(int size)
 		{
 			var differenceChunk = new MemoryStream();
 			var sw = new StreamWriter(differenceChunk);
@@ -87,21 +85,18 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-			destinationClient.UploadAsync("test.txt", destinationContent).Wait();
+			await destinationClient.UploadAsync("test.txt", destinationContent);
 			sourceContent.Position = 0;
-			sourceClient.UploadAsync("test.txt", sourceContent).Wait();
+			await sourceClient.UploadAsync("test.txt", sourceContent);
 
 			var result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.txt");
 
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
 
 			string resultMd5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await destinationClient.DownloadAsync("test.txt"))
 			{
-				destinationClient.DownloadAsync("test.txt", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
-				resultFileContent.Position = 0;
 			}
 
 			sourceContent.Position = 0;
@@ -112,7 +107,7 @@ namespace RavenFS.Tests.Synchronization
 
 		[Theory]
 		[InlineData(5000)]
-		public void Should_have_the_same_content(int size)
+		public async void Should_have_the_same_content(int size)
 		{
 			var sourceContent = SyncTestUtils.PrepareSourceStream(size);
 			sourceContent.Position = 0;
@@ -120,19 +115,17 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-            destinationClient.UploadAsync("test.txt", new RavenJObject(), destinationContent).Wait();
+            destinationClient.UploadAsync("test.txt", destinationContent, new RavenJObject()).Wait();
 			sourceContent.Position = 0;
-            sourceClient.UploadAsync("test.txt", new RavenJObject(), sourceContent).Wait();
+            sourceClient.UploadAsync("test.txt", sourceContent, new RavenJObject()).Wait();
 
 			var result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.txt");
 
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
 
 			string resultMd5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await destinationClient.DownloadAsync("test.txt"))
 			{
-				destinationClient.DownloadAsync("test.txt", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
 			}
 
@@ -145,7 +138,7 @@ namespace RavenFS.Tests.Synchronization
 		[Theory]
 		[InlineData(1024*1024, 1)] // this pair of parameters helped to discover storage reading issue 
 		[InlineData(1024*1024, null)]
-		public void Synchronization_of_already_synchronized_file_should_detect_that_no_work_is_needed(int size, int? seed)
+		public async void Synchronization_of_already_synchronized_file_should_detect_that_no_work_is_needed(int size, int? seed)
 		{
 			Random r;
 
@@ -165,18 +158,16 @@ namespace RavenFS.Tests.Synchronization
 			var dstMd5 = (new RandomlyModifiedStream(new RandomStream(size, 1), 0.01, seed)).GetMD5Hash();
 
 
-            destinationClient.UploadAsync("test.bin", new RavenJObject(), destinationContent).Wait();
-            sourceClient.UploadAsync("test.bin", new RavenJObject(), sourceContent).Wait();
+            await destinationClient.UploadAsync("test.bin", destinationContent, new RavenJObject());
+            await sourceClient.UploadAsync("test.bin", sourceContent, new RavenJObject());
 
 			var firstSynchronization = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
 			Assert.Equal(sourceContent.Length, firstSynchronization.BytesCopied + firstSynchronization.BytesTransfered);
 
 			string resultMd5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await destinationClient.DownloadAsync("test.bin"))
 			{
-				destinationClient.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
 			}
 
@@ -187,10 +178,8 @@ namespace RavenFS.Tests.Synchronization
 
 			var secondSynchronization = sourceClient.Synchronization.StartAsync("test.bin", destinationClient).Result;
 
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await destinationClient.DownloadAsync("test.bin"))
 			{
-				destinationClient.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
 			}
 
@@ -222,8 +211,8 @@ namespace RavenFS.Tests.Synchronization
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
 
-			destinationClient.UploadAsync("test.bin", destinationMetadata, destinationContent).Wait();
-			sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent).Wait();
+            destinationClient.UploadAsync("test.bin", destinationContent, destinationMetadata).Wait();
+            sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadata).Wait();
 
 			SynchronizationReport result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
@@ -246,8 +235,8 @@ namespace RavenFS.Tests.Synchronization
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
 
-			await destinationClient.UploadAsync("test.bin", destinationMetadata, destinationContent);
-			await sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent);
+            await destinationClient.UploadAsync("test.bin", destinationContent, destinationMetadata);
+            await sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
 
 			SynchronizationReport result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
@@ -265,7 +254,7 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-			await sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent);
+            await sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
 
 			await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
@@ -288,8 +277,8 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-			await sourceClient.UploadAsync("test1.bin", sourceMetadata, sourceContent);
-			await sourceClient.UploadAsync("test2.bin", sourceMetadata, sourceContent);
+            await sourceClient.UploadAsync("test1.bin", sourceContent, sourceMetadata);
+            await sourceClient.UploadAsync("test2.bin", sourceContent, sourceMetadata);
 
 			await sourceClient.Synchronization.StartAsync("test2.bin", destinationClient);
 			await sourceClient.Synchronization.StartAsync("test1.bin", destinationClient);
@@ -322,7 +311,7 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-			await sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent);
+            await sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
 
 			var sourceSynchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 			var resultFileMetadata = await destinationClient.GetMetadataForAsync("test.bin");
@@ -356,7 +345,7 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var sourceContent1 = new RandomStream(10);
 			var sourceClient = NewAsyncClient(1);
-            sourceClient.UploadAsync("test.bin", new RavenJObject { { "test", "Change me" } }, sourceContent1).Wait();
+            sourceClient.UploadAsync("test.bin", sourceContent1, new RavenJObject { { "test", "Change me" } }).Wait();
             var historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
             var history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
@@ -515,7 +504,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-            sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content).Wait();
+            sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } }).Wait();
 			content.Position = 0;
 			destinationClient.UploadAsync("test.bin", content).Wait();
 
@@ -540,9 +529,9 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-            await sourceClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } }, content);
+            await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "key", "value" } });
 			content.Position = 0;
-            await destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } }, content);
+            await destinationClient.UploadAsync("test.bin", content, new RavenJObject { { "key", "value" } });
 
 			await sourceClient.RenameAsync("test.bin", "renamed.bin");
 
@@ -573,17 +562,20 @@ namespace RavenFS.Tests.Synchronization
 			var source = NewAsyncClient(0);
 			var destination = NewAsyncClient(1);
 
-            await source.UploadAsync("empty.test", new RavenJObject { { "should-be-transferred", "true" } }, new MemoryStream());
+            await source.UploadAsync("empty.test", new MemoryStream(), new RavenJObject { { "should-be-transferred", "true" } });
 			var result = await source.Synchronization.StartAsync("empty.test", destination);
 
 			Assert.Null(result.Exception);
 
-			using (var ms = new MemoryStream())
+            using (var downloaded = await destination.DownloadAsync("empty.test"))
 			{
-				var metadata = await destination.DownloadAsync("empty.test", ms);
-
-                // REVIEW: (Oren) The xxx-yyy-zzz headers are being transformed to: Xxx-Yyy-Zzz by the underlying implementation of HTTP Client. Is that OK? The old test was able to handle it "case insensitively".
+				var metadata = await destination.GetMetadataForAsync("empty.test");
+                
                 Assert.Equal("true", metadata.Value<string>("Should-Be-Transferred"));
+                
+                var ms = new MemoryStream();
+                downloaded.CopyTo(ms);
+
 				Assert.Equal(0, ms.Length);
 			}
 		}
@@ -735,12 +727,12 @@ namespace RavenFS.Tests.Synchronization
 			report = await source.Synchronization.StartAsync("test.bin", destination);
 			Assert.Null(report.Exception);
 
-			var destContent = new MemoryStream();
-			var destMetadata = await destination.DownloadAsync("test.bin", destContent);
+			var destContent = await destination.DownloadAsync("test.bin");
+			var destMetadata = await destination.GetMetadataForAsync("test.bin");
 
 			Assert.True(destMetadata[SynchronizationConstants.RavenDeleteMarker] == null, "Metadata should not containt Raven-Delete-Marker");
 
-			sourceContent.Position = destContent.Position = 0;
+			sourceContent.Position = 0;
 			Assert.Equal(sourceContent.GetMD5Hash(), destContent.GetMD5Hash());
 		}
 

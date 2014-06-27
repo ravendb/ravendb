@@ -66,9 +66,7 @@ namespace RavenFS.Tests.Auth
             var client = NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
             await client.UploadAsync("/dir/abc.txt", ms);
 
-            var stream = new MemoryStream();
-
-            await client.DownloadAsync("/dir/abc.txt", stream);
+            var stream = await client.DownloadAsync("/dir/abc.txt");
             Assert.Equal(expected, StreamToString(stream));
 
             await client.RenameAsync("/dir/abc.txt", "/dir/cba.txt");

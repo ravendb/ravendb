@@ -44,11 +44,8 @@ namespace RavenFS.Tests.Shard
             ms.Position = 0;
             var newFileName = await shardedClient.UploadAsync("abc.txt", ms);
 
-            var ms2 = new MemoryStream();
-            await shardedClient.DownloadAsync(newFileName, ms2);
-
-            ms2.Position = 0;
-
+            var ms2 = await shardedClient.DownloadAsync(newFileName);
+          
             var actual = new StreamReader(ms2).ReadToEnd();
             Assert.Equal(expected, actual);
 		}

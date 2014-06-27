@@ -114,6 +114,7 @@
     <Compile Include="Document\ResponseTimeInformation.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
+    <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
     <Compile Include="FileSystem\Changes\FilesConnectionState.cs" />

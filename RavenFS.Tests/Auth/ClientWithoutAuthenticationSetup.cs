@@ -34,7 +34,7 @@ namespace RavenFS.Tests.Auth
                 await client.UploadAsync("a", new MemoryStream(new byte[] { 1, 2 }));
 
                 var ms = new MemoryStream();
-                await client.DownloadAsync("a", ms);
+                (await client.DownloadAsync("a")).CopyTo(ms);
 
                 var array = ms.ToArray();
                 Assert.Equal(1, array[0]);

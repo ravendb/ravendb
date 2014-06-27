@@ -43,7 +43,7 @@ namespace Raven.Client.FileSystem.Impl
                            .ContinueWith(x => { pipe.CompleteWriting(); })
                            .ConfigureAwait(false);
 
-            await commands.UploadAsync(Path, Metadata, pipe, Size, null)
+            await commands.UploadAsync(Path, pipe, Metadata, Size, null)
                           .ConfigureAwait(false);
         }
     }

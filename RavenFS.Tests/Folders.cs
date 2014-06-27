@@ -67,8 +67,8 @@ namespace RavenFS.Tests
             ms.Position = 0;
             await client.UploadAsync("test/ab/c.txt", ms);
 
-            var downloadStream = new MemoryStream();
-            await client.DownloadAsync("test/ab/c.txt", downloadStream);
+            new MemoryStream();
+            var downloadStream = await client.DownloadAsync("test/ab/c.txt");
 
             Assert.Equal(expected, StreamToString(downloadStream));
         }
@@ -88,9 +88,7 @@ namespace RavenFS.Tests
             ms.Position = 0;
             await client.UploadAsync("test/something.txt", ms);
 
-            var downloadStream = new MemoryStream();
-            await client.DownloadAsync("test/ab/c.txt", downloadStream);
-
+            var downloadStream = await client.DownloadAsync("test/ab/c.txt");
             Assert.Equal(expected, StreamToString(downloadStream));
         }
 
@@ -110,36 +108,35 @@ namespace RavenFS.Tests
 
 
 		[Fact]
-		public void CanRename()
+		public async void CanRename()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
-			client.UploadAsync("test/abc.txt", ms).Wait();
+			await client.UploadAsync("test/abc.txt", ms);
 
-			client.RenameAsync("test/abc.txt", "test2/abc.txt").Wait();
+			await client.RenameAsync("test/abc.txt", "test2/abc.txt");
 
-			client.DownloadAsync("test2/abc.txt", new MemoryStream()).Wait();// would thorw if missing
+			await client.DownloadAsync("test2/abc.txt");// would throw if missing
 		}
 
 
 
 		[Fact]
-		public void AfterRename_OldFolderIsGoneAndWeHaveNewOne()
+		public async void AfterRename_OldFolderIsGoneAndWeHaveNewOne()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
-			client.UploadAsync("test/abc.txt", ms).Wait();
+			await client.UploadAsync("test/abc.txt", ms);
 
-			Assert.Contains("/test", client.GetDirectoriesAsync().Result);
+			Assert.Contains("/test", await client.GetDirectoriesAsync());
 
-			client.RenameAsync("test/abc.txt", "test2/abc.txt").Wait();
+			await client.RenameAsync("test/abc.txt", "test2/abc.txt");
 
-			client.DownloadAsync("test2/abc.txt", new MemoryStream()).Wait();// would thorw if missing
+			await client.DownloadAsync("test2/abc.txt");// would throw if missing
 
-			Assert.DoesNotContain("/test", client.GetDirectoriesAsync().Result);
+			Assert.DoesNotContain("/test", await client.GetDirectoriesAsync());
 
-			Assert.Contains("/test2", client.GetDirectoriesAsync().Result);
-
+			Assert.Contains("/test2", await client.GetDirectoriesAsync());
 		}
 
 		[Fact]

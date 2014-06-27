@@ -18,19 +18,19 @@ namespace RavenFS.Tests.Bugs
 			streamWriter.Flush();
 			ms.Position = 0;
 
-            client.UploadAsync("abc.txt", new RavenJObject(), ms).Wait();
+            client.UploadAsync("abc.txt", ms, new RavenJObject()).Wait();
 
 			ms.Position = 0;
-            client.UploadAsync("CorelVBAManual.PDF", new RavenJObject
+            client.UploadAsync("CorelVBAManual.PDF", ms, new RavenJObject
 			{
 				{"Filename", "CorelVBAManual.PDF"}
-			}, ms).Wait();
+			}).Wait();
 
 			ms.Position = 0;
-            client.UploadAsync("TortoiseSVN-1.7.0.22068-x64-svn-1.7.0.msi", new RavenJObject
+            client.UploadAsync("TortoiseSVN-1.7.0.22068-x64-svn-1.7.0.msi", ms, new RavenJObject
 			{
 				{"Filename", "TortoiseSVN-1.7.0.22068-x64-svn-1.7.0.msi"}
-			}, ms).Wait();
+			}).Wait();
 
 
 			var fileInfos = client.SearchAsync("Filename:corelVBAManual.PDF").Result;
@@ -55,17 +55,17 @@ namespace RavenFS.Tests.Bugs
 			for (int i = 0; i < 3; i++)
 			{
 				ms.Position = 0;
-                await client.UploadAsync("CorelVBAManual.PDF", new RavenJObject
+                await client.UploadAsync("CorelVBAManual.PDF", ms, new RavenJObject
 				                                            {
 					                                            {"Filename", "CorelVBAManual.PDF"}
-				                                            }, ms);
+				                                            });
 			}
 
 			ms.Position = 0;
-            await client.UploadAsync("TortoiseSVN-1.7.0.22068-x64-svn-1.7.0.msi", new RavenJObject
+            await client.UploadAsync("TortoiseSVN-1.7.0.22068-x64-svn-1.7.0.msi", ms, new RavenJObject
 			                                                                {
 				                                                                {"Filename", "TortoiseSVN-1.7.0.22068-x64-svn-1.7.0.msi"}
-			                                                                }, ms);
+			                                                                });
 
 
 			var fileInfos = await client.SearchAsync("Filename:corelVBAManual.PDF");
@@ -87,10 +87,10 @@ namespace RavenFS.Tests.Bugs
 			ms.Position = 0;
 
 			const string filename = "10 jQuery Transition Effects/Moving Elements with Style - DevSnippets.txt";
-            client.UploadAsync(filename, new RavenJObject
+            client.UploadAsync(filename, ms, new RavenJObject
 			{
 				{"Item", "10"}
-			}, ms).Wait();
+			}).Wait();
 
 
 			var fileInfos = client.SearchAsync("Item:10*").Result;

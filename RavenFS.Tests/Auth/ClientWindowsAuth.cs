@@ -67,9 +67,7 @@ namespace RavenFS.Tests.Auth
 
             await client.UploadAsync("/dir/ms.bin", ms);
 
-            var result = new MemoryStream();
-
-            await client.DownloadAsync("/dir/ms.bin", result);
+            var result = await client.DownloadAsync("/dir/ms.bin");
 
             ms.Position = 0;
             result.Position = 0;
