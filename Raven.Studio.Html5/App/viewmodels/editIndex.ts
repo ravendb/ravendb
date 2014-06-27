@@ -38,6 +38,7 @@ class editIndex extends viewModelBase {
     indexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
+    loadedIndex: indexDefinition;
     
     constructor() {
         super();
@@ -52,17 +53,17 @@ class editIndex extends viewModelBase {
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
-        this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : null);
+        this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
     }
     
     canActivate(indexToEditName: string) {
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
-            this.fetchIndexToEdit(indexToEditName)
-                .done(()=> canActivateResult.resolve({ can: true }))
+            this.fetchIndexData(indexToEditName)
+                .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(indexToEditName) + " index", null));
-                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase() )});
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) });
                 });
 
             return canActivateResult;
@@ -126,7 +127,6 @@ class editIndex extends viewModelBase {
 
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
-        this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
@@ -155,16 +155,21 @@ class editIndex extends viewModelBase {
         });
     }
 
-    fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
+    private fetchIndexData(indexName: string): JQueryPromise<any> {
+        return $.when(this.fetchIndexToEdit(indexName), this.fetchIndexPriority(indexName));
+    }
+
+    private fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done((results: indexDefinitionContainerDto) => {
                 this.editedIndex(new indexDefinition(results.Index));
+                this.loadedIndex = new indexDefinition(results.Index);
                 this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
         });
     }
 
-    fetchIndexPriority(indexName: string) {
+    private fetchIndexPriority(indexName: string) {
         new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => {
@@ -190,6 +195,8 @@ class editIndex extends viewModelBase {
                 .done(() => {
                     viewModelBase.dirtyFlag().reset(); // Resync Changes
 
+                    this.loadedIndex = new indexDefinition(index);
+
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
@@ -207,27 +214,26 @@ class editIndex extends viewModelBase {
     refreshIndex() {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
         canContinue.done(() => {
-        var existingIndex = this.editedIndex();
-        var existingIndexName = "";
-        if (existingIndex) {
-            this.editedIndex(null);
-            existingIndexName = existingIndex.name();
+            var existingIndex = this.editedIndex();
+            var existingIndexName = "";
+            if (existingIndex) {
+                this.editedIndex(null);
+                existingIndexName = existingIndex.name();
 
-            this.fetchIndexToEdit(existingIndexName)
-                .done(()=> {
-                    this.editExistingIndex(existingIndexName);
+                this.fetchIndexData(existingIndexName)
+                    .done(()=> {
+                        this.editExistingIndex(existingIndexName);
                     
+                        viewModelBase.dirtyFlag().reset();
+                        if (existingIndexName.length > 0)
+                            this.updateUrl(existingIndexName);
+                    }).fail(() => this.editedIndex(existingIndex));
 
-                    viewModelBase.dirtyFlag().reset();
-                    if (existingIndexName.length > 0)
-                        this.updateUrl(existingIndexName);
-                }).fail(() => this.editedIndex(existingIndex));
-
-        } else {
-                viewModelBase.dirtyFlag().reset(); // Resync Changes
-            if (existingIndexName.length > 0)
-                this.updateUrl(existingIndexName);
-        }
+            } else {
+                    viewModelBase.dirtyFlag().reset(); // Resync Changes
+                if (existingIndexName.length > 0)
+                    this.updateUrl(existingIndexName);
+            }
         });
     }
 
@@ -337,8 +343,9 @@ class editIndex extends viewModelBase {
         app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 
-
-    
+    createCSharpCode() {
+        //app.showDialog()
+    }
 }
 
 export = editIndex; 
