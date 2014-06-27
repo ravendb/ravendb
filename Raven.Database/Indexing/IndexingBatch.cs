@@ -20,18 +20,12 @@ namespace Raven.Database.Indexing
 		public readonly List<bool> SkipDeleteFromIndex;
 		public DateTime? DateTime;
 		public readonly Etag HighestEtagBeforeFiltering;
-		public Etag HighestEtagAfterFiltering { get; private set; }
 
 		public void Add(JsonDocument doc, object asJson, bool skipDeleteFromIndex)
 		{
 			Ids.Add(doc.Key);
 			Docs.Add(asJson);
             SkipDeleteFromIndex.Add(skipDeleteFromIndex);
-
-			if (HighestEtagAfterFiltering == null)
-				HighestEtagAfterFiltering = doc.Etag;
-			else if (EtagUtil.IsGreaterThan(doc.Etag, HighestEtagAfterFiltering))
-				HighestEtagAfterFiltering = doc.Etag;
 		}
 	}
 }

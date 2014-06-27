@@ -370,7 +370,7 @@ namespace Raven.Database.Indexing
         /// <summary>
         /// For index recovery purposes
         /// </summary>
-        internal void RemoveDirectlyFromIndex(string[] keys)
+        internal void RemoveDirectlyFromIndex(string[] keys, Etag lastEtag)
         {
             Write((writer, analyzer, stats) =>
             {
@@ -378,7 +378,7 @@ namespace Raven.Database.Indexing
 
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
 
-                return new IndexedItemsInfo(GetLastEtagFromStats()) // just commit, don't create commit point and add any infor about deleted keys
+				return new IndexedItemsInfo(lastEtag) // just commit, don't create commit point and add any infor about deleted keys
                 {
                     ChangedDocs = keys.Length,
 					DisableCommitPoint = true
