@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.FileSystem.Shard
 {
@@ -285,10 +286,10 @@ namespace Raven.Client.FileSystem.Shard
 		}
 
 
-        public async Task<Stream> DownloadAsync(string filename, long? from = null, long? to = null)
+        public async Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
         {
             var client = TryGetClintFromFileName(filename);
-            return await client.DownloadAsync(filename, from, to);
+            return await client.DownloadAsync(filename, metadataRef, from, to);
         }
 
         public Task<string> UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null)
