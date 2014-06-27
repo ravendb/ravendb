@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
@@ -66,14 +67,13 @@ namespace Raven.Client.FileSystem
         Task RenameAsync(string currentName, string newName);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
-        RavenJObject GetMetadataForLastDownload(string filename);
 
         Task UpdateMetadataAsync(string filename, RavenJObject metadata);
 
         Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null);
         Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null);
 
-        Task<Stream> DownloadAsync(string filename, long? from = null, long? to = null);
+        Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
         Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25);
 

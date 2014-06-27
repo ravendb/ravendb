@@ -52,7 +52,7 @@ namespace RavenFS.Tests
             Assert.Equal(size, files.First().TotalSize);
 
             var downloadData = new MemoryStream();
-            (await client.DownloadAsync("mb.bin", skip)).CopyTo(downloadData);
+            (await client.DownloadAsync("mb.bin", null, skip)).CopyTo(downloadData);
 
             var expected = buffer.Skip(skip).ToArray();
             Assert.Equal(expected.Length, downloadData.Length);
