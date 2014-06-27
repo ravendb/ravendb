@@ -12,12 +12,21 @@ namespace Raven.Abstractions.Connection
 	{
 		public int? RequestTimeoutInMs { get; set; }
 
+		public bool? AllowWriteStreamBuffering { get; set; }
+
 		readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
 
-		public void ConfigureRequest(RavenConnectionStringOptions options, WebRequest request)
+		public void ConfigureRequest(RavenConnectionStringOptions options, HttpWebRequest request)
 		{
 			if (RequestTimeoutInMs.HasValue)
 				request.Timeout = RequestTimeoutInMs.Value;
+
+			if (AllowWriteStreamBuffering.HasValue)
+			{
+				request.AllowWriteStreamBuffering = AllowWriteStreamBuffering.Value;
+				if(AllowWriteStreamBuffering.Value == false)
+					request.SendChunked = true;
+			}
 
 			if (options.ApiKey == null)
 			{
