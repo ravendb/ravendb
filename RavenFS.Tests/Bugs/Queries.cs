@@ -35,7 +35,7 @@ namespace RavenFS.Tests.Bugs
 
 			var fileInfos = client.SearchAsync("Filename:corelVBAManual.PDF").Result;
 
-			Assert.Equal(1, fileInfos.Files.Length);
+            Assert.Equal(1, fileInfos.Files.Count);
 			Assert.Equal("CorelVBAManual.PDF", fileInfos.Files[0].Name);
 		}
 
@@ -70,7 +70,7 @@ namespace RavenFS.Tests.Bugs
 
 			var fileInfos = await client.SearchAsync("Filename:corelVBAManual.PDF");
 
-			Assert.Equal(1, fileInfos.Files.Length);
+            Assert.Equal(1, fileInfos.Files.Count);
 			Assert.Equal("CorelVBAManual.PDF", fileInfos.Files[0].Name);
 		}
 
@@ -95,7 +95,7 @@ namespace RavenFS.Tests.Bugs
 
 			var fileInfos = client.SearchAsync("Item:10*").Result;
 
-			Assert.Equal(1, fileInfos.Files.Length);
+            Assert.Equal(1, fileInfos.Files.Count);
 			Assert.Equal("/" + filename, fileInfos.Files[0].Name);
 		}
 	}

@@ -11,56 +11,82 @@ namespace Raven.Abstractions.FileSystem
 {
     public class FileHeader
     {
-        public RavenJObject Metadata { get; private set; }
+        public RavenJObject Metadata { get; set; }
 
         public string Name { get; set; }
         public long? TotalSize { get; set; }
+        public long UploadedSize { get; set; }
 
-        public string Path { get; private set; }
-        public string Extension { get; private set; }
+        public DateTimeOffset LastModified
+        {
+            get
+            {
+                var lastModified = new DateTimeOffset();
+                if (this.Metadata.Keys.Contains("Last-Modified"))
+                {
+                    lastModified = this.Metadata["Last-Modified"].Value<DateTimeOffset>();
+                }
+                return lastModified;
+            }
+        }
 
-        public DateTimeOffset CreationDate { get; private set; }
+        public DateTimeOffset CreationDate
+        {
+            get
+            {
+                var creationDate = new DateTimeOffset();
+                if (this.Metadata.Keys.Contains("Creation-Date"))
+                {
+                    creationDate = this.Metadata["Creation-Date"].Value<DateTimeOffset>();
+                }
+                return creationDate;
+            }
+        }
 
-        public DateTimeOffset LastModified { get; private set; }
+        public Etag Etag
+        {
+            get
+            {
+                Etag parsedEtag = null;
+                if (this.Metadata.Keys.Contains("ETag"))
+                {
+                    Etag.TryParse(this.Metadata["ETag"].Value<string>(), out parsedEtag);
+                }
 
-        public Etag Etag { get; private set; }
+                return parsedEtag;
+            }
+        }
+
+        public string Extension
+        {
+            get
+            {
+                return System.IO.Path.GetExtension(this.Name);
+            }
+        }
+
+        public string Path
+        {
+            get
+            {
+                return System.IO.Path.GetDirectoryName(this.Name);
+            }
+        }
 
         public FileHeader( string name, RavenJObject metadata )
         {
-            this.Extension = System.IO.Path.GetExtension(name);
-            this.Path = System.IO.Path.GetDirectoryName(name);
             this.Name = name;
             this.Metadata = metadata;
             
-            if (this.TotalSize <= 0 || metadata.Keys.Contains("RavenFS-Size"))
+            if (this.TotalSize.HasValue && (this.TotalSize <= 0 || metadata.Keys.Contains("RavenFS-Size")))
             {
                 this.TotalSize = metadata["RavenFS-Size"].Value<long>();
-            }
-            
-            Etag parsedEtag = new Etag();
-            if (metadata.Keys.Contains("ETag"))
-            {
-                if (Etag.TryParse(metadata["ETag"].Value<string>(), out parsedEtag))
-                    this.Etag = parsedEtag;
-            }
-
-            this.LastModified = new DateTimeOffset();
-            if (metadata.Keys.Contains("Last-Modified"))
-            {
-                this.LastModified = metadata["Last-Modified"].Value<DateTimeOffset>();
-            }
-
-            this.CreationDate = new DateTimeOffset();
-            if (metadata.Keys.Contains("Creation-Date"))
-            {
-                this.CreationDate = metadata["Creation-Date"].Value<DateTimeOffset>();
+                this.UploadedSize = this.TotalSize.HasValue ? this.TotalSize.Value : 0;
             }
         }
 
-        protected FileHeader()
-        {
-
-        }
+        public FileHeader()
+        {}
 
         public string HumaneTotalSize
         {
@@ -88,6 +114,36 @@ namespace Raven.Abstractions.FileSystem
             if (absSize > KB)
                 return string.Format("{0:#,#.##} KBytes", size / KB);
             return string.Format("{0:#,#} Bytes", size);
+        }
+
+        public bool IsFileBeingUploadedOrUploadHasBeenBroken()
+        {
+            return TotalSize == null || TotalSize != UploadedSize || (Metadata[SynchronizationConstants.RavenDeleteMarker] == null && Metadata["Content-MD5"] == null);
+        }
+
+        protected bool Equals(FileHeader other)
+        {
+            return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Equals(Metadata, other.Metadata);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((FileHeader)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Name != null ? Name.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ TotalSize.GetHashCode();
+                hashCode = (hashCode * 397) ^ UploadedSize.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Metadata != null ? Metadata.GetHashCode() : 0);
+                return hashCode;
+            }
         }
     }
 

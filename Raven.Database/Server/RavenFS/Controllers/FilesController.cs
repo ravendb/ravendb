@@ -36,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             int results;
             var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
 
-            var list = new List<FileHeaderInformation>();
+            var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
             return this.GetMessageWithObject(list, HttpStatusCode.OK)
@@ -172,7 +172,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             var ravenPaths = fileNames.Where(x => x != null).Select(x => RavenFileNameHelper.RavenPath(x));
 
-            var list = new List<FileHeaderInformation>();
+            var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
 
             return this.GetMessageWithObject(list, HttpStatusCode.OK)

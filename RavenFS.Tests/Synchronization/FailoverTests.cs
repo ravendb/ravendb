@@ -32,13 +32,13 @@ namespace RavenFS.Tests.Synchronization
 			
 			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(1, destinationFiles.FileCount);
-			Assert.Equal(1, destinationFiles.Files.Length);
+            Assert.Equal(1, destinationFiles.Files.Count);
 
 			var server = GetServer(0);
 			server.Dispose();
 			var fileFromSync = await sourceClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(1, fileFromSync.FileCount);
-			Assert.Equal(1, fileFromSync.Files.Length);
+            Assert.Equal(1, fileFromSync.Files.Count);
 		}
 	}
 }

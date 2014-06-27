@@ -23,6 +23,7 @@ using Raven.Json.Linq;
 using Voron;
 using Voron.Impl;
 using System.Diagnostics;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
@@ -199,7 +200,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return result.Reader.Length;
         }
 
-        public FileHeaderInformation ReadFile(string filename)
+        public FileHeader ReadFile(string filename)
         {
             var key = CreateKey(filename);
 
@@ -262,7 +263,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         }
 
 
-        public IEnumerable<FileHeaderInformation> ReadFiles(int start, int size)
+        public IEnumerable<FileHeader> ReadFiles(int start, int size)
         {
             using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
             {
@@ -285,7 +286,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
         }
 
-        public IEnumerable<FileHeaderInformation> GetFilesAfter(Guid etag, int take)
+        public IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take)
         {
             var key = CreateKey(etag);
 
@@ -826,12 +827,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             };
         }
 
-        private static FileHeaderInformation ConvertToFile(RavenJObject file)
+        private static FileHeader ConvertToFile(RavenJObject file)
         {
             var metadata = (RavenJObject)file["metadata"];
             metadata["ETag"] = file["etag"];
 
-            return new FileHeaderInformation
+            return new FileHeader
                    {
                        Name = file.Value<string>("name"),
                        TotalSize = file.Value<long?>("total_size"),

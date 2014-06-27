@@ -266,15 +266,15 @@ namespace Raven.Client.FileSystem.Shard
 					files.AddRange(item.Files);
 
 				result.FileCount++;
-				result.Files = files.ToArray();
+                result.Files = files;
 				result.PageSize = pageSize;
 				result.Start = 0; //TODO: update start
 			}
 
 			pagingInfo.SetPagingInfo(indexes);
 
-			result.Files = result.Files.Where(info => info != null).ToArray();
-			result.FileCount = result.Files.Length;
+            result.Files = result.Files.Where(info => info != null).ToList();
+			result.FileCount = result.Files.Count;
 			return result;
 		}
 
@@ -425,7 +425,7 @@ namespace Raven.Client.FileSystem.Shard
 			return new SearchResults
 			{
 				FileCount = 1,
-				Files = new[] { smallest }
+				Files = new List<FileHeader> { smallest }
 			};
 		}
 

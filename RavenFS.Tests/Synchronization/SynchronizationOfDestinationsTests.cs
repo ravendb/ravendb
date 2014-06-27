@@ -136,7 +136,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(2, destinationFiles.FileCount);
-			Assert.Equal(2, destinationFiles.Files.Length);
+            Assert.Equal(2, destinationFiles.Files.Count);
 			Assert.NotEqual(destinationFiles.Files[0].Name, destinationFiles.Files[1].Name);
 			Assert.True(destinationFiles.Files[0].Name == "test1.bin" || destinationFiles.Files[0].Name == "test2.bin");
 			Assert.True(destinationFiles.Files[1].Name == "test1.bin" || destinationFiles.Files[1].Name == "test2.bin");
