@@ -317,6 +317,13 @@ class ctor {
             if (customConfig) {
                 return customConfig.header();
             }
+        } else {
+            var columns = this.settings.customColumns().columns();
+            for(var i=0; i < columns.length; i++) {
+                if (columns[i].binding() === binding) {
+                    return columns[i].header();
+                }
+            }
         }
         return binding;
     }
