@@ -255,40 +255,45 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public IAsyncFilesSession OpenAsyncSession()
+        public virtual IAsyncFilesSession OpenAsyncSession()
         {
-            throw new NotImplementedException();
+            return OpenAsyncSession(
+                        new OpenFilesSessionOptions
+                        {
+                            FileSystem = this.DefaultFileSystem
+                        });
         }
 
-        public IAsyncFilesSession OpenAsyncSession(string filesystem)
+        public virtual IAsyncFilesSession OpenAsyncSession(string filesystem)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(filesystem))
+                throw new ArgumentException("Filesystem cannot be null, empty or whitespace.", "filesystem");
+
+            return OpenAsyncSession(
+                    new OpenFilesSessionOptions
+                    {
+                        FileSystem = filesystem
+                    });
         }
 
-        public virtual IFilesSession OpenSession()
+        public IAsyncFilesSession OpenAsyncSession(OpenFilesSessionOptions sessionOptions)
         {
-            return OpenSession(new OpenFilesSessionOptions());
-        }
-
-        public virtual IFilesSession OpenSession(string filesystem)
-        {
-            return OpenSession(new OpenFilesSessionOptions
-            {
-                FileSystem = filesystem
-            });
-        }
-
-        public virtual IFilesSession OpenSession(OpenFilesSessionOptions sessionOptions)
-        {
+            AssertInitialized();
             EnsureNotClosed();
+
+            if (string.IsNullOrWhiteSpace(sessionOptions.FileSystem))
+                throw new ArgumentException("Filesystem cannot be null, empty or whitespace.", "FileSystem");
+
 
             var sessionId = Guid.NewGuid();
             currentSessionId = sessionId;
             try
             {
+                var client = new AsyncFilesServerClient( this.Url, sessionOptions.FileSystem, sessionOptions.Credentials, sessionOptions.ApiKey );
 
-                // TODO: Implement FileSession creation. 
-                throw new NotImplementedException();
+                var session = new AsyncFilesSession(this, client, this.Listeners, sessionId);
+                AfterSessionCreated(session);
+                return session;
             }
             finally
             {
@@ -296,19 +301,31 @@ namespace Raven.Client.FileSystem
             }
         }
 
+
+        private static IAsyncFilesCommands SetupCommandsAsync(IAsyncFilesCommands filesCommands, OpenFilesSessionOptions options)
+        {
+            if (string.IsNullOrWhiteSpace(options.FileSystem))
+                throw new ArgumentException("Filesystem cannot be null, empty or whitespace.", "FileSystem");
+
+            filesCommands = filesCommands.ForFileSystem(options.FileSystem);
+            if (options.Credentials != null)
+                filesCommands = filesCommands.With(options.Credentials);
+            
+            return filesCommands;
+        }
+
+
+
         public FilesSessionListeners Listeners
         {
             get 
             {
-                throw new NotImplementedException();        
-                //return listeners; 
+                return listeners; 
             }
         }
         public void SetListeners(FilesSessionListeners newListeners)
         {
-            this.listeners = newListeners;
-
-            throw new NotImplementedException();            
+            this.listeners = newListeners;         
         }
 
 
@@ -322,6 +339,16 @@ namespace Raven.Client.FileSystem
         {
             if (!initialized)
                 throw new InvalidOperationException("You cannot open a session or access the files commands before initializing the files store. Did you forget calling Initialize()?");
+        }
+
+        ///<summary>
+        /// Internal notification for integration tools, mainly
+        ///</summary>
+        public event Action<InMemoryFilesSessionOperations> SessionCreatedInternal = x => { };
+
+        protected virtual void AfterSessionCreated(InMemoryFilesSessionOperations session)
+        {
+            SessionCreatedInternal(session);
         }
 
 
@@ -370,5 +397,8 @@ namespace Raven.Client.FileSystem
             WasDisposed = true;
             AfterDispose(this, EventArgs.Empty);
         }
+
+
+
     }
 }

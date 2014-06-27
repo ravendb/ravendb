@@ -66,14 +66,12 @@ namespace RavenFS.Tests.Auth
             var client = NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
             await client.UploadAsync("/dir/abc.txt", ms);
 
-            var stream = new MemoryStream();
-
-            await client.DownloadAsync("/dir/abc.txt", stream);
+            var stream = await client.DownloadAsync("/dir/abc.txt");
             Assert.Equal(expected, StreamToString(stream));
 
             await client.RenameAsync("/dir/abc.txt", "/dir/cba.txt");
 
-            var searchResults = await client.GetFilesFromAsync("/dir");
+            var searchResults = await client.SearchOnDirectoryAsync("/dir");
 
             Assert.Equal(1, searchResults.FileCount);
 
@@ -81,7 +79,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.NotNull(metadata);
 
-            var folders = await client.GetFoldersAsync();
+            var folders = await client.GetDirectoriesAsync();
 
             Assert.Equal(1, folders.Length);
 

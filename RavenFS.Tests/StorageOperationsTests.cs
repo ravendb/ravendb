@@ -81,7 +81,7 @@ namespace RavenFS.Tests
 
             await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
-            var searchResults = await client.GetFilesFromAsync("/");
+            var searchResults = await client.SearchOnDirectoryAsync("/");
 
 			Assert.Equal(0, searchResults.FileCount);
 			Assert.Equal(0, searchResults.Files.Count());
@@ -233,7 +233,7 @@ namespace RavenFS.Tests
 
 			Assert.NotNull(renamedMetadata);
 
-			var results = client.GetFilesFromAsync("/").Result; // make sure that indexes are updated
+			var results = client.SearchOnDirectoryAsync("/").Result; // make sure that indexes are updated
 
 			Assert.Equal(1, results.FileCount);
 			Assert.Equal(rename, results.Files[0].Name);

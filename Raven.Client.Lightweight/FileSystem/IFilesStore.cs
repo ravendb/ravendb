@@ -63,26 +63,11 @@ namespace Raven.Client.FileSystem
         /// <returns></returns>
         IAsyncFilesSession OpenAsyncSession(string filesystem);
 
-#if !NETFX_CORE
-
         /// <summary>
-        /// Opens the session.
+        /// Opens the async session.
         /// </summary>
         /// <returns></returns>
-        IFilesSession OpenSession();
-
-        /// <summary>
-        /// Opens the session for a particular filesystem
-        /// </summary>
-        IFilesSession OpenSession(string filesystem);
-
-        /// <summary>
-        /// Opens the session with the specified options.
-        /// </summary>
-        IFilesSession OpenSession(OpenFilesSessionOptions sessionOptions);
-
-
-#endif
+        IAsyncFilesSession OpenAsyncSession(OpenFilesSessionOptions sessionOptions);
 
         /// <summary>
         /// Gets the conventions.
