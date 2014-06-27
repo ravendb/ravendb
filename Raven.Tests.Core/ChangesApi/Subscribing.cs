@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System.Net.WebSockets;
+using System.Text;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Replication;
@@ -182,6 +184,27 @@ namespace Raven.Tests.Core.ChangesApi
                 source.Replication.WaitAsync(eTag, replicas: 1).Wait();
 
                 WaitUntilOutput("conflict");
+            }
+        }
+
+        [Fact]
+        public async Task Can_connect_via_websockets_and_receive_heartbeat()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var clientWebSocket = new ClientWebSocket())
+                {
+                    string url = store.Url.Replace("http:", "ws:");
+                    url = url + "/changes/websocket?id=" + Guid.NewGuid();
+                    await clientWebSocket.ConnectAsync(new Uri(url), CancellationToken.None);
+
+                    var buffer = new byte[1024];
+                    WebSocketReceiveResult result =
+                        await clientWebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    var x = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+                    Assert.Contains("Heartbeat", x);
+                }
             }
         }
     }
