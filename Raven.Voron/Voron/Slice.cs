@@ -5,6 +5,8 @@ using Voron.Trees;
 
 namespace Voron
 {
+	using System.Runtime.CompilerServices;
+
 	public sealed unsafe class Slice : MemorySlice
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
@@ -128,21 +130,6 @@ namespace Voron
 				return Encoding.UTF8.GetString(Array,0, Size);
 
 			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
-		}
-
-		public IDisposable GetPointer(out byte* ptr)
-		{
-			if (Array != null)
-			{
-				fixed (byte* a = Array)
-				{
-					ptr = a;
-				}
-			}
-
-			ptr = Pointer;
-
-			return null;
 		}
 
 		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)
@@ -290,6 +277,7 @@ namespace Voron
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void Set(byte* p, ushort size)
 		{
 			Pointer = p;
@@ -298,9 +286,13 @@ namespace Voron
 			Array = null;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public override void Set(NodeHeader* node)
 		{
-			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
+			Pointer = (byte*) node + Constants.NodeHeaderSize;
+			Size = node->KeySize;
+			KeyLength = node->KeySize;
+			Array = null;
 		}
 	}
 }

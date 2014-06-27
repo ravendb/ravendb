@@ -324,7 +324,7 @@ namespace Voron.Trees
 	        bool rightmostPage = true;
 	        bool leftmostPage = true;
 
-	        while (p.Flags.HasFlag(PageFlags.Branch))
+	        while (p.Flags == PageFlags.Branch)
 	        {
 	            int nodePos;
 	            if (key.Options == SliceOptions.BeforeAllKeys)

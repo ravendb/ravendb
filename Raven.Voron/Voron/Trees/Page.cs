@@ -9,7 +9,9 @@ using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
-    public unsafe class Page
+	using System.Runtime.CompilerServices;
+
+	public unsafe class Page
     {
 	    public const byte PrefixCount = 8;
         private readonly byte* _base;
@@ -17,7 +19,7 @@ namespace Voron.Trees
 
 	    public readonly string Source;
 	    private readonly ushort _pageSize;
-	    private bool _keysPrefixed;
+	    private bool _keysPrefixed = false;
 
 	    public int LastMatch;
 	    public int LastSearchPosition;
@@ -29,20 +31,11 @@ namespace Voron.Trees
             _header = (PageHeader*)b;
 	        Source = source;
 	        _pageSize = pageSize;
-	        _keysPrefixed = Flags.HasFlag(PageFlags.KeysPrefixed);
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
 
-	    public PageFlags Flags
-	    {
-		    get { return _header->Flags; }
-		    set
-		    {
-			    _header->Flags = value;
-				_keysPrefixed = value.HasFlag(PageFlags.KeysPrefixed);
-		    }
-	    }
+	    public PageFlags Flags { get { return _header->Flags; } set {_header->Flags = value; } }
 
         public ushort Lower { get { return _header->Lower; } set { _header->Lower = value; } }
 
@@ -52,7 +45,7 @@ namespace Voron.Trees
 
 		private ushort* PrefixOffsets { get { throw new NotImplementedException("TODO arek");} }
 
-		private byte NextPrefixId { get { return _header->NextPrefixId; } set { _header->NextPrefixId = value; }}
+		private byte NextPrefixId { get { throw new NotImplementedException("TODO arek"); } set { throw new NotImplementedException("TODO arek"); } }
 
 		public ushort PageSize { get { return _pageSize; } }
 
@@ -151,17 +144,17 @@ namespace Voron.Trees
 
 	    public bool IsLeaf
         {
-            get { return _header->Flags.HasFlag(PageFlags.Leaf); }
+            get { return _header->Flags == PageFlags.Leaf; }
         }
 
         public bool IsBranch
         {
-            get { return _header->Flags.HasFlag(PageFlags.Branch); }
+            get { return _header->Flags == PageFlags.Branch; }
         }
 
 		public bool IsOverflow
 		{
-			get { return _header->Flags.HasFlag(PageFlags.Overflow); }
+			get { return _header->Flags == PageFlags.Overflow; }
 		}
 
         public ushort NumberOfEntries
@@ -684,6 +677,7 @@ namespace Voron.Trees
             get { return GetNodeKey(i).ToString(); }
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    public MemorySlice GetNodeKey(NodeHeader* node, MemorySlice sliceInstance = null)
 	    {
 			if (_keysPrefixed == false)
