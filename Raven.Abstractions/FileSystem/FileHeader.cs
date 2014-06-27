@@ -29,7 +29,7 @@ namespace Raven.Abstractions.FileSystem
         {
             this.Extension = System.IO.Path.GetExtension(name);
             this.Path = System.IO.Path.GetDirectoryName(name);
-            this.Name = System.IO.Path.GetFileName(name);
+            this.Name = name;
             this.Metadata = metadata;
             
             if (this.TotalSize <= 0 || metadata.Keys.Contains("RavenFS-Size"))

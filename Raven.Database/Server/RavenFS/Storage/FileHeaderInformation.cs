@@ -28,7 +28,7 @@ namespace Raven.Database.Server.RavenFS.Storage
             get 
             {
                 var lastModified = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains("Creation-Date")) 
+                if (this.Metadata.Keys.Contains("Last-Modified")) 
                 {
                     lastModified = this.Metadata["Last-Modified"].Value<DateTimeOffset>(); 
                 }
