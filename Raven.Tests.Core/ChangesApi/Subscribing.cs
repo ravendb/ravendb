@@ -201,9 +201,9 @@ namespace Raven.Tests.Core.ChangesApi
                     var buffer = new byte[1024];
                     WebSocketReceiveResult result =
                         await clientWebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    var x = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                    Assert.Contains("Heartbeat", x);
+                    Assert.Contains("Heartbeat", message);
                 }
             }
         }
