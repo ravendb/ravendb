@@ -28,7 +28,7 @@ class synchronizationConflicts extends viewModelBase {
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
 
         // treat notifications events
-        this.conflictsSubscription = shell.currentReourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => {
+        this.conflictsSubscription = shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => {
             if (e.FileSystemName === this.activeFilesystem().name) {
                 switch (e.Status) {
                 case conflictStatus.Detected:

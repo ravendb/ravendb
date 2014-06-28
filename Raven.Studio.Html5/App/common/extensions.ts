@@ -30,6 +30,8 @@ declare class EventSource {
     close();
     onerror: (event: any) => void;
     onmessage: (event: any) => void;
+    onopen: (event: any) => void;
+    readyState: number;
 }
 
 

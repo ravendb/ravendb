@@ -82,7 +82,7 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
 
     static globalChangesApi: changesApi;
-    static currentReourceChangesApi = ko.observable<changesApi>(null);
+    static currentResourceChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
@@ -489,11 +489,11 @@ class shell extends viewModelBase {
                 db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
             this.disconnectFromResourceChangesApi();
 
-            shell.currentReourceChangesApi(new changesApi(db, 5000));
+            shell.currentResourceChangesApi(new changesApi(db, 5000));
 
-            shell.currentReourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentReourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentReourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
 
             this.currentConnectedDatabase = db;
         }
@@ -503,7 +503,7 @@ class shell extends viewModelBase {
         if (!fs.disabled() && (this.currentConnectedFileSystem.name != fs.name || !this.appUrls.isAreaActive('filesystems')())) {
             this.disconnectFromResourceChangesApi();
 
-            shell.currentReourceChangesApi(new changesApi(fs, 5000));
+            shell.currentResourceChangesApi(new changesApi(fs, 5000));
 
             this.currentConnectedFileSystem = fs;
         }
@@ -514,16 +514,16 @@ class shell extends viewModelBase {
         if (!cs.disabled() && (this.currentConnectedCounterStorage.name != cs.name || !this.appUrls.isAreaActive('counterstorages')())) {
             this.disconnectFromResourceChangesApi();
 
-            shell.currentReourceChangesApi(new changesApi(cs, 5000));
+            shell.currentResourceChangesApi(new changesApi(cs, 5000));
 
             this.currentConnectedCounterStorage = cs;
         }
     }
 
     private disconnectFromResourceChangesApi() {
-        if (shell.currentReourceChangesApi()) {
-            shell.currentReourceChangesApi().dispose();
-            shell.currentReourceChangesApi(null);
+        if (shell.currentResourceChangesApi()) {
+            shell.currentResourceChangesApi().dispose();
+            shell.currentResourceChangesApi(null);
         }
     }
     
