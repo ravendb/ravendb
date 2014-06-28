@@ -37,6 +37,7 @@ class ctor {
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
     collections: KnockoutObservableArray<string>;
+    noResults: KnockoutComputed<boolean>;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -57,6 +58,7 @@ class ctor {
         customFunctions: KnockoutObservable<customFunctions>;
         collections: KnockoutObservableArray<collection>;
         rowsAreLoading: KnockoutObservable<boolean>;
+        noResultsMessage: string;
     }
 
     activate(settings: any) {
@@ -76,7 +78,8 @@ class ctor {
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),
             collections: ko.observableArray<collection>([]),
-            rowsAreLoading: ko.observable<boolean>(false)
+            rowsAreLoading: ko.observable<boolean>(false),
+            noResultsMessage: "No records found."
         };
         this.settings = $.extend(defaults, settings);
 
@@ -107,6 +110,8 @@ class ctor {
 
             this.refreshIdAndCheckboxColumn();
         });
+
+        this.noResults = ko.computed<boolean>(() => this.virtualRowCount() === 0 && !this.settings.rowsAreLoading() );
 
         this.registerColumnResizing();
     }
@@ -311,6 +316,13 @@ class ctor {
             var customConfig = this.settings.customColumns().findConfigFor(binding);
             if (customConfig) {
                 return customConfig.header();
+            }
+        } else {
+            var columns = this.settings.customColumns().columns();
+            for(var i=0; i < columns.length; i++) {
+                if (columns[i].binding() === binding) {
+                    return columns[i].header();
+                }
             }
         }
         return binding;
