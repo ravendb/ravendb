@@ -74,7 +74,7 @@ class changesApi {
                 };
                 this.webSocket.onclose = (e: CloseEvent) => {
                     if (e.wasClean == false && changesApi.isServerSupportingWebSockets) {
-                        // Connection has closed uncleanly, so try to reconnect every second.
+                        // Connection has closed uncleanly, so try to reconnect.
                         this.connectWebSocket(resourcePath, coolDownWithDataLoss);
                     }
                 }
