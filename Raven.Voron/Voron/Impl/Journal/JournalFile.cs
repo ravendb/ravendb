@@ -168,25 +168,31 @@ namespace Voron.Impl.Journal
             return _journalWriter.Read(pos, (byte*)txHeader, sizeof(TransactionHeader));
         }
 
-        public void Write(Transaction tx, byte*[] pages)
-        {
-            var txPages = tx.GetTransactionPages();
+		/// <summary>
+		/// write transaction's raw page data into journal. returns write page position
+		/// </summary>
+		public long Write(Transaction tx, byte*[] pages)
+		{
+			var txPages = tx.GetTransactionPages();
 
-            var ptt = new Dictionary<long, PagePosition>();
-            var unused = new HashSet<PagePosition>();
-            var writePagePos = _writePage;
+			var ptt = new Dictionary<long, PagePosition>();
+			var unused = new HashSet<PagePosition>();
+			var writePagePos = _writePage;
 
-            UpdatePageTranslationTable(tx, txPages, unused, ptt);
+			UpdatePageTranslationTable(tx, txPages, unused, ptt);
 
-            lock (_locker)
-            {
-                _writePage += pages.Length;
-                _pageTranslationTable.SetItems(tx, ptt);
-                _unusedPages.AddRange(unused);
-            }
+			lock (_locker)
+			{
+				_writePage += pages.Length;
+				_pageTranslationTable.SetItems(tx, ptt);
+				_unusedPages.AddRange(unused);
+			}
 
-            _journalWriter.WriteGather(writePagePos * AbstractPager.PageSize, pages);
-        }
+			var position = writePagePos * AbstractPager.PageSize;
+			_journalWriter.WriteGather(position, pages);
+
+			return writePagePos;
+		}      
 
 	    private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 	    {

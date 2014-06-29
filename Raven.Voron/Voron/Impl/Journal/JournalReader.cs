@@ -14,6 +14,7 @@ namespace Voron.Impl.Journal
 
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
+		private uint _previousTransactionCrc;
 
         private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
         private int _recoveryPage;
@@ -34,9 +35,54 @@ namespace Voron.Impl.Journal
             _readingPage = 0;
             _recoveryPage = 0;
             LastTransactionHeader = previous;
+			_previousTransactionCrc = 0;
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
+
+		protected bool ReadOneTransactionForShipping(StorageEnvironmentOptions options, out TransactionToShip transactionToShipRecord)
+		{
+			transactionToShipRecord = null;
+			if (_readingPage >= _pager.NumberOfAllocatedPages)
+				return false;
+
+			TransactionHeader* current;
+			if (!TryReadAndValidateHeader(options, out current))
+				return false;
+
+			var compressedPageCount = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+			if (current->TransactionId <= _lastSyncedTransactionId)
+			{
+				LastTransactionHeader = current;
+				_readingPage += compressedPageCount;
+				return true; // skipping
+			}
+
+			if (!ValidatePagesCrc(options, compressedPageCount, current))
+				return false;
+
+			var compressedPagesRaw = new byte[compressedPageCount * AbstractPager.PageSize];
+			fixed (byte* compressedDataPtr = compressedPagesRaw)
+				NativeMethods.memcpy(compressedDataPtr, _pager.AcquirePagePointer(_readingPage), compressedPageCount * AbstractPager.PageSize);
+
+			transactionToShipRecord = new TransactionToShip(*current)
+			{
+				CompressedData = new MemoryStream(compressedPagesRaw), //no need to compress the pages --> after being written to Journal they are already compressed
+				PreviousTransactionCrc = _previousTransactionCrc
+			};
+
+			_previousTransactionCrc = current->Crc;
+
+			_readingPage += compressedPageCount;
+			return true;
+		}
+
+		public IEnumerable<TransactionToShip> ReadJournalForShipping(StorageEnvironmentOptions options)
+		{
+			TransactionToShip transactionToShip;
+			while (ReadOneTransactionForShipping(options, out transactionToShip))
+				yield return transactionToShip;
+		}
 
         public bool ReadOneTransaction(StorageEnvironmentOptions options,bool checkCrc = true)
         {
@@ -56,18 +102,8 @@ namespace Voron.Impl.Journal
                 return true; // skipping
             }
 
-	        if (checkCrc)
-	        {
-		        uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * AbstractPager.PageSize);
-
-				if (crc != current->Crc)
-				{
-					RequireHeaderUpdate = true;
-					options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId, null);
-
-					return false;
-				}
-	        }
+			if (checkCrc && !ValidatePagesCrc(options, compressedPages, current))
+				return false;
 
             _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
             var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
@@ -197,6 +233,20 @@ namespace Voron.Impl.Journal
 				current->TransactionId - previous->TransactionId != 1)
 				throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
 											   ", got:" + current->TransactionId);
+		}
+
+		private bool ValidatePagesCrc(StorageEnvironmentOptions options, int compressedPages, TransactionHeader* current)
+		{
+			uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * AbstractPager.PageSize);
+
+			if (crc != current->Crc)
+			{
+				RequireHeaderUpdate = true;
+				options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId, null);
+
+				return false;
+			}
+			return true;
 		}
 
 		public override string ToString()

@@ -91,6 +91,7 @@
     <Compile Include="DebugJournalTest.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
+    <Compile Include="Journal\LogShipping.cs" />
     <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />

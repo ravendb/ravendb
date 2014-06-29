@@ -99,6 +99,22 @@ namespace Voron.Impl
 			MarkTreesForWriteTransaction();
 		}
 
+		internal void WriteDirect(byte*[] pages)
+		{
+			foreach (var pageData in pages)
+			{
+				var allocation = _env.ScratchBufferPool.Allocate(this, 1);
+				var page = _env.ScratchBufferPool.ReadPage(allocation.PositionInScratchBuffer);
+				NativeMethods.memcpy(page.Base, pageData, AbstractPager.PageSize);
+
+				page.Dirty = true;
+				_dirtyPages.Add(page.PageNumber);
+
+				_transactionPages.Add(allocation);
+				_allocatedPagesInTransaction++;
+			}
+		}
+
 		private void InitTransactionHeader()
 		{
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
