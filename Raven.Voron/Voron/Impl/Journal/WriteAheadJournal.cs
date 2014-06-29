@@ -35,7 +35,8 @@ namespace Voron.Impl.Journal
 
 		private readonly LZ4 _lz4 = new LZ4();
 		private readonly JournalApplicator _journalApplicator;
-		private readonly ReaderWriterLockSlim _journalSyncObj;
+        private readonly ShipppedTransactionsApplicator _shipppedTransactionsApplicator;
+        private readonly ReaderWriterLockSlim _journalLock = new ReaderWriterLockSlim();
 		private readonly ModifyHeaderAction _updateLogInfo;
 
 		private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
@@ -63,16 +64,15 @@ namespace Voron.Impl.Journal
 
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
 
-			_journalSyncObj = new ReaderWriterLockSlim();
-			_journalApplicator = new JournalApplicator(this, _journalSyncObj);
-			_journalShipper = new JournalShipper(this, _journalSyncObj);
+			_journalApplicator = new JournalApplicator(this, _journalLock);
+			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_journalLock, _env, _headerAccessor);
 		}
 
 		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
 
 		public JournalApplicator Applicator { get { return _journalApplicator; } }
 
-		public JournalShipper Shipper { get { return _journalShipper; } }
+		public ShipppedTransactionsApplicator Shipper { get { return _shipppedTransactionsApplicator; } }
 
 		private JournalFile NextFile(int numberOfPages = 1)
 		{
@@ -309,9 +309,8 @@ namespace Voron.Impl.Journal
 		}
 
 		private bool disposed;
-		private JournalShipper _journalShipper;
 
-		public void Dispose()
+	    public void Dispose()
 		{
 			if (disposed)
 				return;
@@ -321,14 +320,16 @@ namespace Voron.Impl.Journal
 
 			_compressionPager.Dispose();
 			_lz4.Dispose();
-			if (_env.Options.OwnsPagers)
+
+            _journalApplicator.Dispose();
+            _shipppedTransactionsApplicator.Dispose();
+            if (_env.Options.OwnsPagers)
 			{
 				foreach (var logFile in _files)
 				{
 					logFile.Dispose();
 				}
 
-				_journalApplicator.Dispose();
 			}
 			else
 			{
@@ -366,73 +367,6 @@ namespace Voron.Impl.Journal
 		}
 
 
-		public class JournalShipper
-		{
-			private readonly ReaderWriterLockSlim _shippingSemaphore;
-			private readonly WriteAheadJournal _waj;
-
-			public JournalShipper(WriteAheadJournal waj, ReaderWriterLockSlim shippingSemaphore = null)
-			{
-				_waj = waj;
-				_shippingSemaphore = shippingSemaphore ?? new ReaderWriterLockSlim();
-			}
-
-			public IEnumerable<TransactionToShip> ReadJournalForShippings(long lastTransactionId)
-			{
-				bool locked = false;
-				if (_shippingSemaphore.IsReadLockHeld == false)
-				{
-					if (_shippingSemaphore.TryEnterReadLock(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30)) == false)
-						throw new TimeoutException("Could not acquire the read lock in 30 seconds");
-					locked = true;
-				}
-
-				try
-				{
-					var logInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
-					var transactionsToShip = new List<TransactionToShip>();
-
-					for (int journalNumber = 0; journalNumber < logInfo.JournalFilesCount; journalNumber++)
-					{
-						var journalReader = new JournalReader(_waj._env.Options.OpenJournalPager(journalNumber), null, lastTransactionId, null);
-						var journalLogs = journalReader.ReadJournalForShipping(_waj._env.Options).ToList();
-
-						if (journalLogs.Count > 0)
-							transactionsToShip.AddRange(journalLogs);
-					}
-
-					return transactionsToShip;
-				}
-				finally
-				{
-					if (locked)
-						_shippingSemaphore.ExitReadLock();
-				}
-			}
-
-			public void ApplyShippedLogs(IEnumerable<TransactionToShip> shippedTransactions)
-			{
-				if (shippedTransactions == null)
-					throw new ArgumentNullException();
-				shippedTransactions = shippedTransactions.OrderBy(x => x.Header.TransactionId).ToList();
-
-				if (shippedTransactions.Any() == false)
-					return;
-
-				using (var tempPager = _waj._env.Options.CreateScratchPager(StorageEnvironmentOptions.TempBufferName()))
-				{
-					tempPager.DeleteOnClose = true;
-					var shippedTransactionsReader = new ShippedTransactionsReader(tempPager);
-					shippedTransactionsReader.ReadTransactions(shippedTransactions);
-
-					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						tx.WriteDirect(shippedTransactionsReader.RawPageData);
-						tx.Commit();
-					}
-				}
-			}
-		}
 
 		public class JournalSyncEventArgs : EventArgs
 		{
@@ -777,29 +711,23 @@ namespace Voron.Impl.Journal
 
 			var transactionHeader = *(TransactionHeader*)pages[0];
 
-			var writePage = CurrentFile.Write(tx, pages);
+			CurrentFile.Write(tx, pages);
 
 			var onTransactionCommit = OnTransactionCommit;
 			if (onTransactionCommit != null)
 			{
-				var bufferSize = pages.Length * AbstractPager.PageSize;
-				var buffer = new byte[bufferSize];
-
-				fixed (byte* bp = buffer)
-					CurrentFile.JournalWriter.Read(writePage, bp, bufferSize);
-
-				var stream = new MemoryStream(buffer, AbstractPager.PageSize, (pages.Length - 1) * AbstractPager.PageSize);
 				var transactionToShip = new TransactionToShip(transactionHeader)
 				{
-					CompressedData = stream,
+                    CompressedPages = pages,
 					PreviousTransactionCrc = _previousTransactionCrc
 				};
 
-				_previousTransactionCrc = transactionHeader.Crc;
 				onTransactionCommit(transactionToShip);
 			}
 
-			if (CurrentFile.AvailablePages == 0)
+            _previousTransactionCrc = transactionHeader.Crc;
+
+            if (CurrentFile.AvailablePages == 0)
 				CurrentFile = null;
 
 		}

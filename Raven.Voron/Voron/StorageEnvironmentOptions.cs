@@ -87,11 +87,6 @@ namespace Voron
 			IncrementalBackupEnabled = false;
 		}
 
-		public static string TempBufferName()
-		{
-			return string.Format("{0}.scratch", Guid.NewGuid());
-		}
-
 		public static StorageEnvironmentOptions CreateMemoryOnly()
 		{
 			return new PureMemoryStorageEnvironmentOptions();

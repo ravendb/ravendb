@@ -23,7 +23,11 @@ namespace Voron.Tests.Journal
 		public unsafe void Committing_tx_should_fire_event_with_transactionsToShip_records()
 		{
 			var transactionsToShip = new List<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += transactionsToShip.Add;
+			Env.Journal.OnTransactionCommit += ship =>
+			{
+			    ship.CopyPages();
+			    transactionsToShip.Add(ship);   
+			};
 
 			WriteTestDataToEnv();
 
@@ -32,7 +36,7 @@ namespace Voron.Tests.Journal
 			//validate crc
 			foreach (var tx in transactionsToShip)
 			{
-				var compressedDataBuffer = ReadFromTransactionToShip(tx);
+				var compressedDataBuffer = tx.CopiedPages;
 				fixed (byte* compressedDataBufferPtr = compressedDataBuffer)
 				{
 					var crc = Crc.Value(compressedDataBufferPtr, 0, compressedDataBuffer.Length);
@@ -136,7 +140,11 @@ namespace Voron.Tests.Journal
 		public void Committed_tx_should_be_possible_to_read_from_journal_as_shipping_records()
 		{
 			var transactionsToShipFromCommits = new ConcurrentBag<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += transactionsToShipFromCommits.Add;
+			Env.Journal.OnTransactionCommit += ship =>
+			{
+                ship.CopyPages();
+			    transactionsToShipFromCommits.Add(ship);
+			};
 
 			WriteTestDataToEnv();
 
@@ -154,37 +162,8 @@ namespace Voron.Tests.Journal
 							 join txFromRead in transactionsToShip on txFromCommit.Header.TransactionId equals txFromRead.Header.TransactionId
 							 select Tuple.Create(txFromCommit, txFromRead)).ToList();
 
-			dataPairs.ForEach(pair => Assert.Equal(ReadFromTransactionToShip(pair.Item1), ReadFromTransactionToShip(pair.Item2)));
+			dataPairs.ForEach(pair => Assert.Equal(pair.Item1.CopiedPages, pair.Item2.CopiedPages));
 
-		}
-
-		private byte[] ReadFromTransactionToShip(TransactionToShip tx)
-		{
-			var compressedPages = (tx.Header.CompressedSize / AbstractPager.PageSize) + (tx.Header.CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
-			var bufferSize = compressedPages * AbstractPager.PageSize;
-
-			var buffer = new byte[bufferSize];
-
-			tx.CompressedData.Read(buffer, 0, bufferSize);
-
-			return buffer;
-
-		}
-
-		private TCollection SetPreviousCrc<TCollection>(TCollection transactionsToShip)
-			where TCollection : IEnumerable<TransactionToShip>
-		{
-			if (ReferenceEquals(transactionsToShip, null) || transactionsToShip.Any() == false) throw new ArgumentNullException("transactionsToShip");
-
-			TransactionToShip previousTx = null;
-
-			foreach (var tx in transactionsToShip)
-			{
-				tx.PreviousTransactionCrc = (previousTx != null) ? previousTx.Header.Crc : 0;
-				previousTx = tx;
-			}
-
-			return transactionsToShip;
 		}
 
 		private void WriteTestDataToEnv()

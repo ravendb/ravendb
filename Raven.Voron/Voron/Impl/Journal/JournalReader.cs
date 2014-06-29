@@ -40,50 +40,6 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		protected bool ReadOneTransactionForShipping(StorageEnvironmentOptions options, out TransactionToShip transactionToShipRecord)
-		{
-			transactionToShipRecord = null;
-			if (_readingPage >= _pager.NumberOfAllocatedPages)
-				return false;
-
-			TransactionHeader* current;
-			if (!TryReadAndValidateHeader(options, out current))
-				return false;
-
-			var compressedPageCount = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
-			if (current->TransactionId <= _lastSyncedTransactionId)
-			{
-				LastTransactionHeader = current;
-				_readingPage += compressedPageCount;
-				return true; // skipping
-			}
-
-			if (!ValidatePagesCrc(options, compressedPageCount, current))
-				return false;
-
-			var compressedPagesRaw = new byte[compressedPageCount * AbstractPager.PageSize];
-			fixed (byte* compressedDataPtr = compressedPagesRaw)
-				NativeMethods.memcpy(compressedDataPtr, _pager.AcquirePagePointer(_readingPage), compressedPageCount * AbstractPager.PageSize);
-
-			transactionToShipRecord = new TransactionToShip(*current)
-			{
-				CompressedData = new MemoryStream(compressedPagesRaw), //no need to compress the pages --> after being written to Journal they are already compressed
-				PreviousTransactionCrc = _previousTransactionCrc
-			};
-
-			_previousTransactionCrc = current->Crc;
-
-			_readingPage += compressedPageCount;
-			return true;
-		}
-
-		public IEnumerable<TransactionToShip> ReadJournalForShipping(StorageEnvironmentOptions options)
-		{
-			TransactionToShip transactionToShip;
-			while (ReadOneTransactionForShipping(options, out transactionToShip))
-				yield return transactionToShip;
-		}
-
         public bool ReadOneTransaction(StorageEnvironmentOptions options,bool checkCrc = true)
         {
             if (_readingPage >= _pager.NumberOfAllocatedPages)
