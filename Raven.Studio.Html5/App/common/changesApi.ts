@@ -8,15 +8,18 @@ import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import shell = require("viewmodels/shell");
 
 class changesApi {
 
     private eventsId: string;
     private webSocket: WebSocket;
-    private isConnectionClosed: boolean = false;
-    private connectWebSocketTask: JQueryDeferred<any>;
     private normalClosureCode = 1000;
     private normalClosureMessage = "CLOSE_NORMAL";
+    static isServerSupportingWebSockets = true;
+    private eventSource: EventSource;
+    private readyStateOpen = 1;
+    private connectToChangesApiTask: JQueryDeferred<any>;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
@@ -31,47 +34,84 @@ class changesApi {
 
     constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
         this.eventsId = this.makeId();
-        this.connectWebSocketTask = $.Deferred();
-        this.connect(coolDownWithDataLoss);
-    }
+        this.connectToChangesApiTask = $.Deferred();
 
-    private connect(coolDownWithDataLoss: number = 0) {
-        if ("WebSocket" in window) {
-            var host = window.location.host;
-            var resourcePath = appUrl.forResourceQuery(this.rs);
+        var resourcePath = appUrl.forResourceQuery(this.rs);
 
-            console.log("Connecting to changes API (rs = " + this.rs.name + ")");
-
-            var getTokenTask = new getSingleAuthTokenCommand(resourcePath).execute();
-            getTokenTask
-                .done((tokenObject: singleAuthToken) => {
-                    var token = tokenObject.Token;
-
-                    this.webSocket = new WebSocket('ws://' + host + resourcePath + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
-
-                    this.webSocket.onmessage = (e) => {
-                        this.onEvent(e)
-                    };
-                    this.webSocket.onerror = (e) => {
-                        this.onError(e)
-                    };
-                    this.webSocket.onclose = (e) => {
-                        this.isConnectionClosed = true
-                    };
-                    this.webSocket.onopen = () => {
-                        this.connectWebSocketTask.resolve();
-                    }
-                })
-                .fail(() => this.connectWebSocketTask.reject());
+        if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
+            this.connectWebSocket(resourcePath, coolDownWithDataLoss);
+        }
+        else if ("EventSource" in window) {
+            this.connectEventSource(resourcePath, coolDownWithDataLoss);
         }
         else {
-            console.log("WebSocket NOT supported by your Browser!"); // The browser doesn't support WebSocket
-            this.connectWebSocketTask.reject();
+            //The browser doesn't support websocket and eventsource
+            console.log("Nor WebSocket nor EventSource are supported by your Browser!");
+            this.connectToChangesApiTask.reject();
+        }
+    }
+
+    private connectWebSocket(resourcePath, coolDownWithDataLoss: number = 0) {
+        var getTokenTask = new getSingleAuthTokenCommand(resourcePath).execute();
+
+        getTokenTask
+            .done((tokenObject: singleAuthToken) => {
+                var token = tokenObject.Token;
+                var host = window.location.host;
+
+                this.webSocket = new WebSocket('ws://' + host + resourcePath + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
+
+                var isConnectionOpenedOnce: boolean = false;
+
+                this.webSocket.onmessage = (e) => this.onMessage(e);
+                this.webSocket.onerror = (e) => {
+                    if (isConnectionOpenedOnce == false) {
+                        changesApi.isServerSupportingWebSockets = false;
+                        this.connectEventSource(resourcePath, coolDownWithDataLoss);
+                    } else {
+                        this.onError(e);
+                    }
+                };
+                this.webSocket.onclose = (e: CloseEvent) => {
+                    if (e.wasClean == false && changesApi.isServerSupportingWebSockets) {
+                        // Connection has closed uncleanly, so try to reconnect.
+                        this.connectWebSocket(resourcePath, coolDownWithDataLoss);
+                    }
+                }
+                this.webSocket.onopen = () => {
+                    console.log("Connected to WebSocket changes API (rs = " + this.rs.name + ")");
+                    isConnectionOpenedOnce = true;
+                    this.connectToChangesApiTask.resolve();
+                }
+                })
+            .fail((e) => {
+                // Connection has closed so try to reconnect every 3 seconds.
+                setTimeout(() => this.connectWebSocket(resourcePath, coolDownWithDataLoss), 3 * 1000);
+                this.onError(e);
+        });
+    }
+
+    private connectEventSource(resourcePath, coolDownWithDataLoss: number = 0) {
+        this.eventSource = new EventSource(resourcePath + '/changes/events?id=' + this.eventsId);
+
+        var isConnectionOpenedOnce: boolean = false;
+
+        this.eventSource.onmessage = (e) => this.onMessage(e);
+        this.eventSource.onerror = (e) => {
+            if (isConnectionOpenedOnce == false) {
+                this.connectToChangesApiTask.reject();
+            }
+            this.onError(e);
+        };
+        this.eventSource.onopen = () => {
+            console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
+            isConnectionOpenedOnce = true;
+            this.connectToChangesApiTask.resolve();
         }
     }
 
     private send(command: string, value?: string) {
-        this.connectWebSocketTask.done(() => {
+        this.connectToChangesApiTask.done(() => {
             var args = {
                 id: this.eventsId,
                 command: command
@@ -84,8 +124,7 @@ class changesApi {
         });
     }
 
-    private onError(e: any) {
-        this.isConnectionClosed = true;
+    private onError(e: Event) {
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
 
@@ -97,7 +136,7 @@ class changesApi {
         }
     }
 
-    private onEvent(e: any) {
+    private onMessage(e: any) {
         var eventDto: changesApiEventDto = JSON.parse(e.data);
         var type = eventDto.Type;
         var value = eventDto.Value;
@@ -283,12 +322,17 @@ class changesApi {
             }
         });
     }
-
+    
     dispose() {
-        this.connectWebSocketTask.done(() => {
-            if (this.webSocket && !this.isConnectionClosed) {
-                console.log("Disconnecting from changes API for (rs = " + this.rs.name + ")");
+        this.connectToChangesApiTask.done(() => {
+            if (this.webSocket && this.webSocket.readyState == this.readyStateOpen){
+                console.log("Disconnecting from WebSocket changes API for (rs = " + this.rs.name + ")");
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
+                this.send('disconnect');
+            }
+            else if (this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
+                console.log("Disconnecting from EventSource changes API for (rs = " + this.rs.name + ")");
+                this.eventSource.close();
                 this.send('disconnect');
             }
         });

@@ -110,7 +110,7 @@ class indexes extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentReourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
+        return [shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
