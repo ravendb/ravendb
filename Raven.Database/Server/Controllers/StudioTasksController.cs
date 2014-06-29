@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Permissions;
 using System.Text;
@@ -190,17 +191,29 @@ namespace Raven.Database.Server.Controllers
 			var mapList = indexDefinition.Maps.Select(mapString => @"@""" + mapString + @"""").ToList();
 			var maps = string.Join(", ", mapList);
 			var reduce = indexDefinition.Reduce != null ? @"@""" + indexDefinition.Reduce + @"""" : "null";
+			var maxIndexOutputsPerDocument = indexDefinition.MaxIndexOutputsPerDocument != null ? 
+												indexDefinition.MaxIndexOutputsPerDocument.ToString() : "null";
 
 			var indexes = GenerateStringFromStringToEnumDictionary(indexDefinition.Indexes);
 			var stores = GenerateStringFromStringToEnumDictionary(indexDefinition.Stores);
 			var sortOptions = GenerateStringFromStringToEnumDictionary(indexDefinition.SortOptions);
 			var termVectors = GenerateStringFromStringToEnumDictionary(indexDefinition.TermVectors);
 
+			var analyzersList = (from analyzer in indexDefinition.Analyzers
+								select @"{ """ + analyzer.Key + @""", """ + analyzer.Value + @""" }").ToList();
+			var analyzers = (analyzersList.Count > 0) ? "{ " + string.Join(", ", analyzersList) + @" }" : "null";
+
+			var suggestionList = (from suggestion in indexDefinition.Suggestions
+							   let distance = "Distance = StringDistanceTypes." + suggestion.Value.Distance
+							   let accuracy = "Accuracy = " + suggestion.Value.Accuracy
+							   select @"{ """ + suggestion.Key + @""", new SuggestionOptions { " + distance + ", " + accuracy + "f } }").ToList();
+			var suggestions = (suggestionList.Count > 0) ? "{ " + string.Join(", ", suggestionList) + @" }" : "null";
+
 			string x = @"public class " + indexName + @" : AbstractIndexCreationTask
 						{
 							public override string IndexName
 							{
-								get { return '" + indexName + @"'; }
+								get { return """ + indexName + @"""; }
 							}
 
 							public override IndexDefinition CreateIndexDefinition()
@@ -209,11 +222,13 @@ namespace Raven.Database.Server.Controllers
 								{
 									Maps = { " + maps + @" },
 									Reduce = " + reduce + @",
+									MaxIndexOutputsPerDocument = " + maxIndexOutputsPerDocument + @",
 									Indexes = " + indexes + @",
 									Stores = " + stores + @",
 									TermVectors = " + termVectors + @",
 									SortOptions = " + sortOptions + @",
-									MaxIndexOutputsPerDocument = " + indexDefinition.MaxIndexOutputsPerDocument + @".
+									Analyzers = " + analyzers + @",
+									Suggestions = " + suggestions + @",
 
 									
 								};
