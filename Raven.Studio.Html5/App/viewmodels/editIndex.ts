@@ -38,7 +38,7 @@ class editIndex extends viewModelBase {
     indexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
-    loadedIndex: indexDefinition;
+    loadedIndexName: string;
     
     constructor() {
         super();
@@ -85,7 +85,7 @@ class editIndex extends viewModelBase {
         }
 
         this.initializeDirtyFlag();
-        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.editedIndex().maps().every(m => m().trim().length > 0) && viewModelBase.dirtyFlag().isDirty());
+
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
     }
 
@@ -123,10 +123,16 @@ class editIndex extends viewModelBase {
         });
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
+
+        this.isSaveEnabled = ko.computed(() => {
+            return !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty();
+            //return !!this.editedIndex().name() && this.editedIndex().maps().every(m => m().trim().length > 0) && viewModelBase.dirtyFlag().isDirty()
+        });
     }
 
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
+        this.loadedIndexName = indexName;
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
@@ -155,21 +161,29 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private fetchIndexData(indexName: string): JQueryPromise<any> {
+    private fetchIndexData(unescapedIndexName: string): JQueryPromise<any> {
+        var indexName = decodeURIComponent(unescapedIndexName);
         return $.when(this.fetchIndexToEdit(indexName), this.fetchIndexPriority(indexName));
     }
 
-    private fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
-        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
+    private fetchIndexToEdit(indexName: string): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done((results: indexDefinitionContainerDto) => {
                 this.editedIndex(new indexDefinition(results.Index));
-                this.loadedIndex = new indexDefinition(results.Index);
                 this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
-        });
+                deferred.resolve();
+            })
+            .fail(() => deferred.reject());
+
+        return deferred;
     }
 
-    private fetchIndexPriority(indexName: string) {
+    private fetchIndexPriority(indexName: string): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
         new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => {
@@ -179,7 +193,11 @@ class editIndex extends viewModelBase {
                     var priorityWithoutWhitespace = matchingIndex.Priority.replace(", ", ",");
                     this.priority(index.priorityFromString(priorityWithoutWhitespace));
                 }
-            });
+                deferred.resolve();
+            })
+            .fail(() => deferred.reject());
+
+        return deferred;
     }
 
     createNewIndexDefinition(): indexDefinition {
@@ -194,8 +212,6 @@ class editIndex extends viewModelBase {
                 .execute()
                 .done(() => {
                     viewModelBase.dirtyFlag().reset(); // Resync Changes
-
-                    this.loadedIndex = new indexDefinition(index);
 
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
@@ -212,7 +228,23 @@ class editIndex extends viewModelBase {
     }
 
     refreshIndex() {
-        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
+        canContinue.done(() => {
+            var loadedIndexName = this.loadedIndexName;
+
+            this.fetchIndexData(loadedIndexName)
+                .done(() => {
+                    this.editExistingIndex(loadedIndexName);
+                    this.initializeDirtyFlag();
+                    //viewModelBase.dirtyFlag().reset(); // Resync Changes
+
+                    //viewModelBase.dirtyFlag.valueHasMutated();
+                    //this.initializeDirtyFlag();
+                    //viewModelBase.dirtyFlag().reset(); // Resync Changes
+                });
+        });
+
+/*        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
         canContinue.done(() => {
             var existingIndex = this.editedIndex();
             var existingIndexName = "";
@@ -234,7 +266,7 @@ class editIndex extends viewModelBase {
                 if (existingIndexName.length > 0)
                     this.updateUrl(existingIndexName);
             }
-        });
+        });*/
     }
 
     deleteIndex() {
@@ -344,7 +376,7 @@ class editIndex extends viewModelBase {
     }
 
     createCSharpCode() {
-        //app.showDialog()
+        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 }
 

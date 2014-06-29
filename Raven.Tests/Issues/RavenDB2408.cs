@@ -4,8 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using Xunit;
@@ -67,5 +70,41 @@ namespace Raven.Tests.Issues
                               select new Timeout { Owner = d.Owner, Time = d.Time };
             }
         }
+
+
+		public class OrdersByCompany : AbstractIndexCreationTask
+		{
+			public override string IndexName
+			{
+				get { return "OrdersByCompany"; }
+			}
+
+			public override IndexDefinition CreateIndexDefinition()
+			{
+				return new IndexDefinition
+				{
+					Maps = { @"from order in docs.Orders
+						select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }", "123" },
+					Reduce = @"",
+					MaxIndexOutputsPerDocument = 3,
+
+/*
+           
+			Indexes = new Dictionary<string, FieldIndexing>();
+			Analyzers = new Dictionary<string, string>();
+			SortOptions = new Dictionary<string, SortOptions>();
+			Suggestions = new Dictionary<string, SuggestionOptions>();
+			TermVectors = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<string, SpatialOptions>();
+
+
+            Fields = new List<string>();*/
+
+
+					Stores = { { "Total", FieldStorage.Yes }, { "TTT", FieldStorage.No } }
+				};
+			}
+		}
+
     }
 }

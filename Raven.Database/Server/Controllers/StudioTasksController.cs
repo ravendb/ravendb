@@ -20,8 +20,10 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
+using Raven.Client.Indexes;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
@@ -130,8 +132,6 @@ namespace Raven.Database.Server.Controllers
             };
 			
 			return result;
-
-
 		}
         
 		[HttpPost]
@@ -175,11 +175,64 @@ namespace Raven.Database.Server.Controllers
                    var data = reader.ReadToEnd();
                    return GetMessageWithObject(data);
                 }
-                 
-                
-               
             }
         }
+
+		[HttpGet]
+		[Route("databases/{databaseName}/studio-tasks/generateCSharpIndexDefinition/{*fullIndexName}")]
+		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
+		{
+			var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
+			if (indexDefinition == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var indexName = fullIndexName.Replace("/", string.Empty);
+			var mapList = indexDefinition.Maps.Select(mapString => @"@""" + mapString + @"""").ToList();
+			var maps = string.Join(", ", mapList);
+			var reduce = indexDefinition.Reduce != null ? @"@""" + indexDefinition.Reduce + @"""" : "null";
+
+			var indexes = GenerateStringFromStringToEnumDictionary(indexDefinition.Indexes);
+			var stores = GenerateStringFromStringToEnumDictionary(indexDefinition.Stores);
+			var termVectors = GenerateStringFromStringToEnumDictionary(indexDefinition.TermVectors);
+
+			string x = @"public class " + indexName + @" : AbstractIndexCreationTask
+						{
+							public override string IndexName
+							{
+								get { return '" + indexName + @"'; }
+							}
+
+							public override IndexDefinition CreateIndexDefinition()
+							{
+								return new IndexDefinition
+								{
+									Maps = { " + maps + @" },
+									Reduce = " + reduce + @",
+									Indexes = " + indexes + @",
+									Stores = " + stores + @",
+									TermVectors = " + termVectors + @",
+									MaxIndexOutputsPerDocument = " + indexDefinition.MaxIndexOutputsPerDocument + @".
+
+									
+								};
+							}
+						}";
+			//Stores = { { 'Total', FieldStorage.Yes } }
+			indexDefinition.Fields = Database.Indexes.GetIndexFields(indexName);
+			return GetMessageWithObject(new
+			{
+				Index = indexDefinition,
+			});
+		}
+
+		private string GenerateStringFromStringToEnumDictionary<T>(IEnumerable<KeyValuePair<string, T>> dictionary)
+		{
+			var list = (from keyValuePair in dictionary
+						let value = keyValuePair.Value.GetType().Name + "." + keyValuePair.Value
+						select @"{ """ + keyValuePair.Key + @""", " + value + " }").ToList();
+			
+			return (list.Count > 0) ? "{ " + string.Join(", ", list) + @" }" : "null"; 
+		}
 
         [HttpGet]
         [Route("studio-tasks/new-encryption-key")]
@@ -366,7 +419,6 @@ namespace Raven.Database.Server.Controllers
             }
 
             return GetEmptyMessage();
-
 	    }
 	}
 }
