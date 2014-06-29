@@ -193,6 +193,7 @@ namespace Raven.Database.Server.Controllers
 
 			var indexes = GenerateStringFromStringToEnumDictionary(indexDefinition.Indexes);
 			var stores = GenerateStringFromStringToEnumDictionary(indexDefinition.Stores);
+			var sortOptions = GenerateStringFromStringToEnumDictionary(indexDefinition.SortOptions);
 			var termVectors = GenerateStringFromStringToEnumDictionary(indexDefinition.TermVectors);
 
 			string x = @"public class " + indexName + @" : AbstractIndexCreationTask
@@ -211,6 +212,7 @@ namespace Raven.Database.Server.Controllers
 									Indexes = " + indexes + @",
 									Stores = " + stores + @",
 									TermVectors = " + termVectors + @",
+									SortOptions = " + sortOptions + @",
 									MaxIndexOutputsPerDocument = " + indexDefinition.MaxIndexOutputsPerDocument + @".
 
 									
