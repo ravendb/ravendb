@@ -65,7 +65,7 @@ namespace Voron.Impl.Journal
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
 
 			_journalApplicator = new JournalApplicator(this, _journalLock);
-			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_journalLock, _env, _headerAccessor);
+			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env);
 		}
 
 		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
