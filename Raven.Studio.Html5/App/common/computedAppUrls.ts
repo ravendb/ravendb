@@ -30,6 +30,7 @@ interface computedAppUrls {
     replications: KnockoutComputed<string>;
     versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
+    editSqlReplication: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
     customFunctionsEditor: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;

@@ -59,14 +59,56 @@ body {
 .replicationError {
   color: red;
 }
-#sqlReplications .sqlRepActions {
-  margin-top: -25px !important;
+#sqlReplications .replications-container {
+  margin-top: 10px;
+}
+#sqlReplications .replications-container .replication {
+  border-radius: 10px;
+  -webkit-box-shadow: 0 0 5px 2px silver;
+  box-shadow: 0 0 5px 2px silver;
+  min-width: 140px;
+  min-height: 60px;
+  display: inline-block;
+  padding: 8px;
+  margin: 0 10px 14px 0;
+  /*   &:hover {
+                background-color: white;
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }*/
+}
+#sqlReplications .replications-container .replication .replication-name {
+  float: left;
+}
+#sqlReplications .replications-container .replication .btn-group {
+  float: right;
+  margin-left: 5px;
+  margin-top: 3px;
+}
+#sqlReplications .replications-container .replication .btn-default {
+  border-color: white;
+}
+#sqlReplications .replications-container .replication .btn-default:hover {
+  -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
+  box-shadow: 0 0 5px 0 #6aa3d5;
 }
 #sqlReplications .panel {
   overflow: visible!important;
 }
+#sqlReplications .enabledReplication {
+  color: green;
+}
+#sqlReplications .disabledReplication {
+  color: red;
+}
 #sqlReplications label {
   text-align: left;
+}
+#editSQLReplication label {
+  text-align: left;
+}
+#editSQLReplication .script-label {
+  padding-left: 0;
 }
 .sqlReplication-Stats {
   width: 60vw;

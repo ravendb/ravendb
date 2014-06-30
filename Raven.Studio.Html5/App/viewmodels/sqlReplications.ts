@@ -38,6 +38,10 @@ class sqlReplications extends viewModelBase {
         app.showDialog(viewModel);
     }
 
+    getSqlReplicationUrl(sqlReplicationName: string) {
+        return appUrl.forEditSqlReplication(sqlReplicationName, this.activeDatabase());
+    }
+
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
