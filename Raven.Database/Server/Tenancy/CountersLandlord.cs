@@ -25,10 +25,13 @@ namespace Raven.Database.Server.Tenancy
 		public CountersLandlord(DocumentDatabase systemDatabase)
 		{
 			this.systemDatabase = systemDatabase;
+		    Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled",null) != null;
 			Init();
 		}
 
-		public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+	    public bool Enabled { get; set; }
+
+	    public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
 		public void Init()
         {
@@ -80,15 +83,12 @@ namespace Raven.Database.Server.Tenancy
 			return document;
 		}
 
-
-		public bool TryGetFileSystem(string tenantId, out Task<CounterStorage> fileSystem)
-		{
-			return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
-		}
-
-
 		public bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
 		{
+		    if (Enabled == false)
+		    {
+                throw new InvalidOperationException("Counters are an experimental feature that is not enabled");
+		    }
 			if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
 			{
 				if (counter.IsFaulted || counter.IsCanceled)
