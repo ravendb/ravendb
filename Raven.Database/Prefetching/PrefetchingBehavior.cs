@@ -40,11 +40,14 @@ namespace Raven.Database.Prefetching
 
 		private int currentIndexingAge;
 
-		public PrefetchingBehavior(WorkContext context, BaseBatchSizeAutoTuner autoTuner)
+		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner)
 		{
 			this.context = context;
 			this.autoTuner = autoTuner;
+			PrefetchingUser = prefetchingUser;
 		}
+
+		public PrefetchingUser PrefetchingUser { get; private set; }
 
 		public int InMemoryIndexingQueueSize
 		{

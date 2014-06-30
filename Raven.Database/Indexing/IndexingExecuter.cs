@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
-			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			prefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
 		}
 
 		public PrefetchingBehavior PrefetchingBehavior
