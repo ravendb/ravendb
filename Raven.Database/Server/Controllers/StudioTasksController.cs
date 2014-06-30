@@ -201,54 +201,68 @@ namespace Raven.Database.Server.Controllers
 
 			var analyzersList = (from analyzer in indexDefinition.Analyzers
 								select @"{ """ + analyzer.Key + @""", """ + analyzer.Value + @""" }").ToList();
-			var analyzers = (analyzersList.Count > 0) ? "{ " + string.Join(", ", analyzersList) + @" }" : "null";
+			var analyzers = ConvertListToStringWithSeperator(analyzersList);
 
 			var suggestionList = (from suggestion in indexDefinition.Suggestions
-							   let distance = "Distance = StringDistanceTypes." + suggestion.Value.Distance
-							   let accuracy = "Accuracy = " + suggestion.Value.Accuracy
-							   select @"{ """ + suggestion.Key + @""", new SuggestionOptions { " + distance + ", " + accuracy + "f } }").ToList();
-			var suggestions = (suggestionList.Count > 0) ? "{ " + string.Join(", ", suggestionList) + @" }" : "null";
+								  let distance = "Distance = StringDistanceTypes." + suggestion.Value.Distance
+								  let accuracy = "Accuracy = " + suggestion.Value.Accuracy
+								  select @"{ """ + suggestion.Key + @""", new SuggestionOptions { " + distance + ", " + accuracy + "f } }").ToList();
+			var suggestions = ConvertListToStringWithSeperator(suggestionList);
 
-			string x = @"public class " + indexName + @" : AbstractIndexCreationTask
+			var spatialIndexesList = (from spatialIndex in indexDefinition.SpatialIndexes
+									  let type = "Type = SpatialFieldType." + spatialIndex.Value.Type
+									  let strategy = "Strategy = SpatialSearchStrategy." + spatialIndex.Value.Strategy
+									  let maxTreeLevel = "MaxTreeLevel = " + spatialIndex.Value.MaxTreeLevel
+									  let minX = "MinX = " + spatialIndex.Value.MinX
+									  let maxX = "MaxX = " + spatialIndex.Value.MaxX
+									  let minY = "MinY = " + spatialIndex.Value.MinY
+									  let maxY = "MaxY = " + spatialIndex.Value.MaxY
+									  let units = "Units = SpatialUnits." + spatialIndex.Value.Units
+									  let spatialOptions = string.Join(", ", type, strategy, maxTreeLevel, minX, maxX, minY, maxY, units)
+									  select @"{ """ + spatialIndex.Key + @""", new SpatialOptions { " + spatialOptions + " } }").ToList();
+			var spatialIndexes = ConvertListToStringWithSeperator(spatialIndexesList);
+
+			var cSharpCode = 
+				@"public class " + indexName + @" : AbstractIndexCreationTask
+				{
+					public override string IndexName
+					{
+						get { return """ + indexName + @"""; }
+					}
+
+					public override IndexDefinition CreateIndexDefinition()
+					{
+						return new IndexDefinition
 						{
-							public override string IndexName
-							{
-								get { return """ + indexName + @"""; }
-							}
+							Maps = { " + maps + @" },
+							Reduce = " + reduce + @",
+							MaxIndexOutputsPerDocument = " + maxIndexOutputsPerDocument + @",
+							Indexes = " + indexes + @",
+							Stores = " + stores + @",
+							TermVectors = " + termVectors + @",
+							SortOptions = " + sortOptions + @",
+							Analyzers = " + analyzers + @",
+							Suggestions = " + suggestions + @",
+							SpatialIndexes = " + spatialIndexes + @"
+						};
+					}
+				}";
 
-							public override IndexDefinition CreateIndexDefinition()
-							{
-								return new IndexDefinition
-								{
-									Maps = { " + maps + @" },
-									Reduce = " + reduce + @",
-									MaxIndexOutputsPerDocument = " + maxIndexOutputsPerDocument + @",
-									Indexes = " + indexes + @",
-									Stores = " + stores + @",
-									TermVectors = " + termVectors + @",
-									SortOptions = " + sortOptions + @",
-									Analyzers = " + analyzers + @",
-									Suggestions = " + suggestions + @",
-
-									
-								};
-							}
-						}";
-			//Stores = { { 'Total', FieldStorage.Yes } }
-			indexDefinition.Fields = Database.Indexes.GetIndexFields(indexName);
-			return GetMessageWithObject(new
-			{
-				Index = indexDefinition,
-			});
+			return GetMessageWithObject(cSharpCode);
 		}
 
-		private string GenerateStringFromStringToEnumDictionary<T>(IEnumerable<KeyValuePair<string, T>> dictionary)
+		private static string GenerateStringFromStringToEnumDictionary<T>(IEnumerable<KeyValuePair<string, T>> dictionary)
 		{
 			var list = (from keyValuePair in dictionary
 						let value = keyValuePair.Value.GetType().Name + "." + keyValuePair.Value
 						select @"{ """ + keyValuePair.Key + @""", " + value + " }").ToList();
-			
-			return (list.Count > 0) ? "{ " + string.Join(", ", list) + @" }" : "null"; 
+
+			return ConvertListToStringWithSeperator(list);
+		}
+
+		private static string ConvertListToStringWithSeperator(List<string> list)
+		{
+			return (list.Count > 0) ? "{ " + string.Join(", ", list) + @" }" : "null";
 		}
 
         [HttpGet]
@@ -305,47 +319,6 @@ namespace Raven.Database.Server.Controllers
 
             Database.Batch(commands, CancellationToken.None);
         }
-
-        private static RavenJToken SetValueInDocument(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return value;
-
-            var ch = value[0];
-            if (ch == '[' || ch == '{')
-            {
-                try
-                {
-                    return RavenJToken.Parse(value);
-                }
-                catch (Exception)
-                {
-                    // ignoring failure to parse, will proceed to insert as a string value
-                }
-            }
-            else if (char.IsDigit(ch) || ch == '-' || ch == '.')
-            {
-                // maybe it is a number?
-                long longResult;
-                if (long.TryParse(value, out longResult))
-                {
-                    return longResult;
-                }
-
-                decimal decimalResult;
-                if (decimal.TryParse(value, out decimalResult))
-                {
-                    return decimalResult;
-                }
-            }
-            else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
-            {
-                return value.Substring(1, value.Length - 2);
-            }
-
-            return value;
-        }
-
 
 	    [HttpPost]
         [Route("studio-tasks/loadCsvFile")]
@@ -437,6 +410,46 @@ namespace Raven.Database.Server.Controllers
 
             return GetEmptyMessage();
 	    }
+
+		private static RavenJToken SetValueInDocument(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return value;
+
+			var ch = value[0];
+			if (ch == '[' || ch == '{')
+			{
+				try
+				{
+					return RavenJToken.Parse(value);
+				}
+				catch (Exception)
+				{
+					// ignoring failure to parse, will proceed to insert as a string value
+				}
+			}
+			else if (char.IsDigit(ch) || ch == '-' || ch == '.')
+			{
+				// maybe it is a number?
+				long longResult;
+				if (long.TryParse(value, out longResult))
+				{
+					return longResult;
+				}
+
+				decimal decimalResult;
+				if (decimal.TryParse(value, out decimalResult))
+				{
+					return decimalResult;
+				}
+			}
+			else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
+			{
+				return value.Substring(1, value.Length - 2);
+			}
+
+			return value;
+		}
 	}
 }
 
