@@ -17,7 +17,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-	public class ClientUsage : RavenFsTestBase
+    public class CommandsUsage : RavenFsTestBase
 	{
 		[Fact]
 		public async Task Can_update_just_metadata()
@@ -29,10 +29,10 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewAsyncClient();
-            await client.UploadAsync("abc.txt", new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 		                                        {
 		                                            {"test", "1"}
-		                                        }, ms);
+		                                        });
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject
 				                                        {
@@ -43,10 +43,7 @@ namespace RavenFS.Tests
 			var metadata = await client.GetMetadataForAsync("abc.txt");
 			Assert.Equal("2", metadata["test"]);
 
-		    var readStream = new MemoryStream();
-
-		    await client.DownloadAsync("abc.txt", readStream);
-
+		    var readStream = await client.DownloadAsync("abc.txt");
             Assert.Equal(expected, StreamToString(readStream));
 		}
 
@@ -65,9 +62,7 @@ namespace RavenFS.Tests
 			var client = NewAsyncClient();
 		    await client.UploadAsync("numbers.txt", ms);
 
-			var actual = new MemoryStream();
-		    await client.DownloadAsync("numbers.txt", actual, 1024*4 + 1);
-			actual.Position = 0;
+			var actual = await client.DownloadAsync("numbers.txt", null, 1024*4 + 1);
 			ms.Position = 1024*4 + 1;
 			var expectedString = new StreamReader(ms).ReadToEnd();
 			var actualString = new StreamReader(actual).ReadToEnd();
@@ -91,9 +86,7 @@ namespace RavenFS.Tests
 			var client = NewAsyncClient();
 		    await client.UploadAsync("abc.txt", ms);
 
-		    var stream = new MemoryStream();
-
-		    await client.DownloadAsync("abc.txt", stream);
+		    var stream = await client.DownloadAsync("abc.txt");
             Assert.Equal(expected, StreamToString(stream));
 		}
 
@@ -107,11 +100,11 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewAsyncClient();
-            await client.UploadAsync("abc.txt", new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 		                                        {
 		                                            {"test", "value"},
 		                                            {"hello", "there"}
-		                                        }, ms);
+		                                        });
 
 
 			var collection = await client.GetMetadataForAsync("abc.txt");
@@ -131,15 +124,15 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewAsyncClient();
-            await client.UploadAsync("abc.txt", new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 		                                        {
 		                                            {"Test", "value"},
-		                                        }, ms);
+		                                        });
 
 
 		    var collection = await client.SearchAsync("Test:value");
 
-			Assert.Equal(1, collection.Files.Length);
+            Assert.Equal(1, collection.Files.Count);
 			Assert.Equal("abc.txt", collection.Files[0].Name);
 			Assert.Equal("value", collection.Files[0].Metadata["Test"]);
 		}
@@ -157,11 +150,7 @@ namespace RavenFS.Tests
 			var client = NewAsyncClient();
 		    await client.UploadAsync("abc.txt", ms);
 
-			var ms2 = new MemoryStream();
-		    await client.DownloadAsync("abc.txt", ms2);
-
-			ms2.Position = 0;
-
+			var ms2 = await client.DownloadAsync("abc.txt");
 			var actual = new StreamReader(ms2).ReadToEnd();
 
 			Assert.Equal(expected, actual);
@@ -231,87 +220,78 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Can_get_partial_content_from_the_begin()
+		public async void Can_get_partial_content_from_the_begin()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
-			client.UploadAsync("abc.txt",
-                               new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 				                   {
 					                   {"test", "1"}
-				                   }, ms)
-			      .Wait();
-			var downloadedStream = new MemoryStream();
-			var nameValues = client.DownloadAsync("abc.txt", downloadedStream, 0, 6).Result;
-			var sr = new StreamReader(downloadedStream);
-			downloadedStream.Position = 0;
-			var result = sr.ReadToEnd();
+				                   });
+
+            var nameValues = new Reference<RavenJObject>();
+            var downloadedStream = await client.DownloadAsync("abc.txt", nameValues, 0, 6);
+
+            var result = new StreamReader(downloadedStream).ReadToEnd();
+
 			Assert.Equal("000001", result);
-			Assert.Equal("bytes 0-5/3000000", nameValues["Content-Range"]);
-			//Assert.Equal("6", nameValues["Content-Length"]); // no idea why we aren't getting this, probably because we get a range
+			Assert.Equal("bytes 0-5/3000000", nameValues.Value["Content-Range"]);			
 		}
 
 		[Fact]
-		public void Can_get_partial_content_from_the_middle()
+		public async void Can_get_partial_content_from_the_middle()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
-			client.UploadAsync("abc.txt",
-                               new RavenJObject
-				                   {
-					                   {"test", "1"}
-				                   }, ms)
-			      .Wait();
-			var downloadedStream = new MemoryStream();
-			var nameValues = client.DownloadAsync("abc.txt", downloadedStream, 3006, 3017).Result;
-			var sr = new StreamReader(downloadedStream);
-			downloadedStream.Position = 0;
-			var result = sr.ReadToEnd();
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
+				                       {
+					                       {"test", "1"}
+				                       });
+
+            var nameValues = new Reference<RavenJObject>();
+			var downloadedStream = await client.DownloadAsync("abc.txt", nameValues, 3006, 3017);
+            
+            var result = new StreamReader(downloadedStream).ReadToEnd();
 			Assert.Equal("00050200050", result);
-			Assert.Equal("bytes 3006-3016/3000000", nameValues["Content-Range"]);
-			//Assert.Equal("11", nameValues["Content-Length"]); - no idea why we aren't getting this, probably because we get a range
+			Assert.Equal("bytes 3006-3016/3000000", nameValues.Value["Content-Range"]);
 		}
 
 		[Fact]
-		public void Can_get_partial_content_from_the_end_explicitely()
+		public async void Can_get_partial_content_from_the_end_explicitely()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
-			client.UploadAsync("abc.txt",
-                               new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 				                   {
 					                   {"test", "1"}
-				                   }, ms)
-			      .Wait();
-			var downloadedStream = new MemoryStream();
-			var nameValues = client.DownloadAsync("abc.txt", downloadedStream, ms.Length - 6, ms.Length - 1).Result;
-			var sr = new StreamReader(downloadedStream);
-			downloadedStream.Position = 0;
-			var result = sr.ReadToEnd();
+				                   });
+
+
+            var nameValues = new Reference<RavenJObject>();
+            var downloadedStream = await client.DownloadAsync("abc.txt", nameValues, ms.Length - 6, ms.Length - 1);
+           
+            var result = new StreamReader(downloadedStream).ReadToEnd();
+
 			Assert.Equal("50000", result);
-			Assert.Equal("bytes 2999994-2999998/3000000", nameValues.Value<string>("Content-Range"));
-			//Assert.Equal("6", nameValues["Content-Length"]); - no idea why we aren't getting this, probably because we get a range
+			Assert.Equal("bytes 2999994-2999998/3000000", nameValues.Value.Value<string>("Content-Range"));			
 		}
 
 		[Fact]
-		public void Can_get_partial_content_from_the_end()
+		public async void Can_get_partial_content_from_the_end()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
-			client.UploadAsync("abc.bin",
-                               new RavenJObject
+            await client.UploadAsync("abc.bin", ms, new RavenJObject
 				                   {
 					                   {"test", "1"}
-				                   }, ms)
-			      .Wait();
-			var downloadedStream = new MemoryStream();
-			var nameValues = client.DownloadAsync("abc.bin", downloadedStream, ms.Length - 7).Result;
-			var sr = new StreamReader(downloadedStream);
-			downloadedStream.Position = 0;
-			var result = sr.ReadToEnd();
-			Assert.Equal("9500000", result);
-            Assert.Equal("bytes 2999993-2999999/3000000", nameValues.Value<string>("Content-Range"));
-			//Assert.Equal("7", nameValues["Content-Length"]); - no idea why we aren't getting this, probably because we get a range
+				                   });
+
+            var nameValues = new Reference<RavenJObject>();
+            var downloadedStream = await client.DownloadAsync("abc.bin", nameValues, ms.Length - 7);
+            var result = new StreamReader(downloadedStream).ReadToEnd();
+
+            Assert.Equal("9500000", result);
+            Assert.Equal("bytes 2999993-2999999/3000000", nameValues.Value.Value<string>("Content-Range"));
 		}
 
 		[Fact]
@@ -321,10 +301,10 @@ namespace RavenFS.Tests
 			var client = NewAsyncClient();
 
 			// note that file upload modifies ETag twice
-            await client.UploadAsync("test.bin", new RavenJObject(), content);
+            await client.UploadAsync("test.bin", content, new RavenJObject());
             var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
             var etag0 = resultFileMetadata.Value<Guid>("ETag");
-            await client.UploadAsync("test.bin", new RavenJObject(), content);
+            await client.UploadAsync("test.bin", content, new RavenJObject());
             resultFileMetadata = await client.GetMetadataForAsync("test.bin");
 			var etag1 = resultFileMetadata.Value<Guid>("ETag");
 			
@@ -451,51 +431,27 @@ namespace RavenFS.Tests
 			Assert.NotNull(client.GetMetadataForAsync("name#.bin").Result);
 		}
 
+        private void ExecuteWithSimplifiedException ( Action action )
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                throw e.SimplifyException();
+            }
+        }
+
 		[Fact]
-		public async Task Should_throw_file_not_found_exception()
+		public void Should_throw_file_not_found_exception()
 		{
 			var client = NewAsyncClient();
 
-			var throwsCount = 0;
-
-			try
-			{
-				await client.DownloadAsync("not_existing_file", new MemoryStream());
-			}
-            catch (FileNotFoundException ex)
-			{
-				throwsCount++;
-			}
-
-			try
-			{
-				await client.RenameAsync("not_existing_file", "abc");
-			}
-            catch (FileNotFoundException ex)
-			{
-				throwsCount++;
-			}
-
-			try
-			{
-				await client.DeleteAsync("not_existing_file");
-			}
-            catch (FileNotFoundException ex)
-			{
-				throwsCount++;
-			}
-
-			try
-			{
-                await client.UpdateMetadataAsync("not_existing_file", new RavenJObject());
-				throwsCount++;
-			}
-            catch (FileNotFoundException ex)
-			{
-				throwsCount++;
-			}
-
-			Assert.Equal(4, throwsCount);
+            Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.DownloadAsync("not_existing_file").Wait()));
+            Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.RenameAsync("not_existing_file", "abc").Wait()));
+            Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.DeleteAsync("not_existing_file").Wait()));
+            Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.UpdateMetadataAsync("not_existing_file", new RavenJObject()).Wait()));
 		}
 
 		[Fact]
@@ -651,7 +607,39 @@ namespace RavenFS.Tests
             Assert.True(throwsException);
         }
 
-	    private static MemoryStream PrepareTextSourceStream()
+        [Fact]
+        public async Task Can_get_files_metadata()
+        {
+            var client = NewAsyncClient();
+            await client.UploadAsync("1.txt", new RandomStream(128),
+                                        new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+            await client.UploadAsync("a/b/2.txt", new RandomStream(128));
+
+            var fileMetadata = await client.GetAsync(new string[] { "1.txt", "a/b/2.txt" });
+            Assert.NotNull(fileMetadata);
+            Assert.Equal(2, fileMetadata.Length);
+            Assert.Equal("1.txt", fileMetadata[0].Name);
+            Assert.Equal("/a/b/2.txt", fileMetadata[1].Name);
+            Assert.Equal(128, fileMetadata[0].TotalSize);
+            Assert.Equal(128, fileMetadata[1].TotalSize);
+            Assert.NotNull(fileMetadata[0].Etag);
+            Assert.NotNull(fileMetadata[1].Etag);
+
+            Assert.NotNull(fileMetadata[0].LastModified);
+            Assert.Equal(fileMetadata[0].Metadata["Last-Modified"].Value<DateTimeOffset>(), fileMetadata[0].LastModified);
+            Assert.NotNull(fileMetadata[0].CreationDate);
+            Assert.Equal(fileMetadata[1].Metadata["Creation-Date"].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
+            Assert.Equal(".txt", fileMetadata[0].Extension);
+            Assert.Equal(".txt", fileMetadata[1].Extension);
+            Assert.Equal("", fileMetadata[0].Path);
+            Assert.Equal("\\a\\b", fileMetadata[1].Path);
+        }
+
+
+        private static MemoryStream PrepareTextSourceStream()
 		{
 			var ms = new MemoryStream();
 			var writer = new StreamWriter(ms);

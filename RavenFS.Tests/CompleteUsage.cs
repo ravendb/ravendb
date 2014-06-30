@@ -11,11 +11,11 @@ namespace RavenFS.Tests
 		public async void HowToUseTheClient()
 		{
 			var client = NewAsyncClient();
-            var uploadTask = client.UploadAsync("dragon.design", new RavenJObject
+            var uploadTask = client.UploadAsync("dragon.design", new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject
 			{
 				{"Customer", "Northwind"},
 				{"Preferred", "True"}
-			}, new MemoryStream(new byte[] {1, 2, 3}));
+			});
 
 			await uploadTask; // or we can just let it run
 

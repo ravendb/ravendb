@@ -67,9 +67,9 @@ namespace RavenFS.Tests.Auth
             var sourceClient = NewAsyncClient(0);
             var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
 
-            await sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content);
+            await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } });
             content.Position = 0;
-            await destinationClient.UploadAsync("test.bin", new RavenJObject { { "really", "different" } }, content);
+            await destinationClient.UploadAsync("test.bin", content, new RavenJObject { { "really", "different" } });
 
             var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
