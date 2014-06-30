@@ -182,7 +182,7 @@ namespace Raven.Database.Config
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 
-			DatbaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
+			DatabaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
 
 			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
@@ -283,7 +283,7 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// The time to wait before canceling a database operation such as load (many) or query
 		/// </summary>
-		public TimeSpan DatbaseOperationTimeout { get; private set; }
+		public TimeSpan DatabaseOperationTimeout { get; private set; }
 
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
 

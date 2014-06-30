@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
 			{
 				writer.WriteStartObject();
@@ -109,7 +109,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 			{
 				var msg = GetEmptyMessage();
 
