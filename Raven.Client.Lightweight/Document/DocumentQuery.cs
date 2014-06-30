@@ -88,11 +88,6 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
-	    {
-	        this.queryInputs = queryInputs;
-	    }
-
 		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>

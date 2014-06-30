@@ -2177,5 +2177,12 @@ If you really want to do in memory filtering on the data returned from the query
 	    {
             this.resultsTransformer = transformer;
 	    }
+
+
+        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        {
+            this.queryInputs = queryInputs;
+        }
+
 	}
 }
