@@ -2,7 +2,7 @@
 
 class versioningEntry {
     collection = ko.observable<string>().extend({ required: true });
-    maxRevisions = ko.observable<string>().extend({ required: true });
+    maxRevisions = ko.observable<number>().extend({ required: true });
     exclude = ko.observable<boolean>().extend({ required: true });
 
     fromDatabase = ko.observable<boolean>();
@@ -27,7 +27,7 @@ class versioningEntry {
 
         this.fromDatabase(fromDatabse);
         this.collection(dto.Id);
-        this.maxRevisions(dto.MaxRevisions.toString());
+        this.maxRevisions(dto.MaxRevisions);
         this.exclude(dto.Exclude);
         this.removable = ko.computed<boolean>(() => {
             return (this.collection() !== "DefaultConfiguration");
@@ -52,7 +52,7 @@ class versioningEntry {
         var dto = {
             '@metadata': undefined,
             Id: this.collection(),
-            MaxRevisions: parseInt(this.maxRevisions()),
+            MaxRevisions: this.maxRevisions(),
             Exclude: this.exclude()
         };
 

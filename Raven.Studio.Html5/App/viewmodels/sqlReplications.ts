@@ -26,7 +26,7 @@ class sqlReplications extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
-        this.firstIndex = ko.computed(function () {
+        this.firstIndex = ko.computed(() => {
             return !this.isFirstLoad() ? 0 : -1;
         }, this);
     }

@@ -8,10 +8,10 @@ import appUrl = require("common/appUrl");
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<documentModel>();
 
-    maximumSize = ko.observable<string>();
-    warningLimitThreshold = ko.observable<string>();
-    maxNumberOfDocs = ko.observable<string>();
-    warningThresholdForDocs = ko.observable<string>();
+    maximumSize = ko.observable<number>();
+    warningLimitThreshold = ko.observable<number>();
+    maxNumberOfDocs = ko.observable<number>();
+    warningThresholdForDocs = ko.observable<number>();
  
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -42,8 +42,8 @@ class quotas extends viewModelBase {
             .execute()
             .done((document: documentModel) => {
                 this.settingsDocument(document);
-                this.maximumSize((document["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024).toString());
-                this.warningLimitThreshold((document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024).toString());
+                this.maximumSize(document["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024);
+                this.warningLimitThreshold(document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024);
                 this.maxNumberOfDocs(document["Settings"]["Raven/Quotas/Documents/HardLimit"]);
                 this.warningThresholdForDocs(document["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
             });
@@ -62,10 +62,10 @@ class quotas extends viewModelBase {
         var db = this.activeDatabase();
         if (db) {
             var document = new documentModel(this.settingsDocument().toDto(true));
-            document["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = (parseInt(this.maximumSize()) * 1024).toString();
-            document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = (parseInt(this.warningLimitThreshold()) * 1024).toString();
-            document["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs().toString();
-            document["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs().toString();
+            document["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = this.maximumSize() * 1024;
+            document["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = this.warningLimitThreshold() * 1024;
+            document["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs();
+            document["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs();
             var saveTask = new saveDatabaseSettingsCommand(db, document).execute();
             saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
                 this.settingsDocument().__metadata['@etag'] = idAndEtag.ETag;

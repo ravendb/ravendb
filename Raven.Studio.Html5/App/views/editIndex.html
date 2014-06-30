@@ -67,7 +67,7 @@
                 <i class="fa fa-files-o"></i>
             </button>
             <button class="btn btn-default" title="Generate C# index definition" data-bind="click: createCSharpCode">
-                <i class="fa fa-windows"></i>
+                <i class="fa">C#</i>
             </button>
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
                 <i class="fa fa-refresh"></i>
@@ -185,7 +185,7 @@
                                     <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm"  >Suggestion</label>
                                     <div class="col-md-7 fieldControl">
                                         <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
-                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="value: suggestionAccuracy, valueUpdate: 'afterkeyup', visible: suggestionDistance() !== 'None'" />
+                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="numericValue: suggestionAccuracy, valueUpdate: 'afterkeyup', visible: suggestionDistance() !== 'None'" />
                                     </div>
                                 </div>
                             </div>
@@ -222,11 +222,11 @@
                                     </div>
                                     <label class="control-label col-md-3">Min X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="value: minX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: minX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-3">Max X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="value: maxX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: maxX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-3">Precision</label>
                                     <div class="col-md-9">
@@ -240,15 +240,15 @@
                                     </div>
                                     <label class="control-label col-md-7" data-bind="visible: canSpecifyTreeLevel">Max Tree Level</label>
                                     <div class="col-md-5" data-bind="visible: canSpecifyTreeLevel">
-                                        <input type="number" class="form-control" data-bind="value: maxTreeLevel, valueUpdate: 'afterkeyup'" />
+                                        <input type="number" class="form-control" data-bind="numericValue: maxTreeLevel, valueUpdate: 'afterkeyup'" />
                                     </div>
                                     <label class="control-label col-md-7">Min Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="value: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-7">Max Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="value: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
                                     </div>
                                 </div>
                             </div>
@@ -260,7 +260,7 @@
 
                 <label class="col-sm-1 control-label">Max Index Outputs Per Document</label>
                 <div class="col-md-2">
-                    <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument, valueUpdate: 'afterkeyup'" min="0" />
+                    <input class="form-control" required type="number" data-bind="numericValue: maxIndexOutputsPerDocument, valueUpdate: 'afterkeyup'" min="0" />
                 </div>
                 <div class="col-md-1">
                     <button type="button" class="close pull-left"  data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
