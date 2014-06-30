@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(fixedName, indexDefinition, luceneDirectory);
 
-                    CheckIndexState(luceneDirectory, indexDefinition, indexImplementation);
+                    CheckIndexState(luceneDirectory, indexDefinition, indexImplementation, resetTried);
 
 					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
 					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
@@ -190,36 +190,57 @@ namespace Raven.Database.Indexing
 			indexes.TryAdd(fixedName, indexImplementation);
 		}
 
-	    private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index)
+	    private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
 	    {
             if (configuration.ResetIndexOnUncleanShutdown == false)
                 return;
 
-			if (index.IsMapReduce)
-				return;
+			// 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
+			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
+			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
 
-            // 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
-            // 2. If no 'LastEtag' in commitData then we consider it an invalid index
-            // 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
+			var commitData = IndexReader.GetCommitUserData(directory);
 
-	        var commitData = IndexReader.GetCommitUserData(directory);
-
-	        string value;
-	        Etag lastEtag = null;
-	        if (commitData != null && commitData.TryGetValue("LastEtag", out value))
-	            Etag.TryParse(value, out lastEtag); // etag will be null if parsing will fail
-
-            var lastStoredEtag = GetLastEtagForIndex(index) ?? Etag.Empty;
-	        lastEtag = lastEtag ?? Etag.Empty;
-
-            if (EtagUtil.IsGreaterThanOrEqual(lastEtag, lastStoredEtag))
-                return;
-
-	        var now = SystemTime.UtcNow;
-            ResetLastIndexedEtag(indexDefinition, lastEtag, now);
+		    if (index.IsMapReduce)
+				CheckMapReduceIndexState(commitData, resetTried);
+			else
+				CheckMapIndexState(commitData, indexDefinition, index);
 	    }
 
-	    private static bool IsIdleAutoIndex(Index index)
+		private void CheckMapIndexState(IDictionary<string, string> commitData, IndexDefinition indexDefinition, Index index)
+		{
+			string value;
+			Etag lastEtag = null;
+			if (commitData != null && commitData.TryGetValue("LastEtag", out value))
+				Etag.TryParse(value, out lastEtag); // etag will be null if parsing will fail
+
+			var lastStoredEtag = GetLastEtagForIndex(index) ?? Etag.Empty;
+			lastEtag = lastEtag ?? Etag.Empty;
+
+			if (EtagUtil.IsGreaterThanOrEqual(lastEtag, lastStoredEtag))
+				return;
+
+			var now = SystemTime.UtcNow;
+			ResetLastIndexedEtag(indexDefinition, lastEtag, now);
+		}
+
+		private static void CheckMapReduceIndexState(IDictionary<string, string> commitData, bool resetTried)
+		{
+			if (resetTried)
+				return;
+
+			string marker;
+			long commitMarker;
+			var valid = commitData != null 
+				&& commitData.TryGetValue("Marker", out marker) 
+				&& long.TryParse(marker, out commitMarker)
+				&& commitMarker == RavenIndexWriter.CommitMarker;
+
+			if (valid == false)
+				throw new InvalidOperationException("Map-Reduce index corruption detected.");
+		}
+
+		private static bool IsIdleAutoIndex(Index index)
 		{
 			return index.name.StartsWith("Auto/") && index.Priority == IndexingPriority.Idle;
 		}
@@ -615,7 +636,7 @@ namespace Raven.Database.Indexing
 					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexName,
 																				commitPointDirectoryName);
 
-					if (ValidateCommitPointChecksum(commitPointDirectory, out indexCommit) == false)
+					if (TryGetCommitPoint(commitPointDirectory, out indexCommit) == false)
 					{
 						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
 						continue; // checksum is invalid, try another commit point
@@ -696,7 +717,7 @@ namespace Raven.Database.Indexing
             return result;
         }
 
-		private static bool ValidateCommitPointChecksum(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
+		private static bool TryGetCommitPoint(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
 		{
 			using (var commitPointFile = File.OpenRead(commitPointDirectory.FileFullPath))
 			{
