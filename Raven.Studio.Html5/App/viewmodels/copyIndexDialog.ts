@@ -49,8 +49,7 @@ class copyIndexDialog extends dialogViewModelBase {
         $("#indexJSON").select();
     }
 
-
-    finishOperation() {
+    saveIndex() {
         if (this.isPaste === true && !!this.indexJSON()) {
             var indexDto: indexDefinitionDto;
 
