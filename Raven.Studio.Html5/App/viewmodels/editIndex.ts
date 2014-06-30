@@ -7,15 +7,12 @@ import luceneField = require("models/luceneField");
 import spatialIndexField = require("models/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
-import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
-import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
 
@@ -38,6 +35,7 @@ class editIndex extends viewModelBase {
     indexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
+    loadedIndexName = ko.observable<string>();
     
     constructor() {
         super();
@@ -52,17 +50,19 @@ class editIndex extends viewModelBase {
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
-        this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : null);
+        this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
     }
     
     canActivate(indexToEditName: string) {
+        super.canActivate(indexToEditName);
+
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
-            this.fetchIndexToEdit(indexToEditName)
-                .done(()=> canActivateResult.resolve({ can: true }))
+            this.fetchIndexData(indexToEditName)
+                .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(indexToEditName) + " index", null));
-                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase() )});
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) });
                 });
 
             return canActivateResult;
@@ -84,7 +84,7 @@ class editIndex extends viewModelBase {
         }
 
         this.initializeDirtyFlag();
-        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.editedIndex().maps().every(m => m().trim().length > 0) && viewModelBase.dirtyFlag().isDirty());
+
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
     }
 
@@ -122,11 +122,13 @@ class editIndex extends viewModelBase {
         });
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
+
+        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty());
     }
 
-    editExistingIndex(unescapedIndexName: string) {
+    private editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
-        this.fetchIndexPriority(indexName);
+        this.loadedIndexName(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
@@ -155,16 +157,29 @@ class editIndex extends viewModelBase {
         });
     }
 
-    fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
-        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
+    private fetchIndexData(unescapedIndexName: string): JQueryPromise<any> {
+        var indexName = decodeURIComponent(unescapedIndexName);
+        return $.when(this.fetchIndexToEdit(indexName), this.fetchIndexPriority(indexName));
+    }
+
+    private fetchIndexToEdit(indexName: string): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done((results: indexDefinitionContainerDto) => {
                 this.editedIndex(new indexDefinition(results.Index));
                 this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
-        });
+                deferred.resolve();
+            })
+            .fail(() => deferred.reject());
+
+        return deferred;
     }
 
-    fetchIndexPriority(indexName: string) {
+    private fetchIndexPriority(indexName: string): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
         new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => {
@@ -174,7 +189,11 @@ class editIndex extends viewModelBase {
                     var priorityWithoutWhitespace = matchingIndex.Priority.replace(", ", ",");
                     this.priority(index.priorityFromString(priorityWithoutWhitespace));
                 }
-            });
+                deferred.resolve();
+            })
+            .fail(() => deferred.reject());
+
+        return deferred;
     }
 
     createNewIndexDefinition(): indexDefinition {
@@ -184,18 +203,21 @@ class editIndex extends viewModelBase {
     save() {
         if (this.editedIndex().name()) {
             var index = this.editedIndex().toDto();
-            var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
-            saveCommand
-                .execute()
-                .done(() => {
-                    viewModelBase.dirtyFlag().reset(); // Resync Changes
 
-                    if (!this.isEditingExistingIndex()) {
-                        this.isEditingExistingIndex(true);
-                        this.editExistingIndex(index.Name);
-                    }
-                this.updateUrl(index.Name);
-            });
+            require(["commands/saveIndexDefinitionCommand"], saveIndexDefinitionCommand => {
+                var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
+                saveCommand
+                    .execute()
+                    .done(() => {
+                        viewModelBase.dirtyFlag().reset(); // Resync Changes
+
+                        if (!this.isEditingExistingIndex()) {
+                            this.isEditingExistingIndex(true);
+                            this.editExistingIndex(index.Name);
+                        }
+                        this.updateUrl(index.Name);
+                    });
+            }); 
         }
     }
 
@@ -205,40 +227,30 @@ class editIndex extends viewModelBase {
     }
 
     refreshIndex() {
-        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
         canContinue.done(() => {
-        var existingIndex = this.editedIndex();
-        var existingIndexName = "";
-        if (existingIndex) {
-            this.editedIndex(null);
-            existingIndexName = existingIndex.name();
-
-            this.fetchIndexToEdit(existingIndexName)
-                .done(()=> {
-                    this.editExistingIndex(existingIndexName);
-                    
-
-                    viewModelBase.dirtyFlag().reset();
-                    if (existingIndexName.length > 0)
-                        this.updateUrl(existingIndexName);
-                }).fail(() => this.editedIndex(existingIndex));
-
-        } else {
-                viewModelBase.dirtyFlag().reset(); // Resync Changes
-            if (existingIndexName.length > 0)
-                this.updateUrl(existingIndexName);
-        }
+            this.fetchIndexData(this.loadedIndexName())
+                .done(() => {
+                    this.initializeDirtyFlag();
+                    this.editedIndex().name.valueHasMutated();
+            });
         });
     }
 
     deleteIndex() {
-        var index = this.editedIndex();
-        if (index) {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm([index.name()], db);
-            deleteViewModel.deleteTask.done(()=> router.navigate(appUrl.forIndexes(db)));
+        var indexName = this.loadedIndexName();
+        if (indexName) {
+            require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+                var db = this.activeDatabase();
+                var deleteViewModel = new deleteIndexesConfirm([indexName], db);
+                deleteViewModel.deleteTask.done(() => {
+                    //prevent asking for unsaved changes
+                    viewModelBase.dirtyFlag().reset(); // Resync Changes
+                    router.navigate(appUrl.forIndexes(db));
+                });
 
-            dialog.show(deleteViewModel);
+                dialog.show(deleteViewModel);
+            });
         }
     }
 
@@ -334,11 +346,22 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        require(["viewmodels/copyIndexDialog"], copyIndexDialog => {
+            app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        });   
     }
 
-
-    
+    createCSharpCode() {
+        require(["commands/getCSharpIndexDefinitionCommand"], getCSharpIndexDefinitionCommand => {
+            new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
+                .execute()
+                .done((data: string) => {
+                    require(["viewmodels/showDataDialog"], showDataDialog => {
+                        app.showDialog(new showDataDialog("C# Index Definition", data));
+                    });
+                });
+        });
+    }
 }
 
 export = editIndex; 
