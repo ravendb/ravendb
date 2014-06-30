@@ -134,10 +134,35 @@ namespace Voron
 
 		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)
 		{
-			var otherSlice = other as Slice;
+			var otherSlice =  other as Slice;
 
 			if (otherSlice != null)
-				return SliceComparisonMethods.Compare(this, otherSlice, cmp, size);
+			{
+				if (Array != null)
+				{
+					fixed (byte* a = Array)
+					{
+						if (otherSlice.Array != null)
+						{
+							fixed (byte* b = otherSlice.Array)
+							{
+								return SliceComparisonMethods.MemoryCompare(a, b, size);
+							}
+						}
+						return SliceComparisonMethods.MemoryCompare(a, otherSlice.Pointer, size);
+					}
+				}
+
+				if (otherSlice.Array != null)
+				{
+					fixed (byte* b = otherSlice.Array)
+					{
+						return SliceComparisonMethods.MemoryCompare(Pointer, b, size);
+					}
+				}
+
+				return SliceComparisonMethods.MemoryCompare(Pointer, otherSlice.Pointer, size);
+			}
 
 			var prefixedSlice = other as PrefixedSlice;
 
@@ -167,7 +192,7 @@ namespace Voron
 
 		public override Slice ToSlice()
 		{
-			return this;
+			return new Slice(this, Size);
 		}
 
 		public void CopyTo(byte[] dest)

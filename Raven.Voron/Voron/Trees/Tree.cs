@@ -73,7 +73,7 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		public void Add(MemorySlice key, Stream value, ushort? version = null)
+		public void Add(Slice key, Stream value, ushort? version = null)
 		{
 		    if (value == null) throw new ArgumentNullException("value");
 		    if (value.Length > int.MaxValue)
@@ -102,7 +102,7 @@ namespace Voron.Trees
 			return value;
 		}
 
-		public void Add(MemorySlice key, byte[] value, ushort? version = null)
+		public void Add(Slice key, byte[] value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 
@@ -115,7 +115,7 @@ namespace Voron.Trees
 			}
 		}
 
-		public void Add(MemorySlice key, Slice value, ushort? version = null)
+		public void Add(Slice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 
@@ -166,7 +166,7 @@ namespace Voron.Trees
 			{
 				node = page.GetNode(page.LastSearchPosition);
 
-				Debug.Assert(page.GetNodeKey(node).Equals(key));
+				//TODO arek Debug.Assert(page.SetNodeKey(node).Equals(key));
 
 				shouldGoToOverflowPage = _tx.DataPager.ShouldGoToOverflowPage(len);
 
@@ -384,10 +384,33 @@ namespace Voron.Trees
 	    {
 	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
 	        {
-	            Number = p.PageNumber,
-	            FirstKey = leftmostPage == true ? PrefixedSlice.BeforeAllKeys : p.GetNodeKey(0),
-	            LastKey = rightmostPage == true ? PrefixedSlice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
+	            Number = p.PageNumber
 	        };
+
+		    if (leftmostPage == true)
+		    {
+				if(p.KeysPrefixed)
+					foundPage.FirstKey = PrefixedSlice.BeforeAllKeys;
+				else
+					foundPage.FirstKey = Slice.BeforeAllKeys;
+		    }
+		    else
+		    {
+			    foundPage.FirstKey = p.GetNodeKey(0);
+		    }
+
+			if (rightmostPage == true)
+			{
+				if (p.KeysPrefixed)
+					foundPage.LastKey = PrefixedSlice.AfterAllKeys;
+				else
+					foundPage.LastKey = Slice.AfterAllKeys;
+			}
+			else
+			{
+				foundPage.LastKey = p.GetNodeKey(p.NumberOfEntries - 1);
+			}
+
 	        var cur = c.Pages.First;
 	        int pos = foundPage.CursorPath.Length - 1;
 	        while (cur != null)
@@ -469,7 +492,7 @@ namespace Voron.Trees
 			return page;
 		}
 
-		public void Delete(MemorySlice key, ushort? version = null)
+		public void Delete(Slice key, ushort? version = null)
 		{
 			if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot delete a value in a read only transaction");
@@ -570,10 +593,14 @@ namespace Voron.Trees
 			var stack = new Stack<Page>();
 			var root = _tx.GetReadOnlyPage(State.RootPageNumber);
 			stack.Push(root);
+
 			while (stack.Count > 0)
 			{
 				var p = stack.Pop();
 				results.Add(p.PageNumber);
+
+				var key = p.CreateNewEmptyKey();
+
 				for (int i = 0; i < p.NumberOfEntries; i++)
 				{
 					var node = p.GetNode(i);
@@ -597,7 +624,8 @@ namespace Voron.Trees
 						results.Add(childTreeHeader->RootPageNumber);
 
 						// this is a multi value
-						var tree = OpenOrCreateMultiValueTree(_tx, p.GetNodeKey(node), node);
+						p.SetNodeKey(node, ref key);
+						var tree = OpenOrCreateMultiValueTree(_tx, key, node);
 						results.AddRange(tree.AllPages());
 					}
 				}

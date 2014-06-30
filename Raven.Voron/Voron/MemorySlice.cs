@@ -10,8 +10,6 @@ using Voron.Trees;
 
 namespace Voron
 {
-	using System.Text;
-
 	public unsafe abstract class MemorySlice
 	{
 		public ushort Size;
@@ -35,16 +33,11 @@ namespace Voron
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, Math.Min(KeyLength, other.KeyLength));
+			var r = CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, KeyLength <= other.KeyLength ? KeyLength : other.KeyLength);
 			if (r != 0)
 				return r;
 
 			return KeyLength - other.KeyLength;
-		}
-
-		public static implicit operator MemorySlice(string s)
-		{
-			return new Slice(Encoding.UTF8.GetBytes(s));
 		}
 
 		public bool StartsWith(MemorySlice other)

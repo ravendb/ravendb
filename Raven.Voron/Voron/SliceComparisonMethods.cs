@@ -69,16 +69,6 @@
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int Compare(Slice x, Slice y, SliceComparer cmp, int size)
-		{
-			fixed (byte* p1 = x.Array)
-			fixed (byte* p2 = y.Array)
-			{
-				return cmp(p1 != null ? p1 : x.Pointer, p2 != null ? p2 : y.Pointer, size);
-			}
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Compare(Slice x, PrefixedSlice y, SliceComparer cmp, ushort size)
 		{
 			fixed (byte* p1 = x.Array)

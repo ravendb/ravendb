@@ -293,7 +293,7 @@ namespace Voron.Trees
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
-				key = page.GetNodeKey(node);
+				page.SetNodeKey(node, ref key);
             }
 
             return key;

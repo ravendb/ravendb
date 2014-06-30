@@ -153,11 +153,12 @@ namespace Voron.Trees
 
 				newNestedPage.ClearPrefixInfo();
 
-				MemorySlice nodeKey = null;
+				MemorySlice nodeKey = nestedPage.CreateNewEmptyKey();
 				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 				{
 					var nodeHeader = nestedPage.GetNode(i);
-					nodeKey = newNestedPage.ConvertToPrefixedKey(nestedPage.GetNodeKey(nodeHeader), i);
+					nestedPage.SetNodeKey(nodeHeader, ref nodeKey);
+					nodeKey = newNestedPage.ConvertToPrefixedKey(nodeKey, i);
 					newNestedPage.AddDataNode(i, nodeKey, 0,
 						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
