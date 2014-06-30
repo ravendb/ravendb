@@ -818,4 +818,23 @@ interface queryFieldInfo {
 
 interface indexSuggestion extends queryFieldInfo {
     Suggestion: string;
+
+interface mappedResultInfo {
+    ReduceKey: string;
+    DateTime: string;
+    Etag: string;
+    Data: any;
+    Bucket: number;
+    Source: string;
+}
+
+
+
+interface visualizerDataObjectDto {
+    x?: number;
+    y?: number;
+    type: number;
+    id: any;
+    source?: any;
+    idx: number;
 }

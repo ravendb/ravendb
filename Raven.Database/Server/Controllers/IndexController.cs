@@ -339,9 +339,8 @@ namespace Raven.Database.Server.Controllers
 			});
 			return GetMessageWithObject(new
 			{
-				Error = "Query string argument \'key\' is required",
 				Results = mappedResult
-			}, HttpStatusCode.BadRequest);
+			});
 		}
 
 		private HttpResponseMessage GetExplanation(string index)

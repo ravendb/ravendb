@@ -8,8 +8,8 @@ import router = require("plugins/router");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
-    //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
+    //private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
@@ -40,6 +40,7 @@ class appUrl {
         indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
+        visualizer: ko.computed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
@@ -269,6 +270,10 @@ class appUrl {
 
     static forUserInfo(db: database): string {
         return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forVisualizer(db: database): string {
+        return "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
     }
 
     static forApiKeys(): string {

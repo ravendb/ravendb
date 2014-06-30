@@ -167,7 +167,7 @@ class viewModelBase {
             this.modelPollingStop();
             viewModelBase.modelPollingHandle = null;
         }
-        viewModelBase.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
+        viewModelBase.modelPollingHandle = setInterval(() => this.modelPolling(), 1000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }

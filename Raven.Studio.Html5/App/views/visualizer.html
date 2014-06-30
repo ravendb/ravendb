@@ -1,0 +1,21 @@
+﻿<style>
+
+.link, .noForceLink {
+  stroke: #ccc;
+}
+
+.node text {
+  pointer-events: none;
+  font: 10px sans-serif;
+}
+
+</style>
+
+<section>
+    <div style="width: 1300px; height: 700px" id="visualizerContainer"><svg id="visualizer" ></svg></div>
+    
+    <input type="text" name="key" placeholder="key"  value="" id="itemKey" />
+    <button data-bind="click: addItem">Add item</button> <br />
+    Index name: <input type="text" name="indexName" value="" data-bind="value: indexName" />
+    <button data-bind="click: enterFullscreen">Fullscreen</button>
+</section>

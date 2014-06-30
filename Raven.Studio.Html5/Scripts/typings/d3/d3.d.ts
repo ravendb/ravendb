@@ -1264,7 +1264,8 @@ declare module D3 {
             resume(): ForceLayout;
             stop(): ForceLayout;
             tick(): ForceLayout;
-            on(type: string, listener: () => void ): ForceLayout;
+            on(type: string, listener: () => void): ForceLayout;
+            on(type: string, listener: (e) => void): ForceLayout;
             drag(): ForceLayout;
         }
 

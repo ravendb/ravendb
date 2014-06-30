@@ -284,6 +284,8 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexDebugMapCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexDebugReduceCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -324,8 +326,12 @@
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\visualizer.html" />
     <Content Include="App\views\metricsPrefetches.html" />
     <Content Include="App\views\metricsRequests.html" />
     <Content Include="App\views\metricsIndexBatchSize.html" />
