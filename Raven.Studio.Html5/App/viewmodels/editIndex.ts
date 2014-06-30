@@ -123,10 +123,7 @@ class editIndex extends viewModelBase {
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
 
-        this.isSaveEnabled = ko.computed(() => {
-            return !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty();
-            //return !!this.editedIndex().name() && this.editedIndex().maps().every(m => m().trim().length > 0) && viewModelBase.dirtyFlag().isDirty()
-        });
+        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty());
     }
 
     private editExistingIndex(unescapedIndexName: string) {
