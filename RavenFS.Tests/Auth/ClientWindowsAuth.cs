@@ -67,9 +67,7 @@ namespace RavenFS.Tests.Auth
 
             await client.UploadAsync("/dir/ms.bin", ms);
 
-            var result = new MemoryStream();
-
-            await client.DownloadAsync("/dir/ms.bin", result);
+            var result = await client.DownloadAsync("/dir/ms.bin");
 
             ms.Position = 0;
             result.Position = 0;
@@ -77,7 +75,7 @@ namespace RavenFS.Tests.Auth
             Assert.Equal(ms.GetMD5Hash(), result.GetMD5Hash());
             await client.RenameAsync("/dir/ms.bin", "/dir/sm.bin");
 
-            var searchResults = await client.GetFilesFromAsync("/dir");
+            var searchResults = await client.SearchOnDirectoryAsync("/dir");
 
             Assert.Equal(1, searchResults.FileCount);
 
@@ -85,7 +83,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.NotNull(metadata);
 
-            var folders = await client.GetFoldersAsync();
+            var folders = await client.GetDirectoriesAsync();
 
             Assert.Equal(1, folders.Length);
 

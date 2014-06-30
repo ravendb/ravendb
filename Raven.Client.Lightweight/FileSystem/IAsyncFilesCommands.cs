@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
@@ -66,21 +67,22 @@ namespace Raven.Client.FileSystem
         Task RenameAsync(string currentName, string newName);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
+
         Task UpdateMetadataAsync(string filename, RavenJObject metadata);
 
-        Task UploadAsync(string filename, Stream source);
-        Task UploadAsync(string filename, RavenJObject metadata, Stream source);
-        Task UploadAsync(string filename, RavenJObject metadata, Stream source, Action<string, long> progress);
+        Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null);
+        Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null);
 
-        Task<RavenJObject> DownloadAsync(string filename, Stream destination, long? from = null, long? to = null);
+        Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
-        Task<SearchResults> GetFilesFromAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
-        Task<string[]> GetFoldersAsync(string from = null, int start = 0, int pageSize = 25);        
+        Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25);
 
-        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25);
         Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25);
+        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25);
+        Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
 
-        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);                
+        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);
+        Task<FileHeader[]> GetAsync(string[] filename);
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation

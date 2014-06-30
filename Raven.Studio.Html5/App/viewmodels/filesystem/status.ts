@@ -43,7 +43,7 @@ class status extends viewModelBase {
         super.activate(args);
 
         // treat notifications events
-        this.activitiesSubscription = shell.currentReourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
+        this.activitiesSubscription = shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
 
             if (e.Action != synchronizationAction.Finish) {

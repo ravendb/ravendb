@@ -6,6 +6,7 @@ using System.IO;
 
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
@@ -25,13 +26,13 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         int ReadPage(int pageId, byte[] buffer);
 
-        FileHeaderInformation ReadFile(string filename);
+        FileHeader ReadFile(string filename);
 
         FileAndPagesInformation GetFile(string filename, int start, int pagesToLoad);
 
-        IEnumerable<FileHeaderInformation> ReadFiles(int start, int size);
+        IEnumerable<FileHeader> ReadFiles(int start, int size);
 
-        IEnumerable<FileHeaderInformation> GetFilesAfter(Guid etag, int take);
+        IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take);
 
         void Delete(string filename);
        

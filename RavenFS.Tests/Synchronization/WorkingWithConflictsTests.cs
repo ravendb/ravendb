@@ -39,7 +39,7 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public void Should_mark_file_to_be_resolved_using_current_strategy()
+		public async void Should_mark_file_to_be_resolved_using_current_strategy()
 		{
 			var differenceChunk = new MemoryStream();
 			var sw = new StreamWriter(differenceChunk);
@@ -63,28 +63,27 @@ namespace RavenFS.Tests.Synchronization
 					                          {"SomeTest-metadata", "shouldnt-be-overwritten"}
 				                          };
 
-			destinationClient.UploadAsync("test.txt", destinationMetadata, destinationContent).Wait();
+            await destinationClient.UploadAsync("test.txt", destinationContent, destinationMetadata);
 			sourceContent.Position = 0;
-			sourceClient.UploadAsync("test.txt", sourceMetadata, sourceContent).Wait();
+            await sourceClient.UploadAsync("test.txt", sourceContent, sourceMetadata);
 
 
 			var shouldBeConflict = sourceClient.Synchronization.StartAsync("test.txt", destinationClient).Result;
 
 			Assert.Equal("File test.txt is conflicted", shouldBeConflict.Exception.Message);
 
-			destinationClient.Synchronization.ResolveConflictAsync("test.txt", ConflictResolutionStrategy.CurrentVersion).Wait();
-			var result = destinationClient.Synchronization.StartAsync("test.txt", sourceClient).Result;
+			await destinationClient.Synchronization.ResolveConflictAsync("test.txt", ConflictResolutionStrategy.CurrentVersion);
+            var result = await destinationClient.Synchronization.StartAsync("test.txt", sourceClient);
 			Assert.Equal(destinationContent.Length, result.BytesCopied + result.BytesTransfered);
 
 			// check if conflict resolution has been properly set on the source
 			string resultMd5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await sourceClient.DownloadAsync("test.txt"))
 			{
-				var metadata = sourceClient.DownloadAsync("test.txt", resultFileContent).Result;
+                var metadata = await sourceClient.GetMetadataForAsync("test.txt");
 				Assert.Equal("shouldnt-be-overwritten", metadata.Value<string>("SomeTest-Metadata"));
-				resultFileContent.Position = 0;
+				
 				resultMd5 = resultFileContent.GetMD5Hash();
-				resultFileContent.Position = 0;
 			}
 
 			destinationContent.Position = 0;
@@ -147,7 +146,7 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-			await sourceClient.UploadAsync("test.bin", sourceMetadataWithConflict, sourceContent);
+            await sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadataWithConflict);
 
 			var shouldBeConflict = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
@@ -201,8 +200,8 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-			await sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent);
-			await destinationClient.UploadAsync("test.bin", sourceMetadata, sourceContent);
+            await sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
+            await destinationClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
 
 			var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
@@ -260,7 +259,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-            sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content).Wait();
+            sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } }).Wait();
 			content.Position = 0;
 			destinationClient.UploadAsync("test.bin", content).Wait();
 
@@ -278,9 +277,9 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-            sourceClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } }, content).Wait();
+            sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "key", "value" } }).Wait();
 			content.Position = 0;
-            destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } }, content).Wait();
+            destinationClient.UploadAsync("test.bin", content, new RavenJObject { { "key", "value" } }).Wait();
 
 			sourceClient.RenameAsync("test.bin", "renamed.bin").Wait();
 
@@ -316,8 +315,7 @@ namespace RavenFS.Tests.Synchronization
 		{
             var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
-            destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } },
-			                              new MemoryStream(new byte[] {1, 2, 3, 4})).Wait();
+            destinationClient.UploadAsync("test.bin", new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject { { "key", "value" } }).Wait();
 
             var webRequest = (HttpWebRequest)WebRequest.Create(destinationClient.ServerUrl + "/fs/" + destinationClient.FileSystem + "/synchronization/updatemetadata/test.bin");
 			webRequest.ContentLength = 0;

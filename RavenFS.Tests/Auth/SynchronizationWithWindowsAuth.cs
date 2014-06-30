@@ -77,7 +77,7 @@ namespace RavenFS.Tests.Auth
             var sourceClient = NewAsyncClient(0);
             var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 
-            await sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content);
+            await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } });
             content.Position = 0;
             await destinationClient.UploadAsync("test.bin", content);
 

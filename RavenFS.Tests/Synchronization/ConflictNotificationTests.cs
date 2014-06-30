@@ -44,8 +44,8 @@ namespace RavenFS.Tests.Synchronization
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
 
-			await destinationClient.UploadAsync("abc.txt", destinationMetadata, destinationContent);
-			await sourceClient.UploadAsync("abc.txt", sourceMetadata, sourceContent);
+            await destinationClient.UploadAsync("abc.txt", destinationContent, destinationMetadata);
+            await sourceClient.UploadAsync("abc.txt", sourceContent, sourceMetadata);
 
             var notificationTask = destinationStore.Changes()
                                         .ForConflicts()

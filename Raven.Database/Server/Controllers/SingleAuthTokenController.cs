@@ -1,7 +1,6 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Web.Http;
-using Raven.Database.Counters.Controllers;
-using Raven.Database.Server.RavenFS.Controllers;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers

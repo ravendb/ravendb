@@ -28,6 +28,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using System.IO.Compression;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -122,6 +123,8 @@ namespace Raven.Client.Document
                     }
 
                 }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
+
+                await response.AssertNotFailingResponse();
 
                 long operationId;
 

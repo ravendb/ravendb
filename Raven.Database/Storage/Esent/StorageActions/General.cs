@@ -111,56 +111,50 @@ namespace Raven.Storage.Esent.StorageActions
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
-			if (lists != null)
-				lists.Dispose();
+			var toDispose = new[]
+			                {
+				                documents, 
+								queue, 
+								lists, 
+								directories, 
+								files, 
+								indexesStats, 
+								indexesStatsReduce, 
+								indexesEtags, 
+								scheduledReductions, 
+								mappedResults, 
+								reducedResults, 
+								tasks, 
+								identity, 
+								details, 
+								reduceKeysCounts, 
+								reduceKeysStatus, 
+								indexedDocumentsReferences
+			                };
 
-			if (reduceKeysCounts != null)
-				reduceKeysCounts.Dispose();
+			var aggregator = new ExceptionAggregator("DocumentStorageActions disposal error.");
 
-			if (reduceKeysStatus != null)
-				reduceKeysStatus.Dispose();
+			foreach (var dispose in toDispose)
+			{
+				if (dispose == null)
+					continue;
 
-			if (indexedDocumentsReferences != null)
-				indexedDocumentsReferences.Dispose();
+				aggregator.Execute(() => dispose.Dispose());
+			}
 
-			if (reducedResults != null)
-				reducedResults.Dispose();
+			aggregator.Execute(() =>
+			{
+				if (Equals(dbid, JET_DBID.Nil) == false && session != null)
+					Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
+			});
 
-			if (queue != null)
-				queue.Dispose();
-
-			if (directories != null)
-				directories.Dispose();
-
-			if (details != null)
-				details.Dispose();
-
-			if (identity != null)
-				identity.Dispose();
-
-			if (mappedResults != null)
-				mappedResults.Dispose();
-
-			if (scheduledReductions != null)
-				scheduledReductions.Dispose();
-
-			if (indexesStats != null)
-				indexesStats.Dispose();
-
-			if (files != null)
-				files.Dispose();
-
-			if (documents != null)
-				documents.Dispose();
-
-			if (tasks != null)
-				tasks.Dispose();
-
-			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
-				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
-
-		    if (sessionAndTransactionDisposer != null)
-		        sessionAndTransactionDisposer();
+			aggregator.Execute(() =>
+			{
+				if (sessionAndTransactionDisposer != null)
+					sessionAndTransactionDisposer();
+			});
+		    
+			aggregator.ThrowIfNeeded();
 		}
 
 		public void UseLazyCommit()

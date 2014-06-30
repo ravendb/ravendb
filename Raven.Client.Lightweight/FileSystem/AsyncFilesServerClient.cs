@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
@@ -366,6 +367,35 @@ namespace Raven.Client.FileSystem
             return ExecuteWithReplication("HEAD", operation => GetMetadataForAsyncImpl(filename, operation));
         }
 
+        public Task<FileHeader[]> GetAsync(string[] filename)
+        {
+            return ExecuteWithReplication("GET", operation => GetAsyncImpl(filename, operation));
+        }
+        private async Task<FileHeader[]> GetAsyncImpl(string[] filenames, OperationMetadata operation)
+        {
+            StringBuilder requestUriBuilder = new StringBuilder("/files/metadata?");
+            for( int i = 0; i < filenames.Length; i++ )
+            {
+                requestUriBuilder.Append("fileNames=" + Uri.EscapeDataString(filenames[i]));
+                if (i < filenames.Length - 1)
+                    requestUriBuilder.Append("&");
+            }
+
+            var request = RequestFactory.CreateHttpJsonRequest(
+                                new CreateHttpJsonRequestParams(this, operation.Url + requestUriBuilder.ToString(), "GET", operation.Credentials, Conventions))
+                            .AddOperationHeaders(OperationsHeaders);
+
+            try
+            {
+                var response = (RavenJArray)await request.ReadResponseJsonAsync();
+                return response.JsonDeserialization<FileHeader>();
+            }
+            catch ( Exception e )
+            {
+                throw e.SimplifyException();
+            }
+        }
+
         private async Task<RavenJObject> GetMetadataForAsyncImpl(string filename, OperationMetadata operation)
         {
             var request = RequestFactory.CreateHttpJsonRequest(
@@ -398,25 +428,13 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public Task<RavenJObject> DownloadAsync(string filename, Stream destination, long? from = null, long? to = null)
+        public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
         {
-            return DownloadAsync("/files/", filename, destination, from, to);
+            return ExecuteWithReplication("GET", operation => DownloadAsyncImpl("/files/", filename, metadataRef, from, to, operation));
         }
 
-        private Task<RavenJObject> DownloadAsync(string path, string filename, Stream destination,
-                                                              long? from = null, long? to = null,
-                                                              Action<string, long> progress = null)
+        private async Task<Stream> DownloadAsyncImpl(string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, OperationMetadata operation)
         {
-            return ExecuteWithReplication("GET", operation => DownloadAsyncImpl(path, filename, destination, @from, to, progress, operation));
-
-        }
-
-        private async Task<RavenJObject> DownloadAsyncImpl(string path, string filename, Stream destination, long? @from, long? to, Action<string, long> progress, OperationMetadata operation)
-        {
-            var collection = new RavenJObject();
-            if (destination.CanWrite == false)
-                throw new ArgumentException("Stream does not support writing");
-
             var request = RequestFactory.CreateHttpJsonRequest(
                                             new CreateHttpJsonRequestParams(this, operation.Url + path + filename, "GET", operation.Credentials, Conventions))
                                         .AddOperationHeaders(OperationsHeaders);
@@ -428,35 +446,53 @@ namespace Raven.Client.FileSystem
                 else
                     request.AddRange(@from.Value);
             }
-            else if (destination.CanSeek)
-            {
-                destination.Position = destination.Length;
-                request.AddRange(destination.Position);
-            }
 
             try
             {
-                using (var responseStream = new MemoryStream(await request.ReadResponseBytesAsync()))
+                var response = await request.ExecuteRawResponseAsync();
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    throw new FileNotFoundException("The file requested does not exists on the file system.", operation.Url + path + filename);
+
+                await response.AssertNotFailingResponse();
+
+                if ( metadataRef != null )
                 {
-                    foreach (var header in request.ResponseHeaders.AllKeys)
+                    var metadata = new RavenJObject();
+                    foreach (var header in response.Headers)
                     {
-                        collection[header] = request.ResponseHeaders[header];
+                        var item = header.Value.SingleOrDefault();
+                        if (item != null)
+                        {
+                            metadata[header.Key] = item;
+                        }
+                        else
+                        {
+                            metadata[header.Key] = RavenJObject.FromObject(header.Value);
+                        }
                     }
-                    await responseStream.CopyToAsync(destination, i =>
+                    foreach (var header in response.Content.Headers)
                     {
-                        if (progress != null)
-                            progress(filename, i);
-                    });
+                        var item = header.Value.SingleOrDefault();
+                        if (item != null)
+                        {
+                            metadata[header.Key] = item;
+                        }
+                        else
+                        {
+                            metadata[header.Key] = RavenJObject.FromObject(header.Value);
+                        }
+                    }
+
+                    metadataRef.Value = metadata;
                 }
 
-                return collection;
+                return await response.GetResponseStreamWithHttpDecompression();
             }
             catch (Exception e)
             {
                 throw e.SimplifyException();
             }
         }
-
 
         public Task UpdateMetadataAsync(string filename, RavenJObject metadata)
         {
@@ -479,19 +515,17 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadAsync(string filename, Stream source)
+
+        public Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null)
         {
-            return UploadAsync(filename, new RavenJObject(), source, null);
+            return UploadAsync(filename, source, null, size, progress);
         }
 
-
-        public Task UploadAsync(string filename, RavenJObject metadata, Stream source)
+        public Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null)
         {
-            return UploadAsync(filename, metadata, source, null);
-        }
+            if (metadata == null)
+                metadata = new RavenJObject();
 
-        public Task UploadAsync(string filename, RavenJObject metadata, Stream source, Action<string, long> progress)
-        {
             return ExecuteWithReplication("PUT", async operation =>
             {
                 if (source.CanRead == false)
@@ -503,8 +537,8 @@ namespace Raven.Client.FileSystem
                                                                 "PUT", operation.Credentials, Conventions))
                                             .AddOperationHeaders(OperationsHeaders);
 
-                metadata["RavenFS-Size"] = new RavenJValue(source.Length);
-
+                metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
+                
                 AddHeaders(metadata, request);
 
                 var cts = new CancellationTokenSource();
@@ -514,6 +548,8 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     await request.WriteAsync(source);
+                    if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
+                        throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
                 }
                 catch (Exception e)
                 {
@@ -588,7 +624,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public Task<string[]> GetFoldersAsync(string from = null, int start = 0, int pageSize = 25)
+        public Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -615,8 +651,8 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task<SearchResults> GetFilesFromAsync(string folder, FilesSortOptions options = FilesSortOptions.Default,
-                                                 string fileNameSearchPattern = "", int start = 0, int pageSize = 25)
+        public Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default,
+                                                     string fileNameSearchPattern = "", int start = 0, int pageSize = 25)
         {
             var folderQueryPart = GetFolderQueryPart(folder);
 
@@ -879,9 +915,10 @@ namespace Raven.Client.FileSystem
                 return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials));
             }
 
-            public Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
-            {
-                return client.DownloadAsyncImpl("/rdc/signatures/", sigName, destination, from, to, null, new OperationMetadata(client.BaseUrl, credentials));
+            public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
+            {                
+                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials));
+                await stream.CopyToAsync(destination);
             }
 
             public async Task<SignatureManifest> GetRdcManifestAsync(string path)

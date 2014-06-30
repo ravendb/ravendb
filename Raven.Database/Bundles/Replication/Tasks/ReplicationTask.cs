@@ -70,6 +70,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private int replicationAttempts;
 		private int workCounter;
 		private HttpRavenRequestFactory httpRavenRequestFactory;
+		private HttpRavenRequestFactory nonBufferedHttpRavenRequestFactory;
 
 		private PrefetchingBehavior prefetchingBehavior;
 
@@ -83,6 +84,10 @@ namespace Raven.Bundles.Replication.Tasks
 				60 * 1000;
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
+			nonBufferedHttpRavenRequestFactory = new HttpRavenRequestFactory
+			{
+				RequestTimeoutInMs = replicationRequestTimeoutInMs, AllowWriteStreamBuffering = false
+			};
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
 			var disposableAction = new DisposableAction(task.Wait);
@@ -604,7 +609,7 @@ namespace Raven.Bundles.Replication.Tasks
 						  UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
-				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+				var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
 				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x => x.Value<string>("@id"))));
 
@@ -662,7 +667,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var sp = Stopwatch.StartNew();
 
-				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+				var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);

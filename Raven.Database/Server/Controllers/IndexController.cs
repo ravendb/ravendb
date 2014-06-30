@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage IndexGet(string id)
 		{
             using (var cts = new CancellationTokenSource())
-            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var index = id;
                 if (string.IsNullOrEmpty(GetQueryStringValue("definition")) == false) 
