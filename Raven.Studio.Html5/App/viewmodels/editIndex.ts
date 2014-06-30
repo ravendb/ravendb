@@ -55,6 +55,8 @@ class editIndex extends viewModelBase {
     }
     
     canActivate(indexToEditName: string) {
+        super.canActivate(indexToEditName);
+
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
             this.fetchIndexData(indexToEditName)

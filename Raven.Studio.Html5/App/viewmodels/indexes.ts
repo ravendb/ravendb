@@ -25,26 +25,32 @@ class indexes extends viewModelBase {
     appUrls: computedAppUrls;
     btnState = ko.observable<boolean>(false);
     btnStateTooltip = ko.observable<string>("ExpandAll");
-    btnTitle=ko.computed(() => this.btnState() === true?"ExpandAll":"CollapseAll");
+    btnTitle = ko.computed(() => this.btnState() === true ? "ExpandAll" : "CollapseAll");
 
-    sortedGroups = ko.computed(()=> {
-        var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+    sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
 
-        groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> })=> {
-            group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase()?1:-1));
+    constructor() {
+        super();
+
+        this.fetchIndexes();
+        this.fetchRecentQueries();
+
+        this.sortedGroups = ko.computed(() => {
+            var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+
+            groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> }) => {
+                group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1));
+            });
+
+            return groups;
         });
-
-        return groups;
-    });
+    }
 
     activate(args) {
         super.activate(args);
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
-
-        this.fetchIndexes();
-        this.fetchRecentQueries();
     }
 
     attached() {
@@ -53,16 +59,18 @@ class indexes extends viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
     }
 
-    fetchIndexes() {
+    private fetchIndexes() {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
     }
 
-    fetchRecentQueries() {
+    private fetchRecentQueries() {
         new getStoredQueriesCommand(this.activeDatabase())
             .execute()
-            .done((doc: storedQueryContainerDto) => this.recentQueries(doc.Queries));
+            .done((doc: storedQueryContainerDto) => {
+            this.recentQueries(doc.Queries)
+        });
     }
 
     getRecentQueryUrl(query: storedQueryDto) {
