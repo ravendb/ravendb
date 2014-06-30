@@ -85,11 +85,10 @@ namespace Raven.Tests.Indexes.Recovery
 				{
 					var files = Directory.GetFiles(commitPoint);
 
-					Assert.Equal(3, files.Length);
+					Assert.Equal(2, files.Length);
 
 					Assert.True(files.Any(file => Path.GetFileName(file) == "index.commitPoint"));
 					Assert.True(files.Any(file => Path.GetFileName(file).StartsWith("segments_")));
-					Assert.True(files.Any(file => Path.GetExtension(file) == (".md5")));
 				}
 			}
 		}

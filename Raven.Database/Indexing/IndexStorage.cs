@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-		private readonly DocumentDatabase documentDatabase;
+	    private readonly DocumentDatabase documentDatabase;
 		private const string IndexVersion = "2.0.0.1"; 
 		private const string MapReduceIndexVersion = "2.5.0.1";
 
@@ -63,7 +63,7 @@ namespace Raven.Database.Indexing
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
-			try
+		    try
 			{
 				this.indexDefinitionStorage = indexDefinitionStorage;
 				this.configuration = configuration;
@@ -72,7 +72,6 @@ namespace Raven.Database.Indexing
 
 				if (Directory.Exists(path) == false && configuration.RunInMemory == false)
 					Directory.CreateDirectory(path);
-
 
 				if (configuration.RunInMemory == false)
 				{
@@ -103,9 +102,10 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void OpenIndexOnStartup(string indexName)
+	    private void OpenIndexOnStartup(string indexName)
 		{
-			if (indexName == null) throw new ArgumentNullException("indexName");
+			if (indexName == null) 
+                throw new ArgumentNullException("indexName");
 
 			var fixedName = indexDefinitionStorage.FixupIndexName(indexName);
 
@@ -126,17 +126,15 @@ namespace Raven.Database.Indexing
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
-
-                    if (ValidateIndexChecksum(indexDefinitionStorage.FixupIndexName(indexDefinition.Name), luceneDirectory) == false)
-                        throw new InvalidOperationException("Index checksum is invalid.");
-
 					indexImplementation = CreateIndexImplementation(fixedName, indexDefinition, luceneDirectory);
+
+                    CheckIndexState(luceneDirectory, indexDefinition, indexImplementation, resetTried);
 
 					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
 					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
 					{
 						// remove keys from index that were deleted after creating commit point
-						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
+						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery, GetLastEtagForIndex(simpleIndex));
 					}
 
 					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
@@ -167,9 +165,6 @@ namespace Raven.Database.Indexing
 							latestPersistedQueryTime = dateTime;
 					});
 
-                    if (ValidateIndexStats(indexDefinitionStorage.FixupIndexName(indexName), indexDefinition, indexImplementation) == false)
-                        throw new InvalidOperationException("Index stats are invalid.");
-
 					break;
 				}
 				catch (Exception e)
@@ -193,6 +188,56 @@ namespace Raven.Database.Indexing
 				}
 			}
 			indexes.TryAdd(fixedName, indexImplementation);
+		}
+
+	    private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
+	    {
+            if (configuration.ResetIndexOnUncleanShutdown == false)
+                return;
+
+			// 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
+			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
+			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
+
+			var commitData = IndexReader.GetCommitUserData(directory);
+
+		    if (index.IsMapReduce)
+				CheckMapReduceIndexState(commitData, resetTried);
+			else
+				CheckMapIndexState(commitData, indexDefinition, index);
+	    }
+
+		private void CheckMapIndexState(IDictionary<string, string> commitData, IndexDefinition indexDefinition, Index index)
+		{
+			string value;
+			Etag lastEtag = null;
+			if (commitData != null && commitData.TryGetValue("LastEtag", out value))
+				Etag.TryParse(value, out lastEtag); // etag will be null if parsing will fail
+
+			var lastStoredEtag = GetLastEtagForIndex(index) ?? Etag.Empty;
+			lastEtag = lastEtag ?? Etag.Empty;
+
+			if (EtagUtil.IsGreaterThanOrEqual(lastEtag, lastStoredEtag))
+				return;
+
+			var now = SystemTime.UtcNow;
+			ResetLastIndexedEtag(indexDefinition, lastEtag, now);
+		}
+
+		private static void CheckMapReduceIndexState(IDictionary<string, string> commitData, bool resetTried)
+		{
+			if (resetTried)
+				return;
+
+			string marker;
+			long commitMarker;
+			var valid = commitData != null 
+				&& commitData.TryGetValue("Marker", out marker) 
+				&& long.TryParse(marker, out commitMarker)
+				&& commitMarker == RavenIndexWriter.CommitMarker;
+
+			if (valid == false)
+				throw new InvalidOperationException("Map-Reduce index corruption detected.");
 		}
 
 		private static bool IsIdleAutoIndex(Index index)
@@ -412,6 +457,17 @@ namespace Raven.Database.Indexing
 				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastIndexedEtag, timestamp));
 		}
 
+        internal Etag GetLastEtagForIndex(Index index)
+        {
+	        if (index.IsMapReduce) 
+				return null;
+
+            IndexStats stats = null;
+            documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.name));
+
+	        return stats != null ? stats.LastIndexedEtag : Etag.Empty;
+        }
+
 		public static string IndexVersionFileName(IndexDefinition indexDefinition)
 		{
 			if (indexDefinition.IsMapReduce)
@@ -485,77 +541,6 @@ namespace Raven.Database.Indexing
 			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
 		}
 
-		private bool ValidateIndexChecksum(string indexName, Lucene.Net.Store.Directory directory)
-		{
-			if (directory is RAMDirectory)
-				return true;
-
-			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
-
-			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5")
-				.Select(file => new FileInfo(file))
-				.ToList();
-
-			if (hashFiles.Count == 0) 
-				return true; // backward compatibility
-
-			if (hashFiles.Count > 1) 
-				return false; // too many hash files
-
-			var hashFile = hashFiles.First();
-			var hash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
-
-			var segmentInfo = GetCurrentSegmentsInfo(indexName, directory);
-			if (segmentInfo.IsIndexCorrupted)
-				return false;
-
-			var currentSegmentsFileName = segmentInfo.SegmentsFileName;
-			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
-			using (var md5 = MD5.Create())
-			{
-				var currentHash = md5.ComputeHash(segmentFile);
-				var hex = IOExtensions.GetMD5Hex(currentHash);
-
-				return hash.Equals(hex, StringComparison.OrdinalIgnoreCase);
-			}
-		}
-
-		public static void StoreChecksum(string path, string indexName, IndexSegmentsInfo segmentsInfo, Etag highestETagInIndex)
-		{
-			if (segmentsInfo == null || segmentsInfo.IsIndexCorrupted)
-				return;
-
-			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
-			var currentSegmentsFileName = segmentsInfo.SegmentsFileName;
-
-			var hashFiles = Directory.GetFiles(indexFullPath, "*.md5");
-			var etagFiles = Directory.GetFiles(indexFullPath, "*.etag");
-
-			using (var segmentFile = File.OpenRead(Path.Combine(indexFullPath, currentSegmentsFileName)))
-			using (var md5 = MD5.Create())
-			{
-				var hash = md5.ComputeHash(segmentFile);
-				var hex = IOExtensions.GetMD5Hex(hash);
-
-				using (File.Create(Path.Combine(indexFullPath, string.Format("{0}.md5", hex))))
-				{
-				}
-			}
-
-			if (highestETagInIndex != null)
-			{
-				using (File.Create(Path.Combine(indexFullPath, string.Format("{0}.etag", highestETagInIndex))))
-				{
-				}
-
-				foreach (var etagFile in etagFiles)
-					File.Delete(etagFile);
-			}
-
-			foreach (var hashFile in hashFiles)
-                File.Delete(hashFile);
-		}
-
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
 		{
 			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted)
@@ -571,48 +556,21 @@ namespace Raven.Database.Indexing
 
 			Directory.CreateDirectory(commitPointDirectory.FullPath);
 
-			using (var md5 = MD5.Create())
+			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
+			using (var sw = new StreamWriter(commitPointFile))
 			{
-				var buffer = new byte[1024];
+				var jsonSerializer = new JsonSerializer();
+				var textWriter = new JsonTextWriter(sw);
 
-				using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
-				using (var sw = new StreamWriter(commitPointFile))
-				{
-					var jsonSerializer = new JsonSerializer();
-					var textWriter = new JsonTextWriter(sw);
-
-					jsonSerializer.Serialize(textWriter, indexCommit);
-					sw.Flush();
-
-					commitPointFile.Position = 0;
-					int read;
-					while ((read = commitPointFile.Read(buffer, 0, buffer.Length)) > 0)
-					{
-						md5.TransformBlock(buffer, 0, read, null, 0);
-					}
-				}
-
-				var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
-
-				File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
-						  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
-						  overwrite: true);
-
-				var currentSegmentChecksumFile = Directory.GetFiles(commitPointDirectory.IndexFullPath, "*.md5")
-					.Select(file => new FileInfo(file))
-					.Single();
-
-				var currentSegmentChecksum = currentSegmentChecksumFile.Name.Substring(0, currentSegmentChecksumFile.Name.Length - 4);
-				var currentSegmentChecksumBytes = Encoding.UTF8.GetBytes(currentSegmentChecksum);
-
-				md5.TransformBlock(currentSegmentChecksumBytes, 0, currentSegmentChecksumBytes.Length, null, 0);
-				md5.TransformFinalBlock(new byte[0], 0, 0);
-				var hex = IOExtensions.GetMD5Hex(md5.Hash);
-
-				using (File.Create(Path.Combine(commitPointDirectory.FullPath, string.Format("{0}.md5", hex))))
-				{
-				}
+				jsonSerializer.Serialize(textWriter, indexCommit);
+				sw.Flush();
 			}
+
+			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+
+			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
+						Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
+						overwrite: true);
 
 			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
@@ -678,7 +636,7 @@ namespace Raven.Database.Indexing
 					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexName,
 																				commitPointDirectoryName);
 
-					if (ValidateCommitPointChecksum(commitPointDirectory, out indexCommit) == false)
+					if (TryGetCommitPoint(commitPointDirectory, out indexCommit) == false)
 					{
 						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
 						continue; // checksum is invalid, try another commit point
@@ -724,8 +682,6 @@ namespace Raven.Database.Indexing
 					if (File.Exists(commitPointDirectory.DeletedKeysFile))
 						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
 
-					StoreChecksum(indexStoragePath, indexName, GetCurrentSegmentsInfo(indexDefinition.Name, directory), indexCommit.HighestCommitedETag);
-
 					return true;
 				}
 				catch (Exception ex)
@@ -761,109 +717,16 @@ namespace Raven.Database.Indexing
             return result;
         }
 
-        private bool ValidateIndexStats(string indexName, IndexDefinition indexDefinition, Index index)
-        {
-            if (configuration.ResetIndexOnUncleanShutdown == false)
-                return true;
-
-			if (indexDefinition.IsMapReduce)
-				return true;
-
-			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
-
-			var etagFiles = Directory.GetFiles(indexFullPath, "*.etag")
-					.Select(file => new FileInfo(file))
-					.ToList();
-
-			if (etagFiles.Count == 0)
-				return true; // backward compatibility
-
-			if (etagFiles.Count > 1)
-				return false;
-
-			var etagFile = etagFiles.First();
-			var etag = Etag.Parse(etagFile.Name.Substring(0, etagFile.Name.Length - 5));
-
-            IndexSearcher searcher;
-            using (index.GetSearcher(out searcher))
-            {
-                int maxDoc;
-                JsonDocument doc = null;
-                for (maxDoc = searcher.MaxDoc - 1; maxDoc >= 0; maxDoc--)
-                {
-                    if (searcher.IndexReader.IsDeleted(maxDoc))
-                        continue;
-
-                    var document = searcher.Doc(maxDoc);
-                    var documentKey = document.Get(Constants.DocumentIdFieldName);
-
-                    doc = documentDatabase.Get(documentKey, null);
-                    if (doc != null) // doc could have been deleted, but not yet removed from index
-                        break;
-                }
-
-                if (doc == null) // no docs or all deleted, cant make decision
-                    return true;
-
-				if (doc.Etag.Equals(etag))
-					return true;
-
-	            var minEtag = EtagUtil.IsGreaterThan(doc.Etag, etag) ? etag : doc.Etag;
-				ResetLastIndexedEtag(indexDefinition, minEtag, SystemTime.UtcNow);
-
-	            return true;
-            }
-        }
-
-		private static bool ValidateCommitPointChecksum(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
+		private static bool TryGetCommitPoint(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
 		{
-			using (var md5 = MD5.Create())
+			using (var commitPointFile = File.OpenRead(commitPointDirectory.FileFullPath))
 			{
-				var buffer = new byte[1024];
+				var jsonSerializer = new JsonSerializer();
+				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
 
-				var hashFile = Directory.GetFiles(commitPointDirectory.FullPath, "*.md5")
-					.Select(file => new FileInfo(file))
-					.FirstOrDefault();
+				indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
 
-				using (var commitPointFile = File.OpenRead(commitPointDirectory.FileFullPath))
-				{
-					var jsonSerializer = new JsonSerializer();
-					var textReader = new JsonTextReader(new StreamReader(commitPointFile));
-
-					indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
-
-				    if (indexCommit == null)
-				        return false;
-
-					commitPointFile.Position = 0;
-
-					if (hashFile == null)
-						return true; // backward compatibility
-
-					int read;
-					while ((read = commitPointFile.Read(buffer, 0, buffer.Length)) > 0)
-					{
-						md5.TransformBlock(buffer, 0, read, null, 0);
-					}				
-				}
-
-				var storedHash = hashFile.Name.Substring(0, hashFile.Name.Length - 4);
-
-				var storedSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
-
-				using (var storedSegmentsFile = File.OpenRead(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFileName)))
-				using (var storeSegmentsFileMd5 = MD5.Create())
-				{
-					var hash = storeSegmentsFileMd5.ComputeHash(storedSegmentsFile);
-					var hashBytes = Encoding.UTF8.GetBytes(IOExtensions.GetMD5Hex(hash));
-
-					md5.TransformBlock(hashBytes, 0, hashBytes.Length, null, 0);
-					md5.TransformFinalBlock(new byte[0], 0, 0);
-
-					var hex = IOExtensions.GetMD5Hex(md5.Hash);
-
-					return hex.Equals(storedHash, StringComparison.OrdinalIgnoreCase);
-				}
+				return indexCommit != null;
 			}
 		}
 
@@ -878,8 +741,8 @@ namespace Raven.Database.Indexing
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext, path)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext, path);
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 
@@ -1159,7 +1022,7 @@ namespace Raven.Database.Indexing
 				if ((SystemTime.UtcNow - value.LastIndexTime).TotalMinutes < 1)
 					continue;
 
-				value.Flush();
+                value.Flush(value.GetLastEtagFromStats());
 			}
 
 			SetUnusedIndexesToIdle();
@@ -1330,7 +1193,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{
-				value.Flush();
+                value.Flush(value.GetLastEtagFromStats());
 			}
 		}
 
@@ -1338,7 +1201,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
 			{
-				value.Flush();
+                value.Flush(value.GetLastEtagFromStats());
 			}
 		}
 

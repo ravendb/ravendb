@@ -28,8 +28,8 @@ namespace Raven.Database.Indexing
 {
     public class SimpleIndex : Index
     {
-        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
-            : base(directory, name, indexDefinition, viewGenerator, context, indexStoragePath)
+        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+            : base(directory, name, indexDefinition, viewGenerator, context)
         {
         }
 
@@ -175,11 +175,9 @@ namespace Raven.Database.Indexing
                         x => x.Dispose());
                     BatchCompleted("Current");
                 }
-                return new IndexedItemsInfo
+                return new IndexedItemsInfo(batch.HighestEtagBeforeFiltering)
                 {
-                    ChangedDocs = sourceCount,
-                    HighestETag = batch.HighestEtagBeforeFiltering,
-					HighestETagInIndex = batch.HighestEtagAfterFiltering
+                    ChangedDocs = sourceCount
                 };
             });
 
@@ -207,7 +205,7 @@ namespace Raven.Database.Indexing
 
         protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
         {
-            if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
+            if (ShouldStoreCommitPoint(itemsInfo) && itemsInfo.HighestETag != null)
             {
                 context.IndexStorage.StoreCommitPoint(name, new IndexCommitPoint
                 {
@@ -224,8 +222,11 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private bool ShouldStoreCommitPoint()
+        private bool ShouldStoreCommitPoint(IndexedItemsInfo itemsInfo)
         {
+			if (itemsInfo.DisableCommitPoint)
+				return false;
+
             if (directory is RAMDirectory) // no point in trying to store commits for ram index
                 return false;
             // no often than specified indexing interval
@@ -358,13 +359,9 @@ namespace Raven.Database.Indexing
                     },
                     batcher => batcher.Dispose());
 
-                IndexStats currentIndexStats = null;
-                context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
-
-                return new IndexedItemsInfo
+                return new IndexedItemsInfo(GetLastEtagFromStats())
                 {
                     ChangedDocs = keys.Length,
-                    HighestETag = currentIndexStats.LastIndexedEtag,
                     DeletedKeys = keys
                 };
             });
@@ -373,7 +370,7 @@ namespace Raven.Database.Indexing
         /// <summary>
         /// For index recovery purposes
         /// </summary>
-        internal void RemoveDirectlyFromIndex(string[] keys)
+        internal void RemoveDirectlyFromIndex(string[] keys, Etag lastEtag)
         {
             Write((writer, analyzer, stats) =>
             {
@@ -381,9 +378,10 @@ namespace Raven.Database.Indexing
 
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
 
-                return new IndexedItemsInfo // just commit, don't create commit point and add any infor about deleted keys
+				return new IndexedItemsInfo(lastEtag) // just commit, don't create commit point and add any infor about deleted keys
                 {
-                    ChangedDocs = keys.Length
+                    ChangedDocs = keys.Length,
+					DisableCommitPoint = true
                 };
             });
         }

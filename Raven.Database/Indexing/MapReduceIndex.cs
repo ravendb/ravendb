@@ -59,8 +59,8 @@ namespace Raven.Database.Indexing
 		}
 
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,
-							  AbstractViewGenerator viewGenerator, WorkContext context, string indexStoragePath)
-			: base(directory, name, indexDefinition, viewGenerator, context, indexStoragePath)
+							  AbstractViewGenerator viewGenerator, WorkContext context)
+			: base(directory, name, indexDefinition, viewGenerator, context)
 		{
 			jsonSerializer = new JsonSerializer();
 			foreach (var jsonConverter in Default.Converters)
@@ -322,14 +322,14 @@ namespace Raven.Database.Indexing
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-				return new IndexedItemsInfo
+				return new IndexedItemsInfo(null)
 				{
 					ChangedDocs = keys.Length
 				};
 			});
 		}
 
-		public class ReduceDocuments
+	    public class ReduceDocuments
 		{
 			private readonly MapReduceIndex parent;
 			private readonly int inputCount;
@@ -561,7 +561,8 @@ namespace Raven.Database.Indexing
 						}
 						parent.BatchCompleted("Current Reduce #" + Level);
 					}
-					return new IndexedItemsInfo
+
+					return new IndexedItemsInfo(null)
 					{
 						ChangedDocs = count + ReduceKeys.Count
 					};
