@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.FileSystem
 {
@@ -33,8 +34,8 @@ namespace Raven.Client.FileSystem
 
         Task<DirectoryHeader> LoadDirectoryAsync(string path);
 
-        Task<Stream> DownloadAsync(string path);
-        Task<Stream> DownloadAsync(FileHeader path);
+        Task<Stream> DownloadAsync(string path, Reference<RavenJObject> metadata = null);
+        Task<Stream> DownloadAsync(FileHeader path, Reference<RavenJObject> metadata = null);
 
 
         void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null);

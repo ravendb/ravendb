@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.FileSystem
 {
@@ -109,33 +110,39 @@ namespace Raven.Client.FileSystem
             throw new NotImplementedException();
         }
 
-        public Task<Stream> DownloadAsync(string filename)
+        public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null)
         {
             if (string.IsNullOrWhiteSpace(filename))
                 throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
 
-            throw new NotImplementedException();
+            return Commands.DownloadAsync(filename, metadata);;                   
+            
         }
 
-        public Task<Stream> DownloadAsync(FileHeader filename)
+        public Task<Stream> DownloadAsync(FileHeader fileHeader, Reference<RavenJObject> metadata = null)
         {
-            throw new NotImplementedException();
+            if (fileHeader == null || string.IsNullOrWhiteSpace(fileHeader.Name))
+                throw new ArgumentNullException("fileHeader", "The file header cannot be null, and must have a filename.");
+
+            return this.DownloadAsync(fileHeader.Name, metadata);
         }
 
-        public Task<FileHeader[]> LoadFilesAtDirectoryAsync(DirectoryHeader directory)
+        public async Task<FileHeader[]> LoadFilesAtDirectoryAsync(DirectoryHeader directory)
         {
-            if (directory == null)
-                throw new ArgumentNullException("directory", "The directory cannot be null.");
+            if (directory == null || string.IsNullOrWhiteSpace(directory.Name))
+                throw new ArgumentNullException("directory", "The directory cannot be null and must have a name.");
 
-            throw new NotImplementedException();
+            return await this.LoadFilesAtDirectoryAsync(directory.Name);
         }
 
-        public Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory)
+        public async Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory)
         {
             if (string.IsNullOrWhiteSpace(directory))
                 throw new ArgumentNullException("directory", "The directory cannot be null, empty or whitespace.");
 
-            throw new NotImplementedException();
+            var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
+            var searchResults = await Commands.SearchOnDirectoryAsync(directory);
+            return searchResults.Files.ToArray();
         }
     }
 }

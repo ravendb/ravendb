@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -279,7 +280,7 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();
 
-              var firstCallFile = await session.LoadFileAsync("test1.file");
+                var firstCallFile = await session.LoadFileAsync("test1.file");
                 var secondCallFile = await session.LoadFileAsync("test1.file");
                 Assert.Equal(firstCallFile, secondCallFile);
 
@@ -314,8 +315,17 @@ namespace RavenFS.Tests.ClientApi
                 var originalText = new StreamReader(fileStream).ReadToEnd();
                 var downloadedText = new StreamReader(resultingStream).ReadToEnd();
                 Assert.Equal(originalText, downloadedText);
+
+                //now downloading file with metadata
+
+                Reference<RavenJObject> metadata = new Reference<RavenJObject>();
+                resultingStream = await session.DownloadAsync("test1.file", metadata);
+
+                Assert.NotNull(metadata.Value);
+                Assert.Equal(128, metadata.Value.Value<long>("RavenFS-Size"));
             }
         }
+
 
   
     }
