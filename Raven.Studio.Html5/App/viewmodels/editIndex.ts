@@ -8,7 +8,6 @@ import spatialIndexField = require("models/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
-import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
@@ -36,7 +35,7 @@ class editIndex extends viewModelBase {
     indexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
-    loadedIndexName: string;
+    loadedIndexName = ko.observable<string>();
     
     constructor() {
         super();
@@ -130,9 +129,9 @@ class editIndex extends viewModelBase {
         });
     }
 
-    editExistingIndex(unescapedIndexName: string) {
+    private editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
-        this.loadedIndexName = indexName;
+        this.loadedIndexName(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
@@ -233,53 +232,28 @@ class editIndex extends viewModelBase {
     refreshIndex() {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
         canContinue.done(() => {
-            var loadedIndexName = this.loadedIndexName;
-
-            this.fetchIndexData(loadedIndexName)
+            this.fetchIndexData(this.loadedIndexName())
                 .done(() => {
-                    this.editExistingIndex(loadedIndexName);
                     this.initializeDirtyFlag();
-                    //viewModelBase.dirtyFlag().reset(); // Resync Changes
-
-                    //viewModelBase.dirtyFlag.valueHasMutated();
-                    //this.initializeDirtyFlag();
-                    //viewModelBase.dirtyFlag().reset(); // Resync Changes
-                });
+                    this.editedIndex().name.valueHasMutated();
+            });
         });
-
-/*        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
-        canContinue.done(() => {
-            var existingIndex = this.editedIndex();
-            var existingIndexName = "";
-            if (existingIndex) {
-                this.editedIndex(null);
-                existingIndexName = existingIndex.name();
-
-                this.fetchIndexData(existingIndexName)
-                    .done(()=> {
-                        this.editExistingIndex(existingIndexName);
-                    
-                        viewModelBase.dirtyFlag().reset();
-                        if (existingIndexName.length > 0)
-                            this.updateUrl(existingIndexName);
-                    }).fail(() => this.editedIndex(existingIndex));
-
-            } else {
-                    viewModelBase.dirtyFlag().reset(); // Resync Changes
-                if (existingIndexName.length > 0)
-                    this.updateUrl(existingIndexName);
-            }
-        });*/
     }
 
     deleteIndex() {
-        var index = this.editedIndex();
-        if (index) {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm([index.name()], db);
-            deleteViewModel.deleteTask.done(()=> router.navigate(appUrl.forIndexes(db)));
+        var indexName = this.loadedIndexName();
+        if (indexName) {
+            require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+                var db = this.activeDatabase();
+                var deleteViewModel = new deleteIndexesConfirm([indexName], db);
+                deleteViewModel.deleteTask.done(() => {
+                    //prevent asking for unsaved changes
+                    viewModelBase.dirtyFlag().reset(); // Resync Changes
+                    router.navigate(appUrl.forIndexes(db));
+                });
 
-            dialog.show(deleteViewModel);
+                dialog.show(deleteViewModel);
+            });
         }
     }
 
