@@ -7,7 +7,6 @@ import luceneField = require("models/luceneField");
 import spatialIndexField = require("models/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import dialog = require("plugins/dialog");
@@ -15,7 +14,6 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
-import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
 
@@ -207,18 +205,21 @@ class editIndex extends viewModelBase {
     save() {
         if (this.editedIndex().name()) {
             var index = this.editedIndex().toDto();
-            var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
-            saveCommand
-                .execute()
-                .done(() => {
-                    viewModelBase.dirtyFlag().reset(); // Resync Changes
 
-                    if (!this.isEditingExistingIndex()) {
-                        this.isEditingExistingIndex(true);
-                        this.editExistingIndex(index.Name);
-                    }
-                this.updateUrl(index.Name);
-            });
+            require(["commands/saveIndexDefinitionCommand"], saveIndexDefinitionCommand => {
+                var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
+                saveCommand
+                    .execute()
+                    .done(() => {
+                        viewModelBase.dirtyFlag().reset(); // Resync Changes
+
+                        if (!this.isEditingExistingIndex()) {
+                            this.isEditingExistingIndex(true);
+                            this.editExistingIndex(index.Name);
+                        }
+                        this.updateUrl(index.Name);
+                    });
+            }); 
         }
     }
 
@@ -372,11 +373,21 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        require(["viewmodels/copyIndexDialog"], copyIndexDialog => {
+            app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        });   
     }
 
     createCSharpCode() {
-        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        require(["commands/getCSharpIndexDefinitionCommand"], getCSharpIndexDefinitionCommand => {
+            new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
+                .execute()
+                .done((data: string) => {
+                    require(["viewmodels/showDataDialog"], showDataDialog => {
+                        app.showDialog(new showDataDialog("C# Index Definition", data));
+                    });
+                });
+        });
     }
 }
 

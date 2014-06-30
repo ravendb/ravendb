@@ -14,7 +14,7 @@ class copyIndexDialog extends dialogViewModelBase {
     
     indexJSON = ko.observable<string>("");
 
-    constructor(private indexName: string, private db: database,private isPaste:boolean = false, elementToFocusOnDismissal?: string) {
+    constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
     }
     
@@ -97,8 +97,6 @@ class copyIndexDialog extends dialogViewModelBase {
         } else {
             this.close();    
         }
-
-        
     }
 
     close() {

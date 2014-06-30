@@ -8,29 +8,21 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
-using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
-using Raven.Client.Indexes;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
-using Raven.Database.Extensions;
-using System.Text.RegularExpressions;
-using System.Reflection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -178,92 +170,6 @@ namespace Raven.Database.Server.Controllers
                 }
             }
         }
-
-		[HttpGet]
-		[Route("databases/{databaseName}/studio-tasks/generateCSharpIndexDefinition/{*fullIndexName}")]
-		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
-		{
-			var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
-			if (indexDefinition == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
-
-			var indexName = fullIndexName.Replace("/", string.Empty);
-			var mapList = indexDefinition.Maps.Select(mapString => @"@""" + mapString + @"""").ToList();
-			var maps = string.Join(", ", mapList);
-			var reduce = indexDefinition.Reduce != null ? @"@""" + indexDefinition.Reduce + @"""" : "null";
-			var maxIndexOutputsPerDocument = indexDefinition.MaxIndexOutputsPerDocument != null ? 
-												indexDefinition.MaxIndexOutputsPerDocument.ToString() : "null";
-
-			var indexes = GenerateStringFromStringToEnumDictionary(indexDefinition.Indexes);
-			var stores = GenerateStringFromStringToEnumDictionary(indexDefinition.Stores);
-			var sortOptions = GenerateStringFromStringToEnumDictionary(indexDefinition.SortOptions);
-			var termVectors = GenerateStringFromStringToEnumDictionary(indexDefinition.TermVectors);
-
-			var analyzersList = (from analyzer in indexDefinition.Analyzers
-								select @"{ """ + analyzer.Key + @""", """ + analyzer.Value + @""" }").ToList();
-			var analyzers = ConvertListToStringWithSeperator(analyzersList);
-
-			var suggestionList = (from suggestion in indexDefinition.Suggestions
-								  let distance = "Distance = StringDistanceTypes." + suggestion.Value.Distance
-								  let accuracy = "Accuracy = " + suggestion.Value.Accuracy
-								  select @"{ """ + suggestion.Key + @""", new SuggestionOptions { " + distance + ", " + accuracy + "f } }").ToList();
-			var suggestions = ConvertListToStringWithSeperator(suggestionList);
-
-			var spatialIndexesList = (from spatialIndex in indexDefinition.SpatialIndexes
-									  let type = "Type = SpatialFieldType." + spatialIndex.Value.Type
-									  let strategy = "Strategy = SpatialSearchStrategy." + spatialIndex.Value.Strategy
-									  let maxTreeLevel = "MaxTreeLevel = " + spatialIndex.Value.MaxTreeLevel
-									  let minX = "MinX = " + spatialIndex.Value.MinX
-									  let maxX = "MaxX = " + spatialIndex.Value.MaxX
-									  let minY = "MinY = " + spatialIndex.Value.MinY
-									  let maxY = "MaxY = " + spatialIndex.Value.MaxY
-									  let units = "Units = SpatialUnits." + spatialIndex.Value.Units
-									  let spatialOptions = string.Join(", ", type, strategy, maxTreeLevel, minX, maxX, minY, maxY, units)
-									  select @"{ """ + spatialIndex.Key + @""", new SpatialOptions { " + spatialOptions + " } }").ToList();
-			var spatialIndexes = ConvertListToStringWithSeperator(spatialIndexesList);
-
-			var cSharpCode = 
-				@"public class " + indexName + @" : AbstractIndexCreationTask
-				{
-					public override string IndexName
-					{
-						get { return """ + indexName + @"""; }
-					}
-
-					public override IndexDefinition CreateIndexDefinition()
-					{
-						return new IndexDefinition
-						{
-							Maps = { " + maps + @" },
-							Reduce = " + reduce + @",
-							MaxIndexOutputsPerDocument = " + maxIndexOutputsPerDocument + @",
-							Indexes = " + indexes + @",
-							Stores = " + stores + @",
-							TermVectors = " + termVectors + @",
-							SortOptions = " + sortOptions + @",
-							Analyzers = " + analyzers + @",
-							Suggestions = " + suggestions + @",
-							SpatialIndexes = " + spatialIndexes + @"
-						};
-					}
-				}";
-
-			return GetMessageWithObject(cSharpCode);
-		}
-
-		private static string GenerateStringFromStringToEnumDictionary<T>(IEnumerable<KeyValuePair<string, T>> dictionary)
-		{
-			var list = (from keyValuePair in dictionary
-						let value = keyValuePair.Value.GetType().Name + "." + keyValuePair.Value
-						select @"{ """ + keyValuePair.Key + @""", " + value + " }").ToList();
-
-			return ConvertListToStringWithSeperator(list);
-		}
-
-		private static string ConvertListToStringWithSeperator(List<string> list)
-		{
-			return (list.Count > 0) ? "{ " + string.Join(", ", list) + @" }" : "null";
-		}
 
         [HttpGet]
         [Route("studio-tasks/new-encryption-key")]
