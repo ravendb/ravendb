@@ -67,9 +67,11 @@
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSqlReplicationStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />

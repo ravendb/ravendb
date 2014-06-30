@@ -5,6 +5,7 @@
     </div>
     <div class="modal-body replicationStatsData">
         <div class="modal-body">
+            <!-- ko if: !!repData()  -->
             <div class="form-horizontal" role="form" data-bind="with: repData">
                 <div class="form-group">
                     <label class="col-lg-2 col-md-4 control-label">Last error time</label>
@@ -96,6 +97,12 @@
                     </div>
                 </div>
                 <!-- /ko -->
+            </div>
+            <!-- /ko -->
+            <div class="alert alert-warning text-center" data-bind="visible: !repData()">
+                <h3>
+                    No stats available
+                </h3>
             </div>
         </div>
     </div>

@@ -36,7 +36,7 @@ namespace Raven.Database.Bundles.SqlReplication
 	[ExportMetadata("Bundle", "sqlReplication")]
 	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
-		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
+		public const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
@@ -75,7 +75,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					return;
 
 				replicationConfigs = null;
-				statistics.Clear();
+				//statistics.Clear(); removed, should not be cleared on update
 				log.Debug(() => "Sql Replication configuration was changed.");
 			};
 
@@ -285,6 +285,8 @@ namespace Raven.Database.Bundles.SqlReplication
 								Name = cfg.Name,
 								LastDocEtag = currentLatestEtag ?? Etag.Empty
 							});
+
+						    SqlReplicationStatistics removedStats;
 						}
 						else
 						{

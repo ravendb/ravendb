@@ -6,35 +6,26 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import app = require("durandal/app");
-
 import database = require("models/database");
 import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
-import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import ace = require("ace/ace");
 import sqlReplicationStatsDialog = require("viewmodels/sqlReplicationStatsDialog");
-
-import sys = require("durandal/system");
-
-
 import document = require("models/document");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import deleteDocuments = require("viewmodels/deleteDocuments");
-import pagedList = require("common/pagedList");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
-import genUtils = require("common/generalUtils");
-import queryIndexCommand = require("commands/queryIndexCommand");
-import pagedResultSet = require("common/pagedResultSet");
-
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import documentMetadata = require("models/documentMetadata");
+import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
 
 
 class editSqlReplication extends viewModelBase {
+
+    static editSqlReplicationSelector = "#editSQLReplication";
 
     editedReplication = ko.observable<sqlReplication>();
     collections = ko.observableArray<string>();
@@ -43,6 +34,7 @@ class editSqlReplication extends viewModelBase {
     loadedSqlReplications: string[] = [];
     sqlReplicationName: KnockoutComputed<string>;
     isEditingNewReplication = ko.observable(false);
+    
     
     appUrls: computedAppUrls;
 
@@ -57,7 +49,19 @@ class editSqlReplication extends viewModelBase {
         this.sqlReplicationName = ko.computed(() => (!!this.editedReplication() && !this.isEditingNewReplication()) ? this.editedReplication().name() : null);
     }
 
-    
+    private addScriptLabelPopover() {
+        var popOverSettings: PopoverOptions = {
+            html: true,
+            trigger: 'hover',
+            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
+            selector: '.script-label',
+            placement:"right"
+        };
+        $('body').popover(popOverSettings);
+        $('form :input[name="ravenEntityName"]').on("keypress", (e) => {
+            return e.which != 13;
+        });
+    }
 
     canActivate(replicationToEditName: string) {
         if (replicationToEditName) {
@@ -71,33 +75,26 @@ class editSqlReplication extends viewModelBase {
 
             return canActivateResult;
         } else {
+            this.isEditingNewReplication(true);
+            this.editedReplication(this.createSqlReplication());
             return $.Deferred().resolve({ can: true });
         }
     }
 
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
-
-//        this.isEditingExistingReplication(replicationToEditName != null);
-
-        if (!replicationToEditName) {
-            this.editedReplication(this.createSqlReplication());
-        }
-
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
-
         this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
-        
     }
     
    
     loadSqlReplication(replicationToLoadName: string) {
         var loadDeferred = $.Deferred();
-
-        this.fetchSqlReplicationToEdit(replicationToLoadName)
+        $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
             .done(() => {
+                this.editedReplication().collections = this.collections;
                 new getDocumentsMetadataByIDPrefixCommand("Raven/SqlReplication/Configuration/", 256, this.activeDatabase())
                     .execute()
                     .done((results: string[]) => {
@@ -107,7 +104,6 @@ class editSqlReplication extends viewModelBase {
                     fail(() => loadDeferred.reject());
             })
             .fail(() => {
-            debugger;
             loadDeferred.reject();
         });
 
@@ -119,7 +115,7 @@ class editSqlReplication extends viewModelBase {
         loadDocTask.done((document: document) => {
             var sqlReplicationDto: any = document.toDto(true);
             this.editedReplication(new sqlReplication(sqlReplicationDto));
-            this.initialReplicationId = this.editedReplication().getId();
+            this.initialReplicationId = this.editedReplication().name();
             viewModelBase.dirtyFlag().reset(); //Resync Changes
         });
         loadDocTask.always(() => this.isBusy(false));
@@ -127,17 +123,32 @@ class editSqlReplication extends viewModelBase {
         return loadDocTask;
     }
 
+    private fetchCollections(db: database): JQueryPromise<any> {
+        return new getCollectionsCommand(db)
+            .execute()
+            .done((collections: Array<collection>) => {
+                this.collections(collections.map((collection: collection) => { return collection.name; }));
+            });
+    }
+
     showStats() {
-        alert("showStats");
+        var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), this.editedReplication().name());
+        app.showDialog(viewModel);
     }
 
     refreshSqlReplication() {
-        alert("refreshSqlReplication");
+        if (this.isEditingNewReplication() === false) {
+            var docId = this.initialReplicationId;
+
+            this.loadSqlReplication(docId);
+        } else {
+            this.editedReplication(this.createSqlReplication());
+        }
     }
 
     compositionComplete() {
         super.compositionComplete();
-
+        this.addScriptLabelPopover();
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
         });
@@ -202,7 +213,8 @@ class editSqlReplication extends viewModelBase {
         }
         
         var newDoc = new document(this.editedReplication().toDto());
-
+        newDoc.__metadata = new documentMetadata();
+        this.attachReservedMetaProperties("Raven/SqlReplication/Configuration/" + currentDocumentId, newDoc.__metadata);
         
         var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Configuration/" + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
@@ -211,65 +223,45 @@ class editSqlReplication extends viewModelBase {
             this.loadSqlReplication(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
             this.isEditingNewReplication(false);
-            //deleteDocumentCommand - todo: delete previous document if was renamed
+            this.updateUrl(currentDocumentId);
+            this.initialReplicationId = currentDocumentId;
         });
     }
 
-    updateUrl(indexName: string) {
-//        if (indexName != null)
-//            router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
+
+    updateUrl(docId: string) {
+        var url = appUrl.forEditSqlReplication(docId, this.activeDatabase());
+        router.navigate(url, false);
     }
 
-    refreshDocument() {
-//        if (this.isInDocMode()) {
-//            if (!this.isCreatingNewDocument()) {
-//                var docId = this.editedDocId();
-//                this.document(null);
-//                this.documentText(null);
-//                this.metadataText(null);
-//                this.userSpecifiedId('');
-//                this.loadDocument(docId);
-//            } else {
-//                this.editNewDocument();
-//            }
-//        } else {
-//            this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
-//            this.lodaedDocumentName("");
-//        }
-    }
-
-    deleteSqlReplication() {
-        alert("delete");
-    }
-    deleteDocument() {
-//        var doc: document = this.document();
-//        if (doc) {
-//            var viewModel = new deleteDocuments([doc]);
-//            viewModel.deletionTask.done(() => {
-//                viewModelBase.dirtyFlag().reset(); //Resync Changes
-//
-//                var list = this.docsList();
-//                if (!!list) {
-//                    this.docsList().invalidateCache();
-//
-//                    var newTotalResultCount = list.totalResultCount() - 1;
-//                    list.totalResultCount(newTotalResultCount);
-//
-//                    var nextIndex = list.currentItemIndex();
-//                    if (nextIndex >= newTotalResultCount) {
-//                        nextIndex = 0;
-//                    }
-//
-//                    this.pageToItem(nextIndex, newTotalResultCount);
-//                }
-//            });
-//            app.showDialog(viewModel, editDocument.editDocSelector);
-//        }
+    attachReservedMetaProperties(id: string, target: documentMetadata) {
+        target.etag = '';
+        target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
+        target.id = id;
     }
     
-
-    copyIndex() {
-//        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+    deleteSqlReplication() {
+        var newDoc = new document(this.editedReplication().toDto());
+        
+        if (newDoc) {
+            var viewModel = new deleteDocuments([newDoc]);
+            viewModel.deletionTask.done(() => {
+                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                router.navigate(appUrl.forCurrentDatabase().sqlReplications());
+            });
+            app.showDialog(viewModel, editSqlReplication.editSqlReplicationSelector);
+            
+        } 
+    }
+    resetSqlReplication() {
+        var replicationId = this.initialReplicationId;
+        new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+            .done(() => {
+                ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
+            })
+        .fail((foo) => {
+            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+        });
     }
 
 
