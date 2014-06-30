@@ -1054,6 +1054,9 @@ namespace Raven.Client.Indexes
 			if (type.Assembly() == typeof(object).Assembly()) // mscorlib
 				return true;
 
+			if (type.Assembly == typeof (Uri).Assembly()) // System assembly
+				return true;
+
 			if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
 				return true;
 
