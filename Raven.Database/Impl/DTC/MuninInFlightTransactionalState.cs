@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
@@ -23,9 +24,11 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Commit(string id)
 		{
-			storage.Batch(accessor => RunOperationsInTransaction(id));
+		    List<DocumentInTransactionData> list;
+		    storage.Batch(accessor => RunOperationsInTransaction(id, out list));
 		}
-		public override void Prepare(string id)
+
+	    public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
 			// nothing to do here - Munin does not support doing work in the Prepare phase
 		}

@@ -35,10 +35,10 @@ namespace Raven.Client
 	    /// <param name="txId">The tx id.</param>
 	    void Rollback(string txId);
 
-		/// <summary>
-		/// Prepares the transaction on the server.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void PrepareTransaction(string txId);
+	    /// <summary>
+	    /// Prepares the transaction on the server.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 	}
 }

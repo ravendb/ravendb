@@ -725,10 +725,10 @@ namespace Raven.Client.Document
             ClearEnlistment();
         }
 
-        public void PrepareTransaction(string txId)
+        public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
         {
             IncrementRequestCount();
-            DatabaseCommands.PrepareTransaction(txId);
+            DatabaseCommands.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
             ClearEnlistment();
         }
 

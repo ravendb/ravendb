@@ -1539,15 +1539,17 @@ namespace Raven.Client.Connection
 			httpJsonRequest.ReadResponseJson();
 		}
 
-		/// <summary>
-		/// Prepares the transaction on the server.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void PrepareTransaction(string txId)
+	    /// <summary>
+	    /// Prepares the transaction on the server.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    /// <param name="resourceManagerId"></param>
+	    /// <param name="recoveryInformation"></param>
+	    public void PrepareTransaction(string txId, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
 			ExecuteWithReplication<object>("POST", u =>
 			{
-				DirectPrepareTransaction(txId, u);
+				DirectPrepareTransaction(txId, resourceManagerId, recoveryInformation, u);
 				return null;
 			});
 		}
@@ -1563,17 +1565,26 @@ namespace Raven.Client.Connection
 			return ((RavenJObject)result).Deserialize<BuildNumber>(convention);
 		}
 
-		private void DirectPrepareTransaction(string txId, OperationMetadata operationMetadata)
+		private void DirectPrepareTransaction(string txId, Guid? resourceManagerId, byte[] recoveryInformation, OperationMetadata operationMetadata)
 		{
 			try
 			{
-				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST",
+			    var opUrl = operationMetadata.Url + "/transaction/prepare?tx=" + txId;
+			    if (resourceManagerId != null)
+			        opUrl += "&resourceManagerId=" + resourceManagerId;
+
+			    var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, opUrl, "POST",
 						operationMetadata.Credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 						HandleReplicationStatusChanges);
 
+			    if (recoveryInformation != null)
+			    {
+			        var ms = new MemoryStream(recoveryInformation);
+			        httpJsonRequest.Write(ms);
+			    }
 
 				httpJsonRequest.ReadResponseJson();
 			}

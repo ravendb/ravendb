@@ -763,14 +763,16 @@ namespace Raven.Client.Embedded
 			database.Rollback(txId);
 		}
 
-		/// <summary>
-		/// Prepares the transaction on the server.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void PrepareTransaction(string txId)
+	    /// <summary>
+	    /// Prepares the transaction on the server.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    /// <param name="resourceManagerId"></param>
+	    /// <param name="recoveryInformation"></param>
+	    public void PrepareTransaction(string txId, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.PrepareTransaction(txId);
+			database.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
 		}
 
 		/// <summary>

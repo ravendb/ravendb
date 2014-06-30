@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Transactions;
+using Amazon.Route53.Model;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -148,7 +149,7 @@ namespace Raven.Database.Impl.DTC
 
 		public abstract void Commit(string id);
 
-		public abstract void Prepare(string id);
+		public abstract void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation);
 
 		private Etag AddToTransactionState(string key,
 			Etag etag,
@@ -286,12 +287,14 @@ namespace Raven.Database.Impl.DTC
 			return transactionStates.ContainsKey(txId);
 		}
 
-        protected HashSet<string> RunOperationsInTransaction(string id)
-		{
+        protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
+        {
+            changes = null;
 			TransactionState value;
 		    if (transactionStates.TryGetValue(id, out value) == false)
 		        return null; // no transaction, cannot do anything to this
 
+            changes = value.changes;
 			lock (value)
 			{
 				currentlyCommittingTransaction.Value = id;
@@ -335,5 +338,20 @@ namespace Raven.Database.Impl.DTC
 				}
 			}
 		}
+
+	    public void RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+	    {
+            var txInfo = new TransactionInformation
+            {
+                Id = id,
+                Timeout = TimeSpan.FromMinutes(5)
+            };
+	        foreach (var changedDoc in changes)
+	        {
+                changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+                changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
+	            AddToTransactionState(changedDoc.Key, null, txInfo, changedDoc.CommittedEtag, changedDoc);
+	        }
+	    }
 	}
 }

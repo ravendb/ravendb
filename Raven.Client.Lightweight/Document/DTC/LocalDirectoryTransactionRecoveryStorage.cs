@@ -1,5 +1,6 @@
 ﻿#if !SILVERLIGHT && !NETFX_CORE
 using System;
+using System.Transactions;
 using System.Collections.Generic;
 using System.IO;
 
@@ -45,7 +46,12 @@ namespace Raven.Client.Document.DTC
 			return File.Open(Path.Combine(path, name), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 		}
 
-		public void Dispose()
+	    public byte[] GetRecoveryInformation(PreparingEnlistment preparingEnlistment)
+	    {
+	        return preparingEnlistment.RecoveryInformation();
+	    }
+
+	    public void Dispose()
 		{
 			
 		}

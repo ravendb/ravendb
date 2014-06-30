@@ -76,7 +76,7 @@ namespace Raven.Abstractions.Extensions
 		/// <summary>
 		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
 		/// </summary>
-		public static T JsonDeserialization<T>(this RavenJObject self)
+		public static T JsonDeserialization<T>(this RavenJToken self)
 		{
 			return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
 		}

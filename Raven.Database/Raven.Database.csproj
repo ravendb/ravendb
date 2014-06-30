@@ -215,6 +215,8 @@
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
+    <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
+    <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />

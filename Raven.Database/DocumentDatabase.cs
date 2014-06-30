@@ -1085,13 +1085,13 @@ namespace Raven.Database
             return inFlightTransactionalState.HasTransaction(txId);
         }
 
-        public void PrepareTransaction(string txId)
+        public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
         {
             using (DocumentLock.Lock())
             {
                 try
                 {
-                    inFlightTransactionalState.Prepare(txId);
+                    inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
                     log.Debug("Prepare of tx {0} completed", txId);
                 }
                 catch (Exception e)

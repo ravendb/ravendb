@@ -1,9 +1,9 @@
 ﻿#if !SILVERLIGHT && !NETFX_CORE
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.IsolatedStorage;
+using System.Transactions;
 using System.Threading;
 
 namespace Raven.Client.Document.DTC
@@ -63,7 +63,12 @@ namespace Raven.Client.Document.DTC
 			return machineStoreForApplication.OpenFile(name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 		}
 
-		public void Dispose()
+	    public byte[] GetRecoveryInformation(PreparingEnlistment preparingEnlistment)
+	    {
+	        return preparingEnlistment.RecoveryInformation();
+	    }
+
+	    public void Dispose()
 		{
 			machineStoreForApplication.Dispose();
 		}
