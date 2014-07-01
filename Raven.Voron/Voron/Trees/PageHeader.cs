@@ -19,11 +19,5 @@ namespace Voron.Trees
 
 		[FieldOffset(13)]
 		public int OverflowSize;
-
-		//[FieldOffset(17)]
-		//public byte NextPrefixId;
-
-		//[FieldOffset(18)] TODO arek
-		//public unsafe fixed ushort PrefixOffsets[Page.PrefixCount];
 	}
 }

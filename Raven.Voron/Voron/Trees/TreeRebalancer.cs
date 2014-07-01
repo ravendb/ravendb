@@ -96,7 +96,7 @@ namespace Voron.Trees
 			TemporaryPage tmp;
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
 			{
-				var mergedPage = tmp.TempPage;
+				var mergedPage = tmp.GetTempPage(left.KeysPrefixed);
 				NativeMethods.memcpy(mergedPage.Base, left.Base, left.PageSize);
 
 				var previousSearchPosition = right.LastSearchPosition;
@@ -107,7 +107,7 @@ namespace Voron.Trees
 					var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
 					var node = right.GetNode(i);
 
-					var prefixedKey = mergedPage.ConvertToPrefixedKey(key, mergedPage.NumberOfEntries);
+					var prefixedKey = mergedPage.PrepareKeyToInsert(key, mergedPage.NumberOfEntries);
 
 					if (mergedPage.HasSpaceFor(_tx, SizeOf.NodeEntryWithAnotherKey(node, prefixedKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedKey)) == false)
 					{
@@ -167,7 +167,7 @@ namespace Voron.Trees
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-	        var prefixedOriginalFromKey = to.ConvertToPrefixedKey(originalFromKeyStart, to.LastSearchPosition);
+	        var prefixedOriginalFromKey = to.PrepareKeyToInsert(originalFromKeyStart, to.LastSearchPosition);
 
 	        byte* dataPos;
 	        switch (fromNode->Flags)
@@ -204,7 +204,7 @@ namespace Voron.Trees
                 newKey = GetActualKey(from, 0);
             }
 
-	        var prefixedNewKey = parentPage.ConvertToPrefixedKey(newKey, pos);
+	        var prefixedNewKey = parentPage.PrepareKeyToInsert(newKey, pos);
 
 			parentPage.EnsureHasSpaceFor(_tx, prefixedNewKey, -1);
 			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);
@@ -214,9 +214,9 @@ namespace Voron.Trees
         {
             Debug.Assert(from.IsBranch);
 
-	        var prefixedOriginalFromKey = to.ConvertToPrefixedKey(GetActualKey(from, from.LastSearchPositionOrLastEntry), to.LastSearchPosition);
+	        var originalFromKey = to.PrepareKeyToInsert(GetActualKey(from, from.LastSearchPositionOrLastEntry), to.LastSearchPosition);
 
-            to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, -1);
+            to.EnsureHasSpaceFor(_tx, originalFromKey, -1);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             long pageNum = fromNode->PageNumber;
@@ -231,21 +231,21 @@ namespace Voron.Trees
 	            var implicitLeftNode = to.GetNode(0);
 				var leftPageNumber = implicitLeftNode->PageNumber;
 
-	            MemorySlice implicitLeftPrefixedKey;
+	            MemorySlice implicitLeftKeyToInsert;
 
 	            if (implicitLeftNode == actualKeyNode) // no need to create a prefix, just use the existing prefixed key from the node
-					implicitLeftPrefixedKey = _tree.KeysPrefixing ? (MemorySlice) new PrefixedSlice(actualKeyNode) : new Slice(actualKeyNode);
+					implicitLeftKeyToInsert = _tree.KeysPrefixing ? (MemorySlice) new PrefixedSlice(actualKeyNode) : new Slice(actualKeyNode);
 				else
-					implicitLeftPrefixedKey = to.ConvertToPrefixedKey(implicitLeftKey, 1);
+					implicitLeftKeyToInsert = to.PrepareKeyToInsert(implicitLeftKey, 1);
 	            
-				to.EnsureHasSpaceFor(_tx, implicitLeftPrefixedKey, -1);
-				to.AddPageRefNode(1, implicitLeftPrefixedKey, leftPageNumber);
+				to.EnsureHasSpaceFor(_tx, implicitLeftKeyToInsert, -1);
+				to.AddPageRefNode(1, implicitLeftKeyToInsert, leftPageNumber);
 
 				to.ChangeImplicitRefPageNode(pageNum); // setup the new implicit node
             }
             else
             {
-				to.AddPageRefNode(to.LastSearchPosition, prefixedOriginalFromKey, pageNum);
+				to.AddPageRefNode(to.LastSearchPosition, originalFromKey, pageNum);
             }
 
             if (from.LastSearchPositionOrLastEntry == 0)
@@ -270,7 +270,7 @@ namespace Voron.Trees
                 newKey = GetActualKey(from, 0);
             }
 
-	        var prefixedNewKey = parentPage.ConvertToPrefixedKey(newKey, pos);
+	        var prefixedNewKey = parentPage.PrepareKeyToInsert(newKey, pos);
 
 			parentPage.EnsureHasSpaceFor(_tx, prefixedNewKey, -1);
 			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);

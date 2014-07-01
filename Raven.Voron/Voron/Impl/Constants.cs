@@ -28,6 +28,10 @@ namespace Voron.Impl
 
 		public static ushort SizeOfUInt = sizeof(uint);
 
+		public static ushort PrefixOffsetSize = sizeof(ushort);
+
+		public static byte NextPrefixIdSize = sizeof (byte);
+
 		public const int CurrentVersion = 2;
 
 		public const string RootTreeName = "Root";

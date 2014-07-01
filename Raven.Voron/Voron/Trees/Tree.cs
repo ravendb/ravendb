@@ -13,7 +13,7 @@ namespace Voron.Trees
 {
 	public unsafe partial class Tree
 	{
-		private TreeMutableState _state = new TreeMutableState();
+		private readonly TreeMutableState _state = new TreeMutableState();
 
 		public string Name { get; set; }
 
@@ -36,7 +36,7 @@ namespace Voron.Trees
 			_state = state;
 		}
 
-		public bool KeysPrefixing { get; set; }
+		public bool KeysPrefixing { get { return _state.KeysPrefixing; } }
 
 		public static Tree Open(Transaction tx, TreeRootHeader* header)
 		{
@@ -51,21 +51,23 @@ namespace Voron.Trees
 					LeafPages = header->LeafPages,
 					EntriesCount = header->EntriesCount,
 					Flags = header->Flags,
-                    InWriteTransaction = tx.Flags.HasFlag(TransactionFlags.ReadWrite)
+                    InWriteTransaction = tx.Flags.HasFlag(TransactionFlags.ReadWrite),
+					KeysPrefixing = header->KeysPrefixing
 				}
 			};
 		}
 
-		public static Tree Create(Transaction tx, TreeFlags flags = TreeFlags.None)
+		public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
 		{
-			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
+			var newRootPage = NewPage(tx, PageFlags.Leaf, keysPrefixing, 1);
 			var tree = new Tree(tx, newRootPage.PageNumber)
 			{
 				_state =
 				{
 					Depth = 1,
 					Flags = flags,
-                    InWriteTransaction = true
+                    InWriteTransaction = true,
+					KeysPrefixing = keysPrefixing
 				}
 			};
 			
@@ -166,7 +168,7 @@ namespace Voron.Trees
 			{
 				node = page.GetNode(page.LastSearchPosition);
 
-				//TODO arek Debug.Assert(page.SetNodeKey(node).Equals(key));
+				Debug.Assert(page.GetNodeKey(node).Equals(key));
 
 				shouldGoToOverflowPage = _tx.DataPager.ShouldGoToOverflowPage(len);
 
@@ -203,10 +205,10 @@ namespace Voron.Trees
 				nodeType = NodeFlags.PageRef;
 			}
 
-			var prefixedKey = page.ConvertToPrefixedKey(key, lastSearchPosition);
+			var keyToInsert = page.PrepareKeyToInsert(key, lastSearchPosition);
 
 			byte* dataPos;
-			if (page.HasSpaceFor(_tx, prefixedKey, len) == false)
+			if (page.HasSpaceFor(_tx, keyToInsert, len) == false)
 			{
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
@@ -221,13 +223,13 @@ namespace Voron.Trees
 				switch (nodeType)
 				{
 					case NodeFlags.PageRef:
-						dataPos = page.AddPageRefNode(lastSearchPosition, prefixedKey, pageNumber);
+						dataPos = page.AddPageRefNode(lastSearchPosition, keyToInsert, pageNumber);
 						break;
 					case NodeFlags.Data:
-						dataPos = page.AddDataNode(lastSearchPosition, prefixedKey, len, nodeVersion);
+						dataPos = page.AddDataNode(lastSearchPosition, keyToInsert, len, nodeVersion);
 						break;
 					case NodeFlags.MultiValuePageRef:
-						dataPos = page.AddMultiValueNode(lastSearchPosition, prefixedKey, len, nodeVersion);
+						dataPos = page.AddMultiValueNode(lastSearchPosition, keyToInsert, len, nodeVersion);
 						break;
 					default:
 						throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
@@ -242,7 +244,7 @@ namespace Voron.Trees
 		private long WriteToOverflowPages(TreeMutableState txInfo, int overflowSize, out byte* dataPos)
 		{
 			var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowSize);
-			var overflowPageStart = _tx.AllocatePage(numberOfPages);
+			var overflowPageStart = _tx.AllocatePage(numberOfPages, false);
 			overflowPageStart.Flags = PageFlags.Overflow;
 			overflowPageStart.OverflowSize = overflowSize;
 			dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
@@ -484,9 +486,9 @@ namespace Voron.Trees
 			return true;
 		}
 
-		internal static Page NewPage(Transaction tx, PageFlags flags, int num)
+		internal static Page NewPage(Transaction tx, PageFlags flags, bool keysPrefixing, int num)
 		{
-			var page = tx.AllocatePage(num);
+			var page = tx.AllocatePage(num, keysPrefixing);
 			page.Flags = flags;
 
 			return page;

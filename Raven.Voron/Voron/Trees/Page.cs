@@ -14,6 +14,7 @@ namespace Voron.Trees
 	public unsafe class Page
     {
 	    public const byte PrefixCount = 8;
+		public const sbyte KeysPrefixingDisabled = -127;
         private readonly byte* _base;
         private readonly PageHeader* _header;
 
@@ -23,7 +24,7 @@ namespace Voron.Trees
 	    public int LastMatch;
 	    public int LastSearchPosition;
 	    public bool Dirty;
-		public bool KeysPrefixed = false;
+		public bool KeysPrefixed;
 
 	    public Page(byte* b, string source, ushort pageSize)
         {
@@ -31,6 +32,10 @@ namespace Voron.Trees
             _header = (PageHeader*)b;
 	        Source = source;
 	        _pageSize = pageSize;
+
+			//TODO arek
+			//if (NextPrefixId != KeysPrefixingDisabled)
+			//	KeysPrefixed = true;
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
@@ -43,9 +48,9 @@ namespace Voron.Trees
 
         public int OverflowSize { get { return _header->OverflowSize; } set { _header->OverflowSize = value; } }
 
-		private ushort* PrefixOffsets { get { throw new NotImplementedException("TODO arek");} }
+		private ushort* PrefixOffsets { get { return (ushort*) (_base + _pageSize - PrefixCount*Constants.PrefixOffsetSize); } }
 
-		private byte NextPrefixId { get { throw new NotImplementedException("TODO arek"); } set { throw new NotImplementedException("TODO arek"); } }
+		public byte NextPrefixId { get { return (byte) *(PrefixOffsets - sizeof (sbyte)); } set { throw new NotImplementedException("TODO arek");} }
 
 		public ushort PageSize { get { return _pageSize; } }
 
@@ -295,7 +300,7 @@ namespace Voron.Trees
                                  other->DataSize);
         }
 
-	    public MemorySlice ConvertToPrefixedKey(MemorySlice key, int nodeIndex)
+	    public MemorySlice PrepareKeyToInsert(MemorySlice key, int nodeIndex)
 	    {
 		    if (KeysPrefixed == false) 
 				return key;
@@ -417,7 +422,7 @@ namespace Voron.Trees
 
 			if (left != null && leftLength > minPrefixLength && leftLength > rightLength)
 			{
-				prefixedSlice = new PrefixedSlice(NextPrefixId, leftLength, key.Skip(leftLength))
+				prefixedSlice = new PrefixedSlice((byte) NextPrefixId, leftLength, key.Skip(leftLength))
 				{
 					NewPrefix = new Slice(left.ToSlice(), leftLength)
 				};
@@ -427,7 +432,7 @@ namespace Voron.Trees
 
 			if (right != null && rightLength > minPrefixLength && rightLength > leftLength)
 			{
-				prefixedSlice = new PrefixedSlice(NextPrefixId, rightLength, key.Skip(rightLength))
+				prefixedSlice = new PrefixedSlice((byte) NextPrefixId, rightLength, key.Skip(rightLength))
 				{
 					NewPrefix = new Slice(right.ToSlice(), rightLength)
 				};
@@ -518,7 +523,7 @@ namespace Voron.Trees
 	        TemporaryPage tmp;
 	        using (tx.Environment.GetTemporaryPage(tx, out tmp))
 	        {
-		        var copy = tmp.TempPage;
+		        var copy = tmp.GetTempPage(KeysPrefixed);
 				copy.Flags = Flags;
 
 		        copy.ClearPrefixInfo();
@@ -529,7 +534,7 @@ namespace Voron.Trees
 				{
 					var node = GetNode(j);
 					SetNodeKey(node, ref slice);
-					copy.CopyNodeDataToEndOfPage(node, copy.ConvertToPrefixedKey(slice, copy.NumberOfEntries));
+					copy.CopyNodeDataToEndOfPage(node, copy.PrepareKeyToInsert(slice, copy.NumberOfEntries));
 				}
 
 				NativeMethods.memcpy(_base + Constants.PageHeaderSize,
@@ -605,7 +610,7 @@ namespace Voron.Trees
 		    TemporaryPage tmp;
 		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
 		    {
-			    var tempPage = tmp.TempPage;
+			    var tempPage = tmp.GetTempPage(KeysPrefixed);
 			    NativeMethods.memcpy(tempPage.Base, Base, _pageSize);
 
 			    var numberOfEntries = NumberOfEntries;

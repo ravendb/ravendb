@@ -143,8 +143,8 @@ namespace Voron
             State = new StorageEnvironmentState(null, null, initialNextPageNumber);
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Create(tx);
-                var freeSpace = Tree.Create(tx);
+                var root = Tree.Create(tx, false);
+                var freeSpace = Tree.Create(tx, false);
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);
@@ -236,7 +236,7 @@ namespace Voron
             tx.RemoveTree(name);
         }
 
-        public unsafe Tree CreateTree(Transaction tx, string name)
+        public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
@@ -257,7 +257,7 @@ namespace Voron
                 return tree;
             }
 
-            tree = Tree.Create(tx);
+            tree = Tree.Create(tx, keysPrefixing);
             tree.Name = name;
             var space = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
 

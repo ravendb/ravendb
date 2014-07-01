@@ -98,17 +98,17 @@ namespace Voron.Trees
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
 			}
 
-			var prefixedValue = nestedPage.ConvertToPrefixedKey(value, nestedPage.LastSearchPosition);
+			var valueToInsert = nestedPage.PrepareKeyToInsert(value, nestedPage.LastSearchPosition);
 
-			if (nestedPage.HasSpaceFor(_tx, prefixedValue, 0))
+			if (nestedPage.HasSpaceFor(_tx, valueToInsert, 0))
 			{
 				// we are now working on top of the modified root page, we can just modify the memory directly
-				nestedPage.AddDataNode(nestedPage.LastSearchPosition, prefixedValue, 0, previousNodeRevision);
+				nestedPage.AddDataNode(nestedPage.LastSearchPosition, valueToInsert, 0, previousNodeRevision);
 				return;
 			}
 
 			int pageSize = nestedPage.CalcSizeUsed() + Constants.PageHeaderSize;
-			var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(prefixedValue, 0);
+			var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0);
 			if (newRequiredSize <= maxNodeSize)
 			{
 				// we can just expand the current value... no need to create a nested tree yet
@@ -118,7 +118,7 @@ namespace Voron.Trees
 				return;
 			}
 			// we now have to convert this into a tree instance, instead of just a nested page
-			var tree = Create(_tx, TreeFlags.MultiValue);
+			var tree = Create(_tx, KeysPrefixing, TreeFlags.MultiValue);
 			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 			{
 				var existingValue = nestedPage.GetNodeKey(i);
@@ -158,27 +158,27 @@ namespace Voron.Trees
 				{
 					var nodeHeader = nestedPage.GetNode(i);
 					nestedPage.SetNodeKey(nodeHeader, ref nodeKey);
-					nodeKey = newNestedPage.ConvertToPrefixedKey(nodeKey, i);
+					nodeKey = newNestedPage.PrepareKeyToInsert(nodeKey, i);
 					newNestedPage.AddDataNode(i, nodeKey, 0,
 						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
 
 				newNestedPage.Search(value);
-				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, newNestedPage.ConvertToPrefixedKey(value, newNestedPage.LastSearchPosition), 0, 0);
+				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, newNestedPage.PrepareKeyToInsert(value, newNestedPage.LastSearchPosition), 0, 0);
 			}
 		}
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
-			var prefixedValue = KeysPrefixing ? (MemorySlice) new PrefixedSlice(value) : value; // first item is never prefixed
+			var valueToInsert = KeysPrefixing ? (MemorySlice) new PrefixedSlice(value) : value; // first item is never prefixed
 
-			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, prefixedValue, 0) + Constants.NodeOffsetSize;
+			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
 			{
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
 				// otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
-				var tree = Create(tx, TreeFlags.MultiValue);
+				var tree = Create(tx, KeysPrefixing, TreeFlags.MultiValue);
 				tree.DirectAdd(value, 0);
 				tx.AddMultiValueTree(this, key, tree);
 
@@ -200,7 +200,7 @@ namespace Voron.Trees
 
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
-			nestedPage.AddDataNode(0, prefixedValue, 0, 0);
+			nestedPage.AddDataNode(0, valueToInsert, 0, 0);
 		}
 
 		public void MultiDelete(Slice key, Slice value, ushort? version = null)
@@ -302,7 +302,7 @@ namespace Voron.Trees
 			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
 			tree = childTreeHeader != null ?
 				Open(tx, childTreeHeader) :
-				Create(tx);
+				Create(tx, KeysPrefixing);
 
 			tx.AddMultiValueTree(this, key, tree);
 			return tree;

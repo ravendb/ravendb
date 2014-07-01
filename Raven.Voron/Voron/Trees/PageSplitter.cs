@@ -45,12 +45,12 @@ namespace Voron.Trees
 
         public byte* Execute()
         {
-            Page rightPage = Tree.NewPage(_tx, _page.Flags, 1);
+            Page rightPage = Tree.NewPage(_tx, _page.Flags, _tree.KeysPrefixing, 1);
             _treeState.RecordNewPage(_page, 1);
             rightPage.Flags = _page.Flags;
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-                Page newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
+                Page newRootPage = Tree.NewPage(_tx, PageFlags.Branch, _tree.KeysPrefixing, 1);
                 _cursor.Push(newRootPage);
                 _treeState.RootPageNumber = newRootPage.PageNumber;
                 _treeState.Depth++;
@@ -132,7 +132,7 @@ namespace Voron.Trees
 
         private byte* AddNodeToPage(Page page, int index)
         {
-	        var prefixedKey = page.ConvertToPrefixedKey(_newKey, index);
+	        var prefixedKey = page.PrepareKeyToInsert(_newKey, index);
 
             switch (_nodeType)
             {
@@ -189,7 +189,7 @@ namespace Voron.Trees
                 else
                 {
 	                _page.SetNodeKey(node, ref instance);
-	                var key = rightPage.ConvertToPrefixedKey(instance, rightPage.NumberOfEntries);
+	                var key = rightPage.PrepareKeyToInsert(instance, rightPage.NumberOfEntries);
 					rightPage.CopyNodeDataToEndOfPage(node, key);
                 }
             }
@@ -212,7 +212,7 @@ namespace Voron.Trees
 
         private void AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
         {
-	        var prefixedSeparatorKey = _parentPage.ConvertToPrefixedKey(seperatorKey, _parentPage.LastSearchPosition);
+	        var prefixedSeparatorKey = _parentPage.PrepareKeyToInsert(seperatorKey, _parentPage.LastSearchPosition);
 
 			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(prefixedSeparatorKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedSeparatorKey)) == false)
             {

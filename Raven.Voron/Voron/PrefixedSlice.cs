@@ -53,6 +53,7 @@ namespace Voron
 			Size = 0;
 			KeyLength = 0;
 			Header = new PrefixedSliceHeader();
+			NonPrefixedData = new Slice(SliceOptions.Key);
 		}
 
 		public PrefixedSlice(SliceOptions options)
