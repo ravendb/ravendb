@@ -59,8 +59,6 @@ namespace Voron.Trees
 
 		public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
 		{
-			keysPrefixing = true; // TODO arek - for testing purposes only
-
 			var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
 			var tree = new Tree(tx, newRootPage.PageNumber)
 			{
