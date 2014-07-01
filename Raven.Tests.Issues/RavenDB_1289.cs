@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
 									   foo.Bars == null
 										   ? new string[0]
 										   : foo.Bars.Select(x => LoadDocument<Bar>(x).Name),
-									   Input = Parameter("input")
+									   Input = Query("input")
 								   };
 			}
 		}
@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
 								   select new
 								   {
 									   Name = foo.Name.ToUpper(),
-									   Input = Parameter("input")
+									   Input = Query("input")
 								   };
 			}
 		}
@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 
 					var fooBars = session.Advanced.LoadStartingWith<FooCapitalNameTransformer, FooCapitalNameDto>("foos/", configure:
-																						x => x.AddTransformerParameter("input", "testParam")).OrderBy(x => x.Name).ToArray();
+																						x => x.AddQueryParam("input", "testParam")).OrderBy(x => x.Name).ToArray();
 
 					Assert.Equal(2, fooBars.Length);
 
@@ -145,7 +145,7 @@ namespace Raven.Tests.Issues
 				using (var asyncSession = shardedDocumentStore.OpenAsyncSession())
 				{
 					var fooBars = asyncSession.Advanced.LoadStartingWithAsync<FooCapitalNameTransformer, FooCapitalNameDto>("foos/", configure:
-																						x => x.AddTransformerParameter("input", "testParam")).Result.OrderBy(x => x.Name).ToArray();
+																						x => x.AddQueryParam("input", "testParam")).Result.OrderBy(x => x.Name).ToArray();
 
 					Assert.Equal(2, fooBars.Length);
 
@@ -209,7 +209,7 @@ namespace Raven.Tests.Issues
 				var fooBars =
 					session.Advanced.LoadStartingWith<FooBarTransformer, FooBarDto>("foos/",
 					                                                                configure:
-						                                                                x => x.AddTransformerParameter("input", "testParam"))
+						                                                                x => x.AddQueryParam("input", "testParam"))
 					       .OrderBy(x => x.Name)
 					       .ToArray();
 
@@ -229,7 +229,7 @@ namespace Raven.Tests.Issues
 			using (var session = store.OpenAsyncSession())
 			{
 				var fooBars = session.Advanced.LoadStartingWithAsync<FooBarTransformer, FooBarDto>("foos/", configure:
-																						x => x.AddTransformerParameter("input", "testParam")).Result
+																						x => x.AddQueryParam("input", "testParam")).Result
 						   .OrderBy(x => x.Name).ToArray();
 					       
 

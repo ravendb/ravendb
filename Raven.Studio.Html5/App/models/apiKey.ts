@@ -44,10 +44,7 @@ class apiKey extends document {
             if (!this.fullApiKey()) {
                 return "Requires name and secret";
             }
-
-
-
-            return appUrl.forServer() + "/raven/studio.html#/home?api-key=" + this.fullApiKey();
+            return appUrl.forServer() + "/studio/index.html?api-key=" + this.fullApiKey();
         });
     }
 

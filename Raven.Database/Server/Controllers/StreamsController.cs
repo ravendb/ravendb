@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
 			{
 				writer.WriteStartObject();
@@ -109,7 +109,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 			{
 				var msg = GetEmptyMessage();
 
@@ -169,10 +169,10 @@ namespace Raven.Database.Server.Controllers
 			private readonly HttpRequestMessage req;
 			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
-		    private readonly CancellationTokenSourceExtensions.CancellationTimeout _timeout;
+		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTokenSourceExtensions.CancellationTimeout timeout, Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;

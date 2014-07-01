@@ -60,11 +60,11 @@ namespace Raven.Smuggler.Client
 			}
 		}
 
-		public void Write(string id, RavenJObject metadata, RavenJObject data)
+		public void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize)
 		{
 			current = GetBulkInsertOperation();
 
-			current.Write(id, metadata, data);
+			current.Write(id, metadata, data, dataSize);
 
 			if(documentSizeInChunkLimit.HasValue)
 				documentSizeInChunk += DocumentHelpers.GetRoughSize(data);
@@ -126,6 +126,12 @@ namespace Raven.Smuggler.Client
 				var disposeAsync = DisposeAsync().ConfigureAwait(false);
 				disposeAsync.GetAwaiter().GetResult();
 			}
+		}
+
+
+		public bool IsAborted
+		{
+			get { return current.IsAborted; }
 		}
 	}
 }

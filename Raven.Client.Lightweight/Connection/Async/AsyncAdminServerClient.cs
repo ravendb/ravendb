@@ -63,7 +63,8 @@ namespace Raven.Client.Connection.Async
 
 		public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
 		{
-			return innerAsyncServerClient.GetDatabaseNamesAsync(pageSize, start);
+            
+			return adminRequest.GetDatabaseNamesAsync(pageSize, start);
 		}
 
 		public async Task<AdminStatistics> GetStatisticsAsync()

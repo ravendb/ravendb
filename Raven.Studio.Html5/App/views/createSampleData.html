@@ -11,6 +11,8 @@
                     Create Sample Data
                 </button>
             </div>
+
+
         </div>
         <div class="alert alert-info pull-right">
             <i class="fa fa-info"></i>
@@ -19,8 +21,18 @@
         <br />
         <br />
         <br />
-        <div class="progress progress-striped active" data-bind="visible: isBusy">
-            <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+        <div class="btn-toolbar pull-left">
+            <div class="btn-group">
+                <button class="btn btn-primary" data-bind="click: showSampleDataClass , enable: isEnable">
+                    <i class="fa fa-download"></i>
+                    Show Sample Data Classes
+                </button>
+            </div>
         </div>
-    </div>
+        <br />
+        <br />
+            <div class="progress progress-striped active" data-bind="visible: isBusy">
+                <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+            </div>
+        </div>
 </div>

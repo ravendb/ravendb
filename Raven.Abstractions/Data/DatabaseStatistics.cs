@@ -36,12 +36,6 @@ namespace Raven.Abstractions.Data
 
 		public IEnumerable<ExtensionsLog> Extensions { get; set; }
 
-		public class TriggerInfo
-		{
-			public string Type { get; set; }
-			public string Name { get; set; }
-		}
-
 		public ActualIndexingBatchSize[] ActualIndexingBatchSize { get; set; }
 		public FutureBatchStats[] Prefetches { get; set; }
 
@@ -49,6 +43,13 @@ namespace Raven.Abstractions.Data
 
         public bool SupportsDtc { get; set; }
 	}
+
+
+    public class TriggerInfo
+    {
+        public string Type { get; set; }
+        public string Name { get; set; }
+    }
 
 	public class ActualIndexingBatchSize
 	{
@@ -75,4 +76,10 @@ namespace Raven.Abstractions.Data
 		public string Name { get; set; }
 		public string Assembly { get; set; }
 	}
+
+    public class PluginsInfo
+    {
+        public List<ExtensionsLog> Extensions { get; set; }
+        public List<TriggerInfo> Triggers { get; set; } 
+    }
 }

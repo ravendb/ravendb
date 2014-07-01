@@ -37,6 +37,7 @@ class ctor {
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
     collections: KnockoutObservableArray<string>;
+    noResults: KnockoutComputed<boolean>;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -57,6 +58,7 @@ class ctor {
         customFunctions: KnockoutObservable<customFunctions>;
         collections: KnockoutObservableArray<collection>;
         rowsAreLoading: KnockoutObservable<boolean>;
+        noResultsMessage: string;
     }
 
     activate(settings: any) {
@@ -76,7 +78,8 @@ class ctor {
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),
             collections: ko.observableArray<collection>([]),
-            rowsAreLoading: ko.observable<boolean>(false)
+            rowsAreLoading: ko.observable<boolean>(false),
+            noResultsMessage: "No records found."
         };
         this.settings = $.extend(defaults, settings);
 
@@ -107,6 +110,10 @@ class ctor {
 
             this.refreshIdAndCheckboxColumn();
         });
+
+        this.noResults = ko.computed<boolean>(() => this.virtualRowCount() === 0 && !this.settings.rowsAreLoading() );
+
+        this.registerColumnResizing();
     }
 
 
@@ -136,6 +143,8 @@ class ctor {
         if (this.itemsSourceSubscription) {
             this.itemsSourceSubscription.dispose();
         }
+
+        this.unregisterColumnResizing();
     }
 
     calculateRecycleRowCount() {
@@ -307,6 +316,13 @@ class ctor {
             var customConfig = this.settings.customColumns().findConfigFor(binding);
             if (customConfig) {
                 return customConfig.header();
+            }
+        } else {
+            var columns = this.settings.customColumns().columns();
+            for(var i=0; i < columns.length; i++) {
+                if (columns[i].binding() === binding) {
+                    return columns[i].header();
+                }
             }
         }
         return binding;
@@ -598,6 +614,45 @@ class ctor {
             )
             .reduce((p: boolean, c: boolean) => c || p, false);
         return result;
+    }
+
+    registerColumnResizing() {
+        var resizingColumn = false;
+        var startX = 0;
+        var startingWidth = 0;
+        var columnIndex = 0;
+
+        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
+            columnIndex = parseInt( $(e.currentTarget).attr("column"));
+            startingWidth = this.columns()[columnIndex].width();
+            startX = e.pageX;
+            resizingColumn = true;
+        });
+
+        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", (e: any) => {
+            resizingColumn = false;
+        });
+
+        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: any) => {
+            if (resizingColumn) {
+                var targetColumnSize = startingWidth + e.pageX - startX;
+                this.columns()[columnIndex].width(targetColumnSize);
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+
+                return false;
+            }
+        });
+    }
+
+    unregisterColumnResizing() {
+        $(this.settings.gridSelector).off("mousedown.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mouseup.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mousemove.virtualTableColumnResize");
     }
 }
 

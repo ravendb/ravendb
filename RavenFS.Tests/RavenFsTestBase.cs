@@ -200,7 +200,6 @@ namespace RavenFS.Tests
 
         public static string StreamToString(Stream stream)
         {
-            stream.Position = 0;
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
                 return reader.ReadToEnd();
@@ -314,6 +313,18 @@ namespace RavenFS.Tests
                     Thread.Sleep(2500);
                 }
             }
+        }
+
+        protected Stream CreateUniformFileStream(int size, char value = 'a')
+        {
+            var ms = new MemoryStream();
+            var streamWriter = new StreamWriter(ms);
+            var expected = new string(value, size);
+            streamWriter.Write(expected);
+            streamWriter.Flush();
+            ms.Position = 0;
+
+            return ms;
         }
     }
 }

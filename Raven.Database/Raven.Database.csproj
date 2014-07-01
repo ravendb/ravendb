@@ -220,6 +220,7 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
     <Compile Include="Bundles\PeriodicExports\Triggers\AttachmentAncestryPutTrigger.cs" />
@@ -271,6 +272,7 @@
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
     <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Server\Connections\WebSocketsTransport.cs" />
+    <EmbeddedResource Include="Server\Assets\EmbeddedData\NorthwindHelpData.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
@@ -410,11 +412,9 @@
     <Compile Include="Server\RavenFS\Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\ITransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\FileAndPagesInformation.cs" />
-    <Compile Include="Server\RavenFS\Storage\FileHeaderInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\PageInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\RenameFileOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\SchemaCreator.cs" />
-    <Compile Include="Server\RavenFS\Storage\SearchResults.cs" />
     <Compile Include="Server\RavenFS\Storage\SignatureReadOnlyStream.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\StorageConfigurator.cs" />
@@ -574,7 +574,6 @@
     <Compile Include="Indexing\RavenIndexWriter.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\BBoxStrategyThatSupportsAllShapes.cs" />
-    <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringReadWriter.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
@@ -957,7 +956,8 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs">
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From48To50.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
@@ -1034,6 +1034,7 @@
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
+    <Compile Include="Util\Streams\BlockingStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -36,6 +36,42 @@ namespace Raven.Database.Server.Controllers
 	public class DebugController : RavenDbApiController
 	{
 		[HttpGet]
+		[Route("debug/prefetch-status")]
+		[Route("databases/{databaseName}/debug/prefetch-status")]
+		public HttpResponseMessage PrefetchingQueueStatus()
+		{
+			var prefetcherDocs = Database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+			var compareToCollection = new Dictionary<Etag, int>();
+
+			for (int i = 1; i < prefetcherDocs.Length; i++)
+				compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
+
+			if (compareToCollection.Any(x => x.Value < 0))
+			{
+				return GetMessageWithObject(new
+				{
+					HasCorrectlyOrderedEtags = true,
+					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+				});
+			}
+			
+			return GetMessageWithObject(new
+			{
+				HasCorrectlyOrderedEtags = false,
+				IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
+				EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+			});
+		}
+
+        [HttpGet]
+        [Route("debug/plugins")]
+        [Route("databases/{databaseName}/debug/plugins")]
+        public HttpResponseMessage Plugins()
+        {
+            return GetMessageWithObject(Database.PluginsInfo);
+        }
+
+		[HttpGet]
 		[Route("debug/changes")]
 		[Route("databases/{databaseName}/debug/changes")]
 		public HttpResponseMessage Changes()

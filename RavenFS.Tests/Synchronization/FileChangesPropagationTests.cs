@@ -23,7 +23,7 @@ namespace RavenFS.Tests.Synchronization
 		    var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
-            await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
+            await server1.UploadAsync("test.bin", content, new RavenJObject { { "test", "value" } });
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -75,7 +75,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
-            await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
+            await server1.UploadAsync("test.bin", content, new RavenJObject { { "test", "value" } });
 			
 			Assert.Equal(1, server1.GetStatisticsAsync().Result.FileCount);
 
@@ -106,26 +106,20 @@ namespace RavenFS.Tests.Synchronization
 
 			// On all servers should have the same content of the file
 			string server1Md5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await server1.DownloadAsync("test.bin"))
 			{
-				server1.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				server1Md5 = resultFileContent.GetMD5Hash();
 			}
 
 			string server2Md5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await server2.DownloadAsync("test.bin"))
 			{
-				server2.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				server2Md5 = resultFileContent.GetMD5Hash();
 			}
 
 			string server3Md5;
-			using (var resultFileContent = new MemoryStream())
+			using (var resultFileContent = await server3.DownloadAsync("test.bin"))
 			{
-				server3.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				server3Md5 = resultFileContent.GetMD5Hash();
 			}
 
@@ -147,7 +141,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
-            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
+            server1.UploadAsync("test.bin", content, new RavenJObject { { "test", "value" } }).Wait();
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -198,7 +192,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewAsyncClient(2);
 
 			content.Position = 0;
-            await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
+            await server1.UploadAsync("test.bin", content, new RavenJObject { { "test", "value" } });
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 

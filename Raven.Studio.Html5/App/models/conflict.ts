@@ -16,6 +16,10 @@ class conflict {
         return this.id;
     }
 
+    getUrl() {
+        return this.id;
+    }
+
     getDocumentPropertyNames(): Array<string> {
         return ["Id", "conflictDetectedAt", "versions"];
     }

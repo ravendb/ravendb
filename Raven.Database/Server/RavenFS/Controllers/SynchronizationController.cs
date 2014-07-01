@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,15 +11,12 @@ using System.Web.Http;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using System.Diagnostics;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
@@ -161,7 +157,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        FileSystemName = FileSystemName,
                         Status = ConflictStatus.Resolved
                     });
                 }
@@ -243,7 +238,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					FileName = fileName,
 					SourceServerUrl = sourceServer.FileSystemUrl,
-                    FileSystemName = FileSystemName,
                     Status = ConflictStatus.Detected
 				});
 
@@ -310,7 +304,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        FileSystemName = FileSystemName,
                         Status = ConflictStatus.Resolved
                     });
                 }
@@ -465,7 +458,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        FileSystemName = FileSystemName,
                         Status = ConflictStatus.Detected
                     });
 				}
@@ -671,7 +663,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				FileName = filename,
 				SourceServerUrl = remoteServerUrl,
-                FileSystemName = FileSystemName,
                 Status = ConflictStatus.Detected
 			});
 
@@ -725,7 +716,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Publisher.Publish(new FileChangeNotification
 			{
-                FileSystemName = FileSystem.Name,
 				File = FilePathTools.Cannoicalise(fileName),
 				Action = action
 			});
@@ -735,7 +725,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Publisher.Publish(new SynchronizationUpdateNotification
 			{
-                FileSystemName = fileSystemName,
 				FileName = fileName,
 				SourceFileSystemUrl = sourceServer.FileSystemUrl,
 				SourceServerId = sourceServer.Id,
@@ -768,7 +757,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 Publisher.Publish(new ConflictNotification 
                 { 
                     FileName = fileName,
-                    FileSystemName = FileSystemName,
                     Status = ConflictStatus.Resolved
                 });
 			});

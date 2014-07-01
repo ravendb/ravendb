@@ -19,7 +19,7 @@ namespace RavenFS.Tests.Synchronization
 		private const int AddtitionalServerInstancePortNumber = 19083;
 
 		[Fact]
-		public void Should_synchronize_to_all_destinations()
+		public async void Should_synchronize_to_all_destinations()
 		{
 			var sourceContent = SyncTestUtils.PrepareSourceStream(10000);
 			sourceContent.Position = 0;
@@ -34,11 +34,11 @@ namespace RavenFS.Tests.Synchronization
 			var destination2Content = new RandomlyModifiedStream(sourceContent, 0.01);
 			sourceContent.Position = 0;
 
-			destination1Client.UploadAsync("test.bin", destination1Content).Wait();
-			destination2Client.UploadAsync("test.bin", destination2Content).Wait();
+            await destination1Client.UploadAsync("test.bin", destination1Content);
+            await destination2Client.UploadAsync("test.bin", destination2Content);
 
 			sourceContent.Position = 0;
-			sourceClient.UploadAsync("test.bin", sourceContent).Wait();
+            await sourceClient.UploadAsync("test.bin", sourceContent);
 			sourceContent.Position = 0;
 
             sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination()).Wait();
@@ -50,15 +50,15 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal("File test.bin is conflicted", destinationSyncResults[0].Reports.ToArray()[0].Exception.Message);
 			Assert.Equal("File test.bin is conflicted", destinationSyncResults[1].Reports.ToArray()[0].Exception.Message);
 
-			destination1Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion).Wait();
-			destination2Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion).Wait();
+            await destination1Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion);
+            await destination2Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion);
 
-			destinationSyncResults = sourceClient.Synchronization.SynchronizeAsync().Result;
+            destinationSyncResults = await sourceClient.Synchronization.SynchronizeAsync();
 
-			var conflictItem = destination1Client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+            var conflictItem = await destination1Client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin"));
 			Assert.Null(conflictItem);
 
-			conflictItem = destination2Client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+            conflictItem = await destination2Client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin"));
 			Assert.Null(conflictItem);
 
 			// check if reports match
@@ -73,18 +73,14 @@ namespace RavenFS.Tests.Synchronization
 
 			// check content of files
 			string destination1Md5;
-			using (var resultFileContent = new MemoryStream())
+            using (var resultFileContent = await destination1Client.DownloadAsync("test.bin"))
 			{
-				destination1Client.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				destination1Md5 = resultFileContent.GetMD5Hash();
 			}
 
 			string destination2Md5;
-			using (var resultFileContent = new MemoryStream())
+            using (var resultFileContent = await destination2Client.DownloadAsync("test.bin"))
 			{
-				destination2Client.DownloadAsync("test.bin", resultFileContent).Wait();
-				resultFileContent.Position = 0;
 				destination2Md5 = resultFileContent.GetMD5Hash();
 			}
 
@@ -138,9 +134,9 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 			await sourceClient.Synchronization.SynchronizeAsync();
 
-			var destinationFiles = await destinationClient.GetFilesFromAsync("/");
+			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(2, destinationFiles.FileCount);
-			Assert.Equal(2, destinationFiles.Files.Length);
+            Assert.Equal(2, destinationFiles.Files.Count);
 			Assert.NotEqual(destinationFiles.Files[0].Name, destinationFiles.Files[1].Name);
 			Assert.True(destinationFiles.Files[0].Name == "test1.bin" || destinationFiles.Files[0].Name == "test2.bin");
 			Assert.True(destinationFiles.Files[1].Name == "test1.bin" || destinationFiles.Files[1].Name == "test2.bin");
@@ -467,7 +463,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-            await destinationClient.UploadAsync("file.bin", new RavenJObject { { SynchronizationConstants.RavenSynchronizationConflict, new RavenJValue(true) } }, new RandomStream(10));
+            await destinationClient.UploadAsync("file.bin", new RandomStream(10), new RavenJObject { { SynchronizationConstants.RavenSynchronizationConflict, new RavenJValue(true) } });
 			
             await sourceClient.UploadAsync("file.bin", new RandomStream(10));
 
@@ -484,7 +480,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
-            await sourceClient.UploadAsync("file.bin", new RavenJObject { { SynchronizationConstants.RavenSynchronizationConflict, new RavenJValue(true) } }, new RandomStream(10));
+            await sourceClient.UploadAsync("file.bin", new RandomStream(10), new RavenJObject { { SynchronizationConstants.RavenSynchronizationConflict, new RavenJValue(true) } });
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 

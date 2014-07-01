@@ -300,17 +300,17 @@ namespace Raven.Client
 			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
-		protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-		{
-			var onSessionCreatedInternal = SessionCreatedInternal;
-			if (onSessionCreatedInternal != null)
-				onSessionCreatedInternal(session);
-		}
+        protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+        {
+            var onSessionCreatedInternal = SessionCreatedInternal;
+            if (onSessionCreatedInternal != null)
+                onSessionCreatedInternal(session);
+        }
 
-		///<summary>
-		/// Internal notification for integration tools, mainly
-		///</summary>
-		public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
+        ///<summary>
+        /// Internal notification for integration tools, mainly
+        ///</summary>
+        public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
 
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 

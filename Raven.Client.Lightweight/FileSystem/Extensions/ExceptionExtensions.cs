@@ -55,6 +55,10 @@ namespace Raven.Client.FileSystem
 			{
 				return new FileNotFoundException();
 			}
+            if (webException.StatusCode == HttpStatusCode.BadRequest)
+            {
+                return new BadRequestException();
+            }
 
 			using (var reader = new StringReader(webException.Message))
 			{
@@ -83,10 +87,14 @@ namespace Raven.Client.FileSystem
 						return new JsonSerializer().Deserialize<ConcurrencyException>(new JsonTextReader(new StreamReader(stream)));
 					}
 				}
-				else if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+                else if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 				{
 					return new FileNotFoundException();
 				}
+                else if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    return new BadRequestException();
+                }
 			}
 
 			using (var stream = webException.Response.GetResponseStream())

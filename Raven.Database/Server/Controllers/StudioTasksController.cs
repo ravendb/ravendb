@@ -9,14 +9,12 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
-using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -25,9 +23,6 @@ using Raven.Abstractions.Smuggler;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
-using Raven.Database.Extensions;
-using System.Text.RegularExpressions;
-using System.Reflection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -40,7 +35,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
-            if (!this.Request.Content.IsMimeMultipartContent())
+            if (!Request.Content.IsMimeMultipartContent())
             {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
@@ -130,8 +125,6 @@ namespace Raven.Database.Server.Controllers
             };
 			
 			return result;
-
-
 		}
         
 		[HttpPost]
@@ -158,6 +151,25 @@ namespace Raven.Database.Server.Controllers
 
 			return GetEmptyMessage();
 		}
+
+        [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
+        public async Task<HttpResponseMessage> CreateSampleDataClass()
+        {
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
+            {
+                if (sampleData == null)
+                    return GetEmptyMessage();
+                   
+                sampleData.Position = 0;
+                using (var reader = new StreamReader(sampleData, Encoding.UTF8))
+                {
+                   var data = reader.ReadToEnd();
+                   return GetMessageWithObject(data);
+                }
+            }
+        }
 
         [HttpGet]
         [Route("studio-tasks/new-encryption-key")]
@@ -213,47 +225,6 @@ namespace Raven.Database.Server.Controllers
 
             Database.Batch(commands, CancellationToken.None);
         }
-
-        private static RavenJToken SetValueInDocument(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return value;
-
-            var ch = value[0];
-            if (ch == '[' || ch == '{')
-            {
-                try
-                {
-                    return RavenJToken.Parse(value);
-                }
-                catch (Exception)
-                {
-                    // ignoring failure to parse, will proceed to insert as a string value
-                }
-            }
-            else if (char.IsDigit(ch) || ch == '-' || ch == '.')
-            {
-                // maybe it is a number?
-                long longResult;
-                if (long.TryParse(value, out longResult))
-                {
-                    return longResult;
-                }
-
-                decimal decimalResult;
-                if (decimal.TryParse(value, out decimalResult))
-                {
-                    return decimalResult;
-                }
-            }
-            else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
-            {
-                return value.Substring(1, value.Length - 2);
-            }
-
-            return value;
-        }
-
 
 	    [HttpPost]
         [Route("studio-tasks/loadCsvFile")]
@@ -344,8 +315,47 @@ namespace Raven.Database.Server.Controllers
             }
 
             return GetEmptyMessage();
-
 	    }
+
+		private static RavenJToken SetValueInDocument(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return value;
+
+			var ch = value[0];
+			if (ch == '[' || ch == '{')
+			{
+				try
+				{
+					return RavenJToken.Parse(value);
+				}
+				catch (Exception)
+				{
+					// ignoring failure to parse, will proceed to insert as a string value
+				}
+			}
+			else if (char.IsDigit(ch) || ch == '-' || ch == '.')
+			{
+				// maybe it is a number?
+				long longResult;
+				if (long.TryParse(value, out longResult))
+				{
+					return longResult;
+				}
+
+				decimal decimalResult;
+				if (decimal.TryParse(value, out decimalResult))
+				{
+					return decimalResult;
+				}
+			}
+			else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
+			{
+				return value.Substring(1, value.Length - 2);
+			}
+
+			return value;
+		}
 	}
 }
 

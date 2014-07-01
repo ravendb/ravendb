@@ -13,8 +13,8 @@ class saveCustomFunctionsCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var args = JSON.stringify(this.toSave.toDto());
-        var url = "/docs/Raven/Studio/Config";
-        var saveTask = this.put(url, args, null, null);
+        var url = "/docs/Raven/Javascript/Functions";
+        var saveTask = this.put(url, args, this.db, null);
 
         saveTask.done(() => this.reportSuccess("Custom functions saved!"));
         saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save custom functions!", response.responseText, response.statusText));

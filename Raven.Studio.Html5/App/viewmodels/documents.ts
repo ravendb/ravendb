@@ -14,7 +14,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
-import selectColumns = require('viewmodels/selectColumns');
 import changeSubscription = require('models/changeSubscription');
 import changesApi = require("common/changesApi");
 import customFunctions = require("models/customFunctions");
@@ -49,17 +48,13 @@ class documents extends viewModelBase {
         this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
     }
 
-
-    
-
-
     activate(args) {
         super.activate(args);
 
         this.fetchCustomFunctions();
 
         // treat document put/delete events
-        this.currentDBDocChangesSubscription = shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+        this.currentDBDocChangesSubscription = shell.currentResourceChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
             this.isDocumentsUpToDate = false;
             var collections = this.collections();
             var curCollection = this.collections.first(x => x.name === e.CollectionName);
@@ -82,7 +77,7 @@ class documents extends viewModelBase {
         });
         
         // treat bulk Insert events
-        this.currentDBBulkInsertSubscription = shell.currentDbChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
+        this.currentDBBulkInsertSubscription = shell.currentResourceChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
             if (e.Type == documentChangeType.BulkInsertEnded) {
                 this.isDocumentsUpToDate = false;
 
@@ -147,13 +142,11 @@ class documents extends viewModelBase {
         });
     }
 
-    
     deactivate() {
         super.deactivate();
         this.currentDBDocChangesSubscription.off();
         this.currentDBBulkInsertSubscription.off();
     }
-
 
     collectionsLoaded(collections: Array<collection>, db: database) {
         
@@ -180,7 +173,6 @@ class documents extends viewModelBase {
         // The collection info contains information such as total number of documents.
         collectionsWithSysCollection.forEach(c => c.fetchTotalDocumentCount());
     }
-
 
     fetchCustomFunctions() {
         var customFunctionsCommand = new getCustomFunctionsCommand(this.activeDatabase()).execute();
@@ -281,13 +273,15 @@ class documents extends viewModelBase {
     }
 
     selectColumns() {
-        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
-        app.showDialog(selectColumnsViewModel);
-        selectColumnsViewModel.onExit().done((cols) => {
-            this.currentColumnsParams(cols);
+        require(["viewmodels/selectColumns"], selectColumns => {
+            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
+            app.showDialog(selectColumnsViewModel);
+            selectColumnsViewModel.onExit().done((cols) => {
+                this.currentColumnsParams(cols);
 
-            var pagedList = this.currentCollection().getDocuments();
-            this.currentCollectionPagedItems(pagedList);
+                var pagedList = this.currentCollection().getDocuments();
+                this.currentCollectionPagedItems(pagedList);
+            });
         });
     }
 

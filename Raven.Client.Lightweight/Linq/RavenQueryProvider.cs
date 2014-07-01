@@ -102,6 +102,11 @@ namespace Raven.Client.Linq
 	    public string ResultTransformer { get; private set; }
         public Dictionary<string, RavenJToken> TransformerParameters { get { return transformerParamaters; } }
 
+		public void AddQueryInput(string name, RavenJToken value)
+		{
+			AddTransformerParameter(name, value);
+		}
+
 	    public void AddTransformerParameter(string name, RavenJToken value)
 	    {
 	        transformerParamaters[name] = value;

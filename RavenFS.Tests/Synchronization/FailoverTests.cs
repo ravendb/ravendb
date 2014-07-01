@@ -30,15 +30,15 @@ namespace RavenFS.Tests.Synchronization
 			sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
 			await sourceClient.Synchronization.SynchronizeAsync();
 			
-			var destinationFiles = await destinationClient.GetFilesFromAsync("/");
+			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(1, destinationFiles.FileCount);
-			Assert.Equal(1, destinationFiles.Files.Length);
+            Assert.Equal(1, destinationFiles.Files.Count);
 
 			var server = GetServer(0);
 			server.Dispose();
-			var fileFromSync = await sourceClient.GetFilesFromAsync("/");
+			var fileFromSync = await sourceClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(1, fileFromSync.FileCount);
-			Assert.Equal(1, fileFromSync.Files.Length);
+            Assert.Equal(1, fileFromSync.Files.Count);
 		}
 	}
 }

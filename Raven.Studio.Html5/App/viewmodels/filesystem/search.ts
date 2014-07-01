@@ -75,7 +75,7 @@ class search extends viewModelBase {
     }
 
     fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new searchByQueryCommand(appUrl.getFilesystem(), query, skip, take, null).execute();
+        var task = new searchByQueryCommand(appUrl.getFileSystem(), query, skip, take, null).execute();
         return task;
     }
 

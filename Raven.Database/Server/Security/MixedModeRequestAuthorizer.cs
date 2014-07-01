@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Security
 		private class OneTimeToken
 		{
 			private IPrincipal user;
-			public string DatabaseName { get; set; }
+			public string ResourceName { get; set; }
 			public DateTime GeneratedAt { get; set; }
 			public IPrincipal User
 			{
@@ -100,7 +100,6 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
 		}
 
-
 	    public bool TryAuthorizeSingleUseAuthToken(string token, string tenantName, out object msg, out HttpStatusCode statusCode, out IPrincipal user)
         {
             user = null;
@@ -115,8 +114,8 @@ namespace Raven.Database.Server.Security
                 return false;
             }
 
-            if (string.Equals(value.DatabaseName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
-                (value.DatabaseName == Constants.SystemDatabase && tenantName == null) == false)
+            if (string.Equals(value.ResourceName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
+                (value.ResourceName == Constants.SystemDatabase && tenantName == null) == false)
             {
                 msg = new
                 {
@@ -145,6 +144,7 @@ namespace Raven.Database.Server.Security
             CurrentOperationContext.User.Value = user = value.User;
             return true;
         }
+
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
         {
             object result;
@@ -210,35 +210,11 @@ namespace Raven.Database.Server.Security
 			oAuthRequestAuthorizer.Dispose();
 		}
 
-		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user)
+		public string GenerateSingleUseAuthToken(string resourceName, IPrincipal user)
 		{
 			var token = new OneTimeToken
 			{
-				DatabaseName = TenantId,
-				GeneratedAt = SystemTime.UtcNow,
-				User = user
-			};
-			var tokenString = Guid.NewGuid().ToString();
-
-			singleUseAuthTokens.TryAdd(tokenString, token);
-
-			if (singleUseAuthTokens.Count > 25)
-			{
-				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => (x.Value.GeneratedAt - SystemTime.UtcNow).TotalMinutes > 5))
-				{
-					OneTimeToken value;
-					singleUseAuthTokens.TryRemove(oneTimeToken.Key, out value);
-				}
-			}
-
-			return tokenString;
-		}
-
-		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user, RavenDbApiController controller)
-		{
-			var token = new OneTimeToken
-			{
-				DatabaseName = controller.DatabaseName,
+				ResourceName = resourceName,
 				GeneratedAt = SystemTime.UtcNow,
 				User = user
 			};

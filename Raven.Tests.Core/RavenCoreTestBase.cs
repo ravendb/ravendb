@@ -5,12 +5,15 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Extensions;
+using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
 
@@ -62,6 +65,25 @@ namespace Raven.Tests.Core
 
 			return documentStore;
 		}
+
+        public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
+        {
+            if (debug && Debugger.IsAttached == false)
+                return;
+
+            OwinHttpServer server = null;
+            string url = documentStore.Url;
+            using (server)
+            {
+                Process.Start(url); // start the server
+
+                do
+                {
+                    Thread.Sleep(100);
+                } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+            }
+        }
+
 
 		public static void WaitForIndexing(DocumentStore store, string db = null, TimeSpan? timeout = null)
 		{

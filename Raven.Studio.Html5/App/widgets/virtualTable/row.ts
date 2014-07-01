@@ -143,7 +143,7 @@ class row {
             }
             else if (!!data[propertyName] &&
                 typeof data[propertyName] == "string" &&
-                /\w+\/\w+/ig.test(data[propertyName])) {
+                /\w+\/\w+/.test(data[propertyName])) {
                 return cell.externalIdTemplate;
             }
         }

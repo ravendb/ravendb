@@ -23,43 +23,54 @@ class indexes extends viewModelBase {
     recentQueries = ko.observableArray<storedQueryDto>();
     indexMutex = true;
     appUrls: computedAppUrls;
+    btnState = ko.observable<boolean>(false);
+    btnStateTooltip = ko.observable<string>("ExpandAll");
+    btnTitle = ko.computed(() => this.btnState() === true ? "ExpandAll" : "CollapseAll");
 
-    sortedGroups = ko.computed(()=> {
-        var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+    sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
 
-        groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> })=> {
-            group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase()?1:-1));
+    constructor() {
+        super();
+
+        this.fetchIndexes();
+        this.fetchRecentQueries();
+
+        this.sortedGroups = ko.computed(() => {
+            var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+
+            groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> }) => {
+                group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1));
+            });
+
+            return groups;
         });
-
-        return groups;
-    });
+    }
 
     activate(args) {
         super.activate(args);
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
-
-        this.fetchIndexes();
-        this.fetchRecentQueries();
     }
 
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
-        ko.postbox.publish("SetRawJSONUrl",  appUrl.forIndexesRawData(this.activeDatabase()));
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
     }
 
-    fetchIndexes() {
+    private fetchIndexes() {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
     }
 
-    fetchRecentQueries() {
+    private fetchRecentQueries() {
         new getStoredQueriesCommand(this.activeDatabase())
             .execute()
-            .done((doc: storedQueryContainerDto) => this.recentQueries(doc.Queries));
+            .done((doc: storedQueryContainerDto) => {
+            this.recentQueries(doc.Queries)
+        });
     }
 
     getRecentQueryUrl(query: storedQueryDto) {
@@ -102,18 +113,12 @@ class indexes extends viewModelBase {
                 group.indexes.push(i);
             }
         } else {
-            indexExists = !!this.indexGroups.first((curGroup: { entityName: string; indexes: KnockoutObservableArray<index> }) =>
-                !!curGroup.indexes.first((cur: index) => cur.name == i.name));
-
-            if (!indexExists) {
-
-                this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
-            }
+            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
         }
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentDbChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
+        return [shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
@@ -150,8 +155,17 @@ class indexes extends viewModelBase {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
     
+    
+   
     toggleExpandAll() {
-        $(".index-group-content").collapse('toggle');
+       if (this.btnState() === true) {
+           $(".index-group-content").collapse('show');
+       } else {
+           $(".index-group-content").collapse('hide');
+        }
+        
+        
+        this.btnState.toggle();
     }
 
     deleteIdleIndexes() {

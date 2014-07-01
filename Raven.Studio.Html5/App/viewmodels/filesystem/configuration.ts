@@ -3,6 +3,7 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import ace = require("ace/ace");
+import shell = require("viewmodels/shell");
 
 import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -57,6 +58,24 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        if (!this.subscription) {
+            this.subscription = shell.currentResourceChangesApi()
+                .watchFsConfig((e: filesystemConfigNotification) => {
+                    switch (e.Action) {
+                        case filesystemConfigurationChangeAction.Set:
+                            this.addKey(e.Name);
+                            break;
+                        case filesystemConfigurationChangeAction.Delete:
+                            this.removeKey(e.Name);
+                            break;
+                        default:
+                            console.error("Unknown notification action.");
+
+                    }
+                });
+        }
+
         if (this.currentKey()) {
             this.loadedConfiguration(this.currentKey().key);
         }
@@ -162,19 +181,37 @@ class configuration extends viewModelBase {
             deleteConfigurationKeyViewModel
                 .deletionTask
                 .done(() => {
-                    var currentIndex = this.keys.indexOf(this.currentKey());
-                    var newIndex = currentIndex;
-                    if (currentIndex + 1 == this.keys().length) {
-                        newIndex = currentIndex - 1;
-                    }
-
-                    this.keys.remove(this.currentKey());
-                    if (this.keys()[newIndex]) {
-                        this.selectKey(this.keys()[newIndex]);
-                    }
+                    this.removeKey(this.currentKey().key);
                 });
             app.showDialog(deleteConfigurationKeyViewModel);
         });
+    }
+
+    removeKey(key: string) {
+        var foundKey = this.keys().filter((x: configurationKey) => { return (x.key == key) });
+
+        if (foundKey.length > 0) {
+            var currentIndex = this.keys.indexOf(this.currentKey());
+            var foundIndex = this.keys.indexOf(foundKey[0]);
+            var newIndex = currentIndex;
+            if (currentIndex + 1 == this.keys().length) {
+                newIndex = currentIndex - 1;
+            }
+
+            this.keys.remove(foundKey[0]);
+            if (this.keys()[newIndex] && currentIndex == foundIndex) {
+                this.selectKey(this.keys()[newIndex]);
+            }
+        }
+    }
+
+    addKey(key: string) {
+        var foundKey = this.keys().filter((x: configurationKey) => { return (x.key == key) });
+        if (foundKey.length <= 0) {
+            var newKey = new configurationKey(this.activeFilesystem(), key);
+            this.keys.push(newKey);
+            this.selectKey(newKey);
+        }
     }
 
     newConfigurationKey() {
@@ -183,11 +220,9 @@ class configuration extends viewModelBase {
             createConfigurationKeyViewModel
                 .creationTask
                 .done((key: string) => {
-                    var newKey = new configurationKey(this.activeFilesystem(), key);
-                    new saveConfigurationCommand(this.activeFilesystem(), newKey, JSON.parse("{}")).execute()
+                    new saveConfigurationCommand(this.activeFilesystem(), new configurationKey(this.activeFilesystem(), key), JSON.parse("{}")).execute()
                         .done(() => {
-                            this.keys.push(newKey);
-                            this.selectKey(newKey);
+                            this.addKey(key);
                         })
                         .fail((qXHR, textStatus, errorThrown) => {
                             ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not create Configuration Key.", errorThrown));
@@ -197,8 +232,6 @@ class configuration extends viewModelBase {
         });
     }
 
-    modelPolling() {
-    }
 } 
 
 export = configuration;

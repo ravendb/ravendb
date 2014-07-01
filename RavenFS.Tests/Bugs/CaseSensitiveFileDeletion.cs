@@ -14,7 +14,7 @@ namespace RavenFS.Tests.Bugs
 
             client.DeleteAsync("Abc.txt").Wait();
 
-            var result = client.GetFilesFromAsync("/").Result;
+            var result = client.SearchOnDirectoryAsync("/").Result;
 
             Assert.Equal(0, result.FileCount);
         }

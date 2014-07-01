@@ -28,8 +28,12 @@ namespace Raven.Database.Server.Connections
 
 		public void OnIdle()
 		{
-			ConnectionState _;
-			timeSensitiveStore.ForAllExpired(s => connections.TryRemove(s, out _));
+			timeSensitiveStore.ForAllExpired(s =>
+			{
+				ConnectionState value;
+				if(connections.TryRemove(s, out value))
+					value.Dispose();
+			});
 		}
 
 		public void Disconnect(string id)

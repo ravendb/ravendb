@@ -5,6 +5,7 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
 
+import forge = require("forge/forge_custom.min");
 import viewModelBase = require("viewmodels/viewModelBase");
 import resource = require("models/resource");
 import database = require("models/database");
@@ -25,6 +26,7 @@ import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import changesApi = require("common/changesApi");
+import oauthContext = require("common/oauthContext");
 
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
@@ -37,6 +39,7 @@ import getFilesystemsCommand = require("commands/filesystem/getFilesystemsComman
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+import enterApiKey = require("viewmodels/enterApiKey");
 
 class shell extends viewModelBase {
     private router = router;
@@ -79,16 +82,15 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
 
     static globalChangesApi: changesApi;
-    static currentDbChangesApi = ko.observable<changesApi>(null);
-    static currentFsChangesApi = ko.observable<changesApi>(null);
+    static currentResourceChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
+        oauthContext.enterApiKeyTask = this.setupApiKey();
+
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
-        ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
-        ko.postbox.subscribe("ActivateCounterStorageWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db, true); });
         ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs, true); });
@@ -104,7 +106,8 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
         this.isDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -144,6 +147,7 @@ class shell extends viewModelBase {
             }
             return shell.counterStorages();
         }, this);
+
     }
 
     activate(args: any) {
@@ -179,7 +183,12 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        this.connectToRavenServer();
+        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
+
+        window.addEventListener("beforeunload", ()=> {
+            shell.globalChangesApi.dispose();
+            this.disconnectFromResourceChangesApi();
+        });
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -201,6 +210,18 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
+    }
+
+    setupApiKey() {
+        // try to find api key as studio parameter
+        var queryVars = forge.util.getQueryVariables();
+        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
+            oauthContext.apiKey(queryVars['api-key'][0]);
+        }
+        if ('has-api-key' in queryVars) {
+            return this.showApiKeyDialog();
+        }
+        return $.Deferred().resolve();
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -237,7 +258,7 @@ class shell extends viewModelBase {
                     observableResourceArray.remove(resourceToDelete);
 
                     if (observableResourceArray().length != 0 && !observableResourceArray.contains(activeResource)) {
-                        this.selectResource(observableResourceArray().first(), typeHash);
+                        this.selectResource(observableResourceArray().first());
                     }
                 }
             } else { // e.Type === documentChangeType.Put
@@ -245,7 +266,7 @@ class shell extends viewModelBase {
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
 
-                    if (existingResource == null) {
+                    if (existingResource == null) { // new database
                         var newResource = this.createNewResource(typeHash, receivedResourceName, dto);
                         observableResourceArray.unshift(newResource);
                     } else {
@@ -278,45 +299,26 @@ class shell extends viewModelBase {
         return newResource;
     }
 
-    selectResource(rs, locationHash: string) {
+    selectResource(rs) {
         rs.activate();
 
-        if (window.location.hash !== locationHash) {
-            var updatedUrl = appUrl.forCurrentPage(rs);
-            this.navigate(updatedUrl);
-        }
+        var updatedUrl = appUrl.forCurrentPage(rs);
+        this.navigate(updatedUrl);
     }
 
-    databasesLoaded(databases) {
+    private databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
         systemDatabase.isVisible(false);
         shell.databases(databases.concat([systemDatabase]));
-        if (shell.databases().length == 1) {
-            systemDatabase.activate();
-        } else {
-            var urlDatabase = appUrl.getDatabase();
-            var newSelectedDb;
-            if (urlDatabase != null && (newSelectedDb = shell.databases.first(x => x.name == urlDatabase.name)) != null) {
-                newSelectedDb.activate();
-            } else {
-                shell.databases.first(x => x.isVisible()).activate();
-            }
-        }
     }
 
-    fileSystemsLoaded(filesystems) {
+    private fileSystemsLoaded(filesystems) {
         shell.fileSystems(filesystems);
-        if (shell.fileSystems().length != 0) {
-            shell.fileSystems.first(x=> x.isVisible()).activate();
-        }
     }
 
-    counterStoragesLoaded(results: counterStorage[]) {
+    private counterStoragesLoaded(results: counterStorage[]) {
         shell.counterStorages(results);
-        if (shell.counterStorages().length != 0) {
-            shell.counterStorages.first(x => x.isVisible()).activate();
-        }
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
@@ -345,6 +347,47 @@ class shell extends viewModelBase {
         this.counterStoragesLoadedTask = new getCounterStoragesCommand()
             .execute()
             .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+
+        $.when(this.databasesLoadedTask, this.fileSystemsLoadedTask, this.counterStoragesLoadedTask)
+            .done(() => {
+                var locationHash = window.location.hash;
+
+                if (locationHash.indexOf("#filesystems") == 0) {
+                    this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
+                }
+                else if (locationHash.indexOf("#counterstorages") == 0 && shell.counterStorages().length > 0) {
+                    this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
+                } else {
+                    this.activateResource(appUrl.getDatabase(), shell.databases);
+                }
+        });
+    }
+
+    private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
+        var newResource;
+
+        if (observableResourceArray().length > 0) {
+            if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
+                newResource.activate();
+            } else {
+                observableResourceArray.first(x => x.isVisible()).activate();
+            }
+        }
+    }
+
+    navigateToResourceGroup(resourceHash) {
+        this.disconnectFromResourceChangesApi();
+
+        if (resourceHash == this.appUrls.databases()) {
+            this.activateResource(appUrl.getDatabase(), shell.databases);
+        }
+        else if (resourceHash == this.appUrls.filesystems()) {
+            this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
+        } else {
+            this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
+        }
+
+        this.navigate(resourceHash);
     }
 
     fetchStudioConfig() {
@@ -441,51 +484,26 @@ class shell extends viewModelBase {
         }
     }
 
-    private activateFilesystemWithName(fileSystemName: string) {
-        if (this.fileSystemsLoadedTask) {
-            this.fileSystemsLoadedTask.done(() => {
-                var matchingFileSystem = shell.fileSystems().first(fs => fs.name == fileSystemName);
-                if (matchingFileSystem && this.activeFilesystem() !== matchingFileSystem) {
-                    ko.postbox.publish("ActivateFilesystem", matchingFileSystem);
-                }
-            });
-        }
-    }
-
-    private activateCounterStorageWithName(counterStorageName: string) {
-        if (this.counterStoragesLoadedTask) {
-            this.counterStoragesLoadedTask.done(() => {
-                var matchingCounterStorage = shell.counterStorages().first(cs => cs.name == counterStorageName);
-                if (matchingCounterStorage && this.activeCounterStorage() !== matchingCounterStorage) {
-                    ko.postbox.publish("ActivateCounterStorage", matchingCounterStorage);
-                }
-            });
-        }
-    }
-
     private updateDbChangesApi(db: database) {
-        if (!db.disabled() && this.currentConnectedDatabase.name != db.name ||
-            db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
-            if (shell.currentDbChangesApi()) {
-                shell.currentDbChangesApi().dispose();
-            }
+        if (!db.disabled() && (this.currentConnectedDatabase.name != db.name || !this.appUrls.isAreaActive('databases')()) ||
+                db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
+            this.disconnectFromResourceChangesApi();
 
-            shell.currentDbChangesApi(new changesApi(db, 5000));
+            shell.currentResourceChangesApi(new changesApi(db, 5000));
 
-            shell.currentDbChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentDbChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentDbChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
 
             this.currentConnectedDatabase = db;
         }
     }
 
     private updateFsChangesApi(fs: filesystem) {
-        if (!fs.disabled() && this.currentConnectedFileSystem.name != fs.name) {
-            if (shell.currentFsChangesApi()) {
-                shell.currentFsChangesApi().dispose();
-            }
-            shell.currentFsChangesApi(new changesApi(fs));
+        if (!fs.disabled() && (this.currentConnectedFileSystem.name != fs.name || !this.appUrls.isAreaActive('filesystems')())) {
+            this.disconnectFromResourceChangesApi();
+
+            shell.currentResourceChangesApi(new changesApi(fs, 5000));
 
             this.currentConnectedFileSystem = fs;
         }
@@ -493,14 +511,20 @@ class shell extends viewModelBase {
 
     private updateCsChangesApi(cs: counterStorage) {
         //TODO: enable changes api for counter storages, server side
-/*        if (!cs.disabled() && this.currentConnectedCounterStorage.name != cs.name) {
-            if (shell.currentFsChangesApi()) {
-                shell.currentFsChangesApi().dispose();
-            }
-            shell.currentFsChangesApi(new changesApi(cs));
+        if (!cs.disabled() && (this.currentConnectedCounterStorage.name != cs.name || !this.appUrls.isAreaActive('counterstorages')())) {
+            this.disconnectFromResourceChangesApi();
+
+            shell.currentResourceChangesApi(new changesApi(cs, 5000));
 
             this.currentConnectedCounterStorage = cs;
-        }*/
+        }
+    }
+
+    private disconnectFromResourceChangesApi() {
+        if (shell.currentResourceChangesApi()) {
+            shell.currentResourceChangesApi().dispose();
+            shell.currentResourceChangesApi(null);
+        }
     }
     
     static fetchDbStats(db: database, forceFetch: boolean = false) {
@@ -591,9 +615,14 @@ class shell extends viewModelBase {
         }
     }
 
+    showApiKeyDialog() {
+        var dialog = new enterApiKey();
+        return app.showDialog(dialog);
+    }
+
     showErrorsDialog() {
-        require(["viewmodels/recentErrors"], ErrorDetails => {
-            var dialog = new ErrorDetails(this.recordedErrors);
+        require(["viewmodels/recentErrors"], errorDetails => {
+            var dialog = new errorDetails(this.recordedErrors);
             app.showDialog(dialog);
         });
     }

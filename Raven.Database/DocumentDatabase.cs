@@ -91,7 +91,7 @@ namespace Raven.Database
             DocumentLock = new PutSerialLock();
             Name = configuration.DatabaseName;
             Configuration = configuration;
-            this.transportState = new TransportState();
+            transportState = new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
@@ -350,30 +350,59 @@ namespace Raven.Database
         [ImportMany]
         public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
 
-        public DatabaseStatistics Statistics
+        public PluginsInfo PluginsInfo
         {
             get
             {
-                DatabaseStatistics.TriggerInfo[] triggerInfos = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo
+                var triggerInfos = PutTriggers.Select(x => new TriggerInfo
                 {
                     Name = x.ToString(),
                     Type = "Put"
                 })
-                    .Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo
-                    {
-                        Name = x.ToString(),
-                        Type = "Delete"
-                    }))
-                    .Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo
-                    {
-                        Name = x.ToString(),
-                        Type = "Read"
-                    }))
-                    .Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo
-                    {
-                        Name = x.ToString(),
-                        Type = "Index Update"
-                    })).ToArray();
+                   .Concat(DeleteTriggers.Select(x => new TriggerInfo
+                   {
+                       Name = x.ToString(),
+                       Type = "Delete"
+                   }))
+                   .Concat(ReadTriggers.Select(x => new TriggerInfo
+                   {
+                       Name = x.ToString(),
+                       Type = "Read"
+                   }))
+                   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
+                   {
+                       Name = x.ToString(),
+                       Type = "Index Update"
+                   })).ToList();
+
+                var extensions = Configuration.ReportExtensions(
+                    typeof (IStartupTask),
+                    typeof (AbstractReadTrigger),
+                    typeof (AbstractDeleteTrigger),
+                    typeof (AbstractPutTrigger),
+                    typeof (AbstractDocumentCodec),
+                    typeof (AbstractIndexCodec),
+                    typeof (AbstractDynamicCompilationExtension),
+                    typeof (AbstractIndexQueryTrigger),
+                    typeof (AbstractIndexUpdateTrigger),
+                    typeof (AbstractAnalyzerGenerator),
+                    typeof (AbstractAttachmentDeleteTrigger),
+                    typeof (AbstractAttachmentPutTrigger),
+                    typeof (AbstractAttachmentReadTrigger),
+                    typeof (AbstractBackgroundTask),
+                    typeof (IAlterConfiguration)).ToList();
+                return new PluginsInfo
+                {
+                    Triggers = triggerInfos,
+                    Extensions = extensions,
+                };
+            }
+        }
+
+        public DatabaseStatistics Statistics
+        {
+            get
+            {
                 var result = new DatabaseStatistics
                 {
                     CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
@@ -386,23 +415,7 @@ namespace Raven.Database
                     Errors = workContext.Errors,
                     DatabaseId = TransactionalStorage.Id,
                     SupportsDtc = TransactionalStorage.SupportsDtc,
-                    Triggers = triggerInfos,
-                    Extensions = Configuration.ReportExtensions(
-                        typeof(IStartupTask),
-                        typeof(AbstractReadTrigger),
-                        typeof(AbstractDeleteTrigger),
-                        typeof(AbstractPutTrigger),
-                        typeof(AbstractDocumentCodec),
-                        typeof(AbstractIndexCodec),
-                        typeof(AbstractDynamicCompilationExtension),
-                        typeof(AbstractIndexQueryTrigger),
-                        typeof(AbstractIndexUpdateTrigger),
-                        typeof(AbstractAnalyzerGenerator),
-                        typeof(AbstractAttachmentDeleteTrigger),
-                        typeof(AbstractAttachmentPutTrigger),
-                        typeof(AbstractAttachmentReadTrigger),
-                        typeof(AbstractBackgroundTask),
-                        typeof(IAlterConfiguration)),
+                    
                 };
 
                 TransactionalStorage.Batch(actions =>

@@ -11,6 +11,7 @@ import changesCallback = require("common/changesCallback");
 import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
 import ace = require("ace/ace");
+import oauthContext = require("common/oauthContext");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -21,7 +22,7 @@ class viewModelBase {
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
 
     private keyboardShortcutDomContainers: string[] = [];
-    private modelPollingHandle: number;
+    static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     static dirtyFlag = new ko.DirtyFlag([]);
     private static isConfirmedUsingSystemDatabase: boolean;
@@ -34,11 +35,10 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var database = (appUrl.getDatabase() != null) ? appUrl.getDatabase() : appUrl.getSystemDatabase(); //TODO: temporary fix for routing problem for system databse - remove this when fixed
-        var filesystem = appUrl.getFilesystem();
+        var database = appUrl.getDatabase();
 
-        // we only want to prompt warning to system db if we are in the databases section, not in the filesystems one
-        if (database.isSystem && filesystem.isDefault) {
+        // we only want to prompt warning to system db if we are in the databases section
+        if (!!database && database.isSystem) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
                 return true;
             }
@@ -71,16 +71,16 @@ class viewModelBase {
         if (!!db && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
-        this.notifications = this.createNotifications();
 
-        var fs = appUrl.getFilesystem();
-        var currentFilesystem = this.activeFilesystem();
-        if (!currentFilesystem || currentFilesystem.name !== fs.name) {
-            ko.postbox.publish("ActivateFilesystemWithName", fs.name);
-        }
+        oauthContext.enterApiKeyTask.done(() => this.notifications = this.createNotifications());
 
         this.modelPollingStart();
-        window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
+
+        if (!!args) {
+            window.addEventListener("beforeunload", this.beforeUnloadListener, false);
+        }
+
+        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -99,15 +99,21 @@ class viewModelBase {
         return true;
     }
 
+    detached() {
+        var x = 4;
+    }
     /*
      * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
      */
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
+        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
         this.cleanupNotifications();
+
+        window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
     }
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
@@ -156,13 +162,18 @@ class viewModelBase {
 
     modelPollingStart() {
         this.modelPolling();
-        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
+        // clear previous pooling handle (if any)
+        if (viewModelBase.modelPollingHandle) {
+            this.modelPollingStop();
+            viewModelBase.modelPollingHandle = null;
+        }
+        viewModelBase.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
 
     modelPollingStop() {
-        clearInterval(this.modelPollingHandle);
+        clearInterval(viewModelBase.modelPollingHandle);
     }
 
     confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
@@ -215,7 +226,7 @@ class viewModelBase {
         return canNavTask;
     }
 
-    private beforeUnload(e: any) {
+    private beforeUnloadListener: EventListener = (e: any): any => {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
             var message = "You have unsaved data.";

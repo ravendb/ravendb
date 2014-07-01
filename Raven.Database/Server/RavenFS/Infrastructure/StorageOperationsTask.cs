@@ -34,7 +34,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		private readonly IndexStorage search;
 		private readonly ITransactionalStorage storage;
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
-		private readonly ConcurrentDictionary<string, FileHeaderInformation> uploadingFiles = new ConcurrentDictionary<string, FileHeaderInformation>();
+        private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
 
 		public StorageOperationsTask(ITransactionalStorage storage, IndexStorage search, INotificationPublisher notificationPublisher)
 		{
@@ -59,7 +59,6 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 			notificationPublisher.Publish(new FileChangeNotification
 			{
-                FileSystemName = operation.FileSystem,
 				File = FilePathTools.Cannoicalise(operation.Name),
 				Action = FileChangeAction.Renaming
 			});
@@ -92,7 +91,6 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			notificationPublisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
 			notificationPublisher.Publish(new FileChangeNotification
 			{
-                FileSystemName = operation.FileSystem,
 				File = FilePathTools.Cannoicalise(operation.Rename),
 				Action = FileChangeAction.Renamed
 			});
@@ -309,7 +307,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		private bool IsUploadInProgress(string originalFileName)
 		{
-			FileHeaderInformation deletedFile = null;
+			FileHeader deletedFile = null;
 			storage.Batch(accessor => deletedFile = accessor.ReadFile(originalFileName));
 
 			if (deletedFile != null) // if there exists a file already marked as deleted
@@ -326,7 +324,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					{
 						return true; // if uploaded size changed it means that file is being uploading
 					}
-					FileHeaderInformation header;
+					FileHeader header;
 					uploadingFiles.TryRemove(deletedFile.Name, out header);
 				}
 			}

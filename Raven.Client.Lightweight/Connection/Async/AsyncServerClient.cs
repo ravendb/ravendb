@@ -1468,18 +1468,6 @@ namespace Raven.Client.Connection.Async
 			return json.Deserialize<DatabaseStatistics>(convention);
 		}
 
-		/// <summary>
-		/// Gets the list of databases from the server asynchronously
-		/// </summary>
-		public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
-		{
-			var result = await url.Databases(pageSize, start)
-				.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-								  .ReadResponseJsonAsync().ConfigureAwait(false);
-			var json = (RavenJArray)result;
-			return json.Select(x => x.ToString())
-				.ToArray();
-		}
 
 		public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
 		{
@@ -1767,12 +1755,16 @@ namespace Raven.Client.Connection.Async
 			{
 				if (method == "POST")
 				{
-					response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+					response = await request.ExecuteRawResponseAsync(query.Query)
+                                            .ConfigureAwait(false);
 				}
 				else
 				{
-					response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+					response = await request.ExecuteRawResponseAsync()
+                                            .ConfigureAwait(false);
 				}
+
+                await response.AssertNotFailingResponse();
 			}
 			catch (Exception e)
 			{
@@ -1980,7 +1972,11 @@ namespace Raven.Client.Connection.Async
 
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+            var response = await request.ExecuteRawResponseAsync()
+                                        .ConfigureAwait(false);
+
+            await response.AssertNotFailingResponse();
+
 			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), start, pageSize, pagingInformation);
 		}
 

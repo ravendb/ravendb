@@ -43,12 +43,8 @@ class status extends viewModelBase {
         super.activate(args);
 
         // treat notifications events
-        this.activitiesSubscription = shell.currentFsChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
+        this.activitiesSubscription = shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
             this.isFsSyncUpToDate = false;
-
-            if (e.FileSystemName != this.activeFilesystem().name) {
-                return;
-            }
 
             if (e.Action != synchronizationAction.Finish) {
                 this.addOrUpdateActivity(e);

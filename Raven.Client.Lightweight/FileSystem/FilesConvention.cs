@@ -22,7 +22,14 @@ namespace Raven.Client.FileSystem
 			AllowMultipuleAsyncOperations = true;
 			IdentityPartsSeparator = "/";
 			ShouldCacheRequest = url => true;
+            MaxNumberOfRequestsPerSession = 30;
 		}
+
+        /// <summary>
+        /// Gets or sets the default max number of requests per session.
+        /// </summary>
+        /// <value>The max number of requests per session.</value>
+        public int MaxNumberOfRequestsPerSession { get; set; }
 
 		/// <summary>
 		/// Clone the current conventions to a new instance

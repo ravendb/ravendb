@@ -29,11 +29,9 @@ class conflicts extends viewModelBase {
     displayName = "conflicts";
     sourcesLookup: dictionary<string> = {};
 
-    currentColumnsParams = ko.observable(customColumns.empty());
+    currentColumns = ko.observable(customColumns.empty());
 
-    //TODO: subscribe to databases and remove item from list once user delete DB.
     static performedIndexChecks: Array<string> = [];
-
     static conflictsIndexName = "Raven/ConflictDocuments";
     static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
 
@@ -48,10 +46,11 @@ class conflicts extends viewModelBase {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
-        this.currentColumnsParams().columns([
+        this.currentColumns().columns([
             new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
             new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' }),
         ]);
+        this.currentColumns().customMode(true);
 
         return this.performIndexCheck(this.activeDatabase()).then(() => {
             return this.loadReplicationSources(this.activeDatabase());

@@ -1,51 +1,51 @@
-﻿<section data-bind="with: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+﻿<section data-bind="if: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <form class="form-horizontal" role="form">
         <div class="form-group">
             <label class="col-md-2 control-label">Last document Etag</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: LastDocEtag"></p>
+                <p class="form-control-static" data-bind="text: stats().LastDocEtag"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Last attachment etag</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: LastAttachmentEtag"></p>
+                <p class="form-control-static" data-bind="text: stats().LastAttachmentEtag"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Index count</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: CountOfIndexes"></p>
+                <p class="form-control-static" data-bind="text: stats().CountOfIndexes"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Document count</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: CountOfDocuments"></p>
+                <p class="form-control-static" data-bind="text: stats().CountOfDocuments"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Stale indexes</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: StaleIndexes"></p>
+                <p class="form-control-static" data-bind="text: stats().StaleIndexes"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Index batch size</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: CurrentNumberOfItemsToIndexInSingleBatch"></p>
+                <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToIndexInSingleBatch"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Reduce batch size</label>
             <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: CurrentNumberOfItemsToReduceInSingleBatch"></p>
+                <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToReduceInSingleBatch"></p>
             </div>
         </div>
         <div class="form-group">
             <label class="col-md-2 control-label">Indexes</label>
             <div class="col-md-10">
-                <div class="panel-group" id="indexStatsAccordion" data-bind="foreach: Indexes">
+                <div class="panel-group" id="indexStatsAccordion" data-bind="foreach: indexes">
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <h4 class="panel-title">
