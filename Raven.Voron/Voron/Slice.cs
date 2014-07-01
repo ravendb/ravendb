@@ -268,7 +268,7 @@ namespace Voron
 		public override Slice Skip(ushort bytesToSkip)
 		{
 			if (bytesToSkip == 0)
-				return this;
+				return new Slice(this, Size);
 
 			if (Pointer != null)
 				return new Slice(Pointer + bytesToSkip, (ushort)(Size - bytesToSkip));
