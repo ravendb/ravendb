@@ -12,6 +12,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.BBox;
+using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
 using Lucene.Net.Spatial.Queries;
 using Lucene.Net.Spatial.Util;
@@ -79,9 +80,9 @@ namespace Raven.Database.Indexing
 			switch (opt.Strategy)
 			{
 				case SpatialSearchStrategy.GeohashPrefixTree:
-					return new RecursivePrefixTreeStrategyThatSupportsWithin(new GeohashPrefixTree(context, opt.MaxTreeLevel), fieldName);
+					return new RecursivePrefixTreeStrategy(new GeohashPrefixTree(context, opt.MaxTreeLevel), fieldName);
 				case SpatialSearchStrategy.QuadPrefixTree:
-					return new RecursivePrefixTreeStrategyThatSupportsWithin(new QuadPrefixTree(context, opt.MaxTreeLevel), fieldName);
+					return new RecursivePrefixTreeStrategy(new QuadPrefixTree(context, opt.MaxTreeLevel), fieldName);
 				case SpatialSearchStrategy.BoundingBox:
 					return new BBoxStrategyThatSupportsAllShapes(context, fieldName);
 			}
