@@ -621,18 +621,19 @@ class ctor {
         var startX = 0;
         var startingWidth = 0;
         var columnIndex = 0;
-        $(document).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
+
+        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
             columnIndex = parseInt( $(e.currentTarget).attr("column"));
             startingWidth = this.columns()[columnIndex].width();
             startX = e.pageX;
             resizingColumn = true;
         });
 
-        $(document).on("mouseup.virtualTableColumnResize", "", (e: any) => {
+        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", (e: any) => {
             resizingColumn = false;
         });
 
-        $(document).on("mousemove.virtualTableColumnResize", "", (e: any) => {
+        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: any) => {
             if (resizingColumn) {
                 var targetColumnSize = startingWidth + e.pageX - startX;
                 this.columns()[columnIndex].width(targetColumnSize);
@@ -642,15 +643,16 @@ class ctor {
                 if (e.preventDefault) e.preventDefault();
                 e.cancelBubble = true;
                 e.returnValue = false;
+
                 return false;
             }
         });
     }
 
     unregisterColumnResizing() {
-        $(document).off("mousedown.virtualTableColumnResize");
-        $(document).off("mouseup.virtualTableColumnResize");
-        $(document).off("mousemove.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mousedown.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mouseup.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mousemove.virtualTableColumnResize");
     }
 }
 
