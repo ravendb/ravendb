@@ -147,7 +147,7 @@ namespace Voron.Trees
 				{
 					Lower = (ushort)Constants.PageHeaderSize,
 					Upper = newSize,
-					Flags = PageFlags.Leaf,
+					Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
 					PageNumber = -1L // mark as invalid page number
 				};
 
@@ -195,7 +195,7 @@ namespace Voron.Trees
 				PageNumber = -1L,// hint that this is an inner page
 				Lower = (ushort) Constants.PageHeaderSize,
 				Upper = actualPageSize,
-				Flags = PageFlags.Leaf,
+				Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
 			};
 
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);

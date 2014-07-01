@@ -59,7 +59,7 @@ namespace Voron.Trees
 
 		public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
 		{
-			var newRootPage = NewPage(tx, PageFlags.Leaf, keysPrefixing, 1);
+			var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
 			var tree = new Tree(tx, newRootPage.PageNumber)
 			{
 				_state =
@@ -244,8 +244,7 @@ namespace Voron.Trees
 		private long WriteToOverflowPages(TreeMutableState txInfo, int overflowSize, out byte* dataPos)
 		{
 			var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowSize);
-			var overflowPageStart = _tx.AllocatePage(numberOfPages, false);
-			overflowPageStart.Flags = PageFlags.Overflow;
+			var overflowPageStart = _tx.AllocatePage(numberOfPages, PageFlags.Overflow);
 			overflowPageStart.OverflowSize = overflowSize;
 			dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
 			txInfo.OverflowPages += numberOfPages;
@@ -326,7 +325,7 @@ namespace Voron.Trees
 	        bool rightmostPage = true;
 	        bool leftmostPage = true;
 
-	        while (p.Flags == PageFlags.Branch)
+			while ((p.Flags & PageFlags.Branch) == PageFlags.Branch)
 	        {
 	            int nodePos;
 	            if (key.Options == SliceOptions.BeforeAllKeys)
@@ -486,10 +485,9 @@ namespace Voron.Trees
 			return true;
 		}
 
-		internal static Page NewPage(Transaction tx, PageFlags flags, bool keysPrefixing, int num)
+		internal static Page NewPage(Transaction tx, PageFlags flags, int num)
 		{
-			var page = tx.AllocatePage(num, keysPrefixing);
-			page.Flags = flags;
+			var page = tx.AllocatePage(num, flags);
 
 			return page;
 		}

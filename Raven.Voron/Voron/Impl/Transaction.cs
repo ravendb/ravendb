@@ -168,7 +168,7 @@ namespace Voron.Impl
 
 			page = GetPageForModification(num, page);
 
-			var newPage = AllocatePage(1, false, num); // allocate new page in a log file but with the same number
+			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
 			NativeMethods.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
@@ -200,7 +200,7 @@ namespace Voron.Impl
 		    return p;
 		}
 
-		internal Page AllocatePage(int numberOfPages, bool keysPrefixing, long? pageNumber = null)
+		internal Page AllocatePage(int numberOfPages, PageFlags flags, long? pageNumber = null)
 		{
 			if (pageNumber == null)
 			{
@@ -243,20 +243,15 @@ namespace Voron.Impl
 			_scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer;
 
 			page.Lower = (ushort)Constants.PageHeaderSize;
+			page.Flags = flags;
 
-			if (keysPrefixing == false)
+			if ((flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed)
 			{
-				page.Upper = AbstractPager.PageSize;
-				//page.NextPrefixId = Page.KeysPrefixingDisabled; //TODO arek
-				page.KeysPrefixed = false;
-			}
-			else
-			{
-				page.Upper = (ushort)(AbstractPager.PageSize - Page.PrefixCount * Constants.PrefixOffsetSize);
-				page.NextPrefixId = 0;
-				page.KeysPrefixed = true;
+				page.Upper = (ushort) (AbstractPager.PageSize - Page.PrefixCount*Constants.PrefixOffsetSize - Constants.NextPrefixIdSize);
 				page.ClearPrefixInfo();
 			}
+			else
+				page.Upper = AbstractPager.PageSize;
 
 			page.Dirty = true;
 

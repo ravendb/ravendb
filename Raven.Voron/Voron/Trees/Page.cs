@@ -24,7 +24,6 @@ namespace Voron.Trees
 	    public int LastMatch;
 	    public int LastSearchPosition;
 	    public bool Dirty;
-		public bool KeysPrefixed;
 
 	    public Page(byte* b, string source, ushort pageSize)
         {
@@ -32,10 +31,6 @@ namespace Voron.Trees
             _header = (PageHeader*)b;
 	        Source = source;
 	        _pageSize = pageSize;
-
-			//TODO arek
-			//if (NextPrefixId != KeysPrefixingDisabled)
-			//	KeysPrefixed = true;
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
@@ -149,17 +144,22 @@ namespace Voron.Trees
 
 	    public bool IsLeaf
         {
-            get { return _header->Flags == PageFlags.Leaf; }
+			get { return (_header->Flags & PageFlags.Leaf) == PageFlags.Leaf; }
         }
 
         public bool IsBranch
         {
-            get { return _header->Flags == PageFlags.Branch; }
+            get { return (_header->Flags &  PageFlags.Branch) == PageFlags.Branch; }
         }
 
 		public bool IsOverflow
 		{
-			get { return _header->Flags == PageFlags.Overflow; }
+			get { return (_header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
+		}
+
+		public bool KeysPrefixed
+		{
+			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
 		}
 
         public ushort NumberOfEntries
@@ -729,7 +729,6 @@ namespace Voron.Trees
 
 		public MemorySlice GetNodeKey(int nodeNumber)
 		{
-			//TODO arek - this is a very unoptimized method when it's called multiple times because every time it creates slice instance
 			var node = GetNode(nodeNumber);
 
 			return GetNodeKey(node);

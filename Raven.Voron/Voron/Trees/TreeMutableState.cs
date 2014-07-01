@@ -63,15 +63,15 @@ namespace Voron.Trees
 		{
 			PageCount++;
 			var flags = p.Flags;
-			if (flags == (PageFlags.Branch))
+			if ((flags & PageFlags.Branch) == PageFlags.Branch)
 			{
 				BranchPages++;
 			}
-			else if (flags == (PageFlags.Leaf))
+			else if ((flags & PageFlags.Leaf) == PageFlags.Leaf)
 			{
 				LeafPages++;
 			}
-			else if (flags == (PageFlags.Overflow))
+			else if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
 			{
 				OverflowPages += num;
 			}

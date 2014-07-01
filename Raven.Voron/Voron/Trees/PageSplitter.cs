@@ -45,12 +45,12 @@ namespace Voron.Trees
 
         public byte* Execute()
         {
-            Page rightPage = Tree.NewPage(_tx, _page.Flags, _tree.KeysPrefixing, 1);
+            Page rightPage = Tree.NewPage(_tx, _page.Flags, 1);
             _treeState.RecordNewPage(_page, 1);
-            rightPage.Flags = _page.Flags;
+
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-                Page newRootPage = Tree.NewPage(_tx, PageFlags.Branch, _tree.KeysPrefixing, 1);
+				Page newRootPage = Tree.NewPage(_tx, _tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
                 _treeState.RootPageNumber = newRootPage.PageNumber;
                 _treeState.Depth++;
