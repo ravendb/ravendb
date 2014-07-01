@@ -24,10 +24,10 @@
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
-            <button class="btn btn-default" data-bind="text: $data, click: $root.unHidelogType.bind($root)"></button>
-        </div>
-        <div id="logTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%; padding-top:40px">
+        <div id="logTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 40px; width: 100%;">
+            <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
+                <button class="btn btn-default" data-bind="text: $data, click: $root.unHidelogType.bind($root)"></button>
+            </div>
             <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
                 <thead>
                     <tr>
