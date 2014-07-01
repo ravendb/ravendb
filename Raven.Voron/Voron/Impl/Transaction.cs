@@ -247,7 +247,7 @@ namespace Voron.Impl
 
 			if ((flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed)
 			{
-				page.Upper = (ushort) (AbstractPager.PageSize - Page.PrefixCount*Constants.PrefixOffsetSize - Constants.NextPrefixIdSize);
+				page.Upper = (ushort) (AbstractPager.PageSize - Constants.PrefixInfoSectionSize);
 				page.ClearPrefixInfo();
 			}
 			else

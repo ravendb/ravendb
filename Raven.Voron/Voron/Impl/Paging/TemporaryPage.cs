@@ -38,11 +38,10 @@ namespace Voron.Impl.Paging
         {
 	        return new Page((byte*) _tempPage.ToPointer(), "temp", AbstractPager.PageSize)
 	        {
-		        Upper =
-			        (ushort)
+		        Upper = (ushort)
 				        (keysPrefixing == false
 					        ? AbstractPager.PageSize
-					        : AbstractPager.PageSize - Page.PrefixCount*Constants.PrefixOffsetSize - Constants.NextPrefixIdSize),
+					        : AbstractPager.PageSize - Constants.PrefixInfoSectionSize),
 		        Lower = (ushort) Constants.PageHeaderSize,
 		        Flags = PageFlags.None,
 	        };

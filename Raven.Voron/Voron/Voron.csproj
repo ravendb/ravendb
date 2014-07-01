@@ -74,6 +74,7 @@
     <Compile Include="SliceComparisonMethods.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="Trees\PageIterator.cs" />
+    <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
     <Compile Include="Trees\Tree.MultiTree.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />

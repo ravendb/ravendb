@@ -22,15 +22,13 @@ namespace Voron.Impl
 
 		public static readonly int PrefixedSliceHeaderSize = sizeof (PrefixedSliceHeader);
 
+		public static readonly int PrefixInfoSectionSize = sizeof (PrefixInfoSection);
+
 		public static int PageNumberSize = sizeof(long);
 
 		public static int NodeOffsetSize = sizeof(ushort);
 
 		public static ushort SizeOfUInt = sizeof(uint);
-
-		public static ushort PrefixOffsetSize = sizeof(ushort);
-
-		public static byte NextPrefixIdSize = sizeof (byte);
 
 		public const int CurrentVersion = 2;
 
