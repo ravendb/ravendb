@@ -146,7 +146,7 @@ namespace Voron.Trees
 				var newNestedPage = new Page(ptr, "multi tree", newSize)
 				{
 					Lower = (ushort)Constants.PageHeaderSize,
-					Upper = newSize, // TODO arek
+					Upper = KeysPrefixing ? (ushort) (newSize - Constants.PrefixInfoSectionSize) : newSize,
 					Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
 					PageNumber = -1L // mark as invalid page number
 				};
@@ -194,7 +194,7 @@ namespace Voron.Trees
 			{
 				PageNumber = -1L,// hint that this is an inner page
 				Lower = (ushort) Constants.PageHeaderSize,
-				Upper = actualPageSize,
+				Upper = KeysPrefixing ? (ushort)(actualPageSize - Constants.PrefixInfoSectionSize) : actualPageSize,
 				Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
 			};
 

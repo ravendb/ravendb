@@ -674,7 +674,7 @@ namespace Voron.Trees
 	    {
 		    get
 		    {
-				return KeysPrefixed ? _pageSize - Constants.PageHeaderSize - Constants.PrefixInfoSectionSize : _pageSize - Constants.PageHeaderSize;
+				return _pageSize - Constants.PageHeaderSize;
 		    }
 	    }
 
@@ -706,7 +706,7 @@ namespace Voron.Trees
 				prefixedSlice = (PrefixedSlice)sliceInstance;
 			}
 			else
-				prefixedSlice = new PrefixedSlice(node);
+				sliceInstance = prefixedSlice = new PrefixedSlice(node);
 
 			if (prefixedSlice.Header.PrefixId == PrefixedSlice.NonPrefixedId)
 			{
@@ -822,6 +822,8 @@ namespace Voron.Trees
 			        var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 			        size += prefixNodeSize + (prefixNodeSize & 1);
 		        }
+
+		        size += Constants.PrefixInfoSectionSize;
 	        }
 
 	        Debug.Assert(size <= _pageSize);
