@@ -21,6 +21,8 @@ namespace Voron
 		public abstract Slice Skip(ushort bytesToSkip);
 		public abstract void Set(NodeHeader* node);
 
+		protected abstract int CompareData(MemorySlice other, ushort size);
+
 		protected abstract int CompareData(MemorySlice other, SliceComparer cmp, ushort size);
 
 		public bool Equals(MemorySlice other)
@@ -33,7 +35,7 @@ namespace Voron
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, KeyLength <= other.KeyLength ? KeyLength : other.KeyLength);
+			var r = CompareData(other, KeyLength <= other.KeyLength ? KeyLength : other.KeyLength);
 			if (r != 0)
 				return r;
 
@@ -44,7 +46,7 @@ namespace Voron
 		{
 			if (KeyLength < other.KeyLength)
 				return false;
-			return CompareData(other, SliceComparisonMethods.OwnMemCmpInstane, other.KeyLength) == 0;
+			return CompareData(other, other.KeyLength) == 0;
 		}
 
 		private ushort _matchedBytes;

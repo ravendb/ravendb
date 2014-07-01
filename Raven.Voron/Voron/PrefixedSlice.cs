@@ -11,6 +11,8 @@ using Voron.Trees;
 
 namespace Voron
 {
+	using Util;
+
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
 	public struct PrefixedSliceHeader
 	{
@@ -178,6 +180,23 @@ namespace Voron
 			NonPrefixedData.CopyTo(0, sliceData, prefixPart, sliceSize - prefixPart);
 
 			return new Slice(sliceData);
+		}
+
+		protected override int CompareData(MemorySlice other, ushort size)
+		{
+			var prefixedSlice = other as PrefixedSlice;
+
+			if (prefixedSlice != null)
+				return SliceComparisonMethods.Compare(this, prefixedSlice, MemoryUtils.MemoryComparerInstance, size);
+
+			var slice = other as Slice;
+
+			if (slice != null)
+			{
+				return SliceComparisonMethods.Compare(slice, this, MemoryUtils.MemoryComparerInstance, size) * -1;
+			}
+
+			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
 		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)

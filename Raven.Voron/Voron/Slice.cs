@@ -6,6 +6,7 @@ using Voron.Trees;
 namespace Voron
 {
 	using System.Runtime.CompilerServices;
+	using Util;
 
 	public sealed unsafe class Slice : MemorySlice
 	{
@@ -132,11 +133,49 @@ namespace Voron
 			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
 		}
 
+		protected override int CompareData(MemorySlice other, ushort size)
+		{
+			var otherSlice =  other as Slice;
+
+			if (otherSlice != null)
+			{
+				if (Array != null)
+				{
+					fixed (byte* a = Array)
+					{
+						if (otherSlice.Array != null)
+						{
+							fixed (byte* b = otherSlice.Array)
+							{
+								return MemoryUtils.Compare(a, b, size);
+							}
+						}
+						return MemoryUtils.Compare(a, otherSlice.Pointer, size);
+					}
+				}
+
+				if (otherSlice.Array != null)
+				{
+					fixed (byte* b = otherSlice.Array)
+					{
+						return MemoryUtils.Compare(Pointer, b, size);
+					}
+				}
+
+				return MemoryUtils.Compare(Pointer, otherSlice.Pointer, size);
+			}
+
+			var prefixedSlice = other as PrefixedSlice;
+
+			if (prefixedSlice != null)
+				return SliceComparisonMethods.Compare(this, prefixedSlice, MemoryUtils.MemoryComparerInstance, size);
+
+			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
+		}
+
 		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)
 		{
-			// TODO arek - call  SliceComparisonMethods.MemoryCompare instead of cmp for better performance
-
-			var otherSlice =  other as Slice;
+			var otherSlice = other as Slice;
 
 			if (otherSlice != null)
 			{
@@ -169,7 +208,7 @@ namespace Voron
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
-				return SliceComparisonMethods.Compare(this, prefixedSlice, cmp, size); // TODO arek move the entire method's body here
+				return SliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
