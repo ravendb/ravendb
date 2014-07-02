@@ -47,11 +47,13 @@ namespace Raven.Database.Indexing
 			{
 				if (singleStepReduceKeys.Length > 0)
 				{
+					Log.Debug("SingleStep reduce for keys: {0}",singleStepReduceKeys.Select(x => x + ","));
 					SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete);
 				}
 
 				if (multiStepsReduceKeys.Length > 0)
 				{
+					Log.Debug("MultiStep reduce for keys: {0}", singleStepReduceKeys.Select(x => x + ","));
 					MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
 				}
 			}

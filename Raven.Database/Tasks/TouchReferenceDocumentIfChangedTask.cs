@@ -88,6 +88,7 @@ namespace Raven.Database.Tasks
 								Etag preTouchEtag;
 								Etag afterTouchEtag;
 								accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
+								logger.Debug("Touching document: {0}, etag before touch: {1}, after touch {2}", doc, preTouchEtag, afterTouchEtag);
 							}
 							catch (ConcurrencyException)
 							{

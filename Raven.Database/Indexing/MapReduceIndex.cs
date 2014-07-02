@@ -207,6 +207,7 @@ namespace Raven.Database.Indexing
 
 				var data = GetMappedData(doc);
 
+				logIndexing.Debug("Storing map result for document = {0}, recuce key = {1}, data = {2}", currentKey, reduceKey, data);
 				actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
 				statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
 				actions.General.MaybePulseTransaction();
