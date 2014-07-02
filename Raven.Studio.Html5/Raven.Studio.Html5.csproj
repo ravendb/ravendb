@@ -68,9 +68,11 @@
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSqlReplicationStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
@@ -174,6 +176,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\editSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFolderInFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
@@ -234,6 +237,7 @@
     <TypeScriptCompile Include="App\viewmodels\showDataDialog.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
+    <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\toggleIndexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
@@ -326,6 +330,9 @@
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\editSqlReplication.html" />
     <Content Include="App\views\metricsPrefetches.html" />
     <Content Include="App\views\metricsRequests.html" />
     <Content Include="App\views\metricsIndexBatchSize.html" />
@@ -357,6 +364,8 @@
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\quotas.html" />
+    <Content Include="App\views\showSampleDataDialog.html" />
+    <Content Include="App\views\sqlReplicationStatsDialog.html" />
     <Content Include="App\views\showDataDialog.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
     <Content Include="App\views\filesystem\createConfigurationKey.html" />

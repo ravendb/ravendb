@@ -76,6 +76,101 @@ html, body {
     color:red;
 }
 
+#sqlReplications{
+    .replications-container {
+        margin-top: 10px;
+
+        .replication {            
+            border-radius: 10px;
+            -webkit-box-shadow: 0 0 5px 2px silver;
+            box-shadow: 0 0 5px 2px silver;
+            min-width: 140px;
+            min-height: 60px;
+            display: inline-block;
+            padding: 8px;
+            margin: 0 10px 14px 0;
+
+            @selectColor: rgb(66, 139, 202);
+            @hoverColor: lighten(@selectColor, 10%);
+            @disabledColor: lighten(silver, 5%);
+
+            .replication-name{ 
+                float: left;
+            }
+
+            .btn-group{ 
+                float: right;
+                margin-left: 5px;
+                margin-top: 3px;
+            }
+
+            .btn-default{
+                border-color: white;
+            }
+
+            .btn-default:hover{
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }                       
+
+         /*   &:hover {
+                background-color: white;
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }*/
+            
+        }
+    }
+    .panel{
+    overflow:visible!important;
+    }
+
+    .enabledReplication{
+        color:green;
+    }
+    .disabledReplication{
+        color:red;
+    }
+    label{
+        text-align:left;
+    }
+}
+
+#editSQLReplication{    
+    label{
+        text-align:left;
+    }
+    .script-label{
+        padding-left:0;
+    }
+    .edit-sql-replication-actions{
+        padding-top:0.5%;
+    }
+}
+
+.sqlReplication-Stats{
+
+    width:60vw;
+
+     @media(max-width: 767px) {
+         width:80vw;
+         }
+    max-height:60vh!important;
+    
+    
+    .modal-header{
+        max-height:20%;
+    }
+    .replicationStatsData{
+        max-height:35vh!important;
+        overflow-x:hidden;
+        overflow-y:auto;
+    }    
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+
+}
+
 .query-stats{
     width: 600px; 
 	margin: -250px 0 0 -450px; 
