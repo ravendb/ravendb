@@ -222,7 +222,7 @@ class editIndex extends viewModelBase {
         }
     }
 
-    private updateUrl(indexName: string) {
+    updateUrl(indexName: string) {
         if (indexName != null && this.loadedIndexName() !== indexName) {
             router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
         }
