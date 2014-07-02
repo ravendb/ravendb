@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
 
 				store
 					.DatabaseCommands
-					.Patch("people/1", new ScriptedPatchRequest { Script = "this.Name = custom.test(this.Name);" });
+					.Patch("people/1", new ScriptedPatchRequest { Script = "this.Name = test(this.Name);" });
 
 				using (var session = store.OpenSession())
 				{
@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
 
 				store
 					.DatabaseCommands
-					.Patch("people/1", new ScriptedPatchRequest { Script = "this.Name = custom.test(this.Name);" });
+					.Patch("people/1", new ScriptedPatchRequest { Script = "this.Name = test(this.Name);" });
 
 				using (var session = store.OpenSession())
 				{
@@ -89,7 +89,7 @@ namespace Raven.Tests.Issues
 
 				Assert.Throws<ErrorResponseException>(() => store
 					.DatabaseCommands
-					.Patch("people/1", new ScriptedPatchRequest { Script = "this.Name = custom.test(this.Name);" }));
+					.Patch("people/1", new ScriptedPatchRequest { Script = "this.Name = test(this.Name);" }));
 				
 				using (var session = store.OpenSession())
 				{

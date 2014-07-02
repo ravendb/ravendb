@@ -229,12 +229,26 @@ function ExecutePatchScript(docInner){{
 			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
 				return;
 
-			engine.Execute(string.Format("var custom = function() {{ var exports = {{ }}; {0}; return exports; }}();", functions));
+			engine.Execute(string.Format(@"
+var customFunctions = function() {{ 
+	var exports = {{ }};
+	{0};
+	return exports;
+}}();
+for(var customFunction in customFunctions) {{
+	this[customFunction] = customFunctions[customFunction];
+}};", functions));
 		}
 
 		protected virtual void RemoveEngineCustomizations(Engine engine)
 		{
-			engine.SetValue("custom", JsValue.Undefined);
+			engine.Execute(@"
+if(customFunctions) { 
+	for(var customFunction in customFunctions) { 
+		delete this[customFunction]; 
+	}; 
+};");
+			engine.SetValue("customFunctions", JsValue.Undefined);
 		}
 
 		private void OutputLog(Engine engine)
