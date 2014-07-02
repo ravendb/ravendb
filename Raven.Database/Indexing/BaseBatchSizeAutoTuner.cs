@@ -21,12 +21,16 @@ namespace Raven.Database.Indexing
         private DateTime lastIncrease;
         private readonly long memoryLimitForIndexingInBytes;
 
-        protected BaseBatchSizeAutoTuner(WorkContext context)
+	    private int maximumSizeAllowedToFetchFromStorageInMb;
+
+	    protected BaseBatchSizeAutoTuner(WorkContext context)
         {
             this.context = context;
             NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
             currentlyUsedBatchSizes = new ConcurrentDictionary<Guid, long>();
             memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
+	        FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.FetchingDocumentsFromDiskTimeoutInSeconds);
+			maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.MaximumSizeAllowedToFetchFromStorageInMb;
         }
 
         public int NumberOfItemsToIndexInSingleBatch
@@ -102,10 +106,7 @@ namespace Raven.Database.Indexing
             return true;
         }
 
-        public TimeSpan FetchingDocumentsFromDiskTimeout
-        {
-            get { return TimeSpan.FromSeconds(15); }
-        }
+		public TimeSpan FetchingDocumentsFromDiskTimeout { get; private set; }
 
         public long MaximumSizeAllowedToFetchFromStorage
         {
@@ -116,7 +117,7 @@ namespace Raven.Database.Indexing
                 // if we just loaded > 256 MB to index, that is big enough for right now
                 // remember, this value refer to just the data on disk, not including
                 // the memory to do the actual indexing
-                double sizeInMB = Math.Min(256, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
+				double sizeInMB = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
                 return (long)sizeInMB * 1024 * 1024;
             }
         }
