@@ -173,10 +173,6 @@ namespace Raven.Database.Json
 				jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
 		}
 
-		protected virtual void RemoveEngineCustomizations(Engine jintEngine)
-		{
-		}
-
 		private Engine CreateEngine(ScriptedPatchRequest patch)
 		{
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
@@ -227,8 +223,18 @@ function ExecutePatchScript(docInner){{
 			jintEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs));
 		}
 
-		protected virtual void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
+		protected virtual void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
+			RavenJToken functions;
+			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
+				return;
+
+			engine.Execute(string.Format("var custom = function() {{ var exports = {{ }}; {0}; return exports; }}();", functions));
+		}
+
+		protected virtual void RemoveEngineCustomizations(Engine engine)
+		{
+			engine.SetValue("custom", JsValue.Undefined);
 		}
 
 		private void OutputLog(Engine engine)

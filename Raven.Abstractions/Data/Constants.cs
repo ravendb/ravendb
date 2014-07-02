@@ -45,6 +45,7 @@ namespace Raven.Abstractions.Data
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
+		public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
