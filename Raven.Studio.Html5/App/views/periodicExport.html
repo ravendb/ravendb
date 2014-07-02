@@ -62,7 +62,7 @@
                 <div class="form-group">
                     <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
                     <div class="col-sm-1">
-                        <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="value: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
+                        <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
                     </div>
                     <div class="col-sm-2">
                         <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
@@ -71,7 +71,7 @@
                 <div class="form-group">
                     <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
                     <div class="col-sm-1">
-                        <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="value: fullBackupInterval, valueUpdate: 'afterkeydown'" />
+                        <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
                     </div>
                     <div class="col-sm-2">
                         <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
