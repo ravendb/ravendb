@@ -22,6 +22,9 @@ class logs extends viewModelBase {
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
     filteredLoggers = ko.observableArray<string>();
+    sortColumn = ko.observable<string>("logged");
+    sortAsc = ko.observable<boolean>(true);
+    filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
 
     constructor() {
         super();
@@ -34,6 +37,20 @@ class logs extends viewModelBase {
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
+
+        this.filteredAndSortedLogs = ko.computed<Array<logDto>>(() => {
+            var logs = this.allLogs();
+            var column = this.sortColumn();
+            var asc = this.sortAsc();
+
+            var sortFunc = (left, right) => {
+                if (left[column] === right[column]) { return 0; }
+                var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
+                return test(left[column], right[column]) ? 1 : -1;
+            }
+
+            return logs.sort(sortFunc);
+        });
     }
 
     activate(args) {
@@ -181,6 +198,15 @@ class logs extends viewModelBase {
         }
     }
 
+    sortBy(columnName, logs, event) {
+        if (this.sortColumn() === columnName) {
+            this.sortAsc( !this.sortAsc() );
+        }
+        else {
+            this.sortColumn(columnName);
+            this.sortAsc(true);
+        }
+    }
 }
 
 export = logs;

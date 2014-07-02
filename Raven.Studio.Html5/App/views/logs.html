@@ -31,14 +31,44 @@
             <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
                 <thead>
                     <tr>
-                        <th class="col-md-1">Level</th>
-                        <th class="col-md-2">Logged</th>
-                        <th class="col-md-4">Message</th>
-                        <th class="col-md-4">Exception</th>
-                        <th class="col-md-2">Log Name</th>
+                        <th class="col-md-1" data-bind="click: $root.sortBy.bind($root, 'Level')">
+                            <span>Level</span>
+                            <span data-bind="visible: $root.sortColumn() === 'Level'">
+                                <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                                <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                            </span>
+                        </th>
+                        <th class="col-md-2" data-bind="click: $root.sortBy.bind($root, 'TimeStamp')">
+                            <span>Logged</span>
+                            <span data-bind="visible: $root.sortColumn() === 'TimeStamp'">
+                                <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                                <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                            </span>
+                        </th>
+                        <th class="col-md-4" data-bind="click: $root.sortBy.bind($root, 'Message')">
+                            <span>Message</span>
+                            <span data-bind="visible: $root.sortColumn() === 'Message'">
+                                <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                                <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                            </span>
+                        </th>
+                        <th class="col-md-4" data-bind="click: $root.sortBy.bind($root, 'Exception')">
+                            <span>Exception</span>
+                            <span data-bind="visible: $root.sortColumn() === 'Exception'">
+                                <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                                <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                            </span>
+                        </th>
+                        <th class="col-md-2" data-bind="click: $root.sortBy.bind($root, 'LoggerName')">
+                            <span>Log Name</span>
+                            <span data-bind="visible: $root.sortColumn() === 'LoggerName'">
+                                <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                                <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                            </span>
+                        </th>
                     </tr>
                 </thead>
-                <tbody data-bind="foreach: allLogs, delegatedHandler: 'click'">
+                <tbody data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
                     <tr class="logRecord" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
                         <td data-bind="text: Level"></td>
                         <td data-bind="text: TimeStampText, attr: { title: TimeStampText }"></td>
