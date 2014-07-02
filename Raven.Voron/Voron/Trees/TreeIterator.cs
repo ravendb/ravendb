@@ -12,12 +12,18 @@ namespace Voron.Trees
 		private readonly Transaction _tx;
 		private Cursor _cursor;
 		private Page _currentPage;
-		private readonly Slice _currentKey = new Slice(SliceOptions.Key);
+		private Slice _currentKey = new Slice(SliceOptions.Key);
+		private MemorySlice _currentInternalKey;
 
 		public TreeIterator(Tree tree, Transaction tx)
 		{
 			_tree = tree;
 			_tx = tx;
+
+			if (tree.KeysPrefixing)
+				_currentInternalKey = new PrefixedSlice(SliceOptions.Key);
+			else
+				_currentInternalKey = new Slice(SliceOptions.Key); 
 		}
 
 		public int GetCurrentDataSize()
@@ -35,8 +41,9 @@ namespace Voron.Trees
 
 		    if (node != null)
 		    {
-                _currentKey.Set(node);
-                return this.ValidateCurrentKey(Current);
+			    _currentPage.SetNodeKey(node, ref _currentInternalKey);
+				_currentKey = _currentInternalKey.ToSlice();
+				return this.ValidateCurrentKey(Current, _currentPage);
 		    }
 		    
             // The key is not found in the db, but we are Seek()ing for equals or starts with.
@@ -101,9 +108,11 @@ namespace Voron.Trees
 						_currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
-					if (this.ValidateCurrentKey(current) == false)
+					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
-					_currentKey.Set(current);
+
+					_currentPage.SetNodeKey(current, ref _currentInternalKey);
+					_currentKey = _currentInternalKey.ToSlice();
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -131,9 +140,11 @@ namespace Voron.Trees
 						_currentPage.LastSearchPosition = 0;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
-					if (this.ValidateCurrentKey(current) == false)
+					if (this.ValidateCurrentKey(current, _currentPage) == false)
 						return false;
-					_currentKey.Set(current);
+
+					_currentPage.SetNodeKey(current, ref _currentInternalKey);
+					_currentKey = _currentInternalKey.ToSlice();
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -156,7 +167,7 @@ namespace Voron.Trees
 				}
 			}
 
-			return _currentPage != null && this.ValidateCurrentKey(Current);
+			return _currentPage != null && this.ValidateCurrentKey(Current, _currentPage);
 		}
 
 		public ValueReader CreateReaderForCurrent()
@@ -191,17 +202,17 @@ namespace Voron.Trees
 			} while (self.MoveNext());
 		}
 
-		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node)
+		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, Page page)
 		{
 			if (self.RequiredPrefix != null)
 			{
-				var currentKey = new Slice(node);
+				var currentKey = page.GetNodeKey(node);
 				if (currentKey.StartsWith(self.RequiredPrefix) == false)
 					return false;
 			}
 			if (self.MaxKey != null)
 			{
-				var currentKey = new Slice(node);
+				var currentKey = page.GetNodeKey(node);
 				if (currentKey.Compare(self.MaxKey) >= 0)
 					return false;
 			}

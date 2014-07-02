@@ -34,17 +34,17 @@ namespace Voron.Impl.Paging
 			get { return (byte*)_tempPage.ToPointer(); }
 		}
 
-        public Page TempPage
+        public Page GetTempPage(bool keysPrefixing)
         {
-            get
-            {
-                return new Page((byte*)_tempPage.ToPointer(), "temp", AbstractPager.PageSize)
-                {
-                    Upper = AbstractPager.PageSize,
-                    Lower = (ushort)Constants.PageHeaderSize,
-                    Flags = 0,
-                };
-            }
+	        return new Page((byte*) _tempPage.ToPointer(), "temp", AbstractPager.PageSize)
+	        {
+		        Upper = (ushort)
+				        (keysPrefixing == false
+					        ? AbstractPager.PageSize
+					        : AbstractPager.PageSize - Constants.PrefixInfoSectionSize),
+		        Lower = (ushort) Constants.PageHeaderSize,
+		        Flags = PageFlags.None,
+	        };
         }
 	    public IDisposable ReturnTemporaryPageToPool { get; set; }
     }

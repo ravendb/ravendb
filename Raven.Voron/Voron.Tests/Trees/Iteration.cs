@@ -48,18 +48,14 @@ namespace Voron.Tests.Trees
 				var iterator = tx.State.Root.Iterate();
 				Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
-				var slice = new Slice(SliceOptions.Key);
 				for (int i = 0; i < 24; i++)
 				{
-					slice.Set(iterator.Current);
-					Assert.Equal(i.ToString("0000"), slice);
+					Assert.Equal(i.ToString("0000"), iterator.CurrentKey);
 
 					Assert.True(iterator.MoveNext());
 				}
 
-				slice.Set(iterator.Current);
-
-				Assert.Equal(24.ToString("0000"), slice);
+				Assert.Equal(24.ToString("0000"), iterator.CurrentKey);
 				Assert.False(iterator.MoveNext());
 			}
 		}
