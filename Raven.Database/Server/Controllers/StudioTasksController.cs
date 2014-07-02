@@ -21,6 +21,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Util;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -151,6 +152,33 @@ namespace Raven.Database.Server.Controllers
 
 			return GetEmptyMessage();
 		}
+
+        [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
+        public async Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
+        {
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+				return GetMessageWithObject(new
+				{
+					Error = "SQL Replication bundle is not installed"
+				}, HttpStatusCode.NotFound);
+            try
+            {
+                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplicationName);
+
+                return GetMessageWithObject(results.ToList());
+            }
+            catch (Exception ex)
+            {
+                    return GetMessageWithObject(new
+                    {
+                        Error = "Executeion failed",
+                        Exception = ex
+                    }, HttpStatusCode.BadRequest);
+            }
+        }
 
         [HttpGet]
         [Route("studio-tasks/createSampleDataClass")]
