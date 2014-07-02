@@ -43,7 +43,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage DocsGet()
 		{
 		    using (var cts = new CancellationTokenSource())
-		    using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+		    using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 		    {
 		        long documentsCount = 0;
 		        var lastDocEtag = Etag.Empty;

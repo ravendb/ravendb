@@ -60,7 +60,7 @@ class configuration extends viewModelBase {
         super.activate(navigationArgs);
 
         if (!this.subscription) {
-            this.subscription = shell.currentFsChangesApi()
+            this.subscription = shell.currentResourceChangesApi()
                 .watchFsConfig((e: filesystemConfigNotification) => {
                     switch (e.Action) {
                         case filesystemConfigurationChangeAction.Set:

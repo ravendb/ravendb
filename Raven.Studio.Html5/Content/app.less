@@ -727,11 +727,13 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
 #queryContainer {
 
     .breadcrumb {
-        width:100%;
-        li{
-            overflow: visible!important;             
-        }   
+        width: 100%;
+
+        li {
+            overflow: visible!important;
+        }
     }
+
     .editor {
         height: 60px;
     }
@@ -759,6 +761,19 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
             -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
         }
+    }
+
+    .suggestion-box {
+        position: absolute;
+        display: table-cell;
+        z-index: 200;
+        left: 30px;
+        right: 30px;
+        top: 110px;
+        bottom: 30px;
+        text-align: center;
+        vertical-align: middle;
+        padding-top: 40px;
     }
 }
 

@@ -18,10 +18,10 @@ namespace RavenFS.Tests.Bugs
 			streamWriter.Flush();
 			ms.Position = 0;
 
-            await client.UploadAsync("abc.txt", new RavenJObject
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
 			                                        {
 				                                        {"test", "1"}
-			                                        }, ms);
+			                                        });
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject
 			                                                {
@@ -35,5 +35,34 @@ namespace RavenFS.Tests.Bugs
 		}
 
 		 
+        [Fact]
+        public async void PreserveSystemKeysWhenUpdatingMetadata()
+        {
+            var client = NewAsyncClient();
+            var ms = new MemoryStream();
+            var streamWriter = new StreamWriter(ms);
+            var expected = new string('a', 1024);
+            streamWriter.Write(expected);
+            streamWriter.Flush();
+            ms.Position = 0;
+
+            await client.UploadAsync("abc.txt", ms, new RavenJObject
+			                                        {
+				                                        {"Test", "1"},
+			                                        });
+            
+            await client.UpdateMetadataAsync("abc.txt", new RavenJObject
+			                                                {
+				                                                {"Test", "2"}
+			                                                });
+
+            var metadata = await client.GetMetadataForAsync("abc.txt");
+
+            Assert.True(metadata.ContainsKey("Last-Modified"));
+            Assert.True(metadata.ContainsKey("RavenFS-Size"));
+            Assert.True(metadata.ContainsKey("Etag"));
+            Assert.True(metadata.ContainsKey("Content-MD5"));
+            Assert.True(metadata.ContainsKey("Content-Length"));
+        }		 
 	}
 }

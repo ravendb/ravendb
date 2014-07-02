@@ -82,9 +82,7 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
 
     static globalChangesApi: changesApi;
-    static currentDbChangesApi = ko.observable<changesApi>(null);
-    static currentFsChangesApi = ko.observable<changesApi>(null);
-    static currentCsChangesApi = ko.observable<changesApi>(null);
+    static currentResourceChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
@@ -186,6 +184,11 @@ class shell extends viewModelBase {
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
+
+        window.addEventListener("beforeunload", ()=> {
+            shell.globalChangesApi.dispose();
+            this.disconnectFromResourceChangesApi();
+        });
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -373,7 +376,7 @@ class shell extends viewModelBase {
     }
 
     navigateToResourceGroup(resourceHash) {
-        this.disconnectFromChangesApi();
+        this.disconnectFromResourceChangesApi();
 
         if (resourceHash == this.appUrls.databases()) {
             this.activateResource(appUrl.getDatabase(), shell.databases);
@@ -484,13 +487,13 @@ class shell extends viewModelBase {
     private updateDbChangesApi(db: database) {
         if (!db.disabled() && (this.currentConnectedDatabase.name != db.name || !this.appUrls.isAreaActive('databases')()) ||
                 db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
-            this.disconnectFromChangesApi();
+            this.disconnectFromResourceChangesApi();
 
-            shell.currentDbChangesApi(new changesApi(db, 5000));
+            shell.currentResourceChangesApi(new changesApi(db, 5000));
 
-            shell.currentDbChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentDbChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentDbChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
+            shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
 
             this.currentConnectedDatabase = db;
         }
@@ -498,9 +501,9 @@ class shell extends viewModelBase {
 
     private updateFsChangesApi(fs: filesystem) {
         if (!fs.disabled() && (this.currentConnectedFileSystem.name != fs.name || !this.appUrls.isAreaActive('filesystems')())) {
-            this.disconnectFromChangesApi();
+            this.disconnectFromResourceChangesApi();
 
-            shell.currentFsChangesApi(new changesApi(fs, 5000));
+            shell.currentResourceChangesApi(new changesApi(fs, 5000));
 
             this.currentConnectedFileSystem = fs;
         }
@@ -509,26 +512,18 @@ class shell extends viewModelBase {
     private updateCsChangesApi(cs: counterStorage) {
         //TODO: enable changes api for counter storages, server side
         if (!cs.disabled() && (this.currentConnectedCounterStorage.name != cs.name || !this.appUrls.isAreaActive('counterstorages')())) {
-            this.disconnectFromChangesApi();
+            this.disconnectFromResourceChangesApi();
 
-            shell.currentCsChangesApi(new changesApi(cs, 5000));
+            shell.currentResourceChangesApi(new changesApi(cs, 5000));
 
             this.currentConnectedCounterStorage = cs;
         }
     }
 
-    private disconnectFromChangesApi() {
-        if (shell.currentDbChangesApi()) {
-            shell.currentDbChangesApi().dispose();
-            shell.currentDbChangesApi(null);
-        }
-        else if (shell.currentFsChangesApi()) {
-            shell.currentFsChangesApi().dispose();
-            shell.currentFsChangesApi(null);
-        }
-        else if (shell.currentCsChangesApi()) {
-            shell.currentCsChangesApi().dispose();
-            shell.currentCsChangesApi(null);
+    private disconnectFromResourceChangesApi() {
+        if (shell.currentResourceChangesApi()) {
+            shell.currentResourceChangesApi().dispose();
+            shell.currentResourceChangesApi(null);
         }
     }
     

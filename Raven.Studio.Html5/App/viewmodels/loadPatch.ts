@@ -10,7 +10,7 @@ class loadPatch extends dialogViewModelBase {
 
     private nextTask = $.Deferred<patchDocument>();
     nextTaskStarted = false;
-    patchName = ko.observable<string>();
+    patchName = ko.observable<string>("");
     patches = ko.observableArray<patchDocument>();
     patch = ko.observable<patchDocument>();
 
@@ -20,6 +20,7 @@ class loadPatch extends dialogViewModelBase {
 
     activate() {
         this.fetchAllPatches();
+        this.patchName = ko.observable<string>("Select patch to load");
     }
 
     cancel() {

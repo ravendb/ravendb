@@ -8,7 +8,8 @@ import dialog = require("plugins/dialog");
  */
 class dialogViewModelBase {
     static dialogSelector = ".messageBox";
-    dialogSelectorName="";
+    dialogSelectorName = "";
+
     constructor(private elementToFocusOnDismissal?: string) {
     }
 
@@ -39,7 +40,6 @@ class dialogViewModelBase {
         }
         return true;
     }
-
 }
 
 export = dialogViewModelBase;

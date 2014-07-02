@@ -24,5 +24,8 @@ namespace RavenFS.Tests
 			var webException = Assert.Throws<WebException>(()=>WebClient.DownloadString(GetFsUrl("/files/abc.txt")));
 			Assert.Equal(HttpStatusCode.NotFound, ((HttpWebResponse)webException.Response).StatusCode);
 		}
+
+
+
 	}
 }

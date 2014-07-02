@@ -6,36 +6,20 @@ import counterStorage = require("models/counter/counterStorage");
 
 class getSingleAuthTokenCommand extends commandBase {
 
-    constructor(private rs: resource) {
+    constructor(private resourcePath: string) {
         super();
 
-        if (!rs) {
-            throw new Error("Must specify resource");
+        if (resourcePath == null) {
+            throw new Error("Must specify resourcePath");
         }
     }
 
     execute(): JQueryPromise<singleAuthToken> {
-        var url = this.getPrefixdForResourcePath() + this.rs.name + "/singleAuthToken";
+        var url = this.resourcePath + "/singleAuthToken";
 
         var getTask = this.query(url, null, null);
 
         return getTask;
-    }
-
-    private getPrefixdForResourcePath(): string {
-        var path: string;
-
-        if (this.rs instanceof database) {
-            path = "/databases/";
-        }
-        else if (this.rs instanceof filesystem) {
-            path = "/fs/";
-        }
-        else { // this.rs instanceof counterStorage
-            path = "/counters/";
-        }
-
-        return path;
     }
 }
 

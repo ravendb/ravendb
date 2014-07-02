@@ -186,7 +186,7 @@ class aceEditorBindingHandler {
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
         $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
         $('.ui-resizable-se').css('cursor', 's-resize');
-        $(element).append('<span class="fullScreenModeLabel" style="font-size:90%; z-index:2000000000; position:absolute; bottom:22px; right:22px;opacity:0.4">Press Shift+F11 to enter full screen mode</span>');
+        $(element).append('<span class="fullScreenModeLabel" style="font-size:90%; z-index: 1000; position: absolute; bottom: 22px; right: 22px; opacity: 0.4">Press Shift+F11 to enter full screen mode</span>');
 
         // When the element is removed from the DOM, unhook our keyup and focus event handlers and remove the  resizable functionality completely. lest we leak memory.
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {

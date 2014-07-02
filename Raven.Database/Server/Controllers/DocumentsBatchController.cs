@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> BulkPost()
 		{
             using (var cts = new CancellationTokenSource())
-            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var jsonCommandArray = await ReadJsonArrayAsync();
 
@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage BulkDelete(string id)
 		{
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
                 return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id);
@@ -77,7 +77,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> BulkPatch(string id)
 		{
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
                 var patchRequestJson = await ReadJsonArrayAsync();
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> BulkEval(string id)
 		{
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
                 var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();

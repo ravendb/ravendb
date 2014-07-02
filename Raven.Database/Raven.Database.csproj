@@ -412,11 +412,9 @@
     <Compile Include="Server\RavenFS\Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\ITransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\FileAndPagesInformation.cs" />
-    <Compile Include="Server\RavenFS\Storage\FileHeaderInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\PageInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\RenameFileOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\SchemaCreator.cs" />
-    <Compile Include="Server\RavenFS\Storage\SearchResults.cs" />
     <Compile Include="Server\RavenFS\Storage\SignatureReadOnlyStream.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\StorageConfigurator.cs" />
@@ -576,7 +574,6 @@
     <Compile Include="Indexing\RavenIndexWriter.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\BBoxStrategyThatSupportsAllShapes.cs" />
-    <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringReadWriter.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
     <Compile Include="Json\ScriptsCache.cs" />

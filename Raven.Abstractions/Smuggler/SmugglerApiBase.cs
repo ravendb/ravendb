@@ -48,7 +48,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
         protected abstract Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo);
-		protected abstract void PutDocument(RavenJObject document, SmugglerOptions options);
+		protected abstract void PutDocument(RavenJObject document, SmugglerOptions options, int size);
 		protected abstract Task PutTransformer(string transformerName, RavenJToken transformer);
 
 	    protected abstract Task DeleteDocument(string key);
@@ -757,7 +757,7 @@ namespace Raven.Abstractions.Smuggler
 				if (document == null)
 					continue;
 
-				PutDocument(document, options);
+				PutDocument(document, options, (int)size);
 
 				count++;
 
@@ -767,7 +767,7 @@ namespace Raven.Abstractions.Smuggler
 				}
 			}
 
-			PutDocument(null, options); // force flush
+		    PutDocument(null, options, -1); // force flush
 
 			return count;
 		}

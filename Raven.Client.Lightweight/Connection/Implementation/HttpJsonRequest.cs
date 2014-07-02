@@ -457,7 +457,7 @@ namespace Raven.Client.Connection
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				var data = await RavenJToken.TryLoadAsync(responseStream);
+				var data = RavenJToken.TryLoad(responseStream);
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
@@ -723,8 +723,12 @@ namespace Raven.Client.Connection
 			};
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-			await AssertNotFailingResponse(response);
+			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
+                                           .ConfigureAwait(false);
+
+            this.ResponseStatusCode = response.StatusCode;
+
+			// await AssertNotFailingResponse(response);
 			return response;
 		}
 
@@ -733,7 +737,10 @@ namespace Raven.Client.Connection
 			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
 			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
-			await AssertNotFailingResponse(response).ConfigureAwait(false);
+
+            this.ResponseStatusCode = response.StatusCode;
+
+			// await AssertNotFailingResponse(response).ConfigureAwait(false);
 			return response;
 		}
 
@@ -748,8 +755,10 @@ namespace Raven.Client.Connection
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
 			var response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
+            
+            this.ResponseStatusCode = response.StatusCode;
 
-			await AssertNotFailingResponse(response).ConfigureAwait(false);
+			//await AssertNotFailingResponse(response).ConfigureAwait(false);
 			return response;
 		}
 
@@ -773,28 +782,6 @@ namespace Raven.Client.Connection
 			{
 				length = -1;
 				return false;
-			}
-		}
-
-		private async Task AssertNotFailingResponse(HttpResponseMessage response)
-		{
-			ResponseStatusCode = response.StatusCode;
-
-			if (response.IsSuccessStatusCode == false)
-			{
-				var sb = new StringBuilder()
-					.Append(response.StatusCode)
-					.AppendLine();
-
-				using (var reader = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						sb.AppendLine(line);
-					}
-				}
-				throw new InvalidOperationException(sb.ToString());
 			}
 		}
 

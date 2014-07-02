@@ -152,7 +152,6 @@ namespace Raven.Smuggler
             {
                 BatchSize = options.BatchSize,
                 OverwriteExisting = true,
-				UseAdaptiveBatchSize = true
             });
             bulkInsertOperation.Report += text => ShowProgress(text);
 

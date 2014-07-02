@@ -106,7 +106,6 @@ namespace Raven.Smuggler
 				{
 					operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 					{
-						UseAdaptiveBatchSize = true,
 						BatchSize = options.BatchSize,
 						OverwriteExisting = true
                     }, store.Changes(), options.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
@@ -135,19 +134,20 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override void PutDocument(RavenJObject document, SmugglerOptions options)
+		protected override void PutDocument(RavenJObject document, SmugglerOptions options, int size)
 		{
-			if (document != null)
-			{
-				var metadata = document.Value<RavenJObject>("@metadata");
-				var id = metadata.Value<string>("@id");
-				if(String.IsNullOrWhiteSpace(id))
-					throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
+		    if (document == null) 
+                return;
 
-				document.Remove("@metadata");
 
-				operation.Store(document, metadata, id);
-			}
+		    var metadata = document.Value<RavenJObject>("@metadata");
+		    var id = metadata.Value<string>("@id");
+		    if(String.IsNullOrWhiteSpace(id))
+		        throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
+
+		    document.Remove("@metadata");
+
+		    operation.Store(document, metadata, id, size);
 		}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)

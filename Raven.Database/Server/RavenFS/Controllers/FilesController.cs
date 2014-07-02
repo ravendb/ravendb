@@ -36,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             int results;
             var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
 
-            var list = new List<FileHeaderInformation>();
+            var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
             return this.GetMessageWithObject(list, HttpStatusCode.OK)
@@ -125,7 +125,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
-			Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
+			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
 			StartSynchronizeDestinationsInBackground();
@@ -160,6 +160,25 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return httpResponseMessage;
 		}
 
+        [HttpGet]
+        [Route("fs/{fileSystemName}/files/metadata")]
+        public HttpResponseMessage Metadata([FromUri] string[] fileNames)
+        {
+            if (fileNames == null || fileNames.Length == 0)
+            {
+                log.Debug("'fileNames' parameter should have a value.");
+                return GetEmptyMessage(HttpStatusCode.BadRequest);
+            }
+
+            var ravenPaths = fileNames.Where(x => x != null).Select(x => RavenFileNameHelper.RavenPath(x));
+
+            var list = new List<FileHeader>();
+            Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
+
+            return this.GetMessageWithObject(list, HttpStatusCode.OK)
+                       .WithNoCache();
+        }
+
 		[HttpPost]
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
@@ -188,7 +207,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             Search.Index(name, headers);
 
-            Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+            Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
             StartSynchronizeDestinationsInBackground();
 
@@ -258,7 +277,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		[HttpPut]
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
-		{
+		{         
 			try
 			{
                 FileSystem.MetricsCounters.FilesPerSecond.Mark();
@@ -268,10 +287,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
+                headers["Creation-Date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);
 
+                long? size = -1;
                 ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
                 {
                     AssertFileIsNotBeingSynced(name, accessor, true);
@@ -279,7 +300,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                     var contentLength = Request.Content.Headers.ContentLength;
                     var sizeHeader = GetHeader("RavenFS-size");
-                    long? size;
+
                     long sizeForParse;
                     if (contentLength == 0 || long.TryParse(sizeHeader, out sizeForParse) == false)
                     {
@@ -295,6 +316,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     }
 
                     accessor.PutFile(name, size, headers);
+
                     Search.Index(name, headers);                  
                 }));
 
@@ -303,18 +325,27 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 using (var contentStream = await Request.Content.ReadAsStreamAsync())
                 using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
                 {
-                    await readFileToDatabase.Execute();
+                    await readFileToDatabase.Execute();                
+   
+                    if ( readFileToDatabase.TotalSizeRead != size )
+                    {
+                        Storage.Batch(accessor => { StorageOperationsTask.IndicateFileToDelete(name); });
+                        throw new HttpResponseException(HttpStatusCode.BadRequest);
+                    }                        
 
                     Historian.UpdateLastModified(headers); // update with the final file size
 
                     log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 
-                    headers["Content-MD5"] = readFileToDatabase.FileHash;
+                    headers["Content-MD5"] = readFileToDatabase.FileHash;                    
 
                     Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
-                    headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
+
+                    int totalSizeRead = readFileToDatabase.TotalSizeRead;
+                    headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
+                    
                     Search.Index(name, headers);
-                    Publisher.Publish(new FileChangeNotification { FileSystemName = FileSystem.Name, Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+                    Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
                     log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
 

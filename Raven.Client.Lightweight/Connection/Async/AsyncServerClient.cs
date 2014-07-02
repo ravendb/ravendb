@@ -1755,12 +1755,16 @@ namespace Raven.Client.Connection.Async
 			{
 				if (method == "POST")
 				{
-					response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+					response = await request.ExecuteRawResponseAsync(query.Query)
+                                            .ConfigureAwait(false);
 				}
 				else
 				{
-					response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+					response = await request.ExecuteRawResponseAsync()
+                                            .ConfigureAwait(false);
 				}
+
+                await response.AssertNotFailingResponse();
 			}
 			catch (Exception e)
 			{
@@ -1968,7 +1972,11 @@ namespace Raven.Client.Connection.Async
 
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+            var response = await request.ExecuteRawResponseAsync()
+                                        .ConfigureAwait(false);
+
+            await response.AssertNotFailingResponse();
+
 			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), start, pageSize, pagingInformation);
 		}
 
