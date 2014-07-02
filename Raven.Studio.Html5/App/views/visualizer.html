@@ -1,21 +1,99 @@
 ﻿<style>
 
-.link, .noForceLink {
-  stroke: #ccc;
+.nvtooltip {
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    -webkit-box-shadow: 2px 2px 5px 0px rgba(50, 50, 50, 0.61);
+    -moz-box-shadow:    2px 2px 5px 0px rgba(50, 50, 50, 0.61);
+    box-shadow:         2px 2px 5px 0px rgba(50, 50, 50, 0.61);
 }
 
-.node text {
-  pointer-events: none;
+.nvtooltip .string { color: #D14; }
+.nvtooltip .number { color: #099; }
+.nvtooltip .boolean { color: #0000ff; }
+.nvtooltip .null { color: #0000ff; }
+.nvtooltip .key { color: #000; }
+
+.node rect {
+    transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+    -moz-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+    -webkit-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+}
+
+
+.node rect.hover {
+  stroke-width: 2px;
+  stroke: black;
+  fill-opacity: .95 !important;
+  stroke-opacity: .95 !important;
+}
+
+.node rect.highlight {
+  fill-opacity: 0.8 !important;
+}
+
+.node .nodeRect {
+    fill-opacity: .4 !important;
+    stroke: #777;
+    stroke-width: 1.5px;
+}
+
+.hidden {
+    display: none;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.node {
   font: 10px sans-serif;
 }
+
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
+
+
 
 </style>
 
 <section>
-    <div style="width: 1300px; height: 700px" id="visualizerContainer"><svg id="visualizer" ></svg></div>
+    <form class="form-inline" role="form">
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <span data-bind="text: indexName"></span>
+                <span class="caret"></span>
+            </button>
+             <ul class="dropdown-menu" role="menu">
+                    <!-- ko foreach: indexes -->
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                    <!-- /ko -->
+                </ul>
+            </div>
+        <div class="form-group">
+            <div class="input-group">
+                <input type="text" data-bind="value: itemKey" class="form-control" placeholder="Reduce key">
+                <span class="input-group-btn" style="width: auto" >
+                    <button data-bind="click: addItem" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
+                </span>
+            </div>
+        </div>
+    </form>
+
+    <svg id="visHeader" height="25">
+            
+    </svg>
+    <div id="visualizerContainer" style="height: 600px" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" class="with-3d-shadow with-transitions">
+        
+        <div>
+            <svg id="visualizer"></svg>
+        </div>
+    </div>
     
-    <input type="text" name="key" placeholder="key"  value="" id="itemKey" />
-    <button data-bind="click: addItem">Add item</button> <br />
-    Index name: <input type="text" name="indexName" value="" data-bind="value: indexName" />
-    <button data-bind="click: enterFullscreen">Fullscreen</button>
 </section>

@@ -1,328 +1,368 @@
-import getUserInfoCommand = require("commands/getUserInfoCommand");
 import appUrl = require("common/appUrl");
+import jsonUtil = require("common/jsonUtil");
+
 import database = require("models/database");
+
 import viewModelBase = require("viewmodels/viewModelBase");
-import d3 = require('d3/d3');
+
 import queryIndexDebugMapCommand = require("commands/queryIndexDebugMapCommand");
 import queryIndexDebugReduceCommand = require("commands/queryIndexDebugReduceCommand");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+
+import d3 = require('d3/d3');
+import nv = require('d3/nv');
 
 class visualizer extends viewModelBase {
 
+    indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
+    indexName = ko.observable("Index Name");
+    itemKey = ko.observable("");
+
     keys = ko.observableArray<string>();
+    colors = d3.scale.category10();
+    keysCounter = 0;
 
-    indexName = ko.observable("ByCounty");
+    tree: visualizerDataObjectNodeDto = null;
+    xScale: D3.Scale.LinearScale;
 
-    nodes: any = [];
-    links: any = [];
-    noForceLinks: any = [];
-    width = 1300;
-    height = 600;
-
-    node = null;
-    link = null;
-    noForceLink = null;
-    fill = null;
-    force = null;
-
-    inputDocs:any = {}; // map source id -> chart node
-    inputDocsSettings = {
-        targetY: 100,
-        padding: 100,
-        counter: 0
+    diagonal: any;
+    graph: any;
+    nodes: any[] = []; // nodes data
+    links: any[] = []; // links data
+    width: number;
+    height: number;
+    margin = {
+        left: 10,
+        right: 10,
+        bottom: 10,
+        top: 10
     }
-    mappedDocsSettings = {
-        targetY: 250,
-    }
-    reducedDocsLevel1Settings = {
-        targetY: 450,
-        padding: 150,
-        counter: 0
-    }
-    reducedDocsLevel2Settings = {
-        targetY: 550,
-        padding: 150,
-        counter: 0
+    boxWidth: number;
+    boxSpacing = 30;
+
+    node = null; // nodes selection
+    link = null; // links selection
+
+    activate(args) {
+        super.activate(args);
+        return this.fetchAllIndexes();
     }
 
     attached() {
-        this.fill = d3.scale.category10();
+        this.resetChart();
+        var svg = d3.select("#visualizer");
+        this.diagonal = d3.svg.diagonal().projection(d => [d.y, d.x]);
+        this.node = svg.selectAll(".node");
+        this.link = svg.selectAll(".link");
 
-        var svg = d3.select("#visualizer")
-            .attr("width", this.width)
-            .attr("height", this.height);
-
-        this.force = d3.layout.force()
-            .nodes(this.nodes)
-            .links(this.links)
-            .linkDistance((d, idx) => {
-                if (d.source.type == 1 && d.target.type == 2) {
-                    return this.mappedDocsSettings.targetY - this.inputDocsSettings.targetY;
-                } else if (d.source.type == 2 && d.target.type == 3) {
-                    return this.reducedDocsLevel1Settings.targetY - this.mappedDocsSettings.targetY;
-                }
-                return 20;
-            })
-            .linkStrength((d, idx) => {
-                if (d.source.type == 2 && d.target.type == 3) {
-                    return 0.5;
-                } 
-                return 1;
-            })
-            .gravity(0)
-            .size([this.width, this.height])
-            .on("tick", this.tick.bind(this));
-
-        this.node = svg.selectAll("circle");
-        this.link = svg.selectAll("line.link");
-        this.noForceLink = svg.selectAll("line.noForceLink");
+        $("#visualizerContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
+        this.width = $("#visualizerContainer").width();
+        this.height = $("#visualizerContainer").height();
+        this.updateScale();
+        this.drawHeader();
     }
 
+    resetChart() {
+        this.tree = {
+            level: 5,
+            name: 'root',
+            children: []
+        }
+        this.keys([]);
+        this.keysCounter = 0;
+    }
+
+    updateScale() {
+        this.xScale = d3.scale.linear().domain([0, 5]).range([this.margin.left, this.width - this.margin.left - this.margin.right]);
+        this.boxWidth = this.width / 7;
+    }
+
+    drawHeader() {
+        var header = d3.select("#visHeader");
+        var headerData = ["Input", "Map", "Reduce 0", "Reduce 1", "Reduce 2"];
+        var texts = header.selectAll("text").data(headerData);
+
+        texts.transition().attr('x', (d, i) => this.xScale(i) + this.boxWidth / 2);
+
+        texts.enter()
+            .append("text")
+            .attr('y', 20)
+            .attr('x', (d, i) => this.xScale(i) + this.boxWidth / 2)
+            .text(d => d).attr("text-anchor", "middle");
+
+    }
+
+    detached() {
+        $("#visualizerContainer").off('DynamicHeightSet');
+    }
+
+    onWindowHeightChanged() {
+        this.width = $("#visualizerContainer").width();
+        this.updateScale();
+        this.drawHeader();
+        this.updateGraph();
+    }
 
     addItem() {
-        var key = $("#itemKey").val();
-        //TODO: duplicate detection
-        this.keys.push(key);
-        $("#itemKey").val("");
+        var self = this;
+        var key = this.itemKey();
+        if (key && !this.keys.contains(key)) {
+            this.keys.push(key);
+            this.keysCounter++;
+            this.itemKey("");
 
-        this.fetchDataFor(key).then(() => this.updateGraph());
-
-    }
-    enterFullscreen() {
-        if (
-            document.fullscreenEnabled ||
-            document.webkitFullscreenEnabled ||
-            document.mozFullScreenEnabled ||
-            document.msFullscreenEnabled
-            ) {
-            var container:any = document.getElementById("visualizerContainer");
-
-            // go full-screen
-            if (container.requestFullscreen) {
-                container.requestFullscreen();
-            } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen();
-            } else if (container.mozRequestFullScreen) {
-                container.mozRequestFullScreen();
-            } else if (container.msRequestFullscreen) {
-                container.msRequestFullscreen();
-            }
-        } else {
-            console.log("not supported");
-             //TODO: we don't support this feature!
+            this.fetchDataFor(key).then((subTree: visualizerDataObjectNodeDto[]) => {
+                if (self.tree.children === undefined) {
+                    self.tree.children = [];
+                }
+                self.tree.children.push({
+                    level: 4,
+                    name: key,
+                    children: subTree
+                });
+                self.updateGraph();
+            });
         }
+    }
 
+    setSelectedIndex(indexName) {
+        this.indexName(indexName);
+        this.itemKey("");
+        this.resetChart();
+        this.updateGraph();
+    }
+
+    fetchAllIndexes(): JQueryPromise<any> {
+        return new getDatabaseStatsCommand(this.activeDatabase())
+            .execute()
+            .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
+                return {
+                    name: i.PublicName,
+                    hasReduce: !!i.LastReducedTimestamp
+                };
+            }).filter(i => i.hasReduce)));
+    }
+
+    // replace characters with their char codes, but leave A-Za-z0-9 and - in place. 
+    escape(input) {
+        var output = "";
+        for (var i = 0; i < input.length; i++) {
+            var ch = input.charCodeAt(i);
+            if (ch == 0x2F) {
+                output += '-';
+            } else if (ch >= 0x30 && ch <= 0x39 || ch >= 0x41 && ch <= 0x5A || ch >= 0x61 && ch <= 0x7A || ch == 0x2D) {
+                output += input[i];
+            } else {
+                output += ch;
+            }
+        }
+        return output;
+    }
+
+    makeNodeId(data: visualizerDataObjectNodeDto) {
+        if (data.payload) { 
+            return this.escape("node-" + data.level + "-" + data.payload.ReduceKey + "-" + data.payload.Source + "-" + data.payload.Bucket);
+        } else {
+            return this.escape("node-" + data.level + "-" + data.name);
+        }
+    }
+
+    setHighlightToParent(node, highlighted) {
+        while (node) {
+            d3.select("." + this.makeNodeId(node)).select('rect').classed('highlight', highlighted);
+            node = node.parent;
+        }
+    }
+
+    estimateHeight() {
+        var level1Nodes = 0;
+        var nodes = [this.tree];
+        var node = null;
+        while ((node = nodes.pop()) != null) {
+            if (node.level == 1) level1Nodes++;
+            if ((children = node.children) && (n = children.length)) {
+                var n, children;
+                while (--n >= 0) nodes.push(children[n]);
+            }
+        }
+        return this.boxSpacing * level1Nodes + this.margin.top + this.margin.bottom;
+    }
+
+    getTooltip(data: visualizerDataObjectNodeDto) {
+        var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
+        return "<table>" + 
+            "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
+            "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
+            "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
+            "<tr><td><strong>Bucket</strong></td><td>" + data.payload.Bucket + "</td></tr>" +
+            "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>" +
+            "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
+        "</table>";
     }
 
     updateGraph() {
+        this.height = this.estimateHeight();
         var self = this;
-        this.force.start();
+
+        d3.select("#visualizer")
+            .attr("width", this.width)
+            .attr("height", this.height)
+            .attr("viewBox", "0 0 " + this.width + " " + this.height);
+
+        this.graph = d3.layout.cluster()
+            .size([this.height - this.margin.top - this.margin.bottom, this.width - this.margin.left - this.margin.right]);
+        this.nodes = this.graph.nodes(this.tree);
+        this.links = this.graph.links(this.nodes)
+            .filter(l => l.target.level < 4)
+            .map(l => {
+            return {
+                source: {
+                    y: self.xScale(l.source.level),
+                    x: l.source.x + self.margin.top 
+                },
+                target: {
+                    y: self.xScale(l.target.level) + self.boxWidth,
+                    x: l.target.x + self.margin.top
+                }
+            }
+        });
+
         this.node = this.node.data(this.nodes);
         this.link = this.link.data(this.links);
-        this.noForceLink = this.noForceLink.data(this.noForceLinks);
 
-        (<any>this.link).enter().append("line").attr("class", "link");
-        (<any>this.noForceLink).enter().append("line").attr("class", "noForceLink");
+        var existingNodes = (<any>this.node)
+            .transition()
+            .attr("transform", (d) => "translate(" + self.xScale(d.level) + "," + (d.x + this.margin.top) + ")");
 
-        var enteringNodes = (<any>this.node).enter().append("g").attr("class", "node")
+        existingNodes.select("rect")
+            .attr('width', self.boxWidth);
 
-        enteringNodes.append("circle")
-            .attr("r", 8)
-            .style("fill", d => self.fill(d.type))
-            .style("stroke", function (d) { return d3.rgb(self.fill(d.type)).darker(2); })
-            .on("mouseover", function () {
-                console.log(d3.select(this));
+        existingNodes.select('text')
+            .attr('x', self.boxWidth / 2);
+
+        (<any>this.link)
+            .transition()
+            .attr("d", this.diagonal);
+
+        (<any>this.link)
+            .enter()
+            .append("path")
+            .attr("class", "link")
+            .attr("d", this.diagonal);
+
+        var enteringNodes = (<any>this.node).enter().append("g").attr("class", d => "node " + self.makeNodeId(d))
+            .attr("transform", (d) => "translate(" + self.xScale(d.level) + "," + (d.x + this.margin.top) + ")")
+            .classed("hidden", d => d.level > 4);
+
+        enteringNodes.append("rect").attr('class', 'nodeRect')
+            .attr('x', 0)
+            .attr('y', -10)
+            .attr("fill",  d => d.level > 0 ?  this.colors(this.keysCounter) : 'white')
+            .attr('width', self.boxWidth)
+            .attr('height', 20)
+            .attr('rx', 5)
+            .on("mouseenter", function (d) {
+                if (d.level > 0) {
+                    d3.select(this).classed("hover", true);
+                    var offset = $(this).offset();
+                    nv.tooltip.show([offset.left + self.boxWidth / 2, offset.top], self.getTooltip(d), 'n', 25);
+                }
+                self.setHighlightToParent(d, true);
             })
-            .call(this.force.drag);
+            .on("mouseout", function (d) {
+                if (d.level > 0) {
+                    d3.select(this).classed("hover", false);
+                }
+                self.setHighlightToParent(d, false);
+                nv.tooltip.cleanup();
+            });
 
         enteringNodes.append("text")
-            .attr("x", 12)
-            .attr("y", ".35em")
+            .attr("x", self.boxWidth / 2)
+            .attr("y", 4.5)
+            .attr("pointer-events", "none")
             .attr("text-anchor", "middle")
-            .text(d => d.id);
+            .text(d => d.name);
 
-        //TODO: d3.select.exit()
+        this.node.exit().transition().attr('opacity', 0).remove();
+        this.link.exit().transition().attr('opacity', 0).remove();
     }
 
     fetchDataFor(key: string) {
         var allDataFetched = $.Deferred();
 
-        var mapTask = new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), key, 0, 256)
-            .execute().then(results => {
+        // TODO support for paging
 
-                return results.map(result => {
-                    var sourceNode = this.getOrCreateInputDocNode(result.Source);
-                    var mappedDocNode = this.createMappedDocNode(result);
+        var mapTask = new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), key, 0, 1024).execute();
+        var reduce1Task = new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 1, key, 0, 1024).execute();
+        var reduce2Task = new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 2, key, 0, 1024).execute();
 
-                    this.links.push({
-                        source: sourceNode,
-                        target: mappedDocNode
-                    });
-                    return mappedDocNode;
+        (<any>$.when(mapTask, reduce1Task, reduce2Task)).then((map: mappedResultInfo[], reduce1: mappedResultInfo[], reduce2: mappedResultInfo[]) =>
+        {
+            var mapGroupedByBucket = d3
+                .nest()
+                .key(k => String(k.Bucket))
+                .map(map, d3.map);
+
+            var reduce1GropedByBucket = d3
+                .nest()
+                .key(d => String(d.Bucket))
+                .map(reduce1, d3.map);
+
+            if (reduce2.length == 0 && reduce1.length == 0) {
+                var subTree: visualizerDataObjectNodeDto[] = map.map((m: mappedResultInfo) => {
+                    return {
+                        name: m.ReduceKey,
+                        payload: m,
+                        level: 1,
+                        children: [
+                            {
+                                name: m.Source,
+                                level: 0,
+                                children: []
+                            }
+                        ]
+                    }
                 });
-            });
+                allDataFetched.resolve(subTree);
+            }
 
-        var reduce1Task = mapTask.then((mapResults) => {
-            //TODO: support for counter
-            return new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 1, key, 0, 256)
-                .execute().then(results => {
-                    var resultsByBucket = {};
-
-                    results.forEach(result => {
-                        var node = this.createReduce1Node(result);
-                        resultsByBucket[result.Source] = node;
-                    });
-
-                    mapResults.forEach(r => {
-                        this.noForceLinks.push({
-                            source: r,
-                            target: resultsByBucket[String(r.bucket)]
-                        });
-                    });
+            if (reduce2.length > 0 && reduce1.length > 0) {
+                var subTree: visualizerDataObjectNodeDto[] = reduce2.map(r2 => {
+                return {
+                        name: r2.ReduceKey,
+                        payload: r2,
+                        level: 3,
+                        children: reduce1GropedByBucket.get(r2.Source).map((r1: mappedResultInfo) => {
+                        return {
+                                name: r1.ReduceKey,
+                                payload: r1,
+                                level: 2,
+                                children: mapGroupedByBucket.get(r1.Source).map((m: mappedResultInfo) => {
+                                return {
+                                        name: m.ReduceKey,
+                                        payload: m,
+                                        level: 1,
+                                        children: [
+                                            {
+                                                name: m.Source,
+                                                level: 0,
+                                                children: []
+                                            }
+                                        ]
+                                    }
+                            })
+                            }
+                    })
+                    }
                 });
-        })
-
-        var reduce2Task = reduce1Task.then(() => {
-            return new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 2, key, 0, 256)
-                .execute().then(results => {
-                    results.forEach(result => {
-                        var r2Node = this.createReduce2Node(result);
-                    });
+                allDataFetched.resolve(subTree);
+            }
+        }, () => {
+                allDataFetched.reject();
                 });
-        }).then(() => allDataFetched.resolve());
-
         return allDataFetched;
     }
-
-    getOrCreateInputDocNode(source: string) {
-        if (source in this.inputDocs) {
-            return this.inputDocs[source];
-        }
-
-        var node = {
-            x: Math.random() * this.width,
-            y: this.height - 50,
-            type: 1,
-            id: source,
-            idx: this.inputDocsSettings.counter++
-        };
-        this.inputDocs[source] = node;
-        this.nodes.push(node);
-        return node;
-    }
-
-    createMappedDocNode(result: mappedResultInfo) {
-        var node = {
-            x: Math.random() * this.width,
-            y: this.height - 100,
-            type: 2,
-            id: result.ReduceKey,
-            source: result.Source,
-            bucket: result.Bucket
-        };
-
-        this.nodes.push(node);
-        return node;
-    }
-
-    createReduce1Node(result: mappedResultInfo) {
-        var node = {
-            x: Math.random() * this.width,
-            y: this.height,
-            type: 3,
-            id: result.ReduceKey,
-            source: result.Source,
-            idx: this.reducedDocsLevel1Settings.counter++
-        }
-
-        this.nodes.push(node);
-        return node; 
-    }
-
-    createReduce2Node(result: mappedResultInfo) {
-        var node = {
-            x: Math.random() * this.width,
-            y: this.height,
-            type: 4,
-            id: result.ReduceKey,
-            source: result.Source,
-            idx: this.reducedDocsLevel2Settings.counter++
-        }
-
-        this.nodes.push(node);
-        return node;
-    }
-
-    tick(e) {
-
-        var k = .1 * e.alpha;
-        var self = this;
-        this.nodes.forEach(function (o, i) {
-            if (!o.fixed) {
-                var targetPosition = self.computeTargetPosition(o);
-                o.x += (targetPosition.x - o.x) * k;
-                o.y += (targetPosition.y - o.y) * k;
-            }
-        });
-
-        this.node.select("circle")
-            .attr("cx", function (d) { return d.x; })
-            .attr("cy", function (d) { return d.y; });
-
-        this.node.select("text")
-                    .attr("x", function (d) { return d.x; })
-                    .attr("y", function (d) { return d.y  - 10; });
-
-        this.link.attr("x1", function (d) { return d.source.x; })
-            .attr("y1", function (d) { return d.source.y; })
-            .attr("x2", function (d) { return d.target.x; })
-            .attr("y2", function (d) { return d.target.y; });
-
-        this.noForceLink.attr("x1", function (d) { return d.source.x; })
-            .attr("y1", function (d) { return d.source.y; })
-            .attr("x2", function (d) { return d.target.x; })
-            .attr("y2", function (d) { return d.target.y; });
-    }
-
-    interpolate(idx: number, total: number, padding: number, totalWidth: number) {
-        if (total == 1) {
-            return totalWidth / 2;
-        }
-        return padding + (idx * (totalWidth - 2 * padding) / (total - 1));
-    }
-
-    computeTargetPosition(o: visualizerDataObjectDto) {
-        if (o.type === 1) {
-            return {
-                x: this.interpolate(o.idx, this.inputDocsSettings.counter, this.inputDocsSettings.padding, this.width),
-                y: this.inputDocsSettings.targetY + (o.idx % 4) * 20
-            };
-        } else if (o.type === 2) {
-            var idx = <number>this.inputDocs[o.source].idx;
-            return {
-                x: this.interpolate(idx, this.inputDocsSettings.counter, this.inputDocsSettings.padding, this.width),
-                y: this.mappedDocsSettings.targetY + (idx % 4) * 20
-            };
-        } else if (o.type === 3) {
-            return {
-                x: this.interpolate(o.idx, this.reducedDocsLevel1Settings.counter, this.reducedDocsLevel1Settings.padding, this.width),
-                y: this.reducedDocsLevel1Settings.targetY
-            };
-        } else if (o.type === 4) {
-            return {
-                x: this.interpolate(o.idx, this.reducedDocsLevel2Settings.counter, this.reducedDocsLevel2Settings.padding, this.width),
-                y: this.reducedDocsLevel2Settings.targetY
-            };
-        }
-
-        else {
-            return {
-                x: o.x,
-                y: o.y
-            }
-        }
-    }
-
 }
-
 
 export = visualizer;

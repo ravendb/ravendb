@@ -339,6 +339,7 @@ namespace Raven.Database.Server.Controllers
 			});
 			return GetMessageWithObject(new
 			{
+                mappedResult.Count,
 				Results = mappedResult
 			});
 		}

@@ -821,13 +821,12 @@ interface indexSuggestion extends queryFieldInfo {
 
 interface mappedResultInfo {
     ReduceKey: string;
-    DateTime: string;
+    Timestamp: string;
     Etag: string;
     Data: any;
     Bucket: number;
     Source: string;
 }
-
 
 
 interface visualizerDataObjectDto {
@@ -837,4 +836,15 @@ interface visualizerDataObjectDto {
     id: any;
     source?: any;
     idx: number;
+}
+
+interface visualizerDataObjectNodeDto {
+    children?: visualizerDataObjectNodeDto[];
+    name?: string;
+    level?: number;
+    x?: number;
+    y?: number;
+    depth?: number;
+    parent?: visualizerDataObjectNodeDto;
+    payload?: mappedResultInfo;
 }
