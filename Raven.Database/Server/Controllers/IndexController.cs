@@ -264,6 +264,7 @@ namespace Raven.Database.Server.Controllers
 				return GetMessageWithObject(new
 				{
 					Error = "Query string argument \'key\' is required",
+					keys.Count,
 					Keys = keys
 				}, HttpStatusCode.BadRequest);
 			}
@@ -276,7 +277,7 @@ namespace Raven.Database.Server.Controllers
 			});
 			return GetMessageWithObject(new
 			{
-                mappedResult.Count,
+				mappedResult.Count,
 				Results = mappedResult
 			});
 		}
