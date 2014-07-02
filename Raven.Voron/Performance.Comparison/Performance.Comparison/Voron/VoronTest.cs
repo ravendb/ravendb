@@ -187,7 +187,7 @@ namespace Performance.Comparison.Voron
 
                         valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
-                        tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
+                        tx.State.Root.Add(enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
                     }
 
                     tx.Commit();
@@ -258,7 +258,7 @@ namespace Performance.Comparison.Voron
                 foreach (var id in ids)
                 {
                     var key = id.ToString("0000000000000000");
-                    var readResult = tx.State.Root.Read(tx, key);
+                    var readResult = tx.State.Root.Read(key);
                     int reads = 0;
                     while ((reads = readResult.Reader.Read(ms, 0, ms.Length)) > 0)
                     {
