@@ -25,6 +25,7 @@ class logs extends viewModelBase {
     sortColumn = ko.observable<string>("logged");
     sortAsc = ko.observable<boolean>(true);
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
+    columnWidths: Array<KnockoutObservable<number>>;
 
     constructor() {
         super();
@@ -55,11 +56,20 @@ class logs extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.columnWidths = [
+            ko.observable<number>(100),
+            ko.observable<number>(265),
+            ko.observable<number>(300),
+            ko.observable<number>(200),
+            ko.observable<number>(360)
+        ];
+        this.registerColumnResizing();
         return this.fetchLogs();
     }
 
     deactivate() {
         clearTimeout(this.updateNowTimeoutHandle);
+        this.unregisterColumnResizing();
     }
 
     fetchLogs(): JQueryPromise<logDto[]> {
@@ -206,6 +216,47 @@ class logs extends viewModelBase {
             this.sortColumn(columnName);
             this.sortAsc(true);
         }
+    }
+    
+    registerColumnResizing() {
+        var resizingColumn = false;
+        var startX = 0;
+        var startingWidth = 0;
+        var columnIndex = 0;
+
+        $(document).on("mousedown.logTableColumnResize", ".column-handle", (e: any) => {
+            columnIndex = parseInt( $(e.currentTarget).attr("column"));
+            startingWidth = this.columnWidths[columnIndex]();
+            startX = e.pageX;
+            resizingColumn = true;
+        });
+
+        $(document).on("mouseup.logTableColumnResize", "", (e: any) => {
+            resizingColumn = false;
+
+            console.log( this.columnWidths.map((obs) => obs()) );
+        });
+
+        $(document).on("mousemove.logTableColumnResize", "", (e: any) => {
+            if (resizingColumn) {
+                var targetColumnSize = startingWidth + e.pageX - startX;
+                this.columnWidths[columnIndex](targetColumnSize);
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+
+                return false;
+            }
+        });
+    }
+
+    unregisterColumnResizing() {
+        $(document).off("mousedown.logTableColumnResize");
+        $(document).off("mouseup.logTableColumnResize");
+        $(document).off("mousemove.logTableColumnResize");
     }
 }
 

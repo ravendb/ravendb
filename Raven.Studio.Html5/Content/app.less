@@ -1023,11 +1023,12 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer, #requestTracingContainer {
-	@media(max-device-height:1024px) {
+    @media(max-device-height:1024px) {
         button {
             max-height: 50% !important;
         }
     }
+
     table {
         outline: none;
 
@@ -1049,6 +1050,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#de56acf2', e
             font-weight: bold;
         }
     }
+
 }
 
 #databaseSettingsContainer {
@@ -1378,4 +1380,16 @@ footer {
     overflow-y: scroll;
     height: 43vh;
     position: absolute;
+}
+
+.column-handle {
+    width: 8px;
+    display: block;
+    height: 20px;
+    float: right;
+    cursor: col-resize;
+    position: relative;
+    z-index: 1;
+    background-color: hsl(0, 0%, 80%);
+    box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
 }
