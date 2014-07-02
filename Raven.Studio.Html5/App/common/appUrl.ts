@@ -40,6 +40,7 @@ class appUrl {
         indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
+        visualizer: ko.computed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
@@ -270,6 +271,10 @@ class appUrl {
 
     static forUserInfo(db: database): string {
         return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forVisualizer(db: database): string {
+        return "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
     }
 
     static forApiKeys(): string {
