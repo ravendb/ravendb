@@ -1,10 +1,9 @@
 ﻿using System;
-using System.CodeDom;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -13,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using ICSharpCode.NRefactory.CSharp;
+using Lucene.Net.Documents;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -20,15 +20,16 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Expression = ICSharpCode.NRefactory.CSharp.Expression;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -193,7 +194,7 @@ namespace Raven.Database.Server.Controllers
 			if (indexDefinition == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			var ind = new TypeDeclaration
+			var indexDeclaration = new TypeDeclaration
 			{
 				Name = Regex.Replace(fullIndexName, @"[^\w\d]", ""),
 				BaseTypes =
@@ -225,19 +226,19 @@ namespace Raven.Database.Server.Controllers
 
 			if (indexDefinition.Maps.Count == 1)
 			{
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Map", new StringLiteralExpression(indexDefinition.Map)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Map", new VerbatimStringLiteralExpression(indexDefinition.Map)));
 			}
 			else
 			{
 				var maps = new ArrayInitializerExpression();
-				indexDefinition.Maps.ForEach(map => maps.Elements.Add(new PrimitiveExpression(indexDefinition.Map)));
+				indexDefinition.Maps.ForEach(map => maps.Elements.Add(new VerbatimStringLiteralExpression(indexDefinition.Map)));
 
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Maps", new PrimitiveExpression(maps)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Maps", maps));
 			}
 
 			if (indexDefinition.Reduce != null)
 			{
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Reduce", new StringLiteralExpression(indexDefinition.Reduce)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Reduce", new VerbatimStringLiteralExpression(indexDefinition.Reduce)));
 			}
 
 			if (indexDefinition.MaxIndexOutputsPerDocument != null)
@@ -247,100 +248,37 @@ namespace Raven.Database.Server.Controllers
 
 			if (indexDefinition.Indexes.Count > 0)
 			{
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Indexes", GenerateExpressionFromStringToEnumDictionary(indexDefinition.Indexes)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Indexes", CreateExpressionFromStringToEnumDictionary(indexDefinition.Indexes)));
 			}
 
 			if (indexDefinition.Stores.Count > 0)
 			{
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Stores", GenerateExpressionFromStringToEnumDictionary(indexDefinition.Stores)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Stores", CreateExpressionFromStringToEnumDictionary(indexDefinition.Stores)));
 			}
 
 			if (indexDefinition.TermVectors.Count > 0)
 			{
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("TermVectors", GenerateExpressionFromStringToEnumDictionary(indexDefinition.TermVectors)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("TermVectors", CreateExpressionFromStringToEnumDictionary(indexDefinition.TermVectors)));
 			}
 
 			if (indexDefinition.SortOptions.Count > 0)
 			{
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SortOptions", GenerateExpressionFromStringToEnumDictionary(indexDefinition.SortOptions)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SortOptions", CreateExpressionFromStringToEnumDictionary(indexDefinition.SortOptions)));
 			}
 
 			if (indexDefinition.Analyzers.Count > 0)
 			{
-				var analyzers = new ArrayInitializerExpression();
-
-				indexDefinition.Analyzers.ForEach(analyzer =>
-				{
-					var property = new ArrayInitializerExpression();
-					property.Elements.Add(new PrimitiveExpression(analyzer.Key));
-					property.Elements.Add(new PrimitiveExpression(analyzer.Value));
-					analyzers.Elements.Add(new PrimitiveExpression(property));
-				});
-
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Analyzers", new PrimitiveExpression(analyzers)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Analyzers", CreateAnalizersExpression(indexDefinition)));
 			}
 
 			if (indexDefinition.Suggestions.Count > 0)
 			{
-				var suggestions = new ArrayInitializerExpression();
-
-				indexDefinition.Suggestions.ForEach(suggestion =>
-				{
-					var property = new ArrayInitializerExpression();
-					property.Elements.Add(new PrimitiveExpression(suggestion.Key));
-
-					var value = suggestion.Value;
-					property.Elements.Add(new ObjectCreateExpression
-					{
-						Type = new PrimitiveType("SuggestionOptions"),
-						Initializer = new ArrayInitializerExpression
-						{
-							Elements =
-							{
-								new NamedExpression("Distance", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("StringDistanceTypes")), value.Distance.ToString())),
-								new NamedExpression("Accuracy", new PrimitiveExpression(value.Accuracy))
-							}
-						},
-					});
-					suggestions.Elements.Add(new PrimitiveExpression(property));
-				});
-
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Suggestions", new PrimitiveExpression(suggestions)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Suggestions", CreateSuggestionsExpression(indexDefinition)));
 			}
 
 			if (indexDefinition.SpatialIndexes.Count > 0)
 			{
-				var spatialIndexes = new ArrayInitializerExpression();
-
-				indexDefinition.SpatialIndexes.ForEach(spatialIndex =>
-				{
-					var property = new ArrayInitializerExpression();
-					property.Elements.Add(new PrimitiveExpression(spatialIndex.Key));
-
-					var value = spatialIndex.Value;
-					property.Elements.Add(new ObjectCreateExpression
-					{
-						Type = new PrimitiveType("SpatialOptions"),
-						Initializer = new ArrayInitializerExpression
-						{
-							Elements =
-							{
-								new NamedExpression("Type", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("SpatialFieldType")), value.Type.ToString())),
-								new NamedExpression("Strategy", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("SpatialSearchStrategy")), value.Strategy.ToString())),
-								new NamedExpression("MaxTreeLevel", new PrimitiveExpression(value.MaxTreeLevel)),
-								new NamedExpression("MinX", new PrimitiveExpression(value.MinX)),
-								new NamedExpression("MaxX", new PrimitiveExpression(value.MaxX)),
-								new NamedExpression("MinY", new PrimitiveExpression(value.MinY)),
-								new NamedExpression("MaxY", new PrimitiveExpression(value.MaxY)),
-								new NamedExpression("Units", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("StringDistanceTypes")), value.Units.ToString()))
-							}
-						}
-					});
-
-					spatialIndexes.Elements.Add(property);
-				});
-
-				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SpatialIndexes", new PrimitiveExpression(spatialIndexes)));
+				objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SpatialIndexes", CreateSpatialIndexesExpression(indexDefinition)));
 			}
 
 			var createIndexDefintion = new MethodDeclaration
@@ -353,26 +291,111 @@ namespace Raven.Database.Server.Controllers
 					new ReturnStatement(objectCreateExpression)
 				}
 			};
-			ind.Members.Add(createIndexDefintion);
-			var text = QueryParsingUtils.GenerateText(ind, new OrderedPartCollection<AbstractDynamicCompilationExtension>());
+			indexDeclaration.Members.Add(createIndexDefintion);
+
+			var namespaces = new HashSet<string>
+				{
+					typeof (SystemTime).Namespace,
+					typeof (Enumerable).Namespace,
+					typeof (IEnumerable<>).Namespace,
+					typeof (IEnumerable).Namespace,
+					typeof (int).Namespace,
+					typeof (CultureInfo).Namespace,
+					typeof (Regex).Namespace,
+					typeof (AbstractIndexCreationTask).Namespace,
+					typeof (IndexDefinition).Namespace,
+					typeof (StringDistanceTypes).Namespace,
+				};
+
+			var text = QueryParsingUtils.GenerateText(indexDeclaration, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), namespaces);
 		
 			return GetMessageWithObject(text);
 		}
 
-		private static PrimitiveExpression GenerateExpressionFromStringToEnumDictionary<T>(IEnumerable<KeyValuePair<string, T>> dictionary)
+		private static ArrayInitializerExpression CreateExpressionFromStringToEnumDictionary<T>(IEnumerable<KeyValuePair<string, T>> dictionary)
 		{
 			var elements = new ArrayInitializerExpression();
 			dictionary.ForEach(keyValuePair =>
 			{
 				var property = new ArrayInitializerExpression();
-				property.Elements.Add(new PrimitiveExpression(keyValuePair.Key));
+				property.Elements.Add(new StringLiteralExpression(keyValuePair.Key));
 
 				var value = keyValuePair.Value;
 				property.Elements.Add(new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType(value.GetType().Name)), value.ToString()));
 
 				elements.Elements.Add(property);
 			});
-			return new PrimitiveExpression(elements);
+			return elements;
+		}
+
+		private static ArrayInitializerExpression CreateAnalizersExpression(IndexDefinition indexDefinition)
+		{
+			var analyzers = new ArrayInitializerExpression();
+
+			indexDefinition.Analyzers.ForEach(analyzer =>
+			{
+				var property = new ArrayInitializerExpression();
+				property.Elements.Add(new StringLiteralExpression(analyzer.Key));
+				property.Elements.Add(new StringLiteralExpression(analyzer.Value));
+				analyzers.Elements.Add(property);
+			});
+
+			return analyzers;
+		}
+
+		private static ArrayInitializerExpression CreateSuggestionsExpression(IndexDefinition indexDefinition)
+		{
+			var suggestions = new ArrayInitializerExpression();
+
+			indexDefinition.Suggestions.ForEach(suggestion =>
+			{
+				var property = new ArrayInitializerExpression();
+				property.Elements.Add(new StringLiteralExpression(suggestion.Key));
+
+				var value = suggestion.Value;
+				property.Elements.Add(new ObjectCreateExpression
+				{
+					Type = new PrimitiveType("SuggestionOptions"),
+					Initializer = new ArrayInitializerExpression(
+						new NamedExpression("Distance", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("StringDistanceTypes")), value.Distance.ToString())),
+						new NamedExpression("Accuracy", new PrimitiveExpression(value.Accuracy))
+					)
+				});
+				suggestions.Elements.Add(property);
+			});
+
+			return suggestions;
+		}
+
+		private static ArrayInitializerExpression CreateSpatialIndexesExpression(IndexDefinition indexDefinition)
+		{
+			var spatialIndexes = new ArrayInitializerExpression();
+
+			indexDefinition.SpatialIndexes.ForEach(spatialIndex =>
+			{
+				var property = new ArrayInitializerExpression();
+				property.Elements.Add(new StringLiteralExpression(spatialIndex.Key));
+
+				var value = spatialIndex.Value;
+				property.Elements.Add(new ObjectCreateExpression
+				{
+					Type = new PrimitiveType("SpatialOptions"),
+					Initializer = new ArrayInitializerExpression(
+						new NamedExpression("Type", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("SpatialFieldType")), value.Type.ToString())),
+						new NamedExpression("Strategy", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("SpatialSearchStrategy")), value.Strategy.ToString())),
+						new NamedExpression("MaxTreeLevel", new PrimitiveExpression(value.MaxTreeLevel)),
+						new NamedExpression("MinX", new PrimitiveExpression(value.MinX)),
+						new NamedExpression("MaxX", new PrimitiveExpression(value.MaxX)),
+						new NamedExpression("MinY", new PrimitiveExpression(value.MinY)),
+						new NamedExpression("MaxY", new PrimitiveExpression(value.MaxY)),
+						new NamedExpression("Units", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("SpatialUnits")), value.Units.ToString()))
+					)
+				});
+
+				spatialIndexes.Elements.Add(property);
+			});
+
+			return spatialIndexes;
 		}
 
 		private HttpResponseMessage GetIndexDefinition(string index)

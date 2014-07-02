@@ -40,23 +40,28 @@ namespace Raven.Database.Linq
 	public static class QueryParsingUtils
 	{
 		[CLSCompliant(false)]
-		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
+		public static string GenerateText(TypeDeclaration type, 
+			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+			HashSet<string> namespaces = null)
 		{
 			var unit = new SyntaxTree();
 
-			var namespaces = new HashSet<string>
+			if (namespaces == null)
 			{
-				typeof (SystemTime).Namespace,
-				typeof (AbstractViewGenerator).Namespace,
-				typeof (Enumerable).Namespace,
-				typeof (IEnumerable<>).Namespace,
-				typeof (IEnumerable).Namespace,
-				typeof (int).Namespace,
-				typeof (LinqOnDynamic).Namespace,
-				typeof(Field).Namespace,
-				typeof(CultureInfo).Namespace,
-				typeof(Regex).Namespace
-			};
+				namespaces = new HashSet<string>
+				{
+					typeof (SystemTime).Namespace,
+					typeof (AbstractViewGenerator).Namespace,
+					typeof (Enumerable).Namespace,
+					typeof (IEnumerable<>).Namespace,
+					typeof (IEnumerable).Namespace,
+					typeof (int).Namespace,
+					typeof (LinqOnDynamic).Namespace,
+					typeof (Field).Namespace,
+					typeof (CultureInfo).Namespace,
+					typeof (Regex).Namespace
+				};
+			}
 
 			foreach (var extension in extensions)
 			{
@@ -71,7 +76,6 @@ namespace Raven.Database.Linq
 				unit.Members.Add(new UsingDeclaration(ns));
 			}
 
-			unit.Members.Add(new WindowsNewLine());
 			unit.Members.Add(new WindowsNewLine());
 
 			unit.Members.Add(type);
