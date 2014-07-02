@@ -98,7 +98,7 @@ namespace Raven.Database.Json
 				var jsObject = scope.ToJsObject(jintEngine, doc);
 			    jintEngine.Invoke("ExecutePatchScript", jsObject);
 
-			    CleanupEngine(patch, jintEngine);
+			    CleanupEngine(patch, jintEngine, scope);
 
 				OutputLog(jintEngine);
 
@@ -131,13 +131,13 @@ namespace Raven.Database.Json
 			}
 		}
 
-		private void CleanupEngine(ScriptedPatchRequest patch, Engine jintEngine)
+		private void CleanupEngine(ScriptedPatchRequest patch, Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
 			foreach (var kvp in patch.Values)
 				jintEngine.Global.Delete(kvp.Key, true);
 
 			jintEngine.Global.Delete("__document_id", true);
-			RemoveEngineCustomizations(jintEngine);
+			RemoveEngineCustomizations(jintEngine, scope);
 		}
 
 		private void PrepareEngine(ScriptedPatchRequest patch, string docId, int size, ScriptedJsonPatcherOperationScope scope, Engine jintEngine)
@@ -171,10 +171,6 @@ namespace Raven.Database.Json
 			jintEngine.ResetStatementsCount();
 			if (size != 0)
 				jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
-		}
-
-		protected virtual void RemoveEngineCustomizations(Engine jintEngine)
-		{
 		}
 
 		private Engine CreateEngine(ScriptedPatchRequest patch)
@@ -227,8 +223,36 @@ function ExecutePatchScript(docInner){{
 			jintEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs));
 		}
 
-		protected virtual void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
+		protected virtual void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
+			RavenJToken functions;
+			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
+				return;
+
+			engine.Execute(string.Format(@"
+var customFunctions = function() {{ 
+	var exports = {{ }};
+	{0};
+	return exports;
+}}();
+for(var customFunction in customFunctions) {{
+	this[customFunction] = customFunctions[customFunction];
+}};", functions));
+		}
+
+		protected virtual void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
+		{
+		    RavenJToken functions;
+		    if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
+                return;
+
+			engine.Execute(@"
+if(customFunctions) { 
+	for(var customFunction in customFunctions) { 
+		delete this[customFunction]; 
+	}; 
+};");
+			engine.SetValue("customFunctions", JsValue.Undefined);
 		}
 
 		private void OutputLog(Engine engine)

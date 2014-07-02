@@ -34,7 +34,7 @@ class periodicExport extends viewModelBase {
         this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
         
         var self = this;
-        this.isSaveEnabled = ko.computed(function () {
+        this.isSaveEnabled = ko.computed(() => {
             return (self.backupConfigDirtyFlag().isDirty()) &&
                 (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
         });

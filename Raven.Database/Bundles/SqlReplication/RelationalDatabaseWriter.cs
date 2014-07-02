@@ -185,7 +185,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					cmd.CommandText = sb.ToString();
 					try
 					{
-						cmd.ExecuteNonQuery();
+                        ExecuteCommand(cmd);
 					}
 					catch (Exception e)
 					{
@@ -239,7 +239,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					try
 					{
-						cmd.ExecuteNonQuery();
+						ExecuteCommand(cmd);
 					}
 					catch (Exception e)
 					{
@@ -253,7 +253,12 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public string SanitizeSqlValue(string sqlValue)
+	    protected virtual void ExecuteCommand(DbCommand cmd)
+	    {
+	        cmd.ExecuteNonQuery();
+	    }
+
+	    public string SanitizeSqlValue(string sqlValue)
 		{
 			return sqlValue.Replace("'", "''");
 		}

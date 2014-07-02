@@ -5,9 +5,9 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
-    private CONNECTION_STRING = "cs";
-    private CONNECTION_STRING_NAME = "csn";
-    private CONNECTION_STRING_SETTING_NAME = "cssn";
+    private CONNECTION_STRING = "Connection String";
+    private CONNECTION_STRING_NAME = "Connection String Name";
+    private CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
 
     availableConnectionStringTypes = [
         { label: "Connection String", value: this.CONNECTION_STRING },
@@ -33,6 +33,8 @@ class sqlReplication extends document {
 
     collections = ko.observableArray<string>();
     searchResults = ko.observableArray<string>();
+
+    showReplicationConfiguration = ko.observable<boolean>(false);
 
     constructor(dto: sqlReplicationDto) {
         super(dto);

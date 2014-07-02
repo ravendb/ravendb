@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace Voron.Trees
 {
@@ -13,7 +12,7 @@ namespace Voron.Trees
 
 		public Slice CurrentKey
 		{
-			get { return new Slice(Current); }
+			get { throw new InvalidOperationException("No current page"); }
 		}
 
 		public int GetCurrentDataSize()

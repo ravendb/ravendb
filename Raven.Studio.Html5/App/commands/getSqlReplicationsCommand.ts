@@ -4,7 +4,7 @@ import database = require("models/database");
 
 class getSqlReplicationsCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private sqlReplicationName:string = null) {
         super();
     }
 

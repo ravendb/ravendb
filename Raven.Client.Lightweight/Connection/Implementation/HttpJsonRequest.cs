@@ -457,7 +457,7 @@ namespace Raven.Client.Connection
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				var data = await RavenJToken.TryLoadAsync(responseStream);
+				var data = RavenJToken.TryLoad(responseStream);
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
