@@ -24,9 +24,9 @@ namespace Raven.Database.Bundles.SqlReplication
 			this.docId = docId;
 		}
 
-		protected override void RemoveEngineCustomizations(Engine engine)
+		protected override void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			base.RemoveEngineCustomizations(engine);
+			base.RemoveEngineCustomizations(engine, scope);
 
 			engine.Global.Delete("documentId", true);
 			engine.Global.Delete("replicateTo", true);

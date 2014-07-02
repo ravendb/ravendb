@@ -98,7 +98,7 @@ namespace Raven.Database.Json
 				var jsObject = scope.ToJsObject(jintEngine, doc);
 			    jintEngine.Invoke("ExecutePatchScript", jsObject);
 
-			    CleanupEngine(patch, jintEngine);
+			    CleanupEngine(patch, jintEngine, scope);
 
 				OutputLog(jintEngine);
 
@@ -131,13 +131,13 @@ namespace Raven.Database.Json
 			}
 		}
 
-		private void CleanupEngine(ScriptedPatchRequest patch, Engine jintEngine)
+		private void CleanupEngine(ScriptedPatchRequest patch, Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
 			foreach (var kvp in patch.Values)
 				jintEngine.Global.Delete(kvp.Key, true);
 
 			jintEngine.Global.Delete("__document_id", true);
-			RemoveEngineCustomizations(jintEngine);
+			RemoveEngineCustomizations(jintEngine, scope);
 		}
 
 		private void PrepareEngine(ScriptedPatchRequest patch, string docId, int size, ScriptedJsonPatcherOperationScope scope, Engine jintEngine)
@@ -240,8 +240,12 @@ for(var customFunction in customFunctions) {{
 }};", functions));
 		}
 
-		protected virtual void RemoveEngineCustomizations(Engine engine)
+		protected virtual void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
+		    RavenJToken functions;
+		    if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
+                return;
+
 			engine.Execute(@"
 if(customFunctions) { 
 	for(var customFunction in customFunctions) { 
