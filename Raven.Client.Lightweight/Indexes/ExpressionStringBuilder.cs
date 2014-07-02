@@ -320,7 +320,10 @@ namespace Raven.Client.Indexes
 				foreach (var customAttribute in propertyInfo.GetCustomAttributes(true))
 				{
 					string propName;
-					switch (customAttribute.GetType().Name)
+					var customAttributeType = customAttribute.GetType();
+					if (typeof (JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+						continue;
+					switch (customAttributeType.Name)
 					{
 						case "JsonPropertyAttribute":
 							propName = ((dynamic)customAttribute).PropertyName;
