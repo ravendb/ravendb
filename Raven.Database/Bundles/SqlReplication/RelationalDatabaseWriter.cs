@@ -191,7 +191,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					cmd.CommandText = sb.ToString();
 					try
 					{
-						cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery(); ;
 					}
 					catch (Exception e)
 					{
@@ -345,7 +345,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					try
 					{
-						cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery(); 
 					}
 					catch (Exception e)
 					{

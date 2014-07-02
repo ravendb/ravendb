@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Journal
@@ -27,7 +28,7 @@ namespace Voron.Tests.Journal
 			long pageAllocatedInUncommittedTransaction;
 			using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var page = tx1.AllocatePage(1);
+				var page = tx1.AllocatePage(1, PageFlags.Leaf);
 
 				pageAllocatedInUncommittedTransaction = page.PageNumber;
 

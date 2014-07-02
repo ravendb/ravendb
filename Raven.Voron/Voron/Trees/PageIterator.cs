@@ -8,10 +8,12 @@ namespace Voron.Trees
 	{
 		private readonly Page _page;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
+		private MemorySlice _currentInternalKey;
 
 		public PageIterator(Page page)
 		{
-			this._page = page;
+			_page = page;
+			_currentInternalKey = page.CreateNewEmptyKey();
 		}
 
 		public void Dispose()
@@ -24,8 +26,10 @@ namespace Voron.Trees
 			var current = _page.Search(key);
 			if (current == null)
 				return false;
-			_currentKey.Set(current);
-			return this.ValidateCurrentKey(current);
+
+			_page.SetNodeKey(current, ref _currentInternalKey);
+			_currentKey = _currentInternalKey.ToSlice();
+			return this.ValidateCurrentKey(current, _page);
 		}
 
 		public NodeHeader* Current
@@ -84,11 +88,12 @@ namespace Voron.Trees
 				return false;
 
 			var current = _page.GetNode(_page.LastSearchPosition);
-			if (this.ValidateCurrentKey(current) == false)
+			if (this.ValidateCurrentKey(current, _page) == false)
 			{
 				return false;
 			}
-			_currentKey.Set(current);
+			_page.SetNodeKey(current, ref _currentInternalKey);
+			_currentKey = _currentInternalKey.ToSlice();
 			return true;
 		}
 

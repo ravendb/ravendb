@@ -107,6 +107,7 @@ class aceEditorBindingHandler {
             completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
             completerHostObject?: any;
+            minHeight?:number;
         },
         allBindings,
         viewModel,
@@ -120,6 +121,7 @@ class aceEditorBindingHandler {
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         var langTools = null;
         var completerHostObject = bindingValues.completerHostObject;
+        var minHeight = bindingValues.minHeight ? bindingValues.minHeight:140;
 
 
         if (typeof code !== "function") {
@@ -168,7 +170,7 @@ class aceEditorBindingHandler {
         // Initialize ace resizeble text box
         aceEditor.setOption('vScrollBarAlwaysVisible', true);
         aceEditor.setOption('hScrollBarAlwaysVisible', true);
-        var minHeight = 120;
+        
         if ($(element).height() < minHeight) {
             $(element).height(minHeight);
         }

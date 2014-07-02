@@ -12,12 +12,15 @@
     <li class="active">
         <span>Settings</span>
     </li>
+    <li class="active" data-bind="text: activeSubViewTitle">
+        <a data-bind="attr: { href: hash }, text: title"></a>
+    </li>
 </ul>
 
 <div class="settings-container row">
     <div class="col-md-2">
         <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
-            <li data-bind="css: { active: isActive }, visible: $parent.routeIsVisible($data)">
+            <li data-bind="css: { active: (isActive() || $root.isEditingSqlReplication($root.router.navigationModel,route) === true) }, visible: $parent.routeIsVisible($data)">
                 <a data-bind="attr: { href: hash }, text: title"></a>
             </li>
         </ul>

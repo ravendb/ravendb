@@ -122,6 +122,7 @@
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />
     <Compile Include="Trees\Rebalance.cs" />
+    <Compile Include="Trees\TreesWithPrefixedKeys.cs" />
     <Compile Include="Trees\Updates.cs" />
     <Compile Include="Util\CrcTests.cs" />
     <Compile Include="Util\ImmutableAppendOnlyTests.cs" />

@@ -212,6 +212,53 @@ namespace Raven.Database.Server.Controllers
             return response;
         }
 
+        [HttpGet]
+        [Route("studio-tasks/get-sql-replication-stats")]
+        [Route("databases/{databaseName}/studio-tasks/get-sql-replication-stats")]
+        public HttpResponseMessage GetSQLReplicationStats(string sqlReplicationName)
+        {
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+                return GetMessageWithObject(new
+                {
+                    Error = "SQL Replication bundle is not installed"
+                }, HttpStatusCode.NotFound);
+
+            var matchingStats = task.Statistics.FirstOrDefault(x => x.Key == sqlReplicationName);
+
+            if (matchingStats.Key != null)
+            {
+                return GetMessageWithObject(task.Statistics.FirstOrDefault(x => x.Key == sqlReplicationName));
+            }
+            return GetEmptyMessage(HttpStatusCode.NotFound);
+        }
+
+        [HttpPost]
+        [Route("studio-tasks/reset-sql-replication")]
+        [Route("databases/{databaseName}/studio-tasks/reset-sql-replication")]
+        public async Task<HttpResponseMessage> ResetSqlReplication(string sqlReplicationName)
+        {
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+                return GetMessageWithObject(new
+                {
+                    Error = "SQL Replication bundle is not installed"
+                }, HttpStatusCode.NotFound);
+            SqlReplicationStatistics stats;
+            task.Statistics.TryRemove(sqlReplicationName, out stats);
+            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlreplicationStatus, null);
+            if (jsonDocument != null)
+            {
+                var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
+                replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
+                
+                Database.Documents.Put(SqlReplicationTask.RavenSqlreplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
+            }
+
+
+            return GetEmptyMessage(HttpStatusCode.NoContent);
+        }
+
         [HttpPost]
         [Route("studio-tasks/is-base-64-key")]
         public async Task<HttpResponseMessage> IsBase64Key(string path = null)

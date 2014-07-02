@@ -316,14 +316,31 @@ String.prototype.count = function (regex: string) {
 
 // TODO: this should really be in its own file, similiar to common/aceEditorBindingHandler
 ko.bindingHandlers['slideVisible'] = {
-    init: function (element, valueAccessor) {
+    init: (element, valueAccessor) => {
         var value = valueAccessor();
         jQuery(element).toggle(ko.unwrap(value));
     },
-    update: function (element, valueAccessor) {
+    update: (element, valueAccessor) => {
         var value = valueAccessor();
         ko.unwrap(value) ? jQuery(element).slideDown() : jQuery(element).slideUp();
     }
+};
+
+ko.bindingHandlers['numericValue'] = {
+    init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+        var underlyingObservable = valueAccessor();
+        var interceptor = ko.computed({
+            read: underlyingObservable,
+            write: value => {
+                if (!isNaN(value)) {
+                    underlyingObservable(parseFloat(value));
+                }
+            },
+            disposeWhenNodeIsRemoved: element
+        });
+        ko.bindingHandlers.value.init(element, () => interceptor, allBindingsAccessor, viewModel, bindingContext);
+    },
+    update: ko.bindingHandlers.value.update
 };
 
 class Pair<T1, T2> {
