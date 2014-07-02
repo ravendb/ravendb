@@ -38,7 +38,7 @@ class changesApi {
 
         var resourcePath = appUrl.forResourceQuery(this.rs);
 
-        if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
+        if ("1" in window && changesApi.isServerSupportingWebSockets) {
             this.connectWebSocket(resourcePath, coolDownWithDataLoss);
         }
         else if ("EventSource" in window) {
@@ -84,10 +84,9 @@ class changesApi {
                     this.connectToChangesApiTask.resolve();
                 }
                 })
-            .fail((e) => {
+            .fail(() => {
                 // Connection has closed so try to reconnect every 3 seconds.
                 setTimeout(() => this.connectWebSocket(resourcePath, coolDownWithDataLoss), 3 * 1000);
-                this.onError(e);
         });
     }
 
@@ -96,8 +95,10 @@ class changesApi {
 
         var isConnectionOpenedOnce: boolean = false;
 
+        var x = false;
+
         this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e) => {
+        this.eventSource.onerror = (e: Event) => {
             if (isConnectionOpenedOnce == false) {
                 this.connectToChangesApiTask.reject();
             }

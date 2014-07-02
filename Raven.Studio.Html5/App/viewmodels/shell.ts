@@ -45,7 +45,7 @@ import enterApiKey = require("viewmodels/enterApiKey");
 
 class shell extends viewModelBase {
     private router = router;
-    canStudioBeLoaded = ko.computed(() => ("EventSource" in window || "WebSocket" in window)); //IE9 and below
+    canStudioBeLoaded = ko.computed(() => ("EventSource" in window || "WebSocket" in window)); //IE10 and above
 
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
@@ -195,7 +195,6 @@ class shell extends viewModelBase {
             });
         } else {
             this.confirmationMessage(':-(', "Your browser isn't supported. Please use a modern browser!", []);
-            shell.globalChangesApi.dispose();
         }
     }
 
@@ -363,7 +362,7 @@ class shell extends viewModelBase {
                 if (locationHash.indexOf("#filesystems") == 0) {
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
-                else if (locationHash.indexOf("#counterstorages") == 0 && shell.counterStorages().length > 0) {
+                else if (locationHash.indexOf("#counterstorages") == 0) {
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
                 } else {
                     this.activateResource(appUrl.getDatabase(), shell.databases);
@@ -372,13 +371,15 @@ class shell extends viewModelBase {
     }
 
     private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
-        var newResource;
+        var arrayLength = observableResourceArray().length;
 
-        if (observableResourceArray().length > 0) {
+        if (arrayLength > 0) {
+            var newResource;
+
             if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
                 newResource.activate();
             } else {
-                observableResourceArray.first(x => x.isVisible()).activate();
+                observableResourceArray.first().activate();
             }
         }
     }
@@ -510,6 +511,8 @@ class shell extends viewModelBase {
             this.disconnectFromResourceChangesApi();
 
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
+
+            shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs));
 
             this.currentConnectedFileSystem = fs;
         }
