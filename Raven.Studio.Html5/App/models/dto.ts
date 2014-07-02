@@ -818,6 +818,7 @@ interface queryFieldInfo {
 
 interface indexSuggestion extends queryFieldInfo {
     Suggestion: string;
+}
 
 interface mappedResultInfo {
     ReduceKey: string;

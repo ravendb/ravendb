@@ -25,12 +25,6 @@ interface Window {
     EventSource: EventSource;
 }
 
-interface Document {
-    webkitFullscreenEnabled: boolean;
-    mozFullScreenEnabled: boolean;
-    fullscreenEnabled: boolean;
-}
-
 declare class EventSource {
     constructor(string);
     close();
