@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Amazon.EC2.Model;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -1546,15 +1547,31 @@ namespace Raven.Database.Indexing
             ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
 			ConcurrentQueue<IDictionary<string, Etag>> missingReferencedDocs)
         {
+
+			IDictionary<string, HashSet<string>> merged = new Dictionary<string, HashSet<string>>(StringComparer.InvariantCultureIgnoreCase);
             IDictionary<string, HashSet<string>> result;
             while (allReferencedDocs.TryDequeue(out result))
             {
-                foreach (var referencedDocument in result)
-                {
-                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
-                    actions.General.MaybePulseTransaction();
-                }
+	            foreach (var kvp in result)
+	            {
+		            HashSet<string> set;
+		            if (merged.TryGetValue(kvp.Key, out set))
+		            {
+						logIndexing.Debug("Merging references for key = {0}, references = {1}", kvp.Key, String.Join(",", set));
+			            set.UnionWith(kvp.Value);
+		            }
+		            else
+		            {
+			            merged.Add(kvp.Key, kvp.Value);
+		            }
+	            }
             }
+
+			foreach (var referencedDocument in merged)
+			{
+				actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+				actions.General.MaybePulseTransaction();
+			}
             var task = new TouchReferenceDocumentIfChangedTask
             {
                 Index = name, // so we will get IsStale properly
@@ -1577,7 +1594,7 @@ namespace Raven.Database.Indexing
                     task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
                 }
 				
-				logIndexing.Debug("Scheduled to touch documents: {0}", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value + ","));				
+				logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(",",task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));				
             }
             if (task.ReferencesToCheck.Count == 0)
                 return;

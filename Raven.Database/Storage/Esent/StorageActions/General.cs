@@ -178,13 +178,19 @@ namespace Raven.Storage.Esent.StorageActions
 			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
 			if (sizeInBytes <= 0) // there has been an error
 			{
-				if (maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
+				if (maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+				{
+					logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 					PulseTransaction();
+				}
 				return;
 			}
 			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
-			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
+			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+			{
+				logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 				PulseTransaction();
+			}
 		}
 
 		public bool UsingLazyCommit { get; set; }

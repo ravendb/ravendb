@@ -364,10 +364,12 @@ namespace Raven.Storage.Esent.StorageActions
 					                                           Encoding.Unicode);
 
 					if (references.Contains(reference))
-					{
+					{						
 						references.Remove(reference);
 						continue;
 					}
+
+					logger.Debug("UpdateDocumentReferences() --> delete {0} -> {1} on index {2}", key, reference, view);
 					Api.JetDelete(session, IndexedDocumentsReferences);
 
 				} while (Api.TryMoveNext(session, IndexedDocumentsReferences));

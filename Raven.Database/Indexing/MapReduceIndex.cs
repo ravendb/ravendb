@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
@@ -190,6 +191,18 @@ namespace Raven.Database.Indexing
 			if (currentKey == null || currentDocumentResults.Count == 0)
 				return 0;
 
+		    if (logIndexing.IsDebugEnabled)
+		    {
+			    var sb = new StringBuilder()
+				    .AppendFormat("Index {0} for document {1} resulted in:", name, currentKey)
+				    .AppendLine();
+			    foreach (var currentDocumentResult in currentDocumentResults)
+			    {
+				    sb.AppendLine(JsonConvert.SerializeObject(currentDocumentResult));
+			    }
+			    logIndexing.Debug(sb.ToString());
+		    }
+
 			int count = 0;
 			var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition);
 			foreach (var doc in results)
@@ -207,7 +220,7 @@ namespace Raven.Database.Indexing
 
 				var data = GetMappedData(doc);
 
-				logIndexing.Debug("Storing map result for document = {0}, recuce key = {1}, data = {2}", currentKey, reduceKey, data);
+				logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", name, currentKey, reduceKey, data);
 				actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
 				statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
 				actions.General.MaybePulseTransaction();
