@@ -1,8 +1,4 @@
-﻿<div class="alert alert-danger">
-    <p>Note: not implemented yet</p>
-    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2060">You can track progress here</a>
-</div>
-<div id="csvImportContainer" class="panel panel-default not-implemented-yet">
+﻿<div id="csvImportContainer" class="panel panel-default">
 
     <div class="panel-heading">
         <h3 class="panel-title">Csv Import</h3>
@@ -15,16 +11,20 @@
             </div>
         </div>
         <div id="addfileContainer">
-            <form id="sendFileForm" action="/" enctype="multipart/form-data">
-                <div class="fileinputs">
-                    <div class="fakefile">
-                        <button class="btn btn-primary">
-                            <span class="glyphicon glyphicon-floppy-save"></span>
-                            <span>Csv Import</span>
-                        </button>
-                    </div>
+            <input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+            <br />
+            <div class="btn-toolbar" data-bind="visible: hasFileSelected">
+                <div class="btn-group">
+                    <button class="btn btn-primary" data-bind="click: importCsv">
+                        <div class="glyphicon glyphicon-floppy-save"></div>
+                        Csv Import
+                    </button>
                 </div>
-            </form>
+            </div>
+            <br />
+            <div class="progress progress-striped active" data-bind="visible: isImporting">
+                <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+            </div>
         </div>
 
     </div>

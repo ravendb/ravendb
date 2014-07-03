@@ -49,7 +49,7 @@
                             <li accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+Shift+D)"><a style="cursor: pointer;">Data</a></li>
                             <li accesskey="m" data-bind="click: activateMeta, css: { active: isEditingMetadata }" title="Edit document metadata (Alt+Shift+M)"><a style="cursor: pointer;">Metadata</a></li>
                         </ul>
-                        <pre id="docEditor" class="form-control" data-bind="aceEditor: { code: text, theme: 'ace/theme/github', fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+                        <pre id="docEditor" class="form-control" data-bind="aceEditor: { code: text, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
                     </div>
                 </div>
             </div>

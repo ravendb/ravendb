@@ -68,6 +68,7 @@ class patch extends viewModelBase {
                 this.clearDocumentPreview();
             }
         });
+
     }
 
     attached() {
@@ -85,7 +86,6 @@ class patch extends viewModelBase {
         });
 
         var rowCreatedEvent = app.on(patch.gridSelector + 'RowsCreated').then(() => {
-            $("#matchingDocumentsContainer").hide();
             rowCreatedEvent.off();
         });
     }
@@ -113,15 +113,12 @@ class patch extends viewModelBase {
         switch (patchOnOption) {
             case "Collection":
                 this.fetchAllCollections();
-                $("#matchingDocumentsContainer").show();
                 break;
             case "Index":
                 this.fetchAllIndexes();
-                $("#matchingDocumentsContainer").show();
                 break;
             default:
                 this.currentCollectionPagedItems(null);
-                $("#matchingDocumentsContainer").hide();
                 break;
         }
     }
@@ -140,6 +137,7 @@ class patch extends viewModelBase {
     setSelectedCollection(coll: collection) {
         this.patchDocument().selectedItem(coll.name);
         this.currentCollectionPagedItems(coll.getDocuments());
+        $("#matchingDocumentsGrid").resize();
     }
 
     fetchAllIndexes(): JQueryPromise<any> {
@@ -307,7 +305,6 @@ class patch extends viewModelBase {
 
         return null;
     }
-        
 }
 
 export = patch;

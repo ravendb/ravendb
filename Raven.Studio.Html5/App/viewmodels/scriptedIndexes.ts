@@ -21,13 +21,13 @@ class scriptedIndexes extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
-        this.inactiveIndexNames = ko.computed(function() {
+        this.inactiveIndexNames = ko.computed(() => {
             var activeIndexNames = this.allScriptedIndexes()
                 .filter((index: scriptedIndex)=> { return !index.isMarkedToDelete(); })
                 .map((index: scriptedIndex) => index.indexName());
             return this.indexNames().filter((indexName: string) => { return activeIndexNames.indexOf(indexName) < 0; });
         }, this);
-        this.firstIndex = ko.computed(function () {
+        this.firstIndex = ko.computed(() => {
             return !this.isFirstLoad() ? 0 : -1;
         }, this);
     }

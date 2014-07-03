@@ -158,7 +158,7 @@ namespace Voron.Tests
 			if (node == null)
 				return null;
 
-			var item1 = new Slice(node);
+			var item1 = p.GetNodeKey(node).ToSlice();
 
 			if (item1.Compare(key) != 0)
 				return null;

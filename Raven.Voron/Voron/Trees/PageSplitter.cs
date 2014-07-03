@@ -9,7 +9,7 @@ namespace Voron.Trees
     {
         private readonly Cursor _cursor;
         private readonly int _len;
-        private readonly Slice _newKey;
+        private readonly MemorySlice _newKey;
         private readonly NodeFlags _nodeType;
         private readonly ushort _nodeVersion;
         private readonly Page _page;
@@ -21,7 +21,7 @@ namespace Voron.Trees
 
         public PageSplitter(Transaction tx,
             Tree tree,
-            Slice newKey,
+            MemorySlice newKey,
             int len,
             long pageNumber,
             NodeFlags nodeType,
@@ -47,17 +47,17 @@ namespace Voron.Trees
         {
             Page rightPage = Tree.NewPage(_tx, _page.Flags, 1);
             _treeState.RecordNewPage(_page, 1);
-            rightPage.Flags = _page.Flags;
+
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-                Page newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
+				Page newRootPage = Tree.NewPage(_tx, _tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
                 _treeState.RootPageNumber = newRootPage.PageNumber;
                 _treeState.Depth++;
                 _treeState.RecordNewPage(newRootPage, 1);
 
                 // now add implicit left page
-                newRootPage.AddPageRefNode(0, Slice.BeforeAllKeys, _page.PageNumber);
+                newRootPage.AddPageRefNode(0, PrefixedSlice.BeforeAllKeys, _page.PageNumber);
                 _parentPage = newRootPage;
                 _parentPage.LastSearchPosition++;
             }
@@ -109,16 +109,18 @@ namespace Voron.Trees
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
                     NodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
                     Debug.Assert(node->Flags == NodeFlags.PageRef);
-                    rightPage.AddPageRefNode(0, Slice.Empty, node->PageNumber);
+					rightPage.AddPageRefNode(0, PrefixedSlice.BeforeAllKeys, node->PageNumber);
                     pos = AddNodeToPage(rightPage, 1);
 
-                    AddSeparatorToParentPage(rightPage, new Slice(node));
+	                var separatorKey = _page.GetNodeKey(node);
+
+                    AddSeparatorToParentPage(rightPage.PageNumber, separatorKey);
 
                     _page.RemoveNode(_page.NumberOfEntries - 1);
                 }
                 else
                 {
-                    AddSeparatorToParentPage(rightPage, _newKey);
+                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey);
                     pos = AddNodeToPage(rightPage, 0);
                 }
                 _cursor.Push(rightPage);
@@ -130,14 +132,16 @@ namespace Voron.Trees
 
         private byte* AddNodeToPage(Page page, int index)
         {
+	        var prefixedKey = page.PrepareKeyToInsert(_newKey, index);
+
             switch (_nodeType)
             {
                 case NodeFlags.PageRef:
-                    return page.AddPageRefNode(index, _newKey, _pageNumber);
+					return page.AddPageRefNode(index, prefixedKey, _pageNumber);
                 case NodeFlags.Data:
-                    return page.AddDataNode(index, _newKey, _len, _nodeVersion);
+					return page.AddDataNode(index, prefixedKey, _len, _nodeVersion);
                 case NodeFlags.MultiValuePageRef:
-                    return page.AddMultiValueNode(index, _newKey, _len, _nodeVersion);
+					return page.AddMultiValueNode(index, prefixedKey, _len, _nodeVersion);
                 default:
                     throw new NotSupportedException("Unknown node type");
             }
@@ -153,15 +157,14 @@ namespace Voron.Trees
 
             if (_page.IsLeaf)
             {
-                splitIndex = AdjustSplitPosition(_newKey, _len, _page, currentIndex, splitIndex, ref newPosition);
+                splitIndex = AdjustSplitPosition(currentIndex, splitIndex, ref newPosition);
             }
 
-            NodeHeader* currentNode = _page.GetNode(splitIndex);
-            var currentKey = new Slice(currentNode);
+	        var currentKey = _page.GetNodeKey(splitIndex);
 
-            // here we the current key is the separator key and can go either way, so 
+            // here the current key is the separator key and can go either way, so 
             // use newPosition to decide if it stays on the left node or moves to the right
-            Slice seperatorKey;
+            MemorySlice seperatorKey;
             if (currentIndex == splitIndex && newPosition)
             {
                 seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
@@ -171,8 +174,9 @@ namespace Voron.Trees
                 seperatorKey = currentKey;
             }
 
-            AddSeparatorToParentPage(rightPage, seperatorKey);
+            AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey);
 
+	        MemorySlice instance = _page.CreateNewEmptyKey();
             // move the actual entries from page to right page
             ushort nKeys = _page.NumberOfEntries;
             for (int i = splitIndex; i < nKeys; i++)
@@ -180,11 +184,13 @@ namespace Voron.Trees
                 NodeHeader* node = _page.GetNode(i);
                 if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                 {
-                    rightPage.CopyNodeDataToEndOfPage(node, Slice.Empty);
+                    rightPage.CopyNodeDataToEndOfPage(node, PrefixedSlice.BeforeAllKeys);
                 }
                 else
                 {
-                    rightPage.CopyNodeDataToEndOfPage(node);
+	                _page.SetNodeKey(node, ref instance);
+	                var key = rightPage.PrepareKeyToInsert(instance, rightPage.NumberOfEntries);
+					rightPage.CopyNodeDataToEndOfPage(node, key);
                 }
             }
             _page.Truncate(_tx, splitIndex);
@@ -204,18 +210,20 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private void AddSeparatorToParentPage(Page rightPage, Slice seperatorKey)
+        private void AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
         {
-            if (_parentPage.HasSpaceFor(_tx ,SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize) == false)
+	        var prefixedSeparatorKey = _parentPage.PrepareKeyToInsert(seperatorKey, _parentPage.LastSearchPosition);
+
+			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(prefixedSeparatorKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedSeparatorKey)) == false)
             {
-                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef,
+                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);
                 pageSplitter.Execute();
             }
             else
             {
                 _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
-                _parentPage.AddPageRefNode(_parentPage.LastSearchPosition, seperatorKey, rightPage.PageNumber);
+				_parentPage.AddPageRefNode(_parentPage.LastSearchPosition, prefixedSeparatorKey, pageNumber);
             }
         }
 
@@ -232,22 +240,24 @@ namespace Voron.Trees
         ///     item is also "large" and falls on the half with
         ///     "large" nodes, it also may not fit.
         /// </summary>
-        private int AdjustSplitPosition(Slice key, int len, Page page, int currentIndex, int splitIndex,
+        private int AdjustSplitPosition(int currentIndex, int splitIndex,
             ref bool newPosition)
         {
-            int nodeSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, key, len) + Constants.NodeOffsetSize;
-            if (page.NumberOfEntries >= 20 && nodeSize <= AbstractPager.PageMaxSpace/16)
+	        var prefixedKey = new PrefixedSlice(_newKey); // let's assume that _newkey won't be prefixed to ensure the destination page will have enough space
+
+			int nodeSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, prefixedKey , _len) + Constants.NodeOffsetSize;
+            if (_page.NumberOfEntries >= 20 && nodeSize <= AbstractPager.PageMaxSpace/16)
             {
                 return splitIndex;
             }
 
-            int pageSize = nodeSize;
+			int pageSize = nodeSize + (Constants.PrefixNodeHeaderSize + 1); // let's assume that prefix will be created to ensure the destination page will have enough space
             if (currentIndex <= splitIndex)
             {
                 newPosition = false;
                 for (int i = 0; i < splitIndex; i++)
                 {
-                    NodeHeader* node = page.GetNode(i);
+                    NodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
                     if (pageSize > AbstractPager.PageMaxSpace)
@@ -264,9 +274,9 @@ namespace Voron.Trees
             }
             else
             {
-                for (int i = page.NumberOfEntries - 1; i >= splitIndex; i--)
+                for (int i = _page.NumberOfEntries - 1; i >= splitIndex; i--)
                 {
-                    NodeHeader* node = page.GetNode(i);
+                    NodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
                     if (pageSize > AbstractPager.PageMaxSpace)

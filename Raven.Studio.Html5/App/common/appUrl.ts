@@ -13,7 +13,7 @@ class appUrl {
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-
+    
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         databases: ko.computed(() => appUrl.forDatabases()),
@@ -40,12 +40,14 @@ class appUrl {
         indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
+        visualizer: ko.computed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
+        editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
         customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
 
@@ -271,6 +273,14 @@ class appUrl {
         return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forVisualizer(db: database, index: string = null): string {
+        var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+        if (index) { 
+            url += "&index=" + index;
+        }
+        return url;
+    }
+
     static forApiKeys(): string {
         // Doesn't take a database, because API keys always works against the system database only.
         return "#databases/settings/apiKeys";
@@ -303,6 +313,11 @@ class appUrl {
 
     static forSqlReplications(db: database): string {
         return "#databases/settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forEditSqlReplication(sqlReplicationName: string, db: database):string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/settings/editSqlReplication/" + encodeURIComponent(sqlReplicationName) + "?" + databasePart;
     }
 
     static forScriptedIndexes(db: database): string {

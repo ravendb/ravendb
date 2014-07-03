@@ -71,7 +71,6 @@
     <Compile Include="DtcIssue.cs" />
     <Compile Include="Embedded.cs" />
     <Compile Include="ExplicitTransaction.cs" />
-    <Compile Include="ManyDocumentsViaDTC.cs" />
     <Compile Include="MoreDtcIssues.cs" />
     <Compile Include="MultiGetDTC.cs" />
     <Compile Include="NestedTransactions.cs" />

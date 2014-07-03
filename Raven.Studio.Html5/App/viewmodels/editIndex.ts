@@ -209,7 +209,8 @@ class editIndex extends viewModelBase {
                 saveCommand
                     .execute()
                     .done(() => {
-                        viewModelBase.dirtyFlag().reset(); // Resync Changes
+                        this.initializeDirtyFlag();
+                        this.editedIndex().name.valueHasMutated();
 
                         if (!this.isEditingExistingIndex()) {
                             this.isEditingExistingIndex(true);
@@ -222,8 +223,9 @@ class editIndex extends viewModelBase {
     }
 
     updateUrl(indexName: string) {
-        if(indexName!=null)
+        if (indexName != null && this.loadedIndexName() !== indexName) {
             router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
+        }
     }
 
     refreshIndex() {

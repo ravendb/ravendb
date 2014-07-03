@@ -54,6 +54,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\DebugActionType.cs" />
     <Compile Include="Debugging\DebugJournal.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
@@ -68,8 +69,13 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\MemoryMapNativeMethods.cs" />
     <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="PrefixComparisonCache.cs" />
+    <Compile Include="PrefixedSlice.cs" />
+    <Compile Include="SliceComparisonMethods.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="Trees\PageIterator.cs" />
+    <Compile Include="Trees\PrefixInfoSection.cs" />
+    <Compile Include="Trees\PrefixNodeHeader.cs" />
     <Compile Include="Trees\Tree.MultiTree.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
@@ -141,6 +147,7 @@
     <Compile Include="Util\DisposableAction.cs" />
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\LZ4.cs" />
+    <Compile Include="Util\MemoryUtils.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />

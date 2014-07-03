@@ -16,6 +16,19 @@ class settings extends viewModelBase {
     bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index"};
     userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
     systemDatabasePages = ["API Keys", "Windows Authentication"];
+    activeSubViewTitle: KnockoutComputed<string>;
+
+    isEditingSqlReplication(navigationalModel:any, curNavHash:any) {
+        var activeRoute = navigationalModel.first(r=> r.isActive());
+        if (!!activeRoute && !!curNavHash && !!activeRoute.hash) {
+            return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
+                activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0;
+        } else {
+            return false;
+        }
+
+        //($root.router.navigationModel.first(function(x){return x.isActive}).hash().indexOf('databases/settings/editSqlReplication/')>=0)
+    }
 
     constructor() {
         super();
@@ -31,10 +44,12 @@ class settings extends viewModelBase {
         var quotasRoute = { route: 'databases/settings/quotas', moduleId: 'viewmodels/quotas', title: 'Quotas', nav: true, hash: appUrl.forCurrentDatabase().quotas };
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
+        var editsqlReplicationsRoute = { route: 'databases/settings/editSqlReplication(/:sqlReplicationName)', moduleId: 'viewmodels/editSqlReplication', title: 'Edit SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().editSqlReplication };
         var versioningRoute = { route: 'databases/settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
         var periodicExportRoute = { route: 'databases/settings/periodicExports', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
         var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
+        
 
         this.router = durandalRouter.createChildRouter()
             .map([
@@ -44,6 +59,7 @@ class settings extends viewModelBase {
                 quotasRoute,
                 replicationsRoute,
                 sqlReplicationsRoute,
+                editsqlReplicationsRoute,
                 versioningRoute,
                 periodicExportRoute,
                 scriptedIndexesRoute,
@@ -52,6 +68,12 @@ class settings extends viewModelBase {
             .buildNavigationModel();
 
         this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
+
+        this.activeSubViewTitle = ko.computed(() => {
+            // Is there a better way to get the active route?
+            var activeRoute = this.router.navigationModel().first(r=> r.isActive());
+            return activeRoute != null ? activeRoute.title : "";
+        });
     }
 
     /**

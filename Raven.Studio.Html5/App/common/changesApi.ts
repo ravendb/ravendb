@@ -46,7 +46,7 @@ class changesApi {
         }
         else {
             //The browser doesn't support websocket and eventsource
-            console.log("Nor WebSocket nor EventSource are supported by your Browser!");
+            console.log("Neither WebSocket nor EventSource are supported by your Browser!");
             this.connectToChangesApiTask.reject();
         }
     }
@@ -61,7 +61,7 @@ class changesApi {
 
                 this.webSocket = new WebSocket('ws://' + host + resourcePath + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
 
-                var isConnectionOpenedOnce: boolean = false;
+                var isConnectionOpenedOnce = false;
 
                 this.webSocket.onmessage = (e) => this.onMessage(e);
                 this.webSocket.onerror = (e) => {
@@ -88,26 +88,32 @@ class changesApi {
                 // Connection has closed so try to reconnect every 3 seconds.
                 setTimeout(() => this.connectWebSocket(resourcePath, coolDownWithDataLoss), 3 * 1000);
                 this.onError(e);
-        });
+            });
     }
 
     private connectEventSource(resourcePath, coolDownWithDataLoss: number = 0) {
-        this.eventSource = new EventSource(resourcePath + '/changes/events?id=' + this.eventsId);
+        var getTokenTask = new getSingleAuthTokenCommand(resourcePath).execute();
 
-        var isConnectionOpenedOnce: boolean = false;
+        getTokenTask
+            .done((tokenObject: singleAuthToken) => {
+                var token = tokenObject.Token;
+                this.eventSource = new EventSource(resourcePath + '/changes/events?id=' + this.eventsId + "&singleUseAuthToken=" + token);
 
-        this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e) => {
-            if (isConnectionOpenedOnce == false) {
-                this.connectToChangesApiTask.reject();
-            }
-            this.onError(e);
-        };
-        this.eventSource.onopen = () => {
-            console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
-            isConnectionOpenedOnce = true;
-            this.connectToChangesApiTask.resolve();
-        }
+                var isConnectionOpenedOnce: boolean = false;
+
+                this.eventSource.onmessage = (e) => this.onMessage(e);
+                this.eventSource.onerror = (e) => {
+                    if (isConnectionOpenedOnce == false) {
+                        this.connectToChangesApiTask.reject();
+                    }
+                    this.onError(e);
+                };
+                this.eventSource.onopen = () => {
+                    console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
+                    isConnectionOpenedOnce = true;
+                    this.connectToChangesApiTask.resolve();
+                }
+            });
     }
 
     private send(command: string, value?: string) {

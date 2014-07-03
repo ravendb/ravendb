@@ -1,4 +1,4 @@
-define(["d3/nv"], function(nv) {
+define(["d3/d3", "d3/nv"], function(d3, nv) {
     nv.models.timelinesChart = function() {
         "use strict";
         //============================================================
@@ -708,4 +708,6 @@ define(["d3/nv"], function(nv) {
 
         return chart;
     }
+
+    return nv;
 });

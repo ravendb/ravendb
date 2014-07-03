@@ -24,24 +24,28 @@ namespace Raven.Database.Bundles.SqlReplication
 			this.docId = docId;
 		}
 
-		protected override void RemoveEngineCustomizations(Engine jintEngine)
+		protected override void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			jintEngine.Global.Delete("documentId", true);
-			jintEngine.Global.Delete("replicateTo", true);
+			base.RemoveEngineCustomizations(engine, scope);
+
+			engine.Global.Delete("documentId", true);
+			engine.Global.Delete("replicateTo", true);
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
-				jintEngine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
+				engine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
 			}
 		}
 
-		protected override void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
+		protected override void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			jintEngine.SetValue("documentId", docId);
-			jintEngine.SetValue("replicateTo", new Action<string,object>(ReplicateToFunction));
+			base.CustomizeEngine(engine, scope);
+
+			engine.SetValue("documentId", docId);
+			engine.SetValue("replicateTo", new Action<string,object>(ReplicateToFunction));
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
-				jintEngine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
+				engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
 				{
 					var tableName = current.TableName;
 					ReplicateToFunction(tableName, cols);

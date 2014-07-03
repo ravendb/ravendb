@@ -46,14 +46,14 @@ class periodicExportSetup {
     ];
     availableIntervalUnits = [this.TU_MINUTES, this.TU_HOURS, this.TU_DAYS];
 
-    additionalAwsInfoRequired = ko.computed(function () {
+    additionalAwsInfoRequired = ko.computed(() => {
         return jQuery.inArray(
             this.type(), [this.GLACIER_VAULT, this.S3_BUCKET]
             ) !== -1;
     }, this);
 
 
-    additionalAzureInfoRequired = ko.computed(function () {
+    additionalAzureInfoRequired = ko.computed(() => {
         return this.type() === this.AZURE_STORAGE;
     }, this);
 
@@ -63,11 +63,11 @@ class periodicExportSetup {
         this.setupTypeAndMainValue(dto);
 
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
-        this.incrementalBackupInterval(incr[0] ? incr[0].toString() : incr[0]);
+        this.incrementalBackupInterval(incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
 
         var full = this.prepareBackupInterval(dto.FullBackupIntervalMilliseconds);
-        this.fullBackupInterval(full[0] ? full[0].toString() : full[0]);
+        this.fullBackupInterval(full[0]);
         this.fullBackupIntervalUnit(full[1]);
 
         this.disabled(dto.Disabled);
@@ -167,7 +167,7 @@ class periodicExportSetup {
             }
             return [minutes, this.TU_MINUTES];
         }
-        return [];
+        return [0, this.TU_MINUTES];
     }
 
     private isValidTimeValue(value: number): boolean {

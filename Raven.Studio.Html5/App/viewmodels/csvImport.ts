@@ -3,43 +3,25 @@ import saveCsvFileCommand = require("commands/saveCsvFileCommand");
 
 class csvImport extends viewmodelBase {
     
-    constructor() {
-        super();
+    hasFileSelected = ko.observable(false);
+    isImporting = ko.observable(false);
 
-        
-
+    fileSelected(args: any) {
+        this.hasFileSelected(true);
     }
 
-    uploadFile() {
-       
-    }
-    
+    importCsv() {
+        if (!this.isImporting()) {
+            this.isImporting(true);
 
-    attached() {
-        var that = this;    
-           
-        /*document.getElementById('uploadedCsv').addEventListener('change', this.fileChanged, false);*/
-        $("#sendFileForm").submit(() => {
-            var saveFileFormElement: HTMLFormElement;
-            saveFileFormElement = <HTMLFormElement>document.getElementById('sendFileForm');
             var formData = new FormData();
-            
-            var fileElement = <HTMLInputElement>document.getElementById('uploadedCsv');
+            var fileInput = <HTMLInputElement>document.querySelector("#csvFilePicker");
+            formData.append("file", fileInput.files[0]);
 
-            formData.append("csvFile", fileElement.files[0]);
-
-            new saveCsvFileCommand(formData, fileElement.files[0].name, that.activeDatabase()).execute();
-        });
-    }
-
-    fileChanged() {
-        var saveFileFormElement: HTMLFormElement;
-        saveFileFormElement = <HTMLFormElement>document.getElementById('sendFileForm');
-        saveFileFormElement.submit();
-    }
-
-    uploadCsv() {
-        
+            new saveCsvFileCommand(formData, fileInput.files[0].name, this.activeDatabase())
+                .execute()
+                .always(() => this.isImporting(false));
+        }
     }
 
 }

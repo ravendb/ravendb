@@ -717,7 +717,14 @@ namespace Voron.Impl.Journal
 			}
 
 			var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
-			var compressedPages = (len / AbstractPager.PageSize) + (len % AbstractPager.PageSize == 0 ? 0 : 1);
+		    var remainder = len % AbstractPager.PageSize;
+            var compressedPages = (len / AbstractPager.PageSize) + (remainder == 0 ? 0 : 1);
+
+		    if (remainder != 0)
+		    {
+                // zero the remainder of the page
+		        NativeMethods.memset(compressionBuffer + len, 0, remainder);
+		    }
 
 			var pages = new byte*[compressedPages + 1];
 

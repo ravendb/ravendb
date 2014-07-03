@@ -39,11 +39,14 @@ import getFilesystemsCommand = require("commands/filesystem/getFilesystemsComman
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+
+import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
+import extensions = require("common/extensions");
 
 class shell extends viewModelBase {
     private router = router;
-
+    canStudioBeLoaded = ko.computed(() => ("EventSource" in window || "WebSocket" in window)); //IE9 and below
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     isDatabaseDisabled: KnockoutComputed<boolean>;
@@ -86,8 +89,10 @@ class shell extends viewModelBase {
 
     constructor() {
         super();
-        oauthContext.enterApiKeyTask = this.setupApiKey();
 
+		extensions.install();
+        oauthContext.enterApiKeyTask = this.setupApiKey();
+        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
@@ -106,8 +111,6 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-
-        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
         this.isDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -130,7 +133,7 @@ class shell extends viewModelBase {
                 return shell.databases().filter(database => database.name != currentDatabase.name);
             }
             return shell.databases();
-        }, this);
+        });
 
         this.listedFileSystems = ko.computed(() => {
             var currentFileSystem = this.activeFilesystem();
@@ -138,7 +141,7 @@ class shell extends viewModelBase {
                 return shell.fileSystems().filter(fileSystem => fileSystem.name != currentFileSystem.name);
             }
             return shell.fileSystems();
-        }, this);
+        });
 
         this.listedCounterStorages = ko.computed(() => {
             var currentCounterStorage = this.activeCounterStorage();
@@ -146,49 +149,54 @@ class shell extends viewModelBase {
                 return shell.counterStorages().filter(counterStorage => counterStorage.name != currentCounterStorage.name);
             }
             return shell.counterStorages();
-        }, this);
-
+        });
     }
 
     activate(args: any) {
-        super.activate(args);
+        if (this.canStudioBeLoaded()) {
+            super.activate(args);
 
-        NProgress.set(.7);
-        router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
-            { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
-            { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
-            { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
-            { route: 'databases/indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
-            { route: 'databases/transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
-            { route: 'databases/query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
-            { route: 'databases/tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
-            { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
-            { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
-            { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
-            { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
-            { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
-            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
-            { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
-            { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
-            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
-            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
-            { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
-            { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
-            { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
-            { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
-            { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
-        ]).buildNavigationModel();
+            oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
-        // Show progress whenever we navigate.
-        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
+            NProgress.set(.7);
+            router.map([
+                { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
+                { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+                { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
+                { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
+                { route: 'databases/indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
+                { route: 'databases/transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
+                { route: 'databases/query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
+                { route: 'databases/tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
+                { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
+                { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
+                { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
+                { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
+                { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
+                { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
+                { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
+                { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
+                { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
+                { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
+                { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+                { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
+                { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
+                { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
+                { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
+                { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
+            ]).buildNavigationModel();
 
-        window.addEventListener("beforeunload", ()=> {
+            // Show progress whenever we navigate.
+            router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+
+            window.addEventListener("beforeunload", () => {
+                shell.globalChangesApi.dispose();
+                this.disconnectFromResourceChangesApi();
+            });
+        } else {
+            this.confirmationMessage(':-(', "Your browser isn't supported. Please use a modern browser!", []);
             shell.globalChangesApi.dispose();
-            this.disconnectFromResourceChangesApi();
-        });
+        }
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -198,6 +206,11 @@ class shell extends viewModelBase {
             e.preventDefault();
             this.newDocument();
         });
+
+        jwerty.key("enter", e => {
+            e.preventDefault();
+            return false;
+        }, this, "#goToDocInput");
 
         $("body").tooltip({
             delay: { show: 1000, hide: 100 },
@@ -213,13 +226,16 @@ class shell extends viewModelBase {
     }
 
     setupApiKey() {
-        // try to find api key as studio parameter
-        var queryVars = forge.util.getQueryVariables();
-        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
-            oauthContext.apiKey(queryVars['api-key'][0]);
-        }
-        if ('has-api-key' in queryVars) {
+        // try to find api key as studio hash parameter
+        var hash = window.location.hash;
+        if (hash === "#has-api-key") {
             return this.showApiKeyDialog();
+        } else if (hash.match(/#api-key/g)) {
+            var match = /#api-key=(.*)/.exec(hash);
+            if (match && match.length == 2) {
+                oauthContext.apiKey(match[1]);
+                window.location.hash = "#";
+            }
         }
         return $.Deferred().resolve();
     }
@@ -360,7 +376,7 @@ class shell extends viewModelBase {
                 } else {
                     this.activateResource(appUrl.getDatabase(), shell.databases);
                 }
-        });
+            });
     }
 
     private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
@@ -370,7 +386,10 @@ class shell extends viewModelBase {
             if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
                 newResource.activate();
             } else {
-                observableResourceArray.first(x => x.isVisible()).activate();
+                var resource = observableResourceArray.first(x => x.isVisible());
+                if (resource) {
+                    resource.activate();
+                }
             }
         }
     }
@@ -398,16 +417,14 @@ class shell extends viewModelBase {
             });
     }
 
-    handleRavenConnectionFailure(result) {
+    private handleRavenConnectionFailure(result) {
         NProgress.done();
         sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
-        var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
-        messageBoxResultPromise.done(messageBoxResult => {
-            if (messageBoxResult === tryAgain) {
-                NProgress.start();
-                this.connectToRavenServer();
-            }
+        var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
+        messageBoxResultPromise.done(() => {
+            NProgress.start();
+            this.connectToRavenServer();
         });
     }
 
@@ -617,14 +634,12 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog);
+        return app.showDialog(dialog).then(() => window.location.href = "#");
     }
 
     showErrorsDialog() {
-        require(["viewmodels/recentErrors"], errorDetails => {
-            var dialog = new errorDetails(this.recordedErrors);
-            app.showDialog(dialog);
-        });
+        var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
+        app.showDialog(errorDetails);
     }
 
     uploadStatusChanged(item: uploadItem) {
