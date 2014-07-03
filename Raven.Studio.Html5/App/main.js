@@ -34,7 +34,13 @@ define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dial
         //Look for partial views in a 'views' folder in the root.
         viewLocator.useConvention();
 
-        //Show the app by setting the root view model for our application with a transition.
-        app.setRoot('viewmodels/shell');
+        if ("WebSocket" in window || "EventSource" in window) {
+            //Show the app by setting the root view model for our application with a transition.
+            app.setRoot('viewmodels/shell');
+        } else {
+            //The browser doesn't support nor WebSocket nor EventSource. IE 9, Firefox 6, Chrome 6 and below.
+            app.showMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
+            NProgress.done();
+        }
     });
 });
