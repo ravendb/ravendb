@@ -10,7 +10,7 @@ import queryIndexDebugReduceCommand = require("commands/queryIndexDebugReduceCom
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 
 import d3 = require('d3/d3');
-import nv = require('d3/nv');
+import nv = require('nvd3');
 
 class visualizer extends viewModelBase {
 

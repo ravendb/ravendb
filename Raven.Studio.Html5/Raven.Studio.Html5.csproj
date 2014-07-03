@@ -1183,8 +1183,8 @@
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
+    <Content Include="Scripts\typings\d3\nvd3.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
-    <Content Include="Scripts\typings\d3\nv.d.ts" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
