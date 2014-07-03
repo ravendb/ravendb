@@ -280,7 +280,7 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();
 
-                var firstCallFile = await session.LoadFileAsync("test1.file");
+               var firstCallFile = await session.LoadFileAsync("test1.file");
                 var secondCallFile = await session.LoadFileAsync("test1.file");
                 Assert.Equal(firstCallFile, secondCallFile);
 

@@ -82,6 +82,8 @@ namespace Raven.Client.FileSystem
         Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
 
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);
+        Task<DirectoryHeader> BrowseDirectoryAsync(string folder, int start = 0, int pageSize = 25);
+
         Task<FileHeader[]> GetAsync(string[] filename);
     }
 

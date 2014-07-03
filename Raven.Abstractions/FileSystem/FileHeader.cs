@@ -123,7 +123,7 @@ namespace Raven.Abstractions.FileSystem
 
         protected bool Equals(FileHeader other)
         {
-            return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Equals(Metadata, other.Metadata);
+            return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Metadata.Equals(other.Metadata);
         }
 
         public override bool Equals(object obj)

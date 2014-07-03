@@ -102,12 +102,21 @@ namespace Raven.Client.FileSystem
             return result.ToArray();
         }
 
-        public Task<DirectoryHeader> LoadDirectoryAsync(string path)
+        public async Task<DirectoryHeader> LoadDirectoryAsync(string directoryName)
         {
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrWhiteSpace(directoryName))
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace.");
 
-            throw new NotImplementedException();
+            directoryName = directoryName.StartsWith("/") ? directoryName : "/" + directoryName;
+            object cachedDirectory;
+            if (entitiesByKey.TryGetValue(directoryName, out cachedDirectory))
+            {
+                return cachedDirectory as DirectoryHeader;
+            } 
+            var directory = await Commands.BrowseDirectoryAsync(directoryName);
+
+            entitiesByKey.Add(directoryName, directory);
+            return directory;
         }
 
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null)
