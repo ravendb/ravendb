@@ -13,7 +13,7 @@ class appUrl {
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-
+    
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         databases: ko.computed(() => appUrl.forDatabases()),
@@ -273,8 +273,12 @@ class appUrl {
         return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forVisualizer(db: database): string {
-        return "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+    static forVisualizer(db: database, index: string = null): string {
+        var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+        if (index) { 
+            url += "&index=" + index;
+        }
+        return url;
     }
 
     static forApiKeys(): string {

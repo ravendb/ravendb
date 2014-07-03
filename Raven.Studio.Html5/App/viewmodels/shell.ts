@@ -42,10 +42,10 @@ import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
+import extensions = require("common/extensions");
 
 class shell extends viewModelBase {
     private router = router;
-
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     isDatabaseDisabled: KnockoutComputed<boolean>;
@@ -89,9 +89,9 @@ class shell extends viewModelBase {
     constructor() {
         super();
 
+		extensions.install();
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
-
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
@@ -215,13 +215,16 @@ class shell extends viewModelBase {
     }
 
     setupApiKey() {
-        // try to find api key as studio parameter
-        var queryVars = forge.util.getQueryVariables();
-        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
-            oauthContext.apiKey(queryVars['api-key'][0]);
-        }
-        if ('has-api-key' in queryVars) {
+        // try to find api key as studio hash parameter
+        var hash = window.location.hash;
+        if (hash === "#has-api-key") {
             return this.showApiKeyDialog();
+        } else if (hash.match(/#api-key/g)) {
+            var match = /#api-key=(.*)/.exec(hash);
+            if (match && match.length == 2) {
+                oauthContext.apiKey(match[1]);
+                window.location.hash = "#";
+            }
         }
         return $.Deferred().resolve();
     }
@@ -618,7 +621,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog);
+        return app.showDialog(dialog).then(() => window.location.href = "#");
     }
 
     showErrorsDialog() {

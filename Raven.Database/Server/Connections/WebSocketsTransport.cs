@@ -110,7 +110,7 @@ namespace Raven.Database.Server.Connections
 
 				while (callCancelled.IsCancellationRequested == false)
                 {
-                    bool result = await manualResetEvent.WaitAsync(5000);
+                    var result = await manualResetEvent.WaitAsync(5000);
                     if (callCancelled.IsCancellationRequested)
                         break;
 

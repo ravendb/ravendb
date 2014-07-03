@@ -3,11 +3,6 @@
 import composition = require("durandal/composition");
 import moment = require("moment");
 
-/*
- * A custom Knockout binding handler transforms the target element (usually a <pre>) into a code editor, powered by Ace. http://ace.c9.io
- * Usage: data-bind="aceEditor: { code: someObservableString, lang: 'ace/mode/csharp', theme: 'ace/theme/github', fontSize: '16px' }"
- * All params are optional, except code.
- */
 class datePickerBindingHandler {
 
     static install() {

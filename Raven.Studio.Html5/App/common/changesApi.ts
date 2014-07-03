@@ -65,7 +65,7 @@ class changesApi {
 
                 this.webSocket = new WebSocket('ws://' + host + this.resourcePath + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss);
 
-                var isConnectionOpenedOnce: boolean = false;
+                var isConnectionOpenedOnce = false;
 
                 this.webSocket.onmessage = (e) => this.onMessage(e);
                 this.webSocket.onerror = (e) => {
@@ -91,28 +91,38 @@ class changesApi {
             .fail(() => {
                 // Connection has closed so try to reconnect every 3 seconds.
                 setTimeout(() => this.connectWebSocket(), 3 * 1000);
-        });
+            });
     }
 
     private connectEventSource() {
-        var isConnectionOpenedOnce: boolean = false;
+	    var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath).execute();
 
-        this.eventSource = new EventSource(this.resourcePath + '/changes/events?id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss);
+	    getTokenTask
+		    .done((tokenObject: singleAuthToken) => {
+			    var isConnectionOpenedOnce: boolean = false;
+			    var token = tokenObject.Token;
+			
+			    this.eventSource = new EventSource(this.resourcePath + '/changes/events?id=' + this.eventsId + "&singleUseAuthToken=" + token);
 
-        this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e: Event) => {
-            if (isConnectionOpenedOnce == false) {
-                this.connectToChangesApiTask.reject();
-            } else {
-                this.onError(e);
-            }
-        };
-        this.eventSource.onopen = () => {
-            console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
-            this.showReconnectMessage();
-            isConnectionOpenedOnce = true;
-            this.connectToChangesApiTask.resolve();
-        }
+			    this.eventSource.onmessage = (e) => this.onMessage(e);
+			    this.eventSource.onerror = (e) => {
+				    if (isConnectionOpenedOnce == false) {
+					    this.connectToChangesApiTask.reject();
+				    } else {
+					    this.onError(e);
+				    }
+			    };
+			    this.eventSource.onopen = () => {
+				    console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
+				    this.showReconnectMessage();
+				    isConnectionOpenedOnce = true;
+				    this.connectToChangesApiTask.resolve();
+			    }
+		    })
+        .fail(() => {
+            // Connection has closed so try to reconnect every 3 seconds.
+            setTimeout(() => this.connectEventSource(), 3 * 1000);
+        });
     }
 
     private showWarning(message: string) {

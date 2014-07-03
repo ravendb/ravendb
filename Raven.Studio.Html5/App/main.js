@@ -4,7 +4,7 @@
         durandal: '../Scripts/durandal',
         plugins: '../Scripts/durandal/plugins',
         transitions: '../Scripts/durandal/transitions',
-        ace: '../Scripts/ace',        
+        ace: '../Scripts/ace',
         moment: '../Scripts/moment',
         'd3': '../Scripts/nvd3',
         forge: '../Scripts/forge'
@@ -13,6 +13,7 @@
 
 define('jquery', function() { return jQuery; });
 define('knockout', ko);
+define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function(d3, nv, timelines, chart) { return nv; });
 
 define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dialog'], function (system, app, viewLocator, dialog) {
     //>>excludeStart("build", true);
@@ -22,7 +23,7 @@ define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dial
 
     app.title = 'Raven.Studio';
     dialog.MessageBox.setViewUrl('views/dialog.html');
-	
+
     app.configurePlugins({
         router: true,
         dialog: true,
