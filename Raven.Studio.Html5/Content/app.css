@@ -1183,10 +1183,16 @@ footer ul {
   height: 43vh;
   position: absolute;
 }
-
-.column-handle {
-  width: 8px;
+.column-header {
+  font-weight: bold;
+  border-bottom: 2px solid #ddd;
+}
+.column-header:hover .column-handle {
   display: block;
+}
+.column-header .column-handle {
+  display: none;
+  width: 4px;
   height: 20px;
   float: right;
   cursor: col-resize;
@@ -1195,4 +1201,3 @@ footer ul {
   background-color: #cccccc;
   box-shadow: #999999 0px 0px 5px inset;
 }
-/*# sourceMappingURL=app.css.map */

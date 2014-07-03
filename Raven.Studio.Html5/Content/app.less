@@ -1482,14 +1482,25 @@ footer {
     position: absolute;
 }
 
-.column-handle {
-    width: 8px;
-    display: block;
-    height: 20px;
-    float: right;
-    cursor: col-resize;
-    position: relative;
-    z-index: 1;
-    background-color: hsl(0, 0%, 80%);
-    box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
+.column-header {
+    font-weight: bold;
+    border-bottom: 2px solid #ddd;
+
+    &:hover {
+        .column-handle {
+            display: block;
+        }
+    }
+
+    .column-handle {
+        display: none;
+        width: 4px;
+        height: 20px;
+        float: right;
+        cursor: col-resize;
+        position: relative;
+        z-index: 1;
+        background-color: hsl(0, 0%, 80%);
+        box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
+    }
 }

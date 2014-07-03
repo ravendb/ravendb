@@ -22,10 +22,6 @@
     background-color: #ffffcc;
 }
 
-.header {
-    font-weight: bold;
-    border-bottom: 2px solid #ddd;
-}
 </style>
 <section id="logsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div style="height: 65%; position: relative;">
@@ -61,56 +57,56 @@
                 </button>
             </div>
             <span style="white-space: nowrap">
-                <div class="column header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                    <span class="column-handle" column="0"></span>
                     <span data-bind="click: $root.sortBy.bind($root, 'Level')">Level</span>
                     <span data-bind="visible: $root.sortColumn() === 'Level'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
-                    <span class="column-handle" column="0"></span>
                 </div>
-                <div class="column header" data-bind="style: { width: $root.columnWidths[1]() + 'px' }">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + 'px' }">
+                    <span class="column-handle" column="1"></span>
                     <span data-bind="click: $root.sortBy.bind($root, 'TimeStamp')">Logged</span>
                     <span data-bind="visible: $root.sortColumn() === 'TimeStamp'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
-                    <span class="column-handle" column="1"></span>
                 </div>
-                <div class="column header" data-bind="style: { width: $root.columnWidths[2]() + 'px' }">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + 'px' }">
+                    <span class="column-handle" column="2"></span>
                     <span data-bind="click: $root.sortBy.bind($root, 'Message')">Message</span>
                     <span data-bind="visible: $root.sortColumn() === 'Message'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
-                    <span class="column-handle" column="2"></span>
                 </div>
-                <div class="column header" data-bind="style: { width: $root.columnWidths[3]() + 'px' }">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + 'px' }">
+                    <span class="column-handle" column="3"></span>
                     <span data-bind="click: $root.sortBy.bind($root, 'Exception')">Exception</span>
                     <span data-bind="visible: $root.sortColumn() === 'Exception'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
-                    <span class="column-handle" column="3"></span>
                 </div>
-                <div class="column header" data-bind="style: { width: $root.columnWidths[4]() + 'px' }">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + 'px' }">
+                    <span class="column-handle" column="4"></span>
                     <span data-bind="click: $root.sortBy.bind($root, 'LoggerName')">Log name</span>
                     <span data-bind="visible: $root.sortColumn() === 'LoggerName'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
-                    <span class="column-handle" column="4"></span>
                 </div>
             </span>
-            <span style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
-                <span style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
+            <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
+                <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: Level"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: Message, attr: { title: Message }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: Exception, attr: { title: Exception }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }, text: LoggerName"></div>
-                </span>
-            </span>
+                </div>
+            </div>
         </div>
     </div>
     <div class="log-details panel panel-default" style="height: 30%">
