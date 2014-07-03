@@ -49,14 +49,21 @@ namespace Raven.Client.FileSystem
             object existingEntity;
             if (entitiesByKey.TryGetValue(filename, out existingEntity))
             {
-                return existingEntity as FileHeader;
+                // Check if the file is not currently been scheduled for deletion or known to be non-existent.
+                if (!knownMissingIds.Contains(filename))
+                    return existingEntity as FileHeader;
+                else
+                    return null;
             }
 
-            IncrementRequestCount();
+            IncrementRequestCount();            
 
+            // Check if the file exists on the server.
             var metadata = await Commands.GetMetadataForAsync(filename);
-            var fileHeader = new FileHeader(filename, metadata);
+            if (metadata == null)
+                return null;
 
+            var fileHeader = new FileHeader(filename, metadata);
             entitiesByKey.Add(filename, fileHeader);
 
             return fileHeader;

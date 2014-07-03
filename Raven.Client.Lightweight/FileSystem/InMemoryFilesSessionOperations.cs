@@ -83,10 +83,7 @@ namespace Raven.Client.FileSystem
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryFilesSessionOperations"/> class.
 		/// </summary>
-        protected InMemoryFilesSessionOperations(
-            FilesStore filesStore,
-            FilesSessionListeners listeners,
-			Guid id)
+        protected InMemoryFilesSessionOperations( FilesStore filesStore, FilesSessionListeners listeners, Guid id)
 		{
             this.Id = id;
             this.filesStore = filesStore;
@@ -133,69 +130,68 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag); 
+            var operation = new UploadFileOperation(this, path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag); 
             registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterUpload(FileHeader file, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(file.Path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
+            var operation = new UploadFileOperation(this, file.Path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
             registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(path, size, write, metadata, etag);
+            var operation = new UploadFileOperation(this, path, size, write, metadata, etag);
             registeredOperations.Enqueue(operation);           
         }
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(file.Path, size, write, metadata, etag);
+            var operation = new UploadFileOperation(this, file.Path, size, write, metadata, etag);
             registeredOperations.Enqueue(operation);     
         }
 
         public void RegisterFileDeletion(string path, Etag etag = null)
         {
-            var operation = new DeleteFileOperation(path, etag);
+            var operation = new DeleteFileOperation(this, path, etag);
             registeredOperations.Enqueue(operation); 
         }
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
-            var operation = new DeleteFileOperation(file.Path, etag);
+            var operation = new DeleteFileOperation(this, file.Path, etag);
             registeredOperations.Enqueue(operation); 
         }
 
         public void RegisterDirectoryDeletion(string path, bool recurse = false)
         {
-            var operation = new DeleteDirectoryOperation(path, recurse);
+            var operation = new DeleteDirectoryOperation(this, path, recurse);
             registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterDirectoryDeletion(DirectoryHeader directory, bool recurse = false)
         {
-            var operation = new DeleteDirectoryOperation(directory.Path, recurse);
+            var operation = new DeleteDirectoryOperation(this, directory.Path, recurse);
             registeredOperations.Enqueue(operation); 
         }
 
         public void RegisterRename(string sourceFile, string destinationFile)
         {
-            var operation = new RenameFileOperation(sourceFile, destinationFile);
+            var operation = new RenameFileOperation(this, sourceFile, destinationFile);
             registeredOperations.Enqueue(operation);
+            deletedEntities.Add(sourceFile);
         }
 
         public void RegisterRename(FileHeader sourceFile, string destinationFile)
         {
-            var operation = new RenameFileOperation(sourceFile.Path, destinationFile);
-            registeredOperations.Enqueue(operation);
+            RegisterRename(sourceFile.Path, destinationFile);
         }
 
         public void RegisterRename(FileHeader sourceFile, DirectoryHeader destination, string destinationName)
         {
             //TODO Validate destinationName is a filename and not a directory.
-            var operation = new RenameFileOperation(sourceFile.Path, Path.Combine(destination.Path, destinationName));
-            registeredOperations.Enqueue(operation);
+            RegisterRename(sourceFile.Path, Path.Combine(destination.Path, destinationName));
         }
 
         /// <summary>
@@ -214,6 +210,11 @@ namespace Raven.Client.FileSystem
         public bool IsDeleted(string id)
         {
             return knownMissingIds.Contains(id);
+        }
+
+        public void RegisterMissing(string id)
+        {
+            knownMissingIds.Add(id);
         }
 
         public async Task SaveChangesAsync()

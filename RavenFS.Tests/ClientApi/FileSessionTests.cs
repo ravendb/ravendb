@@ -204,6 +204,30 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
+        public async void UploadDeleteThenUploadFile()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
+                session.RegisterUpload("a/test2.file", CreateUniformFileStream(128));
+                session.RegisterUpload("a/test3.file", CreateUniformFileStream(128));
+                session.RegisterUpload("a/b/test.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                session.RegisterDirectoryDeletion("a", false);
+                await session.SaveChangesAsync();
+
+                var deletedFile = await session.LoadFileAsync("/a/test1.file");
+                Assert.Null(deletedFile);
+
+                var availableFile = await session.LoadFileAsync("/a/b/test.file");
+                Assert.NotNull(availableFile);
+            }
+        }
+
+        [Fact]
         public async void RenameWithDirectoryChange()
         {
             var store = (FilesStore)filesStore;
