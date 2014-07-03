@@ -68,6 +68,8 @@ Raven.Studio.Html5/App/viewmodels/counter/*.js
 Raven.Studio.Html5/App/viewmodels/counter/*.js.map
 Raven.Studio.Html5/App/widgets/virtualTable/*.js
 Raven.Studio.Html5/App/widgets/virtualTable/*.js.map
+Raven.Studio.Html5/Scripts/typings/ace/aceExt.js
+Raven.Studio.Html5/Scripts/typings/ace/aceExt.js.map
 Raven.Studio.Html5/Content/app.min.css
 Raven.Studio.Html5/Content/app.less.map
 Raven.Studio.Html5/Content/app.css.map
