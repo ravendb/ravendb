@@ -55,7 +55,10 @@
         </form>
         <div id="logTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
             <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
-                <button class="btn btn-default" data-bind="text: $data, click: $root.unHidelogType.bind($root)"></button>
+                <button class="btn btn-default" data-bind="click: $root.unHidelogType.bind($root)">
+                    <span data-bind="text: $data"></span>
+                    <span class="fa fa-times"></span>
+                </button>
             </div>
             <span style="white-space: nowrap">
                 <div class="column header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
