@@ -23,25 +23,30 @@ namespace Voron.Tests.Journal
 		[Fact]
 		public void Committing_tx_should_fire_event_with_transactionsToShip_records()
 		{
-			var transactionsToShip = new List<TransactionToShip>();
+			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
 			Env.Journal.OnTransactionCommit += tx =>
 			{
 				tx.CreatePagesSnapshot();
-				transactionsToShip.Add(tx);
+				transactionsToShip.Enqueue(tx);
 			};
 
 			WriteTestDataToEnv();
 
 			Assert.Equal(3, transactionsToShip.Count);
 
+			uint previousCrc = 0;
 			//validate crc
 			foreach (var tx in transactionsToShip)
 			{
-				var compressedDataBuffer = tx.PagesSnapshot;
-				fixed (byte* compressedDataBufferPtr = compressedDataBuffer)
+				fixed (byte* pageDataBufferPtr = tx.PagesSnapshot)
 				{
-					var crc = Crc.Value(compressedDataBufferPtr, 0, compressedDataBuffer.Length);
+					//calculate crc, but skip the first page --> it is a header
+					var crc = Crc.Value(pageDataBufferPtr + AbstractPager.PageSize, 0, tx.PagesSnapshot.Length - AbstractPager.PageSize);
 					Assert.Equal(tx.Header.Crc, crc);
+
+					if (previousCrc != 0)
+						Assert.Equal(previousCrc, tx.PreviousTransactionCrc);
+					previousCrc = tx.Header.Crc;
 				}
 			}
 		}
