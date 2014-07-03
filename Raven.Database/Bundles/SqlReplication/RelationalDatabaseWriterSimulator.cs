@@ -83,7 +83,7 @@ namespace Raven.Database.Bundles.SqlReplication
                         continue;
                     DbParameter param = new OdbcParameter();
                     RelationalDatabaseWriter.SetParamValue(param, column.Value, stringParserList);
-                    sb.Append(param.Value).Append(", ");
+                    sb.Append("'").Append(param.Value).Append("'").Append(", ");
                 }
                 sb.Length = sb.Length - 2;
                 sb.Append(");");

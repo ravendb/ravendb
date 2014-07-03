@@ -113,6 +113,9 @@ body {
 #editSQLReplication .edit-sql-replication-actions {
   padding-top: 0.5%;
 }
+#editSQLReplication .advanced {
+  padding-left: 0;
+}
 .sqlReplication-Stats {
   width: 60vw;
   max-height: 60vh!important;

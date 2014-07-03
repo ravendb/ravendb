@@ -35,6 +35,7 @@ class editSqlReplication extends viewModelBase {
     loadedSqlReplications: string[] = [];
     sqlReplicationName: KnockoutComputed<string>;
     isEditingNewReplication = ko.observable(false);
+    isBasicView = ko.observable(true);
     
     
     appUrls: computedAppUrls;
