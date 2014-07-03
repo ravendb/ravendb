@@ -1,6 +1,8 @@
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 
+import router = require("plugins/router");
+
 import database = require("models/database");
 
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -18,12 +20,19 @@ class visualizer extends viewModelBase {
     indexName = ko.observable("Index Name");
     itemKey = ko.observable("");
 
+    hasIndexSelected = ko.computed(() => {
+        return this.indexName() !== "Index Name";
+    });
+
     keys = ko.observableArray<string>();
     colors = d3.scale.category10();
     keysCounter = 0;
 
     tree: visualizerDataObjectNodeDto = null;
     xScale: D3.Scale.LinearScale;
+
+    editIndexUrl: KnockoutComputed<string>;
+    runQueryUrl: KnockoutComputed<string>;
 
     diagonal: any;
     graph: any;
@@ -45,6 +54,19 @@ class visualizer extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        if (args && args.index) {
+            this.indexName(args.index);
+        }
+
+        this.editIndexUrl = ko.computed(() => {
+            return appUrl.forEditIndex(this.indexName(), this.activeDatabase());
+        });
+
+        this.runQueryUrl = ko.computed(() => {
+            return appUrl.forQuery(this.activeDatabase(), this.indexName());
+        });
+
         return this.fetchAllIndexes();
     }
 
@@ -94,6 +116,7 @@ class visualizer extends viewModelBase {
 
     detached() {
         $("#visualizerContainer").off('DynamicHeightSet');
+        nv.tooltip.cleanup();
     }
 
     onWindowHeightChanged() {
@@ -190,7 +213,8 @@ class visualizer extends viewModelBase {
 
     getTooltip(data: visualizerDataObjectNodeDto) {
         var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
-        return "<table>" + 
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">×</button>' +
+            "<table> " + 
             "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
             "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
             "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
@@ -205,8 +229,7 @@ class visualizer extends viewModelBase {
         var self = this;
 
         d3.select("#visualizer")
-            .attr("width", this.width)
-            .attr("height", this.height)
+            .style({height: self.height + 'px')
             .attr("viewBox", "0 0 " + this.width + " " + this.height);
 
         this.graph = d3.layout.cluster()
@@ -250,23 +273,33 @@ class visualizer extends viewModelBase {
             .attr("class", "link")
             .attr("d", this.diagonal);
 
-        var enteringNodes = (<any>this.node).enter().append("g").attr("class", d => "node " + self.makeNodeId(d))
+        var enteringNodes = (<any>this.node).enter().append("g").attr("class", d => "node " + self.makeNodeId(d) + " node-level-" + d.level)
             .attr("transform", (d) => "translate(" + self.xScale(d.level) + "," + (d.x + this.margin.top) + ")")
             .classed("hidden", d => d.level > 4);
 
         enteringNodes.append("rect").attr('class', 'nodeRect')
             .attr('x', 0)
             .attr('y', -10)
-            .attr("fill",  d => d.level > 0 ?  this.colors(this.keysCounter) : 'white')
+            .attr("fill", d => d.level > 0 ? this.colors(this.keysCounter) : 'white')
             .attr('width', self.boxWidth)
             .attr('height', 20)
             .attr('rx', 5)
-            .on("mouseenter", function (d) {
-                if (d.level > 0) {
+            .on("click", function (d) {
+                nv.tooltip.cleanup();
+                if (d.level === 0) {
+                    console.log(d);
+                    router.navigate(appUrl.forEditDoc(d.name, null, null, self.activeDatabase()));
+                }
+                else {
                     d3.select(this).classed("hover", true);
                     var offset = $(this).offset();
-                    nv.tooltip.show([offset.left + self.boxWidth / 2, offset.top], self.getTooltip(d), 'n', 25);
+                    nv.tooltip.show([offset.left + self.boxWidth / 2, offset.top], self.getTooltip(d), 'n', 25, null, "selectable-tooltip");
+                    $(".nvtooltip").each((i, elem) => {
+                        ko.applyBindings(self, elem);
+                    });
                 }
+            })
+            .on("mouseenter", function (d) {
                 self.setHighlightToParent(d, true);
             })
             .on("mouseout", function (d) {
@@ -274,7 +307,7 @@ class visualizer extends viewModelBase {
                     d3.select(this).classed("hover", false);
                 }
                 self.setHighlightToParent(d, false);
-                nv.tooltip.cleanup();
+                
             });
 
         enteringNodes.append("text")
@@ -362,6 +395,10 @@ class visualizer extends viewModelBase {
                 allDataFetched.reject();
                 });
         return allDataFetched;
+    }
+
+    tooltipClose() {
+        nv.tooltip.cleanup();
     }
 }
 

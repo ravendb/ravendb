@@ -272,8 +272,12 @@ class appUrl {
         return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forVisualizer(db: database): string {
-        return "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+    static forVisualizer(db: database, index: string = null): string {
+        var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+        if (index) { 
+            url += "&index=" + index;
+        }
+        return url;
     }
 
     static forApiKeys(): string {
