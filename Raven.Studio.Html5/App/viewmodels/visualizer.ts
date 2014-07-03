@@ -1,4 +1,4 @@
-import appUrl = require("common/appUrl");
+﻿import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 
 import router = require("plugins/router");
@@ -213,7 +213,7 @@ class visualizer extends viewModelBase {
 
     getTooltip(data: visualizerDataObjectNodeDto) {
         var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
-        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">�</button>' +
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">׳</button>' +
             "<table> " + 
             "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
             "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
@@ -229,7 +229,7 @@ class visualizer extends viewModelBase {
         var self = this;
 
         d3.select("#visualizer")
-            .style({height: self.height + 'px')
+            .style({ height: self.height + 'px' })
             .attr("viewBox", "0 0 " + this.width + " " + this.height);
 
         this.graph = d3.layout.cluster()
