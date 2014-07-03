@@ -92,22 +92,28 @@ class changesApi {
     }
 
     private connectEventSource(resourcePath, coolDownWithDataLoss: number = 0) {
-        this.eventSource = new EventSource(resourcePath + '/changes/events?id=' + this.eventsId);
+        var getTokenTask = new getSingleAuthTokenCommand(resourcePath).execute();
 
-        var isConnectionOpenedOnce: boolean = false;
+        getTokenTask
+            .done((tokenObject: singleAuthToken) => {
+                var token = tokenObject.Token;
+                this.eventSource = new EventSource(resourcePath + '/changes/events?id=' + this.eventsId + "&singleUseAuthToken=" + token);
 
-        this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e) => {
-            if (isConnectionOpenedOnce == false) {
-                this.connectToChangesApiTask.reject();
-            }
-            this.onError(e);
-        };
-        this.eventSource.onopen = () => {
-            console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
-            isConnectionOpenedOnce = true;
-            this.connectToChangesApiTask.resolve();
-        }
+                var isConnectionOpenedOnce: boolean = false;
+
+                this.eventSource.onmessage = (e) => this.onMessage(e);
+                this.eventSource.onerror = (e) => {
+                    if (isConnectionOpenedOnce == false) {
+                        this.connectToChangesApiTask.reject();
+                    }
+                    this.onError(e);
+                };
+                this.eventSource.onopen = () => {
+                    console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
+                    isConnectionOpenedOnce = true;
+                    this.connectToChangesApiTask.resolve();
+                }
+            });
     }
 
     private send(command: string, value?: string) {
