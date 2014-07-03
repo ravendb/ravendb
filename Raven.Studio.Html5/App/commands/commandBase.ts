@@ -249,7 +249,7 @@ class commandBase {
                             grant_type: 'client_credentials'
                         }
                     }).done((results, status, xhr) => {
-                        oauthContext.authHeader("Bearer " + results);
+                        oauthContext.authHeader("Bearer " + results.replace(/(\r\n|\n|\r)/gm,""));
                         this.retryOriginalRequest(task, originalArguments);
                     }).fail((request, status, error) => {
                         task.reject(request, status, error);
