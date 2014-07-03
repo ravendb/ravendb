@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Controllers
             var options = new SmugglerOptions
             {
                 BatchSize = batchSize,
-                ShouldExcludeExpired = includeExpiredDocuments,
+                ShouldExcludeExpired = !includeExpiredDocuments,
                 OperateOnTypes = operateOnTypes,
                 TransformScript = transformScript
             };
