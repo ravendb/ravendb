@@ -12,13 +12,20 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
     simulationResults = ko.observableArray<string>();
     documentAutocompletes = ko.observableArray<string>();
     documentId = ko.observable<string>();
+    lastSearchedDocumentID = ko.observable<string>("");
+    isAutoCompleteVisible : KnockoutComputed<boolean>;
     
     constructor(private db: database, private sqlReplicationName: string) {
         super();
         this.documentId.throttle(250).subscribe(search => this.fetchDocumentIdAutocompletes(search));
+        this.isAutoCompleteVisible = ko.computed(() => {
+            return this.lastSearchedDocumentID() !== this.documentId() && 
+                (this.documentAutocompletes().length > 1 || this.documentAutocompletes().length == 1 && this.documentId() !== this.documentAutocompletes()[0]);
+        });
     }
 
     getResults() {
+        this.lastSearchedDocumentID(this.documentId());
         new simulateSqlReplicationCommand(this.db, this.sqlReplicationName, this.documentId())
             .execute()
             .done((results: string[]) => this.simulationResults(results))
