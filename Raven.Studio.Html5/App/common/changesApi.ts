@@ -46,7 +46,7 @@ class changesApi {
         }
         else {
             //The browser doesn't support websocket and eventsource
-            console.log("Nor WebSocket nor EventSource are supported by your Browser!");
+            console.log("Neither WebSocket nor EventSource are supported by your Browser!");
             this.connectToChangesApiTask.reject();
         }
     }
@@ -61,7 +61,7 @@ class changesApi {
 
                 this.webSocket = new WebSocket('ws://' + host + resourcePath + '/changes/websocket?singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + coolDownWithDataLoss);
 
-                var isConnectionOpenedOnce: boolean = false;
+                var isConnectionOpenedOnce = false;
 
                 this.webSocket.onmessage = (e) => this.onMessage(e);
                 this.webSocket.onerror = (e) => {
@@ -88,7 +88,7 @@ class changesApi {
                 // Connection has closed so try to reconnect every 3 seconds.
                 setTimeout(() => this.connectWebSocket(resourcePath, coolDownWithDataLoss), 3 * 1000);
                 this.onError(e);
-        });
+            });
     }
 
     private connectEventSource(resourcePath, coolDownWithDataLoss: number = 0) {

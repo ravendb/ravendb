@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "DotlessClientOnly": "1.4.0.0",
+    "Pvc.Core": "0.0.1.6",
+    "Pvc.Less": "0.0.1.3",
+    "Pvc.MSBuild": "0.0.1.2"
+  }
+}

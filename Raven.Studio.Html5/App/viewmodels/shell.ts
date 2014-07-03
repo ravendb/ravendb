@@ -42,11 +42,11 @@ import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
+import extensions = require("common/extensions");
 
 class shell extends viewModelBase {
     private router = router;
     canStudioBeLoaded = ko.computed(() => ("EventSource" in window || "WebSocket" in window)); //IE9 and below
-
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     isDatabaseDisabled: KnockoutComputed<boolean>;
@@ -90,9 +90,9 @@ class shell extends viewModelBase {
     constructor() {
         super();
 
+		extensions.install();
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
-
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
@@ -378,7 +378,10 @@ class shell extends viewModelBase {
             if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
                 newResource.activate();
             } else {
-                observableResourceArray.first(x => x.isVisible()).activate();
+                var resource = observableResourceArray.first(x => x.isVisible());
+                if (resource) {
+                    resource.activate();
+                }
             }
         }
     }

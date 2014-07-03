@@ -71,6 +71,7 @@ Raven.Studio.Html5/App/widgets/virtualTable/*.js.map
 Raven.Studio.Html5/Content/app.min.css
 Raven.Studio.Html5/Content/app.less.map
 Raven.Studio.Html5/Content/app.css.map
+Raven.Studio.Html5/optimized-build/
 /Raven.Web/Assemblies
 /test.log
 Tools/Raven.Filesystem.CreateSample/packages/

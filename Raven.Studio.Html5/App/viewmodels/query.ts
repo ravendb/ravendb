@@ -19,10 +19,10 @@ import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocuments
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
-import customColumnParams = require('models/customColumnParams');
-import customColumns = require('models/customColumns');
-import selectColumns = require('viewmodels/selectColumns');
-import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
+import customColumnParams = require("models/customColumnParams");
+import customColumns = require("models/customColumns");
+import selectColumns = require("viewmodels/selectColumns");
+import getCustomColumnsCommand = require("commands/getCustomColumnsCommand");
 import ace = require("ace/ace");
 import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
@@ -183,8 +183,7 @@ class query extends viewModelBase {
             this.setSelectedIndex(this.indexes.first().name);
         } else if (this.indexes.first(i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
-        }
-        else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
+        } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
             if (matchingQuery) {
@@ -333,15 +332,14 @@ class query extends viewModelBase {
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
 
-        if (!currentToken || typeof currentToken.type == "string") {
+        if (!currentToken || typeof currentToken.type === "string") {
             // if in beginning of text or in free text token
-            if (!currentToken || currentToken.type == "text") {
+            if (!currentToken || currentToken.type === "text") {
                 callback(null, this.indexFields().map(curColumn => {
                     return { name: curColumn, value: curColumn, score: 10, meta: "field" };
                 }));
-            }
-            // if right after, or a whitespace after keyword token ([column name]:)
-            else if (currentToken.type == "keyword" || currentToken.type == "value") {
+            } else if (currentToken.type === "keyword" || currentToken.type === "value") { 
+                // if right after, or a whitespace after keyword token ([column name]:)
 
                 // first, calculate and validate the column name
                 var currentColumnName: string = null;
@@ -380,7 +378,7 @@ class query extends viewModelBase {
                                 .done((results: string[]) => {
                                     if (!!results && results.length > 0) {
                                         callback(null, results.map(curVal => {
-                                            return { name: curVal['@metadata']['@id'], value: curVal['@metadata']['@id'], score: 10, meta: "value" };
+                                            return { name: curVal["@metadata"]["@id"], value: curVal["@metadata"]["@id"], score: 10, meta: "value" };
                                         }));
                                     }
                                 });
@@ -403,7 +401,12 @@ class query extends viewModelBase {
             Sorts: sorts,
             TransformerQuery: transformerQuery,
             UseAndOperator: useAndOperator,
-            Hash: (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformerQuery ? transformerQuery.toUrl() : "") + showFields + indexEntries + useAndOperator).hashCode()
+            Hash: (indexName + (queryText || "") +
+                sorts.reduce((a, b) => a + b, "") +
+                (transformerQuery ? transformerQuery.toUrl() : "") +
+                showFields +
+                indexEntries +
+                useAndOperator).hashCode()
         };
 
         // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
@@ -430,7 +433,7 @@ class query extends viewModelBase {
             var preppedDoc = new document(recentQueriesDoc);
             new saveDocumentCommand(getStoredQueriesCommand.storedQueryDocId, preppedDoc, this.activeDatabase(), false)
                 .execute()
-                .done((result: { Key: string; ETag: string; }) => recentQueriesDoc['@metadata']['@etag'] = result.ETag);
+                .done((result: { Key: string; ETag: string; }) => recentQueriesDoc["@metadata"]["@etag"] = result.ETag);
         }
     }
 
@@ -462,7 +465,7 @@ class query extends viewModelBase {
         if (!isAllDocumentsDynamicQuery) {
 
             //if index is dynamic, get columns using index definition, else get it using first index result
-            if (indexName.indexOf('dynamic/') == 0) {
+            if (indexName.indexOf('dynamic/') === 0) {
                 var collectionName = indexName.substring(8);
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
@@ -565,7 +568,11 @@ class query extends viewModelBase {
     }
 
     selectColumns() {
-        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions().clone(), this.contextName(), this.activeDatabase());
+        var selectColumnsViewModel: selectColumns = new selectColumns(
+            this.currentColumnsParams().clone(),
+            this.currentCustomFunctions().clone(),
+            this.contextName(),
+            this.activeDatabase());
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols: customColumns) => {
             this.currentColumnsParams(cols);
@@ -601,7 +608,11 @@ class query extends viewModelBase {
         if (query.TransformerQuery) {
             var params = "";
             if (query.TransformerQuery.queryParams) {
-                return "(" + query.TransformerQuery.queryParams.map((param: transformerParamDto) => param.name + "=" + param.value).join(", ") + ")";
+                return "(" + query
+                    .TransformerQuery
+                    .queryParams
+                    .map((param: transformerParamDto) => param.name + "=" + param.value)
+                    .join(", ") + ")";
             }
         }
         return "";

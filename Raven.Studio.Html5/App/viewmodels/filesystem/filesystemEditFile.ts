@@ -54,8 +54,9 @@ class filesystemEditFile extends viewModelBase {
 
     initializeFileEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
+        // TODO: Just use the simple binding handler instead.
         this.fileMetadataEditor = ace.edit("fileMetadataEditor");
-        this.fileMetadataEditor.setTheme("ace/theme/github");
+        this.fileMetadataEditor.setTheme("ace/theme/xcode");
         this.fileMetadataEditor.setFontSize("16px");
         this.fileMetadataEditor.getSession().setMode("ace/mode/json");
         $("#fileMetadataEditor").on('blur', ".ace_text-input", () => this.storeFileEditorTextIntoObservable());
