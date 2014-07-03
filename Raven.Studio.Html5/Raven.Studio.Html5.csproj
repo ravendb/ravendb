@@ -371,7 +371,6 @@
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\quotas.html" />
-    <Content Include="App\views\showSampleDataDialog.html" />
     <Content Include="App\views\sqlReplicationStatsDialog.html" />
     <Content Include="App\views\showDataDialog.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
