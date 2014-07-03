@@ -68,6 +68,11 @@ namespace Voron.Impl
 			get { return _state; }
 		}
 
+		public uint Crc
+		{
+			get { return _txHeader->Crc; }
+		}
+
 		public bool FlushedToJournal { get; private set; }
 
 		public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
@@ -99,21 +104,37 @@ namespace Voron.Impl
 			MarkTreesForWriteTransaction();
 		}
 
-		internal void WriteDirect(PageFromScratchBuffer pages)
+		internal void WriteDirect(TransactionHeader* transactionHeader, PageFromScratchBuffer pages)
 		{
-            _transactionPages.Add(pages);
-            for (int i = 0; i < pages.NumberOfPages; i++)
+			for (int i = 0; i < pages.NumberOfPages; i++)
 		    {
 		        var page = _env.ScratchBufferPool.ReadPage(pages.PositionInScratchBuffer+i);
-		        if (page.IsOverflow)
+			    int numberOfPages = 1;
+			    if (page.IsOverflow)
 		        {
-		            i += (page.OverflowSize/AbstractPager.PageSize) + (page.OverflowSize%AbstractPager.PageSize == 0 ? 0 : 1);
+					numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					i += numberOfPages;
+			        _overflowPagesInTransaction += (numberOfPages - 1);
 		        }
-                _dirtyPages.Add(page.PageNumber);
-                page.Dirty = true;
 
-                _allocatedPagesInTransaction++;
-            }
+				_allocatedPagesInTransaction++;
+				_dirtyPages.Add(page.PageNumber);
+                page.Dirty = true;
+			    var pageFromScratchBuffer = new PageFromScratchBuffer
+			    {
+				    NumberOfPages = numberOfPages,
+				    PositionInScratchBuffer = pages.PositionInScratchBuffer+i,
+				    Size = numberOfPages,		
+			    };
+				if(i == pages.NumberOfPages-1)
+				{
+					pageFromScratchBuffer.Size += pages.Size-pages.NumberOfPages;
+				}
+			    _scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
+				_transactionPages.Add(pageFromScratchBuffer);
+			
+				_state.NextPageNumber = transactionHeader->NextPageNumber;
+			}
 		}
 
 		private void InitTransactionHeader()

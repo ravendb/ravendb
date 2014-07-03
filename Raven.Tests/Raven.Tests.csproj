@@ -258,6 +258,7 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Issues\RavenDB_2486.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />

@@ -134,8 +134,13 @@ namespace Voron
 
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
-            }
-        }
+
+			}
+
+			_journal.Shipper.UpdatePreviousTransaction(_headerAccessor.Get(fileHeader => fileHeader->ShippedTransactionId));
+			_journal.Shipper.UpdatePreviousTransactionCrc(_headerAccessor.Get(fileHeader => fileHeader->ShippedTransactionCrc));
+		
+		}
 
         private unsafe void CreateNewDatabase()
         {
@@ -150,7 +155,11 @@ namespace Voron
                 tx.UpdateRootsIfNeeded(root, freeSpace);
 
                 tx.Commit();
-            }
+
+				//since this transaction is never shipped, this is the first previous transaction
+				//when applying shipped logs
+				_journal.Shipper.UpdatePreviousTransaction(tx.Id);
+			}
         }
 
         public IFreeSpaceHandling FreeSpaceHandling

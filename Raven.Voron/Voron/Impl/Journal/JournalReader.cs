@@ -14,9 +14,8 @@ namespace Voron.Impl.Journal
 
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
-		private uint _previousTransactionCrc;
 
-        private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
+	    private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
         private int _recoveryPage;
 
         public bool RequireHeaderUpdate { get; private set; }
@@ -35,7 +34,6 @@ namespace Voron.Impl.Journal
             _readingPage = 0;
             _recoveryPage = 0;
             LastTransactionHeader = previous;
-			_previousTransactionCrc = 0;
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }

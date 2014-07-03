@@ -8,9 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
@@ -19,8 +17,6 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-	using System.IO;
-
 	public unsafe class WriteAheadJournal : IDisposable
 	{
 		private readonly StorageEnvironment _env;
@@ -31,7 +27,7 @@ namespace Voron.Impl.Journal
 
 		private long _journalIndex = -1;
 
-		private uint _previousTransactionCrc;
+		private bool disposed;
 
 		private readonly LZ4 _lz4 = new LZ4();
 		private readonly JournalApplicator _journalApplicator;
@@ -43,8 +39,8 @@ namespace Voron.Impl.Journal
 		internal JournalFile CurrentFile;
 
 		private readonly HeaderAccessor _headerAccessor;
-
-		private IVirtualPager _compressionPager;
+		private readonly IVirtualPager _compressionPager;
+		private uint _previousTransactionCrc;
 
 		public event Action<TransactionToShip> OnTransactionCommit;
 
@@ -61,11 +57,23 @@ namespace Voron.Impl.Journal
 				header->Journal.JournalFilesCount = journalFilesCount;
 				header->IncrementalBackup.LastCreatedJournal = _journalIndex;
 			};
+			
+			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env,
+				_headerAccessor.Get(header => header->ShippedTransactionId), 
+				_headerAccessor.Get(header => header->ShippedTransactionCrc));
+
+			_previousTransactionCrc = _shipppedTransactionsApplicator.PreviousTransactionCrc;
 
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
 
 			_journalApplicator = new JournalApplicator(this, _journalLock);
-			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env);
+
+			_shipppedTransactionsApplicator.TransactionApplied += (previousTransactionId, previousTransactionCrc) => 
+				_headerAccessor.Modify(header =>
+				{
+					header->ShippedTransactionId = previousTransactionId;
+					header->ShippedTransactionCrc = previousTransactionCrc;
+				});
 		}
 
 		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
@@ -89,6 +97,7 @@ namespace Voron.Impl.Journal
 			{
 				actualLogSize = minRequiredSize;
 			}
+
 			_lastFile = now;
 
 			var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);
@@ -280,9 +289,8 @@ namespace Voron.Impl.Journal
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
 						var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos, scratchPagerState);
-
+						
 						Debug.Assert(page.PageNumber == pageNumber);
-
 						return page;
 					}
 				}
@@ -308,9 +316,8 @@ namespace Voron.Impl.Journal
 			return null;
 		}
 
-		private bool disposed;
 
-	    public void Dispose()
+		public void Dispose()
 		{
 			if (disposed)
 				return;
@@ -718,16 +725,19 @@ namespace Voron.Impl.Journal
 			{
 				var transactionToShip = new TransactionToShip(transactionHeader)
 				{
-                    CompressedPages = pages,
+					CompressedPages = pages,
 					PreviousTransactionCrc = _previousTransactionCrc
 				};
 
 				onTransactionCommit(transactionToShip);
 			}
+			if (tx.Id == 1) 
+			{
+				Shipper.UpdatePreviousTransactionCrc(transactionHeader.Crc);
+			}
+			_previousTransactionCrc = transactionHeader.Crc;
 
-            _previousTransactionCrc = transactionHeader.Crc;
-
-            if (CurrentFile.AvailablePages == 0)
+			if (CurrentFile.AvailablePages == 0)
 				CurrentFile = null;
 
 		}

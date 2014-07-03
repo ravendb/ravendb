@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Journal;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace Voron.Tests.Journal
 {
-	public class LogShipping : StorageTest
+	public unsafe class LogShipping : StorageTest
 	{
 		public LogShipping()
 			: base(StorageEnvironmentOptions.CreateMemoryOnly())
@@ -20,13 +21,13 @@ namespace Voron.Tests.Journal
 		}
 
 		[Fact]
-		public unsafe void Committing_tx_should_fire_event_with_transactionsToShip_records()
+		public void Committing_tx_should_fire_event_with_transactionsToShip_records()
 		{
 			var transactionsToShip = new List<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += ship =>
+			Env.Journal.OnTransactionCommit += tx =>
 			{
-			    ship.CopyPages();
-			    transactionsToShip.Add(ship);   
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Add(tx);
 			};
 
 			WriteTestDataToEnv();
@@ -36,7 +37,7 @@ namespace Voron.Tests.Journal
 			//validate crc
 			foreach (var tx in transactionsToShip)
 			{
-				var compressedDataBuffer = tx.CopiedPages;
+				var compressedDataBuffer = tx.PagesSnapshot;
 				fixed (byte* compressedDataBufferPtr = compressedDataBuffer)
 				{
 					var crc = Crc.Value(compressedDataBufferPtr, 0, compressedDataBuffer.Length);
@@ -46,15 +47,237 @@ namespace Voron.Tests.Journal
 		}
 
 		[Fact]
+		public void StorageEnvironment_Two_Different_Tx_Should_be_shipped_properly1()
+		{
+			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
+			Env.Journal.OnTransactionCommit += tx =>
+			{
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Enqueue(tx);
+			};
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree");
+				tree.Add("ABC", "Foo");
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree2");
+				tree.Add("ABC", "Foo");
+				tx.Commit();
+			}
+
+			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			{
+				TransactionToShip tx;
+				transactionsToShip.TryDequeue(out tx);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
+				{
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+				}
+
+				transactionsToShip.TryDequeue(out tx);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
+				{
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree2", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+				}
+			}
+		}
+
+
+		[Fact]
+		public void StorageEnvironment_Two_Different_Tx_Should_be_shipped_properly2()
+		{
+			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
+			Env.Journal.OnTransactionCommit += tx =>
+			{
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Enqueue(tx);
+			};
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree");
+				tree.Add("ABC", "Foo");
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree2");
+				tree.Add("ABC", "Foo");
+				tx.Commit();
+			}
+
+			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			{
+				TransactionToShip tx;
+				transactionsToShip.TryDequeue(out tx);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				transactionsToShip.TryDequeue(out tx);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
+				{
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree2", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+				}
+			}
+		}
+
+		[Fact]
+		public void StorageEnvironment_Two_Different_Tx_With_env_shutdown_Should_be_shipped_properly()
+		{
+			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
+			Env.Journal.OnTransactionCommit += tx =>
+			{
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Enqueue(tx);
+			};
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree");
+				tree.Add("ABC", "Foo");
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree2");
+				tree.Add("ABC", "Foo");
+				tx.Commit();
+			}
+
+			var tempPath = "Temp" + Guid.NewGuid();
+			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tempPath)))
+			{
+				TransactionToShip tx;
+				transactionsToShip.TryDequeue(out tx);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
+				{
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+				}
+			}
+
+			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tempPath)))
+			{
+				TransactionToShip tx;
+
+				transactionsToShip.TryDequeue(out tx);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
+				{
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree2", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo", result.Reader.ToStringValue());
+					});
+				}
+			}
+		}
+
+		[Fact]
+		public void StorageEnvironment_CreateTree_Should_be_shipped_properly()
+		{
+			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
+			Env.Journal.OnTransactionCommit += tx =>
+			{
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Add(tx);
+			};
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "TestTree");
+				tree.Add("ABC", "Foo");
+				tx.Commit();				
+			}
+
+			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			{
+				foreach (var tx in transactionsToShip)
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
+				{
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
+					{
+						var result = snaphsot.Read("TestTree", "ABC");
+						Assert.Equal(1, result.Version);
+						Assert.Equal("Foo",result.Reader.ToStringValue());
+					});
+				}
+			}
+		}
+
+		[Fact]
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip()
 		{
 			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += transactionsToShip.Add;
+			Env.Journal.OnTransactionCommit += tx =>
+			{
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Add(tx);
+			};
 
 			WriteTestDataToEnv();
 			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLogs(transactionsToShip);
+				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
 				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
 				{
 					var fooReadResult = snapshot.Read("TestTree", "foo");
@@ -76,7 +299,11 @@ namespace Voron.Tests.Journal
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_LOTS_of_transactions()
 		{
 			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += transactionsToShip.Add;
+			Env.Journal.OnTransactionCommit += tx =>
+			{
+				tx.CreatePagesSnapshot();
+				transactionsToShip.Add(tx);
+			};
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -90,7 +317,8 @@ namespace Voron.Tests.Journal
 
 			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
-				Assert.DoesNotThrow(() => shippingDestinationEnv.Journal.Shipper.ApplyShippedLogs(transactionsToShip));
+				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
+					Assert.DoesNotThrow(() => shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot,tx.PreviousTransactionCrc));
 
 				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -136,35 +364,6 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
-		public void Committed_tx_should_be_possible_to_read_from_journal_as_shipping_records()
-		{
-			var transactionsToShipFromCommits = new ConcurrentBag<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += ship =>
-			{
-                ship.CopyPages();
-			    transactionsToShipFromCommits.Add(ship);
-			};
-
-			WriteTestDataToEnv();
-
-			//will read 4 transactions --> 
-			//the 3 that were written in WriteTestDataToEnv() and the "create new database" transaction
-			var transactionsToShip = Env.Journal.Shipper.ReadJournalForShippings(-1).ToList();
-
-			Assert.Equal(4, transactionsToShip.Count);
-			Assert.Equal((uint)0, transactionsToShip[0].PreviousTransactionCrc);
-			Assert.Equal(transactionsToShip[0].Header.Crc, transactionsToShip[1].PreviousTransactionCrc);
-			Assert.Equal(transactionsToShip[1].Header.Crc, transactionsToShip[2].PreviousTransactionCrc);
-			Assert.Equal(transactionsToShip[2].Header.Crc, transactionsToShip[3].PreviousTransactionCrc);
-
-			var dataPairs = (from txFromCommit in transactionsToShipFromCommits
-							 join txFromRead in transactionsToShip on txFromCommit.Header.TransactionId equals txFromRead.Header.TransactionId
-							 select Tuple.Create(txFromCommit, txFromRead)).ToList();
-
-			dataPairs.ForEach(pair => Assert.Equal(pair.Item1.CopiedPages, pair.Item2.CopiedPages));
-
-		}
 
 		private void WriteTestDataToEnv()
 		{
