@@ -96,9 +96,9 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db, true); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs, true); });
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs, true); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs); });
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
@@ -531,18 +531,15 @@ class shell extends viewModelBase {
         }
     }
     
-    static fetchDbStats(db: database, forceFetch: boolean = false) {
-        if (db && !db.disabled() && (!db.isInStatsFetchCoolDown || forceFetch)) {
-            if (!db.isInStatsFetchCoolDown) {
-                db.isInStatsFetchCoolDown = true;
-                setTimeout(() => db.isInStatsFetchCoolDown = false, 5000);
-            }
-
-            new getDatabaseStatsCommand(db).execute().done(result => db.statistics(result));
+    static fetchDbStats(db: database) {
+        if (db && !db.disabled()) {
+            new getDatabaseStatsCommand(db)
+                .execute()
+                .done(result => db.statistics(result));
         }
     }
 
-    static fetchFsStats(fs: filesystem, forceFetch: boolean = false) {
+    static fetchFsStats(fs: filesystem) {
         if (fs && !fs.disabled()) {
             new getFilesystemStatsCommand(fs)
                 .execute()
@@ -550,7 +547,7 @@ class shell extends viewModelBase {
         }
     }
 
-    static fetchCsStats(cs: counterStorage, forceFetch: boolean = false) {
+    static fetchCsStats(cs: counterStorage) {
         if (cs && !cs.disabled()) {
             //TODO: implememnt fetching of counter storage stats
 /*            new getCounterStorageStatsCommand(cs)

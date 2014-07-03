@@ -47,7 +47,7 @@ class databases extends viewModelBase {
             var few = 20;
             var enabledDatabases: database[] = this.databases().filter((db: database) => !db.disabled());
             if (enabledDatabases.length < few) {
-                enabledDatabases.forEach(db => shell.fetchDbStats(db, true));
+                enabledDatabases.forEach(db => shell.fetchDbStats(db));
             }
         }
     }

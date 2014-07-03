@@ -43,7 +43,7 @@ class filesystems extends viewModelBase {
             var few = 20;
             var enabledFileSystems: filesystem[] = this.fileSystems().filter((fs: filesystem) => !fs.disabled());
             if (enabledFileSystems.length < few) {
-                enabledFileSystems.forEach(fs => shell.fetchFsStats(fs, true));
+                enabledFileSystems.forEach(fs => shell.fetchFsStats(fs));
             }
         }
     }

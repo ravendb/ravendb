@@ -141,9 +141,7 @@ namespace Raven.Database.Server.Connections
                             continue;
                         }
 
-                        lastMessageEnqueuedAndNotSent = null;
                         await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
-                        lastMessageSentTick = Environment.TickCount;
                     }
                 }
             }
@@ -191,7 +189,7 @@ namespace Raven.Database.Server.Connections
 			}).Start();
 	    }
 
-        private static async Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
+        private async Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
         {
             memoryStream.Position = 0;
             var jsonTextWriter = new JsonTextWriter(new StreamWriter(memoryStream));
@@ -200,6 +198,9 @@ namespace Raven.Database.Server.Connections
 
             var arraySegment = new ArraySegment<byte>(memoryStream.GetBuffer(), 0, (int) memoryStream.Position);
             await sendAsync(arraySegment, 1, true, callCancelled);
+
+			lastMessageEnqueuedAndNotSent = null;
+			lastMessageSentTick = Environment.TickCount;
         }
 
         private void OnDisconnection()
