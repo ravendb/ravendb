@@ -64,7 +64,7 @@ namespace Voron.Trees
 			// already was turned into a multi tree, not much to do here
 			if (item->Flags == NodeFlags.MultiValuePageRef)
 			{
-				var existingTree = OpenOrCreateMultiValueTree(_tx, key, item);
+				var existingTree = OpenMultiValueTree(_tx, key, item);
 				existingTree.DirectAdd(value, 0, version: version);
 				return;
 			}
@@ -220,7 +220,7 @@ namespace Voron.Trees
 
 			if (item->Flags == NodeFlags.MultiValuePageRef) //multi-value tree exists
 			{
-				var tree = OpenOrCreateMultiValueTree(_tx, key, item);
+				var tree = OpenMultiValueTree(_tx, key, item);
 
 				tree.Delete(value, version);
 
@@ -281,7 +281,7 @@ namespace Voron.Trees
 
 			if (node->Flags == NodeFlags.MultiValuePageRef)
 			{
-				var tree = OpenOrCreateMultiValueTree(_tx, key, node);
+				var tree = OpenMultiValueTree(_tx, key, node);
 
 				return tree.Iterate();
 			}
@@ -291,7 +291,7 @@ namespace Voron.Trees
 			return new PageIterator(nestedPage);
 		}
 
-		private Tree OpenOrCreateMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
+		private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
@@ -299,10 +299,11 @@ namespace Voron.Trees
 
 			var childTreeHeader =
 				(TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
+
 			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
-			tree = childTreeHeader != null ?
-				Open(tx, childTreeHeader) :
-				Create(tx, KeysPrefixing);
+			Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
+			
+			tree = Open(tx, childTreeHeader);
 
 			tx.AddMultiValueTree(this, key, tree);
 			return tree;
