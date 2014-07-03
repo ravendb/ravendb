@@ -168,7 +168,34 @@ html, body {
     }    
     overflow-x:hidden!important;
     overflow-y:hidden!important;
+}
 
+.replicationSimulation{
+    width:60vw;    
+     @media(max-width: 767px) {
+         width:80vw;
+         }
+    max-height:60vh!important;
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+    .replicationSimulationData
+    {
+        max-height:35vh!important;
+        height:35vh!important;
+        overflow-x:hidden;
+        overflow-y:auto;
+
+        .simulationResultContainer{                
+             margin-top:2.5%;
+           .simulationResult
+            {
+                font-weight:bold;
+                font-size:medium;
+                margin-bottom:2.5%;
+            }
+       }
+    }
+    
 }
 
 .query-stats{

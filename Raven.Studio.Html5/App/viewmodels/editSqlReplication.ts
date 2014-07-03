@@ -21,6 +21,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import documentMetadata = require("models/documentMetadata");
 import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
+import sqlReplicationSimulationDialog = require("viewmodels/sqlReplicationSimulationDialog");
 
 
 class editSqlReplication extends viewModelBase {
@@ -264,6 +265,10 @@ class editSqlReplication extends viewModelBase {
         });
     }
 
+    simulateSqlReplication() {
+        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication().name());
+        app.showDialog(viewModel);
+    }
 
 
 }
