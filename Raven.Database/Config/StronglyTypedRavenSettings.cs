@@ -154,6 +154,10 @@ namespace Raven.Database.Config
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
+
+			FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
+
+			MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 		}
 
 		private string GetDefaultWebDir()
@@ -291,5 +295,9 @@ namespace Raven.Database.Config
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
+
+		public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+
+		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
 	}
 }

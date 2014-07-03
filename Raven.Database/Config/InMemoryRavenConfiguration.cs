@@ -862,6 +862,16 @@ namespace Raven.Database.Config
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
 
+		/// <summary>
+		/// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
+		/// </summary>
+		public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+		/// <summary>
+		/// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
+		/// </summary>
+		public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()

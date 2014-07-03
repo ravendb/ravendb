@@ -825,6 +825,7 @@
     <Compile Include="MailingList\HttpIdTest.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
+    <Compile Include="MailingList\IndexesIgnoreNewtonsoftJsonPropertyAttributes.cs" />
     <Compile Include="MailingList\IndexTest2.cs" />
     <Compile Include="MailingList\IndexWithEnumNullableFailingUnitTest.cs" />
     <Compile Include="MailingList\InIssues.cs" />
