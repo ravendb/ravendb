@@ -563,18 +563,33 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexEntries(string index)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+			var reduceKeysArray = GetQueryStringValue("reduceKeys");
+
+			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray))
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Cannot specity 'query' and 'reducedKeys' at the same time"
+				}, HttpStatusCode.BadRequest);
+			}
+
+			List<string> reduceKeys = null;
+
+			if (reduceKeysArray != null)
+				reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
+
 			var totalResults = new Reference<int>();
 
 			var isDynamic = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
 							|| index.Equals("dynamic", StringComparison.OrdinalIgnoreCase);
 
 			if (isDynamic)
-				return GetIndexEntriesForDynamicIndex(index, indexQuery, totalResults);
+				return GetIndexEntriesForDynamicIndex(index, indexQuery, reduceKeys, totalResults);
 
-			return GetIndexEntriesForExistingIndex(index, indexQuery, totalResults);
+			return GetIndexEntriesForExistingIndex(index, indexQuery, reduceKeys, totalResults);
 		}
 
-		private HttpResponseMessage GetIndexEntriesForDynamicIndex(string index, IndexQuery indexQuery, Reference<int> totalResults)
+		private HttpResponseMessage GetIndexEntriesForDynamicIndex(string index, IndexQuery indexQuery, List<string> reduceKeys, Reference<int> totalResults)
 		{
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
@@ -582,14 +597,14 @@ namespace Raven.Database.Server.Controllers
 			if (dynamicIndexName == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			return GetIndexEntriesForExistingIndex(dynamicIndexName, indexQuery, totalResults);
+			return GetIndexEntriesForExistingIndex(dynamicIndexName, indexQuery, reduceKeys, totalResults);
 		}
 
-		private HttpResponseMessage GetIndexEntriesForExistingIndex(string index, IndexQuery indexQuery, Reference<int> totalResults)
+		private HttpResponseMessage GetIndexEntriesForExistingIndex(string index, IndexQuery indexQuery, List<string> reduceKeys, Reference<int> totalResults)
 		{
 			var results = Database
 					.IndexStorage
-					.IndexEntires(index, indexQuery, Database.IndexQueryTriggers, totalResults)
+					.IndexEntires(index, indexQuery, reduceKeys, Database.IndexQueryTriggers, totalResults)
 					.ToArray();
 
 			Tuple<DateTime, Etag> indexTimestamp = null;
