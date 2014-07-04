@@ -204,8 +204,14 @@ namespace Raven.Client.FileSystem
             if (session == null)
                 throw new InvalidCastException("This object does not implement IAsyncFilesSession.");
 
-            foreach (var op in registeredOperations)
+            var operationsToExecute = this.registeredOperations; // Potential race condition in between this two, not thread safe.
+            this.registeredOperations = new ConcurrentQueue<IFilesOperation>();
+
+            IFilesOperation op;
+            while (operationsToExecute.TryDequeue(out op))
+            {
                 await op.Execute(session);
+            }
         }
 
         public void IncrementRequestCount()

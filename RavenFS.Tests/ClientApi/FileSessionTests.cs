@@ -273,7 +273,40 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
+        [Fact]
+        public async void SaveIsIncompleteEnsureAllPendingOperationsAreCancelledStream()
+        {
+            var store = (FilesStore)filesStore;
 
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                var fileStream = CreateUniformFileStream(128);
+                session.RegisterUpload("test2.file", fileStream);
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 60; i++)
+                        x.WriteByte(i);
+                });
+                session.RegisterRename("test2.file", "test3.file");
+
+                Assert.Throws<BadRequestException>(() =>
+                {
+                    try
+                    {
+                        session.SaveChangesAsync().Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
+
+                var shouldExist = await session.LoadFileAsync("test2.file");
+                Assert.NotNull(shouldExist);
+                var shouldNotExist = await session.LoadFileAsync("test3.file");
+                Assert.Null(shouldNotExist);
+            }
+        }
   
     }
 }
