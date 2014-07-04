@@ -170,7 +170,12 @@ namespace Voron.Trees
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
-			var valueToInsert = KeysPrefixing ? (MemorySlice) new PrefixedSlice(value) : value; // first item is never prefixed
+			MemorySlice valueToInsert;
+			
+			if(KeysPrefixing)
+				valueToInsert = new PrefixedSlice(value); // first item is never prefixed
+			else
+				valueToInsert = value;
 
 			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
