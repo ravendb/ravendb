@@ -181,7 +181,33 @@ namespace Voron.Impl
 
 						try
 						{
-							DebugActionType actionType;
+							if (ShouldRecordToDebugJournal)
+							{
+								DebugActionType actionType;
+								switch (operation.Type)
+								{
+									case WriteBatch.BatchOperationType.Add:
+										actionType = DebugActionType.Add;
+										break;
+									case WriteBatch.BatchOperationType.Delete:
+										actionType = DebugActionType.Delete;
+										break;
+									case WriteBatch.BatchOperationType.MultiAdd:
+										actionType = DebugActionType.MultiAdd;
+										break;
+									case WriteBatch.BatchOperationType.MultiDelete:
+										actionType = DebugActionType.MultiDelete;
+										break;
+									case WriteBatch.BatchOperationType.Increment:
+										actionType = DebugActionType.Increment;
+										break;
+									default:
+										throw new ArgumentOutOfRangeException();
+								}
+
+								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.Value);
+							}
+
 							switch (operation.Type)
 							{
 								case WriteBatch.BatchOperationType.Add:
@@ -190,30 +216,22 @@ namespace Voron.Impl
 										tree.Add(operation.Key, stream, operation.Version);
 									else
 										tree.Add(operation.Key, (Slice)operation.Value, operation.Version);
-									actionType = DebugActionType.Add;
 									break;
 								case WriteBatch.BatchOperationType.Delete:
 									tree.Delete(operation.Key, operation.Version);
-									actionType = DebugActionType.Delete;
 									break;
 								case WriteBatch.BatchOperationType.MultiAdd:
 									tree.MultiAdd(operation.Key, operation.Value as Slice, version: operation.Version);
-									actionType = DebugActionType.MultiAdd;
 									break;
 								case WriteBatch.BatchOperationType.MultiDelete:
 									tree.MultiDelete(operation.Key, operation.Value as Slice, operation.Version);
-									actionType = DebugActionType.MultiDelete;
 									break;
 								case WriteBatch.BatchOperationType.Increment:
 									tree.Increment(operation.Key, (long)operation.Value, operation.Version);
-									actionType = DebugActionType.Increment;
 									break;
 								default:
 									throw new ArgumentOutOfRangeException();
 							}
-
-							if (ShouldRecordToDebugJournal)
-								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.Value);
 						}
 						catch (Exception e)
 						{

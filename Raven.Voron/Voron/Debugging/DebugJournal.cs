@@ -259,8 +259,11 @@ namespace Voron.Debugging
                 var newAction = new ActivityEntry(actionType, key, treeName, value);
                 WriteQueue.Enqueue(newAction);
 				lock(_journalWriteSyncObject)
-					if(!_isDisposed)
+					if (!_isDisposed)
+					{
 						_journalWriter.WriteLine(newAction.ToCsvLine(RecordOnlyValueLength));
+						_journalWriter.Flush();
+					}
             }
         }
 
