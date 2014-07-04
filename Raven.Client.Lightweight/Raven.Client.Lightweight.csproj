@@ -140,7 +140,6 @@
     <Compile Include="FileSystem\Listeners\IFilesConflictListener.cs" />
     <Compile Include="FileSystem\Listeners\IFilesDeleteListener.cs" />
     <Compile Include="FileSystem\IFilesStore.cs" />
-    <Compile Include="FileSystem\Listeners\IFilesWriteListener.cs" />
     <Compile Include="FileSystem\Listeners\IMetadataChangeListener.cs" />
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />

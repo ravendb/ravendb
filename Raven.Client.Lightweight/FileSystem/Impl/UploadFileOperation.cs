@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using System;
@@ -46,6 +47,7 @@ namespace Raven.Client.FileSystem.Impl
             var commands = session.Commands;
 
             var pipe = new BlockingStream(10);           
+
             var task = Task.Run(() => StreamWriter(pipe))
                            .ContinueWith(x => { pipe.CompleteWriting(); })
                            .ConfigureAwait(false);
