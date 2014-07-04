@@ -226,8 +226,6 @@ namespace Voron.Debugging
 
         public void Load(string journalName)
         {
-            InitializeDebugJournal(journalName);
-
             using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
             {
                 while (journalReader.Peek() >= 0)
