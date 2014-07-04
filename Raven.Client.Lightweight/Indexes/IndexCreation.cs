@@ -40,16 +40,16 @@ namespace Raven.Client.Indexes
 		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions)
 		{
-			var failedToCreateIndexNames = new List<string>();
+			var indexCompilationExceptions = new List<IndexCompilationException>();
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 			{
 				try
 				{
 					task.Execute(databaseCommands, conventions);
 				}
-				catch (IndexCompilationException)
+				catch (IndexCompilationException e)
 				{
-					failedToCreateIndexNames.Add(task.IndexName);
+					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 				}
 
 			}
@@ -59,8 +59,8 @@ namespace Raven.Client.Indexes
                 task.Execute(databaseCommands, conventions);
             }
 
-			if (failedToCreateIndexNames.Any())
-				throw new IndexCompilationException("Failed to create one or more indexes. Index names that were not created: " + string.Join(",", failedToCreateIndexNames.ToArray()));
+			if (indexCompilationExceptions.Any())
+				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.",indexCompilationExceptions);
 		}
 
 		/// <summary>
@@ -70,17 +70,16 @@ namespace Raven.Client.Indexes
 		/// <param name="documentStore">The document store.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
-			var failedToCreateIndexNames = new List<string>();
-		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			var indexCompilationExceptions = new List<IndexCompilationException>();
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 			{
 				try
 				{
 					task.Execute(documentStore);
 				}
-				catch (IndexCompilationException)
+				catch (IndexCompilationException e)
 				{
-					
-					failedToCreateIndexNames.Add(task.IndexName);
+					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 				}
 			}
 
@@ -89,8 +88,8 @@ namespace Raven.Client.Indexes
 					task.Execute(documentStore);
 			}
 
-			if(failedToCreateIndexNames.Any())
-				throw new IndexCompilationException("Failed to create one or more indexes. Index names that were not created: " + string.Join(",", failedToCreateIndexNames.ToArray()));
+			if(indexCompilationExceptions.Any())
+				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 #endif
 
@@ -121,16 +120,16 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention conventions)
 		{
-			var failedToCreateIndexNames = new List<string>();
-		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			var indexCompilationExceptions = new List<IndexCompilationException>();
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 		    {
 			    try
 			    {
 				    await task.ExecuteAsync(asyncDatabaseCommands, conventions);
 			    }
-				catch (IndexCompilationException)
+				catch (IndexCompilationException e)
 				{
-					failedToCreateIndexNames.Add(task.IndexName);
+					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 				}
 		    }
             foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
@@ -138,8 +137,8 @@ namespace Raven.Client.Indexes
                 await task.ExecuteAsync(asyncDatabaseCommands, conventions);
             }
 
-			if (failedToCreateIndexNames.Any())
-				throw new IndexCompilationException("Failed to create one or more indexes. Index names that were not created: " + string.Join(",",failedToCreateIndexNames.ToArray()));
+			if (indexCompilationExceptions.Any())
+				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 	}
 }

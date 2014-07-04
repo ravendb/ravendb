@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class IndexCreationWithAnalyzer : RavenTestBase
+	public class RavenDB_2486 : RavenTestBase
 	{
 		public class Foo
 		{
@@ -89,9 +89,9 @@ namespace Raven.Tests.Issues
 				{
 					IndexCreation.CreateIndexes(container, store);
 				}
-				catch (IndexCompilationException e)
+				catch (AggregateException e)
 				{
-					Assert.Contains("Index2",e.Message);
+					Assert.Contains("Index2",e.InnerExceptions.First().Message);
 				}
 
 				var indexInfo = store.DatabaseCommands.GetStatistics().Indexes;
@@ -114,9 +114,9 @@ namespace Raven.Tests.Issues
 				{
 					await IndexCreation.CreateIndexesAsync(container, store);
 				}
-				catch (IndexCompilationException e)
+				catch (AggregateException e)
 				{
-					Assert.Contains("Index2", e.Message);
+					Assert.Contains("Index2", e.InnerExceptions.First().Message);
 				}
 
 				var indexInfo = store.DatabaseCommands.GetStatistics().Indexes;
