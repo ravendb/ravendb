@@ -185,11 +185,10 @@ namespace Voron.Impl
 							switch (operation.Type)
 							{
 								case WriteBatch.BatchOperationType.Add:
-									var stream = operation.Value as Stream;
-									if (stream != null)
-										tree.Add(operation.Key, stream, operation.Version);
+									if (operation.ValueStream != null)
+										tree.Add(operation.Key, operation.ValueStream, operation.Version);
 									else
-										tree.Add(operation.Key, (Slice)operation.Value, operation.Version);
+										tree.Add(operation.Key, operation.ValueSlice, operation.Version);
 									actionType = DebugActionType.Add;
 									break;
 								case WriteBatch.BatchOperationType.Delete:
@@ -197,15 +196,15 @@ namespace Voron.Impl
 									actionType = DebugActionType.Delete;
 									break;
 								case WriteBatch.BatchOperationType.MultiAdd:
-									tree.MultiAdd(operation.Key, operation.Value as Slice, version: operation.Version);
+									tree.MultiAdd(operation.Key, operation.ValueSlice, version: operation.Version);
 									actionType = DebugActionType.MultiAdd;
 									break;
 								case WriteBatch.BatchOperationType.MultiDelete:
-									tree.MultiDelete(operation.Key, operation.Value as Slice, operation.Version);
+									tree.MultiDelete(operation.Key, operation.ValueSlice, operation.Version);
 									actionType = DebugActionType.MultiDelete;
 									break;
 								case WriteBatch.BatchOperationType.Increment:
-									tree.Increment(operation.Key, (long)operation.Value, operation.Version);
+									tree.Increment(operation.Key, operation.ValueLong, operation.Version);
 									actionType = DebugActionType.Increment;
 									break;
 								default:
@@ -213,7 +212,7 @@ namespace Voron.Impl
 							}
 
 							if (ShouldRecordToDebugJournal)
-								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.Value);
+								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.GetValueForDebugJournal());
 						}
 						catch (Exception e)
 						{
