@@ -168,7 +168,6 @@ namespace Raven.Client.FileSystem
         {
             var operation = new RenameFileOperation(this, sourceFile, destinationFile);
             registeredOperations.Enqueue(operation);
-            deletedEntities.Add(sourceFile);
         }
 
         public void RegisterRename(FileHeader sourceFile, string destinationFile)

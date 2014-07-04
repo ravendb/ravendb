@@ -164,15 +164,13 @@ namespace RavenFS.Tests.ClientApi
             using (var session = filesStore.OpenAsyncSession())
             {
                 session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
                 session.RegisterRename("a/test1.file", "a/a/test1.file");
                 await session.SaveChangesAsync();
 
                 var deletedFile = await session.LoadFileAsync("/a/test1.file");
                 Assert.Null(deletedFile);
 
-                var availableFile = await session.LoadFileAsync("/a/b/test1.file");
+                var availableFile = await session.LoadFileAsync("/a/a/test1.file");
                 Assert.NotNull(availableFile);
             }
         }
