@@ -179,6 +179,15 @@ namespace Raven.Client.Connection
 		/// <param name="indexDef">The index def.</param>
 		string PutIndex(string name, IndexDefinition indexDef);
 
+        /// <summary>
+        /// Checks if passed index definition matches version stored on server.
+        /// If index does not exist this method returns true.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="indexDef">The index definition.</param>
+        /// <returns></returns>
+        bool IndexHasChanged(string name, IndexDefinition indexDef);
+
 		/// <summary>
 		/// Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>

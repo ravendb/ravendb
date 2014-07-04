@@ -158,6 +158,28 @@ namespace Raven.Database.Actions
             return true;
         }
        
+
+        public bool IndexHasChanged(string name, IndexDefinition definition)
+        {
+            if (name == null)
+                throw new ArgumentNullException("name");
+
+            IsIndexNameValid(name);
+
+            var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+
+            if (existingIndex == null)
+            {
+                return true;
+            }
+
+            name = name.Trim();
+
+            var creationOption = FindIndexCreationOptions(definition, ref name);
+
+            return creationOption != IndexCreationOptions.Noop;
+        }
+
         // only one index can be created at any given time
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
