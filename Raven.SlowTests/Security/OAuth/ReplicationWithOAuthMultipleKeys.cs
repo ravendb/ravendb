@@ -47,11 +47,11 @@ namespace Raven.SlowTests.Security.OAuth
 				Name = apiKey.Split('/')[0],
 				Secret = apiKey.Split('/')[1],
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess {TenantId = "*"},
-					new DatabaseAccess {TenantId = Constants.SystemDatabase},
-                    new DatabaseAccess {TenantId = databaseName}
+					new ResourceAccess {TenantId = "*"},
+					new ResourceAccess {TenantId = Constants.SystemDatabase},
+                    new ResourceAccess {TenantId = databaseName}
 				}
 			}), new RavenJObject(), null);
 		}

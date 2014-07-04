@@ -9,8 +9,7 @@ namespace Raven.Database.Server.Security.OAuth
 	public class AccessTokenBody
 	{
 		public string UserId { get; set; }
-		public List<DatabaseAccess> AuthorizedDatabases { get; set; }
-        public List<FileSystemAccess> AuthorizedFileSystems { get; set; }
+		public List<ResourceAccess> AuthorizedDatabases { get; set; }
 		public double Issued { get; set; }
 
 		public bool IsExpired()
@@ -21,53 +20,37 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public bool IsAuthorized(string tenantId, bool writeAccess)
 		{
-		    if (string.IsNullOrEmpty(tenantId) || tenantId.StartsWith("fs/") == false)
+		    if (AuthorizedDatabases == null)
+		        return false;
+
+			if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("fs/"))
+				tenantId = tenantId.Substring(3);
+
+			if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("counters/"))
+				tenantId = tenantId.Substring(9);
+
+		    ResourceAccess db;
+		    if (string.Equals(tenantId, "<system>") || string.IsNullOrWhiteSpace(tenantId))
 		    {
-		        if (AuthorizedDatabases == null)
-		            return false;
+		        db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
+		    }
+		    else
+		    {
+		        db = AuthorizedDatabases.FirstOrDefault(a =>
+		                                                string.Equals(a.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) ||
+		                                                string.Equals(a.TenantId, "*"));
+		    }
 
-		        DatabaseAccess db;
-		        if (string.Equals(tenantId, "<system>") || string.IsNullOrWhiteSpace(tenantId))
-		        {
-		            db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
-		        }
-		        else
-		        {
-		            db = AuthorizedDatabases.FirstOrDefault(a =>
-		                                                    string.Equals(a.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) ||
-		                                                    string.Equals(a.TenantId, "*"));
-		        }
+		    if (db == null)
+		        return false;
 
-		        if (db == null)
-		            return false;
-
-		        if (db.Admin)
-		            return true;
-
-		        if (writeAccess && db.ReadOnly)
-		            return false;
-
+		    if (db.Admin)
 		        return true;
-		    }
-		    if (tenantId.StartsWith("fs/"))
-		    {
-		        if (AuthorizedFileSystems == null)
-		            return false;
 
-		        var fs = AuthorizedFileSystems.FirstOrDefault(a =>
-		                                                      string.Equals("fs/" + a.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) ||
-		                                                      string.Equals(a.TenantId, "*"));
+		    if (writeAccess && db.ReadOnly)
+		        return false;
 
-                if (fs == null)
-                    return false;
-
-                if (writeAccess && fs.ReadOnly)
-                    return false;
-
-                return true;
-		    }
-
-		    throw new ArgumentOutOfRangeException("tenantId", "We don't know how to authorize unknown tenant id: " + tenantId);
+		    return true;
 		}
 	}
 

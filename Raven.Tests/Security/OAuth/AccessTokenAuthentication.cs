@@ -44,7 +44,7 @@ namespace Raven.Tests.Security.OAuth
 
 			if (expired) issued -= TimeSpan.FromHours(1).TotalMilliseconds;
 
-			var authorizedDatabases = databases.Split(',').Select(tenantId=> new DatabaseAccess{TenantId = tenantId}).ToList();
+			var authorizedDatabases = databases.Split(',').Select(tenantId=> new ResourceAccess{TenantId = tenantId}).ToList();
 			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
 			var signature = valid ? AccessToken.Sign(body, server.SystemDatabase.Configuration.OAuthTokenKey) : "InvalidSignature";
