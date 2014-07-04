@@ -26,13 +26,8 @@ namespace Raven.Client.FileSystem
 
 
         Task<FileHeader> LoadFileAsync(string path);
-        Task<FileHeader> LoadFileAsync(DirectoryHeader directory, string filename);
         Task<FileHeader[]> LoadFileAsync(IEnumerable<string> path);
 
-        Task<FileHeader[]> LoadFilesAtDirectoryAsync(DirectoryHeader directory);
-        Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory);
-
-        Task<DirectoryHeader> LoadDirectoryAsync(string path);
 
         Task<Stream> DownloadAsync(string path, Reference<RavenJObject> metadata = null);
         Task<Stream> DownloadAsync(FileHeader path, Reference<RavenJObject> metadata = null);
@@ -46,12 +41,9 @@ namespace Raven.Client.FileSystem
         void RegisterFileDeletion(string path, Etag etag = null);
         void RegisterFileDeletion(FileHeader path, Etag etag = null);
 
-        void RegisterDirectoryDeletion(string path, bool recurse = false);
-        void RegisterDirectoryDeletion(DirectoryHeader path, bool recurse = false);
-
         void RegisterRename(string sourceFile, string destinationFile);
         void RegisterRename(FileHeader sourceFile, string destinationFile);
-        void RegisterRename(FileHeader sourceFile, DirectoryHeader destinationPath, string destinationName);
+
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>

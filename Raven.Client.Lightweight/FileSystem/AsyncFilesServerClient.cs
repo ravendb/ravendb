@@ -286,21 +286,6 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task<DirectoryHeader> BrowseDirectoryAsync(string directoryName, int start = 0, int pageSize = 25)
-        {
-            return ExecuteWithReplication("GET", async operation =>
-            {
-                var results = await this.SearchOnDirectoryAsync(directoryName, FilesSortOptions.Default, "", start, pageSize);
-
-                return new DirectoryHeader()
-                            {
-                                Name = directoryName,
-                                Files = results.FileCount,
-                                Metadata = new RavenJObject(),
-                            };
-            });
-        }
-
         public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>

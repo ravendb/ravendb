@@ -208,7 +208,6 @@
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
-    <Compile Include="FileSystem\DirectoryHeader.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />
     <Compile Include="FileSystem\FileSystemDocument.cs" />
     <Compile Include="FileSystem\SearchResults.cs" />

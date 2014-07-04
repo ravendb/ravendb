@@ -37,19 +37,16 @@ namespace RavenFS.Tests.ClientApi
                 file.Metadata.Add("Read-Only", true);
                 await session.SaveChangesAsync();
 
-                var directory = await session.LoadDirectoryAsync("/b");
-
-                session.RegisterDirectoryDeletion(directory, true);
+                session.RegisterFileDeletion("/b/test1.file");
+                session.RegisterFileDeletion("/b/test2.file");
                 await session.SaveChangesAsync();
 
                 Assert.Equal(1, deleteListener.DeletedFiles);
-                Assert.Equal(1, deleteListener.DeletedDirectories);
             }
         }
 
         private class DeleteNotReadOnlyFilesListener : IFilesDeleteListener
         {
-            public int DeletedDirectories { get; protected set; }
             public int DeletedFiles { get; protected set; }
 
             public bool BeforeDelete(FileHeader instance)
@@ -57,20 +54,9 @@ namespace RavenFS.Tests.ClientApi
                 return !instance.Metadata.Value<bool>("Read-Only");
             }
 
-            public bool BeforeDelete(DirectoryHeader instance)
-            {
-                return !instance.Metadata.Value<bool>("Read-Only");
-            }
-
-
             public void AfterDelete(FileHeader instance)
             {
                 DeletedFiles++;
-            }
-
-            public void AfterDelete(DirectoryHeader instance)
-            {
-                DeletedDirectories++;
             }
         }
     }

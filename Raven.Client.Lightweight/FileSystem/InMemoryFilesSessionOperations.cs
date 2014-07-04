@@ -164,18 +164,6 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation); 
         }
 
-        public void RegisterDirectoryDeletion(string path, bool recurse = false)
-        {
-            var operation = new DeleteDirectoryOperation(this, path, recurse);
-            registeredOperations.Enqueue(operation);   
-        }
-
-        public void RegisterDirectoryDeletion(DirectoryHeader directory, bool recurse = false)
-        {
-            var operation = new DeleteDirectoryOperation(this, directory.Path, recurse);
-            registeredOperations.Enqueue(operation); 
-        }
-
         public void RegisterRename(string sourceFile, string destinationFile)
         {
             var operation = new RenameFileOperation(this, sourceFile, destinationFile);
@@ -186,12 +174,6 @@ namespace Raven.Client.FileSystem
         public void RegisterRename(FileHeader sourceFile, string destinationFile)
         {
             RegisterRename(sourceFile.Path, destinationFile);
-        }
-
-        public void RegisterRename(FileHeader sourceFile, DirectoryHeader destination, string destinationName)
-        {
-            //TODO Validate destinationName is a filename and not a directory.
-            RegisterRename(sourceFile.Path, Path.Combine(destination.Path, destinationName));
         }
 
         /// <summary>
