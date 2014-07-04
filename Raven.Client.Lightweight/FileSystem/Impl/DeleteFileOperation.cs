@@ -28,11 +28,29 @@ namespace Raven.Client.FileSystem.Impl
         public async Task Execute(IAsyncFilesSession session)
         {
             var commands = session.Commands;
-            
-            await commands.DeleteAsync(Path, Etag)
-                          .ConfigureAwait(false);
 
-            sessionOperations.RegisterMissing(Path);
+            var fileHeader = await session.LoadFileAsync(Path);
+
+            bool delete = true;
+            foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
+            {
+                if (!deleteListener.BeforeDelete(fileHeader))
+                    delete = false;
+            }
+
+            if (delete)
+            {
+                await commands.DeleteAsync(Path, Etag)
+                              .ConfigureAwait(false);
+
+                sessionOperations.RegisterMissing(Path);
+                
+                foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
+                {
+                    deleteListener.AfterDelete(fileHeader);
+                }
+            }
+
         }
     }
 }
