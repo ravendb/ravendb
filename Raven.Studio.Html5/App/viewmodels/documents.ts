@@ -34,8 +34,6 @@ class documents extends viewModelBase {
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
-    currentDBDocChangesSubscription: changeSubscription;
-    currentDBBulkInsertSubscription: changeSubscription;
     modelPollingTimeoutFlag: boolean = true;
     isDocumentsUpToDate:boolean = true;
     showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
@@ -53,55 +51,46 @@ class documents extends viewModelBase {
 
         this.fetchCustomFunctions();
 
-        // treat document put/delete events
-        this.currentDBDocChangesSubscription = shell.currentResourceChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-            this.isDocumentsUpToDate = false;
-            var collections = this.collections();
-            var curCollection = this.collections.first(x => x.name === e.CollectionName);
-            
-
-            if (e.Type == documentChangeType.Delete) {
-                if (!!curCollection) {
-                    if (curCollection.documentCount() == 1) {
-                        this.collections.remove(curCollection);
-                        this.allDocumentsCollection.clearCollection();
-                        this.selectCollection(this.allDocumentsCollection);
-                    } else {
-                        curCollection.documentCount(curCollection.documentCount() - 1);
-
-                    }
-                }
-            }
-
-            this.throttledFetchCollections();
-        });
-        
-        // treat bulk Insert events
-        this.currentDBBulkInsertSubscription = shell.currentResourceChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
-            if (e.Type == documentChangeType.BulkInsertEnded) {
-                this.isDocumentsUpToDate = false;
-
-                this.throttledFetchCollections();
-            }
-        });
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
         this.fetchCollections(appUrl.getDatabase());
     }
 
-    changesApiBulkInsert(e: bulkInsertChangeNotificationDto) {
-        if (e.Type == documentChangeType.BulkInsertEnded) {
-
-            this.isDocumentsUpToDate = false;
-
-            this.throttledFetchCollections();
-        }
+    attached() {
+        // Initialize the context menu (using Bootstrap-ContextMenu library).
+        // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
+        (<any>$('.document-collections')).contextmenu({
+            target: '#collections-context-menu'
+        });
     }
 
-    changesApidocumentUpdated(e: documentChangeNotificationDto) {
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.currentResourceChangesApi().watchAllDocs((e: documentChangeNotificationDto) => this.changesApiDocumentUpdated(e)),
+            shell.currentResourceChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => this.changesApiBulkInsert(e))
+        ];
+    }
+
+    private changesApiDocumentUpdated(e: documentChangeNotificationDto) {
+        // treat document put/delete events
         this.isDocumentsUpToDate = false;
-        var collections = this.collections();
         var curCollection = this.collections.first(x => x.name === e.CollectionName);
+
+        if (e.Type == documentChangeType.Delete) {
+            if (!!curCollection) {
+                if (curCollection.documentCount() == 1) {
+                    this.collections.remove(curCollection);
+                    this.allDocumentsCollection.clearCollection();
+                    this.selectCollection(this.allDocumentsCollection);
+                } else {
+                    curCollection.documentCount(curCollection.documentCount() - 1);
+
+                }
+            }
+        }
+
+        this.throttledFetchCollections();
+/*      TODO: Decide what to do when put event occur
 
         if (!curCollection) {
             var systemDocumentsCollection = this.collections.first(x => x.isSystemDocuments === true);
@@ -131,25 +120,19 @@ class documents extends viewModelBase {
 
                 this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() - 1);
             }
+        }*/
+    }
+
+    private changesApiBulkInsert(e: bulkInsertChangeNotificationDto) {
+        // treat bulk Insert events
+        if (e.Type == documentChangeType.BulkInsertEnded) {
+            this.isDocumentsUpToDate = false;
+
+            this.throttledFetchCollections();
         }
     }
 
-    attached() {
-        // Initialize the context menu (using Bootstrap-ContextMenu library).
-        // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
-        (<any>$('.document-collections')).contextmenu({
-            target: '#collections-context-menu'
-        });
-    }
-
-    deactivate() {
-        super.deactivate();
-        this.currentDBDocChangesSubscription.off();
-        this.currentDBBulkInsertSubscription.off();
-    }
-
     collectionsLoaded(collections: Array<collection>, db: database) {
-        
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
         this.allDocumentsCollection.documentCount = ko.computed(() =>
@@ -248,7 +231,7 @@ class documents extends viewModelBase {
         collectionToSelect.activate();
     }
 
-    throttledFetchCollections() {
+    private throttledFetchCollections() {
         if (this.modelPollingTimeoutFlag === true) {
             
             setTimeout(() => {

@@ -85,6 +85,7 @@ class shell extends viewModelBase {
 
     static globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
+    private changeSubscriptionArray: changeSubscription[];
 
     constructor() {
         super();
@@ -188,6 +189,7 @@ class shell extends viewModelBase {
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
 
         window.addEventListener("beforeunload", () => {
+            this.cleanupNotifications();
             shell.globalChangesApi.dispose();
             this.disconnectFromResourceChangesApi();
         });
@@ -495,10 +497,11 @@ class shell extends viewModelBase {
             this.disconnectFromResourceChangesApi();
 
             shell.currentResourceChangesApi(new changesApi(db, 5000));
-
-            shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            this.changeSubscriptionArray = [
+                shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
+                shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
+                shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
+            ];
 
             this.currentConnectedDatabase = db;
         }
@@ -529,6 +532,8 @@ class shell extends viewModelBase {
 
     private disconnectFromResourceChangesApi() {
         if (shell.currentResourceChangesApi()) {
+            this.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
+            this.changeSubscriptionArray = [];
             shell.currentResourceChangesApi().dispose();
             shell.currentResourceChangesApi(null);
         }

@@ -123,6 +123,8 @@ namespace Raven.Database.Server.Connections
                         if (lastMessageEnqueuedAndNotSent != null)
                         {
                             await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, callCancelled);
+							lastMessageEnqueuedAndNotSent = null;
+							lastMessageSentTick = Environment.TickCount;
                         }
                         continue;
                     }
@@ -142,6 +144,8 @@ namespace Raven.Database.Server.Connections
                         }
 
                         await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
+						lastMessageEnqueuedAndNotSent = null;
+						lastMessageSentTick = Environment.TickCount;
                     }
                 }
             }
@@ -198,9 +202,6 @@ namespace Raven.Database.Server.Connections
 
             var arraySegment = new ArraySegment<byte>(memoryStream.GetBuffer(), 0, (int) memoryStream.Position);
             await sendAsync(arraySegment, 1, true, callCancelled);
-
-			lastMessageEnqueuedAndNotSent = null;
-			lastMessageSentTick = Environment.TickCount;
         }
 
         private void OnDisconnection()
