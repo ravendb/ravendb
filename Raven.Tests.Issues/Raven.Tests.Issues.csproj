@@ -260,12 +260,15 @@
     <Compile Include="RavenDb_2239.cs" />
     <Compile Include="RavenDB_2233.cs" />
     <Compile Include="RavenDB_2244.cs" />
+    <Compile Include="RavenDB_2273.cs" />
     <Compile Include="RavenDB_2325.cs" />
     <Compile Include="RavenDB_2314.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="RavenDB_2387.cs" />
+    <Compile Include="RavenDB_2391.cs" />
     <Compile Include="RavenDB_2432.cs" />
+    <Compile Include="RavenDB_2435.cs" />
     <Compile Include="RavenDB_2440.cs" />
     <Compile Include="RavenDB_2458.cs" />
     <Compile Include="RavenDB_295.cs" />

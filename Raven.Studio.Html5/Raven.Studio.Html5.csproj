@@ -371,7 +371,6 @@
     <Content Include="App\views\filesystem\synchronizationConflicts.html" />
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\quotas.html" />
-    <Content Include="App\views\showSampleDataDialog.html" />
     <Content Include="App\views\sqlReplicationStatsDialog.html" />
     <Content Include="App\views\showDataDialog.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
@@ -484,6 +483,9 @@
     <Content Include="Content\bootstrap.css" />
     <Content Include="Content\durandal.css" />
     <Content Include="Content\font-awesome.css" />
+    <Content Include="Content\images\icon.png" />
+    <Content Include="Content\images\ios-startup-image-landscape.png" />
+    <Content Include="Content\images\ios-startup-image-portrait.png" />
     <Content Include="Content\images\logo.png" />
     <Content Include="Content\images\raven.png" />
     <Content Include="Content\images\ui-bg_flat_0_aaaaaa_40x100.png" />
@@ -740,7 +742,6 @@
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
-    <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -753,9 +754,10 @@
     <Content Include="Scripts\durandal\plugins\serializer.js" />
     <Content Include="Scripts\durandal\plugins\widget.js" />
     <Content Include="Scripts\durandal\system.js" />
-    <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <Content Include="Scripts\nvd3\d3.js" />
+    <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
@@ -802,8 +804,8 @@
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
+    <Content Include="Scripts\typings\d3\nvd3.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
-    <Content Include="Scripts\typings\d3\nv.d.ts" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>

@@ -58,8 +58,8 @@ namespace Raven.Tests.Issues
 										   Enabled = true,
 										   Databases =
 				                           {
-					                           new DatabaseAccess {Admin = true, TenantId = "*"},
-					                           new DatabaseAccess {Admin = true, TenantId = "<system>"}
+					                           new ResourceAccess {Admin = true, TenantId = "*"},
+					                           new ResourceAccess {Admin = true, TenantId = "<system>"}
 				                           }
 									   }), new RavenJObject(), null);
 		}

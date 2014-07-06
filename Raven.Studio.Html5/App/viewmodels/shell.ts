@@ -207,6 +207,11 @@ class shell extends viewModelBase {
             this.newDocument();
         });
 
+        jwerty.key("enter", e => {
+            e.preventDefault();
+            return false;
+        }, this, "#goToDocInput");
+
         $("body").tooltip({
             delay: { show: 1000, hide: 100 },
             container: 'body',
@@ -221,13 +226,16 @@ class shell extends viewModelBase {
     }
 
     setupApiKey() {
-        // try to find api key as studio parameter
-        var queryVars = forge.util.getQueryVariables();
-        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
-            oauthContext.apiKey(queryVars['api-key'][0]);
-        }
-        if ('has-api-key' in queryVars) {
+        // try to find api key as studio hash parameter
+        var hash = window.location.hash;
+        if (hash === "#has-api-key") {
             return this.showApiKeyDialog();
+        } else if (hash.match(/#api-key/g)) {
+            var match = /#api-key=(.*)/.exec(hash);
+            if (match && match.length == 2) {
+                oauthContext.apiKey(match[1]);
+                window.location.hash = "#";
+            }
         }
         return $.Deferred().resolve();
     }
@@ -626,7 +634,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog);
+        return app.showDialog(dialog).then(() => window.location.href = "#");
     }
 
     showErrorsDialog() {

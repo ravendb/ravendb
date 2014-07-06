@@ -1,4 +1,4 @@
-/// <reference path="../../Scripts/typings/d3/nv.d.ts" />
+/// <reference path="../../Scripts/typings/d3/nvd3.d.ts" />
 /// <reference path="../../Scripts/typings/d3/d3.d.ts" />
 /// <reference path="../../Scripts/typings/d3/timelinesChart.d.ts" />
 /// <reference path="../../Scripts/typings/d3/timelines.d.ts" />
@@ -6,10 +6,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import d3 = require('d3/d3');
-import nv = require('d3/nv');
-import timelines = require('d3/models/timelines');
-import timelinesChart = require('d3/models/timelinesChart');
-
+import nv = require('nvd3');
 
 class metricsIndexBatchSize extends viewModelBase {
 

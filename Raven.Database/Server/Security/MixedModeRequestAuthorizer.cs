@@ -83,11 +83,16 @@ namespace Raven.Database.Server.Security
 				return true;
 			}
 
-			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
-			if (string.IsNullOrEmpty(oneTimeToken) == false)
+			var oneTimeTokenAsHeader = controller.GetHeader("Single-Use-Auth-Token");
+			if (string.IsNullOrEmpty(oneTimeTokenAsHeader) == false)
 			{
-				return TryAuthorizeSingleUseAuthToken(controller, oneTimeToken, out msg);
+			    return TryAuthorizeSingleUseAuthToken(controller, oneTimeTokenAsHeader, out msg);
 			}
+            var oneTimeTokenAsQueryParam = controller.GetQueryStringValue("singleUseAuthToken");
+            if (string.IsNullOrEmpty(oneTimeTokenAsQueryParam) == false)
+            {
+                return TryAuthorizeSingleUseAuthToken(controller, oneTimeTokenAsQueryParam, out msg);
+            }
 
 			var authHeader = controller.GetHeader("Authorization");
 			var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
@@ -172,37 +177,21 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.GetUser(controller);
 		}
 
-		public List<string> GetApprovedDatabases(IPrincipal user, RavenDbApiController controller, string[] databases)
+		public List<string> GetApprovedResources(IPrincipal user, RavenDbApiController controller, string[] databases)
 		{
 			var authHeader = controller.GetHeader("Authorization");
 
 			List<string> approved;
 			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-				approved = oAuthRequestAuthorizer.GetApprovedDatabases(user);
+				approved = oAuthRequestAuthorizer.GetApprovedResources(user);
 			else
-				approved = windowsRequestAuthorizer.GetApprovedDatabases(user);
+				approved = windowsRequestAuthorizer.GetApprovedResources(user);
 
 			if (approved.Contains("*"))
 				return databases.ToList();
 
 			return approved;
 		}
-
-        public List<string> GetApprovedFileSystems(IPrincipal user, RavenDbApiController controller, string[] fileSystems)
-        {
-            var authHeader = controller.GetHeader("Authorization");
-
-            List<string> approved;
-            if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-                approved = oAuthRequestAuthorizer.GetApprovedFileSystems(user);
-            else
-                approved = windowsRequestAuthorizer.GetApprovedFileSystems(user);
-
-            if (approved.Contains("*"))
-                return fileSystems.ToList();
-
-            return approved;
-        }
 
 		public override void Dispose()
 		{

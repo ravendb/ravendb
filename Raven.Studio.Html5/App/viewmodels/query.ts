@@ -40,6 +40,7 @@ class query extends viewModelBase {
     selectedIndex = ko.observable<string>();
     indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
     editIndexUrl: KnockoutComputed<string>;
+    visualizerUrl: KnockoutComputed<string>;
     termsUrl: KnockoutComputed<string>;
     statsUrl: KnockoutComputed<string>;
     hasSelectedIndex: KnockoutComputed<boolean>;
@@ -66,6 +67,7 @@ class query extends viewModelBase {
         var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
         return !!currentIndex && currentIndex.hasReduce == true;
     });
+
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
 
@@ -91,6 +93,7 @@ class query extends viewModelBase {
         super();
         this.appUrls = appUrl.forCurrentDatabase();
         this.editIndexUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
+        this.visualizerUrl = ko.computed(() => this.selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.selectedIndex()) : null);
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
