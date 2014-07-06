@@ -190,8 +190,8 @@ namespace Voron.Impl.Journal
 			{
 				_writePage += pages.Length;
 				_pageTranslationTable.SetItems(tx, ptt);
-				
-				Debug.Assert(_unusedPages.Except(unused).Any() == false);
+
+				Debug.Assert(!_unusedPages.Any(unused.Contains));
 				_unusedPages.AddRange(unused);
 			}
 
@@ -209,17 +209,6 @@ namespace Voron.Impl.Journal
 			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
 			    var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
 
-				ptt[pageNumber] = new PagePosition
-				{
-					ScratchPos = txPage.PositionInScratchBuffer,
-					JournalPos = -1, // needed only during recovery and calculated there
-					TransactionId = tx.Id,
-					JournalNumber = Number
-				};
-			    if (txPage.PositionInScratchBuffer == 1)
-			    {
-				    
-			    }
 			    PagePosition value;
 			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
 				    unused.Add(value);
@@ -227,7 +216,14 @@ namespace Voron.Impl.Journal
 			    PagePosition pagePosition;
 			    if (ptt.TryGetValue(pageNumber, out pagePosition))
 				    unused.Add(pagePosition);
-				
+
+				ptt[pageNumber] = new PagePosition
+				{
+					ScratchPos = txPage.PositionInScratchBuffer,
+					JournalPos = -1, // needed only during recovery and calculated there
+					TransactionId = tx.Id,
+					JournalNumber = Number
+				};
 			}
 	    }
 

@@ -100,8 +100,8 @@ namespace Voron.Impl
             PageFromScratchBuffer value;
 	        if (_allocatedPages.TryGetValue(page, out value) == false)
 	        {
-				Trace.WriteLine(String.Format("Free for not allocated page attempted. Page = {0}, aSOfTxId = {1}, stack trace of last allocate = {2}",page,asOfTxId, allocatePageTraces[page]));
-		        //throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+				//Trace.WriteLine(String.Format("Free for not allocated page attempted. Page = {0}, aSOfTxId = {1}, stack trace of last allocate = {2}",page,asOfTxId, allocatePageTraces[page]));
+		        throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
 	        }
 	        _allocatedPages.Remove(page);
             LinkedList<PendingPage> list;
@@ -139,11 +139,7 @@ namespace Voron.Impl
         public long Size;
         public int NumberOfPages;
 
-	    public PageFromScratchBuffer()
-	    {
-	    }
-
-        public override bool Equals(object obj)
+	    public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -164,5 +160,10 @@ namespace Voron.Impl
                 return hashCode;
             }
         }
+
+	    public override string ToString()
+	    {
+		    return string.Format("PositionInScratchBuffer: {0}, Size: {1}, NumberOfPages: {2}", PositionInScratchBuffer, Size, NumberOfPages);
+	    }
     }
 }
