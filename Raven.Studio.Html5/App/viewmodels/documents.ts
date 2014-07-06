@@ -137,7 +137,7 @@ class documents extends viewModelBase {
             var viewModel = new deleteCollection(collection);
             viewModel.deletionTask.done(() => {
                 this.collections.remove(collection);
-                this.allDocumentsCollection.activate();
+                this.selectCollection(this.allDocumentsCollection);
             });
             app.showDialog(viewModel);
         }
