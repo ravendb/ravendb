@@ -71,7 +71,8 @@ class documents extends viewModelBase {
     createNotifications(): Array<changeSubscription> {
         return [
             shell.currentResourceChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => this.changesApiIndexUpdated(e)),
-            shell.currentResourceChangesApi().watchAllDocs(() => this.changesApiDocumentsUpdated())
+            shell.currentResourceChangesApi().watchAllDocs(() => this.changesApiDocumentsUpdated()),
+            shell.currentResourceChangesApi().watchBulks(() => this.changesApiDocumentsUpdated())
         ];
     }
 
