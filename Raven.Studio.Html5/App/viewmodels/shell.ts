@@ -152,6 +152,11 @@ class shell extends viewModelBase {
         });
     }
 
+        // Override canActivate: we can always load this page, regardless of any system db prompt.
+    canActivate(args: any): any {
+        return true;
+    }
+
     activate(args: any) {
         super.activate(args);
 
@@ -501,7 +506,7 @@ class shell extends viewModelBase {
                 db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
             this.disconnectFromResourceChangesApi();
 
-            shell.currentResourceChangesApi(new changesApi(db, 0));
+            shell.currentResourceChangesApi(new changesApi(db, 5000));
             this.changeSubscriptionArray = [
                 shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
