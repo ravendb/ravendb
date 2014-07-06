@@ -70,25 +70,26 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => this.changesApiDocumentUpdated(e))
+            shell.currentResourceChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => this.changesApiIndexUpdated(e)),
+            shell.currentResourceChangesApi().watchAllDocs(() => this.changesApiDocumentsUpdated())
         ];
     }
 
-    private changesApiDocumentUpdated(e: indexChangeNotificationDto) {
+    private changesApiIndexUpdated(e: indexChangeNotificationDto) {
         if (e.Name === "Raven/DocumentsByEntityName") {
             var db = this.activeDatabase();
             this.fetchCollections(db).done(results => this.updateCollections(results, db));
         }
     }
 
+    private changesApiDocumentsUpdated() {
+        var db = this.activeDatabase();
+        this.fetchCollections(db).done(results => this.updateCollections(results, db));
+    }
+
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() =>
-            this.collections()
-                .filter(c => c !== this.allDocumentsCollection) // Don't include self, the all documents collection.
-                .map(c => c.documentCount()) // Grab the document count of each.
-                .reduce((first: number, second: number) => first + second, 0)); // And sum them up.
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
@@ -100,10 +101,6 @@ class documents extends viewModelBase {
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
-
-        // Fetch the collection info for each collection.
-        // The collection info contains information such as total number of documents.
-        collectionsWithSysCollection.forEach(c => c.fetchTotalDocumentCount());
     }
 
     fetchCustomFunctions() {
@@ -163,24 +160,20 @@ class documents extends viewModelBase {
 
         this.collections.removeAll(deletedCollections);
 
-        var recieveTasks: JQueryPromise<any>[] = [];
         receivedCollections.forEach((receivedCol: collection) => {
             var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
-                recieveTasks.push(receivedCol.fetchTotalDocumentCount());
             } else {
-                recieveTasks.push(foundCollection.fetchTotalDocumentCount());
+                foundCollection.documentCount(receivedCol.documentCount());
             }
         });
 
-        $.when.apply($, recieveTasks)
-            .done(() => {
-                var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
-                if (!currentCollection || currentCollection.documentCount() == 0) {
-                    this.selectCollection(this.allDocumentsCollection);
-                }
-            });
+        //if the collection is deleted, go to the all documents collection
+        var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
+        if (!currentCollection || currentCollection.documentCount() == 0) {
+            this.selectCollection(this.allDocumentsCollection);
+        }
     }
     
     selectCollection(collection: collection) {

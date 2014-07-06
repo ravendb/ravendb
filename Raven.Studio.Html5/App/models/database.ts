@@ -4,7 +4,7 @@ class database extends resource {
     statistics = ko.observable<databaseStatisticsDto>();
     activeBundles = ko.observableArray<string>();
 
-    constructor(public name: string, private isDisabled: boolean = false, private bundles = []) {
+    constructor(public name: string, isDisabled: boolean = false, private bundles = []) {
         super(name, 'database');
         this.disabled(isDisabled);
         this.activeBundles(bundles);
