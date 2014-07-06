@@ -15,6 +15,10 @@ namespace Raven.Tests.Bugs
 	{
 		private const int refCount = 2;
 
+	    public class User
+	    {
+	        public string Id;
+	    }
 		public class Index : AbstractIndexCreationTask<User, Index.Result>
 		{
 			public class Result
@@ -49,7 +53,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void ShouldRecordReferncesProperly()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
 				var count = 2;
 				for (int i = 0; i < count; i++)
