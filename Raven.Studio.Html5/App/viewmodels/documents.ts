@@ -70,20 +70,13 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => this.changesApiIndexUpdated(e)),
-            shell.currentResourceChangesApi().watchAllDocs(() => this.changesApiDocumentsUpdated()),
-            shell.currentResourceChangesApi().watchBulks(() => this.changesApiDocumentsUpdated())
+            shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 
-    private changesApiIndexUpdated(e: indexChangeNotificationDto) {
-        if (e.Name === "Raven/DocumentsByEntityName") {
-            var db = this.activeDatabase();
-            this.fetchCollections(db).done(results => this.updateCollections(results, db));
-        }
-    }
-
-    private changesApiDocumentsUpdated() {
+    private refreshCollections() {
         var db = this.activeDatabase();
         this.fetchCollections(db).done(results => this.updateCollections(results, db));
     }

@@ -1,6 +1,6 @@
 ﻿<div class="documents-page">
     <div class="row">
-        <div class="col-md-2">
+        <div class="col-md-2 document-collections-container">
             <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
                 <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                     <a href="javascript:void(0)">
