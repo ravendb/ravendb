@@ -31,19 +31,17 @@ class collection {
 		ko.postbox.publish("ActivateCollection", this);
     }
 
-    fetchTotalDocumentCount(){
+    fetchTotalDocumentCount(): JQueryPromise<any>{
         // AFAICT, there's no way to fetch just the total number of system 
         // documents, other than doing a full fetch for sys docs.
         if (this.isSystemDocuments) {
-            new getSystemDocumentsCommand(this.ownerDatabase, 0, 1024)
+           return new getSystemDocumentsCommand(this.ownerDatabase, 0, 1024)
                 .execute()
                 .done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
         } else {
-            new getCollectionInfoCommand(this)
+            return new getCollectionInfoCommand(this)
                 .execute()
-                .done((info: collectionInfo) => {
-                    this.documentCount(info.totalResults);
-            });
+                .done((info: collectionInfo) => this.documentCount(info.totalResults));
         }
     }
 

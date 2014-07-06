@@ -34,8 +34,6 @@ class documents extends viewModelBase {
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
-    modelPollingTimeoutFlag: boolean = true;
-    isDocumentsUpToDate:boolean = true;
     showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
 
     static gridSelector = "#documentsGrid";
@@ -53,7 +51,9 @@ class documents extends viewModelBase {
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
-        this.fetchCollections(appUrl.getDatabase());
+
+        var db = this.activeDatabase();
+        this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
     }
 
     attached() {
@@ -64,71 +64,20 @@ class documents extends viewModelBase {
         });
     }
 
+    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
+        return new getCollectionsCommand(db).execute();
+    }
+
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllDocs((e: documentChangeNotificationDto) => this.changesApiDocumentUpdated(e)),
-            shell.currentResourceChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => this.changesApiBulkInsert(e))
+            shell.currentResourceChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => this.changesApiDocumentUpdated(e))
         ];
     }
 
-    private changesApiDocumentUpdated(e: documentChangeNotificationDto) {
-        // treat document put/delete events
-        this.isDocumentsUpToDate = false;
-        var curCollection = this.collections.first(x => x.name === e.CollectionName);
-
-        if (e.Type == documentChangeType.Delete) {
-            if (!!curCollection) {
-                if (curCollection.documentCount() == 1) {
-                    this.collections.remove(curCollection);
-                    this.allDocumentsCollection.clearCollection();
-                    this.selectCollection(this.allDocumentsCollection);
-                } else {
-                    curCollection.documentCount(curCollection.documentCount() - 1);
-
-                }
-            }
-        }
-
-        this.throttledFetchCollections();
-/*      TODO: Decide what to do when put event occur
-
-        if (!curCollection) {
-            var systemDocumentsCollection = this.collections.first(x => x.isSystemDocuments === true);
-            if (!!systemDocumentsCollection && (!!e.CollectionName || (!!e.Id && e.Id.indexOf("Raven/Databases/") == 0))) {
-                curCollection = systemDocumentsCollection;
-            }
-        }
-
-        // for put event, if collection is recognized, increment collection and allDocuments count, if not, create new one also
-        if (e.Type == documentChangeType.Put) {
-            if (!!curCollection) {
-                curCollection.documentCount(curCollection.documentCount() + 1);
-            } else {
-                curCollection = new collection(e.CollectionName, this.activeDatabase());
-                curCollection.documentCount(1);
-                this.collections.push(curCollection);
-            }
-            this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() + 1);
-            // for delete event, if collection is recognized, decrease collection and allDocuments count, if left with zero documents, delete collection
-        } else if (e.Type == documentChangeType.Delete) {
-            if (!!curCollection) {
-                if (curCollection.documentCount() == 1) {
-                    this.collections.remove(curCollection);
-                } else {
-                    curCollection.documentCount(curCollection.documentCount() - 1);
-                }
-
-                this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() - 1);
-            }
-        }*/
-    }
-
-    private changesApiBulkInsert(e: bulkInsertChangeNotificationDto) {
-        // treat bulk Insert events
-        if (e.Type == documentChangeType.BulkInsertEnded) {
-            this.isDocumentsUpToDate = false;
-
-            this.throttledFetchCollections();
+    private changesApiDocumentUpdated(e: indexChangeNotificationDto) {
+        if (e.Name === "Raven/DocumentsByEntityName") {
+            var db = this.activeDatabase();
+            this.fetchCollections(db).done(results => this.updateCollections(results, db));
         }
     }
 
@@ -203,11 +152,8 @@ class documents extends viewModelBase {
         }
     }
 
-    updateCollections(receivedCollections: Array<collection>, db: database) {
-
+    private updateCollections(receivedCollections: Array<collection>, db: database) {
         var deletedCollections = [];
-        var curSelectedCollectionName = this.selectedCollection().name;
-        
 
         this.collections().forEach((col: collection) => {
             if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
@@ -217,35 +163,24 @@ class documents extends viewModelBase {
 
         this.collections.removeAll(deletedCollections);
 
+        var recieveTasks: JQueryPromise<any>[] = [];
         receivedCollections.forEach((receivedCol: collection) => {
             var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
-                receivedCol.fetchTotalDocumentCount();
+                recieveTasks.push(receivedCol.fetchTotalDocumentCount());
             } else {
-                foundCollection.fetchTotalDocumentCount();
+                recieveTasks.push(foundCollection.fetchTotalDocumentCount());
             }
         });
-        
-        var collectionToSelect = this.collections().first(c => c.name === curSelectedCollectionName) || this.allDocumentsCollection;
-        collectionToSelect.activate();
-    }
 
-    private throttledFetchCollections() {
-        if (this.modelPollingTimeoutFlag === true) {
-            
-            setTimeout(() => {
-                this.modelPollingTimeoutFlag = false;
-                var db = appUrl.getDatabase();
-                new getCollectionsCommand(db)
-                    .execute()
-                    .done(results => this.updateCollections(results, db)).always(() => {
-                        this.isDocumentsUpToDate = true;
-                        this.modelPollingTimeoutFlag = true;
-                    });
-                
-            }, 5000);
-        }
+        $.when.apply($, recieveTasks)
+            .done(() => {
+                var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
+                if (!currentCollection || currentCollection.documentCount() == 0) {
+                    this.selectCollection(this.allDocumentsCollection);
+                }
+            });
     }
     
     selectCollection(collection: collection) {
@@ -266,12 +201,6 @@ class documents extends viewModelBase {
                 this.currentCollectionPagedItems(pagedList);
             });
         });
-    }
-
-    fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db)
-            .execute()
-            .done(results => this.collectionsLoaded(results, db));
     }
 
     newDocument() {

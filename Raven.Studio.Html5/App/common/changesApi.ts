@@ -220,19 +220,19 @@ class changesApi {
                 this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
             } else if (type === "ConflictNotification") {
                 this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
-            } else if (type == "FileChangeNotification") {
+            } else if (type === "FileChangeNotification") {
                 for (var key in this.watchedFolders) {
                     var folderCallbacks = <KnockoutObservableArray<fileChangeNotification>> this.watchedFolders[key];
                     this.fireEvents(folderCallbacks(), value, (e) => {
                         var notifiedFolder = folder.getFolderFromFilePath(e.File);
-                        var match: string[] = null
+                        var match: string[] = null;
                         if (notifiedFolder && notifiedFolder.path) {
                             match = notifiedFolder.path.match(key);
                         }
                         return match && match.length > 0;
                     });
                 }
-            } else if (type == "ConfigurationChangeNotification") {
+            } else if (type === "ConfigurationChangeNotification") {
                 this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
             } else {
                 console.log("Unhandled Changes API notification type: " + type);

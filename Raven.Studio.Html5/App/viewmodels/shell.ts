@@ -496,7 +496,7 @@ class shell extends viewModelBase {
                 db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
             this.disconnectFromResourceChangesApi();
 
-            shell.currentResourceChangesApi(new changesApi(db, 5000));
+            shell.currentResourceChangesApi(new changesApi(db, 0));
             this.changeSubscriptionArray = [
                 shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
