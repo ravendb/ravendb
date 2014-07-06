@@ -188,6 +188,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+        [Route("c-sharp-index-definition/{*fullIndexName}")]
 		[Route("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
 		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
 		{
