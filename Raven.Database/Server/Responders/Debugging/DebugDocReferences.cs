@@ -25,16 +25,22 @@ namespace Raven.Database.Server.Responders.Debugging
 
 		public override void Respond(IHttpContext context)
 		{
+
+			var op = context.Request.QueryString["op"] == "from" ? "from" : "to";
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var docId = Uri.UnescapeDataString(match.Groups[1].Value);
 
-			int totalCount = -1;
+			int totalCountReferencing = -1;
 			List<string> results = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				totalCount = accessor.Indexing.GetCountOfDocumentsReferencing(docId);
+				totalCountReferencing = accessor.Indexing.GetCountOfDocumentsReferencing(docId);
+				var documentsReferencing =
+					op == "from"
+						? accessor.Indexing.GetDocumentsReferencesFrom(docId)
+						: accessor.Indexing.GetDocumentsReferencing(docId);
 				results =
-					accessor.Indexing.GetDocumentsReferencing(docId)
+					documentsReferencing
 					        .Skip(context.GetStart())
 					        .Take(context.GetPageSize(Database.Configuration.MaxPageSize))
 					        .ToList();
@@ -42,7 +48,7 @@ namespace Raven.Database.Server.Responders.Debugging
 
 			context.WriteJson(new
 			{
-				TotalCount = totalCount,
+				TotalCountReferencing = totalCountReferencing,
 				Results = results
 			});
 		}

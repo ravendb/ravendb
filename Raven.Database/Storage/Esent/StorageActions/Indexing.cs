@@ -393,7 +393,6 @@ namespace Raven.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_ref", "key");
 		}
 
-
 		public int GetCountOfDocumentsReferencing(string key)
 		{
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_ref");

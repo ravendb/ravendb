@@ -1594,7 +1594,7 @@ namespace Raven.Database.Indexing
                     task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
                 }
 				
-				logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(",",task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));				
+				logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";",task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));				
             }
             if (task.ReferencesToCheck.Count == 0)
                 return;
