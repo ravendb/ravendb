@@ -203,6 +203,11 @@ class shell extends viewModelBase {
             this.newDocument();
         });
 
+        jwerty.key("enter", e => {
+            e.preventDefault();
+            return false;
+        }, this, "#goToDocInput");
+
         $("body").tooltip({
             delay: { show: 1000, hide: 100 },
             container: 'body',
