@@ -26,7 +26,7 @@ namespace Voron.Impl
 			}
 		}
 
-		public IEnumerable<BatchOperation> GetSortedOperations(string treeName)
+		internal IEnumerable<BatchOperation> GetSortedOperations(string treeName)
 		{
 			Dictionary<Slice, BatchOperation> operations;
 			if (_lastOperations.TryGetValue(treeName, out operations))
@@ -45,7 +45,7 @@ namespace Voron.Impl
 			foreach (var operation in multiOperations
 				.OrderBy(x => x.Key, _sliceEqualityComparer)
 				.SelectMany(x => x.Value)
-				.OrderBy(x => (Slice)x.Value, _sliceEqualityComparer))
+				.OrderBy(x => x.ValueSlice, _sliceEqualityComparer))
 				yield return operation;
 		}
 
@@ -108,12 +108,11 @@ namespace Voron.Impl
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
 
-				value = operation.Value as Stream;
+				value = operation.ValueStream;
 				operation.Reset(); // will reset stream position
 
 				if (operation.Type == BatchOperationType.Add)
 					return true;
-
 			}
 
 			return false;
@@ -233,15 +232,14 @@ namespace Voron.Impl
 				if (lastOpsForTree.TryGetValue(operation.Key, out old))
 				{
 					operation.SetVersionFrom(old);
-					var disposable = old.Value as IDisposable;
-					if (disposable != null)
-						disposable.Dispose();
+					if (old.ValueStream != null)
+						old.ValueStream.Dispose();
 				}
 				lastOpsForTree[operation.Key] = operation;
 			}
 		}
 
-		public class BatchOperation : IComparable<BatchOperation>
+		internal class BatchOperation : IComparable<BatchOperation>
 		{
 #if DEBUG
 			private readonly StackTrace stackTrace;
@@ -251,10 +249,16 @@ namespace Voron.Impl
 			}
 #endif
 
-			private readonly long originalStreamPosition;
-			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>();
-			private readonly Action reset = delegate { };
-			private readonly Slice valSlice;
+			private readonly long _originalStreamPosition;
+			private readonly HashSet<Type> _exceptionTypesToIgnore = new HashSet<Type>();
+
+			private readonly Action _reset = null;
+
+			public readonly Stream ValueStream;
+
+			public readonly Slice ValueSlice;
+
+			public readonly long ValueLong;
 
 			public static BatchOperation Add(Slice key, Slice value, ushort? version, string treeName)
 			{
@@ -283,19 +287,21 @@ namespace Voron.Impl
 
 			public static BatchOperation Increment(Slice key, long delta, ushort? version, string treeName)
 			{
-				return new BatchOperation(key, delta, version, treeName, BatchOperationType.Increment);
+				return new BatchOperation(key, delta, version, treeName);
 			}
 
 			private BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
-				: this(key, value as object, version, treeName, type)
+				: this(key, version, treeName, type)
 			{
 				if (value != null)
 				{
-					originalStreamPosition = value.Position;
+					_originalStreamPosition = value.Position;
 					ValueSize = value.Length;
 
-					reset = () => value.Position = originalStreamPosition;
+					_reset = () => value.Position = _originalStreamPosition;
 				}
+
+				ValueStream = value;
 
 #if DEBUG
 				stackTrace = new StackTrace();
@@ -303,42 +309,45 @@ namespace Voron.Impl
 			}
 
 			private BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)
-				: this(key, value as object, version, treeName, type)
+				: this(key, version, treeName, type)
 			{
 				if (value != null)
 				{
-					valSlice = value;
-					originalStreamPosition = 0;
+					_originalStreamPosition = 0;
 					ValueSize = value.Size;
 				}
+
+				ValueSlice = value;
 			}
 
-			private BatchOperation(Slice key, object value, ushort? version, string treeName, BatchOperationType type)
+			private BatchOperation(Slice key, long value, ushort? version, string treeName)
+				: this(key, version, treeName, BatchOperationType.Increment)
+			{
+				ValueLong = value;
+			}
+
+			private BatchOperation(Slice key, ushort? version, string treeName, BatchOperationType type)
 			{
 				Key = key;
-				Value = value;
 				Version = version;
 				TreeName = treeName;
 				Type = type;
 			}
 
-			public Slice Key { get; private set; }
+			public readonly Slice Key;
 
-			public long ValueSize { get; private set; }
+			public readonly long ValueSize;
 
-			public object Value { get; private set; }
+			public readonly string TreeName;
 
-			public string TreeName { get; private set; }
-
-			public BatchOperationType Type { get; private set; }
+			public readonly BatchOperationType Type;
 
 			public ushort? Version { get; private set; }
 
 			public HashSet<Type> ExceptionTypesToIgnore
 			{
-				get { return exceptionTypesToIgnore; }
+				get { return _exceptionTypesToIgnore; }
 			}
-
 
 			public void SetVersionFrom(BatchOperation other)
 			{
@@ -349,7 +358,10 @@ namespace Voron.Impl
 
 			public void Reset()
 			{
-				reset();
+				if (_reset == null)
+					return;
+
+				_reset();
 			}
 
 			public void SetIgnoreExceptionOnExecution<T>()
@@ -358,22 +370,36 @@ namespace Voron.Impl
 				ExceptionTypesToIgnore.Add(typeof(T));
 			}
 
-			public unsafe int CompareTo(BatchOperation other)
+			public int CompareTo(BatchOperation other)
 			{
 				var r = SliceEqualityComparer.Instance.Compare(Key, other.Key);
 				if (r != 0)
 					return r;
-				if (valSlice != null)
+				if (ValueSlice != null)
 				{
-					if (other.valSlice == null)
+					if (other.ValueSlice == null)
 						return -1;
-					return valSlice.Compare(other.valSlice);
+					return ValueSlice.Compare(other.ValueSlice);
 				}
-				else if (other.valSlice != null)
+				else if (other.ValueSlice != null)
 				{
 					return 1;
 				}
 				return 0;
+			}
+
+			public object GetValueForDebugJournal()
+			{
+				if (Type == BatchOperationType.Increment)
+					return ValueLong;
+
+				if (ValueStream != null)
+					return ValueStream;
+
+				if (ValueSlice != null)
+					return ValueSlice;
+
+				return null;
 			}
 		}
 
@@ -393,9 +419,10 @@ namespace Voron.Impl
 			{
 				foreach (var val in operation.Value)
 				{
-					var disposable = val.Value.Value as IDisposable;
-					if (disposable != null)
-						disposable.Dispose();
+					if (val.Value.ValueStream == null)
+						continue;
+
+					val.Value.ValueStream.Dispose();
 				}
 
 			}

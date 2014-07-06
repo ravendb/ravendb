@@ -32,5 +32,13 @@ namespace Raven.Client.Linq.Indexing
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
+
+		/// <summary>
+		/// Boost the value with the given amount
+		/// </summary>
+		public static string StripHtml(this object item)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
 	}
 }

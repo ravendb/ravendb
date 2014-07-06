@@ -62,10 +62,10 @@ namespace Raven.Tests.Server.Runner.Controllers
 					Name = serverConfiguration.ApiKeyName,
 					Secret = serverConfiguration.ApiKeySecret,
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess {TenantId = "*", Admin = true},
-					new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true},
+					new ResourceAccess {TenantId = "*", Admin = true},
+					new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
 				}
 				}), new RavenJObject(), null);
 			}

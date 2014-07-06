@@ -70,11 +70,11 @@ namespace Raven.Tests.Security
 							Secret = apiKey.Split('/')[1],
 							Enabled = true,
 							Databases =
-								new List<DatabaseAccess>
+								new List<ResourceAccess>
 								{
-									new DatabaseAccess { TenantId = "*" },
-									new DatabaseAccess { TenantId = Constants.SystemDatabase },
-                                    new DatabaseAccess {TenantId = databaseName}
+									new ResourceAccess { TenantId = "*" },
+									new ResourceAccess { TenantId = Constants.SystemDatabase },
+                                    new ResourceAccess {TenantId = databaseName}
 								}
 						}),
 					new RavenJObject(),
@@ -91,11 +91,11 @@ namespace Raven.Tests.Security
 					                                   {
 						                                   Name = username,
 						                                   Enabled = true,
-						                                   Databases = new List<DatabaseAccess>
+						                                   Databases = new List<ResourceAccess>
 						                                   {
-							                                   new DatabaseAccess {TenantId = "*"},
-															   new DatabaseAccess {TenantId = Constants.SystemDatabase},
-                                                               new DatabaseAccess {TenantId = databaseName}
+							                                   new ResourceAccess {TenantId = "*"},
+															   new ResourceAccess {TenantId = Constants.SystemDatabase},
+                                                               new ResourceAccess {TenantId = databaseName}
 						                                   }
 					                                   }
 				                                   }

@@ -63,7 +63,7 @@ namespace Raven.Client.FileSystem
         Task<FileSystemStats> GetStatisticsAsync();
 
 
-        Task DeleteAsync(string filename);
+        Task DeleteAsync(string filename, Etag etag = null);
         Task RenameAsync(string currentName, string newName);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
@@ -82,6 +82,7 @@ namespace Raven.Client.FileSystem
         Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
 
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);
+
         Task<FileHeader[]> GetAsync(string[] filename);
     }
 

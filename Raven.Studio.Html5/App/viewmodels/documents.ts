@@ -185,6 +185,19 @@ class documents extends viewModelBase {
 
     selectColumns() {
         require(["viewmodels/selectColumns"], selectColumns => {
+
+            // Fetch column widths from virtual table
+            var virtualTable = this.getDocumentsGrid();
+            var vtColumns = virtualTable.columns();
+            this.currentColumnsParams().columns().forEach( (column: customColumnParams) => {
+                for(var i=0; i < vtColumns.length; i++) {
+                    if (column.binding() === vtColumns[i].binding) {
+                        column.width(vtColumns[i].width()|0);
+                        break;
+                    }
+                }
+            });
+
             var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
             app.showDialog(selectColumnsViewModel);
             selectColumnsViewModel.onExit().done((cols) => {

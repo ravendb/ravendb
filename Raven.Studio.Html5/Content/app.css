@@ -471,6 +471,54 @@ body {
 .collection-style-15 {
   background-color: #95fe00;
 }
+.collection-style-16 {
+  background-image: linear-gradient(#00c700, #c7009a);
+}
+.collection-style-17 {
+  background-image: linear-gradient(#c7009a, #ff0000);
+}
+.collection-style-18 {
+  background-image: linear-gradient(#ff0000, #0095ef);
+}
+.collection-style-19 {
+  background-image: linear-gradient(#0095ef, #a70068);
+}
+.collection-style-20 {
+  background-image: linear-gradient(#a70068, #006464);
+}
+.collection-style-21 {
+  background-image: linear-gradient(#006464, #7832c7);
+}
+.collection-style-22 {
+  background-image: linear-gradient(#7832c7, #c72828);
+}
+.collection-style-23 {
+  background-image: linear-gradient(#c72828, #c7c700);
+}
+.collection-style-24 {
+  background-image: linear-gradient(#c7c700, #c700c7);
+}
+.collection-style-25 {
+  background-image: linear-gradient(#c700c7, #fe8000);
+}
+.collection-style-26 {
+  background-image: linear-gradient(#fe8000, #0095fe);
+}
+.collection-style-27 {
+  background-image: linear-gradient(#0095fe, #95fec7);
+}
+.collection-style-28 {
+  background-image: linear-gradient(#95fec7, #9500fe);
+}
+.collection-style-29 {
+  background-image: linear-gradient(#9500fe, #950000);
+}
+.collection-style-30 {
+  background-image: linear-gradient(#950000, #95fe00);
+}
+.collection-style-31 {
+  background-image: linear-gradient(#95fe00, #00c700);
+}
 .system-documents-collection {
   background-color: #123c65;
 }
@@ -799,9 +847,7 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*#goToDocInput {
-        width: 10em;
-    }*/
+  /*# sourceMappingURL=app.css.map */
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1200,4 +1246,19 @@ footer ul {
   z-index: 1;
   background-color: #cccccc;
   box-shadow: #999999 0px 0px 5px inset;
+}
+.messageBox {
+  background-color: white;
+  border: 1px solid #999;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+  border-radius: 6px;
+  outline: none;
+  -webkit-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  -moz-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  -webkit-background-clip: padding-box;
+  -moz-background-clip: padding-box;
+  background-clip: padding-box;
 }

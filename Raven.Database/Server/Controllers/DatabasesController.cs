@@ -61,7 +61,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 					
-					approvedDatabases = authorizer.GetApprovedDatabases(user, this, databaseNames);
+					approvedDatabases = authorizer.GetApprovedResources(user, this, databaseNames);
 				}
 			}
 

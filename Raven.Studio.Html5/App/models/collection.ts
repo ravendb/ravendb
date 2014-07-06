@@ -83,7 +83,7 @@ class collection {
         } 
 
         // We don't have an existing style. Assign one in the form of 'collection-style-X', where X is a number between 0 and maxStyleCount. These styles are found in app.less.
-        var maxStyleCount = 16;
+        var maxStyleCount = 32;
         var styleNumber = Object.keys(collection.styleMap).length % maxStyleCount;
         var style = "collection-style-" + styleNumber;
         collection.styleMap[entityName] = style;
