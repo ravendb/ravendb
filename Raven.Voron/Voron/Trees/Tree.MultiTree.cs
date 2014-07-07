@@ -203,6 +203,8 @@ namespace Voron.Trees
 				Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
 			};
 
+			nestedPage.ClearPrefixInfo();
+
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
 			nestedPage.AddDataNode(0, valueToInsert, 0, 0);
