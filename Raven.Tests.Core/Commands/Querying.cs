@@ -248,5 +248,37 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[3].Hits);
             }
         }
+
+        [Fact]
+        public void CanGetSuggestions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Users_ByName();
+                index.Execute(store);
+
+                store.DatabaseCommands.Put("users/1", null, RavenJObject.FromObject(new User { Name = "John Smith" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                store.DatabaseCommands.Put("users/2", null, RavenJObject.FromObject(new User { Name = "Jack Johnson" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                store.DatabaseCommands.Put("users/3", null, RavenJObject.FromObject(new User { Name = "Robery Jones" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                store.DatabaseCommands.Put("users/4", null, RavenJObject.FromObject(new User { Name = "David Jones" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                WaitForIndexing(store);
+
+                var suggestions = store.DatabaseCommands.Suggest(index.IndexName, new SuggestionQuery()
+                {
+                    Field = "Name",
+                    Term = "<<johne davi>>",
+                    Accuracy = 0.4f,
+                    MaxSuggestions = 5,
+                    Distance = StringDistanceTypes.JaroWinkler,
+                    Popularity = true,
+                });
+
+                Assert.Equal("john", suggestions.Suggestions[0]);
+                Assert.Equal("jones", suggestions.Suggestions[1]);
+                Assert.Equal("johnson", suggestions.Suggestions[2]);
+                Assert.Equal("david", suggestions.Suggestions[3]);
+                Assert.Equal("jack", suggestions.Suggestions[4]);
+            }
+        }
     }
 }

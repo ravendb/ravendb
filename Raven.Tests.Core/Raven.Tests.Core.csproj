@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3CB57F77-123A-45BB-A3E2-487065D18B90}</ProjectGuid>
+    <ProjectGuid>{93287FBA-732A-4603-9BBE-9CFDC82FC8BE}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Tests.Core</RootNamespace>
@@ -100,7 +100,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BackupRestore\BackupRestore.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="Commands\Batches.cs" />
@@ -160,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Auth\" />
+    <Folder Include="BackupRestore\" />
     <Folder Include="Patching\" />
   </ItemGroup>
   <ItemGroup>
