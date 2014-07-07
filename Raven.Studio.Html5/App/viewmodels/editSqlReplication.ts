@@ -28,6 +28,16 @@ class editSqlReplication extends viewModelBase {
 
     static editSqlReplicationSelector = "#editSQLReplication";
 
+    static sqlProvidersConnectionStrings: { ProviderName: string; ConnectionString: string; }[] = [
+        { ProviderName: 'System.Data.SqlClient', ConnectionString: 'Server=[Server Address];Database=[Database Name];User Id=[User ID];Password=[Password];' },
+        { ProviderName: 'System.Data.SqlServerCe.4.0', ConnectionString: 'Data Source=[path of .sdf file];Persist Security Info=False;' },
+        { ProviderName: 'System.Data.SqlServerCe.3.5', ConnectionString: 'Provider=Microsoft.SQLSERVER.CE.OLEDB.3.5;Data Source=[path of .sdf file];' },
+        { ProviderName: 'System.Data.OleDb', ConnectionString: '' },
+        { ProviderName: 'System.Data.OracleClient', ConnectionString: 'Data Source=[TNSNames name];User Id=[User ID];Password=[Password];Integrated Security=no;' },
+        { ProviderName: 'MySql.Data.MySqlClient', ConnectionString: 'Server=[Server Address];Port=[Server Port(default:3306)];Database=[Database Name];Uid=[User ID];Pwd=[Password];' },
+        { ProviderName: 'Npgsql', ConnectionString: 'Server=[Server Address];Port=[Port];Database=[Database Name];User Id=[User ID];Password=[Password];' }
+    ];
+
     editedReplication = ko.observable<sqlReplication>();
     collections = ko.observableArray<string>();
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
@@ -89,6 +99,23 @@ class editSqlReplication extends viewModelBase {
         this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
+    }
+
+    providerChanged(obj, event) {
+        if (event.originalEvent && obj.connectionStringType() == obj.CONNECTION_STRING) {
+            var curConnectionString = !!this.editedReplication().connectionStringValue()? this.editedReplication().connectionStringValue().trim():"";
+            if (curConnectionString === "" ||
+                editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                if (!!matchingConnectionStringPair) {
+                    var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
+                    this.editedReplication().connectionStringValue(
+                        matchingConnectionStringValue
+                        );
+                }
+                
+            }
+        }
     }
     
    
