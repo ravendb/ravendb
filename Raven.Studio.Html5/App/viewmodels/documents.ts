@@ -31,7 +31,9 @@ class documents extends viewModelBase {
     currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
     selectedDocumentIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
+    hasDocuments: KnockoutComputed<boolean>;
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
+    hasAllDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
     showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
@@ -40,8 +42,26 @@ class documents extends viewModelBase {
 
     constructor() {
         super();
+
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
+        this.hasDocuments = ko.computed(() => {
+            if (!!this.selectedCollection()) {
+                if (this.selectedCollection().name == collection.allDocsCollectionName) {
+                    var db: database = this.activeDatabase();
+                    return db.itemCount() > 0;
+                }
+                return this.selectedCollection().documentCount() > 0;
+            }
+            return false;
+        });
         this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
+        this.hasAllDocumentsSelected = ko.computed(() => {
+            var numOfSelectedDocuments = this.selectedDocumentIndices().length;
+            if (!!this.selectedCollection() && numOfSelectedDocuments != 0) {
+                return numOfSelectedDocuments == this.selectedCollection().documentCount();
+            }
+            return false;
+        });
     }
 
     activate(args) {
@@ -84,6 +104,7 @@ class documents extends viewModelBase {
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
+        this.allDocumentsCollection.documentCount = ko.computed(() => db.itemCount());
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
@@ -208,14 +229,34 @@ class documents extends viewModelBase {
     }
 
     toggleSelectAll() {
-        this.isSelectAll.toggle();
+        var docsGrid = this.getDocumentsGrid();
+
+        if (docsGrid) {
+            if (this.hasAnyDocumentsSelected()) {
+                docsGrid.selectNone();
+            } else {
+                docsGrid.selectAll();
+            }
+
+/*                if (true) {
+                    docsGrid.selectAll();
+                } else {
+                    this.isSelectAll(false);
+                    docsGrid.selectNone();
+                }*/
+        }
+     
+
+
+
+/*        this.isSelectAll.toggle();
 
         var docsGrid = this.getDocumentsGrid();
         if (docsGrid && this.isSelectAll()) {
             docsGrid.selectAll();
         } else if (docsGrid && !this.isSelectAll()) {
             docsGrid.selectNone();
-        }        
+        }   */     
     }
 
     editSelectedDoc() {

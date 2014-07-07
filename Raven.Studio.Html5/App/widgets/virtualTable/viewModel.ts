@@ -34,6 +34,7 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+    lastVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
     collections: KnockoutObservableArray<string>;
@@ -111,7 +112,10 @@ class ctor {
             this.refreshIdAndCheckboxColumn();
         });
 
-        this.noResults = ko.computed<boolean>(() => this.virtualRowCount() === 0 && !this.settings.rowsAreLoading() );
+        this.noResults = ko.computed<boolean>(() => {
+            var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
+            return numOfRowsInUse == 0 && !this.settings.rowsAreLoading();
+        });
 
         this.registerColumnResizing();
     }
@@ -191,6 +195,9 @@ class ctor {
         this.recycleRows(this.createRecycleRows(desiredRowCount));
         this.ensureRowsCoverViewport();
         this.loadRowData();
+
+        // Update row checked states.
+        this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); 
     }
 
     setupKeyboardShortcuts() {
@@ -251,7 +258,7 @@ class ctor {
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
             this.settings.rowsAreLoading(true);
-            var that = this;
+
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -433,8 +440,9 @@ class ctor {
         var positionCheck = viewportTop;
 
         this.firstVisibleRow = null;
+        var rowAtPosition = null;
         while (positionCheck < viewportBottom) {
-            var rowAtPosition = this.findRowAtY(positionCheck);
+            rowAtPosition = this.findRowAtY(positionCheck);
             if (!rowAtPosition) {
                 // If there's no row at this position, recycle one.
                 rowAtPosition = this.getOffscreenRow(viewportTop, viewportBottom);
@@ -451,9 +459,11 @@ class ctor {
             if (!this.firstVisibleRow) {
                 this.firstVisibleRow = rowAtPosition;
             }
-
+            
             positionCheck = rowAtPosition.top() + this.rowHeight;
         }
+
+        this.lastVisibleRow = rowAtPosition;
     }
 
     getOffscreenRow(viewportTop: number, viewportBottom: number) {
@@ -526,11 +536,16 @@ class ctor {
 
     selectAll() {
         var allIndices = [];
-        for (var i = 0; i < this.items.totalResultCount(); i++) {
+        var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
+        var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();
+        var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
+        var actualNumberOfVisibleRows = Math.min(lastVisibleRowNumber - firstVisibleRowNumber, numOfRowsInUse);
+        for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
             allIndices.push(i);
         }
         this.settings.selectedIndices(allIndices);
-        this.recycleRows().forEach(r => r.isChecked(true));
+
+        this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
     }
 
     getRowIndicesRange(firstRowIndex: number, secondRowIndex: number): Array<number> {
@@ -546,12 +561,9 @@ class ctor {
     }
 
     editItem() {
-        var selectedDocs = this.getSelectedItems();
-
         if (this.settings.selectedIndices().length >0) {
             ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
         }
-        
     }
 
     copySelectedDocs() {
@@ -578,10 +590,12 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    deleteSelectedItems() {
+    deleteSelectedItems(){
         var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+
         deleteDocsVm.deletionTask.done(() => {
+            var newItemCount = this.settings.itemsSource().totalResultCount() - this.settings.selectedIndices().length;
             var deletedDocIndices = documents.map(d => this.items.indexOf(d));
             deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
             this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
@@ -592,8 +606,8 @@ class ctor {
             // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
             // note: won't run on delete of last document(s) of a collection in order to prevent race condition 
             // with changes api
-            if (this.items.itemCount()> 0) {
-                this.onWindowHeightChanged(); 
+            if (newItemCount > 0) {
+                this.onWindowHeightChanged();
             }
         });
         app.showDialog(deleteDocsVm);
