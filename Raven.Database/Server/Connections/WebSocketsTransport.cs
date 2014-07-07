@@ -110,7 +110,7 @@ namespace Raven.Database.Server.Connections
 
 				while (callCancelled.IsCancellationRequested == false)
                 {
-                    bool result = await manualResetEvent.WaitAsync(5000);
+                    var result = await manualResetEvent.WaitAsync(5000);
                     if (callCancelled.IsCancellationRequested)
                         break;
 
@@ -123,6 +123,8 @@ namespace Raven.Database.Server.Connections
                         if (lastMessageEnqueuedAndNotSent != null)
                         {
                             await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, callCancelled);
+							lastMessageEnqueuedAndNotSent = null;
+							lastMessageSentTick = Environment.TickCount;
                         }
                         continue;
                     }
@@ -141,9 +143,9 @@ namespace Raven.Database.Server.Connections
                             continue;
                         }
 
-                        lastMessageEnqueuedAndNotSent = null;
                         await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
-                        lastMessageSentTick = Environment.TickCount;
+						lastMessageEnqueuedAndNotSent = null;
+						lastMessageSentTick = Environment.TickCount;
                     }
                 }
             }
@@ -191,7 +193,7 @@ namespace Raven.Database.Server.Connections
 			}).Start();
 	    }
 
-        private static async Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
+        private async Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
         {
             memoryStream.Position = 0;
             var jsonTextWriter = new JsonTextWriter(new StreamWriter(memoryStream));

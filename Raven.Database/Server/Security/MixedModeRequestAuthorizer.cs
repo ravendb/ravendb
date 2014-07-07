@@ -88,7 +88,8 @@ namespace Raven.Database.Server.Security
 			{
 			    return TryAuthorizeSingleUseAuthToken(controller, oneTimeTokenAsHeader, out msg);
 			}
-            var oneTimeTokenAsQueryParam = controller.GetQueryStringValue("singleUseAuthToken");
+            
+			var oneTimeTokenAsQueryParam = controller.GetQueryStringValue("singleUseAuthToken");
             if (string.IsNullOrEmpty(oneTimeTokenAsQueryParam) == false)
             {
                 return TryAuthorizeSingleUseAuthToken(controller, oneTimeTokenAsQueryParam, out msg);

@@ -46,7 +46,6 @@ import extensions = require("common/extensions");
 
 class shell extends viewModelBase {
     private router = router;
-    canStudioBeLoaded = ko.computed(() => ("EventSource" in window || "WebSocket" in window)); //IE9 and below
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     isDatabaseDisabled: KnockoutComputed<boolean>;
@@ -86,6 +85,7 @@ class shell extends viewModelBase {
 
     static globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
+    private changeSubscriptionArray: changeSubscription[];
 
     constructor() {
         super();
@@ -97,9 +97,9 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db, true); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs, true); });
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs, true); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs); });
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
@@ -152,51 +152,52 @@ class shell extends viewModelBase {
         });
     }
 
+        // Override canActivate: we can always load this page, regardless of any system db prompt.
+    canActivate(args: any): any {
+        return true;
+    }
+
     activate(args: any) {
-        if (this.canStudioBeLoaded()) {
-            super.activate(args);
+        super.activate(args);
 
-            oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
+        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
-            NProgress.set(.7);
-            router.map([
-                { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
-                { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
-                { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
-                { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
-                { route: 'databases/indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
-                { route: 'databases/transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
-                { route: 'databases/query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
-                { route: 'databases/tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
-                { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
-                { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
-                { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
-                { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
-                { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
-                { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
-                { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
-                { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
-                { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
-                { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
-                { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
-                { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
-                { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
-                { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
-                { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
-                { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
-            ]).buildNavigationModel();
+        NProgress.set(.7);
+        router.map([
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
+            { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+            { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
+            { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
+            { route: 'databases/indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
+            { route: 'databases/transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
+            { route: 'databases/query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
+            { route: 'databases/tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
+            { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
+            { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
+            { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
+            { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
+            { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
+            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
+            { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
+            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
+            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
+            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+            { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
+            { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
+            { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
+            { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
+        ]).buildNavigationModel();
 
-            // Show progress whenever we navigate.
-            router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+        // Show progress whenever we navigate.
+        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
 
-            window.addEventListener("beforeunload", () => {
-                shell.globalChangesApi.dispose();
-                this.disconnectFromResourceChangesApi();
-            });
-        } else {
-            this.confirmationMessage(':-(', "Your browser isn't supported. Please use a modern browser!", []);
+        window.addEventListener("beforeunload", () => {
+            this.cleanupNotifications();
             shell.globalChangesApi.dispose();
-        }
+            this.disconnectFromResourceChangesApi();
+        });
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
@@ -371,7 +372,7 @@ class shell extends viewModelBase {
                 if (locationHash.indexOf("#filesystems") == 0) {
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
-                else if (locationHash.indexOf("#counterstorages") == 0 && shell.counterStorages().length > 0) {
+                else if (locationHash.indexOf("#counterstorages") == 0) {
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
                 } else {
                     this.activateResource(appUrl.getDatabase(), shell.databases);
@@ -380,16 +381,15 @@ class shell extends viewModelBase {
     }
 
     private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
-        var newResource;
+        var arrayLength = observableResourceArray().length;
 
-        if (observableResourceArray().length > 0) {
+        if (arrayLength > 0) {
+            var newResource;
+
             if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
                 newResource.activate();
             } else {
-                var resource = observableResourceArray.first(x => x.isVisible());
-                if (resource) {
-                    resource.activate();
-                }
+                observableResourceArray.first().activate();
             }
         }
     }
@@ -507,10 +507,11 @@ class shell extends viewModelBase {
             this.disconnectFromResourceChangesApi();
 
             shell.currentResourceChangesApi(new changesApi(db, 5000));
-
-            shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            this.changeSubscriptionArray = [
+                shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
+                shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
+                shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
+            ];
 
             this.currentConnectedDatabase = db;
         }
@@ -521,6 +522,8 @@ class shell extends viewModelBase {
             this.disconnectFromResourceChangesApi();
 
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
+
+            shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs));
 
             this.currentConnectedFileSystem = fs;
         }
@@ -539,23 +542,22 @@ class shell extends viewModelBase {
 
     private disconnectFromResourceChangesApi() {
         if (shell.currentResourceChangesApi()) {
+            this.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
+            this.changeSubscriptionArray = [];
             shell.currentResourceChangesApi().dispose();
             shell.currentResourceChangesApi(null);
         }
     }
     
-    static fetchDbStats(db: database, forceFetch: boolean = false) {
-        if (db && !db.disabled() && (!db.isInStatsFetchCoolDown || forceFetch)) {
-            if (!db.isInStatsFetchCoolDown) {
-                db.isInStatsFetchCoolDown = true;
-                setTimeout(() => db.isInStatsFetchCoolDown = false, 5000);
-            }
-
-            new getDatabaseStatsCommand(db).execute().done(result => db.statistics(result));
+    static fetchDbStats(db: database) {
+        if (db && !db.disabled()) {
+            new getDatabaseStatsCommand(db)
+                .execute()
+                .done(result => db.statistics(result));
         }
     }
 
-    static fetchFsStats(fs: filesystem, forceFetch: boolean = false) {
+    static fetchFsStats(fs: filesystem) {
         if (fs && !fs.disabled()) {
             new getFilesystemStatsCommand(fs)
                 .execute()
@@ -563,7 +565,7 @@ class shell extends viewModelBase {
         }
     }
 
-    static fetchCsStats(cs: counterStorage, forceFetch: boolean = false) {
+    static fetchCsStats(cs: counterStorage) {
         if (cs && !cs.disabled()) {
             //TODO: implememnt fetching of counter storage stats
 /*            new getCounterStorageStatsCommand(cs)

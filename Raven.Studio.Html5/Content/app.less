@@ -405,9 +405,10 @@ html, body {
 }
 
 .document-collections {
-
+    
     li {
         outline: none;
+        margin-left: -10px;
     }
 
     .collection-color-strip {
@@ -434,8 +435,16 @@ html, body {
 
     li:not(:first-child) {
         // All collections except the first one ("All Documents") are indented.
-        padding-left: 15px;
+        padding-left: 9px;
+        margin-left: 0;
     }
+}
+
+.document-collections-container{
+    overflow-y: auto;
+    max-height: 80vh;
+    direction: rtl;
+    text-align: left;
 }
 
 .index-panel {

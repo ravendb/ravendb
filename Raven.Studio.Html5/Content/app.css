@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -314,6 +314,7 @@ body {
 }
 .document-collections li {
   outline: none;
+  margin-left: -10px;
 }
 .document-collections .collection-color-strip {
   margin-right: 5px;
@@ -335,7 +336,14 @@ body {
   max-width: 90%;
 }
 .document-collections li:not(:first-child) {
-  padding-left: 15px;
+  padding-left: 9px;
+  margin-left: 0;
+}
+.document-collections-container {
+  overflow-y: auto;
+  max-height: 80vh;
+  direction: rtl;
+  text-align: left;
 }
 .index-panel {
   overflow: visible !important;
@@ -1262,3 +1270,4 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
+/*# sourceMappingURL=app.css.map */
