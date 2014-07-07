@@ -132,10 +132,8 @@ namespace Voron.Trees
             Page sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
-				// TODO arek - no need to assign parentPage.LastSearchPosition value so many times
-                parentPage.LastSearchPosition = 1;
                 sibling = _tx.ModifyPage(parentPage.GetNode(1)->PageNumber, null);
-                parentPage.LastSearchPosition = 0;
+
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
                 parentPage.LastSearchPosition = 1;
