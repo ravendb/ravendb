@@ -39,13 +39,10 @@ namespace RavenFS.Tests.Auth
                                                   {
                                                       Name = string.Format("{0}\\{1}", domain, username),
                                                       Enabled = true,
-                                                      Databases = new List<DatabaseAccess>
+                                                      Databases = new List<ResourceAccess>
                                                       {
-                                                          new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true} // required to create file system
-                                                      },
-                                                      FileSystems = new List<FileSystemAccess>()
-                                                      {
-                                                          new FileSystemAccess() {TenantId = fileSystemName}
+                                                          new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system,
+														  new ResourceAccess {TenantId = fileSystemName}
                                                       }
                                                   }
                                               }

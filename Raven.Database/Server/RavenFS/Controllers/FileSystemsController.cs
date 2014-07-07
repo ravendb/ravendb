@@ -79,7 +79,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 {
                     var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-                    approvedFileSystems = authorizer.GetApprovedFileSystems(user, this, fileSystemNames);
+                    approvedFileSystems = authorizer.GetApprovedResources(user, this, fileSystemNames);
                 }
             }
 

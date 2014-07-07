@@ -19,13 +19,12 @@ namespace Raven.Database.Server.Security.Windows
 	{
 		public string Name { get; set; }
 		public bool Enabled { get; set; }
-		public List<DatabaseAccess> Databases { get; set; }
-        public List<FileSystemAccess> FileSystems { get; set; } 
+		public List<ResourceAccess> Databases { get; set; }
 
 		protected bool Equals(WindowsAuthData other)
 		{
 		    var baseEqual = string.Equals(Name, other.Name) && Enabled.Equals(other.Enabled) &&
-                Equals(Databases.Count, other.Databases.Count) && Equals(FileSystems.Count, other.FileSystems.Count);
+                Equals(Databases.Count, other.Databases.Count);
 
 			if(baseEqual == false)
 				return false;
@@ -35,12 +34,6 @@ namespace Raven.Database.Server.Security.Windows
 				if(Databases[i].Equals(other.Databases[i]) == false)
 					return false;
 			}
-
-            for (int i = 0; i < FileSystems.Count; i++)
-            {
-                if (FileSystems[i].Equals(other.FileSystems[i]) == false)
-                    return false;
-            }
 
 			return true;
 		}
@@ -60,15 +53,13 @@ namespace Raven.Database.Server.Security.Windows
 				var hashCode = (Name != null ? Name.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ Enabled.GetHashCode();
 				hashCode = (hashCode*397) ^ (Databases != null ? Databases.GetHashCode() : 0);
-			    hashCode = (hashCode*397) ^ (FileSystems != null ? FileSystems.GetHashCode() : 0);
 				return hashCode;
 			}
 		}
 
 		public WindowsAuthData()
 		{
-			Databases = new List<DatabaseAccess>();
-            FileSystems = new List<FileSystemAccess>();
+			Databases = new List<ResourceAccess>();
 		}
 	}
 }

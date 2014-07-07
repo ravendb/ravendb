@@ -35,15 +35,11 @@ namespace RavenFS.Tests.Auth
                 Name = "test",
                 Secret = "ThisIsMySecret",
                 Enabled = true,
-                Databases = new List<DatabaseAccess>
+                Databases = new List<ResourceAccess>
                 {
-                    new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
+                    new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
+					new ResourceAccess {TenantId = fileSystemName}
                 },
-                FileSystems = new List<FileSystemAccess>()
-                {
-                    new FileSystemAccess() {TenantId = fileSystemName}
-                }
-
             }), new RavenJObject(), null);
         }
 

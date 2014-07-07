@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -82,6 +83,8 @@ namespace Raven.Bundles.Replication.Responders
 			var existingDoc = Actions.Documents.DocumentByKey(id, null);
 			if(existingDoc != null)
 			{
+				ReplicationTask.EnsureReplicationInformationInMetadata(existingDoc.Metadata, Database);
+
 				existingItem = existingDoc;
 				existingEtag = existingDoc.Etag;
 				deleted = false;
@@ -91,6 +94,8 @@ namespace Raven.Bundles.Replication.Responders
 			var listItem = Actions.Lists.Read(Constants.RavenReplicationDocsTombstones, id);
 			if(listItem != null)
 			{
+				ReplicationTask.EnsureReplicationInformationInMetadata(listItem.Data, Database);
+
 				existingEtag = listItem.Etag;
 				deleted = true;
 				existingItem = new JsonDocument

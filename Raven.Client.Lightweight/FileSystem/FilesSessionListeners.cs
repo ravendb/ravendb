@@ -14,16 +14,10 @@ namespace Raven.Client.FileSystem
         /// </summary>
         public FilesSessionListeners()
         {
-            WriteListeners = new IFilesWriteListener[0];
             DeleteListeners = new IFilesDeleteListener[0];
             MetadataChangeListeners = new IMetadataChangeListener[0];
             ConflictListeners = new IFilesConflictListener[0];
         }
-
-        /// <summary>
-        ///     The store listeners. You can modify the metadata before the upload happens.
-        /// </summary>
-        public IFilesWriteListener[] WriteListeners { get; set; }
 
         /// <summary>
         ///     The delete listeners.
@@ -39,12 +33,6 @@ namespace Raven.Client.FileSystem
         ///     The conflict listeners
         /// </summary>
         public IFilesConflictListener[] ConflictListeners { get; set; }
-
-        public void RegisterListener(IFilesWriteListener listener)
-        {
-            WriteListeners = WriteListeners.Concat(new[] { listener }).ToArray();
-        }
-
         public void RegisterListener(IFilesDeleteListener listener)
         {
             DeleteListeners = DeleteListeners.Concat(new[] { listener }).ToArray();

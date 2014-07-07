@@ -71,14 +71,11 @@ namespace Raven.Abstractions.Data
 
 		public bool Enabled { get; set; }
 
-		public List<DatabaseAccess> Databases { get; set; }
-
-        public List<FileSystemAccess> FileSystems { get; set; }
+		public List<ResourceAccess> Databases { get; set; }
 
 	    public ApiKeyDefinition()
 	    {
-	        Databases = new List<DatabaseAccess>();
-            FileSystems = new List<FileSystemAccess>();
+	        Databases = new List<ResourceAccess>();
 	    }
 
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -92,7 +89,7 @@ namespace Raven.Abstractions.Data
 		protected bool Equals(ApiKeyDefinition other)
 		{
 			var baseEqual =  string.Equals(Id, other.Id) && Enabled.Equals(other.Enabled) && Equals(Databases.Count, other.Databases.Count) &&
-			       string.Equals(Secret, other.Secret) && string.Equals(Name, other.Name) && Equals(FileSystems.Count, other.FileSystems.Count);
+			       string.Equals(Secret, other.Secret) && string.Equals(Name, other.Name);
 
 			if(baseEqual == false)
 				return false;
@@ -102,12 +99,6 @@ namespace Raven.Abstractions.Data
 				if (Databases[i].Equals(other.Databases[i]) == false)
 					return false;
 			}
-
-            for (int i = 0; i < FileSystems.Count; i++)
-            {
-                if (FileSystems[i].Equals(other.FileSystems[i]) == false)
-                    return false;
-            }
 
 			return true;
 		}
@@ -127,7 +118,6 @@ namespace Raven.Abstractions.Data
 				var hashCode = (Id != null ? Id.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ Enabled.GetHashCode();
 				hashCode = (hashCode*397) ^ (Databases != null ? Databases.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (FileSystems != null ? FileSystems.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (secret != null ? secret.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (name != null ? name.GetHashCode() : 0);
 				return hashCode;
@@ -135,13 +125,13 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class DatabaseAccess
+	public class ResourceAccess
 	{
 		public bool Admin { get; set; }
 		public string TenantId { get; set; }
 		public bool ReadOnly { get; set; }
 
-		protected bool Equals(DatabaseAccess other)
+		protected bool Equals(ResourceAccess other)
 		{
 			return Admin.Equals(other.Admin) && string.Equals(TenantId, other.TenantId) && ReadOnly.Equals(other.ReadOnly);
 		}
@@ -151,7 +141,7 @@ namespace Raven.Abstractions.Data
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != this.GetType()) return false;
-			return Equals((DatabaseAccess) obj);
+			return Equals((ResourceAccess) obj);
 		}
 
 		public override int GetHashCode()
@@ -165,33 +155,4 @@ namespace Raven.Abstractions.Data
 			}
 		}
 	}
-
-    public class FileSystemAccess
-    {
-        public string TenantId { get; set; }
-        public bool ReadOnly { get; set; }
-
-        protected bool Equals(FileSystemAccess other)
-        {
-            return string.Equals(TenantId, other.TenantId) && ReadOnly.Equals(other.ReadOnly);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((FileSystemAccess)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = (TenantId != null ? TenantId.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ ReadOnly.GetHashCode();
-                return hashCode;
-            }
-        }
-    }
 }

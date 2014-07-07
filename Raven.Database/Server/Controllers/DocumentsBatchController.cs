@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -66,6 +67,14 @@ namespace Raven.Database.Server.Controllers
             using (var cts = new CancellationTokenSource())
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
+	            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+				if (indexDefinition == null)
+					throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", id));
+
+				if (indexDefinition.IsMapReduce)
+					throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
+
+
                 var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
                 return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id);
             }

@@ -17,7 +17,7 @@ body {
   right: 0;
 }
 .alert-text {
-  overflow: hidden!important;
+  overflow: hidden !important;
   white-space: nowrap !important;
   -ms-text-overflow: ellipsis !important;
   -o-text-overflow: ellipsis !important;
@@ -93,7 +93,7 @@ body {
   box-shadow: 0 0 5px 0 #6aa3d5;
 }
 #sqlReplications .panel {
-  overflow: visible!important;
+  overflow: visible !important;
 }
 #sqlReplications .enabledReplication {
   color: green;
@@ -115,9 +115,9 @@ body {
 }
 .sqlReplication-Stats {
   width: 60vw;
-  max-height: 60vh!important;
-  overflow-x: hidden!important;
-  overflow-y: hidden!important;
+  max-height: 60vh !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
 }
 @media (max-width: 767px) {
   .sqlReplication-Stats {
@@ -128,7 +128,7 @@ body {
   max-height: 20%;
 }
 .sqlReplication-Stats .replicationStatsData {
-  max-height: 35vh!important;
+  max-height: 35vh !important;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -138,10 +138,10 @@ body {
 }
 .query-stats ul li {
   padding: 0 10px 0 10px;
-  border-bottom: 0!important;
-  border-top: 0!important;
-  border-left: 0!important;
-  border-right: 0!important;
+  border-bottom: 0 !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
 }
 .query-stats ul li strong {
   padding: 0 10px 0 10px;
@@ -164,12 +164,12 @@ body {
   text-overflow: ellipsis;
 }
 .ace_docs {
-  font-style: italic!important;
+  font-style: italic !important;
   font-color: red;
   font-weight: bold;
 }
 .ace_prefix {
-  font-style: italic!important;
+  font-style: italic !important;
   font-color: red;
   font-weight: bold;
 }
@@ -182,8 +182,8 @@ body {
 		position: relative !important
 	}*/
 .fullScreen .fullScreen-editor {
-  height: auto!important;
-  width: auto!important;
+  height: auto !important;
+  width: auto !important;
   border: 0;
   margin: 0;
   position: fixed !important;
@@ -201,11 +201,11 @@ body {
   background-color: #e7e7e7;
 }
 .vertical-bottom-container {
-  width: 10%!important;
+  width: 10% !important;
   padding: 0 40% 0 40% !important;
 }
 .vertical-navbar-menu-item {
-  float: none!important;
+  float: none !important;
   display: block;
   padding: 0 0 0 0;
 }
@@ -314,33 +314,39 @@ body {
 }
 .document-collections li {
   outline: none;
+  margin-left: -10px;
 }
 .document-collections .collection-color-strip {
   margin-right: 5px;
 }
-.document-collections .collectionText {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: ellipsis !important;
-  -o-text-overflow: ellipsis !important;
-  text-overflow: ellipsis !important;
+.document-collections .collection-text {
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
   max-width: 70%;
-  margin-right: 0!important;
 }
-.document-collections .collectionName {
-  overflow: hidden!important;
-  white-space: nowrap !important;
-  -ms-text-overflow: ellipsis !important;
-  -o-text-overflow: ellipsis !important;
-  text-overflow: ellipsis !important;
+.document-collections .collection-name {
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
   max-width: 90%;
-  margin-right: 0!important;
 }
 .document-collections li:not(:first-child) {
-  padding-left: 15px;
+  padding-left: 9px;
+  margin-left: 0;
+}
+.document-collections-container {
+  overflow-y: auto;
+  max-height: 80vh;
+  direction: rtl;
+  text-align: left;
 }
 .index-panel {
-  overflow: visible!important;
+  overflow: visible !important;
 }
 .index-dropdown {
   right: 0;
@@ -352,7 +358,7 @@ body {
 .index-dropdown li > a.active {
   -webkit-box-shadow: inset 0 0 0 rgba(0, 0, 0, 0.125) !important;
   box-shadow: inset 0 0 0 rgba(0, 0, 0, 0.125) !important;
-  text-decoration: underline!important;
+  text-decoration: underline !important;
   font-weight: bold;
 }
 .indexes-container {
@@ -473,6 +479,54 @@ body {
 .collection-style-15 {
   background-color: #95fe00;
 }
+.collection-style-16 {
+  background-image: linear-gradient(#00c700, #c7009a);
+}
+.collection-style-17 {
+  background-image: linear-gradient(#c7009a, #ff0000);
+}
+.collection-style-18 {
+  background-image: linear-gradient(#ff0000, #0095ef);
+}
+.collection-style-19 {
+  background-image: linear-gradient(#0095ef, #a70068);
+}
+.collection-style-20 {
+  background-image: linear-gradient(#a70068, #006464);
+}
+.collection-style-21 {
+  background-image: linear-gradient(#006464, #7832c7);
+}
+.collection-style-22 {
+  background-image: linear-gradient(#7832c7, #c72828);
+}
+.collection-style-23 {
+  background-image: linear-gradient(#c72828, #c7c700);
+}
+.collection-style-24 {
+  background-image: linear-gradient(#c7c700, #c700c7);
+}
+.collection-style-25 {
+  background-image: linear-gradient(#c700c7, #fe8000);
+}
+.collection-style-26 {
+  background-image: linear-gradient(#fe8000, #0095fe);
+}
+.collection-style-27 {
+  background-image: linear-gradient(#0095fe, #95fec7);
+}
+.collection-style-28 {
+  background-image: linear-gradient(#95fec7, #9500fe);
+}
+.collection-style-29 {
+  background-image: linear-gradient(#9500fe, #950000);
+}
+.collection-style-30 {
+  background-image: linear-gradient(#950000, #95fe00);
+}
+.collection-style-31 {
+  background-image: linear-gradient(#95fe00, #00c700);
+}
 .system-documents-collection {
   background-color: #123c65;
 }
@@ -519,9 +573,9 @@ body {
   z-index: 100;
   top: 0;
   left: 0;
-  opacity: 0.8;
+  opacity: .7;
   width: 100%;
-  height: 10px;
+  height: 5px;
 }
 #nprogress .spinner-icon {
   opacity: 0;
@@ -545,7 +599,7 @@ body {
   }
 }
 .fieldControl {
-  text-align: left!important;
+  text-align: left !important;
 }
 @media (max-device-height: 1024px) {
   .fieldControl {
@@ -580,7 +634,7 @@ body {
   width: 100%;
 }
 #queryContainer .breadcrumb li {
-  overflow: visible!important;
+  overflow: visible !important;
 }
 #queryContainer .editor {
   height: 60px;
@@ -637,9 +691,13 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
-.ko-grid .ko-grid-column-container .ko-grid-column-header .ko-grid-column-handle {
-  width: 8px;
+.ko-grid .ko-grid-column-container .ko-grid-column-header:hover .ko-grid-column-handle {
   display: block;
+  /* Display the grid size bars only when we mouse over the columns */
+}
+.ko-grid .ko-grid-column-container .ko-grid-column-header .ko-grid-column-handle {
+  display: none;
+  width: 4px;
   height: 20px;
   float: right;
   cursor: col-resize;
@@ -692,12 +750,12 @@ body {
   width: 100%;
 }
 .breadcrumb li {
-  overflow: hidden!important;
-  white-space: nowrap!important;
-  -ms-text-overflow: ellipsis!important;
-  -o-text-overflow: ellipsis!important;
-  text-overflow: ellipsis!important;
-  max-width: 50%!important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+  max-width: 50% !important;
 }
 .breadcrumb h3 {
   margin-bottom: 0;
@@ -740,15 +798,14 @@ body {
   max-width: 41%;
 }
 #editDocumentContainer .document-addition-data span {
-  overflow: hidden!important;
-  white-space: nowrap!important;
-  -ms-text-overflow: ellipsis!important;
-  -o-text-overflow: ellipsis!important;
-  text-overflow: ellipsis!important;
-  max-width: 50%!important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  -ms-text-overflow: ellipsis !important;
+  -o-text-overflow: ellipsis !important;
+  text-overflow: ellipsis !important;
+  max-width: 50% !important;
 }
 #editDocumentContainer hr {
-  border-color: red;
   margin-top: 5px;
 }
 #editDocumentContainer .query-metadata {
@@ -798,9 +855,7 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*#goToDocInput {
-        width: 10em;
-    }*/
+  /*# sourceMappingURL=app.css.map */
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1150,11 +1205,11 @@ footer ul {
   margin-right: 20px;
 }
 .ace-github .ace_boolean {
-  font-weight: normal!important;
+  font-weight: normal !important;
   color: #0000ff;
 }
 .ace-github .ace_null {
-  font-weight: normal!important;
+  font-weight: normal !important;
   color: #0000ff;
 }
 .animated-loader {
@@ -1181,5 +1236,38 @@ footer ul {
   overflow-y: scroll;
   height: 43vh;
   position: absolute;
+}
+.column-header {
+  font-weight: bold;
+  border-bottom: 2px solid #ddd;
+}
+.column-header:hover .column-handle {
+  display: block;
+}
+.column-header .column-handle {
+  display: none;
+  width: 4px;
+  height: 20px;
+  float: right;
+  cursor: col-resize;
+  position: relative;
+  z-index: 1;
+  background-color: #cccccc;
+  box-shadow: #999999 0px 0px 5px inset;
+}
+.messageBox {
+  background-color: white;
+  border: 1px solid #999;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+  border-radius: 6px;
+  outline: none;
+  -webkit-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  -moz-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+  -webkit-background-clip: padding-box;
+  -moz-background-clip: padding-box;
+  background-clip: padding-box;
 }
 /*# sourceMappingURL=app.css.map */

@@ -34,10 +34,6 @@ class documents extends viewModelBase {
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
-    currentDBDocChangesSubscription: changeSubscription;
-    currentDBBulkInsertSubscription: changeSubscription;
-    modelPollingTimeoutFlag: boolean = true;
-    isDocumentsUpToDate:boolean = true;
     showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
 
     static gridSelector = "#documentsGrid";
@@ -53,85 +49,11 @@ class documents extends viewModelBase {
 
         this.fetchCustomFunctions();
 
-        // treat document put/delete events
-        this.currentDBDocChangesSubscription = shell.currentResourceChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
-            this.isDocumentsUpToDate = false;
-            var collections = this.collections();
-            var curCollection = this.collections.first(x => x.name === e.CollectionName);
-            
-
-            if (e.Type == documentChangeType.Delete) {
-                if (!!curCollection) {
-                    if (curCollection.documentCount() == 1) {
-                        this.collections.remove(curCollection);
-                        this.allDocumentsCollection.clearCollection();
-                        this.selectCollection(this.allDocumentsCollection);
-                    } else {
-                        curCollection.documentCount(curCollection.documentCount() - 1);
-
-                    }
-                }
-            }
-
-            this.throttledFetchCollections();
-        });
-        
-        // treat bulk Insert events
-        this.currentDBBulkInsertSubscription = shell.currentResourceChangesApi().watchBulks((e: bulkInsertChangeNotificationDto) => {
-            if (e.Type == documentChangeType.BulkInsertEnded) {
-                this.isDocumentsUpToDate = false;
-
-                this.throttledFetchCollections();
-            }
-        });
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
-        this.fetchCollections(appUrl.getDatabase());
-    }
 
-    changesApiBulkInsert(e: bulkInsertChangeNotificationDto) {
-        if (e.Type == documentChangeType.BulkInsertEnded) {
-
-            this.isDocumentsUpToDate = false;
-
-            this.throttledFetchCollections();
-        }
-    }
-
-    changesApidocumentUpdated(e: documentChangeNotificationDto) {
-        this.isDocumentsUpToDate = false;
-        var collections = this.collections();
-        var curCollection = this.collections.first(x => x.name === e.CollectionName);
-
-        if (!curCollection) {
-            var systemDocumentsCollection = this.collections.first(x => x.isSystemDocuments === true);
-            if (!!systemDocumentsCollection && (!!e.CollectionName || (!!e.Id && e.Id.indexOf("Raven/Databases/") == 0))) {
-                curCollection = systemDocumentsCollection;
-            }
-        }
-
-        // for put event, if collection is recognized, increment collection and allDocuments count, if not, create new one also
-        if (e.Type == documentChangeType.Put) {
-            if (!!curCollection) {
-                curCollection.documentCount(curCollection.documentCount() + 1);
-            } else {
-                curCollection = new collection(e.CollectionName, this.activeDatabase());
-                curCollection.documentCount(1);
-                this.collections.push(curCollection);
-            }
-            this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() + 1);
-            // for delete event, if collection is recognized, decrease collection and allDocuments count, if left with zero documents, delete collection
-        } else if (e.Type == documentChangeType.Delete) {
-            if (!!curCollection) {
-                if (curCollection.documentCount() == 1) {
-                    this.collections.remove(curCollection);
-                } else {
-                    curCollection.documentCount(curCollection.documentCount() - 1);
-                }
-
-                this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() - 1);
-            }
-        }
+        var db = this.activeDatabase();
+        this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
     }
 
     attached() {
@@ -142,21 +64,26 @@ class documents extends viewModelBase {
         });
     }
 
-    deactivate() {
-        super.deactivate();
-        this.currentDBDocChangesSubscription.off();
-        this.currentDBBulkInsertSubscription.off();
+    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
+        return new getCollectionsCommand(db).execute();
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+        ];
+    }
+
+    private refreshCollections() {
+        var db = this.activeDatabase();
+        this.fetchCollections(db).done(results => this.updateCollections(results, db));
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {
-        
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() =>
-            this.collections()
-                .filter(c => c !== this.allDocumentsCollection) // Don't include self, the all documents collection.
-                .map(c => c.documentCount()) // Grab the document count of each.
-                .reduce((first: number, second: number) => first + second, 0)); // And sum them up.
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
@@ -168,10 +95,6 @@ class documents extends viewModelBase {
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
-
-        // Fetch the collection info for each collection.
-        // The collection info contains information such as total number of documents.
-        collectionsWithSysCollection.forEach(c => c.fetchTotalDocumentCount());
     }
 
     fetchCustomFunctions() {
@@ -220,11 +143,8 @@ class documents extends viewModelBase {
         }
     }
 
-    updateCollections(receivedCollections: Array<collection>, db: database) {
-
+    private updateCollections(receivedCollections: Array<collection>, db: database) {
         var deletedCollections = [];
-        var curSelectedCollectionName = this.selectedCollection().name;
-        
 
         this.collections().forEach((col: collection) => {
             if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
@@ -238,30 +158,15 @@ class documents extends viewModelBase {
             var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
-                receivedCol.fetchTotalDocumentCount();
             } else {
-                foundCollection.fetchTotalDocumentCount();
+                foundCollection.documentCount(receivedCol.documentCount());
             }
         });
-        
-        var collectionToSelect = this.collections().first(c => c.name === curSelectedCollectionName) || this.allDocumentsCollection;
-        collectionToSelect.activate();
-    }
 
-    throttledFetchCollections() {
-        if (this.modelPollingTimeoutFlag === true) {
-            
-            setTimeout(() => {
-                this.modelPollingTimeoutFlag = false;
-                var db = appUrl.getDatabase();
-                new getCollectionsCommand(db)
-                    .execute()
-                    .done(results => this.updateCollections(results, db)).always(() => {
-                        this.isDocumentsUpToDate = true;
-                        this.modelPollingTimeoutFlag = true;
-                    });
-                
-            }, 5000);
+        //if the collection is deleted, go to the all documents collection
+        var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
+        if (!currentCollection || currentCollection.documentCount() == 0) {
+            this.selectCollection(this.allDocumentsCollection);
         }
     }
     
@@ -274,6 +179,19 @@ class documents extends viewModelBase {
 
     selectColumns() {
         require(["viewmodels/selectColumns"], selectColumns => {
+
+            // Fetch column widths from virtual table
+            var virtualTable = this.getDocumentsGrid();
+            var vtColumns = virtualTable.columns();
+            this.currentColumnsParams().columns().forEach( (column: customColumnParams) => {
+                for(var i=0; i < vtColumns.length; i++) {
+                    if (column.binding() === vtColumns[i].binding) {
+                        column.width(vtColumns[i].width()|0);
+                        break;
+                    }
+                }
+            });
+
             var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
             app.showDialog(selectColumnsViewModel);
             selectColumnsViewModel.onExit().done((cols) => {
@@ -283,12 +201,6 @@ class documents extends viewModelBase {
                 this.currentCollectionPagedItems(pagedList);
             });
         });
-    }
-
-    fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db)
-            .execute()
-            .done(results => this.collectionsLoaded(results, db));
     }
 
     newDocument() {

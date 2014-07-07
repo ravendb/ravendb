@@ -35,45 +35,36 @@ class status extends viewModelBase {
     isIncomingActivityVisible = ko.computed(() => true);
     isFsSyncUpToDate: boolean = true;
 
-    activitiesSubscription: changeSubscription;
-
-    private activeFilesystemSubscription: any;
-
     activate(args) {
         super.activate(args);
 
-        // treat notifications events
-        this.activitiesSubscription = shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => {
-            this.isFsSyncUpToDate = false;
 
-            if (e.Action != synchronizationAction.Finish) {
-                this.addOrUpdateActivity(e);
-            }
-            else {
-                setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
-            }
-
-        });
 
         new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-            .done(x => {
-                this.activity(x);
-            });
+            .done(x => this.activity(x));
 
         new getSyncIncomingActivitiesCommand(this.activeFilesystem()).execute()
-            .done(x => {
-                this.activity(x);
-            });
+            .done(x => this.activity(x));
 
         if (this.outgoingActivity().length == 0) {
             $("#outgoingActivityCollapse").collapse();
         }
     }
 
-    deactivate() {
-        super.deactivate();
-        //this.activeFilesystemSubscription.dispose();
-        this.activitiesSubscription.off();
+    createNotifications(): Array<changeSubscription> {
+        return [shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e))];
+    }
+
+    private processFsSync(e: synchronizationUpdateNotification) {
+        // treat notifications events
+        this.isFsSyncUpToDate = false;
+
+        if (e.Action != synchronizationAction.Finish) {
+            this.addOrUpdateActivity(e);
+        }
+        else {
+            setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
+        }
     }
 
     synchronizeNow() {

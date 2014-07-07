@@ -221,7 +221,29 @@ namespace Raven.Client.Connection.Async
 			return PutIndexAsync(name, indexDef.ToIndexDefinition(convention), overwrite);
 		}
 
-		/// <summary>
+	    public Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef)
+	    {
+	        return ExecuteWithReplication("POST", operationMetadata => DirectIndexHasChangedAsync(name, indexDef, operationMetadata));
+	    }
+
+	    private async Task<bool> DirectIndexHasChangedAsync(string name, IndexDefinition indexDef, OperationMetadata operationMetadata)
+	    {
+	        var requestUri = operationMetadata.Url.Indexes(name) + "?op=hasChanged";
+            var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, requestUri, "POST", operationMetadata.Credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
+
+            webRequest.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+                                                   HandleReplicationStatusChanges);
+
+            var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
+
+            await webRequest.WriteAsync(serializeObject).ConfigureAwait(false);
+            var result = await webRequest.ReadResponseJsonAsync().ConfigureAwait(false);
+            return result.Value<bool>("Changed");
+	    }
+
+	    /// <summary>
 		/// Puts the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
