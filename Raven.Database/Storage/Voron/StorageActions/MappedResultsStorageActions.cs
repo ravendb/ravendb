@@ -228,7 +228,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, int start, int take)
+		public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, string sourceId, int start, int take)
 		{
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
 			using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateKey(view)))
@@ -241,6 +241,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+
+					if (string.IsNullOrEmpty(sourceId) == false)
+					{
+						var docId = value.Value<string>("docId");
+						if (string.Equals(sourceId, docId, StringComparison.OrdinalIgnoreCase) == false)
+							continue;
+					}
+
 					var reduceKey = value.Value<string>("reduceKey");
 
 					if (string.IsNullOrEmpty(startsWith) == false && reduceKey.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)

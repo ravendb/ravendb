@@ -534,7 +534,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, int start, int take)
+		public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, string sourceId, int start, int take)
 		{
 			if (take <= 0)
 				yield break;
@@ -565,11 +565,21 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
+
 			    var comparison = view - indexNameFromDb;
 				if (comparison < 0)
 					continue; // skip to the next item
 				if (comparison > 0) // after the current item
 					break;
+
+				if (string.IsNullOrEmpty(sourceId) == false)
+				{
+					var docId = Api.RetrieveColumnAsString(session, MappedResults,
+										   tableColumnsCache.MappedResultsColumns["document_key"]);
+
+					if (string.Equals(sourceId, docId, StringComparison.OrdinalIgnoreCase) == false)
+						continue;
+				}
 
 				if (string.IsNullOrEmpty(startsWith) == false && keyFromDb.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
 					continue;

@@ -23,7 +23,7 @@ namespace Raven.Database.Storage
 		void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed);
 		void DeleteMappedResultsForView(int indexId);
 
-		IEnumerable<string> GetKeysForIndexForDebug(int index, string startsWith, int start, int take);
+		IEnumerable<string> GetKeysForIndexForDebug(int index, string startsWith, string sourceId, int start, int take);
 
 		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int index, string key, int start, int take);
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int index, string reduceKey, int level, int start, int take);
