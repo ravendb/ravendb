@@ -136,6 +136,11 @@ namespace Raven.Database.Server.Controllers
 					msg.Headers.Add(
 						"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
+
+                    if (IsCsvDownloadRequest(InnerRequest))
+                    {
+                        msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+                    }
 				}
 				catch (Exception)
 				{
@@ -219,6 +224,13 @@ namespace Raven.Database.Server.Controllers
 			var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
 			return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
 		}
+
+        private static Boolean IsCsvDownloadRequest(HttpRequestMessage req)
+        {
+            return "true".Equals(GetQueryStringValue(req, "download"), StringComparison.InvariantCultureIgnoreCase) 
+                && "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
+        }
+
 
 		public interface IOutputWriter : IDisposable
 		{

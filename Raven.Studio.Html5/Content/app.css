@@ -113,6 +113,9 @@ body {
 #editSQLReplication .edit-sql-replication-actions {
   padding-top: 0.5%;
 }
+#editSQLReplication .advanced {
+  padding-left: 0;
+}
 .sqlReplication-Stats {
   width: 60vw;
   max-height: 60vh !important;
@@ -131,6 +134,31 @@ body {
   max-height: 35vh !important;
   overflow-x: hidden;
   overflow-y: auto;
+}
+.replicationSimulation {
+  width: 60vw;
+  max-height: 60vh!important;
+  overflow-x: hidden!important;
+  overflow-y: hidden!important;
+}
+@media (max-width: 767px) {
+  .replicationSimulation {
+    width: 80vw;
+  }
+}
+.replicationSimulation .replicationSimulationData {
+  max-height: 35vh!important;
+  height: 35vh!important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.replicationSimulation .replicationSimulationData .simulationResultContainer {
+  margin-top: 2.5%;
+}
+.replicationSimulation .replicationSimulationData .simulationResultContainer .simulationResult {
+  font-weight: bold;
+  font-size: medium;
+  margin-bottom: 2.5%;
 }
 .query-stats {
   width: 600px;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Data.Odbc;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
@@ -67,7 +68,12 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			tx = connection.BeginTransaction();
 
-			stringParserList = new List<Func<DbParameter, string, bool>> { 
+            stringParserList = GenerateStringParsers();
+		}
+
+	    public List<Func<DbParameter, string, bool>> GenerateStringParsers()
+	    {
+            return new List<Func<DbParameter, string, bool>> { 
 				(colParam, value) => {
 					if( char.IsDigit( value[ 0 ] ) ) {
 							DateTime dateTime;
@@ -106,7 +112,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					return false;
 				}
 			};
-		}
+	    }
 
 		public bool Execute(ConversionScriptResult scriptResult)
 		{
@@ -185,7 +191,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					cmd.CommandText = sb.ToString();
 					try
 					{
-                        ExecuteCommand(cmd);
+                        cmd.ExecuteNonQuery(); ;
 					}
 					catch (Exception e)
 					{
@@ -199,7 +205,107 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
+
+        public IEnumerable<string> SimulateExecuteCommandText(ConversionScriptResult scriptResult)
+        {
+            var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList();
+            
+            foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
+            {
+                // first, delete all the rows that might already exist there
+                foreach (string deleteQuery in GenerateDeleteItemsCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
+                    identifiers))
+                {
+                    yield return deleteQuery;
+                }
+            }
+
+            foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
+            {
+                List<ItemToReplicate> dataForTable;
+                if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
+                    continue;
+
+                foreach (string insertQuery in GenerteInsertItemCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable))
+                {
+                    yield return insertQuery;
+                }
+            }
+        }
+
+	    private IEnumerable<string>  GenerteInsertItemCommandText(string tableName, string pkName, List<ItemToReplicate> dataForTable)
+	    {
+            foreach (var itemToReplicate in dataForTable)
+            {
+
+                var sb = new StringBuilder ("INSERT INTO ")
+                        .Append(commandBuilder.QuoteIdentifier(tableName))
+                        .Append(" (")
+                        .Append(commandBuilder.QuoteIdentifier(pkName))
+                        .Append(", ");
+                foreach (var column in itemToReplicate.Columns)
+                {
+                    if (column.Key == pkName)
+                        continue;
+                    sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
+                }
+                sb.Length = sb.Length - 2;
+
+
+                sb.Append(") VALUES (")
+                    .Append(itemToReplicate.DocumentId)
+                    .Append(", ");
+
+                foreach (var column in itemToReplicate.Columns)
+                {
+                    if (column.Key == pkName)
+                        continue;
+                    DbParameter param = new OdbcParameter();
+                    SetParamValue(param, column.Value, stringParserList);
+                    sb.Append(param.Value).Append(", ");
+                }
+                sb.Length = sb.Length - 2;
+                sb.Append(");");
+                yield return sb.ToString();
+            }
+	    }
+
+        private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
+	    {
+	        const int maxParams = 1000;
+
+	        database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+	        for (int i = 0; i < identifiers.Count; i += maxParams)
+	        {
+
+	            var sb = new StringBuilder("DELETE FROM ")
+	                .Append(commandBuilder.QuoteIdentifier(tableName))
+	                .Append(" WHERE ")
+	                .Append(commandBuilder.QuoteIdentifier(pkName))
+	                .Append(" IN (");
+
+	            for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
+	            {
+	                if (i != j)
+	                    sb.Append(", ");
+	                if (doNotParameterize == false)
+	                {
+	                    sb.Append(identifiers[j]);
+	                }
+	                else
+	                {
+	                    sb.Append("'").Append(SanitizeSqlValue(identifiers[j])).Append("'");
+	                }
+
+	            }
+	            sb.Append(");");
+	            yield return sb.ToString();
+	        }
+	        
+
+	    }
+
+	    public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
 		{
 			const int maxParams = 1000;
 			using (var cmd = connection.CreateCommand())
@@ -239,7 +345,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					try
 					{
-						ExecuteCommand(cmd);
+                        cmd.ExecuteNonQuery(); 
 					}
 					catch (Exception e)
 					{
@@ -253,12 +359,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-	    protected virtual void ExecuteCommand(DbCommand cmd)
-	    {
-	        cmd.ExecuteNonQuery();
-	    }
-
-	    public string SanitizeSqlValue(string sqlValue)
+		public static string SanitizeSqlValue(string sqlValue)
 		{
 			return sqlValue.Replace("'", "''");
 		}
@@ -289,7 +390,7 @@ namespace Raven.Database.Bundles.SqlReplication
 																		 new[] { typeof(string) }, null));
 
 
-		private static void SetParamValue(DbParameter colParam, RavenJToken val, List<Func<DbParameter, String, Boolean>> stringParsers)
+		public static void SetParamValue(DbParameter colParam, RavenJToken val, List<Func<DbParameter, String, Boolean>> stringParsers)
 		{
 			if (val == null)
 				colParam.Value = DBNull.Value;

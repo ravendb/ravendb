@@ -35,6 +35,8 @@ class documents extends viewModelBase {
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
     showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
+    currentExportUrl: KnockoutComputed<string>;
+    exportCsvEnabled: KnockoutComputed<boolean>;
 
     static gridSelector = "#documentsGrid";
 
@@ -42,6 +44,18 @@ class documents extends viewModelBase {
         super();
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
         this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
+        this.exportCsvEnabled = ko.computed(() => {
+            var collection = this.selectedCollection();
+            return collection && !collection.isAllDocuments && !collection.isSystemDocuments;
+        });
+        this.currentExportUrl = ko.computed(() => {
+            if (this.exportCsvEnabled()) {
+                var collection = this.selectedCollection();
+                return appUrl.forExportCollectionCsv(collection, this.activeDatabase());
+            }
+            return null;
+        });
+       
     }
 
     activate(args) {
