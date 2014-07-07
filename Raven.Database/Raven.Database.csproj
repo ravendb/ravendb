@@ -223,6 +223,7 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />

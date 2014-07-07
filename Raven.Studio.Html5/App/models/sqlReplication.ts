@@ -23,7 +23,7 @@ class sqlReplication extends document {
     connectionStringType = ko.observable<string>().extend({ required: true });
     connectionStringValue = ko.observable<string>(null).extend({ required: true });
     ravenEntityName = ko.observable<string>("").extend({ required: true });
-    parameterizeDeletesDisabled = ko.observable<boolean>().extend({ required: true });
+    parameterizeDeletesDisabled = ko.observable<boolean>(false).extend({ required: true });
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
     connectionString = ko.observable<string>(null);
@@ -119,7 +119,7 @@ class sqlReplication extends document {
         return new sqlReplication({
             Name: "",
             Disabled: true,
-            ParameterizeDeletesDisabled: true,
+            ParameterizeDeletesDisabled: false,
             RavenEntityName: "",
             Script: "",
             FactoryName: null,
