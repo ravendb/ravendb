@@ -5,25 +5,30 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class toggleIndexing extends viewModelBase {
 
-  indexingStatus = ko.observable<string>("Started");
+    indexingStatus = ko.observable<string>();
 
-  disableIndexing() {
-    new stopIndexingCommand(this.activeDatabase())
-      .execute()
-      .done(() => this.getIndexStatus());
-  }
+    constructor() {
+        super();
+        this.getIndexStatus();
+    }
 
-  enableIndexing() {
-    new startIndexingCommand(this.activeDatabase())
-      .execute()
-        .done(() => this.getIndexStatus());
-  }
+    disableIndexing() {
+        new stopIndexingCommand(this.activeDatabase())
+            .execute()
+            .done(() => this.getIndexStatus());
+    }
 
-  getIndexStatus() {
-    new getIndexingStatusCommand(this.activeDatabase())
-      .execute()
-      .done(result=> this.indexingStatus(result.IndexingStatus));
-  }
+    enableIndexing() {
+        new startIndexingCommand(this.activeDatabase())
+            .execute()
+            .done(() => this.getIndexStatus());
+    }
+
+    getIndexStatus() {
+        new getIndexingStatusCommand(this.activeDatabase())
+            .execute()
+            .done(result=> this.indexingStatus(result.IndexingStatus));
+    }
 
 }
 
