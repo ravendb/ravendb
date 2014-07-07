@@ -57,7 +57,7 @@ namespace Raven.Studio.Features.JsonEditor
         {
             lock (gate)
             {
-                return knownIds.Contains(value);
+                return knownIds.Contains(value, StringComparer.OrdinalIgnoreCase);
             }
         }
 

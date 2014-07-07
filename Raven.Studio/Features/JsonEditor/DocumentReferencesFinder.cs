@@ -47,7 +47,7 @@ namespace Raven.Studio.Features.JsonEditor
                                 .ContinueOnSuccessInTheUIThread(ids =>
                                 {
                                     idManager.AddKnownIds(ids);
-                                    idManager.AddKnownInvalidIds(newReferences.Except(ids));
+                                    idManager.AddKnownInvalidIds(newReferences.Except(ids, StringComparer.OrdinalIgnoreCase));
 
                                     idManager.UpdateCurrentIds(potentialReferences);
                                 });
