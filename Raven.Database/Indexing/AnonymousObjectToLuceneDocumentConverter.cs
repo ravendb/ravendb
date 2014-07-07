@@ -11,7 +11,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
+using Lucene.Net.Search;
+
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -27,17 +30,21 @@ namespace Raven.Database.Indexing
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
 		private readonly AbstractViewGenerator viewGenerator;
+
+		private readonly ILog log;
+
 		private readonly DocumentDatabase database;
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
 		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
-		public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
+		public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, ILog log)
 		{
 			this.database = database;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
+			this.log = log;
 		}
 
 		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
@@ -117,6 +124,9 @@ namespace Raven.Database.Indexing
 								 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield break;
 			}
+
+			CheckIfSortOptionsAndInputTypeMatch(name, value);
+
 			var attachmentFoIndexing = value as AttachmentForIndexing;
 			if (attachmentFoIndexing != null)
 			{
@@ -337,7 +347,36 @@ namespace Raven.Database.Indexing
 				yield return numericField;
 		}
 
-	    private static object GetNullValueForSorting(SortOptions? sortOptions)
+		private void CheckIfSortOptionsAndInputTypeMatch(string name, object value)
+		{
+			if (log == null)
+				return;
+
+			if (value == null)
+				return;
+
+			var sortOption = indexDefinition.GetSortOption(name, null);
+			if (sortOption.HasValue == false)
+				return;
+
+			switch (sortOption.Value)
+			{
+				case SortOptions.Double:
+				case SortOptions.Float:
+				case SortOptions.Int:
+				case SortOptions.Long:
+				case SortOptions.Short:
+					if (value is int || value is short || value is double || value is long || value is float || value is decimal)
+						return;
+
+					log.Warn(string.Format("Field '{1}' in index '{0}' has numerical sorting enabled, but input value '{2}' was a '{3}'.", indexDefinition.Name, name, value, value.GetType()));
+					break;
+				default:
+					return;
+			}
+		}
+
+		private static object GetNullValueForSorting(SortOptions? sortOptions)
 	    {
 	        switch (sortOptions)
 	        {
