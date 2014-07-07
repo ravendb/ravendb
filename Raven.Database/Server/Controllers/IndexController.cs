@@ -254,10 +254,12 @@ namespace Raven.Database.Server.Controllers
 			var key = GetQueryStringValue("key");
 			if (string.IsNullOrEmpty(key))
 			{
+				var startsWith = GetQueryStringValue("startsWith");
+
 				List<string> keys = null;
 				Database.TransactionalStorage.Batch(accessor =>
 				{
-					keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
+					keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
 

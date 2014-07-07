@@ -534,7 +534,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetKeysForIndexForDebug(int view, int start, int take)
+		public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, int start, int take)
 		{
 			if (take <= 0)
 				yield break;
@@ -570,6 +570,9 @@ namespace Raven.Storage.Esent.StorageActions
 					continue; // skip to the next item
 				if (comparison > 0) // after the current item
 					break;
+
+				if (string.IsNullOrEmpty(startsWith) == false && keyFromDb.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
+					continue;
 
 				if (results.Add(keyFromDb))
 				{
