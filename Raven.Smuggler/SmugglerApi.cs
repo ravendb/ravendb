@@ -229,12 +229,12 @@ namespace Raven.Smuggler
 	        }
 	    }
 
-	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
+	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
 		{
 			if (IsDocsStreamingSupported)
 			{
-				ShowProgress("Streaming documents from " + lastEtag);
-				return Commands.StreamDocsAsync(lastEtag, pageSize: limit);
+				ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
+				return Commands.StreamDocsAsync(lastEtag, pageSize: take);
 			}
 			
 			int retries = RetriesCount;
@@ -243,7 +243,7 @@ namespace Raven.Smuggler
 				try
 				{
 					RavenJArray documents = null;
-					var url = "/docs?pageSize=" + Math.Min(SmugglerOptions.BatchSize, limit) + "&etag=" + lastEtag;
+					var url = "/docs?pageSize=" + Math.Min(SmugglerOptions.BatchSize, take) + "&etag=" + lastEtag;
 					ShowProgress("GET " + url);
 					var request = CreateRequest(url);
 					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
