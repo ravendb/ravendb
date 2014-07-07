@@ -229,7 +229,7 @@ namespace Voron.Trees
         private NodeHeader* CreateNode(int index, MemorySlice key, NodeFlags flags, int len, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
-            Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
+            Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
             if (HasSpaceFor(key, len) == false)
                 throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
 
@@ -248,7 +248,7 @@ namespace Voron.Trees
 
 	        node->KeySize = key.Size;
 
-            if (key.Options == SliceOptions.Key)
+            if (key.Options == SliceOptions.Key && key.Size > 0)
                 key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
 	        node->Flags = flags;
@@ -268,7 +268,7 @@ namespace Voron.Trees
 
 			var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
 
-			Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
+			Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
 
 	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
@@ -283,16 +283,16 @@ namespace Voron.Trees
 			newNode->KeySize = key.Size;
             newNode->Flags = other->Flags;
 
-			if(key.Options == SliceOptions.Key)
+			if(key.Options == SliceOptions.Key &&  key.Size > 0)
 				key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
-            if (IsBranch || other->Flags==(NodeFlags.PageRef))
-            {
-                newNode->PageNumber = other->PageNumber;
-                newNode->Flags = NodeFlags.PageRef;
-                return;
-            }
-            newNode->DataSize = other->DataSize;
+	        if (IsBranch || other->Flags == (NodeFlags.PageRef))
+	        {
+		        newNode->PageNumber = other->PageNumber;
+		        newNode->Flags = NodeFlags.PageRef;
+		        return;
+	        }
+	        newNode->DataSize = other->DataSize;
 			NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
@@ -300,10 +300,10 @@ namespace Voron.Trees
 
 	    public MemorySlice PrepareKeyToInsert(MemorySlice key, int nodeIndex)
 	    {
-		    if (KeysPrefixed == false) 
+		    if (KeysPrefixed == false)
 				return key;
 
-			if (key.Size == 0)
+			if (key.KeyLength == 0)
 				return PrefixedSlice.Empty;
 
 		    PrefixedSlice prefixedSlice;
@@ -386,22 +386,22 @@ namespace Voron.Trees
 				return false;
 			}
 
-			var left = CreateNewEmptyKey();
-			var right = CreateNewEmptyKey();
+			MemorySlice left;
+			MemorySlice right;
 
 			if (nodeIndex > 0 && nodeIndex < NumberOfEntries) // middle
 			{
-				SetNodeKey(GetNode(nodeIndex - 1), ref left);
-				SetNodeKey(GetNode(nodeIndex), ref right);
+				left = GetNodeKey(nodeIndex - 1);
+				right = GetNodeKey(nodeIndex);
 			}
 			else if (nodeIndex == 0) // first
 			{
 				left = null;
-				SetNodeKey(GetNode(0), ref right);
+				right = GetNodeKey(0);
 			}
 			else if (nodeIndex == NumberOfEntries) // last
 			{
-				SetNodeKey(GetNode(nodeIndex - 1), ref left);
+				left = GetNodeKey(nodeIndex - 1);
 				right = null;
 			}
 			else
@@ -628,13 +628,10 @@ namespace Voron.Trees
 			    if (KeysPrefixed == false)
 					return;
 			    
-				PrefixNode prefixNode = null;
+				var prefixNode = new PrefixNode();
 
 				for (byte i = 0; i < _prefixSection->NextPrefixId; i++)
 			    {
-				    if (prefixNode == null)
-					    prefixNode = new PrefixNode();
-
 				    tempPage.AssertPrefixNode(i);
 
 					prefixNode.Set(tempPage._base + tempPage._prefixSection->PrefixOffsets[i], tempPage.PageNumber);
@@ -642,7 +639,7 @@ namespace Voron.Trees
 				    var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
 
-				    NativeMethods.memcpy(Base + Upper - prefixNodeSize, (byte*) prefixNode.Header, prefixNodeSize);
+				    NativeMethods.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
 				    Upper -= (ushort) prefixNodeSize;
 					_prefixSection->PrefixOffsets[i] = Upper;
 			    }
@@ -734,11 +731,46 @@ namespace Voron.Trees
 
 		public MemorySlice GetNodeKey(NodeHeader* node)
 		{
-			var slice = CreateNewEmptyKey();
+			if (KeysPrefixed == false)
+			{
+				var keySize = node->KeySize;
+				var key = new byte[keySize];
 
-			SetNodeKey(node, ref slice);
+				fixed (byte* ptr = key)
+					NativeMethods.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
 
-			return slice;
+				return new Slice(key);
+			}
+
+			if (node->KeySize == 0)
+				return new PrefixedSlice(Slice.Empty);
+
+			var prefixHeader = (PrefixedSliceHeader*)((byte*)node + Constants.NodeHeaderSize);
+
+			var nonPrefixedSize = prefixHeader->NonPrefixedDataSize;
+			var nonPrefixedData = new byte[nonPrefixedSize];
+
+			fixed (byte* ptr = nonPrefixedData)
+				NativeMethods.memcpy(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
+
+			var prefixedSlice = new PrefixedSlice(prefixHeader->PrefixId, prefixHeader->PrefixUsage, new Slice(nonPrefixedData));
+
+			if (prefixHeader->PrefixId == PrefixedSlice.NonPrefixedId)
+				return prefixedSlice;
+
+			AssertPrefixNode(prefixedSlice.Header.PrefixId);
+
+			var prefixNodePtr = (PrefixNodeHeader*) (_base + _prefixSection->PrefixOffsets[prefixedSlice.Header.PrefixId]);
+
+			var prefixLength = prefixNodePtr->PrefixLength;
+			var prefixData = new byte[prefixLength];
+
+			fixed (byte* ptr = prefixData)
+				NativeMethods.memcpy(ptr, (byte*) prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
+
+			prefixedSlice.Prefix = new PrefixNode(new PrefixNodeHeader{ PrefixLength =  prefixLength }, prefixData, PageNumber);
+
+			return prefixedSlice;
 		}
 
 	    public string DebugView()

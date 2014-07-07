@@ -132,9 +132,8 @@ namespace Voron.Trees
             Page sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
-                parentPage.LastSearchPosition = 1;
                 sibling = _tx.ModifyPage(parentPage.GetNode(1)->PageNumber, null);
-                parentPage.LastSearchPosition = 0;
+
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
                 parentPage.LastSearchPosition = 1;
@@ -161,7 +160,7 @@ namespace Voron.Trees
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + new PrefixedSlice(fromNode).Size;
+			byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
 
 			var nodeVersion = fromNode->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
@@ -170,6 +169,7 @@ namespace Voron.Trees
 	        var prefixedOriginalFromKey = to.PrepareKeyToInsert(originalFromKeyStart, to.LastSearchPosition);
 
 	        byte* dataPos;
+	        var fromDataSize = fromNode->DataSize;
 	        switch (fromNode->Flags)
 	        {
 				case NodeFlags.PageRef:
@@ -177,19 +177,19 @@ namespace Voron.Trees
 					dataPos = to.AddPageRefNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->PageNumber);
 					break;
 				case NodeFlags.Data:
-					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromNode->DataSize);
-					dataPos = to.AddDataNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->DataSize, nodeVersion);
+					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromDataSize);
+					dataPos = to.AddDataNode(to.LastSearchPosition, prefixedOriginalFromKey, fromDataSize, nodeVersion);
 					break;
 				case NodeFlags.MultiValuePageRef:
-					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromNode->DataSize);
-					dataPos = to.AddMultiValueNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->DataSize, nodeVersion);
+					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromDataSize);
+					dataPos = to.AddMultiValueNode(to.LastSearchPosition, prefixedOriginalFromKey, fromDataSize, nodeVersion);
 					break;
 				default:
 			        throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
 	        }
 			
-			if(dataPos != null)
-				NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
+			if(dataPos != null && fromDataSize > 0)
+				NativeMethods.memcpy(dataPos, val, fromDataSize);
             
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
@@ -233,8 +233,16 @@ namespace Voron.Trees
 
 	            MemorySlice implicitLeftKeyToInsert;
 
-	            if (implicitLeftNode == actualKeyNode) // no need to create a prefix, just use the existing prefixed key from the node
-					implicitLeftKeyToInsert = _tree.KeysPrefixing ? (MemorySlice) new PrefixedSlice(actualKeyNode) : new Slice(actualKeyNode);
+	            if (implicitLeftNode == actualKeyNode)
+	            {
+					// no need to create a prefix, just use the existing prefixed key from the node
+					// this also prevents from creating a prefix which is the full key given in 'implicitLeftKey'
+
+		            if (_tree.KeysPrefixing)
+			            implicitLeftKeyToInsert = new PrefixedSlice(actualKeyNode);
+		            else
+			            implicitLeftKeyToInsert = new Slice(actualKeyNode);
+	            }
 				else
 					implicitLeftKeyToInsert = to.PrepareKeyToInsert(implicitLeftKey, 1);
 	            
@@ -288,15 +296,15 @@ namespace Voron.Trees
         {
             node = page.GetNode(pos);
 			var key = page.GetNodeKey(node);
-			while (key.Size == 0)
+			while (key.KeyLength == 0)
             {
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
-				page.SetNodeKey(node, ref key);
+				key = page.GetNodeKey(node);
             }
 
-            return key;
+			return key;
         }
 
         private void RebalanceRoot(Cursor cursor, Page page)
