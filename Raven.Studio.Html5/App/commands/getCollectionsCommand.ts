@@ -26,13 +26,17 @@ class getCollectionsCommand extends commandBase {
     }
 
     runQuery(): JQueryPromise<collection[]> {
+        var facetsArray = [{ Name: 'Tag' }];
         var args = {
-            field: "Tag",
-            fromValue: "",
-            pageSize: 128
+            facets: JSON.stringify(facetsArray)
+        }
+
+        var resultsSelector = (dto: facetResultSetDto) => {
+            var tag: facetResultDto = dto.Results.Tag;
+            return tag.Values.map((value: facetValueDto) => new collection(value.Range, this.ownerDb, value.Hits));
         };
-        var resultsSelector = (collectionNames: string[]) => collectionNames.map(n => new collection(n, this.ownerDb));
-        return this.query("/terms/Raven/DocumentsByEntityName", args, this.ownerDb, resultsSelector)
+
+        return this.query("/facets/Raven/DocumentsByEntityName", args, this.ownerDb, resultsSelector);
     }
 
     createSystemIndexAndTryAgain(deferred: JQueryDeferred<collection[]>, originalReadError: JQueryXHR) {

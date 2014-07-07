@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -243,7 +244,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task DeleteAsync(string filename)
+        public Task DeleteAsync(string filename, Etag etag = null)
         {
             return ExecuteWithReplication("DELETE", async operation =>
             {

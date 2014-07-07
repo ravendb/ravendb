@@ -32,9 +32,6 @@ class indexes extends viewModelBase {
     constructor() {
         super();
 
-        this.fetchIndexes();
-        this.fetchRecentQueries();
-
         this.sortedGroups = ko.computed(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
 
@@ -44,6 +41,18 @@ class indexes extends viewModelBase {
 
             return groups;
         });
+    }
+
+    canActivate(args) {
+        super.canActivate(args);
+
+        var deferred = $.Deferred();
+
+        $.when(this.fetchIndexes(), this.fetchRecentQueries())
+            .done(() => deferred.resolve({ can: true }))
+            .fail(() => deferred.resolve({ redirect: appUrl.forDatabases() }));
+
+        return deferred;
     }
 
     activate(args) {

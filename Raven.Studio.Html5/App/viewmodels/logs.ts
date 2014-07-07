@@ -22,6 +22,10 @@ class logs extends viewModelBase {
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
     filteredLoggers = ko.observableArray<string>();
+    sortColumn = ko.observable<string>("logged");
+    sortAsc = ko.observable<boolean>(true);
+    filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
+    columnWidths: Array<KnockoutObservable<number>>;
 
     constructor() {
         super();
@@ -34,15 +38,38 @@ class logs extends viewModelBase {
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
+
+        this.filteredAndSortedLogs = ko.computed<Array<logDto>>(() => {
+            var logs = this.allLogs();
+            var column = this.sortColumn();
+            var asc = this.sortAsc();
+
+            var sortFunc = (left, right) => {
+                if (left[column] === right[column]) { return 0; }
+                var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
+                return test(left[column], right[column]) ? 1 : -1;
+            }
+
+            return logs.sort(sortFunc);
+        });
     }
 
     activate(args) {
         super.activate(args);
+        this.columnWidths = [
+            ko.observable<number>(100),
+            ko.observable<number>(265),
+            ko.observable<number>(300),
+            ko.observable<number>(200),
+            ko.observable<number>(360)
+        ];
+        this.registerColumnResizing();
         return this.fetchLogs();
     }
 
     deactivate() {
         clearTimeout(this.updateNowTimeoutHandle);
+        this.unregisterColumnResizing();
     }
 
     fetchLogs(): JQueryPromise<logDto[]> {
@@ -181,6 +208,54 @@ class logs extends viewModelBase {
         }
     }
 
+    sortBy(columnName, logs, event) {
+        if (this.sortColumn() === columnName) {
+            this.sortAsc( !this.sortAsc() );
+        }
+        else {
+            this.sortColumn(columnName);
+            this.sortAsc(true);
+        }
+    }
+    
+    registerColumnResizing() {
+        var resizingColumn = false;
+        var startX = 0;
+        var startingWidth = 0;
+        var columnIndex = 0;
+
+        $(document).on("mousedown.logTableColumnResize", ".column-handle", (e: any) => {
+            columnIndex = parseInt( $(e.currentTarget).attr("column"));
+            startingWidth = this.columnWidths[columnIndex]();
+            startX = e.pageX;
+            resizingColumn = true;
+        });
+
+        $(document).on("mouseup.logTableColumnResize", "", (e: any) => {
+            resizingColumn = false;
+        });
+
+        $(document).on("mousemove.logTableColumnResize", "", (e: any) => {
+            if (resizingColumn) {
+                var targetColumnSize = startingWidth + e.pageX - startX;
+                this.columnWidths[columnIndex](targetColumnSize);
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+
+                return false;
+            }
+        });
+    }
+
+    unregisterColumnResizing() {
+        $(document).off("mousedown.logTableColumnResize");
+        $(document).off("mouseup.logTableColumnResize");
+        $(document).off("mousemove.logTableColumnResize");
+    }
 }
 
 export = logs;

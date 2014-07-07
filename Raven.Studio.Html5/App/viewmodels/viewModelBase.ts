@@ -63,8 +63,8 @@ class viewModelBase {
     }
 
     /*
-    * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
-    */
+     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
+     */
     activate(args) {
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
@@ -83,14 +83,16 @@ class viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
-    // Called back after the entire composition has finished (parents and children included)
+    /*
+     * Called by Durandal when the view model is loaded and after the view is inserted into the DOM.
+     */
     compositionComplete() {
         viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
-    * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
-    */
+     * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
+     */
     canDeactivate(isClose): any {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
@@ -98,10 +100,15 @@ class viewModelBase {
         }
         return true;
     }
-
+    
+    /*
+     * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
+     */
     detached() {
-        var x = 4;
+        this.cleanupNotifications();
+        window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
     }
+
     /*
      * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
      */
@@ -111,10 +118,8 @@ class viewModelBase {
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
-        this.cleanupNotifications();
-
-        window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
     }
+
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.

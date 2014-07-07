@@ -52,10 +52,10 @@ class Transformers extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchAllTransformers(e => this.processTransformerEvent(e))];
+        return [shell.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
     }
 
-    processTransformerEvent(e: transformerChangeNotificationDto) {
+    private processTransformerEvent(e: transformerChangeNotificationDto) {
         if (e.Type == transformerChangeType.TransformerRemoved) {
             this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
         } else {

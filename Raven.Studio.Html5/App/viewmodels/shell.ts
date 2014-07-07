@@ -39,11 +39,13 @@ import getFilesystemsCommand = require("commands/filesystem/getFilesystemsComman
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+
+import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
+import extensions = require("common/extensions");
 
 class shell extends viewModelBase {
     private router = router;
-
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     isDatabaseDisabled: KnockoutComputed<boolean>;
@@ -83,18 +85,21 @@ class shell extends viewModelBase {
 
     static globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
+    private changeSubscriptionArray: changeSubscription[];
 
     constructor() {
         super();
-        oauthContext.enterApiKeyTask = this.setupApiKey();
 
+		extensions.install();
+        oauthContext.enterApiKeyTask = this.setupApiKey();
+        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db, true); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs, true); });
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs, true); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs); });
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.systemDb = appUrl.getSystemDatabase();
@@ -106,8 +111,6 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-
-        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
         this.isDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -130,7 +133,7 @@ class shell extends viewModelBase {
                 return shell.databases().filter(database => database.name != currentDatabase.name);
             }
             return shell.databases();
-        }, this);
+        });
 
         this.listedFileSystems = ko.computed(() => {
             var currentFileSystem = this.activeFilesystem();
@@ -138,7 +141,7 @@ class shell extends viewModelBase {
                 return shell.fileSystems().filter(fileSystem => fileSystem.name != currentFileSystem.name);
             }
             return shell.fileSystems();
-        }, this);
+        });
 
         this.listedCounterStorages = ko.computed(() => {
             var currentCounterStorage = this.activeCounterStorage();
@@ -146,12 +149,18 @@ class shell extends viewModelBase {
                 return shell.counterStorages().filter(counterStorage => counterStorage.name != currentCounterStorage.name);
             }
             return shell.counterStorages();
-        }, this);
+        });
+    }
 
+        // Override canActivate: we can always load this page, regardless of any system db prompt.
+    canActivate(args: any): any {
+        return true;
     }
 
     activate(args: any) {
         super.activate(args);
+
+        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
         NProgress.set(.7);
         router.map([
@@ -183,9 +192,9 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
-        window.addEventListener("beforeunload", ()=> {
+        window.addEventListener("beforeunload", () => {
+            this.cleanupNotifications();
             shell.globalChangesApi.dispose();
             this.disconnectFromResourceChangesApi();
         });
@@ -198,6 +207,11 @@ class shell extends viewModelBase {
             e.preventDefault();
             this.newDocument();
         });
+
+        jwerty.key("enter", e => {
+            e.preventDefault();
+            return false;
+        }, this, "#goToDocInput");
 
         $("body").tooltip({
             delay: { show: 1000, hide: 100 },
@@ -213,13 +227,16 @@ class shell extends viewModelBase {
     }
 
     setupApiKey() {
-        // try to find api key as studio parameter
-        var queryVars = forge.util.getQueryVariables();
-        if ('api-key' in queryVars && queryVars['api-key'].length > 0) {
-            oauthContext.apiKey(queryVars['api-key'][0]);
-        }
-        if ('has-api-key' in queryVars) {
+        // try to find api key as studio hash parameter
+        var hash = window.location.hash;
+        if (hash === "#has-api-key") {
             return this.showApiKeyDialog();
+        } else if (hash.match(/#api-key/g)) {
+            var match = /#api-key=(.*)/.exec(hash);
+            if (match && match.length == 2) {
+                oauthContext.apiKey(match[1]);
+                window.location.hash = "#";
+            }
         }
         return $.Deferred().resolve();
     }
@@ -355,22 +372,24 @@ class shell extends viewModelBase {
                 if (locationHash.indexOf("#filesystems") == 0) {
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
-                else if (locationHash.indexOf("#counterstorages") == 0 && shell.counterStorages().length > 0) {
+                else if (locationHash.indexOf("#counterstorages") == 0) {
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
                 } else {
                     this.activateResource(appUrl.getDatabase(), shell.databases);
                 }
-        });
+            });
     }
 
     private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
-        var newResource;
+        var arrayLength = observableResourceArray().length;
 
-        if (observableResourceArray().length > 0) {
+        if (arrayLength > 0) {
+            var newResource;
+
             if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
                 newResource.activate();
             } else {
-                observableResourceArray.first(x => x.isVisible()).activate();
+                observableResourceArray.first().activate();
             }
         }
     }
@@ -398,16 +417,14 @@ class shell extends viewModelBase {
             });
     }
 
-    handleRavenConnectionFailure(result) {
+    private handleRavenConnectionFailure(result) {
         NProgress.done();
         sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
-        var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
-        messageBoxResultPromise.done(messageBoxResult => {
-            if (messageBoxResult === tryAgain) {
-                NProgress.start();
-                this.connectToRavenServer();
-            }
+        var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
+        messageBoxResultPromise.done(() => {
+            NProgress.start();
+            this.connectToRavenServer();
         });
     }
 
@@ -490,10 +507,11 @@ class shell extends viewModelBase {
             this.disconnectFromResourceChangesApi();
 
             shell.currentResourceChangesApi(new changesApi(db, 5000));
-
-            shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db));
-            shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db));
-            shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db));
+            this.changeSubscriptionArray = [
+                shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
+                shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
+                shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
+            ];
 
             this.currentConnectedDatabase = db;
         }
@@ -504,6 +522,8 @@ class shell extends viewModelBase {
             this.disconnectFromResourceChangesApi();
 
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
+
+            shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs));
 
             this.currentConnectedFileSystem = fs;
         }
@@ -522,23 +542,22 @@ class shell extends viewModelBase {
 
     private disconnectFromResourceChangesApi() {
         if (shell.currentResourceChangesApi()) {
+            this.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
+            this.changeSubscriptionArray = [];
             shell.currentResourceChangesApi().dispose();
             shell.currentResourceChangesApi(null);
         }
     }
     
-    static fetchDbStats(db: database, forceFetch: boolean = false) {
-        if (db && !db.disabled() && (!db.isInStatsFetchCoolDown || forceFetch)) {
-            if (!db.isInStatsFetchCoolDown) {
-                db.isInStatsFetchCoolDown = true;
-                setTimeout(() => db.isInStatsFetchCoolDown = false, 5000);
-            }
-
-            new getDatabaseStatsCommand(db).execute().done(result => db.statistics(result));
+    static fetchDbStats(db: database) {
+        if (db && !db.disabled()) {
+            new getDatabaseStatsCommand(db)
+                .execute()
+                .done(result => db.statistics(result));
         }
     }
 
-    static fetchFsStats(fs: filesystem, forceFetch: boolean = false) {
+    static fetchFsStats(fs: filesystem) {
         if (fs && !fs.disabled()) {
             new getFilesystemStatsCommand(fs)
                 .execute()
@@ -546,7 +565,7 @@ class shell extends viewModelBase {
         }
     }
 
-    static fetchCsStats(cs: counterStorage, forceFetch: boolean = false) {
+    static fetchCsStats(cs: counterStorage) {
         if (cs && !cs.disabled()) {
             //TODO: implememnt fetching of counter storage stats
 /*            new getCounterStorageStatsCommand(cs)
@@ -617,14 +636,12 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog);
+        return app.showDialog(dialog).then(() => window.location.href = "#");
     }
 
     showErrorsDialog() {
-        require(["viewmodels/recentErrors"], errorDetails => {
-            var dialog = new errorDetails(this.recordedErrors);
-            app.showDialog(dialog);
-        });
+        var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
+        app.showDialog(errorDetails);
     }
 
     uploadStatusChanged(item: uploadItem) {

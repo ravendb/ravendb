@@ -129,6 +129,15 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage();
 			}
 
+            if ("hasChanged".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
+            {
+                var data = await ReadJsonObjectAsync<IndexDefinition>();
+                if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+                    return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
+
+                return GetMessageWithObject(new { Name = index, Changed = Database.Indexes.IndexHasChanged(index, data) });
+            }
+
 			if ("lockModeChange".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 				return HandleIndexLockModeChange(index);
 
@@ -188,6 +197,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+        [Route("c-sharp-index-definition/{*fullIndexName}")]
 		[Route("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
 		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
 		{

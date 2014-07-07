@@ -2,13 +2,14 @@
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import shell = require("viewmodels/shell");
 
+import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 
 import conflictItem = require("models/filesystem/conflictItem");
 import filesystem = require("models/filesystem/filesystem");
+import changeSubscription = require("models/changeSubscription");
 
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
@@ -21,31 +22,10 @@ class synchronizationConflicts extends viewModelBase {
 
     private isSelectAllValue = ko.observable<boolean>(false); 
     private activeFilesystemSubscription: any;
-    private conflictsSubscription: any;
 
     activate(args) {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
-
-        // treat notifications events
-        this.conflictsSubscription = shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => {
-            if (e.FileSystemName === this.activeFilesystem().name) {
-                switch (e.Status) {
-                case conflictStatus.Detected:
-                {
-                    this.addConflict(e);
-                    break;
-                }
-                case conflictStatus.Resolved:
-                {
-                    this.removeResolvedConflict(e);
-                    break;
-                }
-                default:
-                    console.error("unknown notification action");
-                }
-            }
-        });
 
         this.loadConflicts();
     }
@@ -53,7 +33,30 @@ class synchronizationConflicts extends viewModelBase {
     deactivate() {
         super.deactivate();
         this.activeFilesystemSubscription.dispose();
-        this.conflictsSubscription.off();
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e))];
+    }
+
+    private processFsConflicts(e: synchronizationConflictNotification) {
+        // treat notifications events
+        if (e.FileSystemName === this.activeFilesystem().name) {
+            switch (e.Status) {
+                case conflictStatus.Detected:
+                    {
+                        this.addConflict(e);
+                        break;
+                    }
+                case conflictStatus.Resolved:
+                    {
+                        this.removeResolvedConflict(e);
+                        break;
+                    }
+                default:
+                    console.error("unknown notification action");
+            }
+        }
     }
 
     addConflict(conflictUpdate: synchronizationConflictNotification) {
@@ -80,7 +83,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
 
-    loadConflicts(): JQueryPromise<any> {
+    private loadConflicts(): JQueryPromise<any> {
         var fs = this.activeFilesystem();
         if (fs) {
             var deferred = $.Deferred();

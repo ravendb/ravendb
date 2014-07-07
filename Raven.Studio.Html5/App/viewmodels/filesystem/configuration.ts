@@ -15,6 +15,7 @@ import createConfigurationKey = require("viewmodels/filesystem/createConfigurati
 import deleteConfigurationKeys = require("viewmodels/filesystem/deleteConfigurationKeys");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
+import Pair = require("common/pair");
 
 class configuration extends viewModelBase {
 
@@ -115,8 +116,9 @@ class configuration extends viewModelBase {
 
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
+        // TODO: Just use the simple binding handler instead.
         this.configurationEditor = ace.edit("configurationEditor");
-        this.configurationEditor.setTheme("ace/theme/github");
+        this.configurationEditor.setTheme("ace/theme/xcode");
         this.configurationEditor.setFontSize("16px");
         this.configurationEditor.getSession().setMode("ace/mode/json");
     }
