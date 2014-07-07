@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
@@ -189,30 +190,52 @@ namespace Raven.Database.Indexing
 		{
 			if (currentKey == null || currentDocumentResults.Count == 0)
 				return 0;
+	        var old = CurrentIndexingScope.Current;
+	        try
+	        {
+                CurrentIndexingScope.Current = null;
 
-			int count = 0;
-			var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition);
-			foreach (var doc in results)
-			{
-				count++;
+	            if (logIndexing.IsDebugEnabled)
+	            {
+	                var sb = new StringBuilder()
+	                    .AppendFormat("Index {0} for document {1} resulted in:", name, currentKey)
+	                    .AppendLine();
+	                foreach (var currentDocumentResult in currentDocumentResults)
+	                {
+	                    sb.AppendLine(JsonConvert.SerializeObject(currentDocumentResult));
+	                }
+	                logIndexing.Debug(sb.ToString());
+	            }
 
-				var reduceValue = viewGenerator.GroupByExtraction(doc);
-				if (reduceValue == null)
-				{
-					logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
-									  viewGenerator.GroupByExtraction, currentKey);
-					continue;
-				}
-				string reduceKey = ReduceKeyToString(reduceValue);
+	            int count = 0;
+	            var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition);
+	            foreach (var doc in results)
+	            {
+	                count++;
 
-				var data = GetMappedData(doc);
+	                var reduceValue = viewGenerator.GroupByExtraction(doc);
+	                if (reduceValue == null)
+	                {
+	                    logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
+	                        viewGenerator.GroupByExtraction, currentKey);
+	                    continue;
+	                }
+	                string reduceKey = ReduceKeyToString(reduceValue);
 
-				actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
-				statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
-				actions.General.MaybePulseTransaction();
-				changes.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(currentKey), reduceKey));
-			}
-			return count;
+	                var data = GetMappedData(doc);
+
+	                logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", name, currentKey, reduceKey, data);
+	                actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
+	                statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
+	                actions.General.MaybePulseTransaction();
+	                changes.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(currentKey), reduceKey));
+	            }
+	            return count;
+	        }
+	        finally 
+	        {
+	            CurrentIndexingScope.Current = old;
+	        }
 		}
 
 		private RavenJObject GetMappedData(object doc)
