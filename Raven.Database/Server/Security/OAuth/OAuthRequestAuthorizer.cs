@@ -89,21 +89,13 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
-		public List<string> GetApprovedDatabases(IPrincipal user)
+		public List<string> GetApprovedResources(IPrincipal user)
 		{
 			var oAuthUser = user as OAuthPrincipal;
 			if (oAuthUser == null)
 				return new List<string>();
-			return oAuthUser.GetApprovedDatabases();
+			return oAuthUser.GetApprovedResources();
 		}
-
-        public List<string> GetApprovedFileSystems(IPrincipal user)
-        {
-            var oAuthUser = user as OAuthPrincipal;
-            if (oAuthUser == null)
-                return new List<string>();
-            return oAuthUser.GetApprovedFileSystems();
-        }
 
 		public override void Dispose()
 		{
@@ -226,15 +218,10 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 		get { return true; }
 	}
 
-	public List<string> GetApprovedDatabases()
+	public List<string> GetApprovedResources()
 	{
 		return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
 	}
-
-    public List<string> GetApprovedFileSystems()
-    {
-        return tokenBody.AuthorizedFileSystems.Select(access => access.TenantId).ToList();
-    }
 
 	public AccessTokenBody TokenBody
 	{

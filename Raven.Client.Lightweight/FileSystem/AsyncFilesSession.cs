@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.FileSystem
 {
@@ -48,28 +49,24 @@ namespace Raven.Client.FileSystem
             object existingEntity;
             if (entitiesByKey.TryGetValue(filename, out existingEntity))
             {
-                return existingEntity as FileHeader;
+                // Check if the file is not currently been scheduled for deletion or known to be non-existent.
+                if (!knownMissingIds.Contains(filename))
+                    return existingEntity as FileHeader;
+                else
+                    return null;
             }
 
-            IncrementRequestCount();
+            IncrementRequestCount();            
 
+            // Check if the file exists on the server.
             var metadata = await Commands.GetMetadataForAsync(filename);
-            var fileHeader = new FileHeader(filename, metadata);
+            if (metadata == null)
+                return null;
 
+            var fileHeader = new FileHeader(filename, metadata);
             entitiesByKey.Add(filename, fileHeader);
 
             return fileHeader;
-        }
-
-        public Task<FileHeader> LoadFileAsync(DirectoryHeader directory, string filename)
-        {
-            if (directory == null)
-                throw new ArgumentNullException("directory", "The directory cannot be null.");
-
-            if (string.IsNullOrWhiteSpace(filename))
-                throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
-
-            return LoadFileAsync(Path.Combine(directory.Path, filename));            
         }
 
         public async Task<FileHeader[]> LoadFileAsync(IEnumerable<string> filenames)
@@ -101,41 +98,31 @@ namespace Raven.Client.FileSystem
             return result.ToArray();
         }
 
-        public Task<DirectoryHeader> LoadDirectoryAsync(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace.");
-
-            throw new NotImplementedException();
-        }
-
-        public Task<Stream> DownloadAsync(string filename)
+        public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null)
         {
             if (string.IsNullOrWhiteSpace(filename))
                 throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
 
-            throw new NotImplementedException();
+            return Commands.DownloadAsync(filename, metadata);;                   
+            
         }
 
-        public Task<Stream> DownloadAsync(FileHeader filename)
+        public Task<Stream> DownloadAsync(FileHeader fileHeader, Reference<RavenJObject> metadata = null)
         {
-            throw new NotImplementedException();
+            if (fileHeader == null || string.IsNullOrWhiteSpace(fileHeader.Name))
+                throw new ArgumentNullException("fileHeader", "The file header cannot be null, and must have a filename.");
+
+            return this.DownloadAsync(fileHeader.Name, metadata);
         }
 
-        public Task<FileHeader[]> LoadFilesAtDirectoryAsync(DirectoryHeader directory)
-        {
-            if (directory == null)
-                throw new ArgumentNullException("directory", "The directory cannot be null.");
-
-            throw new NotImplementedException();
-        }
-
-        public Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory)
+        public async Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory)
         {
             if (string.IsNullOrWhiteSpace(directory))
                 throw new ArgumentNullException("directory", "The directory cannot be null, empty or whitespace.");
 
-            throw new NotImplementedException();
+            var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
+            var searchResults = await Commands.SearchOnDirectoryAsync(directory);
+            return searchResults.Files.ToArray();
         }
     }
 }

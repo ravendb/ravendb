@@ -43,7 +43,7 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				server.SystemDatabase.Documents.Put("Raven/ApiKeys/Ayende", null, RavenJObject.FromObject(new ApiKeyDefinition
 					{
-						Databases = new List<DatabaseAccess> { new DatabaseAccess { TenantId = "*" }, new DatabaseAccess { TenantId = "<system>" }, },
+						Databases = new List<ResourceAccess> { new ResourceAccess { TenantId = "*" }, new ResourceAccess { TenantId = "<system>" }, },
 						Enabled = true,
 						Name = "Ayende",
 						Secret = "abc"
