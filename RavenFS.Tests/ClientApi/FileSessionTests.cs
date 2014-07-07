@@ -28,16 +28,22 @@ namespace RavenFS.Tests.ClientApi
         public void SessionLifecycle()
         {
             var store = (FilesStore)filesStore;
-            store.Conventions.MaxNumberOfRequestsPerSession = 10;
 
             using (var session = filesStore.OpenAsyncSession())
             {
                 Assert.NotNull(session.Advanced);
-                Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 10);
+                Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 30);
                 Assert.False(string.IsNullOrWhiteSpace(session.Advanced.StoreIdentifier));
                 Assert.Equal(filesStore, session.Advanced.FilesStore);
                 Assert.Equal(filesStore.Identifier, session.Advanced.StoreIdentifier.Split(';')[0]);
                 Assert.Equal(store.DefaultFileSystem, session.Advanced.StoreIdentifier.Split(';')[1]);
+            }
+
+            store.Conventions.MaxNumberOfRequestsPerSession = 10;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 10);
             }
         }
 
