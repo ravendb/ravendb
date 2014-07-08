@@ -167,7 +167,7 @@ digraph structs {
         private static string GetBranchNodeString(int i, MemorySlice key, Page p, NodeHeader* node)
         {
             string keyStr;
-            if (i == 0 && key.Size == 0)
+            if (i == 0 && key.KeyLength == 0)
             {
                 key = p.GetNodeKey(1);
                 keyStr = "(lt " + key + ")";

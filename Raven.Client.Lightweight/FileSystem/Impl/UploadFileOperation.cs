@@ -1,19 +1,12 @@
 ﻿using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using System.Web.Http;
 
 namespace Raven.Client.FileSystem.Impl
 {
-
     internal class UploadFileOperation : IFilesOperation
     {
         protected readonly InMemoryFilesSessionOperations sessionOperations;

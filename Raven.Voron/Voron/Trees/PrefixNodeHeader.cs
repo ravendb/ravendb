@@ -17,20 +17,35 @@ namespace Voron.Trees
 
 	public unsafe class PrefixNode
 	{
-		public PrefixNodeHeader* Header;
+		public byte* Base;
+		public PrefixNodeHeader Header;
 		public long PageNumber;
 		public byte* ValuePtr;
+		public byte[] Value;
+
+		public PrefixNode()
+		{
+			
+		}
+
+		public PrefixNode(PrefixNodeHeader header, byte[] value, long pageNumber)
+		{
+			Header = header;
+			Value = value;
+			PageNumber = pageNumber;
+		}
 
 		public void Set(byte* p, long pageNumber)
 		{
-			Header = (PrefixNodeHeader*)p;
+			Base = p;
+			Header = *((PrefixNodeHeader*)p);
 			ValuePtr = p + Constants.PrefixNodeHeaderSize;
 			PageNumber = pageNumber;
 		}
 
 		public ushort PrefixLength
 		{
-			get { return Header->PrefixLength; }
+			get { return Header.PrefixLength; }
 		}
 	}
 }

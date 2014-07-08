@@ -140,6 +140,15 @@ namespace Raven.Client.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
+        /// <summary>
+        /// Checks asynchronously if passed index definition matches version stored on server.
+        /// If index does not exist this method returns true.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="indexDef">The index definition.</param>
+        /// <returns></returns>
+	    Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef);
+
 		/// <summary>
 		/// Puts the transformer definition for the specified name asynchronously
 		/// </summary>

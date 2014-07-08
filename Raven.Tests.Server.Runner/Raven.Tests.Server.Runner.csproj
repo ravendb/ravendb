@@ -11,7 +11,7 @@
     <AssemblyName>Raven.Tests.Server.Runner</AssemblyName>
     <RootNamespace>Raven.Tests.Server.Runner</RootNamespace>
     <AssemblyName>Raven.Tests.Server.Runner</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>

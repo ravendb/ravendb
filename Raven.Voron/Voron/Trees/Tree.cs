@@ -625,7 +625,7 @@ namespace Voron.Trees
 
 						// this is a multi value
 						p.SetNodeKey(node, ref key);
-						var tree = OpenOrCreateMultiValueTree(_tx, key, node);
+						var tree = OpenMultiValueTree(_tx, key, node);
 						results.AddRange(tree.AllPages());
 					}
 				}

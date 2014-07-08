@@ -155,6 +155,33 @@ namespace Raven.Database.Server.Controllers
 
         [HttpGet]
         [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
+        public async Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
+        {
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+				return GetMessageWithObject(new
+				{
+					Error = "SQL Replication bundle is not installed"
+				}, HttpStatusCode.NotFound);
+            try
+            {
+                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplicationName);
+
+                return GetMessageWithObject(results.ToList());
+            }
+            catch (Exception ex)
+            {
+                    return GetMessageWithObject(new
+                    {
+                        Error = "Executeion failed",
+                        Exception = ex
+                    }, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
         [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
         public async Task<HttpResponseMessage> CreateSampleDataClass()
         {
@@ -217,12 +244,16 @@ namespace Raven.Database.Server.Controllers
                 {
                     Error = "SQL Replication bundle is not installed"
                 }, HttpStatusCode.NotFound);
-            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlreplicationStatus, null);
-            var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
-            replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
             SqlReplicationStatistics stats;
             task.Statistics.TryRemove(sqlReplicationName, out stats);
-            Database.Documents.Put(SqlReplicationTask.RavenSqlreplicationStatus, null,  RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
+            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlreplicationStatus, null);
+            if (jsonDocument != null)
+            {
+                var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
+                replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
+                
+                Database.Documents.Put(SqlReplicationTask.RavenSqlreplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
+            }
 
 
             return GetEmptyMessage(HttpStatusCode.NoContent);

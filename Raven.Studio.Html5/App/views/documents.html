@@ -30,6 +30,9 @@
                         <button type="button" class="btn btn-default" data-bind="click: selectColumns, visible: hasDocuments" title="Choose columns...">
                             <i class="fa fa-table"></i>
                         </button>
+                        <a href="#" data-bind="attr: { href: currentExportUrl }, visible: exportCsvEnabled" class="btn btn-default" title="Export CSV">
+                            <i class="fa fa-file-excel-o"></i>
+                        </a>
                     </div>
                     <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
                         <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc" title="Edit selected document (F2)">

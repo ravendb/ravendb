@@ -324,7 +324,12 @@ namespace Raven.Client.Connection
 			return asyncServerClient.PutIndexAsync(name, definition, false).ResultUnwrap();
 		}
 
-		public string PutTransformer(string name, TransformerDefinition transformerDef)
+	    public bool IndexHasChanged(string name, IndexDefinition indexDef)
+	    {
+	        return asyncServerClient.IndexHasChangedAsync(name, indexDef).ResultUnwrap();
+	    }
+
+	    public string PutTransformer(string name, TransformerDefinition transformerDef)
 		{
 			return asyncServerClient.PutTransformerAsync(name, transformerDef).ResultUnwrap();
 		}

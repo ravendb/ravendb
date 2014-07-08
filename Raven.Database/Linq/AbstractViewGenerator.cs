@@ -132,7 +132,7 @@ namespace Raven.Database.Linq
 					index = Field.Index.NOT_ANALYZED_NO_NORMS;
 					break;
 			}
-			return new AnonymousObjectToLuceneDocumentConverter(null,indexDefinition, this)
+			return new AnonymousObjectToLuceneDocumentConverter(null,indexDefinition, this, null)
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO, false, Field.TermVector.NO, index);
 		}
 

@@ -4,6 +4,7 @@ import counterStorage = require("models/counter/counterStorage");
 import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
+import collection = require("models/collection");
 
 // Helper class with static methods for generating app URLs.
 class appUrl {
@@ -422,6 +423,13 @@ class appUrl {
     static forExportDatabase(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/exportDatabase?" + databasePart;
+    }
+
+    static forExportCollectionCsv(collection: collection, db: database): string {
+        if (collection.isAllDocuments || collection.isSystemDocuments) {
+            return null;
+        }
+        return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName?format=excel&download=true&query=Tag:" + encodeURIComponent(collection.name);
     }
 
     static forBackupDatabase(db: database): string {

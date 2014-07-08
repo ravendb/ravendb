@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Tests.Issues</RootNamespace>
     <AssemblyName>Raven.Tests.Issues</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
@@ -237,6 +237,7 @@
     <Compile Include="RavenDB_1762.cs" />
     <Compile Include="RavenDB_1765.cs" />
     <Compile Include="RavenDb_1816.cs" />
+    <Compile Include="RavenDB_1817.cs" />
     <Compile Include="RavenDB_1824.cs" />
     <Compile Include="RavenDB_1825.cs" />
     <Compile Include="RavenDB_1828.cs" />
@@ -266,6 +267,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="RavenDB_2387.cs" />
+    <Compile Include="RavenDB_2424.cs" />
     <Compile Include="RavenDB_2391.cs" />
     <Compile Include="RavenDB_2432.cs" />
     <Compile Include="RavenDB_2435.cs" />
