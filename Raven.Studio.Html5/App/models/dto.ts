@@ -821,12 +821,12 @@ interface indexSuggestion extends queryFieldInfo {
 }
 
 interface mappedResultInfo {
-    ReduceKey: string;
-    Timestamp: string;
-    Etag: string;
-    Data: any;
-    Bucket: number;
-    Source: string;
+    ReduceKey?: string;
+    Timestamp?: string;
+    Etag?: string;
+    Data?: any;
+    Bucket?: number;
+    Source?: string;
 }
 
 
@@ -848,10 +848,16 @@ interface visualizerDataObjectNodeDto {
     depth?: number;
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
+    connections?: visualizerDataObjectNodeDto[];
 }
 
 interface queryIndexDebugMapArgsDto {
     key?: string;
     sourceId?: string;
     startsWith?: string;
+}
+
+interface graphLinkDto {
+    source: visualizerDataObjectNodeDto;
+    target: visualizerDataObjectNodeDto;
 }

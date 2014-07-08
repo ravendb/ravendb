@@ -606,7 +606,13 @@ namespace Raven.Database.Server.Controllers
 			List<string> reduceKeys = null;
 
 			if (reduceKeysArray != null)
-				reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
+			{
+                reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
+                // overwrite indexQueryPagining as __reduce_key field is not indexed, and we don't have simple method to obtain column alias
+			    indexQuery.Start = 0;
+			    indexQuery.PageSize = int.MaxValue;
+			}
+				
 
 			var totalResults = new Reference<int>();
 

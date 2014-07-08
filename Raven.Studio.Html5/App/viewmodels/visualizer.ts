@@ -31,9 +31,8 @@ class visualizer extends viewModelBase {
         return this.indexName() !== "Index Name";
     });
 
-    keys = ko.observableArray<string>();
     colors = d3.scale.category10();
-    keysCounter = 0;
+    colorMap = {};
 
     tree: visualizerDataObjectNodeDto = null;
     xScale: D3.Scale.LinearScale;
@@ -43,8 +42,8 @@ class visualizer extends viewModelBase {
 
     diagonal: any;
     graph: any;
-    nodes: any[] = []; // nodes data
-    links: any[] = []; // links data
+    nodes: visualizerDataObjectNodeDto[] = []; // nodes data
+    links: graphLinkDto[] = []; // links data
     width: number;
     height: number;
     margin = {
@@ -99,8 +98,7 @@ class visualizer extends viewModelBase {
             name: 'root',
             children: []
         }
-        this.keys([]);
-        this.keysCounter = 0;
+        this.colorMap = {};
     }
 
     fetchReduceKeySearchResults(query: string) {
@@ -173,17 +171,19 @@ class visualizer extends viewModelBase {
 
     addReduceKey(key:string) {
         var self = this;
-        if (key && !this.keys.contains(key)) {
-            this.keys.push(key);
-            this.keysCounter++;
+        if (key && !(key in this.colorMap)) {
+
+            this.colorMap[key] = this.colors(Object.keys(this.colorMap).length);
             this.reduceKey("");
 
-            this.fetchDataFor(key).then((subTree: visualizerDataObjectNodeDto[]) => {
+            this.fetchDataFor(key).then((subTree: visualizerDataObjectNodeDto) => {
                 if (self.tree.children === undefined) {
                     self.tree.children = [];
                 }
-                self.tree.children.push(subTree);
-                self.updateGraph();
+                if (subTree.children.length > 0) {
+                    self.tree.children.push(subTree);
+                    self.updateGraph();    
+                }
             });
         }
     }
@@ -224,7 +224,9 @@ class visualizer extends viewModelBase {
     }
 
     makeNodeId(data: visualizerDataObjectNodeDto) {
-        if (data.payload) { 
+        if (data.level == 4) {
+            return this.escape("node-" + data.level + "-" + data.payload.Data["__reduce_key"]);
+        } else if (data.payload) { 
             return this.escape("node-" + data.level + "-" + data.payload.ReduceKey + "-" + data.payload.Source + "-" + data.payload.Bucket);
         } else {
             return this.escape("node-" + data.level + "-" + data.name);
@@ -232,9 +234,13 @@ class visualizer extends viewModelBase {
     }
 
     setHighlightToParent(node, highlighted) {
-        while (node) {
-            d3.select("." + this.makeNodeId(node)).select('rect').classed('highlight', highlighted);
-            node = node.parent;
+        if (node.level == 0) {
+            node.connections.forEach(c => this.setHighlightToParent(c, highlighted));
+        } else {
+            while (node) {
+                d3.select("." + this.makeNodeId(node)).select('rect').classed('highlight', highlighted);
+                node = node.parent;
+            }
         }
     }
 
@@ -281,13 +287,15 @@ class visualizer extends viewModelBase {
         this.graph = d3.layout.cluster()
             .size([this.height - this.margin.top - this.margin.bottom, this.width - this.margin.left - this.margin.right]);
         this.nodes = this.graph.nodes(this.tree);
-        this.links = this.graph.links(this.nodes)
+        this.links = this.graph.links(this.nodes);
+        this.remapNodesAndLinks();
+        this.links = this.links
             .filter(l => l.target.level < 4)
             .map(l => {
             return {
                 source: {
                     y: self.xScale(l.source.level),
-                    x: l.source.x + self.margin.top 
+                    x: l.source.x + self.margin.top
                 },
                 target: {
                     y: self.xScale(l.target.level) + self.boxWidth,
@@ -295,7 +303,7 @@ class visualizer extends viewModelBase {
                 }
             }
         });
-
+        
         this.node = this.node.data(this.nodes);
         this.link = this.link.data(this.links);
 
@@ -325,8 +333,8 @@ class visualizer extends viewModelBase {
 
         enteringNodes.append("rect").attr('class', 'nodeRect')
             .attr('x', 0)
-            .attr('y', -10)
-            .attr("fill", d => d.level > 0 ? this.colors(this.keysCounter) : 'white')
+            .attr('y', -10) 
+            .attr("fill", d => d.level > 0 ? self.colorMap[d.name] : 'white')
             .attr('width', self.boxWidth)
             .attr('height', 20)
             .attr('rx', 5)
@@ -367,7 +375,7 @@ class visualizer extends viewModelBase {
     }
 
     fetchDataFor(key: string) {
-        var allDataFetched = $.Deferred();
+        var allDataFetched = $.Deferred <visualizerDataObjectNodeDto>();
 
         // TODO support for paging
 
@@ -378,6 +386,16 @@ class visualizer extends viewModelBase {
 
         (<any>$.when(mapTask, reduce1Task, reduce2Task, indexEntryTask)).then((map: mappedResultInfo[], reduce1: mappedResultInfo[], reduce2: mappedResultInfo[], indexEntries: any[]) =>
         {
+
+            if (map.length == 0 && reduce1.length == 0 && reduce2.length == 0) {
+                allDataFetched.resolve({
+                    level: 4,
+                    name: key,
+                    children: []
+                });
+                return;
+            }
+
             var mapGroupedByBucket = d3
                 .nest()
                 .key(k => String(k.Bucket))
@@ -468,6 +486,38 @@ class visualizer extends viewModelBase {
     selectDocKey(value: string) {
         this.addDocKey(value);
         this.docKey("");
+    }
+
+    remapNodesAndLinks() {
+        var seenNames = {};
+        var nodesToDelete = [];
+
+        // process nodes
+        this.nodes.forEach(node => {
+            if (node.level == 0) {
+                if (node.name in seenNames) {
+                    nodesToDelete.push(node);
+                } else {
+                    seenNames[node.name] = node;
+                }
+            }
+        });
+        this.nodes.removeAll(nodesToDelete);
+
+        // process links
+        this.links = this.links.map(link => {
+            if (link.target.level == 0) {
+                if (!("connections" in link.target)) {
+                    link.target.connections = [];
+                }
+                var newTarget = seenNames[link.target.name];
+                link.target = newTarget;
+                link.target.connections.push(link.source);
+                return link;
+            } else {
+                return link;
+            }
+        });
     }
 }
 
