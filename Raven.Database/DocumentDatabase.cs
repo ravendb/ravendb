@@ -1926,7 +1926,7 @@ namespace Raven.Database
                     scriptedJsonPatcher = new ScriptedJsonPatcher(this);
                     var jsonDoc = new RavenJObject();
                     jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
-                    return scriptedJsonPatcher.Apply(new RavenJObject(), patchDefault, 0, docId);
+                    return scriptedJsonPatcher.Apply(jsonDoc, patchDefault, 0, docId);
                 },
                 () =>
                 {
