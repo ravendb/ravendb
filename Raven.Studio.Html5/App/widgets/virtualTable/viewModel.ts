@@ -21,7 +21,6 @@ class ctor {
     static idColumnWidth = 200;
 
     items: pagedList;
-    visibleRowCount = 0;
     recycleRows = ko.observableArray<row>();
     rowHeight = 38;
     borderHeight = 2;
@@ -60,6 +59,8 @@ class ctor {
         collections: KnockoutObservableArray<collection>;
         rowsAreLoading: KnockoutObservable<boolean>;
         noResultsMessage: string;
+        isAnyDocumentsAutoSelected: KnockoutObservable<boolean>;
+        isAllDocumentsAutoSelected: KnockoutObservable<boolean>;
     }
 
     activate(settings: any) {
@@ -80,7 +81,9 @@ class ctor {
             customFunctions: ko.observable(customFunctions.empty()),
             collections: ko.observableArray<collection>([]),
             rowsAreLoading: ko.observable<boolean>(false),
-            noResultsMessage: "No records found."
+            noResultsMessage: "No records found.",
+            isAnyDocumentsAutoSelected: ko.observable<boolean>(false),
+            isAllDocumentsAutoSelected: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
 
@@ -509,6 +512,14 @@ class ctor {
     }
 
     toggleRowChecked(row: row, isShiftSelect = false) {
+        if (this.settings.isAllDocumentsAutoSelected()) {
+            var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
+            this.settings.selectedIndices(cachedIndeices);
+            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
+            this.settings.isAllDocumentsAutoSelected(false);
+            this.settings.isAnyDocumentsAutoSelected(true);
+        }
+
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
         var firstIndex = <number>this.settings.selectedIndices.first();
@@ -532,36 +543,40 @@ class ctor {
     selectNone() {
         this.settings.selectedIndices([]);
         this.recycleRows().forEach(r => r.isChecked(false));
+        this.settings.isAnyDocumentsAutoSelected(false);
+        this.settings.isAllDocumentsAutoSelected(false);
     }
 
-    selectAll(forceSelectAll: boolean = false) {
+    selectAll(documentCount: number) {
         var allIndices = [];
 
-        if (!forceSelectAll) {
-            var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
-            var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();
-            var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
-            var actualNumberOfVisibleRows = Math.min(lastVisibleRowNumber - firstVisibleRowNumber + 1, numOfRowsInUse);
-
-            for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
-                allIndices.push(i);
-            }
-            this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
-        } else {
-            for (var i = 0; i < this.items.totalResultCount(); i++) {
-                allIndices.push(i);
-            }
-            this.recycleRows().forEach(r => r.isChecked(true));
-        }
-
-        this.settings.selectedIndices(allIndices);
-
-        /*var allIndices = [];
-        for (var i = 0; i < this.items.totalResultCount(); i++) {
+        for (var i = 0; i < documentCount; i++) {
             allIndices.push(i);
         }
+        this.recycleRows().forEach(r => r.isChecked(true));
+
         this.settings.selectedIndices(allIndices);
-        this.recycleRows().forEach(r => r.isChecked(true));*/
+
+        this.settings.isAnyDocumentsAutoSelected(false);
+        this.settings.isAllDocumentsAutoSelected(true);
+    }
+
+    selectSome() {
+        var allIndices = [];
+
+        var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
+        var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();
+        var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
+        var actualNumberOfVisibleRows = Math.min(lastVisibleRowNumber - firstVisibleRowNumber, numOfRowsInUse);
+
+        for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
+            allIndices.push(i);
+        }
+        this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
+
+        this.settings.selectedIndices(allIndices);
+
+        this.settings.isAllDocumentsAutoSelected(false);
     }
 
     getRowIndicesRange(firstRowIndex: number, secondRowIndex: number): Array<number> {
@@ -604,6 +619,19 @@ class ctor {
         var sliced = max ? <number[]>this.settings.selectedIndices.slice(0, max) : null;
         var maxSelectedIndices = sliced || <number[]>this.settings.selectedIndices();
         return this.items.getCachedItemsAt(maxSelectedIndices);
+    }
+
+    disableSelection() {
+        this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+        this.selectNone();
+    }
+
+    invalidateCache() {
+
+        //this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
+        this.items.invalidateCache(); // Causes the cache of items to be discarded.
+        this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+        this.onWindowHeightChanged();
     }
 
     deleteSelectedItems(){

@@ -94,6 +94,10 @@ class pagedList {
             .map(validIndex => this.items[validIndex]);
     }
 
+    getCachedIndices(indices: number[]): number[] {
+        return indices.filter(index => this.items[index]);
+    }
+
     getAllCachedItems(): any[] {
         return this.items;
     }

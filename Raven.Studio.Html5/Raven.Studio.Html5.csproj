@@ -618,6 +618,8 @@
     <Content Include="Scripts\ace\model\editor.js" />
     <Content Include="Scripts\ace\mode\behaviour.js" />
     <Content Include="Scripts\ace\mode\behaviour\cstyle.js" />
+    <Content Include="Scripts\ace\mode\csharp.js" />
+    <Content Include="Scripts\ace\mode\csharp_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\doc_comment_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\folding\asciidoc.js" />
     <Content Include="Scripts\ace\mode\folding\c9search.js" />

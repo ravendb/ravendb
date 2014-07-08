@@ -20,7 +20,7 @@ import customFunctions = require("models/customFunctions");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 
 class documents extends viewModelBase {
-
+    
     displayName = "documents";
     collections = ko.observableArray<collection>();
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
@@ -32,19 +32,22 @@ class documents extends viewModelBase {
     selectedDocumentIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
     hasDocuments: KnockoutComputed<boolean>;
-    hasAnyDocumentsSelected: KnockoutComputed<boolean>;
-    hasAllDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
-    showLoadingIndicator: KnockoutObservable<boolean> = ko.observable<boolean>(false);
+    showLoadingIndicator = ko.observable<boolean>(false);
     currentExportUrl: KnockoutComputed<string>;
-    exportCsvEnabled: KnockoutComputed<boolean>;
+    isRegularCollection: KnockoutComputed<boolean>;
+
+    hasAnyDocumentsSelected: KnockoutComputed<boolean>;
+    hasAllDocumentsSelected: KnockoutComputed<boolean>;
+    isAnyDocumentsAutoSelected = ko.observable<boolean>(false);
+    isAllDocumentsAutoSelected = ko.observable<boolean>(false);
 
     static gridSelector = "#documentsGrid";
 
     constructor() {
         super();
-
+        
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
         this.hasDocuments = ko.computed(() => {
             if (!!this.selectedCollection()) {
@@ -64,17 +67,18 @@ class documents extends viewModelBase {
             }
             return false;
         });
-        this.exportCsvEnabled = ko.computed(() => {
+        this.isRegularCollection = ko.computed(() => {
             var collection = this.selectedCollection();
             return collection && !collection.isAllDocuments && !collection.isSystemDocuments;
         });
         this.currentExportUrl = ko.computed(() => {
-            if (this.exportCsvEnabled()) {
+            if (this.isRegularCollection()) {
                 var collection = this.selectedCollection();
                 return appUrl.forExportCollectionCsv(collection, this.activeDatabase());
             }
             return null;
-        });    }
+        });
+    }
 
     activate(args) {
         super.activate(args);
@@ -165,12 +169,24 @@ class documents extends viewModelBase {
     }
 
     deleteCollection() {
-        var collection = this.selectedCollection();
+        var collection: collection = this.selectedCollection();
         if (collection) {
             var viewModel = new deleteCollection(collection);
-            viewModel.deletionTask.done(() => {
-                this.collections.remove(collection);
-                this.selectCollection(this.allDocumentsCollection);
+            viewModel.deletionTask.done((result) => {
+                if (!collection.isAllDocuments) {
+                    this.collections.remove(collection);
+                    this.selectCollection(this.allDocumentsCollection);
+                    //result.OperaionId
+                }
+                var docsGrid = this.getDocumentsGrid();
+                docsGrid.disableSelection();
+                setTimeout(() => {
+                    docsGrid.invalidateCache();
+                    
+                    //docsGrid.onWindowHeightChanged();
+/*                    var pagedList = this.allDocumentsCollection.getDocuments();
+                    this.currentCollectionPagedItems(pagedList);*/
+                }, 10000);
             });
             app.showDialog(viewModel);
         }
@@ -240,56 +256,35 @@ class documents extends viewModelBase {
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
-    selectAll() {
-        var docsGrid = this.getDocumentsGrid();
-
-        if (docsGrid) {
-            docsGrid.selectAll(true);
-        }
-    }
-
     toggleSelectAll() {
         var docsGrid = this.getDocumentsGrid();
 
-        if (docsGrid) {
+        if (!!docsGrid) {
             if (this.hasAnyDocumentsSelected()) {
                 docsGrid.selectNone();
             } else {
-                docsGrid.selectAll();
+                docsGrid.selectSome();
 
-                if (!this.hasAllDocumentsSelected()) {
-                    
-                }
-
-
-/*                    this.hasAllDocumentsSelected = ko.computed(() => {
-                        var numOfSelectedDocuments = this.selectedDocumentIndices().length;
-                        if (!!this.selectedCollection() && numOfSelectedDocuments != 0) {
-                            return numOfSelectedDocuments == this.selectedCollection().documentCount();
-                        }
-                        return false;
-                    });*/
+                this.isAnyDocumentsAutoSelected(this.hasAllDocumentsSelected() == false);
             }
-
-/*                if (true) {
-                    docsGrid.selectAll();
-                } else {
-                    this.isSelectAll(false);
-                    docsGrid.selectNone();
-                }*/
         }
-     
+    }
 
-
-
-/*        this.isSelectAll.toggle();
-
+    selectAll() {
         var docsGrid = this.getDocumentsGrid();
-        if (docsGrid && this.isSelectAll()) {
-            docsGrid.selectAll();
-        } else if (docsGrid && !this.isSelectAll()) {
+        var c: collection = this.selectedCollection();
+
+        if (!!docsGrid && !!c) {
+            docsGrid.selectAll(c.documentCount());
+        }
+    }
+
+    selectNone() {
+        var docsGrid = this.getDocumentsGrid();
+
+        if (!!docsGrid) {
             docsGrid.selectNone();
-        }   */     
+        }
     }
 
     editSelectedDoc() {
@@ -300,12 +295,16 @@ class documents extends viewModelBase {
     }
 
     deleteSelectedDocs() {
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            grid.deleteSelectedItems();
+        if (!this.selectedCollection().isSystemDocuments && this.hasAllDocumentsSelected()) {
+            this.deleteCollection();
+        }
+        else {
+            var grid = this.getDocumentsGrid();
+            if (grid) {
+                grid.deleteSelectedItems();
+            }
         }
     }
-    
 
     copySelectedDocs() {
         var grid = this.getDocumentsGrid();
@@ -321,7 +320,7 @@ class documents extends viewModelBase {
         }
     }
 
-    getDocumentsGrid(): virtualTable {
+    private getDocumentsGrid(): virtualTable {
         var gridContents = $(documents.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
