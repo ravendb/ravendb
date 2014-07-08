@@ -7,8 +7,10 @@ import database = require("models/database");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
+import queryIndexDebugDocsCommand = require("commands/queryIndexDebugDocsCommand");
 import queryIndexDebugMapCommand = require("commands/queryIndexDebugMapCommand");
 import queryIndexDebugReduceCommand = require("commands/queryIndexDebugReduceCommand");
+import queryIndexDebugAfterReduceCommand = require("commands/queryIndexDebugAfterReduceCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 
 import d3 = require('d3/d3');
@@ -18,7 +20,12 @@ class visualizer extends viewModelBase {
 
     indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
     indexName = ko.observable("Index Name");
-    itemKey = ko.observable("");
+
+    docKey = ko.observable("");
+    docKeysSearchResults = ko.observableArray<string>(); 
+
+    reduceKey = ko.observable("");
+    reduceKeysSearchResults = ko.observableArray<string>(); 
 
     hasIndexSelected = ko.computed(() => {
         return this.indexName() !== "Index Name";
@@ -66,6 +73,8 @@ class visualizer extends viewModelBase {
         this.runQueryUrl = ko.computed(() => {
             return appUrl.forQuery(this.activeDatabase(), this.indexName());
         });
+        this.reduceKey.throttle(250).subscribe(search => this.fetchReduceKeySearchResults(search));
+        this.docKey.throttle(250).subscribe(search => this.fetchDocKeySearchResults(search));
 
         return this.fetchAllIndexes();
     }
@@ -92,6 +101,34 @@ class visualizer extends viewModelBase {
         }
         this.keys([]);
         this.keysCounter = 0;
+    }
+
+    fetchReduceKeySearchResults(query: string) {
+        if (query.length >= 2) {
+            new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: query }, 0, 10)
+                .execute()
+                .done((results: string[]) => {
+                    if (this.reduceKey() === query) {
+                        this.reduceKeysSearchResults(results.sort());
+                    }
+                });
+        } else if (query.length == 0) {
+            this.reduceKeysSearchResults.removeAll();
+        }
+    }
+
+    fetchDocKeySearchResults(query: string) {
+        if (query.length >= 2) {
+            new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), query, 0, 10)
+                .execute()
+                .done((results: string[]) => {
+                    if (this.docKey() === query) {
+                        this.docKeysSearchResults(results.sort());
+                    }
+                });
+        } else if (query.length == 0) {
+            this.docKeysSearchResults.removeAll();
+        }
     }
 
     updateScale() {
@@ -126,23 +163,26 @@ class visualizer extends viewModelBase {
         this.updateGraph();
     }
 
-    addItem() {
+    addDocKey(key: string) {
+        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { sourceId: key }, 0, 1024)
+            .execute()
+            .then(results => {
+                results.forEach(r => this.addReduceKey(r));
+            });
+    }
+
+    addReduceKey(key:string) {
         var self = this;
-        var key = this.itemKey();
         if (key && !this.keys.contains(key)) {
             this.keys.push(key);
             this.keysCounter++;
-            this.itemKey("");
+            this.reduceKey("");
 
             this.fetchDataFor(key).then((subTree: visualizerDataObjectNodeDto[]) => {
                 if (self.tree.children === undefined) {
                     self.tree.children = [];
                 }
-                self.tree.children.push({
-                    level: 4,
-                    name: key,
-                    children: subTree
-                });
+                self.tree.children.push(subTree);
                 self.updateGraph();
             });
         }
@@ -150,7 +190,8 @@ class visualizer extends viewModelBase {
 
     setSelectedIndex(indexName) {
         this.indexName(indexName);
-        this.itemKey("");
+        this.reduceKey("");
+        this.docKey("");
         this.resetChart();
         this.updateGraph();
     }
@@ -213,15 +254,20 @@ class visualizer extends viewModelBase {
 
     getTooltip(data: visualizerDataObjectNodeDto) {
         var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
-        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">׳</button>' +
-            "<table> " + 
-            "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
+        var content = '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">׳</button>' +
+            "<table> ";
+
+        if (data.level < 4) {
+            content += "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
             "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
             "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
             "<tr><td><strong>Bucket</strong></td><td>" + data.payload.Bucket + "</td></tr>" +
-            "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>" +
-            "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
+            "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>";
+        }
+
+        content += "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
         "</table>";
+        return content;
     }
 
     updateGraph() {
@@ -287,7 +333,6 @@ class visualizer extends viewModelBase {
             .on("click", function (d) {
                 nv.tooltip.cleanup();
                 if (d.level === 0) {
-                    console.log(d);
                     router.navigate(appUrl.forEditDoc(d.name, null, null, self.activeDatabase()));
                 }
                 else {
@@ -326,11 +371,12 @@ class visualizer extends viewModelBase {
 
         // TODO support for paging
 
-        var mapTask = new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), key, 0, 1024).execute();
+        var mapTask = new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { key: key }, 0, 1024).execute();
         var reduce1Task = new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 1, key, 0, 1024).execute();
         var reduce2Task = new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 2, key, 0, 1024).execute();
+        var indexEntryTask = new queryIndexDebugAfterReduceCommand(this.indexName(), this.activeDatabase(), [key]).execute();
 
-        (<any>$.when(mapTask, reduce1Task, reduce2Task)).then((map: mappedResultInfo[], reduce1: mappedResultInfo[], reduce2: mappedResultInfo[]) =>
+        (<any>$.when(mapTask, reduce1Task, reduce2Task, indexEntryTask)).then((map: mappedResultInfo[], reduce1: mappedResultInfo[], reduce2: mappedResultInfo[], indexEntries: any[]) =>
         {
             var mapGroupedByBucket = d3
                 .nest()
@@ -341,6 +387,8 @@ class visualizer extends viewModelBase {
                 .nest()
                 .key(d => String(d.Bucket))
                 .map(reduce1, d3.map);
+
+            var indexEntry = indexEntries[0];
 
             if (reduce2.length == 0 && reduce1.length == 0) {
                 var subTree: visualizerDataObjectNodeDto[] = map.map((m: mappedResultInfo) => {
@@ -357,7 +405,13 @@ class visualizer extends viewModelBase {
                         ]
                     }
                 });
-                allDataFetched.resolve(subTree);
+
+                allDataFetched.resolve({
+                    level: 4,
+                    name: key,
+                    payload: { Data: indexEntry },
+                    children:  subTree 
+                });
             }
 
             if (reduce2.length > 0 && reduce1.length > 0) {
@@ -389,7 +443,12 @@ class visualizer extends viewModelBase {
                     })
                     }
                 });
-                allDataFetched.resolve(subTree);
+                allDataFetched.resolve({
+                    level: 4,
+                    name: key,
+                    payload: { Data: indexEntry },
+                    children: subTree
+                });
             }
         }, () => {
                 allDataFetched.reject();
@@ -399,6 +458,16 @@ class visualizer extends viewModelBase {
 
     tooltipClose() {
         nv.tooltip.cleanup();
+    }
+
+    selectReduceKey(value: string) {
+        this.addReduceKey(value);
+        this.reduceKey("");
+    }
+
+    selectDocKey(value: string) {
+        this.addDocKey(value);
+        this.docKey("");
     }
 }
 

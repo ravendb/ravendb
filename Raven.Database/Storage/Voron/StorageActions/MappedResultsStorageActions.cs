@@ -265,40 +265,68 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int view, string reduceKey, int start, int take)
-		{
+        public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int view, string reduceKey, int start, int take)
+        {
             var reduceKeyHash = HashKey(reduceKey);
             var viewAndReduceKey = CreateKey(view, reduceKey, reduceKeyHash);
-			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
-			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
+            var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
+            var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 
-			using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
-			{
-				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
-					yield break;
+            using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
+                    yield break;
 
-				var count = 0;
-				do
-				{
-					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
-					yield return new MappedResultInfo
-					{
-						ReduceKey = value.Value<string>("reduceKey"),
-						Etag = Etag.Parse(value.Value<byte[]>("etag")),
-						Timestamp = value.Value<DateTime>("timestamp"),
-						Bucket = value.Value<int>("bucket"),
-						Source = value.Value<string>("docId"),
-						Size = size,
-						Data = LoadMappedResult(iterator.CurrentKey, value, mappedResultsData)
-					};
+                var count = 0;
+                do
+                {
+                    ushort version;
+                    var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+                    var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
+                    yield return new MappedResultInfo
+                    {
+                        ReduceKey = value.Value<string>("reduceKey"),
+                        Etag = Etag.Parse(value.Value<byte[]>("etag")),
+                        Timestamp = value.Value<DateTime>("timestamp"),
+                        Bucket = value.Value<int>("bucket"),
+                        Source = value.Value<string>("docId"),
+                        Size = size,
+                        Data = LoadMappedResult(iterator.CurrentKey, value, mappedResultsData)
+                    };
 
-					count++;
-				}
-				while (iterator.MoveNext() && count < take);
-			}
-		}
+                    count++;
+                }
+                while (iterator.MoveNext() && count < take);
+            }
+        }
+
+        public IEnumerable<string> GetSourcesForIndexForDebug(int view, string startsWith, int take)
+        {
+            var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+            using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateKey(view)))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    return Enumerable.Empty<string>();
+
+                var results = new HashSet<string>();
+                do
+                {
+                    ushort version;
+                    var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+
+                    var docId = value.Value<string>("docId");
+
+                    if (string.IsNullOrEmpty(startsWith) == false && docId.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    results.Add(docId);
+                }
+                while (iterator.MoveNext() && results.Count <= take);
+
+                return results;
+            }
+        }
+       
 
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string reduceKey, int level, int start, int take)
 		{

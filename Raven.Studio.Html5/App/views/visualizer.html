@@ -74,27 +74,49 @@
 </style>
 
 <section>
-    <form class="form-inline" role="form" data-bind="submit: addItem">
+    <form class="form-inline" role="form">
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: indexName"></span>
                 <span class="caret"></span>
             </button>
-             <ul class="dropdown-menu" role="menu">
-                    <!-- ko foreach: indexes -->
-                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
-                    <!-- /ko -->
-                </ul>
-            </div>
-        <div class="form-group">
+            <ul class="dropdown-menu" role="menu">
+                <!-- ko foreach: indexes -->
+                <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                <!-- /ko -->
+            </ul>
+        </div>
+        <div class="form-group" data-bind="visible: hasIndexSelected">
             <div class="input-group">
-                <input type="text" data-bind="value: itemKey" class="form-control" placeholder="Reduce key">
+                <input id="docKey" type="text" data-bind="value: docKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto" >
-                    <button data-bind="click: addItem" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
+                    <button data-bind="click: addDocKey.bind($root, docKey())" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
                 </span>
             </div>
+            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: docKeysSearchResults">
+                <li role="presentation" data-bind="click: $root.selectDocKey.bind($root, $data)">
+                    <a role="menuitem" tabindex="-1" href="#">
+                        <span data-bind="text: $data"></span>
+                    </a>
+                </li>
+            </ul>
         </div>
-        <div class="btn-group">
+        <div class="form-group" data-bind="visible: hasIndexSelected">
+            <div class="input-group">
+                <input id="itemKey" type="text" data-bind="value: reduceKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Reduce key" autocomplete="off">
+                <span class="input-group-btn" style="width: auto" >
+                    <button data-bind="click: addReduceKey.bind($root, reduceKey()), visible: hasIndexSelected" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
+                </span>
+            </div>
+            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#itemKey', foreach: reduceKeysSearchResults">
+                <li role="presentation" data-bind="click: $root.selectReduceKey.bind($root, $data)">
+                    <a role="menuitem" tabindex="-1" href="#">
+                        <span data-bind="text: $data"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="btn-group" data-bind="visible: hasIndexSelected">
             <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected" title="Edit index"><i class="fa fa-pencil"></i></a>
             <a class="btn btn-default"  data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected" title="Run query"><i class="fa fa-gears"></i></a>
        </div>

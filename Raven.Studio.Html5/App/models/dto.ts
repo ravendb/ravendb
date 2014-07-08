@@ -849,3 +849,9 @@ interface visualizerDataObjectNodeDto {
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
 }
+
+interface queryIndexDebugMapArgsDto {
+    key?: string;
+    sourceId?: string;
+    startsWith?: string;
+}

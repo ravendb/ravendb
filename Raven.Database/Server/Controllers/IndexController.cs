@@ -238,6 +238,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			switch (GetQueryStringValue("debug").ToLowerInvariant())
 			{
+                case "docs":
+			        return GetDocsStartsWith(index);
 				case "map":
 					return GetIndexMappedResult(index);
 				case "reduce":
@@ -255,6 +257,22 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+        private HttpResponseMessage GetDocsStartsWith(string index)
+        {
+            var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
+            if (definition == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+
+            var prefix = GetQueryStringValue("startsWith");
+            List<string> keys = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.MaxPageSize))
+                    .ToList(); 
+            });
+            return GetMessageWithObject(new { keys.Count, Results = keys });
+        }
+
 		private HttpResponseMessage GetIndexMappedResult(string index)
 		{
 			var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
@@ -264,22 +282,21 @@ namespace Raven.Database.Server.Controllers
 			var key = GetQueryStringValue("key");
 			if (string.IsNullOrEmpty(key))
 			{
-				var startsWith = GetQueryStringValue("startsWith");
+                var startsWith = GetQueryStringValue("startsWith");
 				var sourceId = GetQueryStringValue("sourceId");
 
 				List<string> keys = null;
 				Database.TransactionalStorage.Batch(accessor =>
 				{
-					keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
+                    keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
 
 				return GetMessageWithObject(new
 				{
-					Error = "Query string argument \'key\' is required",
 					keys.Count,
-					Keys = keys
-				}, HttpStatusCode.BadRequest);
+					Results = keys
+				});
 			}
 
 			List<MappedResultInfo> mappedResult = null;
