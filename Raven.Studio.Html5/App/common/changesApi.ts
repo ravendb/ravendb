@@ -52,8 +52,8 @@ class changesApi {
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
-            this.showWarning("Nor WebSocket nor EventSource are supported by your Browser! " +
-                "Changes API is disabled. Please use a modern browser!");
+            setTimeout(() => this.showWarning("Nor WebSocket nor EventSource are supported by your Browser! " +
+                "Changes API is disabled. Please use a modern browser!"), 700);
             this.connectToChangesApiTask.reject();
         }
     }

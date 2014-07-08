@@ -50,8 +50,11 @@
                     <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
                 </div>
             </div>
-            <div class="btn-group" style="align-content: center" data-bind="visible: hasAllDocumentsSelected">
-                All 50 documents on this page are selected. Select all 158 documents in Primary
+            <div class="btn-group" style="align-content: center" data-bind="with: selectedCollection, visible: true">
+                All <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> documents on this page are selected.
+                <u data-bind="click: $root.selectAll.bind($root)">
+                    Select all <strong data-bind="text: documentCount"></strong> documents in <span data-bind="text: name"></span>
+                </u>
             </div>
             <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator }"></div>
         </div>

@@ -62,6 +62,7 @@ class documents extends viewModelBase {
             }
             return false;
         });
+
     }
 
     activate(args) {
@@ -228,6 +229,14 @@ class documents extends viewModelBase {
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
+    selectAll() {
+        var docsGrid = this.getDocumentsGrid();
+
+        if (docsGrid) {
+            docsGrid.selectAll(true);
+        }
+    }
+
     toggleSelectAll() {
         var docsGrid = this.getDocumentsGrid();
 
@@ -236,6 +245,19 @@ class documents extends viewModelBase {
                 docsGrid.selectNone();
             } else {
                 docsGrid.selectAll();
+
+                if (!this.hasAllDocumentsSelected()) {
+                    
+                }
+
+
+/*                    this.hasAllDocumentsSelected = ko.computed(() => {
+                        var numOfSelectedDocuments = this.selectedDocumentIndices().length;
+                        if (!!this.selectedCollection() && numOfSelectedDocuments != 0) {
+                            return numOfSelectedDocuments == this.selectedCollection().documentCount();
+                        }
+                        return false;
+                    });*/
             }
 
 /*                if (true) {

@@ -534,18 +534,34 @@ class ctor {
         this.recycleRows().forEach(r => r.isChecked(false));
     }
 
-    selectAll() {
+    selectAll(forceSelectAll: boolean = false) {
         var allIndices = [];
-        var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
-        var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();
-        var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
-        var actualNumberOfVisibleRows = Math.min(lastVisibleRowNumber - firstVisibleRowNumber, numOfRowsInUse);
-        for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
+
+        if (!forceSelectAll) {
+            var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
+            var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();
+            var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
+            var actualNumberOfVisibleRows = Math.min(lastVisibleRowNumber - firstVisibleRowNumber + 1, numOfRowsInUse);
+
+            for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
+                allIndices.push(i);
+            }
+            this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
+        } else {
+            for (var i = 0; i < this.items.totalResultCount(); i++) {
+                allIndices.push(i);
+            }
+            this.recycleRows().forEach(r => r.isChecked(true));
+        }
+
+        this.settings.selectedIndices(allIndices);
+
+        /*var allIndices = [];
+        for (var i = 0; i < this.items.totalResultCount(); i++) {
             allIndices.push(i);
         }
         this.settings.selectedIndices(allIndices);
-
-        this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
+        this.recycleRows().forEach(r => r.isChecked(true));*/
     }
 
     getRowIndicesRange(firstRowIndex: number, secondRowIndex: number): Array<number> {
