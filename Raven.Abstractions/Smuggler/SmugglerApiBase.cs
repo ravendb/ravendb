@@ -34,7 +34,7 @@ namespace Raven.Abstractions.Smuggler
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
-		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit);
+		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
 		protected abstract Task<RavenJArray> GetTransformers(int start);
 
@@ -286,7 +286,7 @@ namespace Raven.Abstractions.Smuggler
                     var maxRecords = options.Limit - totalCount;
                     if (maxRecords > 0)
 			        {
-			            using (var documents = await GetDocuments(lastEtag, maxRecords))
+			            using (var documents = await GetDocuments(lastEtag, options.BatchSize))
 			            {
 			                var watch = Stopwatch.StartNew();
 
