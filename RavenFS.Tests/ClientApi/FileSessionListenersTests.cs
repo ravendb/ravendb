@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Raven.Client.FileSystem.Extensions;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -14,10 +15,13 @@ namespace RavenFS.Tests.ClientApi
     {
 
         private readonly IFilesStore filesStore;
+        private readonly IFilesStore anotherStore;
 
         public FileSessionListenersTests()
 		{
-			filesStore = this.NewStore();
+			filesStore = this.NewStore(1);
+            anotherStore = this.NewStore(2);
+
 		}
 
         [Fact]
@@ -106,6 +110,37 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
+        [Fact]
+        public async void ConflictListeners()
+        {
+            var store = (FilesStore)filesStore;
+            var conflictsListener = new TakeNewestConflictsListener();
+            store.Listeners.RegisterListener(conflictsListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                var syncDestinatios = new SynchronizationDestination[] {sessionDestination2.Commands.ToSynchronizationDestination()};
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+                
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                var file = await sessionDestination1.LoadFileAsync("test1.file");
+                var file2 = await sessionDestination2.LoadFileAsync("test1.file");
+                Assert.Equal(128, file.TotalSize);
+
+                Assert.Equal(1, conflictsListener.DetectedCount);
+                Assert.Equal(1, conflictsListener.ResolvedCount);
+            }
+        }
+
+
         private class NoOpDeleteFilesListener : IFilesDeleteListener
         {
             public int AfterCount { get; protected set; }
@@ -137,6 +172,33 @@ namespace RavenFS.Tests.ClientApi
             public void AfterDelete(FileHeader instance)
             {
                 AfterCount++;
+            }
+        }
+
+        private class TakeNewestConflictsListener : IFilesConflictListener
+        {
+
+            public int ResolvedCount { get; protected set; }
+            public int DetectedCount { get; protected set; }
+
+            public ConflictResolutionStrategy ConflictDetected(FileHeader local, FileHeader remote, string destinationSourceUri)
+            {
+                DetectedCount++;
+                if (local.LastModified.CompareTo(remote.LastModified) >= 0)
+                {
+                    return ConflictResolutionStrategy.CurrentVersion;
+                }
+                else
+                {
+                    return ConflictResolutionStrategy.RemoteVersion;
+                }
+
+
+            }
+
+            public void ConflictResolved(FileHeader header)
+            {
+
             }
         }
     }

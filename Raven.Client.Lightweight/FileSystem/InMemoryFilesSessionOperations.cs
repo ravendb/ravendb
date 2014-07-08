@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem.Impl;
 using Raven.Client.Util;
@@ -89,7 +90,7 @@ namespace Raven.Client.FileSystem
             this.filesStore = filesStore;
             this.theListeners = listeners;            
 
-            this.MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;			
+            this.MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
 
         /// <summary>

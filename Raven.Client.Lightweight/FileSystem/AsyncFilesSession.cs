@@ -8,10 +8,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
+    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
     {
         	/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
@@ -23,6 +24,7 @@ namespace Raven.Client.FileSystem
 			: base(filesStore, listeners, id)
 		{
             Commands = asyncFilesCommands;
+            filesStore.Changes().ForConflicts().Subscribe(this);
 		}
 
         /// <summary>
@@ -123,6 +125,34 @@ namespace Raven.Client.FileSystem
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
             var searchResults = await Commands.SearchOnDirectoryAsync(directory);
             return searchResults.Files.ToArray();
+        }
+
+        public async void OnNext(ConflictNotification notification)
+        {
+            var localHeader = await this.LoadFileAsync(notification.FileName);
+            //var remolocalHeaderteHeader = await Commands.ForFileSystem(notification.SourceServerUrl).GetMetadataForAsync(notification.FileName);
+            if (notification.Status == ConflictStatus.Detected) 
+            {
+                foreach( var listener in Listeners.ConflictListeners)
+                {
+
+                    var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
+                    await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, strategy);
+                }
+            }
+            else
+            {
+                foreach (var listener in Listeners.ConflictListeners)
+                    listener.ConflictResolved(localHeader);
+            }
+        }
+
+        public void OnError(Exception error)
+        {
+        }
+
+        public void OnCompleted()
+        {
         }
     }
 }

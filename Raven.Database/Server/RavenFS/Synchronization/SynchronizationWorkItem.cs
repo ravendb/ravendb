@@ -89,7 +89,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             return null;
 		}
 
-        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, IAsyncFilesSynchronizationCommands destination, string localServerUrl, ILog log)
+        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenJObject remoteMetadata, IAsyncFilesSynchronizationCommands destination, string localServerUrl, ILog log)
 		{
             var commands = (IAsyncFilesCommandsImpl)destination.Commands;
 
@@ -102,7 +102,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				var history = new List<HistoryItem>(conflict.RemoteHistory);
 				history.RemoveAt(conflict.RemoteHistory.Count - 1);
 
-				await destination.ApplyConflictAsync(FileName, version, serverId, history, localServerUrl);
+                await destination.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl);
 			}
 			catch (Exception ex)
 			{

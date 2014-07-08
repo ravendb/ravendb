@@ -62,7 +62,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
 			if (conflict != null)
-				return await ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.FileSystemUrl, log);
+				return await ApplyConflictOnDestinationAsync(conflict, destinationMetadata, destination, ServerInfo.FileSystemUrl, log);
 
 			using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
 			using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
