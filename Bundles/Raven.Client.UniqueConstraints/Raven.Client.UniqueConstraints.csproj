@@ -59,9 +59,6 @@
     <Compile Include="..\Raven.Bundles.UniqueConstraints\Constants.cs">
       <Link>Constants.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Bundles.UniqueConstraints\Util.cs">
-      <Link>Util.cs</Link>
-    </Compile>
     <Compile Include="ConstraintConfig.cs" />
     <Compile Include="ConstraintInfo.cs" />
     <Compile Include="ReflectedConstraintInfo.cs" />
@@ -69,6 +66,7 @@
     <Compile Include="UniqueConstraintExtensions.cs" />
     <Compile Include="UniqueConstraintsStoreListener.cs" />
     <Compile Include="UniqueConstraintsTypeDictionary.cs" />
+    <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">

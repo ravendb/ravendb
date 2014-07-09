@@ -26,8 +26,6 @@ namespace Raven.Database.Storage.Voron.Impl
 	    private readonly StorageEnvironment env;
 
 #if DEBUG
-		private static int debugJournalCount;
-
 		public TableStorage(StorageEnvironment environment, IBufferPool bufferPool)
 		{
 			this.bufferPool = bufferPool;

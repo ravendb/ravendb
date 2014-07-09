@@ -164,12 +164,12 @@ namespace Raven.Smuggler
 			await FlushBatch();
 		}
 
-		protected async override Task<string> GetVersion(RavenConnectionStringOptions server)
+		protected override Task<string> GetVersion(RavenConnectionStringOptions server)
 		{
 			var request = CreateRequest(server, "/build/version");
 			var version = request.ExecuteRequest<RavenJObject>();
 
-			return version["ProductVersion"].ToString();
+			return new CompletedTask<string>(version["ProductVersion"].ToString());
 		}
 
         protected HttpRavenRequest CreateRequest(RavenConnectionStringOptions connectionStringOptions, string url, string method = "GET")
@@ -324,15 +324,15 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected async override Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
+		protected override Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
 		{
 			if (IsTransformersSupported == false)
-				return new RavenJArray();
+				return new CompletedTask<RavenJArray>(new RavenJArray());
 
 			RavenJArray transformers = null;
 			var request = CreateRequest(src, "/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + start);
 			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));
-			return transformers;
+			return new CompletedTask<RavenJArray>(transformers);
 		}
 
 		protected override Task PutAttachment(RavenConnectionStringOptions dst ,AttachmentExportInfo attachmentExportInfo)
@@ -380,9 +380,9 @@ namespace Raven.Smuggler
 			return Commands.GetStatisticsAsync();
 		}
 
-		protected async override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return SmugglerJintHelper.Transform(transformScript, document);
+			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
 		}
 
 		private Task FlushBatch()
@@ -398,7 +398,9 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
+#pragma warning disable 1998
         protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+#pragma warning restore 1998
 		{
 			if (EnsuredDatabaseExists || string.IsNullOrWhiteSpace(to.DefaultDatabase))
 				return;

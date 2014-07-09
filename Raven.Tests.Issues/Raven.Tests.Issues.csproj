@@ -95,9 +95,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Bundles\Raven.Bundles.UniqueConstraints\Util.cs">
-      <Link>Util.cs</Link>
-    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>

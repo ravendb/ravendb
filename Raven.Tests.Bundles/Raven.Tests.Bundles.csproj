@@ -82,9 +82,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\bundles\raven.bundles.uniqueconstraints\Util.cs">
-      <Link>UniqueConstraints\Util.cs</Link>
-    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>

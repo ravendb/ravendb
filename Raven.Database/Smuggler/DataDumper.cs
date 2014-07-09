@@ -29,9 +29,10 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase database;
 
-		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+		protected override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
 		{
 			EnsuredDatabaseExists = true;
+			return new CompletedTask();
 		}
 
         /// <summary>

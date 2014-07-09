@@ -62,9 +62,6 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\MultiDatabase.cs">
-      <Link>Imports\MultiDatabase.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Database\Json\JintOperationScope.cs">
       <Link>Imports\JintOperationScope.cs</Link>
     </Compile>

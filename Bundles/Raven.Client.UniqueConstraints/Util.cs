@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.UniqueConstraints
+namespace Raven.Client.UniqueConstraints
 {
 	public static class Util
 	{

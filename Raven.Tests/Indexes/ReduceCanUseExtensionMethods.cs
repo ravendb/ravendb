@@ -18,7 +18,9 @@ namespace Raven.Tests.Indexes
 
 		private class Result
 		{
+#pragma warning disable 649
 			public string[] Tags;
+#pragma warning restore 649
 		}
 
 		[Fact]
@@ -29,7 +31,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
 				{
 					Map = documents => from doc in documents
-									   let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+									   let tags = doc.Tags.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
 									   select new Result()
 									   {
 										   Tags = tags.ToArray()

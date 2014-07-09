@@ -30,7 +30,9 @@ namespace Raven.Tests.Common.Util
             totalRead = 0;
             totalWrite = 0;
             isRunning = true;
+#pragma warning disable 4014
             ListenToConnection();
+#pragma warning restore 4014
         }
 
         private async Task ListenToConnection()
@@ -38,7 +40,9 @@ namespace Raven.Tests.Common.Util
             while (isRunning)
             {
                 var client = await listener.AcceptTcpClientAsync();
+#pragma warning disable 4014
                 Task.Run(() => AcceptRequests(client));
+#pragma warning restore 4014
             }
         }
 
