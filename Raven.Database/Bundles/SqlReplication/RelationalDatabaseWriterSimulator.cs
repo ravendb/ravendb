@@ -16,6 +16,14 @@ namespace Raven.Database.Bundles.SqlReplication
         private readonly SqlReplicationStatistics replicationStatistics;
         private readonly DbCommandBuilder commandBuilder;
         private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
+        private bool IsSqlServerFactoryType = false;
+        private static string[] SqlServerFactoryNames =
+        {
+            "System.Data.SqlClient",
+            "System.Data.SqlServerCe.4.0",
+            "MySql.Data.MySqlClient",
+            "System.Data.SqlServerCe.3.5"
+        };
 
         public RelationalDatabaseWriterSimulator( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
         {
@@ -24,6 +32,10 @@ namespace Raven.Database.Bundles.SqlReplication
             this.replicationStatistics = replicationStatistics;
             this.providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
             commandBuilder = providerFactory.CreateCommandBuilder();
+            if (SqlServerFactoryNames.Contains(cfg.FactoryName))
+		    {
+		        IsSqlServerFactoryType = true;
+		    }
         }
 
 
@@ -60,7 +72,7 @@ namespace Raven.Database.Bundles.SqlReplication
             {
 
                 var sb = new StringBuilder("INSERT INTO ")
-                        .Append(commandBuilder.QuoteIdentifier(tableName))
+                        .Append(GetTableNameString(tableName))
                         .Append(" (")
                         .Append(commandBuilder.QuoteIdentifier(pkName))
                         .Append(", ");
@@ -86,7 +98,14 @@ namespace Raven.Database.Bundles.SqlReplication
                     sb.Append("'").Append(param.Value).Append("'").Append(", ");
                 }
                 sb.Length = sb.Length - 2;
-                sb.Append(");");
+                sb.Append(")");
+                if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                {
+                    sb.Append(" OPTION(RECOMPILE)");
+                }
+
+                sb.Append(";");
+
                 yield return sb.ToString();
             }
         }
@@ -100,7 +119,7 @@ namespace Raven.Database.Bundles.SqlReplication
             {
 
                 var sb = new StringBuilder("DELETE FROM ")
-                    .Append(commandBuilder.QuoteIdentifier(tableName))
+                    .Append(GetTableNameString(tableName))
                     .Append(" WHERE ")
                     .Append(commandBuilder.QuoteIdentifier(pkName))
                     .Append(" IN (");
@@ -119,11 +138,30 @@ namespace Raven.Database.Bundles.SqlReplication
                     }
 
                 }
-                sb.Append(");");
+                sb.Append(")");
+
+                if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                {
+                    sb.Append(" OPTION(RECOMPILE)");
+                }
+
+                sb.Append(";");
                 yield return sb.ToString();
             }
 
 
+        }
+
+        private string GetTableNameString(string tableName)
+        {
+            if (cfg.PerformTableQuatation)
+            {
+                return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
+            }
+            else
+            {
+                return tableName;
+            }
         }
     }
 }

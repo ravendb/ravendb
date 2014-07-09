@@ -90,24 +90,29 @@
                 </div>
                 <div class="col-sm-12 advanced"><a  data-bind="attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}">Advanced >></a></div>
                 <div class="form-group" data-bind="visible:$root.isBasicView() == false">
-                    <label class="col-sm-4 control-label">Parameterize Deletes</label>
-                    <div class="col-sm-8">
-                        <div tabindex="4" class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-primary" data-bind="click: enableParameterizeDeletes, css: { active: !parameterizeDeletesDisabled() }">
-                                <input type="radio" name="options"> Enabled
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: disableParameterizeDeletes, css: { active: parameterizeDeletesDisabled }">
-                                <input type="radio" name="options"> Disabled
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group" data-bind="visible:$root.isBasicView() == false">
                     <label class="col-sm-4 control-label">Connection String Source</label>
                     <div class="col-sm-8">
                         <select tabindex="7" required class="form-control"
                                 data-bind="options: ['Connection String','Connection String Name','Connection String Setting Name'], optionsCaption: '', value: connectionStringType"></select>
 
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() == false">
+                    <label class="col-sm-4 control-label">Disable Parameterized Deletes</label>
+                    <div class="checkbox col-sm-8">
+                        <input type="checkbox" data-bind=" checked:parameterizeDeletesDisabled" />
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() === false &&  isSqlServerKindOfDB() === true ">
+                    <label class="col-sm-4 control-label">Force Query Recompiling</label>
+                    <div class="checkbox col-sm-8">
+                        <input type="checkbox" data-bind=" checked:forceSqlServerQueryRecompile" />
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() === false">
+                    <label class="col-sm-4 control-label">Perform Table Quatation</label>
+                    <div class="checkbox col-sm-8">
+                        <input type="checkbox" data-bind=" checked:performTableQuatation" />
                     </div>
                 </div>
             </div>

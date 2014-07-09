@@ -116,6 +116,13 @@ body {
 #editSQLReplication .advanced {
   padding-left: 0;
 }
+#editSQLReplication .checkbox {
+  align-content: flex-start;
+}
+#editSQLReplication .checkbox input[type=checkbox] {
+  font-size: large;
+  margin-left: 0;
+}
 .sqlReplication-Stats {
   width: 60vw;
   max-height: 60vh !important;

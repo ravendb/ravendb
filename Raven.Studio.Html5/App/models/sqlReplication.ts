@@ -8,7 +8,7 @@ class sqlReplication extends document {
     private CONNECTION_STRING = "Connection String";
     private CONNECTION_STRING_NAME = "Connection String Name";
     private CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
-
+    
     availableConnectionStringTypes = [
         { label: "Connection String", value: this.CONNECTION_STRING },
         { label: "Connection String Name", value: this.CONNECTION_STRING_NAME },
@@ -24,6 +24,8 @@ class sqlReplication extends document {
     connectionStringValue = ko.observable<string>(null).extend({ required: true });
     ravenEntityName = ko.observable<string>("").extend({ required: true });
     parameterizeDeletesDisabled = ko.observable<boolean>(false).extend({ required: true });
+    forceSqlServerQueryRecompile = ko.observable<boolean>(false);
+    performTableQuatation = ko.observable<boolean>(true);
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
     connectionString = ko.observable<string>(null);
@@ -46,7 +48,8 @@ class sqlReplication extends document {
         this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
-
+        this.forceSqlServerQueryRecompile(!!dto.ForceSqlServerQueryRecompile? dto.ForceSqlServerQueryRecompile:false);
+        this.performTableQuatation(!!dto.PerformTableQuatation ? dto.PerformTableQuatation : true);
         this.setupConnectionString(dto);
 
         this.metadata = new documentMetadata(dto['@metadata']);
@@ -126,7 +129,9 @@ class sqlReplication extends document {
             ConnectionString: null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: sqlReplicationTables
+            SqlReplicationTables: sqlReplicationTables,
+            ForceSqlServerQueryRecompile: false,
+            PerformTableQuatation:true
         });
     }
 
@@ -144,6 +149,8 @@ class sqlReplication extends document {
             ConnectionString: this.prepareConnectionString(this.CONNECTION_STRING),
             ConnectionStringName: this.prepareConnectionString(this.CONNECTION_STRING_NAME),
             ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
+            ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),
+            PerformTableQuatation: this.performTableQuatation(),
             SqlReplicationTables: this.sqlReplicationTables().map(tab => tab.toDto())
         };
     }
@@ -182,6 +189,14 @@ class sqlReplication extends document {
 
     saveNewRavenEntityName(newRavenEntityName) {
         this.ravenEntityName(newRavenEntityName);
+    }
+
+
+    isSqlServerKindOfDB(): boolean {
+        if (this.factoryName() == 'System.Data.SqlClient' || this.factoryName() == 'System.Data.SqlServerCe.4.0' || this.factoryName() == 'System.Data.SqlServerCe.3.5') {
+            return true;
+        }
+        return false;
     }
 }
 
