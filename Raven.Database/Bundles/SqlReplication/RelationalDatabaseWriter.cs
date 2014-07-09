@@ -170,7 +170,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
 					var sb = new StringBuilder("INSERT INTO ")
-						.Append(commandBuilder.QuoteIdentifier(tableName))
+                        .Append(string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray()))
 						.Append(" (")
 						.Append(commandBuilder.QuoteIdentifier(pkName))
 						.Append(", ");
@@ -238,10 +238,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					cmd.Parameters.Clear();
 					var sb = new StringBuilder("DELETE FROM ")
-						.Append(commandBuilder.QuoteIdentifier(tableName))
-						.Append(" WHERE ")
-						.Append(commandBuilder.QuoteIdentifier(pkName))
-						.Append(" IN (");
+                        .Append(string.Join(".",tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray()))
+				        .Append(" WHERE ")
+					    .Append(commandBuilder.QuoteIdentifier(pkName))
+					    .Append(" IN (");
 
 					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
