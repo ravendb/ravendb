@@ -849,3 +849,8 @@ interface visualizerDataObjectNodeDto {
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
 }
+
+interface mergeResult {
+  Document: string;
+  Metadata: string;
+}

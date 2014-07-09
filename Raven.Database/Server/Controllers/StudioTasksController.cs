@@ -27,15 +27,15 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StudioTasksController : RavenDbApiController
-	{
+    public class StudioTasksController : RavenDbApiController
+    {
         const int csvImportBatchSize = 512;
 
-		[HttpPost]
-		[Route("studio-tasks/import")]
-		[Route("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
-		{
+        [HttpPost]
+        [Route("studio-tasks/import")]
+        [Route("databases/{databaseName}/studio-tasks/import")]
+        public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+        {
             if (!Request.Content.IsMimeMultipartContent())
             {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
@@ -77,81 +77,81 @@ namespace Raven.Database.Server.Controllers
 
             await dataDumper.ImportData(importOptions, options);
             return GetEmptyMessage();
-		}
+        }
 
-	    public class ExportData
-	    {
+        public class ExportData
+        {
             public string SmugglerOptions { get; set; }
-	    }
-        
-		[HttpPost]
-		[Route("studio-tasks/exportDatabase")]
-		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
+        }
+
+        [HttpPost]
+        [Route("studio-tasks/exportDatabase")]
+        [Route("databases/{databaseName}/studio-tasks/exportDatabase")]
         public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
-		{
+        {
             var requestString = smugglerOptionsJson.SmugglerOptions;
-	        SmugglerOptions smugglerOptions;
-      
+            SmugglerOptions smugglerOptions;
+
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
-			{
-				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+            {
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
                 smugglerOptions = (SmugglerOptions)serializer.Deserialize(jsonReader, typeof(SmugglerOptions));
-			}
+            }
 
 
             var result = GetEmptyMessage();
-            
-            // create PushStreamContent object that will be called when the output stream will be ready.
-			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
-			{
-			    try
-			    {
-			        await new DataDumper(Database).ExportData(new SmugglerExportOptions
-			        {
-			            ToStream = outputStream
-			        }, smugglerOptions).ConfigureAwait(false);
-			    }
-                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
-			    finally
-			    {
-			        outputStream.Close();
-			    }
 
-				
-			});
+            // create PushStreamContent object that will be called when the output stream will be ready.
+            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            {
+                try
+                {
+                    await new DataDumper(Database).ExportData(new SmugglerExportOptions
+                    {
+                        ToStream = outputStream
+                    }, smugglerOptions).ConfigureAwait(false);
+                }
+                // close the output stream, so the PushStremContent mechanism will know that the process is finished
+                finally
+                {
+                    outputStream.Close();
+                }
+
+
+            });
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
                 FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("dd MM yyyy HH-mm", CultureInfo.InvariantCulture))
             };
-			
-			return result;
-		}
-        
-		[HttpPost]
-		[Route("studio-tasks/createSampleData")]
-		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
-		public async Task<HttpResponseMessage> CreateSampleData()
-		{
-			var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
-			if (results.Results.Count > 0)
-			{
-				return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);
-			}
 
-			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
-			{
-				var smugglerOptions = new SmugglerOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
-					ShouldExcludeExpired = false,
-				};
-				var dataDumper = new DataDumper(Database);
-				await dataDumper.ImportData(new SmugglerImportOptions {FromStream = sampleData}, smugglerOptions);
-			}
+            return result;
+        }
 
-			return GetEmptyMessage();
-		}
+        [HttpPost]
+        [Route("studio-tasks/createSampleData")]
+        [Route("databases/{databaseName}/studio-tasks/createSampleData")]
+        public async Task<HttpResponseMessage> CreateSampleData()
+        {
+            var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
+            if (results.Results.Count > 0)
+            {
+                return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);
+            }
+
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
+            {
+                var smugglerOptions = new SmugglerOptions
+                {
+                    OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
+                    ShouldExcludeExpired = false,
+                };
+                var dataDumper = new DataDumper(Database);
+                await dataDumper.ImportData(new SmugglerImportOptions { FromStream = sampleData }, smugglerOptions);
+            }
+
+            return GetEmptyMessage();
+        }
 
         [HttpGet]
         [Route("studio-tasks/createSampleDataClass")]
@@ -189,12 +189,12 @@ namespace Raven.Database.Server.Controllers
             {
                 if (sampleData == null)
                     return GetEmptyMessage();
-                   
+
                 sampleData.Position = 0;
                 using (var reader = new StreamReader(sampleData, Encoding.UTF8))
                 {
-                   var data = reader.ReadToEnd();
-                   return GetMessageWithObject(data);
+                    var data = reader.ReadToEnd();
+                    return GetMessageWithObject(data);
                 }
             }
         }
@@ -277,10 +277,10 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-				message = "The key must be in Base64 encoding format!";
+                message = "The key must be in Base64 encoding format!";
             }
 
-			HttpResponseMessage response = Request.CreateResponse((message == null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, message);
+            HttpResponseMessage response = Request.CreateResponse((message == null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, message);
             return response;
         }
 
@@ -301,11 +301,23 @@ namespace Raven.Database.Server.Controllers
             Database.Batch(commands, CancellationToken.None);
         }
 
-	    [HttpPost]
+        [HttpGet]
+        [Route("studio-tasks/resolveMerge")]
+        [Route("databases/{databaseName}/studio-tasks/resolveMerge")]
+        public async Task<HttpResponseMessage> ResolveMerge(string documentId)
+        {
+            int nextPage = 0;
+            var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
+            var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
+            return GetMessageWithObject(conflictsResolver.Resolve());
+            //return GetMessageWithObject(conflictsResolver.Resolve());
+        }
+
+        [HttpPost]
         [Route("studio-tasks/loadCsvFile")]
-	    [Route("databases/{databaseName}/studio-tasks/loadCsvFile")]
-	    public async Task<HttpResponseMessage> LoadCsvFile()
-	    {
+        [Route("databases/{databaseName}/studio-tasks/loadCsvFile")]
+        public async Task<HttpResponseMessage> LoadCsvFile()
+        {
 
             if (!Request.Content.IsMimeMultipartContent())
                 throw new Exception(); // divided by zero
@@ -321,7 +333,7 @@ namespace Raven.Database.Server.Controllers
 
                 using (var csvReader = new TextFieldParser(stream))
                 {
-	                csvReader.SetDelimiters(",");
+                    csvReader.SetDelimiters(",");
                     var headers = csvReader.ReadFields();
                     var entity =
                         Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(filename)));
@@ -333,41 +345,41 @@ namespace Raven.Database.Server.Controllers
                     var columns = headers.Where(x => x.StartsWith("@") == false).ToArray();
 
                     batch.Clear();
-	                while (csvReader.EndOfData == false)
-	                {
-		                var record = csvReader.ReadFields();
+                    while (csvReader.EndOfData == false)
+                    {
+                        var record = csvReader.ReadFields();
                         var document = new RavenJObject();
                         string id = null;
                         RavenJObject metadata = null;
-		                for (int index = 0; index < columns.Length; index++)
-		                {
-			                var column = columns[index];
-			                if (string.IsNullOrEmpty(column))
-				                continue;
+                        for (int index = 0; index < columns.Length; index++)
+                        {
+                            var column = columns[index];
+                            if (string.IsNullOrEmpty(column))
+                                continue;
 
-			                if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
-			                {
-								id = record[index];
-			                }
-			                else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
-			                {
-				                metadata = metadata ?? new RavenJObject();
-								metadata[Constants.RavenEntityName] = record[index];
-								id = id ?? record[index] + "/";
-			                }
-			                else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
-			                {
-				                metadata = metadata ?? new RavenJObject();
-								metadata[Constants.RavenClrType] = record[index];
-								id = id ?? record[index] + "/";
-			                }
-			                else
-			                {
-								document[column] = SetValueInDocument(record[index]);
-			                }
-		                }
+                            if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
+                            {
+                                id = record[index];
+                            }
+                            else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
+                            {
+                                metadata = metadata ?? new RavenJObject();
+                                metadata[Constants.RavenEntityName] = record[index];
+                                id = id ?? record[index] + "/";
+                            }
+                            else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
+                            {
+                                metadata = metadata ?? new RavenJObject();
+                                metadata[Constants.RavenClrType] = record[index];
+                                id = id ?? record[index] + "/";
+                            }
+                            else
+                            {
+                                document[column] = SetValueInDocument(record[index]);
+                            }
+                        }
 
-		                metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
+                        metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
                         document.Add("@metadata", metadata);
                         metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 
@@ -390,47 +402,48 @@ namespace Raven.Database.Server.Controllers
             }
 
             return GetEmptyMessage();
-	    }
+        }
 
-		private static RavenJToken SetValueInDocument(string value)
-		{
-			if (string.IsNullOrEmpty(value))
-				return value;
 
-			var ch = value[0];
-			if (ch == '[' || ch == '{')
-			{
-				try
-				{
-					return RavenJToken.Parse(value);
-				}
-				catch (Exception)
-				{
-					// ignoring failure to parse, will proceed to insert as a string value
-				}
-			}
-			else if (char.IsDigit(ch) || ch == '-' || ch == '.')
-			{
-				// maybe it is a number?
-				long longResult;
-				if (long.TryParse(value, out longResult))
-				{
-					return longResult;
-				}
+        private static RavenJToken SetValueInDocument(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
 
-				decimal decimalResult;
-				if (decimal.TryParse(value, out decimalResult))
-				{
-					return decimalResult;
-				}
-			}
-			else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
-			{
-				return value.Substring(1, value.Length - 2);
-			}
+            var ch = value[0];
+            if (ch == '[' || ch == '{')
+            {
+                try
+                {
+                    return RavenJToken.Parse(value);
+                }
+                catch (Exception)
+                {
+                    // ignoring failure to parse, will proceed to insert as a string value
+                }
+            }
+            else if (char.IsDigit(ch) || ch == '-' || ch == '.')
+            {
+                // maybe it is a number?
+                long longResult;
+                if (long.TryParse(value, out longResult))
+                {
+                    return longResult;
+                }
 
-			return value;
-		}
-	}
+                decimal decimalResult;
+                if (decimal.TryParse(value, out decimalResult))
+                {
+                    return decimalResult;
+                }
+            }
+            else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
+            {
+                return value.Substring(1, value.Length - 2);
+            }
+
+            return value;
+        }
+    }
 }
 
