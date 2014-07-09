@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -882,4 +881,3 @@ namespace Raven.Abstractions.Smuggler
         public string FilePath { get; set; }
     }
 }
-#endif

@@ -318,11 +318,7 @@ namespace Raven.Abstractions.Extensions
 			var lastWasDash = true;
 			var sb = new StringBuilder(header.Length);
 
-#if NETFX_CORE
-			foreach (var ch in header.ToCharArray())
-#else
 			foreach (var ch in header)
-#endif
 			{
 				sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
 

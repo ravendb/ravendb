@@ -7,10 +7,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
-
 namespace Raven.Abstractions.OAuth
 {
     public class BasicAuthenticator : AbstractAuthenticator
@@ -50,7 +46,6 @@ namespace Raven.Abstractions.OAuth
             }
         }
 
-#if !NETFX_CORE
         private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
         {
             var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
@@ -80,7 +75,6 @@ namespace Raven.Abstractions.OAuth
                 }
             }
         }
-#endif
 
         private const string BasicOAuthOverHttpError = @"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
 Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.

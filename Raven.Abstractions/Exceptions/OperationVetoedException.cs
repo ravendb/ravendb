@@ -11,10 +11,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when an operation has been vetoed by a trigger
     /// </summary>
-#if !NETFX_CORE
     [Serializable]
-#endif
-
 	public class OperationVetoedException : Exception
 	{
 		/// <summary>
@@ -41,8 +38,6 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !NETFX_CORE
-
         /// <summary>
 	/// Initializes a new instance of the <see cref="OperationVetoedException"/> class.
 	/// </summary>
@@ -55,7 +50,5 @@ namespace Raven.Abstractions.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
-#endif
-
 	}
 }

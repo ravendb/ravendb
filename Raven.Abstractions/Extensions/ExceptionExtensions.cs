@@ -65,7 +65,6 @@ namespace Raven.Abstractions.Extensions
 			return new CompletedTask<string>(string.Empty);
 		}
 
-#if !NETFX_CORE
 		public static string TryReadResponseIfWebException(this Exception ex)
 		{
 			var webException = ex as WebException;
@@ -80,7 +79,6 @@ namespace Raven.Abstractions.Extensions
 
 			return string.Empty;
 		}
-#endif
 
         public static string TryReadErrorPropertyFromJson(this string errorString)
         {
@@ -123,7 +121,6 @@ namespace Raven.Abstractions.Extensions
 		    }
 		}
 
-#if !NETFX_CORE
         public static T TryReadErrorResponseObject<T>(this Exception ex, T protoTypeObject = null) where T : class
         {
             var response = TryReadResponseIfWebException(ex);
@@ -132,7 +129,6 @@ namespace Raven.Abstractions.Extensions
 
 	        return JsonConvert.DeserializeObject<T>(response);
         }
-#endif
 
         /// <remarks>Code from http://stackoverflow.com/questions/1886611/c-overriding-tostring-method-for-custom-exceptions </remarks>
 	    public static string ExceptionToString(
