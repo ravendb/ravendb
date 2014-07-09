@@ -29,7 +29,7 @@ class pagedList {
         }
     }
 
-    itemCount():number {
+    itemCount(): number {
         return this.items.length;
     }
 

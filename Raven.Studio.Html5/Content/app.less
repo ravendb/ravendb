@@ -435,6 +435,26 @@ html, body {
     cursor: default;
 }
 
+.documents-page {
+    margin-top: 10px;
+
+    @media(max-device-height:1024px) {
+        a {
+            font-size: 12px !important;
+            overflow: hidden;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+}
+
+#loadingIndicator{
+    width: 30px;
+    height: 30px;
+}
+
 .document-collections {
         
     li {
@@ -787,21 +807,6 @@ html, body {
 
     .peg {
         opacity: 0;
-    }
-}
-
-.documents-page {
-    margin-top: 10px;
-
-    @media(max-device-height:1024px) {
-        a {
-            font-size: 12px !important;
-            overflow: hidden;
-            -ms-text-overflow: ellipsis;
-            -o-text-overflow: ellipsis;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
     }
 }
 

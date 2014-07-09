@@ -46,6 +46,7 @@ class documents extends viewModelBase {
     hasAllDocumentsSelected: KnockoutComputed<boolean>;
     isAnyDocumentsAutoSelected = ko.observable<boolean>(false);
     isAllDocumentsAutoSelected = ko.observable<boolean>(false);
+    canCopyAllSelected: KnockoutComputed<boolean>;
 
     static gridSelector = "#documentsGrid";
 
@@ -69,6 +70,18 @@ class documents extends viewModelBase {
             if (!!this.selectedCollection() && numOfSelectedDocuments != 0) {
                 return numOfSelectedDocuments == this.selectedCollection().documentCount();
             }
+            return false;
+        });
+        this.canCopyAllSelected = ko.computed(() => {
+            this.showLoadingIndicator(); //triggers computing the new cached selected items
+            var numOfSelectedDocuments = this.selectedDocumentIndices().length;
+            var docsGrid = this.getDocumentsGrid();
+
+            if (!!docsGrid) {
+                var cachedItems = docsGrid.getNumberOfCachedItems();
+                return cachedItems >= numOfSelectedDocuments;
+            }
+
             return false;
         });
         this.isRegularCollection = ko.computed(() => {
@@ -180,22 +193,11 @@ class documents extends viewModelBase {
                 if (!collection.isAllDocuments) {
                     this.collections.remove(collection);
                     this.selectCollection(this.allDocumentsCollection);
-                    //result.OperaionId
                 } else {
                     this.selectNone();
                 }
                 
                 this.updateGridAfterOperationComplete(collection.ownerDatabase, result.OperationId);
-                //while (!operationCompleted) {
-
-                //}
-/*                setTimeout(() => {
-                    //docsGrid.invalidateCache();
-                    
-                    //docsGrid.onWindowHeightChanged();
-/*                    var pagedList = this.allDocumentsCollection.getDocuments();
-                    this.currentCollectionPagedItems(pagedList);#1#
-                }, 10000);*/
             });
             app.showDialog(viewModel);
         }

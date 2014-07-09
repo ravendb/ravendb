@@ -550,6 +550,7 @@ class ctor {
     selectAll(documentCount: number) {
         var allIndices = [];
 
+        /*this.settings.itemsSource().totalResultCount()*/
         for (var i = 0; i < documentCount; i++) {
             allIndices.push(i);
         }
@@ -622,11 +623,13 @@ class ctor {
     }
 
     invalidateCache() {
-
-        //this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
         this.items.invalidateCache(); // Causes the cache of items to be discarded.
         this.onGridScrolled(); // Forces a re-fetch of the rows in view.
         this.onWindowHeightChanged();
+    }
+
+    getNumberOfCachedItems() {
+        return this.items.itemCount();
     }
 
     deleteSelectedItems(){

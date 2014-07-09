@@ -25,7 +25,7 @@ class getAllDocumentsCommand extends commandBase {
         var totalResultsTask = this.fetchTotalResultCount();
         var doneTask = $.Deferred();
         var combinedTask = $.when(docsTask, totalResultsTask);
-        combinedTask.done((docsResult: document[], resultsCount: number) => doneTask.resolve(new pagedResultSet(docsResult, resultsCount)));
+        combinedTask.done((docsResult: document[], resultsCount: number) => doneTask.resolve(new pagedResultSet(docsResult, docsResult.length)));
         combinedTask.fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }
