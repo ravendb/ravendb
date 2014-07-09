@@ -627,7 +627,11 @@ class ctor {
     }
 
     getNumberOfCachedItems() {
-        return this.items.itemCount();
+        var items = this.items;
+        if (!!items) {
+            return this.items.itemCount();
+        }
+        return 0;
     }
 
     deleteSelectedItems() {
