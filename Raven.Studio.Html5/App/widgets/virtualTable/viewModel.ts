@@ -624,7 +624,7 @@ class ctor {
 
         $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
             columnIndex = parseInt( $(e.currentTarget).attr("column"));
-            startingWidth = this.columns()[columnIndex].width();
+            startingWidth = parseInt(this.columns()[columnIndex].width().toString());
             startX = e.pageX;
             resizingColumn = true;
         });
