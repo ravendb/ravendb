@@ -170,7 +170,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
 					var sb = new StringBuilder("INSERT INTO ")
-                        .Append(string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray()))
+                        .Append(GetTableNameString(tableName))
 						.Append(" (")
 						.Append(commandBuilder.QuoteIdentifier(pkName))
 						.Append(", ");
@@ -227,6 +227,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
+
+
 	    public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
 		{
 			const int maxParams = 1000;
@@ -238,7 +240,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					cmd.Parameters.Clear();
 					var sb = new StringBuilder("DELETE FROM ")
-                        .Append(string.Join(".",tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray()))
+                        .Append(GetTableNameString(tableName))
 				        .Append(" WHERE ")
 					    .Append(commandBuilder.QuoteIdentifier(pkName))
 					    .Append(" IN (");
@@ -285,7 +287,19 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public static string SanitizeSqlValue(string sqlValue)
+        private string GetTableNameString(string tableName)
+        {
+            if (cfg.PerformTableQuatation)
+            {
+                return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
+            }
+            else
+            {
+                return tableName;
+            }
+        }
+
+        public static string SanitizeSqlValue(string sqlValue)
 		{
 			return sqlValue.Replace("'", "''");
 		}

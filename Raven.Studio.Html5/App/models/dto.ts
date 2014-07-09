@@ -460,6 +460,7 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
+    PerformTableQuatation?:boolean;
 }
 
 interface facetDto {

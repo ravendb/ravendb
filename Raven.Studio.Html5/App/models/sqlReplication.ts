@@ -25,6 +25,7 @@ class sqlReplication extends document {
     ravenEntityName = ko.observable<string>("").extend({ required: true });
     parameterizeDeletesDisabled = ko.observable<boolean>(false).extend({ required: true });
     forceSqlServerQueryRecompile = ko.observable<boolean>(false);
+    performTableQuatation = ko.observable<boolean>(true);
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
     connectionString = ko.observable<string>(null);
@@ -48,7 +49,7 @@ class sqlReplication extends document {
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
         this.forceSqlServerQueryRecompile(!!dto.ForceSqlServerQueryRecompile? dto.ForceSqlServerQueryRecompile:false);
-
+        this.performTableQuatation(!!dto.PerformTableQuatation ? dto.PerformTableQuatation : true);
         this.setupConnectionString(dto);
 
         this.metadata = new documentMetadata(dto['@metadata']);
@@ -129,7 +130,8 @@ class sqlReplication extends document {
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
             SqlReplicationTables: sqlReplicationTables,
-            ForceSqlServerQueryRecompile:false
+            ForceSqlServerQueryRecompile: false,
+            PerformTableQuatation:true
         });
     }
 
@@ -148,6 +150,7 @@ class sqlReplication extends document {
             ConnectionStringName: this.prepareConnectionString(this.CONNECTION_STRING_NAME),
             ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
             ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),
+            PerformTableQuatation: this.performTableQuatation(),
             SqlReplicationTables: this.sqlReplicationTables().map(tab => tab.toDto())
         };
     }

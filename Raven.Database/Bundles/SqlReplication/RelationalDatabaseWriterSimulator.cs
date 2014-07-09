@@ -72,7 +72,7 @@ namespace Raven.Database.Bundles.SqlReplication
             {
 
                 var sb = new StringBuilder("INSERT INTO ")
-                        .Append(commandBuilder.QuoteIdentifier(tableName))
+                        .Append(GetTableNameString(tableName))
                         .Append(" (")
                         .Append(commandBuilder.QuoteIdentifier(pkName))
                         .Append(", ");
@@ -119,7 +119,7 @@ namespace Raven.Database.Bundles.SqlReplication
             {
 
                 var sb = new StringBuilder("DELETE FROM ")
-                    .Append(commandBuilder.QuoteIdentifier(tableName))
+                    .Append(GetTableNameString(tableName))
                     .Append(" WHERE ")
                     .Append(commandBuilder.QuoteIdentifier(pkName))
                     .Append(" IN (");
@@ -150,6 +150,18 @@ namespace Raven.Database.Bundles.SqlReplication
             }
 
 
+        }
+
+        private string GetTableNameString(string tableName)
+        {
+            if (cfg.PerformTableQuatation)
+            {
+                return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
+            }
+            else
+            {
+                return tableName;
+            }
         }
     }
 }

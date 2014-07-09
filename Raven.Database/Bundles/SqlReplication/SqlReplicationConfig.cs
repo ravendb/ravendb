@@ -17,6 +17,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public bool ParameterizeDeletesDisabled { get; set; }
         public bool ForceSqlServerQueryRecompile { get; set; }
+        public bool PerformTableQuatation { get; set; }
 
 		public string RavenEntityName { get; set; }
 		public string Script { get; set; }
