@@ -15,41 +15,46 @@
 .nvtooltip .null { color: #0000ff; }
 .nvtooltip .key { color: #000; }
 
-.node rect {
-    transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
-    -moz-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
-    -webkit-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+.nodeRect {
+    fill-opacity: .4 !important;
+    stroke: #777;
+    stroke-width: 1.5px;
 }
 
 
-.node rect.hover {
+rect.hover {
   stroke-width: 2px;
   stroke: black;
   fill-opacity: .95 !important;
   stroke-opacity: .95 !important;
 }
 
-.node rect.highlight {
+.nodeRect.highlight {
   fill-opacity: 0.8 !important;
 }
 
-.node .nodeRect {
-    fill-opacity: .4 !important;
-    stroke: #777;
-    stroke-width: 1.5px;
+.nodeCheck {
+    stroke-width: 2px;
+    stroke: black;
+    fill: white;
+}
+.nodeCheck.selected  {
+    stroke-width: 2px;
+    stroke: black;
+    fill: black;
 }
 
 .hidden {
     display: none;
 }
 
-.node circle {
+circle {
   fill: #fff;
   stroke: steelblue;
   stroke-width: 1.5px;
 }
 
-.node {
+g {
   font: 10px sans-serif;
   cursor: pointer;
 }
@@ -58,6 +63,12 @@
   fill: none;
   stroke: #ccc;
   stroke-width: 1.5px;
+}
+.link.selected {
+    fill: none;
+    stroke: black;
+    stroke-width: 2.5px;
+     
 }
 .selectable-tooltip {
     pointer-events: all;
@@ -68,6 +79,10 @@
   -ms-user-select: all;
   user-select: all;
 
+}
+text {
+    pointer-events: none;
+    text-anchor: middle;
 }
 
 
@@ -119,7 +134,9 @@
         <div class="btn-group" data-bind="visible: hasIndexSelected">
             <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected" title="Edit index"><i class="fa fa-pencil"></i></a>
             <a class="btn btn-default"  data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected" title="Run query"><i class="fa fa-gears"></i></a>
-       </div>
+            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
+        </div>
+        
     </form>
 
     <svg id="visHeader" style="height: 25px" height="25">

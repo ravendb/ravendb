@@ -843,12 +843,14 @@ interface visualizerDataObjectNodeDto {
     children?: visualizerDataObjectNodeDto[];
     name?: string;
     level?: number;
+    origin?: visualizerDataObjectNodeDto;
     x?: number;
     y?: number;
     depth?: number;
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
     connections?: visualizerDataObjectNodeDto[];
+    cachedId?: string;
 }
 
 interface queryIndexDebugMapArgsDto {
@@ -860,4 +862,5 @@ interface queryIndexDebugMapArgsDto {
 interface graphLinkDto {
     source: visualizerDataObjectNodeDto;
     target: visualizerDataObjectNodeDto;
+    cachedId?: string;
 }
