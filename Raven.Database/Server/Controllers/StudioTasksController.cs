@@ -154,7 +154,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
-        [Route("studio-tasks/createSampleDataClass")]
+        [Route("studio-tasks/simulate-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
         public async Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
         {
