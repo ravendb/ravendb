@@ -48,8 +48,7 @@ namespace Raven.Abstractions.Json
                     }
                 }
             }
-            string metadata = "";
-            return GenerateOutput(result, indent, ref metadata);
+            return GenerateOutput(result, indent);
         }
 
         private bool TryHandleArrayValue(int index, Dictionary<string, object> result, KeyValuePair<string, RavenJToken> prop)
@@ -153,8 +152,18 @@ namespace Raven.Abstractions.Json
                 result.Add(prop.Key, conflicted);
         }
 
-        private static void WriteToken(JsonTextWriter writer, string propertyName, Object propertyValue, int indent)
+        private void WriteToken(JsonTextWriter writer, string propertyName, Object propertyValue)
         {
+            if (isMetadataResolver && (
+                propertyName.StartsWith("Raven-Replication-") ||
+                propertyName.StartsWith("@") ||
+                propertyName == "Last-Modified" ||
+                propertyName == "Raven-Last-Modified"
+                ) )
+            {
+                return;
+            }
+
             writer.WritePropertyName(propertyName);
             var ravenJToken = propertyValue as RavenJToken;
             if (ravenJToken != null)
@@ -188,7 +197,7 @@ namespace Raven.Abstractions.Json
             throw new InvalidOperationException("Could not understand how to deal with: " + propertyValue);
         }
 
-        private static void WriteRawData(JsonTextWriter writer, String data, int indent)
+        private void WriteRawData(JsonTextWriter writer, String data, int indent)
         {
             using (var stringReader = new StringReader(data))
             {
@@ -215,10 +224,9 @@ namespace Raven.Abstractions.Json
             }
         }
 
-        private static void WriteConflictResolver(JsonTextWriter documentWriter, JsonTextWriter metadataWriter, ConflictsResolver resolver, int indent)
+        private void WriteConflictResolver(JsonTextWriter documentWriter, JsonTextWriter metadataWriter, ConflictsResolver resolver, int indent)
         {
             MergeResult result = resolver.Resolve(indent);
-
 
             if (resolver.isMetadataResolver)
                 WriteRawData(metadataWriter, result.Document, 0);
@@ -226,7 +234,7 @@ namespace Raven.Abstractions.Json
                 WriteRawData(documentWriter, result.Document, 0);
         }
 
-        private static MergeResult GenerateOutput(Dictionary<string, object> result, int indent, ref string metadata)
+        private MergeResult GenerateOutput(Dictionary<string, object> result, int indent)
         {
             var documentStringWriter = new StringWriter();
             var documentWriter = new JsonTextWriter(documentStringWriter)
@@ -254,7 +262,7 @@ namespace Raven.Abstractions.Json
                 }
                 else
                 {
-                    WriteToken(o.Key == "@metadata" ? metadataWriter : documentWriter, o.Key, o.Value, indent + 1);
+                    WriteToken(o.Key == "@metadata" ? metadataWriter : documentWriter, o.Key, o.Value);
                 }
             }
             documentWriter.WriteEndObject();
