@@ -695,6 +695,7 @@ class editDocument extends viewModelBase {
         var task = new resolveMergeCommand(this.activeDatabase(), this.editedDocId()).execute();
         task.done((response: mergeResult) => {
             this.documentText(response.Document);
+            this.metadataText(response.Metadata);
         });
     }
 }
