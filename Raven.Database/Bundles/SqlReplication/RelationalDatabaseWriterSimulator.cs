@@ -16,6 +16,14 @@ namespace Raven.Database.Bundles.SqlReplication
         private readonly SqlReplicationStatistics replicationStatistics;
         private readonly DbCommandBuilder commandBuilder;
         private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
+        private bool IsSqlServerFactoryType = false;
+        private static string[] SqlServerFactoryNames =
+        {
+            "System.Data.SqlClient",
+            "System.Data.SqlServerCe.4.0",
+            "MySql.Data.MySqlClient",
+            "System.Data.SqlServerCe.3.5"
+        };
 
         public RelationalDatabaseWriterSimulator( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
         {
@@ -24,6 +32,10 @@ namespace Raven.Database.Bundles.SqlReplication
             this.replicationStatistics = replicationStatistics;
             this.providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
             commandBuilder = providerFactory.CreateCommandBuilder();
+            if (SqlServerFactoryNames.Contains(cfg.FactoryName))
+		    {
+		        IsSqlServerFactoryType = true;
+		    }
         }
 
 
@@ -86,7 +98,14 @@ namespace Raven.Database.Bundles.SqlReplication
                     sb.Append("'").Append(param.Value).Append("'").Append(", ");
                 }
                 sb.Length = sb.Length - 2;
-                sb.Append(");");
+                sb.Append(")");
+                if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                {
+                    sb.Append(" OPTION(RECOMPILE)");
+                }
+
+                sb.Append(";");
+
                 yield return sb.ToString();
             }
         }
@@ -119,7 +138,14 @@ namespace Raven.Database.Bundles.SqlReplication
                     }
 
                 }
-                sb.Append(");");
+                sb.Append(")");
+
+                if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                {
+                    sb.Append(" OPTION(RECOMPILE)");
+                }
+
+                sb.Append(";");
                 yield return sb.ToString();
             }
 

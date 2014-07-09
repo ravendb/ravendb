@@ -110,6 +110,22 @@
 
                     </div>
                 </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() === false &&  isSqlServerKindOfDB() === true ">
+                    <label class="col-sm-4 control-label">Force Query Recompiling</label>
+                    <!--<div class="col-sm-8">
+                            <select tabindex="7" required class="form-control"
+                                    data-bind="options: ['Connection String','Connection String Name','Connection String Setting Name'], optionsCaption: '', value: connectionStringType"></select>
+
+                        </div>-->
+                    <div class="btn-group col-sm-8" data-toggle="buttons">
+                        <label class="btn btn-primary" data-bind="click: function(){forceSqlServerQueryRecompile(true)}, css: { active: forceSqlServerQueryRecompile() === true }">
+                            <input type="radio" name="options"> Enabled
+                        </label>
+                        <label class="btn btn-primary" tabindex="1" data-bind="click: function(){forceSqlServerQueryRecompile(false)}, css: { active: forceSqlServerQueryRecompile() === false }">
+                            <input type="radio" name="options"> Disabled
+                        </label>
+                    </div>
+                </div>
             </div>
             <div class="col-sm-6">
                 <div class="form-group">

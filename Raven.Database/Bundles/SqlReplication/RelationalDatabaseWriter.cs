@@ -18,9 +18,17 @@ using System.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	public class RelationalDatabaseWriter : IDisposable
-	{
-		private readonly DocumentDatabase database;
+    public class RelationalDatabaseWriter : IDisposable
+    {
+        private static string[] SqlServerFactoryNames =
+        {
+            "System.Data.SqlClient",
+            "System.Data.SqlServerCe.4.0",
+            "MySql.Data.MySqlClient",
+            "System.Data.SqlServerCe.3.5"
+        };
+	
+	    private readonly DocumentDatabase database;
 		private readonly SqlReplicationConfig cfg;
 		private readonly DbProviderFactory providerFactory;
 		private readonly SqlReplicationStatistics replicationStatistics;
@@ -28,6 +36,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbConnection connection;
 		private readonly DbTransaction tx;
 		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
+        private bool IsSqlServerFactoryType = false;
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -48,6 +57,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			Debug.Assert(commandBuilder != null);
 
 			connection.ConnectionString = cfg.ConnectionString;
+            
+		    if (SqlServerFactoryNames.Contains(cfg.FactoryName))
+		    {
+                IsSqlServerFactoryType = true;
+		    }
 
 			try
 			{
@@ -190,6 +204,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					sb.Length = sb.Length - 2;
 					sb.Append(")");
+
+                    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                    {
+                        sb.Append(" OPTION(RECOMPILE)");
+                    }
+
 					cmd.CommandText = sb.ToString();
 					try
 					{
@@ -243,6 +263,10 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					sb.Append(")");
 
+				    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+				    {
+                        sb.Append(" OPTION(RECOMPILE)");
+				    }
 					cmd.CommandText = sb.ToString();
 
 					try
