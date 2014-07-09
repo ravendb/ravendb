@@ -201,11 +201,19 @@ namespace Raven.Smuggler
 
         protected DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
         {
+	        var credentials = connectionStringOptions.Credentials as NetworkCredential;
+	        if (credentials != null && //precaution
+				(String.IsNullOrWhiteSpace(credentials.UserName) || 
+				 String.IsNullOrWhiteSpace(credentials.Password)))
+	        {
+		        credentials = CredentialCache.DefaultNetworkCredentials;
+	        }
+		
             var s = new DocumentStore
             {
                 Url = connectionStringOptions.Url,
                 ApiKey = connectionStringOptions.ApiKey,
-                Credentials = connectionStringOptions.Credentials
+				Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials
             };
 
             s.Initialize();

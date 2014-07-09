@@ -123,8 +123,6 @@ class ctor {
         this.registerColumnResizing();
     }
 
-
-
     // Attached is called by Durandal when the view is attached to the DOM.
     // We use this to setup some UI-specific things like context menus, row creation, keyboard shortcuts, etc.
     attached() {
@@ -677,7 +675,7 @@ class ctor {
 
         $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
             columnIndex = parseInt($(e.currentTarget).attr("column"));
-            startingWidth = this.columns()[columnIndex].width();
+            startingWidth = parseInt(this.columns()[columnIndex].width().toString());
             startX = e.pageX;
             resizingColumn = true;
         });

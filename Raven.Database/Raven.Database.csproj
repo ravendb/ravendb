@@ -1061,6 +1061,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Util\StackDump\x64\StackDump.exe" />
+    <EmbeddedResource Include="Util\StackDump\x86\StackDump.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
     <EmbeddedResource Include="Server\WebUI\studio.html" />
     <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />

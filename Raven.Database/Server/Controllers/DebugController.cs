@@ -3,32 +3,32 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
+using System.Net.Http.Headers;
 using System.Security.Principal;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-using System.Web.Routing;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Client.Util;
+using Raven.Abstractions.Logging;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
 using Raven.Database.Storage;
-using Raven.Database.Storage.Voron.StorageActions;
 using Raven.Database.Tasks;
+using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
+using IOExtensions = Raven.Database.Extensions.IOExtensions;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -462,7 +462,169 @@ namespace Raven.Database.Server.Controllers
 				                            TotalCount = totalCount,
 											Identities = identities
 			                            });
-		}	
+		}
+
+		[HttpGet]
+		[Route("debug/info-package")]
+		[Route("databases/{databaseName}/debug/info-package")]
+		public HttpResponseMessage InfoPackage()
+		{
+			var compressionLevel = CompressionLevel.Optimal;
+
+			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+			using (var file = new FileStream(tempFileName, FileMode.Create))
+			using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+			{
+				var jsonSerializer = new JsonSerializer
+				{
+					Formatting = Formatting.Indented
+				};
+
+				var stats = package.CreateEntry("stats.txt", compressionLevel);
+
+				using (var statsStream = stats.Open())
+				using (var streamWriter = new StreamWriter(statsStream))
+				{
+					jsonSerializer.Serialize(streamWriter, Database.Statistics);
+					streamWriter.Flush();
+				}
+
+				var metrics = package.CreateEntry("metrics.txt", compressionLevel);
+
+				using (var metricsStream = metrics.Open())
+				using (var streamWriter = new StreamWriter(metricsStream))
+				{
+					jsonSerializer.Serialize(streamWriter, Database.CreateMetrics());
+					streamWriter.Flush();
+				}
+
+				var logs = package.CreateEntry("logs.txt", compressionLevel);
+
+				using (var logsStream = logs.Open())
+				using (var streamWriter = new StreamWriter(logsStream))
+				{
+					var target = LogManager.GetTarget<DatabaseMemoryTarget>();
+
+					if (target == null)
+						streamWriter.WriteLine("DatabaseMemoryTarget was not registered in the log manager, logs are not available");
+					else
+					{
+						var dbName = DatabaseName ?? Constants.SystemDatabase;
+						var boundedMemoryTarget = target[dbName];
+						var log = boundedMemoryTarget.GeneralLog;
+
+						streamWriter.WriteLine("time,logger,level,message,exception");
+
+						foreach (var logEvent in log)
+						{
+							streamWriter.WriteLine("{0:O},{1},{2},{3},{4}", logEvent.TimeStamp, logEvent.LoggerName, logEvent.Level, logEvent.FormattedMessage, logEvent.Exception);
+						}
+					}
+
+					streamWriter.Flush();
+				}
+
+
+				var stacktrace = package.CreateEntry("stacktraces.txt", compressionLevel);
+
+				using (var stacktraceStream = stacktrace.Open())
+				{
+					string stackDumpDir = null;
+
+					try
+					{
+						if(Debugger.IsAttached)
+							throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
+
+						stackDumpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+						var stackDumpExe = Path.Combine(stackDumpDir, "stackdump.exe");
+						var stackDumpOutput = Path.Combine(stackDumpDir, "stacktraces.txt");
+
+						Directory.CreateDirectory(stackDumpDir);
+
+						if (Environment.Is64BitProcess)
+							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
+						else
+							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
+
+						var process = new Process
+						{
+							StartInfo = new ProcessStartInfo
+							{
+								Verb = "runas",
+								Arguments = string.Format("/c {0} {1} > {2}", stackDumpExe, Process.GetCurrentProcess().Id, stackDumpOutput),
+								FileName = "cmd.exe",
+								WindowStyle = ProcessWindowStyle.Hidden,
+							}
+						};
+
+						process.Start();
+
+						process.WaitForExit();
+
+						using (var stackDumpOutputStream = File.Open(stackDumpOutput, FileMode.Open))
+						{
+							stackDumpOutputStream.CopyTo(stacktraceStream);
+						}
+					}
+					catch (Exception ex)
+					{
+						var streamWriter = new StreamWriter(stacktraceStream);
+						streamWriter.WriteLine("Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex);
+					}
+					finally
+					{
+						if (stackDumpDir != null && Directory.Exists(stackDumpDir))
+							IOExtensions.DeleteDirectory(stackDumpDir);
+					}
+
+					stacktraceStream.Flush();
+				}
+
+				file.Flush();
+			}
+
+			var response = new HttpResponseMessage();
+
+			response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
+			{
+				Headers =
+				{
+					ContentDisposition = new ContentDispositionHeaderValue("attachment")
+					{
+						FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
+					},
+					ContentType = new MediaTypeHeaderValue("application/octet-stream")
+				}
+			};
+
+			return response;
+		}
+
+		private void ExtractResource(string resource, string path)
+		{
+			var stream = GetType().Assembly.GetManifestResourceStream(resource);
+
+			if(stream == null)
+				throw new InvalidOperationException("Could not find the requested resource: " + resource);
+
+			var bytes = new byte[4096];
+
+			using (var stackDump = File.Create(path, 4096))
+			{
+				while (true)
+				{
+					var read = stream.Read(bytes, 0, bytes.Length);
+					if(read == 0)
+						break;
+
+					stackDump.Write(bytes, 0, read);
+				}
+
+				stackDump.Flush();
+			}
+		}
 	}
 
 	public class RouteInfo

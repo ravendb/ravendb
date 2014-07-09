@@ -295,6 +295,8 @@
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugMapCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugReduceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexDebugAfterReduceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexDebugDocsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -333,6 +335,8 @@
     <TypeScriptCompile Include="App\viewmodels\metricsPrefetches.ts" />
     <TypeScriptCompile Include="App\models\transformerQuery.ts" />
     <TypeScriptCompile Include="App\common\jsonUtil.ts" />
+    <TypeScriptCompile Include="App\common\chunkFetcher.ts" />
+    <TypeScriptCompile Include="App\commands\resolveMergeCommand.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
@@ -481,7 +485,7 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
+      <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap.css" />
