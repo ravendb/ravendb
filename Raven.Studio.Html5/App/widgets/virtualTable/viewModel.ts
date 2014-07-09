@@ -219,9 +219,9 @@ class ctor {
         untypedGrid.contextmenu({
             target: '#gridContextMenu',
             before: (e: MouseEvent) => {
-
-                var parentRow = $(e.target).parents(".ko-grid-row");
-                var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+                var target: any = e.target;
+                var rowTag = (target.className.indexOf("ko-grid-row") > -1) ? $(target) : $(e.target).parents(".ko-grid-row");
+                var rightClickedElement: row = rowTag.length ? ko.dataFor(rowTag[0]) : null;
 
                 if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
