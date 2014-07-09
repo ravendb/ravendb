@@ -621,11 +621,6 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    disableSelection() {
-        this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-        this.selectNone();
-    }
-
     invalidateCache() {
 
         //this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));

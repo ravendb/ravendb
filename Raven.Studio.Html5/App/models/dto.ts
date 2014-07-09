@@ -849,3 +849,17 @@ interface visualizerDataObjectNodeDto {
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
 }
+
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface operationStatusDto {
+    Completed: boolean;
+    State: documentStateDto[];
+}
+
+interface documentStateDto {
+    Document: string;
+    Deleted: boolean;
+}

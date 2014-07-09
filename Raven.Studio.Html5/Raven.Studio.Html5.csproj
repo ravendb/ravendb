@@ -63,6 +63,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getSyncStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
+    <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />

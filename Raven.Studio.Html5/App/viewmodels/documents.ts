@@ -1,23 +1,27 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
+import virtualTable = require("widgets/virtualTable/viewModel");
+
 import shell = require("viewmodels/shell");
+import viewModelBase = require("viewmodels/viewModelBase");
+import deleteCollection = require("viewmodels/deleteCollection");
 
 import collection = require("models/collection");
 import database = require("models/database");
 import document = require("models/document");
-import deleteCollection = require("viewmodels/deleteCollection");
-import pagedList = require("common/pagedList");
-import appUrl = require("common/appUrl");
+import changeSubscription = require('models/changeSubscription');
+import customFunctions = require("models/customFunctions");
+import customColumns = require('models/customColumns');
+import customColumnParams = require('models/customColumnParams');
+
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
-import viewModelBase = require("viewmodels/viewModelBase");
-import virtualTable = require("widgets/virtualTable/viewModel");
-import customColumnParams = require('models/customColumnParams');
-import customColumns = require('models/customColumns');
-import changeSubscription = require('models/changeSubscription');
-import changesApi = require("common/changesApi");
-import customFunctions = require("models/customFunctions");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
+import getOperationStatusCommand = require('commands/getOperationStatusCommand');
+
+import pagedList = require("common/pagedList");
+import appUrl = require("common/appUrl");
+import changesApi = require("common/changesApi");
 
 class documents extends viewModelBase {
     
@@ -172,24 +176,42 @@ class documents extends viewModelBase {
         var collection: collection = this.selectedCollection();
         if (collection) {
             var viewModel = new deleteCollection(collection);
-            viewModel.deletionTask.done((result) => {
+            viewModel.deletionTask.done((result: operationIdDto) => {
                 if (!collection.isAllDocuments) {
                     this.collections.remove(collection);
                     this.selectCollection(this.allDocumentsCollection);
                     //result.OperaionId
+                } else {
+                    this.selectNone();
                 }
-                var docsGrid = this.getDocumentsGrid();
-                docsGrid.disableSelection();
-                setTimeout(() => {
-                    docsGrid.invalidateCache();
+                
+                this.updateGridAfterOperationComplete(collection.ownerDatabase, result.OperationId);
+                //while (!operationCompleted) {
+
+                //}
+/*                setTimeout(() => {
+                    //docsGrid.invalidateCache();
                     
                     //docsGrid.onWindowHeightChanged();
 /*                    var pagedList = this.allDocumentsCollection.getDocuments();
-                    this.currentCollectionPagedItems(pagedList);*/
-                }, 10000);
+                    this.currentCollectionPagedItems(pagedList);#1#
+                }, 10000);*/
             });
             app.showDialog(viewModel);
         }
+    }
+
+    private updateGridAfterOperationComplete(db: database, operationId: number) {
+        var getOperationStatusTask = new getOperationStatusCommand(db, operationId);
+        getOperationStatusTask.execute()
+            .done((result: operationStatusDto) => {
+                if (result.Completed) {
+                    var docsGrid = this.getDocumentsGrid();
+                    docsGrid.invalidateCache();
+                } else {
+                    setTimeout(() => this.updateGridAfterOperationComplete(db, operationId), 500);
+                }
+        });
     }
 
     private updateCollections(receivedCollections: Array<collection>, db: database) {
