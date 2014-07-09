@@ -140,6 +140,9 @@ namespace Raven.Json.Linq
 				if (unsafeVal == DeletedMarker)
 					return false;
 
+				if (unsafeVal.IsSnapshot == false && unsafeVal.Type != JTokenType.Object)
+					unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
+
 				value = unsafeVal;				
 				return true;
 			}

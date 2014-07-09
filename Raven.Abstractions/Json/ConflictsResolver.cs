@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -199,6 +200,7 @@ namespace Raven.Abstractions.Json
 
         private void WriteRawData(JsonTextWriter writer, String data, int indent)
         {
+	        var sb = new StringBuilder();
             using (var stringReader = new StringReader(data))
             {
                 var first = true;
@@ -207,31 +209,35 @@ namespace Raven.Abstractions.Json
                 {
                     if (first == false)
                     {
-                        writer.WriteRaw(Environment.NewLine);
+	                    sb.AppendLine();
                         for (var i = 0; i < indent; i++)
                         {
-                            writer.WriteRaw(new string(writer.IndentChar, writer.Indentation));
+	                        sb.Append(writer.IndentChar, writer.Indentation);
                         }
                     }
 
-                    //if (!first)
-                    //    writer.WriteRawValue(line);
-                    //else
-                    writer.WriteRaw(line);
+	                sb.Append(line);
 
                     first = false;
                 }
             }
+			writer.WriteRawValue(sb.ToString());
         }
 
-        private void WriteConflictResolver(JsonTextWriter documentWriter, JsonTextWriter metadataWriter, ConflictsResolver resolver, int indent)
+        private void WriteConflictResolver(string name, JsonTextWriter documentWriter, JsonTextWriter metadataWriter, ConflictsResolver resolver, int indent)
         {
             MergeResult result = resolver.Resolve(indent);
 
-            if (resolver.isMetadataResolver)
-                WriteRawData(metadataWriter, result.Document, 0);
-            else
-                WriteRawData(documentWriter, result.Document, 0);
+	        if (resolver.isMetadataResolver)
+	        {
+		        metadataWriter.WritePropertyName(name);
+		        WriteRawData(metadataWriter, result.Document, indent);
+	        }
+	        else
+	        {
+				documentWriter.WritePropertyName(name);
+				WriteRawData(documentWriter, result.Document, indent);
+	        }
         }
 
         private MergeResult GenerateOutput(Dictionary<string, object> result, int indent)
@@ -258,7 +264,7 @@ namespace Raven.Abstractions.Json
                 var resolver = o.Value as ConflictsResolver;
                 if (resolver != null)
                 {
-                    WriteConflictResolver(documentWriter, metadataWriter, resolver, indent + 1);
+                    WriteConflictResolver(o.Key,documentWriter, metadataWriter, resolver, indent + 1);
                 }
                 else
                 {

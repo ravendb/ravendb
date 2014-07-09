@@ -310,7 +310,6 @@ namespace Raven.Database.Server.Controllers
             var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
             var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
             return GetMessageWithObject(conflictsResolver.Resolve());
-            //return GetMessageWithObject(conflictsResolver.Resolve());
         }
 
         [HttpPost]
