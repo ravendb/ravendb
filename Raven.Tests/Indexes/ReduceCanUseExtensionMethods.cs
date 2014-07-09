@@ -31,7 +31,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
 				{
 					Map = documents => from doc in documents
-									   let tags = doc.Tags.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+									   let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
 									   select new Result()
 									   {
 										   Tags = tags.ToArray()
