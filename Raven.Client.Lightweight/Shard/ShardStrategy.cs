@@ -11,14 +11,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Document;
-#if NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-using Raven.Client.WinRT.MissingFromWinRT;
-#else
-using System.Security.Cryptography;
-
-
-#endif
 
 namespace Raven.Client.Shard
 {
@@ -65,11 +57,7 @@ namespace Raven.Client.Shard
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Etag indexEtag;
-#if  NETFX_CORE
-			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));			
-#else
 		    indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(buffer));
-#endif
 			var results = queryResults.SelectMany(x => x.Results);
 
 			// apply sorting

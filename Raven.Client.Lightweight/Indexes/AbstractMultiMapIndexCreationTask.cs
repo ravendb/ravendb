@@ -6,12 +6,7 @@ using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Client.Document;
-#if !NETFX_CORE
 using Raven.Abstractions.MissingFromBCL;
-#else
-using Raven.Client.WinRT.MissingFromWinRT;
-using Raven.Imports.Newtonsoft.Json.Utilities;
-#endif
 using Raven.Client.Linq;
 
 namespace Raven.Client.Indexes

@@ -16,14 +16,6 @@ using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
-#if NETFX_CORE
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-#else
-#endif
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -1458,7 +1450,6 @@ namespace Raven.Client.Connection.Async
 
 		private void AddTransactionInformation(RavenJObject metadata)
 		{
-#if !NETFX_CORE
 			if (convention.EnlistInDistributedTransactions == false)
 				return;
 
@@ -1468,7 +1459,6 @@ namespace Raven.Client.Connection.Async
 
 			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
 			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
-#endif
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -1718,20 +1708,6 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key));
 		}
 
-#if NETFX_CORE
-		//TODO: Mono implement 
-		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
-		{
-			throw new NotImplementedException();
-		}
-
-		 public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-                                                                        int pageSize = Int32.MaxValue)
-                {
-                        throw new NotImplementedException();
-                }
-
-#else
 		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
 			return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
@@ -2014,8 +1990,6 @@ namespace Raven.Client.Connection.Async
 		{
 			return url + "/docs/" + documentKey;
 		}
-
-#endif
 
 		/// <summary>
 		/// Get the low level bulk insert operation

@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-#if !NETFX_CORE
 using System;
 using System.Collections.Specialized;
 using System.Net;
@@ -341,4 +340,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

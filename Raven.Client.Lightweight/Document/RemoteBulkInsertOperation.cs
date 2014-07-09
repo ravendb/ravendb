@@ -5,7 +5,7 @@ using Microsoft.VisualBasic.CompilerServices;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection.Async;
-#if !NETFX_CORE
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,9 +13,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#else
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -24,7 +22,7 @@ using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
-#endif
+
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using System.IO.Compression;
@@ -449,4 +447,3 @@ namespace Raven.Client.Document
         }
     }
 }
-#endif

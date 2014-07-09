@@ -2,9 +2,6 @@
 
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 
 namespace Raven.Client.Connection
 {

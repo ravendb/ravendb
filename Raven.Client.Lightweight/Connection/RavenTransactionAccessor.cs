@@ -3,12 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Document;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Client.Connection
@@ -87,4 +85,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Connection.Async;
-#if !NETFX_CORE
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -125,4 +124,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

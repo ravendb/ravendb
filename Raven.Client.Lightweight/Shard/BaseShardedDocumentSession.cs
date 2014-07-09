@@ -214,13 +214,11 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-#if !NETFX_CORE
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
 			// turns out to be pretty much the same thing
 		}
-#endif
 
 		#endregion
 

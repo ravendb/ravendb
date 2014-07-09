@@ -22,7 +22,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !MONO && !NETFX_CORE
+#if !MONO
 	[System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractTransformerCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -67,8 +67,6 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract TransformerDefinition CreateTransformerDefinition();
 
-#if !NETFX_CORE
-
 		public void Execute(IDocumentStore store)
 		{
 			store.ExecuteTransformer(this);
@@ -94,7 +92,6 @@ namespace Raven.Client.Indexes
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
 				commands.PutTransformer(TransformerName, transformerDefinition));
 		}
-#endif
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.

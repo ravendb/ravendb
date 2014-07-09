@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !MONODROID && !NETFX_CORE
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
@@ -104,4 +103,3 @@ namespace Raven.Client.Indexes
 		}
 	}
 }
-#endif
