@@ -30,12 +30,12 @@ namespace Raven.Smuggler
 	{
 		const int RetriesCount = 5;
 
-		protected async override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
+		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
 		{
 			RavenJArray indexes = null;
 			var request = CreateRequest(src, "/indexes?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
-			return indexes;
+			return new CompletedTask<RavenJArray>(indexes);
 		}
 
 		private static string StripQuotesIfNeeded(RavenJToken value)

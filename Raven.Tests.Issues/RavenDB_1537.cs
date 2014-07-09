@@ -327,8 +327,7 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             using (var store = NewDocumentStore())
             {
-                string userId;
-                using (var session = store.OpenSession())
+	            using (var session = store.OpenSession())
                 {
                     var periodicBackupSetup = new PeriodicExportSetup
                     {
@@ -525,8 +524,7 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             using (var store = NewDocumentStore())
             {
-                string userId;
-                using (var session = store.OpenSession())
+	            using (var session = store.OpenSession())
                 {
                     var periodicBackupSetup = new PeriodicExportSetup
                     {
@@ -636,12 +634,12 @@ namespace Raven.Tests.Issues
             {
             }
 
-            public new Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 return base.ExportDocuments(new RavenConnectionStringOptions(), options, jsonWriter, lastEtag, maxEtag);
             }
 
-            public new Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 return base.ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }

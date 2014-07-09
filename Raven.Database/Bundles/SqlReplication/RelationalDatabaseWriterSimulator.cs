@@ -15,17 +15,15 @@ namespace Raven.Database.Bundles.SqlReplication
         private readonly DbProviderFactory providerFactory;
         private readonly SqlReplicationStatistics replicationStatistics;
         private readonly DbCommandBuilder commandBuilder;
-        private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
 
         public RelationalDatabaseWriterSimulator( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
         {
             this.database = database;
             this.cfg = cfg;
             this.replicationStatistics = replicationStatistics;
-            this.providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
+            providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
             commandBuilder = providerFactory.CreateCommandBuilder();
         }
-
 
         public IEnumerable<string> SimulateExecuteCommandText(ConversionScriptResult scriptResult)
         {
@@ -82,7 +80,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     if (column.Key == pkName)
                         continue;
                     DbParameter param = new OdbcParameter();
-                    RelationalDatabaseWriter.SetParamValue(param, column.Value, stringParserList);
+                    RelationalDatabaseWriter.SetParamValue(param, column.Value, null);
                     sb.Append("'").Append(param.Value).Append("'").Append(", ");
                 }
                 sb.Length = sb.Length - 2;
