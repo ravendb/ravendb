@@ -52,11 +52,11 @@ namespace Lucene.Net.Search.Vectorhighlight
             doc.Add(new Field("f", "a a a b b c a b b c d e f", Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.WITH_POSITIONS_OFFSETS));
             doc.Add(new Field("f", "b a b a f", Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.WITH_POSITIONS_OFFSETS));
             writer.AddDocument(doc);
-            writer.Close();
+            writer.Dispose();
 
             IndexReader reader = IndexReader.Open(dir,true);
             FieldTermStack ftl = new FieldTermStack(reader, 0, "f", fieldQuery);
-            reader.Close();
+            reader.Dispose();
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             {
                 tpv = (TermPositionVector)tfv;
             }
-            catch (InvalidCastException e)
+            catch (InvalidCastException)
             {
                 return; // just return to make null snippets
             }

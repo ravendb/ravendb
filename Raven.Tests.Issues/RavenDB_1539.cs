@@ -232,7 +232,7 @@ namespace Raven.Tests.Issues
 
 		public class Student : BaseIdentity<Student>
 		{
-			public string Id { get; set; }
+			public new string Id { get; set; }
 			public string Name { get; set; }
 			public string Email { get; set; }
 			public string CourseId { get; set; }
@@ -240,7 +240,7 @@ namespace Raven.Tests.Issues
 
 		public class Course : BaseIdentity<Course>
 		{
-			public string Id { get; set; }
+			public new string Id { get; set; }
 			public string Name { get; set; }
 
 			public List<string> Students { get; set; }
@@ -248,7 +248,7 @@ namespace Raven.Tests.Issues
 
 		public class Meal : BaseIdentity<Meal>
 		{
-			public string Id { get; set; }
+			public new string Id { get; set; }
 			public string Name { get; set; }
 		}
 	}

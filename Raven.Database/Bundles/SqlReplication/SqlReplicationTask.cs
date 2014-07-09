@@ -285,8 +285,6 @@ namespace Raven.Database.Bundles.SqlReplication
 								Name = cfg.Name,
 								LastDocEtag = currentLatestEtag ?? Etag.Empty
 							});
-
-						    SqlReplicationStatistics removedStats;
 						}
 						else
 						{

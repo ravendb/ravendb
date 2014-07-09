@@ -46,7 +46,7 @@ namespace Raven.Abstractions.Data
 		{
 			unchecked
 			{
-				var hashCode = (Disabled != null ? Disabled.GetHashCode() : 0);
+				var hashCode = Disabled.GetHashCode();
 				hashCode = (hashCode*397) ^ (GlacierVaultName != null ? GlacierVaultName.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (S3BucketName != null ? S3BucketName.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (AwsRegionEndpoint != null ? AwsRegionEndpoint.GetHashCode() : 0);

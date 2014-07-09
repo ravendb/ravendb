@@ -1,20 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NLog;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Client.Indexes;
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Database.Client;
-using Raven.Tests.Issues;
-using Xunit;
 namespace Raven.Tryouts
 {
 	class Program

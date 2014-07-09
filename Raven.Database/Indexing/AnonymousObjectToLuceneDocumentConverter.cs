@@ -385,8 +385,7 @@ namespace Raven.Database.Indexing
 	                return int.MinValue;
 	            case SortOptions.Double:
 	                return double.MinValue;
-	                break;
-	            case SortOptions.Float:
+		        case SortOptions.Float:
 	                return float.MinValue;
 
 // ReSharper disable RedundantCaseLabel

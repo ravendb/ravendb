@@ -275,7 +275,7 @@ namespace Raven.Database.Server.Controllers
                 //ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                 Convert.FromBase64String(key);
             }
-            catch (Exception e)
+            catch (Exception)
             {
 				message = "The key must be in Base64 encoding format!";
             }

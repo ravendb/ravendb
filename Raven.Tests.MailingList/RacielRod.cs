@@ -26,7 +26,7 @@ namespace Raven.Tests.MailingList
 			public string Name { get; set; }
 		}
 
-		public class Timer
+		public new class Timer
 		{
 			public string Id { get; set; }
 			public User User { get; set; }
