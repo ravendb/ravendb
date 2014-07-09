@@ -200,7 +200,7 @@ class ctor {
         this.loadRowData();
 
         // Update row checked states.
-        this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); 
+        this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
     }
 
     setupKeyboardShortcuts() {
@@ -222,12 +222,12 @@ class ctor {
             target: '#gridContextMenu',
             before: (e: MouseEvent) => {
 
-                var parentRow = $(e.target).parent(".ko-grid-row");
+                var parentRow = $(e.target).parents(".ko-grid-row");
                 var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
 
                 if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
-                    
+
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
                         this.toggleRowChecked(rightClickedElement, e.shiftKey);
                     }
@@ -329,7 +329,7 @@ class ctor {
             }
         } else {
             var columns = this.settings.customColumns().columns();
-            for(var i=0; i < columns.length; i++) {
+            for (var i = 0; i < columns.length; i++) {
                 if (columns[i].binding() === binding) {
                     return columns[i].header();
                 }
@@ -343,7 +343,7 @@ class ctor {
         // Keep allocations to a minimum.
 
         var columnsNeeded = {};
-        
+
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
             for (var i = 0; i < colParams.length; i++) {
@@ -411,7 +411,7 @@ class ctor {
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
-            if ((binding === "Name") && (!this.settings.customColumns().customMode())){
+            if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
                 this.columns.splice(2, 0, newColumn);
             } else {
                 this.columns.push(newColumn);
@@ -428,7 +428,7 @@ class ctor {
                 });
                 if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
                     this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
-                }else {
+                } else {
                     this.settings.customColumns().columns.push(newCustomColumn);
                 }
             }
@@ -462,7 +462,7 @@ class ctor {
             if (!this.firstVisibleRow) {
                 this.firstVisibleRow = rowAtPosition;
             }
-            
+
             positionCheck = rowAtPosition.top() + this.rowHeight;
         }
 
@@ -593,7 +593,7 @@ class ctor {
     }
 
     editItem() {
-        if (this.settings.selectedIndices().length >0) {
+        if (this.settings.selectedIndices().length > 0) {
             ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
         }
     }
@@ -622,7 +622,7 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    invalidateCache() {
+    onCollectionDeleted() {
         this.items.invalidateCache(); // Causes the cache of items to be discarded.
         this.onGridScrolled(); // Forces a re-fetch of the rows in view.
         this.onWindowHeightChanged();
@@ -632,25 +632,22 @@ class ctor {
         return this.items.itemCount();
     }
 
-    deleteSelectedItems(){
+    deleteSelectedItems() {
         var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
 
         deleteDocsVm.deletionTask.done(() => {
-            var newItemCount = this.settings.itemsSource().totalResultCount() - this.settings.selectedIndices().length;
             var deletedDocIndices = documents.map(d => this.items.indexOf(d));
             deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
             this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
             this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
             this.items.invalidateCache(); // Causes the cache of items to be discarded.
             this.onGridScrolled(); // Forces a re-fetch of the rows in view.
-            
+
             // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
             // note: won't run on delete of last document(s) of a collection in order to prevent race condition 
-            // with changes api
-            if (newItemCount > 0) {
-                this.onWindowHeightChanged();
-            }
+            // with changes api. Now we don't use changes api to update the documents list, so this isn't a problem.
+            this.onWindowHeightChanged();
         });
         app.showDialog(deleteDocsVm);
     }
@@ -679,7 +676,7 @@ class ctor {
         var columnIndex = 0;
 
         $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
-            columnIndex = parseInt( $(e.currentTarget).attr("column"));
+            columnIndex = parseInt($(e.currentTarget).attr("column"));
             startingWidth = this.columns()[columnIndex].width();
             startX = e.pageX;
             resizingColumn = true;
@@ -713,4 +710,3 @@ class ctor {
 }
 
 export = ctor;
-

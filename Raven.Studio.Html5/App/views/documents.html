@@ -76,7 +76,7 @@
 </div>
 
 <div id="collections-context-menu">
-    <ul class="dropdown-menu" role="menu" data-bind="with: selectedCollection, visible: isRegularCollection">
-        <li data-bind="click: $root.deleteCollection.bind($root)"><a tabindex="-1" href="#">Delete <span data-bind="text: name"></span></a></li>
+    <ul class="dropdown-menu" role="menu" data-bind="with: rightClickedCollection, visible: isRightClickedCollectionRegular">
+        <li data-bind="click: $root.deleteCollection.bind($root, $data)"><a tabindex="-1" href="#">Delete <span data-bind="text: name"></span></a></li>
     </ul>
 </div>
