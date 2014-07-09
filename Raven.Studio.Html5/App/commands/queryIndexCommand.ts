@@ -37,6 +37,23 @@ class queryIndexCommand extends commandBase {
 
         return url + urlArgs;
     }
+
+    getCsvUrl() {
+        var url = "/streams/query/" + this.indexName;
+        var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
+        var urlArgs = this.urlEncodeArgs({
+            query: this.queryText ? this.queryText : undefined,
+            sort: this.sorts.map(s => s.toQuerySortString()),
+            skipTransformResults: true,
+            fetch: this.showFields ? "__all_fields" : undefined,
+            debug: this.indexEntries ? "entries" : undefined,
+            operator: this.useAndOperator ? "AND" : undefined,
+            format: "excel",
+            download: true
+        }) + resultsTransformerUrlFragment;
+
+        return url + urlArgs;
+    }
 }
 
 export = queryIndexCommand;

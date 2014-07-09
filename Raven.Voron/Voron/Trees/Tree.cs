@@ -625,7 +625,7 @@ namespace Voron.Trees
 
 						// this is a multi value
 						p.SetNodeKey(node, ref key);
-						var tree = OpenOrCreateMultiValueTree(_tx, key, node);
+						var tree = OpenMultiValueTree(_tx, key, node);
 						results.AddRange(tree.AllPages());
 					}
 				}
@@ -701,6 +701,26 @@ namespace Voron.Trees
 			}
 			pos = null;
 			return false;
+		}
+
+		public Slice LastKeyOrDefault()
+		{
+			using (var it = Iterate())
+			{
+				if (it.Seek(Slice.AfterAllKeys) == false)
+					return null;
+				return it.CurrentKey.Clone();
+			}
+		}
+
+		public Slice FirstKeyOrDefault()
+		{
+			using (var it = Iterate())
+			{
+				if (it.Seek(Slice.BeforeAllKeys) == false)
+					return null;
+				return it.CurrentKey.Clone();
+			}
 		}
 	}
 }

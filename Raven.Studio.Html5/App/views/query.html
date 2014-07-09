@@ -76,6 +76,9 @@
             <button type="button" class="btn btn-default"  data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
+            <a href="#" data-bind="attr: { href: exportUrl }, visible: hasSelectedIndex" class="btn btn-default" title="Export CSV">
+                <i class="fa fa-file-excel-o"></i>
+            </a>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
                 <i class="fa fa-sitemap"></i>
             </a>

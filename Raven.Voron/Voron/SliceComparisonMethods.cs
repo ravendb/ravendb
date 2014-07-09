@@ -20,7 +20,17 @@
 					return Compare(null, 0, null, 0, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
 
 				if (x.PrefixComparisonCache == null)
-					return Compare(null, 0, y.PrefixValue, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+				{
+					if(y.Prefix == null)
+						return Compare(null, 0, null, 0, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+					else if (y.Prefix.Value == null)
+						return Compare(null, 0, y.Prefix.ValuePtr, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+					else
+					{
+						fixed (byte* prefixVal = y.Prefix.Value)
+							return Compare(null, 0, prefixVal, y.Header.PrefixUsage, xPtr, x.KeyLength, yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+					}
+				}
 
 				var prefixBytesToCompare = Math.Min(y.Header.PrefixUsage, x.KeyLength);
 
@@ -28,8 +38,19 @@
 
 				if (x.PrefixComparisonCache.TryGetCachedResult(y.Header.PrefixId, y.Prefix.PageNumber, prefixBytesToCompare, out r) == false)
 				{
-					r = Compare(null, 0, y.PrefixValue, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
-						prefixBytesToCompare);
+					if (y.Prefix == null)
+						r = Compare(null, 0, null, 0, xPtr, x.KeyLength, null, 0, cmp,
+							prefixBytesToCompare);
+
+					else if (y.Prefix.Value == null)
+						r = Compare(null, 0, y.Prefix.ValuePtr, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
+							prefixBytesToCompare);
+					else
+					{
+						fixed (byte* prefixVal = y.Prefix.Value)
+							r = Compare(null, 0, prefixVal, y.Header.PrefixUsage, xPtr, x.KeyLength, null, 0, cmp,
+								prefixBytesToCompare);
+					}
 
 					x.PrefixComparisonCache.SetPrefixComparisonResult(y.Header.PrefixId, y.Prefix.PageNumber, prefixBytesToCompare, r);
 				}
@@ -52,8 +73,20 @@
 				var xPtr = p1 != null ? p1 : x.NonPrefixedData.Pointer;
 				var yPtr = p2 != null ? p2 : y.NonPrefixedData.Pointer;
 
-				return Compare(x.PrefixValue, x.Header.PrefixUsage, y.PrefixValue, y.Header.PrefixUsage, xPtr, x.Header.NonPrefixedDataSize,
-					yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+				byte* xPre = null;
+				byte* yPre = null;
+
+				fixed (byte* pre1 = x.Prefix != null ? x.Prefix.Value : null)
+				fixed (byte* pre2 = y.Prefix != null ? y.Prefix.Value : null)
+				{
+					if(x.Prefix != null)
+						xPre = pre1 != null ? pre1 : x.Prefix.ValuePtr;
+					if (y.Prefix != null)
+						yPre = pre2 != null ? pre2 : y.Prefix.ValuePtr;
+
+					return Compare(xPre, x.Header.PrefixUsage, yPre, y.Header.PrefixUsage, xPtr, x.Header.NonPrefixedDataSize,
+						yPtr, y.Header.NonPrefixedDataSize, cmp, size);
+				}
 			}
 		}
 

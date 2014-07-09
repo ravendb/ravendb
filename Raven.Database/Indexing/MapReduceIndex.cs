@@ -346,7 +346,7 @@ namespace Raven.Database.Indexing
 				Actions = actions;
 				ReduceKeys = reduceKeys;
 
-                anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.context.Database, this.parent.indexDefinition, ViewGenerator);
+                anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.context.Database, this.parent.indexDefinition, ViewGenerator, logIndexing);
 
 				if (Level == 2)
 				{

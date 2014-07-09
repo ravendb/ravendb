@@ -409,7 +409,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 			
-			GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 			RavenGC.CollectGarbage(true, afterCollect);
 
             return GetMessageWithString("LOH GC Done");

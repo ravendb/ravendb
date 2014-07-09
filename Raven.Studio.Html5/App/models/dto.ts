@@ -864,3 +864,8 @@ interface graphLinkDto {
     target: visualizerDataObjectNodeDto;
     cachedId?: string;
 }
+
+interface mergeResult {
+  Document: string;
+  Metadata: string;
+}

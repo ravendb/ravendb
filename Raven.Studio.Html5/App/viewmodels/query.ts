@@ -59,6 +59,7 @@ class query extends viewModelBase {
     recentQueries = ko.observableArray<storedQueryDto>();
     recentQueriesDoc = ko.observable<storedQueryContainerDto>();
     rawJsonUrl = ko.observable<string>();
+    exportUrl = ko.observable<string>();
     collections = ko.observableArray<collection>([]);
     collectionNames = ko.observableArray<string>();
     selectedIndexLabel: KnockoutComputed<string>;
@@ -305,7 +306,11 @@ class query extends viewModelBase {
             this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
             var useAndOperator = this.isDefaultOperatorOr() === false;
-            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
+
+            var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
+
+            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + queryCommand.getUrl());
+            this.exportUrl(appUrl.forResourceQuery(this.activeDatabase()) + queryCommand.getCsvUrl());
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command

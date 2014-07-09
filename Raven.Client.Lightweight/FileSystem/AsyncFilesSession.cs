@@ -103,7 +103,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filename))
                 throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
 
-            return Commands.DownloadAsync(filename, metadata);;                   
+            return Commands.DownloadAsync(filename, metadata);
             
         }
 

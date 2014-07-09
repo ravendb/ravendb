@@ -177,10 +177,10 @@ namespace Raven.Database.Smuggler
 	        return database.Documents.Get(key, null);
 	    }
 
-	    protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)
+	    protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
 		{
 			const int dummy = 0;
-			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
+			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, take), lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();
