@@ -69,7 +69,9 @@ namespace Raven.Abstractions.Json
                     return false;
                 if (token == null)
                     continue;
-                arrays.Add((RavenJArray)token.CreateSnapshot());
+	            if (token.IsSnapshot)
+					token = token.CreateSnapshot();
+				arrays.Add((RavenJArray)token);
             }
 
             var mergedArray = new RavenJArray();
