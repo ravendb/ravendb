@@ -163,6 +163,11 @@ namespace Raven.Client
 		IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action);
 
 		/// <summary>
+		/// Execute the transformation function on the results of this query.
+		/// </summary>
+		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
+
+		/// <summary>
 		///   Adds matches highlighting for the specified field.
 		/// </summary>
 		/// <remarks>

@@ -77,6 +77,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly string indexName;
 
+		protected Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResultsFunc;
+
 		protected string defaultField;
 
 		private int currentClauseDepth;
@@ -583,6 +585,7 @@ namespace Raven.Client.Document
 									  theWaitForNonStaleResults,
 									  setOperationHeaders,
 									  timeout,
+									  transformResultsFunc,
 									  includes,
 									  disableEntitiesTracking);
 		}
@@ -804,6 +807,12 @@ namespace Raven.Client.Document
 		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
 		{
 			beforeQueryExecutionAction += action;
+			return this;
+		}
+
+		public IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer)
+		{
+			this.transformResultsFunc = resultsTransformer;
 			return this;
 		}
 

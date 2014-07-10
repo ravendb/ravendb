@@ -26,6 +26,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly bool waitForNonStaleResults;
 		private bool disableEntitiesTracking;
 		private readonly TimeSpan timeout;
+		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
 		private readonly HashSet<string> includes;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
@@ -51,6 +52,7 @@ namespace Raven.Client.Document.SessionOperations
 		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery,
 		                      string[] projectionFields, HashSet<KeyValuePair<string, Type>> sortByHints,
 		                      bool waitForNonStaleResults, Action<string, string> setOperationHeaders, TimeSpan timeout,
+		                      Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
 		                      HashSet<string> includes, bool disableEntitiesTracking)
 		{
 			this.indexQuery = indexQuery;
@@ -58,6 +60,7 @@ namespace Raven.Client.Document.SessionOperations
 			this.waitForNonStaleResults = waitForNonStaleResults;
 			this.setOperationHeaders = setOperationHeaders;
 			this.timeout = timeout;
+			this.transformResults = transformResults;
 			this.includes = includes;
 			this.projectionFields = projectionFields;
 			this.sessionOperations = sessionOperations;
@@ -139,7 +142,10 @@ namespace Raven.Client.Document.SessionOperations
 
 			sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), includes);
 
-			return list;
+			if (transformResults == null)
+				return list;
+
+			return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
 		}
 
 		public bool DisableEntitiesTracking

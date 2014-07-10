@@ -102,6 +102,7 @@ namespace Raven.Client.Document
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
+				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
@@ -159,7 +160,6 @@ namespace Raven.Client.Document
 
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;
-
 
 					Thread.Sleep(100);
 
