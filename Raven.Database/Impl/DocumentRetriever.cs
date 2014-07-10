@@ -213,8 +213,11 @@ namespace Raven.Database.Impl
 			JsonDocument doc;
 			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
+				
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
+			doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+
 			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 			if (nonAuthoritativeInformationBehavior != null)
 				doc = nonAuthoritativeInformationBehavior(doc);

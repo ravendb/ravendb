@@ -326,7 +326,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		[Fact]
 		public void write_then_read_answer_with_votes()
 		{
-			using (DocumentStore documentStore = NewRemoteDocumentStore())
+			using (var documentStore = NewDocumentStore())
 			{
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
@@ -370,6 +370,7 @@ namespace Raven.Tests.Bugs.TransformResults
 
 					session.SaveChanges();
 				}
+
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
 					AnswerEntity2 answerInfo = session.Query<Answer2, Answers_ByAnswerEntity2>()
