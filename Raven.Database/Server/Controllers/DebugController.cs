@@ -546,7 +546,7 @@ namespace Raven.Database.Server.Controllers
 						if (Environment.Is64BitProcess)
 							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
 						else
-							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
+							ExtractResource("Raven.Database.Util.StackDump.x86.StackDump.exe", stackDumpExe);
 
 						var process = new Process
 						{
