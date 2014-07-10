@@ -303,12 +303,12 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("studio-tasks/resolveMerge")]
         [Route("databases/{databaseName}/studio-tasks/resolveMerge")]
-        public async Task<HttpResponseMessage> ResolveMerge(string documentId)
+        public Task<HttpResponseMessage> ResolveMerge(string documentId)
         {
             int nextPage = 0;
             var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
             var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
-            return GetMessageWithObject(conflictsResolver.Resolve());
+            return GetMessageWithObjectAsTask(conflictsResolver.Resolve());
         }
 
 	    [HttpPost]
