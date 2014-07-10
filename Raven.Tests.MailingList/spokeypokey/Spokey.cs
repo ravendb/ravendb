@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -109,6 +111,8 @@ namespace Raven.Tests.MailingList.spokeypokey
 									 provider.InternalId,
 									 provider.Name,
 								 };
+
+				Store(x => x.InternalId, FieldStorage.Yes);
 			}
 		}
 

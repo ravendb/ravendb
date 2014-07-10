@@ -22,6 +22,7 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.PutTransformer("test",
 																new TransformerDefinition()
 																{
+																	Name = "test",
 																	TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
 																});
 
@@ -49,7 +50,8 @@ namespace Raven.Tests.Issues
 				store.AsyncDatabaseCommands.PutTransformerAsync("test",
 								new TransformerDefinition()
 								{
-									TransformResults = "from result in results select new {Doc = Database.Load(result.Id)}"
+									Name = "test",
+									TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
 								}).Wait();
 
 
