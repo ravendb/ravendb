@@ -1,4 +1,8 @@
-﻿import appUrl = require("common/appUrl");
+﻿/// <reference path="../../Scripts/typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
+
+import app = require("durandal/app");
+
+import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import generalUtils = require("common/generalUtils");
 
@@ -6,9 +10,9 @@ import chunkFetcher = require("common/chunkFetcher");
 
 import router = require("plugins/router");
 
-
 import database = require("models/database");
 
+import visualizerKeys = require("viewmodels/visualizerKeys");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import queryIndexDebugDocsCommand = require("commands/queryIndexDebugDocsCommand");
@@ -28,9 +32,11 @@ class visualizer extends viewModelBase {
     showLoadingIndicator = ko.observable(false);
 
     docKey = ko.observable("");
+    docKeys = ko.observableArray<string>();  
     docKeysSearchResults = ko.observableArray<string>();  
 
     reduceKey = ko.observable("");
+    reduceKeys = ko.observableArray<string>();  
     reduceKeysSearchResults = ko.observableArray<string>(); 
 
     hasIndexSelected = ko.computed(() => {
@@ -88,6 +94,14 @@ class visualizer extends viewModelBase {
 
         this.selectedDocs.subscribe(() => this.repaintSelectedNodes());
 
+        $(document).bind("fullscreenchange", function () {
+            if ($(document).fullScreen()) {
+                $("#fullScreenButton i").removeClass("fa-expand").addClass("fa-compress");
+            } else {
+                $("#fullScreenButton i").removeClass("fa-compress").addClass("fa-expand");
+            }
+        });
+
         return this.fetchAllIndexes();
     }
 
@@ -107,6 +121,11 @@ class visualizer extends viewModelBase {
     }
 
     resetChart() {
+        this.tooltipClose();
+        this.reduceKey("");
+        this.reduceKeys([]);
+        this.docKey("");
+        this.docKeys([]);
         this.tree = {
             level: 5,
             name: 'root',
@@ -180,6 +199,10 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
+
+        if (key && !this.docKeys.contains(key)) {
+            this.docKeys.push(key);
+        }
         new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { sourceId: key }, 0, 1024)
             .execute()
             .then(results => {
@@ -190,7 +213,8 @@ class visualizer extends viewModelBase {
     addReduceKey(key: string) {
         this.showLoadingIndicator(true);
         var self = this;
-        if (key && !(key in this.colorMap)) {
+        if (key && !this.reduceKeys().contains(key)) {
+            this.reduceKeys.push(key);
 
             this.colorMap[key] = this.colors(Object.keys(this.colorMap).length);
             this.reduceKey("");
@@ -204,13 +228,18 @@ class visualizer extends viewModelBase {
                     self.updateGraph();
                 }
             }).always(() => this.showLoadingIndicator(false));
+        } else {
+            this.showLoadingIndicator(false);
         }
     }
 
     setSelectedIndex(indexName) {
         this.indexName(indexName);
-        this.reduceKey("");
-        this.docKey("");
+        this.resetChart();
+        this.updateGraph();
+    }
+
+    clearChart() {
         this.resetChart();
         this.updateGraph();
     }
@@ -268,21 +297,31 @@ class visualizer extends viewModelBase {
         return this.boxSpacing * level1Nodes + this.margin.top + this.margin.bottom;
     }
 
+    goToDoc(docName) {
+       router.navigate(appUrl.forEditDoc(docName, null, null, this.activeDatabase()));
+    }
+
     getTooltip(data: visualizerDataObjectNodeDto) {
-        var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
-        var content = '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">׳</button>' +
-            "<table> ";
+        var content = ""; 
+        if (data.level == 0) {
+            content += '<button data-bind="click: goToDoc.bind($root, \'' + data.name + '\')" class="btn" type="button">Go to document</button>';
+        } else {
 
-        if (data.level < 4) {
-            content += "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
-            "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
-            "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
-            "<tr><td><strong>Bucket</strong></td><td>" + data.payload.Bucket + "</td></tr>" +
-            "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>";
+            var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
+            content += '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">x</button>' +
+                "<table> ";
+
+            if (data.level < 4) {
+                content += "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
+                "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
+                "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
+                "<tr><td><strong>Bucket</strong></td><td>" + data.payload.Bucket + "</td></tr>" +
+                "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>";
+            }
+
+            content += "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
+            "</table>";
         }
-
-        content += "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
-        "</table>";
         return content;
     }
 
@@ -359,15 +398,12 @@ class visualizer extends viewModelBase {
             .attr('rx', 5)
             .on("click", function (d) {
                 nv.tooltip.cleanup();
-                if (d.level === 0) {
-                    router.navigate(appUrl.forEditDoc(d.name, null, null, self.activeDatabase()));
-                } else {
-                    var offset = $(this).offset();
-                    nv.tooltip.show([offset.left + self.boxWidth / 2, offset.top], self.getTooltip(d), 'n', 25, null, "selectable-tooltip");
-                    $(".nvtooltip").each((i, elem) => {
-                        ko.applyBindings(self, elem);
-                    });
-                }
+                var offset = $(this).offset();
+                var containerOffset = $("#visualizerSection").offset();
+                nv.tooltip.show([offset.left - containerOffset.left + self.boxWidth / 2, offset.top - containerOffset.top], self.getTooltip(d), 'n', 25, document.getElementById("visualizerSection"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings(self, elem);
+                });
             });
 
         enteringNodes
@@ -616,6 +652,23 @@ class visualizer extends viewModelBase {
             }
         });
     }
+
+    toggleFullscreen() {
+        if ($(document).fullScreen()) {
+            $("#visualizerSection").width('').height('');
+            $("#keysDialogBtn").removeAttr('disabled');
+        } else {
+            $("#visualizerSection").width("100%").height("100%");
+            $("#keysDialogBtn").attr('disabled', 'disabled');            
+        }
+        
+        $("#visualizerSection").toggleFullScreen();
+    }
+
+    displayKeyInfo() {
+        app.showDialog(new visualizerKeys(this));
+    }
+
 }
 
 export = visualizer;

@@ -340,10 +340,12 @@
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
     <Content Include="App\views\sqlReplicationSimulationDialog.html" />
     <Content Include="App\views\visualizer.html" />
@@ -730,6 +732,7 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
@@ -779,6 +782,7 @@
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\d3\nvd3.d.ts" />
+    <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>

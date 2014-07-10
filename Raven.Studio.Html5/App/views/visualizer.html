@@ -88,7 +88,7 @@ text {
 
 </style>
 
-<section>
+<section id="visualizerSection">
     <form class="form-inline" role="form">
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -134,6 +134,16 @@ text {
         <div class="btn-group" data-bind="visible: hasIndexSelected">
             <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected" title="Edit index"><i class="fa fa-pencil"></i></a>
             <a class="btn btn-default"  data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected" title="Run query"><i class="fa fa-gears"></i></a>
+            <button id="fullScreenButton" class="btn btn-default" data-bind="visible: hasIndexSelected, click: toggleFullscreen" title="Fullscreen mode">
+                <i class="fa fa-expand"></i>
+            </button>
+            <button id="keysDialogBtn" class="btn btn-default" title="Displays information about inserted document ids and reduce keys" data-bind="visible: hasIndexSelected, click: displayKeyInfo">
+                <i class="fa fa-key"></i>
+            </button>
+            <button class="btn btn-danger" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
+                <i class="fa fa-trash-o"></i>
+            </button>
+            
             <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
         </div>
         
