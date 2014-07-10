@@ -14,16 +14,14 @@ namespace Raven.Tests.Issues
 	public class RavenDB953 : RavenTest
 	{
 		[Fact]
-		public void PutIndexAsyncSucceedsWhenExistingDefinitionHasError()
+		public void PutTransformerAsyncSucceedsWhenExistingDefinitionHasError()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
 				// put an index containing an intentional mistake (calling LoadDocument is not permitted in TransformResults)
-				store.DatabaseCommands.PutIndex("test",
-																new IndexDefinition
+				store.DatabaseCommands.PutTransformer("test",
+																new TransformerDefinition()
 																{
-																	Map =
-																			@"from doc in docs select new { Id = doc[""@metadata""][""@id""] }",
 																	TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
 																});
 
@@ -48,13 +46,11 @@ namespace Raven.Tests.Issues
 				}
 
 				// now try to put the correct index definition
-				store.AsyncDatabaseCommands.PutIndexAsync("test",
-								new IndexDefinition
+				store.AsyncDatabaseCommands.PutTransformerAsync("test",
+								new TransformerDefinition()
 								{
-									Map =
-										@"from doc in docs select new { Id = doc[""@metadata""][""@id""] }",
 									TransformResults = "from result in results select new {Doc = Database.Load(result.Id)}"
-								}, overwrite: true).Wait();
+								}).Wait();
 
 
 			}

@@ -54,6 +54,7 @@ namespace Raven.Tests.MailingList
 				documentStore.Initialize();
 
 				new CarIndex().Execute(documentStore);
+				new CarTransformer().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -214,24 +215,10 @@ namespace Raven.Tests.MailingList
 				                 };
 
 
-				TransformResults = (db, results) =>
-				                   from result in results
-				                   select new
-				                   {
-					                   result.Id,
-					                   result.LotName,
-					                   result.Make,
-					                   result.Model,
-					                   Foo = "bar",
-					                   Bar = "foo",
-				                   };
-
 				Store(x => x.LotName, FieldStorage.Yes);
 				Store(x => x.Make, FieldStorage.Yes);
 				Store(x => x.Model, FieldStorage.Yes);
 			}
-
-			#region Nested type: IndexResult
 
 			public class IndexResult
 			{
@@ -242,8 +229,24 @@ namespace Raven.Tests.MailingList
 				public string Make { get; set; }
 				public string Model { get; set; }
 			}
+		}
 
-			#endregion
+		public class CarTransformer : AbstractTransformerCreationTask<CarIndex.IndexResult>
+		{
+			public CarTransformer()
+			{
+				TransformResults = results =>
+								   from result in results
+								   select new
+								   {
+									   result.Id,
+									   result.LotName,
+									   result.Make,
+									   result.Model,
+									   Foo = "bar",
+									   Bar = "foo",
+								   };
+			}
 		}
 	}
 }

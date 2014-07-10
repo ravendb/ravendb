@@ -48,10 +48,23 @@ namespace Raven.Tests.MailingList
 										State = g.Key.State,
 										ApplicationCount = g.Sum(x => x.ApplicationCount)
 									};
+			}
 
-				TransformResults = (store, results) => from result in results
+			public class ReduceResult
+			{
+				public string Id { get; set; }
+				public int ApplicationCount { get; set; }
+				public string State { get; set; }
+			}
+		}
+
+		public class Vacancies_ApplicationCountTransformer : AbstractTransformerCreationTask<Vacancies_ApplicationCount.ReduceResult>
+		{
+			public Vacancies_ApplicationCountTransformer()
+			{
+				TransformResults = results => from result in results
 													   group result by result.Id into g
-													   let vacancy = store.Load<Vacancy>(g.Key)
+													   let vacancy = LoadDocument<Vacancy>(g.Key)
 													   select new
 													   {
 														   Id = g.Key,
@@ -75,6 +88,7 @@ namespace Raven.Tests.MailingList
 		{
 			store = NewDocumentStore();
 			new Vacancies_ApplicationCount().Execute(store);
+			new Vacancies_ApplicationCountTransformer().Execute(store);
 			using (var session = store.OpenSession())
 			{
 				var vacancy = new Vacancy { Position = "Developer Guy" };
@@ -98,6 +112,7 @@ namespace Raven.Tests.MailingList
 			using (var session = store.OpenSession())
 			{
 				var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
+					.TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
 					.Customize(x => x.WaitForNonStaleResults())
 					.ToList();
 				Assert.Equal(results.First().Id, vacancyId);
@@ -111,6 +126,7 @@ namespace Raven.Tests.MailingList
 			using (var session = store.OpenSession())
 			{
 				var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
+					.TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
 					.Customize(x => x.WaitForNonStaleResults())
 					.Where(x => x.State == "Approved")
 					.ToList();

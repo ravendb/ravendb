@@ -109,7 +109,6 @@ namespace Raven.Client.Document
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
-				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				rootTypes = {typeof(T)},
 				beforeQueryExecutionAction = beforeQueryExecutionAction,

@@ -60,17 +60,18 @@ namespace Raven.Tests.MailingList
 				}
 
 				new PermissionsByUser().Execute(store);
+				new PermissionsByUserTransformer().Execute(store);
 
 				using(var session = store.OpenSession())
 				{
-					var userWithPermissionses = session.Query<UserWithPermissions, PermissionsByUser>().Customize(x => 
-						x.WaitForNonStaleResults()).ToList();
+					var userWithPermissionses = session.Query<UserWithPermissions, PermissionsByUser>().Customize(x =>
+						x.WaitForNonStaleResults()).TransformWith<PermissionsByUserTransformer, UserWithPermissions>().ToList();
 					Assert.NotEmpty(userWithPermissionses);
 				}
 			}
 		}
 
-		public class PermissionsByUser : AbstractIndexCreationTask<User, UserWithPermissions>
+		public class PermissionsByUser : AbstractIndexCreationTask<User>
 		{
 			public override string IndexName
 			{
@@ -84,9 +85,15 @@ namespace Raven.Tests.MailingList
 				Map = users => from user in users
 							   from role in user.Roles
 							   select new { role.Id };
+			}
+		}
 
-				TransformResults = (database, users) => from user in users
-														let roles = database.Load<Role>(user.Roles.Select(x => x.Id))
+		public class PermissionsByUserTransformer : AbstractTransformerCreationTask<User>
+		{
+			public PermissionsByUserTransformer()
+			{
+				TransformResults = users=> from user in users
+														let roles = LoadDocument<Role>(user.Roles.Select(x => x.Id))
 														select new
 														{
 															Id = user.Id,

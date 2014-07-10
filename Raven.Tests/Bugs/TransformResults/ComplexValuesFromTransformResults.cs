@@ -24,6 +24,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new Answers_ByAnswerEntity2().Execute(documentStore);
+				new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
 			}
 		}
 
@@ -31,12 +32,13 @@ namespace Raven.Tests.Bugs.TransformResults
 		public void CanExecuteTheTransformResultFunction()
 		{
 			var answersIndex = new Answers_ByAnswerEntity2 { Conventions = new DocumentConvention() };
+
 			IndexDefinition indexDefinition = answersIndex.CreateIndexDefinition();
 			var dynamicViewCompiler = new DynamicViewCompiler("test", indexDefinition, ".");
 			AbstractViewGenerator abstractViewGenerator = dynamicViewCompiler.GenerateInstance();
 			using (var documentStore = NewDocumentStore())
 			{
-
+				new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
 				Guid questionId = Guid.NewGuid();
 				Guid answerId = Guid.NewGuid();
 
@@ -106,7 +108,7 @@ namespace Raven.Tests.Bugs.TransformResults
 																									  dynamicJsonObjects
 						);
 
-					transformResultsDefinition.ToArray();
+					transformResultsDefinition.ToArray(); //TODO arek
 				});
 
 
@@ -120,6 +122,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new Answers_ByQuestion().Execute(documentStore);
+				new Answers_ByQuestionTransformer().Execute(documentStore);
 
 				const string questionId = @"question/259";
 				using (IDocumentSession session = documentStore.OpenSession())
@@ -137,54 +140,10 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerViewItem questionInfo = session.Query<AnswerViewItem, Answers_ByQuestion>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.QuestionId == questionId)
+						.TransformWith<Answers_ByQuestionTransformer, AnswerViewItem>()
 						.SingleOrDefault();
 					Assert.NotNull(questionInfo);
 					Assert.Equal(63, questionInfo.DecimalTotal);
-				}
-			}
-		}
-
-		[Fact]
-		public void will_work_normally_when_specifying_transformresults_through_customize()
-		{
-			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
-			{
-				new Answers_ByQuestion_NoTransformResults().Execute(documentStore);
-
-				using (IDocumentSession session = documentStore.OpenSession())
-				{
-					var vote1 = new AnswerVote {QuestionId = @"question/257", Delta = 20};
-					session.Store(vote1);
-					var vote2 = new AnswerVote {QuestionId = @"question/258", Delta = 30};
-					session.Store(vote2);
-					var vote3 = new AnswerVote {QuestionId = @"question/259", Delta = 20};
-					session.Store(vote3);
-
-					session.SaveChanges();
-				}
-
-				using (var session = documentStore.OpenSession())
-				{
-					var answers = session.Query<AnswerViewItem, Answers_ByQuestion_NoTransformResults>()
-						.Customize(x =>
-						{
-							x.WaitForNonStaleResultsAsOfNow();
-							x.TransformResults((database, results) =>
-								results.OfType<dynamic>().GroupBy(r => r.VoteTotal)
-									.Select(g => new AnswerViewItem {UserDisplayName = "From TransformResults", VoteTotal = g.Key, DecimalTotal = g.Count()})
-								);
-						})
-						.ToList()
-						.OrderBy(x=>x.VoteTotal)
-						.ToList();
-
-					Assert.NotNull(answers);
-					// Expecting two results, one with VoteTotal = 20 (DecimalTotal = 2) and one with VoteTotal = 30 (DecimalTotal = 1)
-					Assert.Equal(2, answers.Count());
-
-					var first = answers.First();
-					Assert.Equal(20, first.VoteTotal);
-					Assert.Equal(2, first.DecimalTotal);
 				}
 			}
 		}
@@ -195,6 +154,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new QuestionWithVoteTotalIndex().Execute(documentStore);
+				new QuestionWithVoteTotalTransformer().Execute(documentStore);
 
 				const string questionId = @"question/259";
 				using (IDocumentSession session = documentStore.OpenSession())
@@ -224,6 +184,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					QuestionView questionInfo = session.Query<QuestionView, QuestionWithVoteTotalIndex>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.QuestionId == questionId)
+						.TransformWith<QuestionWithVoteTotalTransformer, QuestionView>()
 						.SingleOrDefault();
 					Assert.NotNull(questionInfo);
 					Assert.False(string.IsNullOrEmpty(questionInfo.User.DisplayName), "User.DisplayName was not loaded");
@@ -237,6 +198,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new Answers_ByAnswerEntity().Execute(documentStore);
+				new Answers_ByAnswerEntityTransformer().Execute(documentStore);
 
 				const string questionId = @"question/259";
 				string answerId = CreateEntities(documentStore);
@@ -246,7 +208,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.Id == answerId)
-						.As<AnswerEntity>()
+						.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						.SingleOrDefault();
 					Assert.NotNull(answerInfo);
 					Assert.NotNull(answerInfo.Question);
@@ -262,7 +224,9 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new Answers_ByAnswerEntity().Execute(documentStore);
+				new Answers_ByAnswerEntityTransformer().Execute(documentStore);
 				new Votes_ByAnswerEntity().Execute(documentStore);
+				new Votes_ByAnswerEntityTransfotmer().Execute(documentStore);
 
 				string answerId = CreateEntities(documentStore);
 				// Working
@@ -271,7 +235,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.Id == answerId)
-						.As<AnswerEntity>()
+						.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						.SingleOrDefault();
 					Assert.NotNull(answerInfo);
 					Assert.NotNull(answerInfo.Question);
@@ -282,7 +246,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerVoteEntity[] votes = session.Query<AnswerVote, Votes_ByAnswerEntity>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.AnswerId == answerId)
-						.As<AnswerVoteEntity>()
+						.TransformWith<Votes_ByAnswerEntityTransfotmer, AnswerVoteEntity>()
 						.ToArray();
 					Assert.NotNull(votes);
 					Assert.True(votes.Length == 2);
@@ -302,6 +266,7 @@ namespace Raven.Tests.Bugs.TransformResults
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
 				new Answers_ByAnswerEntity2().Execute(documentStore);
+				new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
 				Guid questionId = Guid.NewGuid();
 				Guid answerId = Guid.NewGuid();
 
@@ -350,7 +315,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerEntity2 answerInfo = session.Query<Answer2, Answers_ByAnswerEntity2>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.Id == answerId)
-						.As<AnswerEntity2>()
+						.TransformWith<Answers_ByAnswerEntityTransformer2, AnswerEntity2>()
 						.SingleOrDefault();
 					Assert.NotNull(answerInfo);
 					Assert.NotNull(answerInfo.Question);
@@ -361,11 +326,13 @@ namespace Raven.Tests.Bugs.TransformResults
 		[Fact]
 		public void write_then_read_answer_with_votes()
 		{
-			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+			using (DocumentStore documentStore = NewRemoteDocumentStore())
 			{
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
 				new Answers_ByAnswerEntity2().Execute(documentStore);
+				new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
+
 				Guid questionId = Guid.NewGuid();
 				Guid answerId = Guid.NewGuid();
 
@@ -382,26 +349,6 @@ namespace Raven.Tests.Bugs.TransformResults
 						UserId = @"user/222"
 					};
 					session.Store(question);
-
-
-					var answer = new AnswerEntity2
-					{
-						Id = answerId,
-						Question = question,
-						Content = "This is doable",
-						UserId = user.Id
-					};
-					answer.Votes = new[]
-					{
-						new AnswerVoteEntity2
-						{
-							Id = Guid.NewGuid(),
-							QuestionId = questionId,
-							Answer = answer,
-							Delta = 2
-						}
-					};
-
 
 					session.Store(new Answer2
 					{
@@ -428,14 +375,14 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerEntity2 answerInfo = session.Query<Answer2, Answers_ByAnswerEntity2>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.Id == answerId)
-						.As<AnswerEntity2>()
+						.TransformWith<Answers_ByAnswerEntityTransformer2, AnswerEntity2>()
 						.SingleOrDefault();
 					Assert.NotNull(answerInfo);
 					Assert.NotNull(answerInfo.Votes);
 					Assert.True(answerInfo.Votes.Length == 1);
 					Assert.True(answerInfo.Votes[0].QuestionId == questionId);
 					Assert.NotNull(answerInfo.Votes[0].Answer);
-					Assert.True(answerInfo.Votes[0].Answer.Id == answerId);
+					Assert.Equal(answerId, answerInfo.Votes[0].Answer.Id);
 				}
 			}
 		}
@@ -446,6 +393,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new Answers_ByAnswerEntity().Execute(documentStore);
+				new Answers_ByAnswerEntityTransformer().Execute(documentStore);
 
 				const string Content = "This is doable";
 				const string UserId = @"user/222";
@@ -481,14 +429,14 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.UserId == UserId && x.Content == Content)
-						.As<AnswerEntity>()
+						.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						.SingleOrDefault();
 					Assert.NotNull(answerInfo);
 
 					AnswerEntity answerInfo2 = session.Query<Answer, Answers_ByAnswerEntity>()
 													.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 													.Where(x => x.UserId == UserId && x.Content == Content)
-													.As<AnswerEntity>()
+													.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 													.SingleOrDefault();
 					Assert.NotNull(answerInfo2);
 
@@ -499,7 +447,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.UserId == UserId && x.Content == Content)
-						.As<AnswerEntity>()
+						.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						.SingleOrDefault();
 					Assert.NotNull(answerInfo);
 				}

@@ -109,10 +109,17 @@ namespace Raven.Tests.MailingList.spokeypokey
 									 provider.InternalId,
 									 provider.Name,
 								 };
+			}
+		}
+
+		public class IdentityProjectionIndex1Transformer : AbstractTransformerCreationTask<Provider1>
+		{
+			public IdentityProjectionIndex1Transformer()
+			{
 
 				TransformResults =
-					(db, providers) => from provider in providers
-									   let TaxonomyCode = db.Load<TaxonomyCode>(provider.TaxonomyCodeRef.InternalId)
+					providers => from provider in providers
+									   let TaxonomyCode = LoadDocument<TaxonomyCode>(provider.TaxonomyCodeRef.InternalId)
 									   select new
 									   {
 										   provider.InternalId,
@@ -156,10 +163,12 @@ namespace Raven.Tests.MailingList.spokeypokey
 				}
 
 				new IdentityProjectionIndex1().Execute(store);
+				new IdentityProjectionIndex1Transformer().Execute(store);
+
 				using (var session = store.OpenSession())
 				{
 					var result = (from p in session.Query<Provider1, IdentityProjectionIndex1>()
-								  .Customize(x => x.WaitForNonStaleResults())
+								  .Customize(x => x.WaitForNonStaleResults()).TransformWith<IdentityProjectionIndex1Transformer, Provider1>()
 								  select p).First();
 					Assert.Equal(provider1.Name, result.Name);
 					Assert.Equal(provider1.InternalId, result.InternalId);

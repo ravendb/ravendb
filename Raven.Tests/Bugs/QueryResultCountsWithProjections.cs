@@ -72,7 +72,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var results = session.Query<Blog>("SelectManyIndexWithTransformer")
-					.As<BlogProjection>()
+					.TransformWith<BlogProjection>("sampleTransformer")
 					.ToArray();
 				Assert.Equal(1, results.Length);
 			}
@@ -119,13 +119,19 @@ namespace Raven.Tests.Bugs
 									 doc.Title,
 									 tag.Name
 								 },
-				   TransformResults = (database, results) => from result in results
-												 select new
+			   }.ToIndexDefinition(store.Conventions));
+
+			var transformer = "sampleTransformer";
+
+			store.DatabaseCommands.PutTransformer(transformer, new TransformerDefinition()
+			{
+				Name = transformer,
+				TransformResults = @"results => from result in results select new
 												 {
 													 result.Title,
 													 result.Tags
-												 }
-			   }.ToIndexDefinition(store.Conventions));
+												 };"
+			});
 
 			 using (var session = store.OpenSession())
 			 {

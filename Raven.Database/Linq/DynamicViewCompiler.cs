@@ -81,8 +81,6 @@ namespace Raven.Database.Linq
 
 			HandleMapFunctions(ctor);
 
-			HandleTransformResults(ctor);
-
 			HandleReduceDefinition(ctor);
 
 			AddAdditionalInformation(ctor);
@@ -100,10 +98,6 @@ namespace Raven.Database.Linq
 				sb.AppendLine(indexDefinition.Reduce.Replace("\"", "\"\""));
 			}
 
-			if (indexDefinition.TransformResults != null)
-			{
-				sb.AppendLine(indexDefinition.TransformResults.Replace("\"", "\"\""));
-			}
 			sb.Length = sb.Length - 2;
 
 			sb.Append("\"");
@@ -197,56 +191,6 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 		}
 
-		private void HandleTransformResults(ConstructorDeclaration ctor)
-		{
-		    try
-		    {
-		        if (string.IsNullOrEmpty(indexDefinition.TransformResults))
-		            return;
-
-		        VariableInitializer translatorDeclaration;
-
-		        if (indexDefinition.TransformResults.Trim().StartsWith("from"))
-		        {
-		            translatorDeclaration =
-		                QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.TransformResults,
-		                                                                     requiresSelectNewAnonymousType: false);
-		        }
-		        else
-		        {
-		            translatorDeclaration =
-		                QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.TransformResults,
-		                                                                       requiresSelectNewAnonymousType: false);
-		        }
-
-		        translatorDeclaration.AcceptVisitor(new ThrowOnInvalidMethodCallsForTransformResults(), null);
-
-
-		        // this.Translator = (Database,results) => from doc in results ...;
-		        ctor.Body.Statements.Add(new ExpressionStatement(
-		                                     new AssignmentExpression(
-		                                         new MemberReferenceExpression(new ThisReferenceExpression(),
-		                                                                       "TransformResultsDefinition"),
-		                                         AssignmentOperatorType.Assign,
-		                                         new LambdaExpression
-		                                         {
-		                                             Parameters =
-		                                             {
-		                                                 new ParameterDeclaration(null, "Database"),
-		                                                 new ParameterDeclaration(null, "results")
-		                                             },
-		                                             Body = translatorDeclaration.Initializer.Clone()
-		                                         })));
-		    }
-		    catch (InvalidOperationException ex)
-		    {
-		        throw new IndexCompilationException(ex.Message, ex)
-		        {
-                    IndexDefinitionProperty = "TransformResults",
-                    ProblematicText = indexDefinition.TransformResults
-		        };
-		    }
-		}
 
 		private void HandleReduceDefinition(ConstructorDeclaration ctor)
 		{

@@ -143,7 +143,6 @@ namespace Raven.Client.Document
 				isDistinct = isDistinct,
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				negate = negate,
-				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				isSpatialQuery = isSpatialQuery,
 				spatialFieldName = spatialFieldName,

@@ -20,10 +20,18 @@ namespace Raven.Tests.Bugs.TransformResults
 								   QuestionId = g.Key,
 								   VoteTotal = g.Sum(x => x.VoteTotal)
 							   };
-			TransformResults = (database, results) =>
+
+		}
+	}
+
+	public class QuestionWithVoteTotalTransformer : AbstractTransformerCreationTask<QuestionView>
+	{
+		public QuestionWithVoteTotalTransformer()
+		{
+			TransformResults = results =>
 								from result in results
-								let question = database.Load<Question>(result.QuestionId)
-								let user = database.Load<User>(question.UserId)
+								let question = LoadDocument<Question>(result.QuestionId)
+								let user = LoadDocument<User>(question.UserId)
 								select new
 								{
 									QuestionId = result.QuestionId,

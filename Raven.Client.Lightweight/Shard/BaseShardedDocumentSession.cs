@@ -251,11 +251,12 @@ namespace Raven.Client.Shard
 		public IRavenQueryable<T> Query<T>()
 		{
             var indexName = CreateDynamicIndexName<T>();
-			
-			return Query<T>(indexName)
-#pragma warning disable 612,618
-				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
-#pragma warning restore 612,618
+
+			return Query<T>(indexName);
+			//TODO arek
+//#pragma warning disable 612,618
+//				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
+//#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -270,10 +271,11 @@ namespace Raven.Client.Shard
 			{
 				Conventions = Conventions
 			};
-			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
-#pragma warning disable 612,618
-				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
-#pragma warning restore 612,618
+			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
+			//TODO arek
+//#pragma warning disable 612,618
+//				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
+//#pragma warning restore 612,618
 		}
 
 		/// <summary>
