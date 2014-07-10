@@ -401,7 +401,14 @@ namespace Raven.Smuggler
         // [StringFormatMethod("format")]
 		protected override void ShowProgress(string format, params object[] args)
 		{
-			Console.WriteLine(format, args);
+			try
+			{
+				Console.WriteLine(format, args);
+			}
+			catch (FormatException e)
+			{
+				throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
+			}
 		}
 
 		public bool LastRequestErrored { get; set; }
