@@ -463,6 +463,16 @@ interface sqlReplicationDto extends documentDto {
     PerformTableQuatation?:boolean;
 }
 
+interface sqlReplicationConnectionsDto extends documentDto {
+    PredefinedConnections: predefinedSqlConnectionDto[];
+}
+
+interface predefinedSqlConnectionDto {
+    Name:string;
+    FactoryName: string;
+    ConnectionString: string;
+}
+
 interface facetDto {
     Mode: number; // Default = 0, Ranges = 1
     Aggregation: number; // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16

@@ -360,6 +360,10 @@ body {
     white-space: nowrap;
   }
 }
+
+#documentsGrid {
+    overflow-x: auto;
+}
 #loadingIndicator {
   width: 30px;
   height: 30px;
