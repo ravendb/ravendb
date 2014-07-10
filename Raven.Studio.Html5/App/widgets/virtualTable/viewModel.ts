@@ -620,7 +620,7 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    onCollectionDeleted() {
+    refreshCollectionData() {
         this.items.invalidateCache(); // Causes the cache of items to be discarded.
         this.onGridScrolled(); // Forces a re-fetch of the rows in view.
         this.onWindowHeightChanged();

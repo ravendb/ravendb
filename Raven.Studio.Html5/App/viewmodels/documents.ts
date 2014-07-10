@@ -101,6 +101,8 @@ class documents extends viewModelBase {
             }
             return null;
         });
+
+        ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db));
     }
 
     activate(args) {
@@ -139,9 +141,16 @@ class documents extends viewModelBase {
         ];
     }
 
-    private refreshCollections() {
+    private refreshCollections(): JQueryPromise<any> {
+        var deferred = $.Deferred();
         var db = this.activeDatabase();
-        this.fetchCollections(db).done(results => this.updateCollections(results, db));
+
+        this.fetchCollections(db).done(results => {
+            this.updateCollections(results, db);
+            deferred.resolve();
+        });
+
+        return deferred;
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {
@@ -224,7 +233,7 @@ class documents extends viewModelBase {
 
                     if (selectedCollection.isAllDocuments) {
                         var docsGrid = this.getDocumentsGrid();
-                        docsGrid.onCollectionDeleted();
+                        docsGrid.refreshCollectionData();
                     } else {
                         var allDocumentsPagedList = this.allDocumentsCollection.getDocuments();
                         allDocumentsPagedList.invalidateCache();
@@ -259,6 +268,26 @@ class documents extends viewModelBase {
         var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
         if (!currentCollection || currentCollection.documentCount() == 0) {
             this.selectCollection(this.allDocumentsCollection);
+        }
+    }
+
+    private reloadDocumentsData(db: database) {
+        if (db.name == this.activeDatabase().name) {
+            this.refreshCollections().done(() => {
+                var selectedCollection: collection = this.selectedCollection();
+
+                this.collections().forEach((collection: collection) => {
+                    if (collection.name == selectedCollection.name) {
+                        var docsGrid = this.getDocumentsGrid();
+                        if (!!docsGrid) {
+                            docsGrid.refreshCollectionData();
+                        }
+                    } else {
+                        var pagedList = collection.getDocuments();
+                        pagedList.invalidateCache();
+                    }
+                });
+            });
         }
     }
 
