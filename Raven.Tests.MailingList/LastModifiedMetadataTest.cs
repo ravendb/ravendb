@@ -39,7 +39,7 @@ namespace Raven.Tests.MailingList
 				TransformResults = results => from doc in results
 														  select new
 														  {
-															  InternalId = AsDocument(doc)["__document_id"],
+															  InternalId = MetadataFor(doc)["@id"],
 															  LastModified = MetadataFor(doc)["Last-Modified"],
 														  };
 			}

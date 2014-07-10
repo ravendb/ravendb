@@ -77,7 +77,7 @@ namespace Raven.Tests.MailingList
 						.Take(1024);
 
 					var deserializer = session.Advanced.DocumentStore.Conventions.CreateSerializer();
-					var indexQuery = new IndexQuery { Query = query.ToString(), SkipTransformResults = true, PageSize = 1024, };
+					var indexQuery = new IndexQuery { Query = query.ToString(), PageSize = 1024, };
 
 					var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query(typeof(CarIndex).Name, indexQuery, new string[0]);
 
@@ -143,7 +143,7 @@ namespace Raven.Tests.MailingList
 						.Take(1024);
 
 					var deserializer = session.Advanced.DocumentStore.Conventions.CreateSerializer();
-					var indexQuery = new IndexQuery {Query = query.ToString(), SkipTransformResults = true, PageSize = 1024,};
+					var indexQuery = new IndexQuery {Query = query.ToString(), PageSize = 1024,};
 
 					var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query(typeof (CarIndex).Name, indexQuery,
 					                                                                        new string[0]);

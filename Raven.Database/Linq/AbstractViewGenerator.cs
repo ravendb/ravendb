@@ -67,8 +67,6 @@ namespace Raven.Database.Linq
 		public List<IndexingFunc> MapDefinitions { get; private set; }
 
 		public IndexingFunc ReduceDefinition { get; set; }
-		//TODO arek
-		public TranslatorFunc TransformResultsDefinition { get; set; }
 
 		public GroupByKeyFunc GroupByExtraction { get; set; }
 
