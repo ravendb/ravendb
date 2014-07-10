@@ -4,6 +4,7 @@ import viewModel = require("widgets/virtualTable/viewModel");
 import customColumns = require('models/customColumns');
 import customFunctions = require("models/customFunctions");
 import execJs = require('common/execJs');
+import collection = require("models/collection");
 
 class row {
     top = ko.observable(0);
@@ -14,6 +15,16 @@ class row {
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
     compiledCustomFunctions = {};
+
+    calculateExternalIdCellColor(cellValue: string) {
+        var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf('/')).toLocaleLowerCase();
+        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() == cellCollectionName);
+
+        if (!!matchingCollection) {
+            return matchingCollection.colorClass;
+        }
+        return '';
+    }
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
