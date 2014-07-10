@@ -15,12 +15,12 @@ namespace Raven.Abstractions.FileSystem
 
         public string Name { get; set; }
 
-        private long _totalSize;
+        private long? _totalSize;
         public long? TotalSize
         {
             get
             {
-                if (_totalSize <= 0)
+                if (!_totalSize.HasValue)
                 {
                     SetFileSize();
                 }
@@ -29,8 +29,7 @@ namespace Raven.Abstractions.FileSystem
             }
             set 
             {
-                if (value.HasValue)
-                    this._totalSize = value.Value;
+                this._totalSize = value;
             }
         }
         public long UploadedSize { get; set; }
@@ -100,11 +99,14 @@ namespace Raven.Abstractions.FileSystem
 
         private void SetFileSize()
         {
-            if (this._totalSize <= 0 && this.Metadata.Keys.Contains("RavenFS-Size"))
+            if (!this._totalSize.HasValue && this.Metadata.Keys.Contains("RavenFS-Size"))
             {
                 this._totalSize = this.Metadata["RavenFS-Size"].Value<long>();
-                this.UploadedSize = this._totalSize;
             }
+            
+            if (this.UploadedSize <= 0)
+                this.UploadedSize = this._totalSize.HasValue ? this._totalSize.Value : 0;
+
         }
 
         public FileHeader()

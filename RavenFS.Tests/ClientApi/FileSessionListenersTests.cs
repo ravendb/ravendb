@@ -18,11 +18,11 @@ namespace RavenFS.Tests.ClientApi
         private readonly IFilesStore anotherStore;
 
         public FileSessionListenersTests()
-		{
-			filesStore = this.NewStore(1);
+        {
+            filesStore = this.NewStore(1);
             anotherStore = this.NewStore(2);
 
-		}
+        }
 
         [Fact]
         public async void DoNotDeleteReadOnlyFiles()
@@ -115,7 +115,7 @@ namespace RavenFS.Tests.ClientApi
         {
             var store = (FilesStore)filesStore;
             var conflictsListener = new TakeNewestConflictsListener();
-            store.Listeners.RegisterListener(conflictsListener);
+            anotherStore.Listeners.RegisterListener(conflictsListener);
 
             using (var sessionDestination1 = filesStore.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
@@ -126,9 +126,9 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
-                var syncDestinatios = new SynchronizationDestination[] {sessionDestination2.Commands.ToSynchronizationDestination()};
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
-                
+
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 var file = await sessionDestination1.LoadFileAsync("test1.file");
