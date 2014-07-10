@@ -155,7 +155,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
-        [Route("studio-tasks/createSampleDataClass")]
+        [Route("studio-tasks/simulate-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
         public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
         {
@@ -298,6 +298,17 @@ namespace Raven.Database.Server.Controllers
 
             Database.Batch(commands, CancellationToken.None);
 	        return new CompletedTask();
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/resolveMerge")]
+        [Route("databases/{databaseName}/studio-tasks/resolveMerge")]
+        public async Task<HttpResponseMessage> ResolveMerge(string documentId)
+        {
+            int nextPage = 0;
+            var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
+            var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
+            return GetMessageWithObject(conflictsResolver.Resolve());
         }
 
 	    [HttpPost]

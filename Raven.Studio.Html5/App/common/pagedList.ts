@@ -29,7 +29,7 @@ class pagedList {
         }
     }
 
-    itemCount():number {
+    itemCount(): number {
         return this.items.length;
     }
 
@@ -92,6 +92,10 @@ class pagedList {
         return indices
             .filter(index => this.items[index])
             .map(validIndex => this.items[validIndex]);
+    }
+
+    getCachedIndices(indices: number[]): number[] {
+        return indices.filter(index => this.items[index]);
     }
 
     getAllCachedItems(): any[] {

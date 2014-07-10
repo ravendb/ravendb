@@ -152,6 +152,14 @@ html, body {
     {
         padding-left:0;
     }
+    .checkbox{
+        input[type=checkbox]{
+            font-size:large;
+            margin-left:0;
+        }
+        align-content:flex-start;
+        
+    }
 }
 
 .sqlReplication-Stats {
@@ -435,6 +443,26 @@ html, body {
     cursor: default;
 }
 
+.documents-page {
+    margin-top: 10px;
+
+    @media(max-device-height:1024px) {
+        a {
+            font-size: 12px !important;
+            overflow: hidden;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+}
+
+#loadingIndicator{
+    width: 30px;
+    height: 30px;
+}
+
 .document-collections {
         
     li {
@@ -476,6 +504,19 @@ html, body {
     max-height: 80vh;
     direction: rtl;
     text-align: left;
+}
+
+.documents-select{
+    text-align: center;
+    background-color: #ffffcc;
+    margin-top: 5px;
+    border: 1px solid;
+    border-radius: 25px;
+
+   .select-link{
+       text-decoration: underline;
+       cursor: pointer;
+   }
 }
 
 .index-panel {
@@ -774,21 +815,6 @@ html, body {
 
     .peg {
         opacity: 0;
-    }
-}
-
-.documents-page {
-    margin-top: 10px;
-
-    @media(max-device-height:1024px) {
-        a {
-            font-size: 12px !important;
-            overflow: hidden;
-            -ms-text-overflow: ellipsis;
-            -o-text-overflow: ellipsis;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
     }
 }
 

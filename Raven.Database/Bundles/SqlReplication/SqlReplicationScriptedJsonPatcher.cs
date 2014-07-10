@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using Jint;
 using Jint.Native;
 using Raven.Abstractions.Extensions;
@@ -30,6 +31,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			engine.Global.Delete("documentId", true);
 			engine.Global.Delete("replicateTo", true);
+            engine.Global.Delete("toVarchar", true);
+            engine.Global.Delete("toNVarchar", true);
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				engine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
@@ -51,6 +54,9 @@ namespace Raven.Database.Bundles.SqlReplication
 					ReplicateToFunction(tableName, cols);
 				}));
 			}
+
+            engine.SetValue("toVarchar", (Func<string, int,ValueTypLengthTriple>)(ToVarchar));
+            engine.SetValue("toNVarchar", (Func<string, int, ValueTypLengthTriple>)(ToNVarchar));
 		}
 
 		private void ReplicateToFunction(string tableName, object colsAsObject)
@@ -67,5 +73,32 @@ namespace Raven.Database.Bundles.SqlReplication
 				Columns = RavenJObject.FromObject(colsAsObject)
 			});
 		}
+
+        private ValueTypLengthTriple ToVarchar(string value, int size)
+        {
+            return new ValueTypLengthTriple()
+            {
+                Type = DbType.AnsiString,
+                Value = value,
+                Size = size
+            };
+        }
+
+        private ValueTypLengthTriple ToNVarchar(string value, int size)
+	    {
+            return new ValueTypLengthTriple()
+            {
+                Type = DbType.String,
+                Value = value,
+                Size = size
+            };
+	    }
+
+	    public class ValueTypLengthTriple
+	    {
+            public DbType Type { get; set; }
+            public object Value { get; set; }
+            public int Size { get; set; }
+	    }
 	}
 }

@@ -15,7 +15,7 @@ class aceEditorBindingHandler {
     defaults = {
         theme: "ace/theme/xcode",
         fontSize: "16px",
-        lang: "ace/mode/javascript",
+        lang: "ace/mode/csharp",
         readOnly: false
     }
 

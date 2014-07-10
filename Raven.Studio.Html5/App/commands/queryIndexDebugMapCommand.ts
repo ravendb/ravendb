@@ -3,19 +3,19 @@ import database = require("models/database");
 import document = require("models/document");
 
 class queryIndexDebugMapCommand extends commandBase {
-    constructor(private indexName: string, private db: database, private key?: string, private skip = 0, private take = 256) {
+    constructor(private indexName: string, private db: database, private args: queryIndexDebugMapArgsDto, private skip = 0, private take = 256) {
         super();
     }
 
-    execute(): JQueryPromise<mappedResultInfo[]> {
-        var args = {
+    execute(): JQueryPromise<any[]> {
+        var baseArgs = {
             start: this.skip,
             pageSize: this.take,
-            debug: "map",
-            key: this.key
+            debug: "map"
         };
+        
         var url = "/indexes/" + this.indexName;
-        return this.query(url, args, this.db, r => r.Results);
+        return this.query(url, $.extend({}, baseArgs, this.args), this.db, r => r.Results);
     }
 }
 

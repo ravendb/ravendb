@@ -23,8 +23,11 @@ import genUtils = require("common/generalUtils");
 import queryIndexCommand = require("commands/queryIndexCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import querySort = require("models/querySort");
+import resolveMergeCommand = require("commands/resolveMergeCommand");
+
 class editDocument extends viewModelBase {
 
+    isConflictDocument = ko.observable<boolean>();
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('').extend({ required: true });
@@ -64,11 +67,19 @@ class editDocument extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
+        this.isConflictDocument = ko.computed(() => {
+            var metadata = this.metadata();
+            return metadata != null && !!metadata["Raven-Replication-Conflict"];
+        });
 
         this.document.subscribe(doc => {
             if (doc) {
-                var docText = this.stringify(doc.toDto());
-                this.documentText(docText);
+                if (this.isConflictDocument()) {
+                    this.resolveConflicts();
+                } else {
+                    var docText = this.stringify(doc.toDto());
+                    this.documentText(docText);
+                }
             }
         });
 
@@ -678,6 +689,14 @@ class editDocument extends viewModelBase {
             editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([docId]) });
         }
 
+    }
+
+    resolveConflicts() {
+        var task = new resolveMergeCommand(this.activeDatabase(), this.editedDocId()).execute();
+        task.done((response: mergeResult) => {
+            this.documentText(response.Document);
+            this.metadataText(response.Metadata);
+        });
     }
 }
 

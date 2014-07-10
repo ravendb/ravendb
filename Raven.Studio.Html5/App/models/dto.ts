@@ -459,6 +459,8 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+    ForceSqlServerQueryRecompile?: boolean;
+    PerformTableQuatation?:boolean;
 }
 
 interface facetDto {
@@ -821,12 +823,12 @@ interface indexSuggestion extends queryFieldInfo {
 }
 
 interface mappedResultInfo {
-    ReduceKey: string;
-    Timestamp: string;
-    Etag: string;
-    Data: any;
-    Bucket: number;
-    Source: string;
+    ReduceKey?: string;
+    Timestamp?: string;
+    Etag?: string;
+    Data?: any;
+    Bucket?: number;
+    Source?: string;
 }
 
 
@@ -843,9 +845,43 @@ interface visualizerDataObjectNodeDto {
     children?: visualizerDataObjectNodeDto[];
     name?: string;
     level?: number;
+    origin?: visualizerDataObjectNodeDto;
     x?: number;
     y?: number;
     depth?: number;
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
+    connections?: visualizerDataObjectNodeDto[];
+    cachedId?: string;
+}
+
+interface queryIndexDebugMapArgsDto {
+    key?: string;
+    sourceId?: string;
+    startsWith?: string;
+}
+
+interface graphLinkDto {
+    source: visualizerDataObjectNodeDto;
+    target: visualizerDataObjectNodeDto;
+    cachedId?: string;
+}
+
+interface mergeResult {
+  Document: string;
+  Metadata: string;
+}
+
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface operationStatusDto {
+    Completed: boolean;
+    State: documentStateDto[];
+}
+
+interface documentStateDto {
+    Document: string;
+    Deleted: boolean;
 }
