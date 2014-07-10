@@ -97,13 +97,22 @@ namespace Raven.Bundles.Replication.Responders
 
 		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, Etag lastEtag, string src)
 		{
-			new AttachmentReplicationBehavior
+			try
 			{
-				Actions = actions,
-				Database = Database,
-				ReplicationConflictResolvers = ReplicationConflictResolvers,
-				Src = src
-			}.Replicate(id, metadata, data);
+				new AttachmentReplicationBehavior
+				{
+					Actions = actions,
+					Database = Database,
+					ReplicationConflictResolvers = ReplicationConflictResolvers,
+					Src = src
+				}.Replicate(id, metadata, data);
+			}
+			catch (Exception ex)
+			{
+				log.ErrorException(
+					string.Format("Exception occurred during the replication of the attachment {0} from the server {1}", id, src), ex);
+				throw;
+			}
 		}
 
 		private static string HashReplicationIdentifier(RavenJObject metadata, Guid lastEtag)

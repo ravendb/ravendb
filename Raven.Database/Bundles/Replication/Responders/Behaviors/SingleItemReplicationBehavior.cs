@@ -41,8 +41,8 @@ namespace Raven.Bundles.Replication.Responders
 			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag, out deleted);
 			if (existingMetadata == null)
 			{
-				log.Debug("New item {0} replicated successfully from {1}", id, Src);
 				AddWithoutConflict(id, null, metadata, incoming);
+				log.Debug("New item {0} replicated successfully from {1}", id, Src);
 				return;
 			}
 
@@ -61,10 +61,10 @@ namespace Raven.Bundles.Replication.Responders
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
 				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
-				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
-
 				var etag = deleted == false ? existingEtag : null;
 				AddWithoutConflict(id, etag, metadata, incoming);
+
+				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
 				return;
 			}
 

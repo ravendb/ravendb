@@ -104,13 +104,22 @@ namespace Raven.Bundles.Replication.Responders
 
 		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
 		{
-			new DocumentReplicationBehavior
+			try
 			{
-				Actions = actions,
-				Database = Database,
-				ReplicationConflictResolvers = ReplicationConflictResolvers,
-				Src = src
-			}.Replicate(id, metadata, document);
+				new DocumentReplicationBehavior
+				{
+					Actions = actions,
+					Database = Database,
+					ReplicationConflictResolvers = ReplicationConflictResolvers,
+					Src = src
+				}.Replicate(id, metadata, document);
+			}
+			catch (Exception ex)
+			{
+				log.ErrorException(
+					string.Format("Exception occurred during the replication of the document {0} from the server {1}", id, src), ex);
+				throw;
+			}
 		}
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)
