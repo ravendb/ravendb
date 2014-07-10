@@ -275,21 +275,21 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.Query
 		/// </summary>
-		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
+		protected abstract IDocumentQuery<T> DocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
+			return DocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.AsyncQuery
 		/// </summary>
-		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
+		protected abstract IAsyncDocumentQuery<T> DocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
 
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
+			return DocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
 		#endregion
