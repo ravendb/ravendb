@@ -126,7 +126,7 @@ namespace Raven.Tests.Bugs
 			store.DatabaseCommands.PutTransformer(transformer, new TransformerDefinition()
 			{
 				Name = transformer,
-				TransformResults = @"results => from result in results select new
+				TransformResults = @"from result in results select new
 												 {
 													 result.Title,
 													 result.Tags

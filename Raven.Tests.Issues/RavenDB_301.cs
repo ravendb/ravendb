@@ -78,7 +78,11 @@ namespace Raven.Tests.Issues
 				TransformResults = items =>
 								   from item in items
 								   let _ = Include(item.Parent)
-								   select item;
+								   select new
+								          {
+									          Name = item.Name,
+											  Parent = item.Parent
+								          };
 			}
 		}
 	}

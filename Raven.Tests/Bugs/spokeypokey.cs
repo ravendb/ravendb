@@ -17,53 +17,6 @@ namespace Raven.Tests.Bugs
 			public string Name { get; set; }
 		}
 
-		[Fact]
-		public void Can_project_Id_from_transformResults()
-		{
-			using (GetNewServer())
-			using (var store = new DocumentStore {Url = "http://localhost:8079"})
-			{
-				store.Initialize();
-				store.Conventions.FindIdentityProperty = (x => x.Name == "Id");
-				var indexDefinition = new IndexDefinitionBuilder<Shipment1, Shipment1>()
-				                      	{
-				                      		Map = docs => from doc in docs
-				                      		              select new
-				                      		                     	{
-				                      		                     		doc.Id
-				                      		                     	},
-
-				                      	}.ToIndexDefinition(store.Conventions);
-				store.DatabaseCommands.PutIndex(
-					"AmazingIndex1",
-					indexDefinition);
-
-
-				new TransformerWithInternalId().Execute(store);
-
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Shipment1()
-					              	{
-					              		Id = "shipment1",
-					              		Name = "Some shipment"
-					              	});
-					session.SaveChanges();
-
-					var shipment = session.Query<Shipment1>("AmazingIndex1")
-						.TransformWith<TransformerWithInternalId, Shipment1>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.Select(x => new Shipment1
-						             	{
-						             		Id = x.Id,
-						             		Name = x.Name
-						             	}).Take(1).SingleOrDefault();
-
-					Assert.NotNull(shipment.Id);
-				}
-			}
-		}
-
 		public class Shipment2
 		{
 			public string InternalId { get; set; }
@@ -80,53 +33,6 @@ namespace Raven.Tests.Bugs
 												 InternalId = doc.InternalId,
 												 Name = doc.Name
 											 };
-			}
-		}
-
-		[Fact]
-		public void Can_project_InternalId_from_transformResults()
-		{
-			using (GetNewServer())
-			using (var store = new DocumentStore {Url = "http://localhost:8079"})
-			{
-				store.Initialize();
-				store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
-				var indexDefinition = new IndexDefinitionBuilder<Shipment2, Shipment2>()
-				                      	{
-				                      		Map = docs => from doc in docs
-				                      		              select new
-				                      		                     	{
-				                      		                     		doc.InternalId
-				                      		                     	},
-
-				                      	}.ToIndexDefinition(store.Conventions);
-
-				store.DatabaseCommands.PutIndex(
-					"AmazingIndex2",
-					indexDefinition);
-
-				new TransformerWithInternalId().Execute(store);
-
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Shipment2()
-					              	{
-					              		InternalId = "shipment1",
-					              		Name = "Some shipment"
-					              	});
-					session.SaveChanges();
-
-					var shipment = session.Query<Shipment2>("AmazingIndex2")
-						.TransformWith<TransformerWithInternalId, Shipment2>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.Select(x => new Shipment2
-						             	{
-						             		InternalId = x.InternalId,
-						             		Name = x.Name
-						             	}).Take(1).SingleOrDefault();
-
-					Assert.NotNull(shipment.InternalId);
-				}
 			}
 		}
 

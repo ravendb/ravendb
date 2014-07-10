@@ -116,11 +116,14 @@ namespace Raven.Database.Impl
 				if (skipDuplicateCheck == false && loadedIds.Add(queryResult.Key) == false)
 					return null;
 				var document = GetDocumentWithCaching(queryResult.Key);
-				if (document != null)
-				{
-					if(skipDuplicateCheck == false)
-						document.Metadata[Constants.TemporaryScoreValue] = queryScore;
-				}
+				if (document == null)
+					return null;
+
+				document.Metadata = GetMetadata(document);
+
+				if (skipDuplicateCheck == false)
+					document.Metadata[Constants.TemporaryScoreValue] = queryScore;
+
 				return document;
 			}
 
@@ -216,7 +219,9 @@ namespace Raven.Database.Impl
 				
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
-			doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+
+			if (doc != null && doc.Metadata != null)
+				doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
 
 			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 			if (nonAuthoritativeInformationBehavior != null)
