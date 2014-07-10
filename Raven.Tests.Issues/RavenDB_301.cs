@@ -24,6 +24,8 @@ namespace Raven.Tests.Issues
 			}.Initialize())
 			{
 				new Index().Execute(store);
+				new IndexTransformer().Execute(store);
+
 				using(var session = store.OpenSession())
 				{
 					session.Store(new Item
@@ -43,6 +45,7 @@ namespace Raven.Tests.Issues
 				{
 					var a = session.Query<Item, Index>()
 						.Customize(x => x.WaitForNonStaleResults())
+						.TransformWith<IndexTransformer, Item>()
 						.Single(x => x.Name == "Ayende");
 
 					session.Load<Item>(a.Parent);
@@ -65,10 +68,17 @@ namespace Raven.Tests.Issues
 			{
 				Map = items => from item in items
 				               select new {item.Name};
-				TransformResults = (database, items) =>
-				                   from item in items
-								   let _ = database.Include(item.Parent)
-				                   select item;
+			}
+		}
+
+		public class IndexTransformer : AbstractTransformerCreationTask<Item>
+		{
+			public IndexTransformer()
+			{
+				TransformResults = items =>
+								   from item in items
+								   let _ = Include(item.Parent)
+								   select item;
 			}
 		}
 	}

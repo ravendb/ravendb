@@ -30,13 +30,6 @@ namespace Raven.Client.Indexes
 		public Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }
 
 		/// <summary>
-		/// Gets or sets the reduce function
-		/// </summary>
-		/// <value>The reduce.</value>
-		[Obsolete("Use Result Transformers instead.")]
-		public Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
-
-		/// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
@@ -158,9 +151,6 @@ namespace Raven.Client.Indexes
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
-#pragma warning disable 612,618
-				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(TransformResults, convention, "results", translateIdentityProperty: Reduce == null),
-#pragma warning restore 612,618
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),

@@ -44,7 +44,7 @@ namespace Raven.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var q = session.Query<LiveProjection.Shipment, LiveProjection.PurchaseHistoryIndex>()
-						   .Customize(c => c.WaitForNonStaleResults().BeforeQueryExecution(x => x.SkipTransformResults = true))
+						   .Customize(c => c.WaitForNonStaleResults())
 						   .Single();
 
 					Assert.Equal("Hadera", q.Destination.Town);
@@ -82,7 +82,6 @@ namespace Raven.Tests.Bugs
 				{
                     var q = session.Advanced.DocumentQuery<LiveProjection.Shipment, LiveProjection.PurchaseHistoryIndex>()
 							.WaitForNonStaleResults()
-							.BeforeQueryExecution(x => x.SkipTransformResults = true)
 						   .Single();
 
 					Assert.Equal("Hadera", q.Destination.Town);

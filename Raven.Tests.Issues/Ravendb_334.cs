@@ -34,9 +34,17 @@ namespace Raven.Tests.Issues
 			{
 				Map = foos => from f in foos select new { f.Id };
 
-				TransformResults = (database, foos) =>
-									from f in foos select new { f.DateTime };
 				Store(x=>x.DateTime, FieldStorage.Yes);
+			}
+		}
+
+		class FooTransformer : AbstractTransformerCreationTask<Foo>
+		{
+			public FooTransformer()
+			{
+
+				TransformResults = foos =>
+									from f in foos select new { f.DateTime };
 			}
 		}
 
@@ -46,6 +54,8 @@ namespace Raven.Tests.Issues
 			using(var documentStore = NewDocumentStore())
 			{
 				new FooIndex().Execute(documentStore);
+				new FooTransformer().Execute(documentStore);
+
 				using (var session = documentStore.OpenSession())
 				{
 					var foo = new Foo { Id = "foos/1", DateTime = DateTime.UtcNow };
@@ -62,7 +72,7 @@ namespace Raven.Tests.Issues
 
 					var indexedFoo = session.Query<Foo, FooIndex>()
 						.Customize(c => c.WaitForNonStaleResults())
-						.AsProjection<FooIndex.IndexedFoo>()
+						.TransformWith<FooTransformer, FooIndex.IndexedFoo>()
 						.Single(f => f.Id == "foos/1");
 					Assert.Equal(foo.DateTime.Kind, indexedFoo.DateTime.Kind);
 					Assert.Equal(foo.DateTime, indexedFoo.DateTime);

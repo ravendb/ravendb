@@ -144,7 +144,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// If set to true, RavenDB won't execute the transform results function
 		/// returning just the raw results instead
-		/// </summary>
+		/// </summary>//TODO arek
 		public bool SkipTransformResults { get; set; }
 
         /// <summary>
