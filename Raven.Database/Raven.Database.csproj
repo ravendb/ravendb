@@ -220,6 +220,9 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Data\ReplicationSchemaNode.cs" />
+    <Compile Include="Bundles\Replication\Data\ReplicatonNodeState.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationSchemaDiscoverer.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />

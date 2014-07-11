@@ -1,15 +1,15 @@
-﻿using System;
-using System.ComponentModel.Composition;
-using System.IO;
+﻿using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Controllers.Admin;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
 {
@@ -29,27 +29,27 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		[HttpPost]
 		[Route("admin/replication/purge-tombstones")]
-        [Route("databases/{databaseName}/admin/replication/purge-tombstones")]
+		[Route("databases/{databaseName}/admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
 			var docEtagStr = GetQueryStringValue("docEtag");
 			var attachmentEtagStr = GetQueryStringValue("attachmentEtag");
 
-            Etag docEtag, attachmentEtag;
+			Etag docEtag, attachmentEtag;
 
-		    var docEtagParsed = Etag.TryParse(docEtagStr, out docEtag);
-            var attachmentEtagParsed = Etag.TryParse(attachmentEtagStr, out attachmentEtag);
+			var docEtagParsed = Etag.TryParse(docEtagStr, out docEtag);
+			var attachmentEtagParsed = Etag.TryParse(attachmentEtagStr, out attachmentEtag);
 
-		    if (docEtagParsed == false && attachmentEtagParsed == false)
-		    {
-		        return GetMessageWithObject(
-		            new
-		            {
-                        Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid etag"
-		            }, HttpStatusCode.BadRequest);
-		    }
+			if (docEtagParsed == false && attachmentEtagParsed == false)
+			{
+				return GetMessageWithObject(
+					new
+					{
+						Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid etag"
+					}, HttpStatusCode.BadRequest);
+			}
 
-		    Database.TransactionalStorage.Batch(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				if (docEtag != null)
 				{
@@ -82,6 +82,33 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var statuses = CheckDestinations(replicationDocument);
 
 			return GetMessageWithObject(statuses);
+		}
+
+		[HttpPost]
+		[Route("admin/replication/schema")]
+		[Route("databases/{databaseName}/admin/replication/schema")]
+		public async Task<HttpResponseMessage> ReplicationSchema()
+		{
+			var ttlAsString = GetQueryStringValue("ttl");
+
+			int ttl;
+			RavenJArray from;
+
+			if (string.IsNullOrEmpty(ttlAsString))
+			{
+				ttl = 10;
+				from = new RavenJArray();
+			}
+			else
+			{
+				ttl = int.Parse(ttlAsString);
+				from = await ReadJsonArrayAsync();
+			}
+
+			var replicationSchemaDiscoverer = new ReplicationSchemaDiscoverer(Database, from, ttl, Log);
+			var node = replicationSchemaDiscoverer.Discover();
+
+			return GetMessageWithObject(node);
 		}
 
 		private ReplicationInfoStatus[] CheckDestinations(ReplicationDocument replicationDocument)
@@ -134,7 +161,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		private void FillStatus(ReplicationInfoStatus replicationInfoStatus, WebException e)
 		{
 			if (e.GetBaseException() is WebException)
-				e = (WebException) e.GetBaseException();
+				e = (WebException)e.GetBaseException();
 
 			var response = e.Response as HttpWebResponse;
 			if (response == null)
