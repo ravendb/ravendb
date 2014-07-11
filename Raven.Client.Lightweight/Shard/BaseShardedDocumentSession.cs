@@ -253,9 +253,7 @@ namespace Raven.Client.Shard
             var indexName = CreateDynamicIndexName<T>();
 			
 			return Query<T>(indexName)
-#pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
-#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -271,29 +269,27 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
-#pragma warning disable 612,618
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
-#pragma warning restore 612,618
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.Query
 		/// </summary>
-		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
+		protected abstract IDocumentQuery<T> DocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
+			return DocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.AsyncQuery
 		/// </summary>
-		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
+		protected abstract IAsyncDocumentQuery<T> DocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
 
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
+			return DocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
 		#endregion

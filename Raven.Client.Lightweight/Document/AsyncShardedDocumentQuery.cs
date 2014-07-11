@@ -161,7 +161,6 @@ namespace Raven.Client.Document
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;
 
-
 					Thread.Sleep(100);
 
 					return loop();

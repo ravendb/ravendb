@@ -20,6 +20,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 			using (var documentStore = NewDocumentStore())
 			{
 				new TaskSummaryIndex().Execute(((IDocumentStore)documentStore).DatabaseCommands, ((IDocumentStore)documentStore).Conventions);
+				new TaskSummaryTransformer().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -53,6 +54,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 				using (var session = documentStore.OpenSession())
 				{
 					var results = session.Query<dynamic, TaskSummaryIndex>()
+						.TransformWith<TaskSummaryTransformer, dynamic>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.As<TaskSummary>()
 						.ToList();

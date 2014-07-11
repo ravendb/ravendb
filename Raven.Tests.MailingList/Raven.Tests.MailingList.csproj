@@ -183,7 +183,6 @@
     <Compile Include="EnumInIndexDef.cs" />
     <Compile Include="EtagIssue.cs" />
     <Compile Include="EtagUsage.cs" />
-    <Compile Include="Everett.cs" />
     <Compile Include="Everett616.cs" />
     <Compile Include="FacetCountTest.cs" />
     <Compile Include="FacetHits.cs" />
@@ -419,7 +418,6 @@
     <Compile Include="TomCabanski.cs" />
     <Compile Include="Tony.cs" />
     <Compile Include="TransfomerLoadCaching.cs" />
-    <Compile Include="transformedresults_customid_test.cs" />
     <Compile Include="TransformerDictionaryOrderTests.cs" />
     <Compile Include="TransformerParameterTests.cs" />
     <Compile Include="TransformersAndEtags.cs" />

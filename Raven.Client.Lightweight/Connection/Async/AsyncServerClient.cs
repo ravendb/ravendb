@@ -336,6 +336,10 @@ namespace Raven.Client.Connection.Async
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return result.Value<string>("Transformer");
 			}
+			catch (BadRequestException e)
+			{
+				throw new TransformCompilationException(e.Message);
+			}
 			catch (ErrorResponseException e)
 			{
 				if (e.StatusCode != HttpStatusCode.BadRequest)

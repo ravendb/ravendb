@@ -245,7 +245,6 @@ namespace Raven.Database.Server.Controllers
                 WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
 				CutoffEtag = GetCutOffEtag(),
 				PageSize = GetPageSize(maxPageSize),
-				SkipTransformResults = GetSkipTransformResults(),
 				FieldsToFetch = GetQueryStringValues("fetch"),
 				DefaultField = GetQueryStringValue("defaultField"),
 
@@ -377,13 +376,6 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			return null;
-		}
-
-		public bool GetSkipTransformResults()
-		{
-			bool result;
-			bool.TryParse(GetQueryStringValue("skipTransformResults"), out result);
-			return result;
 		}
 
 		public IEnumerable<HighlightedField> GetHighlightedFields()

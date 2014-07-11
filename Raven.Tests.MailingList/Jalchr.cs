@@ -31,6 +31,7 @@ namespace Raven.Tests.MailingList
                 store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
                 new Agency_Entity().Execute(store);
+				new Agency_EntityTransformer().Execute(store);
 
 
                 var code = "code";
@@ -53,7 +54,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<AgencyDb, Agency_Entity>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
+					var query = session.Query<AgencyDb, Agency_Entity>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite()).TransformWith<Agency_EntityTransformer, AgencyDb>();
                     var agency = Queryable.Where(query, x => x.Code == code).As<Agency>().SingleOrDefault();
 
                     Assert.NotNull(agency);
@@ -155,22 +156,28 @@ namespace Raven.Tests.MailingList
                                   {
                                       agency.Code,
                                   };
-
-                TransformResults = (database, agencies) => from agency in agencies
-                                                           select new // AgencyDb
-                                                           {
-                                                               agency.Id,
-                                                               agency.Name,
-                                                               agency.Code,
-                                                               Countries = from com in agency.Countries
-                                                                           select new // AgencyCountry
-                                                                           {
-                                                                               com.Country,
-                                                                               Agency = agency
-                                                                           }
-                                                           };
             }
         }
+
+		class Agency_EntityTransformer : AbstractTransformerCreationTask<AgencyDb>
+		{
+			public Agency_EntityTransformer()
+			{
+				TransformResults = agencies => from agency in agencies
+														   select new // AgencyDb
+														   {
+															   agency.Id,
+															   agency.Name,
+															   agency.Code,
+															   Countries = from com in agency.Countries
+																		   select new // AgencyCountry
+																		   {
+																			   com.Country,
+																			   Agency = agency
+																		   }
+														   };
+			}
+		}
 
         class Agency_Entity2 : AbstractIndexCreationTask<AgencyDb>
         {

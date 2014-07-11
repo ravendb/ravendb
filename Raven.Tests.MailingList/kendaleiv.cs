@@ -54,9 +54,24 @@ namespace Raven.Tests.MailingList
 				Store("CompanySalesId", FieldStorage.Yes);
 				Store("FirstName", FieldStorage.Yes);
 				Store("LastName", FieldStorage.Yes);
+			}
 
-				TransformResults = (database, results) => from result in results
-														  let companySales = database.Load<CompanySales>(result.CompanySalesId)
+			public class IndexResult
+			{
+				public string CompanyId { get; set; }
+				public string FirstName { get; set; }
+				public string LastName { get; set; }
+				public decimal SalesTotal { get; set; }
+				public string CompanySalesId { get; set; }
+			}
+		}
+
+		public class CompanyContactTransformer : AbstractTransformerCreationTask<CompanyContactIndex.IndexResult>
+		{
+			public CompanyContactTransformer()
+			{
+				TransformResults = results => from result in results
+														  let companySales = LoadDocument<CompanySales>(result.CompanySalesId)
 														  select new
 														  {
 															  result.CompanyId,
@@ -84,6 +99,8 @@ namespace Raven.Tests.MailingList
 			using (var store = NewDocumentStore())
 			{
 				new CompanyContactIndex().Execute(store);
+				new CompanyContactTransformer().Execute(store);
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new CompanySales()
@@ -112,7 +129,7 @@ namespace Raven.Tests.MailingList
 				{
 					var items = session.Query<Company, CompanyContactIndex>()
 						.Customize(x => x.WaitForNonStaleResults())
-						.As<CompanyContactIndex.IndexResult>()
+						.TransformWith<CompanyContactTransformer, CompanyContactIndex.IndexResult>()
 						.Take(10)
 						.ToList();
 
