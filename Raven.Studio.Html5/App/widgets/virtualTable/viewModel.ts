@@ -158,20 +158,24 @@ class ctor {
         return rowCountWithPadding;
     }
 
-    createRecycleRows(rowCount: number) {
-        var rows = [];
-        for (var i = 0; i < rowCount; i++) {
+    private createRecycleRows(rowCount: number) {
+        for (var i = this.recycleRows().length; i < rowCount; i++) {
             var newRow = new row(this.settings.showIds, this);
             newRow.createPlaceholderCells(this.columns().map(c => c.binding));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
             newRow.top(desiredTop);
-            rows.push(newRow);
+            this.recycleRows.push(newRow);
         }
 
-        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
+        for (var i = rowCount; i < this.recycleRows().length; i++) {
+            var r: row = this.recycleRows()[i];
+            r.isInUse(false);
+        }
 
-        return rows;
+        //this.recycleRows().length = rowCount;
+
+        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
     }
 
     onGridScrolled() {
@@ -193,9 +197,10 @@ class ctor {
         var newViewportHeight = this.gridViewport.height();
         this.viewportHeight(newViewportHeight);
         var desiredRowCount = this.calculateRecycleRowCount();
-        this.recycleRows(this.createRecycleRows(desiredRowCount));
+        this.createRecycleRows(desiredRowCount);
         this.ensureRowsCoverViewport();
         this.loadRowData();
+        
 
         // Update row checked states.
         this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
