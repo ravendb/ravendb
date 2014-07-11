@@ -1,5 +1,4 @@
 ﻿<style>
-
 .nvtooltip {
     -webkit-border-radius: 5px;
     -moz-border-radius: 5px;
@@ -143,9 +142,22 @@ text {
             <button class="btn btn-danger" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
                 <i class="fa fa-trash-o"></i>
             </button>
-            
+        </div>
+        
+        <div class="btn-group" data-bind="visible: hasIndexSelected">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <i class="fa fa-download"></i>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li data-bind="click: saveAsPng, visible: hasSaveAsPngSupport"><a href="#"><i class="fa fa-file-image-o"></i> PNG</a></li>
+                <li data-bind="click: saveAsSvg"><a href="#"><i class="fa fa-file-image-o"></i> SVG</a></li>
+            </ul>
+        </div>
+        
+        <div class="btn-group" data-bind="visible: hasIndexSelected">
             <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
         </div>
+        
         
     </form>
 
