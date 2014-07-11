@@ -238,6 +238,7 @@
     <Compile Include="Bugs\CustomizingIndexQuery.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />

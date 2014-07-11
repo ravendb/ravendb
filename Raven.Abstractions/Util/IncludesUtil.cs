@@ -47,7 +47,8 @@ namespace Raven.Abstractions.Util
                     // because people will do products/1 and detaisl/products/1 and want to be able
                     // to include on that
 			        loadId(value, prefix);
-			        loadId(value, null);
+					if (prefix != null)
+						loadId(value, null);
 					break;
 				case JTokenType.Integer:
 					try
