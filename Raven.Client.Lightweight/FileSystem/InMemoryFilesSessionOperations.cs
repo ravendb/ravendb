@@ -55,6 +55,11 @@ namespace Raven.Client.FileSystem
         protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// Current file conflicts
+        /// </summary>
+        protected readonly HashSet<string> conflicts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// all the listeners for this session
         /// </summary>
         protected readonly FilesSessionListeners theListeners;
@@ -217,8 +222,25 @@ namespace Raven.Client.FileSystem
             IFilesOperation op;
             while (operationsToExecute.TryDequeue(out op))
             {
+                AssertConflictsAreNotAffectingOperation(op);
                 await op.Execute(session);
             }
+        }
+
+        private void AssertConflictsAreNotAffectingOperation(IFilesOperation operation)
+        {
+            string fileName = null;
+            if (operation.GetType() == typeof(UploadFileOperation))
+            {
+                fileName = (operation as UploadFileOperation).Path;
+            }
+            else if (operation.GetType() == typeof(RenameFileOperation))
+            {
+                fileName = (operation as RenameFileOperation).Source;
+            }
+
+            if (fileName != null && conflicts.Contains(fileName))
+                throw new NotSupportedException( string.Format("There is a conflict over file: {0}. Update or remove operations are not supported", fileName));
         }
 
         public void IncrementRequestCount()

@@ -612,10 +612,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				StrategyAsGetCurrent(fileName);
 			}
-			else
+            else if (strategy == ConflictResolutionStrategy.RemoteVersion)
 			{
 				StrategyAsGetRemote(fileName);
 			}
+            else
+            {
+                throw new NotSupportedException("NoOperation conflict resolution strategy, is not supported.");
+            }
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}

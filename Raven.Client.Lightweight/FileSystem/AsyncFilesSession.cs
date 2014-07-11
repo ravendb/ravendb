@@ -131,23 +131,34 @@ namespace Raven.Client.FileSystem
 
         public async void OnNext(ConflictNotification notification)
         {
+            if (!conflicts.Contains(notification.FileName))
+                conflicts.Add(notification.FileName);
+                
             var localHeader = await this.LoadFileAsync(notification.FileName);
             //var remolocalHeaderteHeader = await Commands.ForFileSystem(notification.SourceServerUrl).GetMetadataForAsync(notification.FileName);
             if (notification.Status == ConflictStatus.Detected) 
             {
-                var resultingStrategy = ConflictResolutionStrategy.CurrentVersion;
+                var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
+                int actionableListenersCount = 0;
                 foreach( var listener in Listeners.ConflictListeners)
                 {
                     var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
 
-                    if (strategy == ConflictResolutionStrategy.RemoteVersion)
-                        resultingStrategy = ConflictResolutionStrategy.RemoteVersion;
+                    if (strategy != ConflictResolutionStrategy.NoResolution )
+                    {
+                        if (actionableListenersCount > 0)
+                        {
+                            return;
+                        }
+                        if (actionableListenersCount == 0) 
+                        {
+                            actionableListenersCount++;
+                            resolutionStrategy = strategy;
+                        }
+                    }
                 }
 
-                await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resultingStrategy);
-
-                //if (resultingStrategy == ConflictResolutionStrategy.RemoteVersion)
-                //    callListenersOnConflictResolved(notification.FileName);
+                await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resolutionStrategy);
             }
             else
             {
@@ -159,6 +170,9 @@ namespace Raven.Client.FileSystem
         {
             if (entitiesByKey.ContainsKey(fileName))
                 entitiesByKey.Remove(fileName);
+
+            if (conflicts.Contains(fileName))
+                conflicts.Remove(fileName);
 
             var localHeader = await this.LoadFileAsync(fileName);
             foreach (var listener in Listeners.ConflictListeners)
