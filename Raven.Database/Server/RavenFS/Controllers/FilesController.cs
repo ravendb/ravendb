@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Exceptions;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
@@ -67,7 +68,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			var readingStream = StorageStream.Reading(Storage, name);
             var result = StreamResult(name, readingStream);
-            AddHeaders(result, fileAndPages.Metadata);
+
+            var etag = new Etag(fileAndPages.Metadata.Value<string>("ETag"));
+            fileAndPages.Metadata.Remove("ETag");
+            WriteHeaders(fileAndPages.Metadata, etag, result);
 
             return result.WithNoCache();
 		}
@@ -155,8 +159,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
+            
+
 			var httpResponseMessage = GetEmptyMessage();
-			AddHeaders(httpResponseMessage, fileAndPages.Metadata);
+
+            var etag = new Etag(fileAndPages.Metadata.Value<string>("ETag"));
+            fileAndPages.Metadata.Remove("ETag");
+
+            WriteHeaders(fileAndPages.Metadata, etag, httpResponseMessage);
+
 			return httpResponseMessage;
 		}
 
@@ -397,13 +408,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 }
                 else
                 {
-                    if (item.Key == "Last-Modified")
-                    {
-                        string value = item.Value.Value<string>();
-                        context.Content.Headers.Add(item.Key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
-                    }
-                    else
-                    {
+                    //if (item.Key == "Last-Modified")
+                    //{
+                    //    string value = item.Value.Value<string>();
+                    //    context.Content.Headers.Add(item.Key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
+                    //}
+                    //else
+                    //{
                         string value;
                         switch (item.Value.Type)
                         {
@@ -417,7 +428,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                 break;
                         }
                         context.Content.Headers.Add(item.Key, value);
-                    }
+                    //}
                 }
             }
         }

@@ -50,7 +50,7 @@ namespace Raven.Client.FileSystem
         protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
         /// <summary>
-        /// Entities whose filename we already know do not exists, because they are missing load, etc.
+        /// Entities whose filename we already know do not exist, because they were registered for deletion, etc.
         /// </summary>
         protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -176,6 +176,13 @@ namespace Raven.Client.FileSystem
             RegisterRename(sourceFile.Path, destinationFile);
         }
 
+        public void AddToCache(string filename, FileHeader fileHeader)
+        {
+            entitiesByKey.Add(filename, fileHeader);
+            if (this.IsDeleted(filename))
+                knownMissingIds.Remove(filename);
+        }
+
         /// <summary>
         /// Returns whatever a filename with the specified id is loaded in the 
         /// current session
@@ -186,8 +193,7 @@ namespace Raven.Client.FileSystem
         }
 
         /// <summary>
-        /// Returns whatever a filename with the specified id is deleted 
-        /// or known to be missing
+        /// Returns whatever a filename with the specified id is deleted.
         /// </summary>
         public bool IsDeleted(string id)
         {

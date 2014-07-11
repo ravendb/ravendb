@@ -831,6 +831,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         {
             var metadata = (RavenJObject)file["metadata"];
             metadata["ETag"] = file["etag"];
+            // To avoid useless handling of conversions for special headers we return the same type we stored.
+            if (metadata.ContainsKey("Last-Modified"))
+                metadata["Last-Modified"] = metadata.Value<DateTimeOffset>("Last-Modified");            
 
             return new FileHeader
                    {

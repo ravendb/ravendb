@@ -246,6 +246,10 @@ namespace Raven.Database.Server.Controllers
 							if (header.Key.StartsWith("Raven-") == false)
 								msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
 						}
+                        else if (header.Value.Type == JTokenType.Boolean)
+                        {
+                            msg.Content.Headers.Add(header.Key, header.Value.ToString());
+                        }
 						else
 						{
 							var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None));

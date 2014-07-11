@@ -459,8 +459,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        Status = ConflictStatus.Detected,
-                        RemoteFileHeader = new FileHeader(fileName, localMetadata)
+                        Status = ConflictStatus.Resolved
                     });
 				}
 
@@ -667,7 +666,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				FileName = filename,
 				SourceServerUrl = remoteServerUrl,
                 Status = ConflictStatus.Detected,
-                RemoteFileHeader = new FileHeader(filename, localMetadata)
+                RemoteFileHeader = new FileHeader(filename, remoteMetadata)
 			});
 
 			Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);

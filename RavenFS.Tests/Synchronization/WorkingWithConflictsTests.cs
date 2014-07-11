@@ -18,6 +18,7 @@ using Xunit;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Database.Server.RavenFS.Infrastructure;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -161,10 +162,11 @@ namespace RavenFS.Tests.Synchronization
 			var client = NewAsyncClient(1);
 			client.UploadAsync("test.bin", content).Wait();
 			var guid = Guid.NewGuid().ToString();
-            //new List<HistoryItem> {new HistoryItem {ServerId = guid, Version = 3}}
-			                                          
-			client.Synchronization.ApplyConflictAsync("test.bin", 8, guid, new RavenJObject(),
-			                                          "http://localhost:12345").Wait();
+            var history = new List<HistoryItem> {new HistoryItem {ServerId = guid, Version = 3}};
+            var remoteMetadata = new RavenJObject();
+            remoteMetadata[SynchronizationConstants.RavenSynchronizationHistory] = Historian.SerializeHistory(history);
+
+            client.Synchronization.ApplyConflictAsync("test.bin", 8, guid, remoteMetadata, "http://localhost:12345").Wait();
 			var resultFileMetadata = client.GetMetadataForAsync("test.bin").Result;
 			var conflict = client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 

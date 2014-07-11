@@ -52,7 +52,7 @@ namespace Raven.Client.FileSystem
             if (entitiesByKey.TryGetValue(filename, out existingEntity))
             {
                 // Check if the file is not currently been scheduled for deletion or known to be non-existent.
-                if (!knownMissingIds.Contains(filename))
+                if (!this.IsDeleted(filename))
                     return existingEntity as FileHeader;
                 else
                     return null;
@@ -66,10 +66,12 @@ namespace Raven.Client.FileSystem
                 return null;
 
             var fileHeader = new FileHeader(filename, metadata);
-            entitiesByKey.Add(filename, fileHeader);
+            AddToCache(filename, fileHeader);
 
             return fileHeader;
         }
+
+
 
         public async Task<FileHeader[]> LoadFileAsync(IEnumerable<string> filenames)
         {
@@ -87,7 +89,7 @@ namespace Raven.Client.FileSystem
 
                 var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());                                
                 foreach( var header in fileHeaders )
-                    entitiesByKey.Add(header.Name, header);                
+                    AddToCache(header.Name, header);                
             }
 
             var result = new List<FileHeader>();
@@ -133,17 +135,35 @@ namespace Raven.Client.FileSystem
             //var remolocalHeaderteHeader = await Commands.ForFileSystem(notification.SourceServerUrl).GetMetadataForAsync(notification.FileName);
             if (notification.Status == ConflictStatus.Detected) 
             {
+                var resultingStrategy = ConflictResolutionStrategy.CurrentVersion;
                 foreach( var listener in Listeners.ConflictListeners)
                 {
-
                     var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
-                    await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, strategy);
+
+                    if (strategy == ConflictResolutionStrategy.RemoteVersion)
+                        resultingStrategy = ConflictResolutionStrategy.RemoteVersion;
                 }
+
+                await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resultingStrategy);
+
+                //if (resultingStrategy == ConflictResolutionStrategy.RemoteVersion)
+                //    callListenersOnConflictResolved(notification.FileName);
             }
             else
             {
-                foreach (var listener in Listeners.ConflictListeners)
-                    listener.ConflictResolved(localHeader);
+                callListenersOnConflictResolved(notification.FileName);  
+            }
+        }
+
+        private async void callListenersOnConflictResolved(string fileName)
+        {
+            if (entitiesByKey.ContainsKey(fileName))
+                entitiesByKey.Remove(fileName);
+
+            var localHeader = await this.LoadFileAsync(fileName);
+            foreach (var listener in Listeners.ConflictListeners)
+            {
+                listener.ConflictResolved(localHeader);
             }
         }
 
