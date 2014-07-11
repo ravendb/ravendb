@@ -1,4 +1,3 @@
-#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -203,4 +202,3 @@ namespace Raven.Abstractions.Data
 		}
 	}
 }
-#endif

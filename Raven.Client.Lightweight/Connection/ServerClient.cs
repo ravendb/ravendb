@@ -1,7 +1,3 @@
-using Raven.Abstractions.Connection;
-using Raven.Client.Exceptions;
-using Raven.Database.Data;
-#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="ServerClient.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -15,6 +11,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Connection;
 using Raven.Client.Changes;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -24,7 +22,9 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
+using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -872,4 +872,3 @@ namespace Raven.Client.Connection
 
 	}
 }
-#endif

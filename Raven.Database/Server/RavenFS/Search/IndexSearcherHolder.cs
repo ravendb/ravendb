@@ -70,8 +70,8 @@ namespace Raven.Database.Server.RavenFS.Search
 			{
 				var indexReader = IndexSearcher.IndexReader;
 				if (indexReader != null)
-					indexReader.Close();
-				IndexSearcher.Close();
+					indexReader.Dispose();
+				IndexSearcher.Dispose();
 			}
 		}
 	}

@@ -137,10 +137,9 @@ namespace Raven.Database.Actions
             }
         }
 
-        private static bool IsIndexNameValid(string indexName)
+        private static void IsIndexNameValid(string indexName)
         {
-            bool result;
-            var error = string.Format("Index name {0} not permitted. ", indexName).Replace("//","__");
+	        var error = string.Format("Index name {0} not permitted. ", indexName).Replace("//","__");
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(error + "Index names starting with dynamic_ or dynamic/ are reserved.");
@@ -154,8 +153,7 @@ namespace Raven.Database.Actions
             {
                 throw new InvalidOperationException(error+ "Index names cannot contains // (double slashes)");
 
-            }         
-            return true;
+            }
         }
        
 
@@ -524,8 +522,7 @@ namespace Raven.Database.Actions
                 IndexDefinitionStorage.RemoveIndex(name);
                 Database.IndexStorage.DeleteIndex(instance.IndexId);
 
-                ConcurrentSet<string> _;
-                WorkContext.ClearErrorsFor(name);
+	            WorkContext.ClearErrorsFor(name);
 
                 // And delete the data in the background
                 StartDeletingIndexDataAsync(instance.IndexId);

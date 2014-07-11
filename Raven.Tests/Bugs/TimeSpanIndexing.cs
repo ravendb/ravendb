@@ -19,6 +19,7 @@ namespace Raven.Tests.Bugs
         {
             store = NewDocumentStore();
             new SimpleIndex().Execute(store);
+			new SimpleTransformer().Execute(store);
             var indexes = store.DatabaseCommands.GetIndexNames(0, int.MaxValue);
             Assert.NotEmpty(indexes);
         }
@@ -34,6 +35,7 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
 
 	            var result = session.Query<Simple, SimpleIndex>()
+									.TransformWith<SimpleTransformer, Simple>()
 	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
 	                                .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
@@ -52,8 +54,9 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
 
 	            var result = session.Query<Simple, SimpleIndex>()
-	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-	                                .FirstOrDefault(x => x.Id == id);
+		            .TransformWith<SimpleTransformer, Simple>()
+		            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+		            .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -70,6 +73,7 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
 
 	            var result = session.Query<Simple, SimpleIndex>()
+									.TransformWith<SimpleTransformer, Simple>()
 	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
 	                                .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
@@ -92,14 +96,21 @@ namespace Raven.Tests.Bugs
                              {
                                  s.Id
                              };
-                TransformResults = (db, results) => from r in results
-                                                    let s = db.Load<Simple>(r.Id)
-                                                    select new
-                                                    {
-                                                        r.Id,
-                                                        s.Value
-                                                    };
             }
         }
+
+		public class SimpleTransformer : AbstractTransformerCreationTask<Simple>
+		{
+			public SimpleTransformer()
+			{
+				TransformResults = results => from r in results
+													let s = LoadDocument<Simple>(r.Id)
+													select new
+													{
+														r.Id,
+														s.Value
+													};
+			}
+		}
     }
 }

@@ -6,7 +6,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.UniqueConstraints
 {
-	internal static class Util
+	public static class Util
 	{
 		public static string EscapeUniqueValue(object value, bool caseInsensitive = false)
 		{

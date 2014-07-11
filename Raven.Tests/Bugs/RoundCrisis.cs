@@ -201,10 +201,5 @@ namespace Raven.Tests.Bugs
 				                    };
 			}
 		}
-
-		public void Dispose()
-		{
-			documentStore.Dispose();
-		}
 	}
 }

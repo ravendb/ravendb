@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs.LiveProjections.Indexes
 	using Raven.Tests.Bugs.LiveProjections.Entities;
 	using Raven.Tests.Bugs.LiveProjections.Views;
 
-	public class ProductSkuListViewModelReport_ByArticleNumberAndName : AbstractIndexCreationTask<ProductSku, ProductSkuListViewModelReport>
+	public class ProductSkuListViewModelReport_ByArticleNumberAndName : AbstractIndexCreationTask<ProductSku>
 	{
 		public ProductSkuListViewModelReport_ByArticleNumberAndName()
 		{
@@ -24,24 +24,31 @@ namespace Raven.Tests.Bugs.LiveProjections.Indexes
 			                  		Name = product.Name
 			                  	};
 
-			TransformResults = (database, results) =>
-			                   from result in results
-			                   let product = database.Load<ProductSku>(result.Id)
-			                   let stock = database.Load<ProductSku>(result.Id)
-			                   select new
-			                   	{
-			                   		result.Id,
-			                   		result.ArticleNumber,
-			                   		result.Name,
-			                   		product.Packing,
-			                   		stock.QuantityInWarehouse
-			                   	};
 
-			Indexes = new Dictionary<Expression<Func<ProductSkuListViewModelReport, object>>, FieldIndexing>()
+			Indexes = new Dictionary<Expression<Func<ProductSku, object>>, FieldIndexing>()
 			    {
 			        { e=>e.ArticleNumber, FieldIndexing.Analyzed},
 			        { e=>e.Name, FieldIndexing.Analyzed}
 			    };
+		}
+	}
+
+	public class ProductSkuListViewModelReport_ByArticleNumberAndNameTransformer : AbstractTransformerCreationTask<ProductSku>
+	{
+		public ProductSkuListViewModelReport_ByArticleNumberAndNameTransformer()
+		{
+			TransformResults = results =>
+							   from result in results
+							   let product = LoadDocument<ProductSku>(result.Id)
+							   let stock = LoadDocument<ProductSku>(result.Id)
+							   select new
+							   {
+								   result.Id,
+								   result.ArticleNumber,
+								   result.Name,
+								   product.Packing,
+								   stock.QuantityInWarehouse
+							   };
 		}
 	}
 }

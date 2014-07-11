@@ -8,9 +8,6 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using Raven.Abstractions.Data;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 
 namespace Raven.Client.Connection
 {
@@ -23,11 +20,7 @@ namespace Raven.Client.Connection
 
         public static Etag GetEtagHeader(this HttpWebResponse response)
         {
-#if NETFX_CORE
-			return EtagHeaderToEtag(response.Headers["ETag"]);
-#else
             return EtagHeaderToEtag(response.GetResponseHeader("ETag"));
-#endif
         }
 
         public static Etag GetEtagHeader(this HttpResponseMessage response)

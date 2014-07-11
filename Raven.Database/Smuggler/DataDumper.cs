@@ -29,9 +29,10 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase database;
 
-		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+		protected override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
 		{
 			EnsuredDatabaseExists = true;
+			return new CompletedTask();
 		}
 
         /// <summary>
@@ -177,7 +178,7 @@ namespace Raven.Database.Smuggler
 	        return database.Documents.Get(key, null);
 	    }
 
-	    protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
+	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
 		{
 			const int dummy = 0;
 			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, take), lastEtag, CancellationToken.None)
@@ -185,7 +186,7 @@ namespace Raven.Database.Smuggler
 				.Cast<RavenJObject>()
 				.GetEnumerator();
 
-			return new AsyncEnumeratorBridge<RavenJObject>(enumerator);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
 		}
 
 		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)

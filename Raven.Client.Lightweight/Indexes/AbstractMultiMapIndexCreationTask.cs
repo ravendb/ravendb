@@ -6,12 +6,7 @@ using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Client.Document;
-#if !NETFX_CORE
 using Raven.Abstractions.MissingFromBCL;
-#else
-using Raven.Client.WinRT.MissingFromWinRT;
-using Raven.Imports.Newtonsoft.Json.Utilities;
-#endif
 using Raven.Client.Linq;
 
 namespace Raven.Client.Indexes
@@ -73,9 +68,6 @@ namespace Raven.Client.Indexes
                 SortOptionsStrings = IndexSortOptionsStrings,
 				Analyzers = Analyzers,
 				Reduce = Reduce,
-#pragma warning disable 612,618
-				TransformResults = TransformResults,
-#pragma warning restore 612,618
 				Stores = Stores,
 				TermVectors = TermVectors,
 				SpatialIndexes = SpatialIndexes,

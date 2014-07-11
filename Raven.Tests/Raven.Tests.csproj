@@ -46,6 +46,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>618, 612</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -237,6 +238,7 @@
     <Compile Include="Bugs\CustomizingIndexQuery.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
@@ -283,7 +285,6 @@
     <Compile Include="Bugs\EmptyAttachments.cs" />
     <Compile Include="Bugs\EqualityWithArrayOfGuids.cs" />
     <Compile Include="Bugs\Everett.cs" />
-    <Compile Include="Bugs\FacetCountTest.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
     <Compile Include="Bugs\HiLoKeyGeneratorConcurrency.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
@@ -438,7 +439,6 @@
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
     <Compile Include="Bugs\Identifiers\LongId.cs" />
-    <Compile Include="Bugs\IndexDefinitionEquality.cs" />
     <Compile Include="Bugs\Image.cs" />
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\Includes.cs" />
@@ -661,14 +661,10 @@
     <Compile Include="Bugs\TransformResults\QuestionWithVoteTotalIndex.cs" />
     <Compile Include="Bugs\TransformResults\User.cs" />
     <Compile Include="Bugs\TransformResults\QuestionView.cs" />
-    <Compile Include="Bugs\TransformResults\Thor.cs" />
-    <Compile Include="Bugs\TransformResults\ThorIndex.cs" />
     <Compile Include="Bugs\TransformResults\Votes_ByAnswerEntity.cs" />
-    <Compile Include="Bugs\TransformResults\WithGuidId.cs" />
     <Compile Include="Bugs\TransitiveNull.cs" />
     <Compile Include="Bugs\TranslatingLinqQueriesToIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
-    <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\TypeNameHandlingTest.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UserGuid.cs" />
@@ -995,9 +991,9 @@
   <ItemGroup>
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
@@ -1013,4 +1009,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

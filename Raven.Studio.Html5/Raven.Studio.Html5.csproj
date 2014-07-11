@@ -63,6 +63,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getSyncStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
+    <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
@@ -501,6 +502,7 @@
     <Content Include="Content\images\ios-startup-image-portrait.png" />
     <Content Include="Content\images\logo.png" />
     <Content Include="Content\images\raven.png" />
+    <Content Include="Content\images\some-checked.png" />
     <Content Include="Content\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="Content\images\ui-bg_flat_75_ffffff_40x100.png" />
     <Content Include="Content\images\ui-bg_glass_55_fbf9ee_1x400.png" />
@@ -627,6 +629,8 @@
     <Content Include="Scripts\ace\model\editor.js" />
     <Content Include="Scripts\ace\mode\behaviour.js" />
     <Content Include="Scripts\ace\mode\behaviour\cstyle.js" />
+    <Content Include="Scripts\ace\mode\csharp.js" />
+    <Content Include="Scripts\ace\mode\csharp_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\doc_comment_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\folding\asciidoc.js" />
     <Content Include="Scripts\ace\mode\folding\c9search.js" />
@@ -906,11 +910,12 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

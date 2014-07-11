@@ -13,7 +13,7 @@ namespace Raven.Tests.Conflicts
 		[Fact]
 		public void CanResolveEmpty()
 		{
-			var conflictsResolver = new ConflictsResolver(new List<RavenJObject> {new RavenJObject(), new RavenJObject()});
+			var conflictsResolver = new ConflictsResolver(new List<RavenJObject> { new RavenJObject(), new RavenJObject() });
 			Assert.Equal("{}", conflictsResolver.Resolve().Document);
 		}
 
@@ -21,60 +21,58 @@ namespace Raven.Tests.Conflicts
 		public void CanResolveIdentical()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                new RavenJObject
-                {
-                    {"Name", "Oren"}
-                },
-                new RavenJObject
-                {
-                    {"Name","Oren"}
-                }
-            });
-			Assert.Equal(new RavenJObject
-			{
-				{"Name","Oren"}
-			}.ToString(Formatting.Indented), conflictsResolver.Resolve().Document);
+								new List<RavenJObject> {
+								new RavenJObject
+								{
+										{"Name", "Oren"}
+								},
+								new RavenJObject
+								{
+										{"Name","Oren"}
+								}
+						});
+			Assert.Equal(@"{
+	""Name"": ""Oren""
+}", conflictsResolver.Resolve().Document);
 		}
 
 		[Fact]
 		public void CanResolveTwoEmptyArrays()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Name", new RavenJArray()}
-                    }, 
-                    new RavenJObject
-                    {
-                        {"Name",new RavenJArray()}
-                    }
-                });
-			Assert.Equal(new RavenJObject
-			{
-				{"Name",new RavenJArray()}
-			}.ToString(Formatting.Indented), conflictsResolver.Resolve().Document);
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+												{"Name", new RavenJArray()}
+										}, 
+										new RavenJObject
+										{
+												{"Name",new RavenJArray()}
+										}
+								});
+			Assert.Equal(@"{
+	""Name"": []
+}", conflictsResolver.Resolve().Document);
 		}
 
 		[Fact]
 		public void CanResolveOneEmptyArraysAndOneWithValue()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> { 
-                    new RavenJObject
-                    {
-                        {"Name", new RavenJArray()}
-                    }, 
-                    new RavenJObject
-                    {
-                        {"Name",new RavenJArray{1}}
-                    }
-                });
+								new List<RavenJObject> { 
+										new RavenJObject
+										{
+												{"Name", new RavenJArray()}
+										}, 
+										new RavenJObject
+										{
+												{"Name",new RavenJArray{1}}
+										}
+								});
 			Assert.Equal(@"{
-  ""Name"": /*>>>> auto merged array start*/ [
-    1
-  ]/*<<<< auto merged array end*/
+	""Name"": /*>>>> auto merged array start*/ [
+		1
+	]/*<<<< auto merged array end*/
 }", conflictsResolver.Resolve().Document);
 		}
 
@@ -82,42 +80,41 @@ namespace Raven.Tests.Conflicts
 		public void CanMergeAdditionalProperties()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> { 
-                    new RavenJObject
-                    {
-                        {"Name", "Oren"}
-                    },
-                    new RavenJObject
-                    {
-                        {"Age",2}
-                    }
-                });
-			Assert.Equal(new RavenJObject
-			{
-				{"Name","Oren"},
-				{"Age", 2}
-			}.ToString(Formatting.Indented), conflictsResolver.Resolve().Document);
+								new List<RavenJObject> { 
+										new RavenJObject
+										{
+												{"Name", "Oren"}
+										},
+										new RavenJObject
+										{
+												{"Age",2}
+										}
+								});
+			Assert.Equal(@"{
+	""Name"": ""Oren"",
+	""Age"": 2
+}", conflictsResolver.Resolve().Document);
 		}
 
 		[Fact]
 		public void CanDetectAndSuggestOptionsForConflict_SimpleProp()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Name", "Oren"}
-                    },
-                    new RavenJObject
-                    {
-                        {"Name", "Ayende"}
-                    }
-                });
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+												{"Name", "Oren"}
+										},
+										new RavenJObject
+										{
+												{"Name", "Ayende"}
+										}
+								});
 			Assert.Equal(@"{
-  ""Name"": /*>>>> conflict start*/ [
-    ""Oren"",
-    ""Ayende""
-  ]/*<<<< conflict end*/
+	""Name"": /*>>>> conflict start*/ [
+		""Oren"",
+		""Ayende""
+	]/*<<<< conflict end*/
 }", conflictsResolver.Resolve().Document);
 		}
 
@@ -125,27 +122,27 @@ namespace Raven.Tests.Conflicts
 		public void CanMergeProperties_Nested()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Name", new RavenJObject
-                        {
-                            {"First", "Oren"}
-                        }}
-                    },
-                    new RavenJObject
-                    {
-                            {"Name", new RavenJObject
-                            {
-                                {"Last", "Eini"}	
-                            }}
-                    }
-                });
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+												{"Name", new RavenJObject
+												{
+														{"First", "Oren"}
+												}}
+										},
+										new RavenJObject
+										{
+														{"Name", new RavenJObject
+														{
+																{"Last", "Eini"}	
+														}}
+										}
+								});
 			Assert.Equal(@"{
-  ""Name"": {
-    ""First"": ""Oren"",
-    ""Last"": ""Eini""
-  }
+	""Name"": {
+			""First"": ""Oren"",
+			""Last"": ""Eini""
+		}
 }", conflictsResolver.Resolve().Document);
 		}
 
@@ -153,26 +150,26 @@ namespace Raven.Tests.Conflicts
 		public void CanDetectConflict_DifferentValues()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Name", new RavenJObject
-                        {
-                            {"First", "Oren"}
-                        }}
-                    },
-                    new RavenJObject
-                    {
-                            {"Name",  "Eini"}
-                    }
-                });
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+												{"Name", new RavenJObject
+												{
+														{"First", "Oren"}
+												}}
+										},
+										new RavenJObject
+										{
+														{"Name",	"Eini"}
+										}
+								});
 			Assert.Equal(@"{
-  ""Name"": /*>>>> conflict start*/ [
-    {
-      ""First"": ""Oren""
-    },
-    ""Eini""
-  ]/*<<<< conflict end*/
+	""Name"": /*>>>> conflict start*/ [
+		{
+			""First"": ""Oren""
+		},
+		""Eini""
+	]/*<<<< conflict end*/
 }", conflictsResolver.Resolve().Document);
 		}
 
@@ -180,43 +177,48 @@ namespace Raven.Tests.Conflicts
 		public void CanDetectAndSuggestOptionsForConflict_NestedProp()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Name", "Oren"}
-                    },
-                    new RavenJObject
-                    {
-                        {"Name", "Ayende"}
-                    }
-                });
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+												{"Name", "Oren"}
+										},
+										new RavenJObject
+										{
+												{"Name", "Ayende"}
+										}
+								});
 			Assert.Equal(@"{
-  ""Name"": /*>>>> conflict start*/ [
-    ""Oren"",
-    ""Ayende""
-  ]/*<<<< conflict end*/
+	""Name"": /*>>>> conflict start*/ [
+		""Oren"",
+		""Ayende""
+	]/*<<<< conflict end*/
 }", conflictsResolver.Resolve().Document);
 		}
 
 		[Fact]
 		public void CanMergeArrays()
 		{
-			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Nicks", new RavenJArray{"Oren"}}
-                    },
-                    new RavenJObject
-                    {
-                        {"Nicks", new RavenJArray{"Ayende"}}
-                    }
-                });
+			var docs = new List<RavenJObject>
+			{
+				new RavenJObject
+				{
+					{"Nicks", new RavenJArray {"Oren"}}
+				},
+				new RavenJObject
+				{
+					{"Nicks", new RavenJArray {"Ayende"}}
+				}
+			};
+			foreach (var doc in docs)
+			{
+				doc.EnsureCannotBeChangeAndEnableSnapshotting();
+			}
+			var conflictsResolver = new ConflictsResolver(docs);
 			Assert.Equal(@"{
-  ""Nicks"": /*>>>> auto merged array start*/ [
-    ""Oren"",
-    ""Ayende""
-  ]/*<<<< auto merged array end*/
+	""Nicks"": /*>>>> auto merged array start*/ [
+		""Oren"",
+		""Ayende""
+	]/*<<<< auto merged array end*/
 }", conflictsResolver.Resolve().Document);
 		}
 
@@ -224,23 +226,23 @@ namespace Raven.Tests.Conflicts
 		public void CanMergeArrays_SameStart()
 		{
 			var conflictsResolver = new ConflictsResolver(
-                new List<RavenJObject> {
-                    new RavenJObject
-                    {
-                        {"Comments", new RavenJArray{1,2,4}}
-                    },
-                    new RavenJObject
-                    {
-                        {"Comments", new RavenJArray{1,2,5}}
-                    }
-                });
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+												{"Comments", new RavenJArray{1,2,4}}
+										},
+										new RavenJObject
+										{
+												{"Comments", new RavenJArray{1,2,5}}
+										}
+								});
 			Assert.Equal(@"{
-  ""Comments"": /*>>>> auto merged array start*/ [
-    1,
-    2,
-    4,
-    5
-  ]/*<<<< auto merged array end*/
+	""Comments"": /*>>>> auto merged array start*/ [
+		1,
+		2,
+		4,
+		5
+	]/*<<<< auto merged array end*/
 }", conflictsResolver.Resolve().Document);
 		}
 	}

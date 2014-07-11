@@ -30,11 +30,7 @@ namespace Raven.Client.Counters
 		//private int readStripingBase;
 		
         private HttpJsonRequestFactory JsonRequestFactory =
-#if !NETFX_CORE
               new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-#else
-			  new HttpJsonRequestFactory();
-#endif
 
         private const int DefaultNumberOfCachedRequests = 2048;
 

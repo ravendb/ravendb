@@ -22,7 +22,6 @@ namespace Raven.SlowTests.Issues
 		protected readonly string path;
 		protected readonly DocumentStore documentStore;
 		private readonly RavenDbServer ravenDbServer;
-		private bool closed = false;
 
 		public RavenDB_1594()
 		{

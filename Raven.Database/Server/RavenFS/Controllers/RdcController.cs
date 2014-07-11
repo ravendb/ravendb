@@ -19,7 +19,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public class RdcController : RavenFsApiController
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/rdc/Signatures/{*id}")]

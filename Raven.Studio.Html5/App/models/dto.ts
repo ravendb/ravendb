@@ -459,6 +459,8 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+    ForceSqlServerQueryRecompile?: boolean;
+    PerformTableQuatation?:boolean;
 }
 
 interface facetDto {
@@ -875,4 +877,18 @@ interface visualizerExportDto {
     docKeys: string[];
     reduceKeys: string[];
     tree: visualizerDataObjectNodeDto;
+}
+
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface operationStatusDto {
+    Completed: boolean;
+    State: documentStateDto[];
+}
+
+interface documentStateDto {
+    Document: string;
+    Deleted: boolean;
 }

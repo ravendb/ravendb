@@ -16,10 +16,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
-
 namespace Raven.Client.Shard
 {
 	/// <summary>
@@ -29,16 +25,12 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
-#if !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
 		/// <exception cref="NotSupportedException"></exception>
 		public override NameValueCollection SharedOperationsHeaders
-#else
-		public IDictionary<string,string> SharedOperationsHeaders 
-#endif
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
 			protected set { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
@@ -217,8 +209,6 @@ namespace Raven.Client.Shard
 			});
 		}
 
-#if !NETFX_CORE
-
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -267,7 +257,6 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 		}
-#endif
 
 		/// <summary>
 		/// Gets or sets the URL.
@@ -288,12 +277,10 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
-#if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
             return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
 		}
-#endif
 
 		/// <summary>
 		/// Initializes this instance.
@@ -325,7 +312,6 @@ namespace Raven.Client.Shard
 			return this;
 		}
 
-#if !NETFX_CORE
 		public IDatabaseCommands DatabaseCommandsFor(string shardId)
 		{
 			IDocumentStore store;
@@ -334,7 +320,6 @@ namespace Raven.Client.Shard
 
 			return store.DatabaseCommands;
 		}
-#endif
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommandsFor(string shardId)
 		{
@@ -345,7 +330,6 @@ namespace Raven.Client.Shard
 			return store.AsyncDatabaseCommands;
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Executes the transformer creation
 		/// </summary>
@@ -375,6 +359,5 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
-#endif
 	}
 }

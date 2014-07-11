@@ -15,12 +15,6 @@ namespace Raven.Tests.MailingList
 
 		private class AmazingIndex2 : AbstractIndexCreationTask<User>
 		{
-			public class ModifiedDocuments
-			{
-				public string InternalId { get; set; }
-				public DateTime LastModified { get; set; }
-			}
-
 			public AmazingIndex2()
 			{
 				Map = docs =>
@@ -29,15 +23,27 @@ namespace Raven.Tests.MailingList
 					  {
 						  LastModified = MetadataFor(doc)["Last-Modified"],
 					  };
-				TransformResults = (database, results) => from doc in results
+			}
+		}
+
+		private class AmazingTransformer2 : AbstractTransformerCreationTask<User>
+		{
+			public class ModifiedDocuments
+			{
+				public string InternalId { get; set; }
+				public DateTime LastModified { get; set; }
+			}
+
+			public AmazingTransformer2()
+			{
+				TransformResults = results => from doc in results
 														  select new
 														  {
-															  InternalId = doc.InternalId,
+															  InternalId = MetadataFor(doc)["@id"],
 															  LastModified = MetadataFor(doc)["Last-Modified"],
 														  };
 			}
 		}
-
 
 		private class User
 		{
@@ -62,6 +68,7 @@ namespace Raven.Tests.MailingList
 				var user1 = new User { Name = "Joe Schmoe" };
 				var user2 = new User { Name = "Jack Spratt" };
 				new AmazingIndex2().Execute(DocStore);
+				new AmazingTransformer2().Execute(DocStore);
 				using (var session = DocStore.OpenSession())
 				{
 					session.Store(user1);
@@ -75,11 +82,11 @@ namespace Raven.Tests.MailingList
 					var metadata = session.Advanced.GetMetadataFor(user3);
 					var lastModified = metadata.Value<DateTime>("Last-Modified");
 
-					var modifiedDocuments = (from u in session.Query<AmazingIndex2.ModifiedDocuments, AmazingIndex2>()
+					var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
+												.TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()
 												 .Customize(x=>x.WaitForNonStaleResults())
 											 orderby u.InternalId
-											 select u)
-											 .As<AmazingIndex2.ModifiedDocuments>().ToList();
+											 select u).ToList();
 
 					Assert.Equal(2, modifiedDocuments.Count);
 					Assert.Equal(user1.InternalId, modifiedDocuments[0].InternalId);

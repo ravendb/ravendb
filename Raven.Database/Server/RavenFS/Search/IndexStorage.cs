@@ -175,8 +175,8 @@ namespace Raven.Database.Server.RavenFS.Search
 			{
 				currentIndexSearcherHolder.SetIndexSearcher(null);
 			}
-			writer.Close();
-			directory.Close();
+			writer.Dispose();
+			directory.Dispose();
 		}
 
 		public void Delete(string key)
@@ -228,7 +228,7 @@ namespace Raven.Database.Server.RavenFS.Search
 				}
 				finally
 				{
-					termEnum.Close();
+					termEnum.Dispose();
 				}
 			}
 		}

@@ -264,11 +264,8 @@ namespace Raven.Abstractions.Data
 		public Etag HashWith(IEnumerable<byte> bytes)
 		{
 			var etagBytes = ToBytes().Concat(bytes).ToArray();
-#if NETFX_CORE
-			return Parse(MD5Core.GetHash(etagBytes));
-#else
+
 			return Parse(Encryptor.Current.Hash.Compute16(etagBytes));
-#endif
 		}
 
 		public static Etag Max(Etag first, Etag second)

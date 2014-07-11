@@ -3,20 +3,23 @@ import alertType = require("common/alertType");
 import database = require("models/database");
 
 class deleteCollectionCommand extends commandBase {
+    private displayCollectionName: string;
 
     constructor(private collectionName: string, private db: database) {
         super();
+
+        this.displayCollectionName = (collectionName == "*") ? "All Documents" : collectionName;
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Deleting " + this.collectionName + " collection...");
+        this.reportInfo("Deleting " + this.displayCollectionName);
 
         var url = "/bulk_docs/Raven/DocumentsByEntityName";
         var urlParams = "?query=Tag%3A" + encodeURIComponent(this.collectionName) + "&allowStale=true";
         var deleteTask = this.del(url + urlParams, null, this.db);
         // deletion is made asynchronically so we infom user about operation start - not about actual completion. 
-        deleteTask.done(() => this.reportSuccess("Scheduled deletion of " + this.collectionName));
-        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete collection", response.responseText, response.statusText));
+        deleteTask.done(() => this.reportSuccess("Scheduled deletion of " + this.displayCollectionName));
+        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete " + this.displayCollectionName, response.responseText, response.statusText));
         return deleteTask;
     }
 }

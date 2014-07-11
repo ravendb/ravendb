@@ -121,20 +121,6 @@ namespace Raven.Client.Connection
 								});
 		}
 
-
-#if NETFX_CORE
-		private Task<int> ReadAsync()
-		{
-			try
-			{
-				return stream.ReadAsync(buffer, posInBuffer, buffer.Length - posInBuffer);
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask<int>(e);
-			}
-		}
-#else
 		private async Task<int> ReadAsync()
 		{
 		    return await Task.Factory.FromAsync<int>(
@@ -142,7 +128,6 @@ namespace Raven.Client.Connection
 		        stream.EndRead,
                 null).ConfigureAwait(false);
 		}
-#endif
 
 		public IDisposable Subscribe(IObserver<string> observer)
 		{

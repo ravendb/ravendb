@@ -8,9 +8,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
 {
-#if !NETFX_CORE
     [Serializable]
-#endif
     public class ErrorResponseException : Exception
     {
 	    public HttpResponseMessage Response { get; private set; }
@@ -80,13 +78,11 @@ namespace Raven.Abstractions.Connection
 	        }
 	    }
 
-#if !NETFX_CORE
         protected ErrorResponseException(
             System.Runtime.Serialization.SerializationInfo info,
             System.Runtime.Serialization.StreamingContext context)
             : base(info, context)
         {
         }
-#endif
     }
 }

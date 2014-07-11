@@ -15,14 +15,7 @@ namespace Raven.Abstractions.Spatial
 
 		static WktSanitizer()
 		{
-			RegexOptions options;
-
-#if NETFX_CORE
-			options = RegexOptions.IgnorePatternWhitespace;
-#else
-			options = RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled;
-#endif
-
+			var options = RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled;
 			RectangleRegex = new Regex(@"^ \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* $", options);
 			DimensionFlagRegex = new Regex(@"\s+ (?:z|m|zm|Z|M|ZM) \s* \(", options);
 			ReducerRegex = new Regex(@"([+-]?(?:\d+\.?\d*|\d*\.?\d+) \s+ [+-]?(?:\d+\.?\d*|\d*\.?\d+)) (?:\s+[+-]?(?:\d+\.?\d*|\d*\.?\d+))+", options);

@@ -141,11 +141,7 @@ namespace Raven.Client.FileSystem
 
 		public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
 		{
-#if NETFX_CORE
-			var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(), collectionSeparator.ToString());
-#else
 			var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(CultureInfo.InvariantCulture), collectionSeparator.ToString(CultureInfo.InvariantCulture));
-#endif
 			propertyPathExpressionVisitor.Visit(expression);
 
 			var builder = new StringBuilder();

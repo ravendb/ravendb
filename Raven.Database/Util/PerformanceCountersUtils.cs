@@ -77,7 +77,7 @@ namespace Raven.Database.Util
 					return counter.NextSample().RawValue;
 				}
 			}
-			catch (Exception e)
+			catch (Exception)
 			{
 				//Don't log anything here, it's up to the calling code to decide what to do
 				return null;

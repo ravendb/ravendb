@@ -1,6 +1,4 @@
-﻿#if !NETFX_CORE
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.IsolatedStorage;
@@ -69,4 +67,3 @@ namespace Raven.Client.Document.DTC
 		}
 	}
 }
-#endif

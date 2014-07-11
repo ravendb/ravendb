@@ -167,11 +167,11 @@
                     <label>Matching Documents</label>
                 </div>
                 <div>
-                    <div id="matchingDocumentsGrid" style="width: 100%; height: 250px;" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
+                    <div id="matchingDocumentsGrid" style="width: 100%; height: 250px;" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid', maxHeight: '210px'  }"></div>
                 </div>
             </div>
         </div>
-        <div class="form-group" data-bind="with: $root">
+        <div class="form-group patch-preview-flag" data-bind="with: $root">
             <div class="col-md-6">
                 <div>
                     <label>Before Patch</label>

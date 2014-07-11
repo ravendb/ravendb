@@ -3,11 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if NETFX_CORE
-using Raven.Client.WinRT.MissingFromWinRT;
-#else
+
 using System.ComponentModel;
-#endif
 
 namespace Raven.Abstractions.Replication
 {
