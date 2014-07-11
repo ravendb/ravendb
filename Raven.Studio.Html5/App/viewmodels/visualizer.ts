@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import generalUtils = require("common/generalUtils");
 import svgDownloader = require("common/svgDownloader");
+import jsonDownloader = require("common/jsonDownloader");
 
 import chunkFetcher = require("common/chunkFetcher");
 
@@ -14,6 +15,7 @@ import router = require("plugins/router");
 import database = require("models/database");
 
 import visualizerKeys = require("viewmodels/visualizerKeys");
+import visualizerImport = require("viewmodels/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import queryIndexDebugDocsCommand = require("commands/queryIndexDebugDocsCommand");
@@ -30,6 +32,7 @@ class visualizer extends viewModelBase {
     indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
     indexName = ko.observable("Index Name");
 
+    onlineMode = ko.observable(true);
     showLoadingIndicator = ko.observable(false);
 
     docKey = ko.observable("");
@@ -245,6 +248,8 @@ class visualizer extends viewModelBase {
     }
 
     clearChart() {
+        this.indexName("Index Name");
+        this.onlineMode(true);
         this.resetChart();
         this.updateGraph();
     }
@@ -560,14 +565,21 @@ class visualizer extends viewModelBase {
         var nodes = this.selectedDocs();
         var queue: visualizerDataObjectNodeDto[] = [];
         queue.pushAll(nodes);
+
+        this.treeTranverse(queue, (node) => result.add(visualizer.makeNodeId(node)));
+
+        return result;
+    }
+
+    treeTranverse(queue: visualizerDataObjectNodeDto[], callback: (node:visualizerDataObjectNodeDto) => void, refPropName:string = "connections") {
         var everQueued = d3.set([]);
 
         while (queue.length > 0) {
             var node = queue.shift();
-            result.add(visualizer.makeNodeId(node));
+            callback(node);
 
-            if (node.connections) {
-                node.connections.forEach(c => {
+            if (node[refPropName]) {
+                node[refPropName].forEach(c => {
                     var nodeId = visualizer.makeNodeId(c);
                     if (!everQueued.has(nodeId)) {
                         queue.push(c);
@@ -576,8 +588,15 @@ class visualizer extends viewModelBase {
                 });
             }
         }
+    }
 
-        return result;
+    exportTree(root: visualizerDataObjectNodeDto): visualizerDataObjectNodeDto {
+        return {
+            level: root.level,
+            name: root.name,
+            payload: root.payload,
+            children: root.children?$.map(root.children, (v, i) => this.exportTree(v)):undefined
+        }
     }
 
     computeLinks(nodes: D3.Set) {
@@ -680,6 +699,39 @@ class visualizer extends viewModelBase {
     saveAsPng() {
         svgDownloader.downloadPng(d3.select('#visualizer').node());
     }
+
+    saveAsJson() {
+        var model: visualizerExportDto = {
+            indexName: this.indexName(),
+            docKeys: this.docKeys(),
+            reduceKeys: this.reduceKeys(),
+            tree: this.exportTree(this.tree)
+        };
+
+        jsonDownloader.downloadAsJson(model, "visualizer.json");
+    }
+
+    chooseImportFile() {
+        var dialog = new visualizerImport(this);
+        dialog.task().
+            done((importedData: visualizerExportDto) => {
+                this.clearChart();
+                this.onlineMode(false);
+                this.docKeys(importedData.docKeys);
+                this.reduceKeys(importedData.reduceKeys);
+
+                importedData.reduceKeys.forEach(reduceKey => {
+                    this.colorMap[reduceKey] = this.colors(Object.keys(this.colorMap).length);
+                });
+
+                this.tree = importedData.tree;
+                this.indexName(importedData.indexName);
+                this.updateGraph();
+            });
+
+        app.showDialog(dialog);
+    }
+    
 
 }
 

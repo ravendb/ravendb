@@ -869,3 +869,10 @@ interface mergeResult {
   Document: string;
   Metadata: string;
 }
+
+interface visualizerExportDto {
+    indexName: string;
+    docKeys: string[];
+    reduceKeys: string[];
+    tree: visualizerDataObjectNodeDto;
+}
