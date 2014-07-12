@@ -1437,9 +1437,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		public IDocumentQuery<T> GetLuceneQueryFor(Expression expression)
 		{
 			var q = queryGenerator.Query<T>(indexName, isMapReduce);
+			q.SetQueryInputs(queryInputs);
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
 		    luceneQuery.SetResultTransformer(resultsTransformer);
+			
 			try
 			{
 				VisitExpression(expression);
@@ -1452,7 +1454,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				throw new NotSupportedException("Could not understand expression: " + expression, e);
 			}
-
+			
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization) luceneQuery);
 
