@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
+using System.Data.Odbc;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
@@ -16,9 +18,17 @@ using System.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	public class RelationalDatabaseWriter : IDisposable
-	{
-		private readonly DocumentDatabase database;
+    public class RelationalDatabaseWriter : IDisposable
+    {
+        private static string[] SqlServerFactoryNames =
+        {
+            "System.Data.SqlClient",
+            "System.Data.SqlServerCe.4.0",
+            "MySql.Data.MySqlClient",
+            "System.Data.SqlServerCe.3.5"
+        };
+	
+	    private readonly DocumentDatabase database;
 		private readonly SqlReplicationConfig cfg;
 		private readonly DbProviderFactory providerFactory;
 		private readonly SqlReplicationStatistics replicationStatistics;
@@ -26,6 +36,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbConnection connection;
 		private readonly DbTransaction tx;
 		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
+        private bool IsSqlServerFactoryType = false;
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -46,6 +57,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			Debug.Assert(commandBuilder != null);
 
 			connection.ConnectionString = cfg.ConnectionString;
+            
+		    if (SqlServerFactoryNames.Contains(cfg.FactoryName))
+		    {
+                IsSqlServerFactoryType = true;
+		    }
 
 			try
 			{
@@ -67,7 +83,12 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			tx = connection.BeginTransaction();
 
-			stringParserList = new List<Func<DbParameter, string, bool>> { 
+            stringParserList = GenerateStringParsers();
+		}
+
+	    public List<Func<DbParameter, string, bool>> GenerateStringParsers()
+	    {
+            return new List<Func<DbParameter, string, bool>> { 
 				(colParam, value) => {
 					if( char.IsDigit( value[ 0 ] ) ) {
 							DateTime dateTime;
@@ -106,7 +127,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					return false;
 				}
 			};
-		}
+	    }
 
 		public bool Execute(ConversionScriptResult scriptResult)
 		{
@@ -149,7 +170,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
 					var sb = new StringBuilder("INSERT INTO ")
-						.Append(commandBuilder.QuoteIdentifier(tableName))
+                        .Append(GetTableNameString(tableName))
 						.Append(" (")
 						.Append(commandBuilder.QuoteIdentifier(pkName))
 						.Append(", ");
@@ -160,8 +181,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
 					}
 					sb.Length = sb.Length - 2;
-
+                    
 					var pkParam = cmd.CreateParameter();
+                    
 					pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, pkName);
 					pkParam.Value = itemToReplicate.DocumentId;
 					cmd.Parameters.Add(pkParam);
@@ -182,10 +204,16 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					sb.Length = sb.Length - 2;
 					sb.Append(")");
+
+                    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                    {
+                        sb.Append(" OPTION(RECOMPILE)");
+                    }
+
 					cmd.CommandText = sb.ToString();
 					try
 					{
-                        ExecuteCommand(cmd);
+                        cmd.ExecuteNonQuery(); ;
 					}
 					catch (Exception e)
 					{
@@ -199,7 +227,9 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
+
+
+	    public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
 		{
 			const int maxParams = 1000;
 			using (var cmd = connection.CreateCommand())
@@ -210,10 +240,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					cmd.Parameters.Clear();
 					var sb = new StringBuilder("DELETE FROM ")
-						.Append(commandBuilder.QuoteIdentifier(tableName))
-						.Append(" WHERE ")
-						.Append(commandBuilder.QuoteIdentifier(pkName))
-						.Append(" IN (");
+                        .Append(GetTableNameString(tableName))
+				        .Append(" WHERE ")
+					    .Append(commandBuilder.QuoteIdentifier(pkName))
+					    .Append(" IN (");
 
 					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
@@ -235,11 +265,15 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					sb.Append(")");
 
+				    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+				    {
+                        sb.Append(" OPTION(RECOMPILE)");
+				    }
 					cmd.CommandText = sb.ToString();
 
 					try
 					{
-						ExecuteCommand(cmd);
+                        cmd.ExecuteNonQuery(); 
 					}
 					catch (Exception e)
 					{
@@ -253,12 +287,19 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-	    protected virtual void ExecuteCommand(DbCommand cmd)
-	    {
-	        cmd.ExecuteNonQuery();
-	    }
+        private string GetTableNameString(string tableName)
+        {
+            if (cfg.PerformTableQuatation)
+            {
+                return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
+            }
+            else
+            {
+                return tableName;
+            }
+        }
 
-	    public string SanitizeSqlValue(string sqlValue)
+        public static string SanitizeSqlValue(string sqlValue)
 		{
 			return sqlValue.Replace("'", "''");
 		}
@@ -289,7 +330,7 @@ namespace Raven.Database.Bundles.SqlReplication
 																		 new[] { typeof(string) }, null));
 
 
-		private static void SetParamValue(DbParameter colParam, RavenJToken val, List<Func<DbParameter, String, Boolean>> stringParsers)
+		public static void SetParamValue(DbParameter colParam, RavenJToken val, List<Func<DbParameter, String, Boolean>> stringParsers)
 		{
 			if (val == null)
 				colParam.Value = DBNull.Value;
@@ -298,12 +339,35 @@ namespace Raven.Database.Bundles.SqlReplication
 				switch (val.Type)
 				{
 					case JTokenType.None:
-					case JTokenType.Object:
 					case JTokenType.Uri:
 					case JTokenType.Raw:
 					case JTokenType.Array:
 						colParam.Value = val.Value<string>();
 						return;
+                    case JTokenType.Object:
+                        var objectValue = val as RavenJObject;
+                        if (objectValue != null && objectValue.Keys.Count >= 2 && objectValue.ContainsKey("Type")  && objectValue.ContainsKey("Value"))
+                        {
+                            var dbType = objectValue["Type"].Value<string>();
+                            var fieldValue = objectValue["Value"].Value<string>();
+                            
+                            colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType,false);
+                            
+                            colParam.Value = fieldValue;
+
+                            if (objectValue.ContainsKey("Size"))
+                            {
+                                var size = objectValue["Size"].Value<int>();
+                                colParam.Size = size;
+                            }
+                            return;
+                        }
+                        else
+                        {
+                            colParam.Value = val.Value<string>();
+                            return;
+                        }
+
 					case JTokenType.String:
 						var value = val.Value<string>();
 						if( value.Length > 0 && stringParsers != null ) {

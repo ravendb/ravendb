@@ -285,8 +285,6 @@ namespace Raven.Database.Bundles.SqlReplication
 								Name = cfg.Name,
 								LastDocEtag = currentLatestEtag ?? Etag.Empty
 							});
-
-						    SqlReplicationStatistics removedStats;
 						}
 						else
 						{
@@ -522,6 +520,16 @@ namespace Raven.Database.Bundles.SqlReplication
 				lastEtag = lastEtagHolder.LastDocEtag;
 			return lastEtag;
 		}
+
+        public IEnumerable<string> SimulateSqlReplicationSQLQueries(string strDocumentId, string replicationName)
+	    {
+            var replicationConfig = replicationConfigs.First(x => x.Name == replicationName);
+            var stats = new SqlReplicationStatistics(replicationName);
+            var docs = new List<JsonDocument>() { Database.Documents.Get(strDocumentId, null) };
+            var scriptResult = ApplyConversionScript(replicationConfig, docs);
+            var writer = new RelationalDatabaseWriterSimulator(Database, replicationConfig, stats);
+            return writer.SimulateExecuteCommandText(scriptResult);
+	    }
 
 		private List<SqlReplicationConfig> GetConfiguredReplicationDestinations()
 		{

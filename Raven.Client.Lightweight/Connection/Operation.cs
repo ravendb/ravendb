@@ -47,12 +47,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
-#if !NETFX_CORE
 		public RavenJToken WaitForCompletion()
 		{
 			return WaitForCompletionAsync().Result;
 		}
-#endif
-
 	}
 }

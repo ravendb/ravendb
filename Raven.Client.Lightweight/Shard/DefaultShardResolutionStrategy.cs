@@ -74,9 +74,7 @@ namespace Raven.Client.Shard
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
 
 			regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern,
-#if !NETFX_CORE
 				RegexOptions.Compiled |
-#endif			
 				RegexOptions.IgnorePatternWhitespace);
 
 			var compiled = shardingProperty.Compile();

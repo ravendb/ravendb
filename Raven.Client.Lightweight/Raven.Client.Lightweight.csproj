@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Client</RootNamespace>
     <AssemblyName>Raven.Client.Lightweight</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -39,9 +39,10 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -69,17 +70,14 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Web.Http, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="System.Web.Http">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.0.0\lib\net45\System.Web.Http.dll</HintPath>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.2\lib\net45\System.Web.Http.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
-      <Link>Extensions\ThreadSleep.cs</Link>
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
@@ -123,7 +121,6 @@
     <Compile Include="FileSystem\Connection\IFilesReplicationInformer.cs" />
     <Compile Include="FileSystem\Extensions\FilesSynchronizationExtensions.cs" />
     <Compile Include="FileSystem\Extensions\FilesTenancyExtensions.cs" />
-    <Compile Include="FileSystem\Impl\DeleteDirectoryOperation.cs" />
     <Compile Include="FileSystem\Impl\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Impl\IFilesOperation.cs" />
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
@@ -141,7 +138,6 @@
     <Compile Include="FileSystem\Listeners\IFilesConflictListener.cs" />
     <Compile Include="FileSystem\Listeners\IFilesDeleteListener.cs" />
     <Compile Include="FileSystem\IFilesStore.cs" />
-    <Compile Include="FileSystem\Listeners\IFilesWriteListener.cs" />
     <Compile Include="FileSystem\Listeners\IMetadataChangeListener.cs" />
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
@@ -355,10 +351,11 @@
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="AfterBuild">
   </Target>
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

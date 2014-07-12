@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,7 +34,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount);
 	    protected abstract JsonDocument GetDocument(string key);
-		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit);
+		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take);
 		protected abstract Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag);
         protected abstract Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start);
 
@@ -314,7 +313,7 @@ namespace Raven.Abstractions.Smuggler
                     var maxRecords = options.Limit - totalCount;
                     if (maxRecords > 0 && reachedMaxEtag == false)
 			        {
-                        using (var documents = await GetDocuments(src, lastEtag, maxRecords))
+                        using (var documents = await GetDocuments(src, lastEtag, Math.Min(options.BatchSize,maxRecords)))
 			            {
 			                var watch = Stopwatch.StartNew();
 
@@ -882,4 +881,3 @@ namespace Raven.Abstractions.Smuggler
         public string FilePath { get; set; }
     }
 }
-#endif

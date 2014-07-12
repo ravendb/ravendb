@@ -148,9 +148,9 @@ namespace Raven.Tests.Issues
 					                                   {
 						                                   Name = "test",
 						                                   Enabled = true,
-						                                   Databases = new List<DatabaseAccess>
+						                                   Databases = new List<ResourceAccess>
 						                                   {
-							                                   new DatabaseAccess {TenantId = "<system>"},
+							                                   new ResourceAccess {TenantId = "<system>"},
 						                                   }
 					                                   }
 				                                   }
@@ -164,9 +164,9 @@ namespace Raven.Tests.Issues
 				Name = "test",
 				Secret = "test",
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess {TenantId = "<system>"},
+					new ResourceAccess {TenantId = "<system>"},
 				}
 			}), new RavenJObject());
 		}

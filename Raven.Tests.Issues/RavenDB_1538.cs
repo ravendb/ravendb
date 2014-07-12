@@ -127,7 +127,7 @@ namespace Raven.Tests.Issues
             }
 
             var key = "UniqueConstraints/" + "Docs".ToLowerInvariant() + "/" + "AlternateIdentifier".ToLowerInvariant() + "/"
-                                           + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue("aaa");
+                                           + Util.EscapeUniqueValue("aaa");
 
             using (var session = DocumentStore.OpenSession())
             {

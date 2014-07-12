@@ -322,10 +322,6 @@ namespace Raven.Database.Actions
                 else
                     throw new InvalidOperationException("The transformer " + query.ResultsTransformer + " was not found");
             }
-            else if (query.SkipTransformResults == false && viewGenerator.TransformResultsDefinition != null)
-            {
-                transformFunc = source => viewGenerator.TransformResultsDefinition(docRetriever, source);
-            }
 
 	        if (transformFunc == null)
 	        {

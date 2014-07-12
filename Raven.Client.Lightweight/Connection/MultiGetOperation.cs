@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Specialized;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;

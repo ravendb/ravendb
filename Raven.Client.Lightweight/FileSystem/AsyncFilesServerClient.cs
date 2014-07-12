@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -40,11 +41,7 @@ namespace Raven.Client.FileSystem
         private const int DefaultNumberOfCachedRequests = 2048;
         private static HttpJsonRequestFactory GetHttpJsonRequestFactory ()
         {
-#if !NETFX_CORE
               return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-#else
-			  return new HttpJsonRequestFactory();
-#endif
         }
 
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens = new ConcurrentDictionary<Guid, CancellationTokenSource>();
@@ -243,7 +240,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task DeleteAsync(string filename)
+        public Task DeleteAsync(string filename, Etag etag = null)
         {
             return ExecuteWithReplication("DELETE", async operation =>
             {

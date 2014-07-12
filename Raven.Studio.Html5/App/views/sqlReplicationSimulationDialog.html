@@ -1,0 +1,43 @@
+﻿<div class="messageBox replicationSimulation" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: $root.cancel" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" data-bind="text:'SQL Replication Simulation For: ' + sqlReplicationName"></h4>
+    </div>
+    <div class="modal-body replicationSimulationData">
+        <div class="modal-body">
+            
+            <!--<label class="col-sm-3 col-lg-2">Document ID</label>-->
+               
+            <div class="col-sm-4">
+                <input id="docIdInput" title="Document to run simulation with" placeholder="Document ID"
+                       type="text" class="form-control" data-bind="value: documentId, valueUpdate: 'afterkeydown'" autocomplete="off" />
+
+                <div data-bind="visible:isAutoCompleteVisible">
+                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                        data-bind="autoComplete: '#docIdInput', foreach: documentAutocompletes">
+                        <li role="presentation" data-bind="click:function(){$root.documentIdSubmitted($data['@metadata']['@id']); }">
+                            <span role="menuitem" tabindex="-1">
+                                <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
+                                <span data-bind="text: $data['@metadata']['@id']"></span>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <button class="col-sm-2 col-lg-1" data-bind="click:getResults">Simulate!</button>
+
+            <div class="col-sm-12 simulationResultContainer" data-bind="foreach:simulationResults">
+                <h4 data-bind="text:$data"></h4>
+            </div>
+            <div class="col-sm-12" data-bind="visible: simulationResults().length == 0">
+                <h4>
+                    No results
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <span class="pull-left">* This is debug data, real queries will be parametrised</span>
+        <button type="button" class="btn btn-primary" data-bind="click: $root.cancel">OK</button>
+    </div>
+</div>

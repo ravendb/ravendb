@@ -102,13 +102,19 @@ namespace Raven.Tests.MailingList.PhilJones
 
 				Index(x => x.Query, FieldIndexing.Analyzed);
 				Store(x => x.Query, FieldStorage.No);
+			}
+		}
 
-				TransformResults = (database, results) => from result in results
-														  let customer = database.Load<Customer>(result.CustomerUserId)
+		public class Proposals_ListProjectionTransformer : AbstractTransformerCreationTask<ProposalListSearch>
+		{
+			public Proposals_ListProjectionTransformer()
+			{
+				TransformResults = results => from result in results
+														  let customer = LoadDocument<Customer>(result.CustomerUserId)
 														  from proposalId in result.ProposalIds.DefaultIfEmpty()
-														  let proposal = database.Load<Proposal>(proposalId)
-														  let admin = database.Load<Admin>(proposal.AdminUserId)
-														  orderby proposal.Created descending 
+														  let proposal = LoadDocument<Proposal>(proposalId)
+														  let admin = LoadDocument<Admin>(proposal.AdminUserId)
+														  orderby proposal.Created descending
 														  select
 														  new
 														  {
@@ -133,6 +139,7 @@ namespace Raven.Tests.MailingList.PhilJones
 			}))
 			{
 				new Proposals_ListProjection().Execute(store);
+				new Proposals_ListProjectionTransformer().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
@@ -161,7 +168,7 @@ namespace Raven.Tests.MailingList.PhilJones
 
 					var proposals = session.Query<ProposalListSearch, Proposals_ListProjection>()
 											.Customize(x => x.WaitForNonStaleResultsAsOfNow()) // strangely required to actually get data back, actual system just uses QueryYourWrites not this
-											.As<ProposalListSearchResult>()
+											.TransformWith<Proposals_ListProjectionTransformer, ProposalListSearchResult>()
 											.Take(10)
 											.ToList();
 

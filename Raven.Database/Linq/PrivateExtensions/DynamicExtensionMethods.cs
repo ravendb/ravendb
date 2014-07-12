@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HtmlAgilityPack;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
 
@@ -13,6 +15,24 @@ namespace Raven.Database.Linq.PrivateExtensions
 	/// </summary>
 	public class DynamicExtensionMethods
 	{
+		public static dynamic StripHtml(dynamic o)
+		{
+			if (o == null)
+				return new DynamicNullObject();
+
+			var value = o as string;
+			if (value == null)
+				return new DynamicNullObject();
+
+			if (value == string.Empty) 
+				return value;
+
+			var document = new HtmlDocument();
+			document.LoadHtml(value);
+
+			return document.DocumentNode.InnerText.Trim();
+		}
+
 		public static BoostedValue Boost(dynamic o, object value)
 		{
 			return new BoostedValue

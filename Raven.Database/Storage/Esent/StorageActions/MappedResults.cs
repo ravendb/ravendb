@@ -534,7 +534,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetKeysForIndexForDebug(int view, int start, int take)
+		public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, string sourceId, int start, int take)
 		{
 			if (take <= 0)
 				yield break;
@@ -565,11 +565,24 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
+
 			    var comparison = view - indexNameFromDb;
 				if (comparison < 0)
 					continue; // skip to the next item
 				if (comparison > 0) // after the current item
 					break;
+
+				if (string.IsNullOrEmpty(sourceId) == false)
+				{
+					var docId = Api.RetrieveColumnAsString(session, MappedResults,
+										   tableColumnsCache.MappedResultsColumns["document_key"]);
+
+					if (string.Equals(sourceId, docId, StringComparison.OrdinalIgnoreCase) == false)
+						continue;
+				}
+
+				if (string.IsNullOrEmpty(startsWith) == false && keyFromDb.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
+					continue;
 
 				if (results.Add(keyFromDb))
 				{
@@ -578,6 +591,56 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
+
+        public IEnumerable<string> GetSourcesForIndexForDebug(int view, string startsWith, int take)
+        {
+            if (take <= 0)
+                yield break;
+
+            Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");
+            Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
+                yield break;
+
+            try
+            {
+                Api.JetMove(session, MappedResults, 0, MoveGrbit.MoveKeyNE);
+            }
+            catch (EsentErrorException e)
+            {
+                if (e.Error == JET_err.NoCurrentRecord)
+                {
+                    yield break;
+                }
+                throw;
+            }
+
+            var results = new HashSet<string>();
+            do
+            {
+                var indexNameFromDb = Api.RetrieveColumnAsInt32(session, MappedResults,
+                                                                 tableColumnsCache.MappedResultsColumns["view"],
+                                                                 RetrieveColumnGrbit.RetrieveFromIndex);
+
+                var comparison = view - indexNameFromDb;
+                if (comparison < 0)
+                    continue; // skip to the next item
+                if (comparison > 0) // after the current item
+                    break;
+
+                var docId = Api.RetrieveColumnAsString(session, MappedResults,
+                                           tableColumnsCache.MappedResultsColumns["document_key"]);
+
+                if (string.IsNullOrEmpty(startsWith) == false && docId.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (results.Add(docId))
+                {
+                    take -= 1;
+                    yield return docId;
+                }
+            } while (Api.TryMoveNext(session, MappedResults) && take > 0);
+        }
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int view, string key, int start, int take)
 		{

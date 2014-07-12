@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Reflection;
-#if !NETFX_CORE
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +19,6 @@ using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Json.Linq;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
@@ -623,7 +622,7 @@ namespace Raven.Client.Shard
                 var responseTimeDuration = new ResponseTimeInformation();
                 while (ExecuteLazyOperationsSingleStep())
 				{
-					ThreadSleep.Sleep(100);
+					Thread.Sleep(100);
 				}
                 responseTimeDuration.ComputeServerTotal();
 
@@ -701,12 +700,12 @@ namespace Raven.Client.Shard
 													 null);
 		}
 
-		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce = false)
+		protected override IDocumentQuery<T> DocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce = false)
 		{
 			return DocumentQuery<T>(indexName, isMapReduce);
 		}
 
-		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce = false)
+		protected override IAsyncDocumentQuery<T> DocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce = false)
 		{
 			throw new NotSupportedException("The synchronous sharded document store doesn't support async operations");
 		}
@@ -948,5 +947,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-
-#endif

@@ -429,11 +429,7 @@ namespace Raven.Client.Linq
 		}
 
 		private static readonly Regex castingRemover = new Regex(@"(?<!\\)[\(\)]",
-#if NETFX_CORE
-				RegexOptions.None
-#else
  RegexOptions.Compiled
-#endif
 );
 
 		/// <summary>
@@ -554,16 +550,12 @@ namespace Raven.Client.Linq
 				switch ((StringComparison)comparisonType)
 				{
 					case StringComparison.CurrentCulture:
-#if !NETFX_CORE
 					case StringComparison.InvariantCulture:
-#endif
 					case StringComparison.Ordinal:
 						throw new NotSupportedException(
 							"RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
 					case StringComparison.CurrentCultureIgnoreCase:
-#if !NETFX_CORE
 					case StringComparison.InvariantCultureIgnoreCase:
-#endif
 					case StringComparison.OrdinalIgnoreCase:
 						break;
 					default:

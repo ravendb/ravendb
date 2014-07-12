@@ -137,10 +137,9 @@ namespace Raven.Database.Actions
             }
         }
 
-        private static bool IsIndexNameValid(string indexName)
+        private static void IsIndexNameValid(string indexName)
         {
-            bool result;
-            var error = string.Format("Index name {0} not permitted. ", indexName).Replace("//","__");
+	        var error = string.Format("Index name {0} not permitted. ", indexName).Replace("//","__");
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(error + "Index names starting with dynamic_ or dynamic/ are reserved.");
@@ -154,10 +153,31 @@ namespace Raven.Database.Actions
             {
                 throw new InvalidOperationException(error+ "Index names cannot contains // (double slashes)");
 
-            }         
-            return true;
+            }
         }
        
+
+        public bool IndexHasChanged(string name, IndexDefinition definition)
+        {
+            if (name == null)
+                throw new ArgumentNullException("name");
+
+            IsIndexNameValid(name);
+
+            var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+
+            if (existingIndex == null)
+            {
+                return true;
+            }
+
+            name = name.Trim();
+
+            var creationOption = FindIndexCreationOptions(definition, ref name);
+
+            return creationOption != IndexCreationOptions.Noop;
+        }
+
         // only one index can be created at any given time
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
@@ -502,8 +522,7 @@ namespace Raven.Database.Actions
                 IndexDefinitionStorage.RemoveIndex(name);
                 Database.IndexStorage.DeleteIndex(instance.IndexId);
 
-                ConcurrentSet<string> _;
-                WorkContext.ClearErrorsFor(name);
+	            WorkContext.ClearErrorsFor(name);
 
                 // And delete the data in the background
                 StartDeletingIndexDataAsync(instance.IndexId);

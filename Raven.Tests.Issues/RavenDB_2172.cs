@@ -38,16 +38,20 @@ namespace Raven.Tests.Issues
 
 		private class UserProjection
 		{
+#pragma warning disable 649
 			public bool Active;
 
 			public int Age;
 
 			public string Name;
+#pragma warning restore 649
 		}
 
 		private class UserWithIdAsField
 		{
+#pragma warning disable 649
 			public string Id;
+#pragma warning restore 649
 
 			public bool Active;
 

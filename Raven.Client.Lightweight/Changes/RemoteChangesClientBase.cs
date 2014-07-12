@@ -11,9 +11,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using Raven.Json.Linq;
 using System.Collections.Generic;
 
@@ -25,9 +22,7 @@ namespace Raven.Client.Changes
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-#if !NETFX_CORE
         private Timer clientSideHeartbeatTimer;
-#endif
 
         private readonly string url;
         private readonly OperationCredentials credentials;
@@ -103,13 +98,11 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-#if !NETFX_CORE
             if (clientSideHeartbeatTimer != null)
             {
                 clientSideHeartbeatTimer.Dispose();
                 clientSideHeartbeatTimer = null;
             }
-#endif
 
             var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
             {
@@ -164,9 +157,7 @@ namespace Raven.Client.Changes
             connection = (IDisposable)serverEvents;
             serverEvents.Subscribe(this);
 
-#if !NETFX_CORE
             clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
-#endif
 
             await SubscribeOnServer();
         }
@@ -236,11 +227,9 @@ namespace Raven.Client.Changes
             disposed = true;
             onDispose();
 
-#if !NETFX_CORE
             if (clientSideHeartbeatTimer != null)
                 clientSideHeartbeatTimer.Dispose();
             clientSideHeartbeatTimer = null;
-#endif
 
             return Send("disconnect", null).
                 ContinueWith(_ =>

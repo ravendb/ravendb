@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
-using System.Linq;
 
 namespace Raven.Database.Backup
 {

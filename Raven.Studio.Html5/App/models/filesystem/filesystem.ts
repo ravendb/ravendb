@@ -5,7 +5,7 @@ class filesystem extends resource {
     statistics = ko.observable<filesystemStatisticsDto>();    
     files = ko.observableArray<filesystemFileHeaderDto>();
 
-    constructor(public name: string, private isDisabled: boolean = false) {
+    constructor(public name: string, isDisabled: boolean = false) {
         super(name, 'filesystem');
         this.disabled(isDisabled);
         this.itemCount = ko.computed(() => this.statistics() ? this.statistics().FileCount : 0);

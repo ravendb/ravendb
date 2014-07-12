@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -57,11 +58,15 @@ namespace RavenFS.Tests.ClientApi
                 var file = await session.LoadFileAsync("test1.file");
                 var resultingStream = await session.DownloadAsync(file);
 
-                Assert.Equal(128, resultingStream.Length);
+                var ms = new MemoryStream();
+                resultingStream.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                Assert.Equal(128, ms.Length);                
 
                 for (byte i = 0; i < 128; i++)
                 {
-                    int value = resultingStream.ReadByte();
+                    int value = ms.ReadByte();
                     Assert.True(value >= 0);
                     Assert.Equal(i, (byte)value);
                 }
@@ -152,57 +157,6 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
-        public async void UploadAndDeleteDirectoryRecursiveFile()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("a/test2.file", CreateUniformFileStream(128));
-                session.RegisterUpload("a/test3.file", CreateUniformFileStream(128));
-                session.RegisterUpload("a/b/test.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                session.RegisterDirectoryDeletion("a", true);
-                await session.SaveChangesAsync();
-
-                var files = await session.LoadFilesAtDirectoryAsync("/a");
-                Assert.Equal(0, files.Count());
-
-                var file = await session.LoadFileAsync("/a/test1.file");
-                Assert.Null(file);
-
-                file = await session.LoadFileAsync("/a/b/test.file");
-                Assert.Null(file);
-            }
-        }
-
-        [Fact]
-        public async void UploadAndDeleteDirectoryFile()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("a/test2.file", CreateUniformFileStream(128));
-                session.RegisterUpload("a/test3.file", CreateUniformFileStream(128));
-                session.RegisterUpload("a/b/test.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                session.RegisterDirectoryDeletion("a", false);
-                await session.SaveChangesAsync();
-
-                var deletedFile = await session.LoadFileAsync("/a/test1.file");
-                Assert.Null(deletedFile);
-
-                var availableFile = await session.LoadFileAsync("/a/b/test.file");
-                Assert.NotNull(availableFile);
-            }
-        }
-
-        [Fact]
         public async void RenameWithDirectoryChange()
         {
             var store = (FilesStore)filesStore;
@@ -210,15 +164,13 @@ namespace RavenFS.Tests.ClientApi
             using (var session = filesStore.OpenAsyncSession())
             {
                 session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
                 session.RegisterRename("a/test1.file", "a/a/test1.file");
                 await session.SaveChangesAsync();
 
                 var deletedFile = await session.LoadFileAsync("/a/test1.file");
                 Assert.Null(deletedFile);
 
-                var availableFile = await session.LoadFileAsync("/a/b/test1.file");
+                var availableFile = await session.LoadFileAsync("/a/a/test1.file");
                 Assert.NotNull(availableFile);
             }
         }
@@ -279,17 +231,13 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();
 
-              var firstCallFile = await session.LoadFileAsync("test1.file");
+               var firstCallFile = await session.LoadFileAsync("test1.file");
                 var secondCallFile = await session.LoadFileAsync("test1.file");
                 Assert.Equal(firstCallFile, secondCallFile);
 
                 firstCallFile = await session.LoadFileAsync("/b/test1.file");
                 secondCallFile = await session.LoadFileAsync("/b/test1.file");
                 Assert.Equal(firstCallFile, secondCallFile);
-
-                var firstCallDirectory = await session.LoadDirectoryAsync("/b");
-                var secondCallDirectory = await session.LoadDirectoryAsync("/b");
-                Assert.Equal(firstCallDirectory, secondCallDirectory);
             }
         }
 
@@ -314,9 +262,51 @@ namespace RavenFS.Tests.ClientApi
                 var originalText = new StreamReader(fileStream).ReadToEnd();
                 var downloadedText = new StreamReader(resultingStream).ReadToEnd();
                 Assert.Equal(originalText, downloadedText);
+
+                //now downloading file with metadata
+
+                Reference<RavenJObject> metadata = new Reference<RavenJObject>();
+                resultingStream = await session.DownloadAsync("test1.file", metadata);
+
+                Assert.NotNull(metadata.Value);
+                Assert.Equal(128, metadata.Value.Value<long>("RavenFS-Size"));
             }
         }
 
+        [Fact]
+        public async void SaveIsIncompleteEnsureAllPendingOperationsAreCancelledStream()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                var fileStream = CreateUniformFileStream(128);
+                session.RegisterUpload("test2.file", fileStream);
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 60; i++)
+                        x.WriteByte(i);
+                });
+                session.RegisterRename("test2.file", "test3.file");
+
+                Assert.Throws<BadRequestException>(() =>
+                {
+                    try
+                    {
+                        session.SaveChangesAsync().Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
+
+                var shouldExist = await session.LoadFileAsync("test2.file");
+                Assert.NotNull(shouldExist);
+                var shouldNotExist = await session.LoadFileAsync("test3.file");
+                Assert.Null(shouldNotExist);
+            }
+        }
   
     }
 }

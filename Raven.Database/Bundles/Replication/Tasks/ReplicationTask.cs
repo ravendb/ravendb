@@ -729,12 +729,14 @@ namespace Raven.Bundles.Replication.Tasks
 					var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
 					int docsSinceLastReplEtag = 0;
-					List<JsonDocument> docsToReplicate;
+					List<JsonDocument> docsToReplicate = null;
 					List<JsonDocument> filteredDocsToReplicate;
 					result.LastEtag = lastEtag;
 
 					while (true)
 					{
+						docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+
 						docsToReplicate = GetDocsToReplicate(actions, result);
 
 						filteredDocsToReplicate =
@@ -813,6 +815,7 @@ namespace Raven.Bundles.Replication.Tasks
 						.Select(x =>
 						{
 							DocumentRetriever.EnsureIdInMetadata(x);
+							EnsureReplicationInformationInMetadata(x.Metadata, docDb);
 							return x;
 						})
 						.Select(x => x.ToJson()));
@@ -919,6 +922,9 @@ namespace Raven.Bundles.Replication.Tasks
 							{
 								data = actions.Attachments.GetAttachment(x.Key).Data().ReadData();
 							}
+
+							ReplicationTask.EnsureReplicationInformationInMetadata(x.Metadata, docDb);
+
 							return new RavenJObject
 							{
 								{"@metadata", x.Metadata},
@@ -1150,7 +1156,23 @@ namespace Raven.Bundles.Replication.Tasks
 			if (prefetchingBehavior != null)
 				prefetchingBehavior.Dispose();
 		}
+
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+		internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
+		{
+			Debug.Assert(database != null);
+
+			if (metadata == null)
+				return;
+
+			if (metadata.ContainsKey(Constants.RavenReplicationSource))
+				return;
+
+			metadata[Constants.RavenReplicationHistory] = new RavenJArray();
+			metadata[Constants.RavenReplicationVersion] = 0;
+			metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(database.TransactionalStorage.Id);
+		}
 	}
 
 	internal class ReplicationStatisticsRecorder : IDisposable

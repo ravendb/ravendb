@@ -4,6 +4,7 @@ import counterStorage = require("models/counter/counterStorage");
 import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
+import collection = require("models/collection");
 
 // Helper class with static methods for generating app URLs.
 class appUrl {
@@ -13,7 +14,7 @@ class appUrl {
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-
+    
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         databases: ko.computed(() => appUrl.forDatabases()),
@@ -273,8 +274,12 @@ class appUrl {
         return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forVisualizer(db: database): string {
-        return "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+    static forVisualizer(db: database, index: string = null): string {
+        var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+        if (index) { 
+            url += "&index=" + index;
+        }
+        return url;
     }
 
     static forApiKeys(): string {
@@ -392,7 +397,7 @@ class appUrl {
         return "#databases/tasks?" + databasePart;
     }
 
-    static forResourceQuery(res: resource) {
+    static forResourceQuery(res: resource): string {
         if (res && res instanceof database && !res.isSystem) {
             return appUrl.baseUrl + "/databases/" + res.name;
         }
@@ -418,6 +423,13 @@ class appUrl {
     static forExportDatabase(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/exportDatabase?" + databasePart;
+    }
+
+    static forExportCollectionCsv(collection: collection, db: database): string {
+        if (collection.isAllDocuments || collection.isSystemDocuments) {
+            return null;
+        }
+        return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName?format=excel&download=true&query=Tag:" + encodeURIComponent(collection.name);
     }
 
     static forBackupDatabase(db: database): string {

@@ -73,9 +73,15 @@
                 </ul>
             </div>
             <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
-                <button type="button" class="btn btn-default"  data-bind="click: selectColumns" title="Choose columns...">
-                    <i class="fa fa-table"></i>
-                </button>
+            <button type="button" class="btn btn-default"  data-bind="click: selectColumns" title="Choose columns...">
+                <i class="fa fa-table"></i>
+            </button>
+            <a href="#" data-bind="attr: { href: exportUrl }, visible: hasSelectedIndex" class="btn btn-default" title="Export CSV">
+                <i class="fa fa-file-excel-o"></i>
+            </a>
+            <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
+                <i class="fa fa-sitemap"></i>
+            </a>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -119,11 +125,11 @@
             <a class="btn btn-default"  data-bind="enable: !!queryStats(), click: openQueryStats" title="Show Query Stats In Dialog">Query Stats</a>
        </div>
 
-            <div class="btn-group"  title="Delete all documents matching the query">
-                <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex, click: deleteDocsMatchingQuery">
-                    <i class="fa fa-trash-o"></i>
-                </button>
-            </div>
+        <div class="btn-group" title="Delete all documents matching the query (map index only)">
+            <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex && isIndexMapReduce() == false, click: deleteDocsMatchingQuery">
+                <i class="fa fa-trash-o"></i>
+            </button>
+        </div>
     </div>
     <br />
 

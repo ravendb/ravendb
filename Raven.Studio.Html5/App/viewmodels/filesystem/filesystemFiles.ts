@@ -198,7 +198,7 @@ class filesystemFiles extends viewModelBase {
 
         var filesGrid = this.getFilesGrid();
         if (filesGrid && this.isSelectAll()) {
-            filesGrid.selectAll();
+            filesGrid.selectSome();
         } else if (filesGrid && !this.isSelectAll()) {
             filesGrid.selectNone();
         }

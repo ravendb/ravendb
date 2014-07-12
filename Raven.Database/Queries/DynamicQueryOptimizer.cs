@@ -86,7 +86,6 @@ namespace Raven.Database.Queries
 
 			// there is no reason why we can't use indexes with transform results
 			// we merely need to disable the transform results for this particular query
-			indexQuery.SkipTransformResults = true;
 			var results = database.IndexDefinitionStorage.IndexNames
 					.Select(indexName =>
 					{

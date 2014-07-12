@@ -14,6 +14,7 @@ using System.Web.Http.Dispatcher;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
@@ -88,7 +89,7 @@ namespace Raven.Database.Server.Controllers
 				this.results = results;
 			}
 
-			protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 			{
 				var streamWriter = new StreamWriter(stream);
 				var writer = new JsonTextWriter(streamWriter);
@@ -130,6 +131,7 @@ namespace Raven.Database.Server.Controllers
 
 				writer.WriteEndArray();
 				writer.Flush();
+				return new CompletedTask();
 			}
 
 

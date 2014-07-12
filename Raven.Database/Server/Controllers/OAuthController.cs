@@ -20,12 +20,6 @@ namespace Raven.Database.Server.Controllers
 		private const int MaxOAuthContentLength = 1500;
 		private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
-		private int numberOfTokensIssued;
-		public int NumberOfTokensIssued
-		{
-			get { return numberOfTokensIssued; }
-		}
-
 		[HttpPost][Route("OAuth/API-Key")]
 		public async Task<HttpResponseMessage> ApiKeyPost()
 		{
@@ -142,8 +136,7 @@ namespace Raven.Database.Server.Controllers
 			return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(DatabasesLandlord.SystemConfiguration.OAuthTokenKey, new AccessTokenBody
 			{
 				UserId = apiKeyName,
-				AuthorizedDatabases = apiKeyDefinition.Databases,
-                AuthorizedFileSystems = apiKeyDefinition.FileSystems
+				AuthorizedDatabases = apiKeyDefinition.Databases
 			}));
 		}
 	}

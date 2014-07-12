@@ -18,9 +18,6 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-#if !NETFX_CORE
-using Raven.Abstractions.MissingFromBCL;
-#endif
 
 namespace Raven.Client.Indexes
 {
@@ -892,11 +889,7 @@ namespace Raven.Client.Indexes
 			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
 				return @"\u" + ((int)c).ToString("x4");
 
-#if NETFX_CORE
-			return c.ToString();
-#else
 			return c.ToString(CultureInfo.InvariantCulture);
-#endif
 		}
 
 		private bool IsLastOperatorIs(char s)
@@ -1110,7 +1103,6 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		///   Visits the children of the <see cref = "T:System.Linq.Expressions.DynamicExpression" />.
 		/// </summary>
@@ -1124,7 +1116,6 @@ namespace Raven.Client.Indexes
 			VisitExpressions('(', node.Arguments, ')');
 			return node;
 		}
-#endif
 
 		/// <summary>
 		///   Visits the element init.
@@ -1191,11 +1182,8 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitGoto(GotoExpression node)
 		{
-#if NETFX_CORE
-			Out(node.Kind.ToString().ToLower());
-#else
 			Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
-#endif
+
 			DumpLabel(node.Target);
 			if (node.Value != null)
 			{
@@ -1736,11 +1724,7 @@ namespace Raven.Client.Indexes
 		}
 		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
-#if NETFX_CORE
-			var attribute = node.Method.GetType().GetTypeInfo().GetCustomAttribute(typeof (ExtensionAttribute));
-#else
 			var attribute = Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute));
-#endif
 			if (attribute == null)
 				return false;
 

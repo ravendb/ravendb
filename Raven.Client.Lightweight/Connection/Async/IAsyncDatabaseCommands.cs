@@ -18,9 +18,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
@@ -139,6 +136,15 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">Should overwrite index</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
+
+        /// <summary>
+        /// Checks asynchronously if passed index definition matches version stored on server.
+        /// If index does not exist this method returns true.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="indexDef">The index definition.</param>
+        /// <returns></returns>
+	    Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef);
 
 		/// <summary>
 		/// Puts the transformer definition for the specified name asynchronously

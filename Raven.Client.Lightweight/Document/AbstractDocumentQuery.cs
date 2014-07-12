@@ -29,7 +29,6 @@ using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Spatial;
-using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -621,7 +620,6 @@ namespace Raven.Client.Document
 			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize);
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -666,7 +664,7 @@ namespace Raven.Client.Document
 					var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
 					if (queryOperation.IsAcceptable(result) == false)
 					{
-						ThreadSleep.Sleep(100);
+						Thread.Sleep(100);
 						continue;
 					}
 					break;
@@ -682,17 +680,6 @@ namespace Raven.Client.Document
                 dbCommands.OperationsHeaders.Remove(key);
             }
         }
-#else
-        protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
-        {
-            foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
-            {
-                dbCommands.OperationsHeaders.Remove(key);
-            }
-        }
-#endif
-
-#if !NETFX_CORE
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -760,7 +747,6 @@ namespace Raven.Client.Document
 
 			return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
 		}
-#endif
 
 		/// <summary>
 		///   Gets the query result
@@ -929,7 +915,6 @@ namespace Raven.Client.Document
 			highlighterPostTags = postTags;
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
@@ -950,7 +935,6 @@ namespace Raven.Client.Document
 				}
 			}
 		}
-#endif
 
 		private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
 		{
@@ -1890,12 +1874,7 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
-#if !NETFX_CORE
 			RegexOptions.Compiled
-#else
- RegexOptions.None
-#endif
-
 			);
 		protected QueryOperator defaultOperator;
 		protected bool isDistinct;

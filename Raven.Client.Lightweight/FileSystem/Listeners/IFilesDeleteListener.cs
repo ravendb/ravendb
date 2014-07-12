@@ -17,21 +17,9 @@ namespace Raven.Client.FileSystem.Listeners
         bool BeforeDelete(FileHeader instance);
 
         /// <summary>
-        /// Invoked before the delete request is sent to the server.
-        /// </summary>
-        /// <param name="instance">The deleted directory</param>
-        bool BeforeDelete(DirectoryHeader instance);
-
-        /// <summary>
         /// Invoked after the delete operation was effective on the server.
         /// </summary>
         /// <param name="instance">The file to delete</param>
         void AfterDelete(FileHeader instance);
-
-        /// <summary>
-        /// Invoked after the delete operation was effective on the server.
-        /// </summary>
-        /// <param name="instance">The deleted directory</param>
-        void AfterDelete(DirectoryHeader instance);
     }
 }

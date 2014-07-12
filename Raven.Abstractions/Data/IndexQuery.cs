@@ -141,12 +141,6 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public QueryOperator DefaultOperator { get; set; }
 
-		/// <summary>
-		/// If set to true, RavenDB won't execute the transform results function
-		/// returning just the raw results instead
-		/// </summary>
-		public bool SkipTransformResults { get; set; }
-
         /// <summary>
         /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
         /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
@@ -265,13 +259,6 @@ namespace Raven.Abstractions.Data
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
-			
-			
-            if (SkipTransformResults)
-            {
-                path.Append("&skipTransformResults=true");
-            }
-
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
@@ -368,7 +355,6 @@ namespace Raven.Abstractions.Data
 				   Equals(CutoffEtag, other.CutoffEtag) && 
                    String.Equals(DefaultField, other.DefaultField) && 
                    DefaultOperator == other.DefaultOperator && 
-                   SkipTransformResults.Equals(other.SkipTransformResults) && 
                    Equals(SkippedResults, other.SkippedResults) && 
                    DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
                    Equals(HighlightedFields, other.HighlightedFields) && 
@@ -403,7 +389,6 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;
-                hashCode = (hashCode * 397) ^ SkipTransformResults.GetHashCode();
                 hashCode = (hashCode * 397) ^ (SkippedResults != null ? SkippedResults.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
                 hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);

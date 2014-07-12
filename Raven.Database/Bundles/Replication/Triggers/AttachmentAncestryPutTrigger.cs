@@ -50,6 +50,14 @@ namespace Raven.Bundles.Replication.Triggers
 							{Constants.RavenReplicationSource, attachmentMetadata[Constants.RavenReplicationSource]}
 						});
 					}
+					else
+					{
+						history.Add(new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, 0},
+							{Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
+						});
+					}
 
 					while (history.Length > Constants.ChangeHistoryLength)
 					{

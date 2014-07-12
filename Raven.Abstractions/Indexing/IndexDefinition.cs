@@ -81,12 +81,6 @@ namespace Raven.Abstractions.Indexing
 		public string Reduce { get; set; }
 
 		/// <summary>
-		/// Gets or sets the translator function
-		/// </summary>
-		[Obsolete("Use Result Transformers instead.")]
-		public string TransformResults { get; set; }
-
-		/// <summary>
 		/// Gets a value indicating whether this instance is map reduce index definition
 		/// </summary>
 		/// <value>
@@ -173,7 +167,6 @@ namespace Raven.Abstractions.Indexing
 			return Maps.SequenceEqual(other.Maps) &&
 					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
-					Equals(other.TransformResults, TransformResults) &&
                     Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
 					DictionaryEquals(other.Stores, Stores) &&
 					DictionaryEquals(other.Indexes, Indexes) &&
@@ -257,7 +250,6 @@ namespace Raven.Abstractions.Indexing
 				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
 				result = (result * 397) ^ Maps.Count;
 				result = (result * 397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
-				result = (result * 397) ^ (TransformResults != null ? TransformResults.GetHashCode() : 0);
 				result = (result * 397) ^ DictionaryHashCode(Stores);
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
@@ -333,7 +325,6 @@ namespace Raven.Abstractions.Indexing
 				IndexId = IndexId,
 				Name = Name,
 				Reduce = Reduce,
-				TransformResults = TransformResults,
                 MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
 			};

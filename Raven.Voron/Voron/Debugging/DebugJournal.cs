@@ -226,8 +226,6 @@ namespace Voron.Debugging
 
         public void Load(string journalName)
         {
-            InitializeDebugJournal(journalName);
-
             using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
             {
                 while (journalReader.Peek() >= 0)
@@ -259,8 +257,11 @@ namespace Voron.Debugging
                 var newAction = new ActivityEntry(actionType, key, treeName, value);
                 WriteQueue.Enqueue(newAction);
 				lock(_journalWriteSyncObject)
-					if(!_isDisposed)
+					if (!_isDisposed)
+					{
 						_journalWriter.WriteLine(newAction.ToCsvLine(RecordOnlyValueLength));
+						_journalWriter.Flush();
+					}
             }
         }
 

@@ -37,10 +37,10 @@ namespace Raven.Tests.Security.OAuth
 				Name = "test",
 				Secret = "ThisIsMySecret",
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess{TenantId = "*"}, 
-					new DatabaseAccess{TenantId = Constants.SystemDatabase}, 
+					new ResourceAccess{TenantId = "*"}, 
+					new ResourceAccess{TenantId = Constants.SystemDatabase}, 
 				}
 			}), new RavenJObject(), null);
 		}
@@ -84,9 +84,9 @@ namespace Raven.Tests.Security.OAuth
 					Name = "sysadmin",
 					Secret = "ThisIsMySecret",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
+					new ResourceAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
 				}
 				}), new RavenJObject(), null);
 
@@ -95,10 +95,10 @@ namespace Raven.Tests.Security.OAuth
 					Name = "dbadmin",
 					Secret = "ThisIsMySecret",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess{TenantId = "*", Admin = true}, 
-					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = false}, 
+					new ResourceAccess{TenantId = "*", Admin = true}, 
+					new ResourceAccess{TenantId = Constants.SystemDatabase, Admin = false}, 
 				}
 				}), new RavenJObject(), null);
 

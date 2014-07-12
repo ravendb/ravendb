@@ -823,6 +823,7 @@ namespace Raven.Database.Indexing
 		public IEnumerable<RavenJObject> IndexEntires(
             string indexName,
 			IndexQuery query,
+			List<string> reduceKeys,
 			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers,
 			Reference<int> totalResults)
 		{
@@ -833,7 +834,7 @@ namespace Raven.Database.Indexing
                 throw new InvalidOperationException("Index '" + indexName + "' does not exists");
 			}
 
-			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, false, null), indexQueryTriggers);
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, false, null), indexQueryTriggers, reduceKeys);
 			return indexQueryOperation.IndexEntries(totalResults);
 		}
 

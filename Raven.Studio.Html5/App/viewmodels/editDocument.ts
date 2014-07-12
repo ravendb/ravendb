@@ -9,22 +9,28 @@ import document = require("models/document");
 import database = require("models/database");
 import documentMetadata = require("models/documentMetadata");
 import collection = require("models/collection");
+import querySort = require("models/querySort");
+
 import saveDocumentCommand = require("commands/saveDocumentCommand");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
+import queryIndexCommand = require("commands/queryIndexCommand");
+import resolveMergeCommand = require("commands/resolveMergeCommand");
+
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import viewModelBase = require("viewmodels/viewModelBase");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
-import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
-import queryIndexCommand = require("commands/queryIndexCommand");
 import pagedResultSet = require("common/pagedResultSet");
-import querySort = require("models/querySort");
+
+import deleteDocuments = require("viewmodels/deleteDocuments");
+import viewModelBase = require("viewmodels/viewModelBase");
+
 class editDocument extends viewModelBase {
 
+    isConflictDocument = ko.observable<boolean>();
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('').extend({ required: true });
@@ -47,7 +53,6 @@ class editDocument extends viewModelBase {
     documentMatchRegexp = /\w+\/\w+/ig;
     lodaedDocumentName = ko.observable('');
     isSaveEnabled: KnockoutComputed<Boolean>;
-    textarea: any;
     documentSize: KnockoutComputed<string>;
     isInDocMode = ko.observable(true);
     queryIndex = ko.observable<String>();
@@ -64,11 +69,19 @@ class editDocument extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
+        this.isConflictDocument = ko.computed(() => {
+            var metadata = this.metadata();
+            return metadata != null && !!metadata["Raven-Replication-Conflict"];
+        });
 
         this.document.subscribe(doc => {
             if (doc) {
-                var docText = this.stringify(doc.toDto());
-                this.documentText(docText);
+                if (this.isConflictDocument()) {
+                    this.resolveConflicts();
+                } else {
+                    var docText = this.stringify(doc.toDto());
+                    this.documentText(docText);
+                }
             }
         });
 
@@ -264,11 +277,7 @@ class editDocument extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.docEditor = ko.utils.domData.get($("#docEditor")[0], "aceEditor");
-        this.textarea = $(this.docEditor.container).find('textarea')[0];
         this.focusOnEditor();
-
-        this.subscribeToObservable(this.documentText, this.metadataText, "data", "metadata");
-        this.subscribeToObservable(this.metadataText, this.documentText, "metadata", "data");
     }
 
     setupKeyboardShortcuts() {        
@@ -315,8 +324,28 @@ class editDocument extends viewModelBase {
             this.isCreatingNewDocument(true);
         }
 
-        var updatedDto = JSON.parse(this.documentText());
-        var meta = JSON.parse(this.metadataText());
+        var message = "";
+        try {
+            var updatedDto = JSON.parse(this.documentText());
+            var meta = JSON.parse(this.metadataText());
+        }
+        catch (e) {
+            if (updatedDto == undefined) {
+                message = "The data isn't a legal JSON expression!";
+                this.isEditingMetadata(false);
+            }
+            else if (meta == undefined) {
+                message = "The metadata isn't a legal JSON expression!";
+                this.isEditingMetadata(true);
+            }
+            this.docEditor.focus();
+            this.reportError(message);
+        }
+        
+        if (message != "") {
+            return;
+        }
+
         updatedDto['@metadata'] = meta;
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
@@ -618,27 +647,6 @@ class editDocument extends viewModelBase {
         }
     }
 
-    private subscribeToObservable(subscribedObservable, secondObservable, textType1: string, textType2: string) {
-        subscribedObservable.subscribe(text=> {
-            var message = "";
-            try {
-                var text1 = JSON.parse(text);
-                var text2 = JSON.parse(secondObservable());
-            }
-            catch (e1) {
-                if (text1 == undefined) {
-                    message = "The " + textType1 + " isn't a legal JSON expression!";
-                }
-                else if (text2 == undefined) {
-                    message = "The " + textType2 + " isn't a legal JSON expression!";
-                }
-            }
-            finally {
-                this.textarea.setCustomValidity(message);
-            }
-        });
-    }
-
     loadRelatedDocumentsList(document) {
         var relatedDocumentsCandidates: string[] = this.findRelatedDocumentsCandidates(document);
         var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
@@ -678,6 +686,14 @@ class editDocument extends viewModelBase {
             editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([docId]) });
         }
 
+    }
+
+    resolveConflicts() {
+        var task = new resolveMergeCommand(this.activeDatabase(), this.editedDocId()).execute();
+        task.done((response: mergeResult) => {
+            this.documentText(response.Document);
+            this.metadataText(response.Metadata);
+        });
     }
 }
 

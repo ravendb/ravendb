@@ -5,7 +5,7 @@ class alertArgs {
     private detailsObject: any;
     private parsedErrorInfo: any;
 
-    constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "") {
+    constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "", public displayInRecentErrors: boolean = true) {
         var hashString = (title + details)
             .hashCode()
             .toString();

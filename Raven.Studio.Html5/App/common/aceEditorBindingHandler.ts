@@ -7,7 +7,7 @@ import aceLang = require("ace/ext/language_tools");
 
 /*
  * A custom Knockout binding handler transforms the target element (usually a <pre>) into a code editor, powered by Ace. http://ace.c9.io
- * Usage: data-bind="aceEditor: { code: someObservableString, lang: 'ace/mode/csharp', theme: 'ace/theme/github', fontSize: '16px' }"
+ * Usage: data-bind="aceEditor: { code: someObservableString, lang: 'ace/mode/csharp', theme: 'ace/theme/xcode', fontSize: '16px' }"
  * All params are optional, except code.
  */
 class aceEditorBindingHandler {
@@ -113,10 +113,10 @@ class aceEditorBindingHandler {
         viewModel,
         bindingContext: any) {
         var bindingValues = valueAccessor();
-        var theme = bindingValues.theme || this.defaults.theme; // "ace/theme/github";
-        var fontSize = bindingValues.fontSize || this.defaults.fontSize; // "16px";
-        var lang = bindingValues.lang || this.defaults.lang; // "ace/mode/csharp";
-        var readOnly = bindingValues.readOnly || this.defaults.readOnly; // false
+        var theme = bindingValues.theme || this.defaults.theme;
+        var fontSize = bindingValues.fontSize || this.defaults.fontSize;
+        var lang = bindingValues.lang || this.defaults.lang;
+        var readOnly = bindingValues.readOnly || this.defaults.readOnly;
         var typeName = bindingValues.typeName;
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         var langTools = null;
