@@ -146,7 +146,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ServerShouldThrow()
 		{
-			var exception = Assert.Throws<IndexCompilationException>(
+			var exception = Assert.Throws<AggregateException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
@@ -156,9 +156,10 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-			Assert.Equal("Reduce cannot contain Average() methods in grouping.", exception.Message);
+			Assert.NotEmpty(exception.InnerExceptions);
+			Assert.IsType<IndexCompilationException>(exception.InnerExceptions.First());
 
-			exception = Assert.Throws<IndexCompilationException>(
+			exception = Assert.Throws<AggregateException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
@@ -168,7 +169,8 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-			Assert.Equal("Reduce cannot contain Average() methods in grouping.", exception.Message);
+			Assert.NotEmpty(exception.InnerExceptions);
+			Assert.IsType<IndexCompilationException>(exception.InnerExceptions.First());
 		}
 
 		[Fact]
