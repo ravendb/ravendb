@@ -1,9 +1,10 @@
 ﻿<div class="messageBox" tabindex="-1">
     <div class="modal-header">
         <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
-        <h4 class="modal-title">Delete Database?</h4>
+        <h4 class="modal-title">Delete Database</h4>
     </div>
     <div class="modal-body">
+        <strong data-bind="text: 'Are you sure you want to delete \'' + dbToDelete().name + '\'?'"></strong>
         <p>You can <a href="#" data-bind="click: navigateToExportDatabase">export the database</a> if needed.</p>
         <br />
         <p>Delete options:</p>

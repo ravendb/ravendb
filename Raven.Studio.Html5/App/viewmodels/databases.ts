@@ -1,4 +1,4 @@
-import app = require("durandal/app");
+﻿import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
@@ -14,8 +14,12 @@ class databases extends viewModelBase {
     databases = ko.observableArray<database>();
     searchText = ko.observable("");
     selectedDatabase = ko.observable<database>();
+    isAnyDatabaseSelected: KnockoutComputed<boolean>;
+    allCheckedDatabasesDisabled: KnockoutComputed<boolean>;
     systemDb: database;
     docsForSystemUrl: string;
+    optionsClicked = ko.observable<boolean>(false);
+    clickedDatabase = ko.observable<database>(null);
 
     constructor() {
         super();
@@ -25,6 +29,33 @@ class databases extends viewModelBase {
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.selectDatabase(db, false));
+
+        this.isAnyDatabaseSelected = ko.computed(() => {
+            for (var i = 0; i < this.databases().length; i++) {
+                var db: database = this.databases()[i];
+                if (db.isChecked()) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        this.allCheckedDatabasesDisabled = ko.computed(() => {
+            var disabledStatus = null;
+            for (var i = 0; i < this.databases().length; i++) {
+                var db: database = this.databases()[i];
+                if (db.isChecked()) {
+                    if (disabledStatus == null) {
+                        disabledStatus = db.disabled();
+                    } else if (disabledStatus != db.disabled()){
+                        return null;
+                    }
+                }
+            }
+
+            return disabledStatus;
+        });
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -57,11 +88,15 @@ class databases extends viewModelBase {
     }
 
     selectDatabase(db: database, activateDatabase: boolean = true) {
-        this.databases().forEach((d: database)=> d.isSelected(d.name === db.name));
-        if (activateDatabase) {
-            db.activate();
+        if (this.optionsClicked() == false){
+            this.databases().forEach((d: database)=> d.isSelected(d.name === db.name));
+            if (activateDatabase) {
+                db.activate();
+            }
+            this.selectedDatabase(db);
         }
-        this.selectedDatabase(db);
+
+        this.optionsClicked(false);
     }
 
     newDatabase() {
@@ -177,7 +212,7 @@ class databases extends viewModelBase {
     }
 
     deleteSelectedDatabase() {
-        var db = this.selectedDatabase();
+        var db: database = this.clickedDatabase();
         if (db) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(db, this.systemDb);
@@ -190,26 +225,58 @@ class databases extends viewModelBase {
     }
 
     toggleSelectedDatabase() {
-        var db = this.selectedDatabase();
+        var db: database = this.clickedDatabase();
         if (db) {
             var desiredAction = db.disabled() ? "enable" : "disable";
             var desiredActionCapitalized = desiredAction.charAt(0).toUpperCase() + desiredAction.slice(1);
             var action = !db.disabled();
 
-            var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' the database?');
+            var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' \'' + db.name +'\'?');
             confirmationMessageViewModel
                 .done(() => {
-                    require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
-                        new toggleDatabaseDisabledCommand(db)
-                            .execute()
-                            .done(() => {
-                                db.isSelected(false);
-                                db.disabled(action);
-                                this.selectDatabase(db);
-                            });
-                    });
+                    this.toggleDatabase(db, action);
                 });
         }
+    }
+
+    private toggleDatabase(db: database, action: boolean, reportToggle: boolean = true) {
+        require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
+            var toggleTask = new toggleDatabaseDisabledCommand(db, reportToggle).execute();
+
+            toggleTask.done(() => {
+                    db.isSelected(false);
+                    db.disabled(action);
+                    this.selectDatabase(db);
+            });
+
+            return toggleTask;
+        });
+    }
+
+    toggleCheckedDatabases() {
+        var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
+        var action = !checkedDatabases[0].disabled();
+
+        this.reportInfo((action ? 'Disabling' : 'Enabling') + " Databases...");
+
+        var toggleTasks = [];
+        checkedDatabases.forEach(db => {
+            toggleTasks.push(this.toggleDatabase(db, action, false));
+        });
+
+        var desiredAction = action ? 'disabled' : 'enabled';
+        $.when(toggleTasks)
+            .done(() => {
+                this.reportSuccess("Databases were successfully " + desiredAction + "!");
+            })
+            .fail(() => {
+                this.reportError("Only part of the databases were " + desiredAction + "!");
+            });
+    }
+
+    deleteCheckedDatabases() {
+        var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
+
     }
 
     private addNewDatabase(databaseName: string): database {

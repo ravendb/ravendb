@@ -71,11 +71,6 @@ body {
   display: inline-block;
   padding: 8px;
   margin: 0 10px 14px 0;
-  /*   &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }*/
 }
 #sqlReplications .replications-container .replication .replication-name {
   float: left;
@@ -259,13 +254,16 @@ body {
   padding: 0 10px 20px 10px;
   width: 98%;
 }
-.database-page .btn-toolbar {
+#database-page .btn-toolbar {
   margin-bottom: 20px;
 }
-.database-page .databases-container {
+#database-page #databases-container {
   margin-top: 10px;
 }
-.database-page .databases-container .database {
+#database-page #databases-container .database:hover .checkbox {
+  display: block;
+}
+#database-page #databases-container .database {
   cursor: pointer;
   border-radius: 10px;
   -webkit-box-shadow: 0 0 5px 2px silver;
@@ -275,60 +273,76 @@ body {
   display: inline-block;
   padding: 8px;
   margin: 0 10px 14px 0;
+  position: relative;
 }
-.database-page .databases-container .database .database-name {
+#database-page #databases-container .database .checkbox {
+  display: none;
+  position: absolute;
+  top: -19px;
+  left: -5px;
+}
+#database-page #databases-container .database .checkbox input {
+  width: 18px;
+  height: 18px;
+}
+#database-page #databases-container .database .details {
   float: left;
 }
-.database-page .databases-container .database .btn-group {
+#database-page #databases-container .database .disabled-status {
   float: right;
-  margin-left: 5px;
-  margin-top: 3px;
+  margin-right: 6px;
 }
-.database-page .databases-container .database .btn-default {
+#database-page #databases-container .database .disabled-status .enabled {
+  color: #58cc46;
+}
+#database-page #databases-container .database .disabled-status .disabled {
+  color: red;
+}
+#database-page #databases-container .database .btn-group {
+  float: right;
+  margin-right: -22px;
+  margin-top: 33px;
+  padding-left: 8px;
+}
+#database-page #databases-container .database .btn-default {
+  padding: 4px;
+  padding-left: 10px;
+  padding-right: 7px;
   border-color: white;
 }
-.database-page .databases-container .database .btn-default:hover {
+#database-page #databases-container .database .btn-default:hover {
   -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
   box-shadow: 0 0 5px 0 #6aa3d5;
 }
-.database-page .databases-container .database .margin {
-  clear: both;
-  display: block;
-  margin: 22px 0;
-}
-.database-page .databases-container .database.disabled {
-  -webkit-box-shadow: 0 0 6px 0 #cdcdcd;
-  box-shadow: 0 0 6px 0 #cdcdcd;
-}
-.database-page .databases-container .database:hover {
+#database-page #databases-container .database:hover {
   background-color: white;
   -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
   box-shadow: 0 0 5px 0 #6aa3d5;
 }
-.database-page .databases-container .database.selected {
+#database-page #databases-container .database.selected {
   -webkit-box-shadow: 0 0 6px 0 #428bca;
   box-shadow: 0 0 6px 0 #428bca;
   background-color: #428bca;
 }
-.database-page .databases-container .database.selected a,
-.database-page .databases-container .database.selected .text-muted {
+#database-page #databases-container .database.selected a,
+#database-page #databases-container .database.selected .text-muted {
   color: white;
 }
-.database-page .databases-container .database.selected a.btn {
+#database-page #databases-container .database.selected a.btn {
   color: black;
   text-align: left;
 }
-.database-page .databases-container .database.selected .btn-default {
+#database-page #databases-container .database.selected .btn-default {
   border-color: #6aa3d5;
 }
-.database-page .databases-container .database.system-database {
+#database-page #databases-container .database.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
-.database-page .databases-container .database.system-database.selected {
+#database-page #databases-container .database.system-database.selected {
   background-color: rgba(14, 14, 14, 0.21);
 }
-.database-page .databases-container .database.system-database.selected a,
-.database-page .databases-container .database.system-database.selected .text-muted {
+#database-page #databases-container .database.system-database.selected a,
+#database-page #databases-container .database.system-database.selected .text-muted {
   color: #3071a9;
 }
 .menu-item-disabled {

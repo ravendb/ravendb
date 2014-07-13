@@ -110,12 +110,7 @@ html, body {
             .btn-default:hover {
                 -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
-            }                       
-         /*   &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }*/
+            }
         }
     }
 
@@ -329,14 +324,18 @@ html, body {
     width: 98%;
 }
 
-.database-page {
+#database-page {
 
     .btn-toolbar {
         margin-bottom: 20px;
     }
 
-    .databases-container {
+    #databases-container {
         margin-top: 10px;
+        
+        .database:hover .checkbox{
+            display : block;
+        }
 
         .database {
             cursor: pointer;
@@ -348,22 +347,52 @@ html, body {
             display: inline-block;
             padding: 8px;
             margin: 0 10px 14px 0;
+            position: relative;
 
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
-            @disabledColor: lighten(silver, 5%);
+            //@disabledColor: lighten(silver, 5%);
 
-            .database-name {
+            .checkbox{
+                display: none;
+                position: absolute;
+                top: -19px;
+                left: -5px;
+
+                input{
+                    width: 18px;
+                    height: 18px;
+                }
+            }
+
+            .details {
                 float: left;
+            }
+
+            .disabled-status{
+                float: right;
+                margin-right: 6px;
+
+                .enabled {
+                    color: #58cc46;
+                }
+
+                .disabled {
+                    color: red;
+                }
             }
 
             .btn-group {
                 float: right;
-                margin-left: 5px;
-                margin-top: 3px;
+                margin-right: -22px;
+                margin-top: 33px;
+                padding-left: 8px;
             }
 
             .btn-default {
+                padding: 4px;
+                padding-left: 10px;
+                padding-right: 7px;
                 border-color: white;
             }
 
@@ -372,16 +401,16 @@ html, body {
                 box-shadow: 0 0 5px 0 @hoverColor;
             }
 
-            .margin {
-                clear: both;
-                display: block;
-                margin: 22px 0;
-            }
+            //.margin {
+            //    clear: both;
+            //    display: block;
+            //    margin: 22px 0;
+            //}
 
-            &.disabled {
-                -webkit-box-shadow: 0 0 6px 0 @disabledColor;
-                box-shadow: 0 0 6px 0 @disabledColor;
-            }
+            //&.disabled {
+            //    -webkit-box-shadow: 0 0 6px 0 @disabledColor;
+            //    box-shadow: 0 0 6px 0 @disabledColor;
+            //}
 
             &:hover {
                 background-color: white;
