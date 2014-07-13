@@ -7,6 +7,7 @@ import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import appUrl = require('common/appUrl');
+import editSqlReplication = require("viewmodels/editSqlReplication");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
@@ -25,6 +26,9 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
             .done( (x:document) => {
                 var dto:any = x.toDto(true);
                 this.connections(new sqlReplicationConnections(dto));
+                if (this.connections().predefinedConnections().length > 0) {
+                    this.connections().predefinedConnections().forEach(x=>this.subscribeToSqlReplicationConnectionName(x));
+                }
                 def.resolve({ can: true });
             })
             .fail((err) => {
@@ -66,11 +70,64 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
 
 
     addSqlReplicationConnection() {
-        this.connections().predefinedConnections.push(predefinedSqlConnection.empty());
+        var newPredefinedConnection: predefinedSqlConnection;
+        newPredefinedConnection = predefinedSqlConnection.empty();
+        this.connections().predefinedConnections.push(newPredefinedConnection);
+        this.subscribeToSqlReplicationConnectionName(newPredefinedConnection);
+        newPredefinedConnection.name("New");
     }
 
     removeSqlReplicationConnection(connection) {
         this.connections().predefinedConnections.remove(connection);
+    }
+
+    subscribeToSqlReplicationConnectionName(con: predefinedSqlConnection) {
+        con.name.subscribe((previousName: string) => {
+                //Get the previous value of 'name' here before it's set to newValue
+            var nameInputArray = $('input[name="name"]')
+                .each((index, inputField: any) => {
+                inputField.setCustomValidity("");
+            });
+            }, this, "beforeChange");
+            con.name.subscribe((newName) => {
+                var message = "";
+                if (newName === "") {
+                    message = "Please fill out this field.";
+                }
+                else if (this.isSqlPredefinedConnectionNameExists(newName)) {
+                    message = "SQL Replication Connection name already exists.";
+                }
+                $('input[name="name"]')
+                    .filter(function () { return this.value === newName; })
+                    .each((index, element: any) => {
+                        element.setCustomValidity(message);
+                    });
+            });
+    }
+
+    isSqlPredefinedConnectionNameExists(connectionName: string) :boolean {
+        if (this.connections().predefinedConnections().count(x => x.name() == connectionName) >1) {
+            return true;
+        }
+        return false;
+    }
+
+    providerChanged(obj, event) {
+        if (event.originalEvent) {
+            var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
+            if (curConnectionString === "" ||
+                editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                if (!!matchingConnectionStringPair) {
+                    var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
+                    obj.connectionString(
+                        matchingConnectionStringValue
+                    );
+                }
+
+            }
+        }
+
     }
 
 }

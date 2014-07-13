@@ -1,10 +1,9 @@
 ﻿<div>
-    <form data-bind="submit: $root.save" class=" form-horizontal" role="form">
+    <form data-bind="submit: $root.save" class="settings-container form-horizontal" role="form">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <div class="pull-left panel-title">Sql Replication Connections</div>
-                <div class="pull-right">
-                    <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add SQL Replication Connection (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add Connection</button>
+                <div class="pull-left">
+                    <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add SQL Replication Connection (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></button>
                     <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                 </div>
                 <div class="clearfix"></div>
@@ -15,7 +14,7 @@
                     You've got no sql replication connections set up.
                 </div>
                 <div data-bind="foreach: predefinedConnections">
-                    <div class="panel col-sm-12 col-lg-6">
+                    <div class="sql-replication-connection-card panel panel-info">
                         <div class="panel-heading">
                             <h3 class="panel-title">
                                 <span data-bind="text: name"></span>
@@ -24,10 +23,17 @@
                         </div>
                         <div class="panel-body">
                             <div class="form-group">
+                                <label class="col-sm-4 control-label">Name</label>
+                                <div class="col-sm-7">
+                                    <input required name="name" type="text" data-bind="value:name, valueUpdate: 'keyup'"></input>
+
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label class="col-sm-4 control-label">SQL Provider</label>
                                 <div class="col-sm-7">
                                     <select tabindex="5" required class="form-control"
-                                            data-bind="options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
+                                            data-bind="event:{change:function(val,event){$root.providerChanged($data,event);return true;}},options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
 
                                 </div>
                             </div>

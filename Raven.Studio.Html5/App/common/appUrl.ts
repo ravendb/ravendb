@@ -323,7 +323,7 @@ class appUrl {
     }
 
     static forSqlReplicationConnections(db: database): string {
-        return "#databases/settings/sqlReplicationConnections?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/sqlReplicationConnectionStringsManagement?" + appUrl.getEncodedDbPart(db);
     }
 
     static forScriptedIndexes(db: database): string {

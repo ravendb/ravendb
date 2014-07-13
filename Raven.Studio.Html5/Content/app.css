@@ -360,10 +360,6 @@ body {
     white-space: nowrap;
   }
 }
-
-#documentsGrid {
-    overflow-x: auto;
-}
 #loadingIndicator {
   width: 30px;
   height: 30px;
@@ -453,6 +449,10 @@ body {
 .settings-container {
   margin-top: 10px;
 }
+.settings-container .panel-body {
+  overflow-y: auto;
+  max-height: 70vh;
+}
 .settings-container .api-key-card,
 .settings-container .win-auth-card {
   display: inline-block;
@@ -497,6 +497,18 @@ body {
 }
 .settings-container .sql-replication-script-container .editor {
   height: 100px;
+}
+.settings-container .sql-replication-connection-card {
+  display: inline-table;
+  width: 40%;
+  margin-right: 20px;
+}
+@media (max-device-height: 1024px) {
+  .settings-container .sql-replication-connection-card {
+    display: inline-table;
+    width: 100%;
+    margin-right: 20px;
+  }
 }
 .collection-style-0 {
   background-color: #00c700;

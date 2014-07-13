@@ -22,7 +22,8 @@ class settings extends viewModelBase {
         var activeRoute = navigationalModel.first(r=> r.isActive());
         if (!!activeRoute && !!curNavHash && !!activeRoute.hash) {
             return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
-                activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0;
+                (activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0 ||
+                activeRoute.route.indexOf('databases/settings/sqlReplicationConnectionStringsManagement') >= 0);
         } else {
             return false;
         }
