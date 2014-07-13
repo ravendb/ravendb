@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Database.Bundles.Replication.Data
 {
-	internal enum ReplicatonNodeState
+	public enum ReplicatonNodeState
 	{
 		Online,
 		Offline,

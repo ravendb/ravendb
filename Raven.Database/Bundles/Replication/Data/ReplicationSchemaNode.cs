@@ -6,8 +6,10 @@ using Raven.Abstractions.Replication;
 
 namespace Raven.Database.Bundles.Replication.Data
 {
-	internal class ReplicationSchemaRootNode : ReplicationSchemaNodeBase
+	public class ReplicationSchemaRootNode : ReplicationSchemaNodeBase
 	{
+		public Guid ServerId { get; set; }
+
 		public ReplicationSchemaRootNode(string serverUrl, Guid serverId)
 		{
 			ServerUrl = serverUrl;
@@ -15,8 +17,10 @@ namespace Raven.Database.Bundles.Replication.Data
 		}
 	}
 
-	internal class ReplicationSchemaDestinationNode : ReplicationSchemaNode
+	public class ReplicationSchemaDestinationNode : ReplicationSchemaNode
 	{
+		public Guid SendServerId { get; set; }
+
 		public TransitiveReplicationOptions ReplicationBehavior { get; protected set; }
 
 		public static ReplicationSchemaDestinationNode Online(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
@@ -26,7 +30,7 @@ namespace Raven.Database.Bundles.Replication.Data
 				ServerUrl = serverUrl,
 				ReplicationBehavior = replicationBehavior,
 				State = ReplicatonNodeState.Online,
-				ServerId = serverId
+				SendServerId = serverId
 			};
 		}
 
@@ -37,7 +41,7 @@ namespace Raven.Database.Bundles.Replication.Data
 				ServerUrl = serverUrl,
 				ReplicationBehavior = replicationBehavior,
 				State = ReplicatonNodeState.Offline,
-				ServerId = serverId
+				SendServerId = serverId
 			};
 		}
 
@@ -48,13 +52,15 @@ namespace Raven.Database.Bundles.Replication.Data
 				ServerUrl = serverUrl,
 				ReplicationBehavior = replicationBehavior,
 				State = ReplicatonNodeState.Disabled,
-				ServerId = serverId
+				SendServerId = serverId
 			};
 		}
 	}
 
-	internal class ReplicationSchemaSourceNode : ReplicationSchemaNode
+	public class ReplicationSchemaSourceNode : ReplicationSchemaNode
 	{
+		public Guid StoredServerId { get; set; }
+
 		public Etag LastAttachmentEtag { get; set; }
 
 		public Etag LastDocumentEtag { get; set; }
@@ -67,7 +73,7 @@ namespace Raven.Database.Bundles.Replication.Data
 					   State = ReplicatonNodeState.Online,
 					   LastDocumentEtag = lastDocumentEtag,
 					   LastAttachmentEtag = lastAttachmentEtag,
-					   ServerId = serverId
+					   StoredServerId = serverId
 				   };
 		}
 
@@ -79,17 +85,17 @@ namespace Raven.Database.Bundles.Replication.Data
 				State = ReplicatonNodeState.Offline,
 				LastDocumentEtag = lastDocumentEtag,
 				LastAttachmentEtag = lastAttachmentEtag,
-				ServerId = serverId
+				StoredServerId = serverId
 			};
 		}
 	}
 
-	internal abstract class ReplicationSchemaNode : ReplicationSchemaNodeBase
+	public abstract class ReplicationSchemaNode : ReplicationSchemaNodeBase
 	{
 		public ReplicatonNodeState State { get; protected set; }
 	}
 
-	internal abstract class ReplicationSchemaNodeBase
+	public abstract class ReplicationSchemaNodeBase
 	{
 		protected ReplicationSchemaNodeBase()
 		{
@@ -99,8 +105,6 @@ namespace Raven.Database.Bundles.Replication.Data
 		}
 
 		public string ServerUrl { get; protected set; }
-
-		public Guid ServerId { get; set; }
 
 		public List<ReplicationSchemaSourceNode> Sources { get; set; }
 
