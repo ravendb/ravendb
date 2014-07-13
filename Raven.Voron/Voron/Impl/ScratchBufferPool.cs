@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Voron.Trees;
 using Voron.Util;
 
@@ -37,8 +38,6 @@ namespace Voron.Impl
 
         public PagerState PagerState { get { return _scratchPager.PagerState; } }
 
-		private static ConcurrentDictionary<long,StackTrace> allocatePageTraces = new ConcurrentDictionary<long, StackTrace>();
-
         public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages)
         {
             var size = Utils.NearestPowerOfTwo(numberOfPages);
@@ -56,9 +55,6 @@ namespace Voron.Impl
                 Size = size,
                 NumberOfPages = numberOfPages
             };
-
-			Trace.WriteLine(String.Format("_allocatedPages.Add, page = {0}, txId = {1}", _lastUsedPage, tx.Id));
-			allocatePageTraces[_lastUsedPage] = new StackTrace();
 
             _allocatedPages.Add(_lastUsedPage, result);
             _lastUsedPage += size;
@@ -84,23 +80,18 @@ namespace Voron.Impl
                 NumberOfPages = numberOfPages
             };
 
-			allocatePageTraces[val.Page] = new StackTrace();
-			Trace.WriteLine(String.Format("_allocatedPages.Add, page = {0}, txId = {1}",val.Page,tx.Id));
 			_allocatedPages.Add(val.Page, pageFromScratchBuffer);
             {
                 result = pageFromScratchBuffer;
 				return true;
             }
-
         }
-
 
         public void Free(long page, long asOfTxId)
         {
             PageFromScratchBuffer value;
-	        if (_allocatedPages.TryGetValue(page, out value) == false)
+			if (_allocatedPages.TryGetValue(page, out value) == false)
 	        {
-				//Trace.WriteLine(String.Format("Free for not allocated page attempted. Page = {0}, aSOfTxId = {1}, stack trace of last allocate = {2}",page,asOfTxId, allocatePageTraces[page]));
 		        throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
 	        }
 	        _allocatedPages.Remove(page);

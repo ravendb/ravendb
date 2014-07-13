@@ -304,21 +304,24 @@ namespace Voron.Tests.Journal
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_LOTS_of_transactions()
 		{
 			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
-			Env.Journal.OnTransactionCommit += tx =>
+			using (var shippingSourceEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
-				tx.CreatePagesSnapshot();
-				transactionsToShip.Add(tx);
-			};
+				shippingSourceEnv.Journal.OnTransactionCommit += tx =>
+				{
+					tx.CreatePagesSnapshot();
+					transactionsToShip.Add(tx);
+				};
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(tx, "TestTree");
-				Env.CreateTree(tx, "TestTree2");
-				tx.Commit();
+				using (var tx = shippingSourceEnv.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					shippingSourceEnv.CreateTree(tx, "TestTree");
+					shippingSourceEnv.CreateTree(tx, "TestTree2");
+					tx.Commit();
+				}
+
+				WriteLotsOfTestDataForTree("TestTree", shippingSourceEnv);
+				WriteLotsOfTestDataForTree("TestTree2", shippingSourceEnv);
 			}
-
-			WriteLotsOfTestDataForTree("TestTree");
-			WriteLotsOfTestDataForTree("TestTree2");
 
 			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
@@ -352,7 +355,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		private void WriteLotsOfTestDataForTree(string treeName)
+		private void WriteLotsOfTestDataForTree(string treeName, StorageEnvironment storageEnvironment)
 		{
 			for (int i = 0; i < 50; i++)
 			{
@@ -364,7 +367,7 @@ namespace Voron.Tests.Journal
 						writeBatch.Add("key/" + index, StreamFor("value/" + index), treeName);
 					}
 
-					Env.Writer.Write(writeBatch);
+					storageEnvironment.Writer.Write(writeBatch);
 				}
 			}
 		}
