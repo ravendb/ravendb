@@ -350,7 +350,13 @@ namespace Raven.Database.Impl.DTC
 	        {
                 changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
                 changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
-	            AddToTransactionState(changedDoc.Key, null, txInfo, changedDoc.CommittedEtag, changedDoc);
+		        
+				//we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
+				//that happened during the transaction, which changed the committed etag. That is fine when we are just running
+				//the transaction, since we can just report the error and abort. But it isn't fine when we recover
+				//var etag = changedDoc.CommittedEtag;
+		        Etag etag = null; 
+	            AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
 	        }
 	    }
 	}

@@ -40,11 +40,29 @@ namespace Raven.Database.Plugins.Builtins
                         if (Guid.TryParse(resourceManagerId, out resourceId) == false || 
                             recoveryInformation == null)
                         {
-                            database.InFlightTransactionalState.Prepare(transactionId, null, null);
+	                        try
+	                        {
+		                        database.InFlightTransactionalState.Prepare(transactionId, null, null);
+	                        }
+	                        catch (Exception e)
+	                        {
+		                        logger.WarnException(
+			                        "Failed to prepare transaction " + transactionId +
+			                        " on database restart, transaction was aborted", e);
+	                        }
                             continue;
                         }
-                        database.InFlightTransactionalState.Prepare(transactionId, resourceId, recoveryInformation);
-
+						try
+						{
+							database.InFlightTransactionalState.Prepare(transactionId, resourceId, recoveryInformation);
+						}
+						catch (Exception e)
+						{
+							logger.WarnException(
+								"Failed to prepare transaction " + transactionId +
+								" on database restart, transaction was aborted", e);
+							continue;
+						}
                         resourceManagerIds.Add(resourceId);
                         recovery.Add(() =>
                         {
