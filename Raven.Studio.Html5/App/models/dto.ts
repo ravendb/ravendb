@@ -457,6 +457,7 @@ interface sqlReplicationDto extends documentDto {
     FactoryName: string;
     ConnectionString: string;
     ConnectionStringName: string;
+    PredefinedConnectionStringSettingName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;

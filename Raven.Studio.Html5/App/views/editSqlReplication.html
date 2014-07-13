@@ -90,14 +90,6 @@
                 </div>
                 <div class="col-sm-12 advanced"><a  data-bind="attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}">Advanced >></a></div>
                 <div class="form-group" data-bind="visible:$root.isBasicView() == false">
-                    <label class="col-sm-4 control-label">Connection String Source</label>
-                    <div class="col-sm-8">
-                        <select tabindex="7" required class="form-control"
-                                data-bind="options: ['Connection String','Predefined Connection String','Connection String Name','Connection String Setting Name'], optionsCaption: '', value: connectionStringType"></select>
-
-                    </div>
-                </div>
-                <div class="form-group" data-bind="visible:$root.isBasicView() == false">
                     <label class="col-sm-4 control-label">Disable Parameterized Deletes</label>
                     <div class="checkbox col-sm-8">
                         <input type="checkbox" data-bind=" checked:parameterizeDeletesDisabled" />
@@ -125,9 +117,17 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label class="col-sm-4 control-label">Connection String Source</label>
+                    <div class="col-sm-8">
+                        <select tabindex="7" required class="form-control"
+                                data-bind="options: $data.availableConnectionStringTypes, optionsCaption: '', value: connectionStringType"></select>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label class="col-sm-4 control-label" data-bind="text: connectionStringSourceFieldName"></label>
                     <div class="col-sm-8">
-                        <textarea tabindex="6" rows="4" required type="text" class="form-control" data-bind="value: connectionStringValue, valueUpdate: 'keyup'" />
+                        <textarea tabindex="6" rows="4" required type="text" class="form-control" data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringValue, valueUpdate: 'keyup'" />
+                        <select tabindex="7" required type="text" class="form-control" data-bind=" options:$root.availableConnectionStrings, attr:{required:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?connectionStringValue:null, valueUpdate: 'keyup'" />
                     </div>
                 </div>
             </div>
