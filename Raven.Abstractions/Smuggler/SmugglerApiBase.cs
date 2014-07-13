@@ -286,7 +286,7 @@ namespace Raven.Abstractions.Smuggler
                     var maxRecords = options.Limit - totalCount;
                     if (maxRecords > 0)
 			        {
-			            using (var documents = await GetDocuments(lastEtag, options.BatchSize))
+			            using (var documents = await GetDocuments(lastEtag,Math.Min(maxRecords, options.BatchSize)))
 			            {
 			                var watch = Stopwatch.StartNew();
 
