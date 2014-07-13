@@ -195,7 +195,6 @@ namespace Raven.Database.Impl.DTC
 						throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
 					});
 
-					item.CommittedEtag = committedEtag;
 					state.changes.Add(item);
 
 					return result.currentEtag;
@@ -309,7 +308,6 @@ namespace Raven.Database.Impl.DTC
 							Data = change.Data == null ? null : (RavenJObject) change.Data.CreateSnapshot(),
 							Delete = change.Delete,
 							Etag = change.Etag,
-							CommittedEtag = change.CommittedEtag,
 							LastModified = change.LastModified,
 							Key = change.Key
 						};
@@ -321,12 +319,12 @@ namespace Raven.Database.Impl.DTC
 						// checked etags on previous PUT/DELETE, so we don't pass it here
 						if (doc.Delete)
 						{
-							databaseDelete(doc.Key, doc.CommittedEtag, null);
+							databaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
 							documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
 						}
 						else
 						{
-							databasePut(doc.Key, doc.CommittedEtag, doc.Data, doc.Metadata, null);
+							databasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
 							documentIdsToTouch.Add(doc.Key);
 						}
 					}

@@ -220,6 +220,7 @@
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\CompilingIndexesCreatesCacheDirectory.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
+    <Compile Include="Bugs\DtcAndTouchDocument.cs" />
     <Compile Include="Bugs\DTC\NSB\DbShutDownMidTransaction.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
