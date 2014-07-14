@@ -8,6 +8,7 @@ using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using System.Threading;
 
 namespace RavenFS.Tests.Synchronization
 {

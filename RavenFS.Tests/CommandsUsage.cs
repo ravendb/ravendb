@@ -638,6 +638,21 @@ namespace RavenFS.Tests
             Assert.Equal("\\a\\b", fileMetadata[1].Path);
         }
 
+        [Fact]
+        public async Task Can_call_different_filesystem_from_client()
+        {
+            var client = NewAsyncClient(1);
+            var client2 = NewAsyncClient(2);
+
+            await client.UploadAsync("1.txt", new RandomStream(128));
+
+            await client2.UploadAsync("2.txt", new RandomStream(128));
+
+            //client.ForFileSystem(client2.)
+
+
+        }
+
 
         private static MemoryStream PrepareTextSourceStream()
 		{

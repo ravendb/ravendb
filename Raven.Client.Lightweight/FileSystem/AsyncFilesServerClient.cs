@@ -1043,7 +1043,7 @@ namespace Raven.Client.FileSystem
             }
 
             public async Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId,
-                                                   IEnumerable<HistoryItem> remoteHistory, string remoteServerUrl)
+                                                   RavenJObject remoteMetadata, string remoteServerUrl)
             {
                 var requestUriString =
                     String.Format("{0}/synchronization/applyConflict/{1}?remoteVersion={2}&remoteServerId={3}&remoteServerUrl={4}",
@@ -1056,7 +1056,7 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    await request.WriteWithObjectAsync(remoteHistory);
+                    await request.WriteAsync(remoteMetadata);
                 }
                 catch (Exception e)
                 {

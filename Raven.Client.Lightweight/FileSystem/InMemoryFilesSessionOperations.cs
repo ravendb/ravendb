@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem.Impl;
 using Raven.Client.Util;
@@ -49,9 +50,14 @@ namespace Raven.Client.FileSystem
         protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
         /// <summary>
-        /// Entities whose filename we already know do not exists, because they are missing load, etc.
+        /// Entities whose filename we already know do not exist, because they were registered for deletion, etc.
         /// </summary>
         protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Current file conflicts
+        /// </summary>
+        protected readonly HashSet<string> conflicts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// all the listeners for this session
@@ -89,7 +95,7 @@ namespace Raven.Client.FileSystem
             this.filesStore = filesStore;
             this.theListeners = listeners;            
 
-            this.MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;			
+            this.MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
 
         /// <summary>
@@ -196,6 +202,13 @@ namespace Raven.Client.FileSystem
             RegisterRename(sourceFile.Path, destinationFile);
         }
 
+        public void AddToCache(string filename, FileHeader fileHeader)
+        {
+            entitiesByKey.Add(filename, fileHeader);
+            if (this.IsDeleted(filename))
+                knownMissingIds.Remove(filename);
+        }
+
         /// <summary>
         /// Returns whatever a filename with the specified id is loaded in the 
         /// current session
@@ -206,8 +219,7 @@ namespace Raven.Client.FileSystem
         }
 
         /// <summary>
-        /// Returns whatever a filename with the specified id is deleted 
-        /// or known to be missing
+        /// Returns whatever a filename with the specified id is deleted.
         /// </summary>
         public bool IsDeleted(string id)
         {
@@ -231,8 +243,25 @@ namespace Raven.Client.FileSystem
             IFilesOperation op;
             while (operationsToExecute.TryDequeue(out op))
             {
+                AssertConflictsAreNotAffectingOperation(op);
                 await op.Execute(session);
             }
+        }
+
+        private void AssertConflictsAreNotAffectingOperation(IFilesOperation operation)
+        {
+            string fileName = null;
+            if (operation.GetType() == typeof(UploadFileOperation))
+            {
+                fileName = (operation as UploadFileOperation).Path;
+            }
+            else if (operation.GetType() == typeof(RenameFileOperation))
+            {
+                fileName = (operation as RenameFileOperation).Source;
+            }
+
+            if (fileName != null && conflicts.Contains(fileName))
+                throw new NotSupportedException( string.Format("There is a conflict over file: {0}. Update or remove operations are not supported", fileName));
         }
 
         public void IncrementRequestCount()

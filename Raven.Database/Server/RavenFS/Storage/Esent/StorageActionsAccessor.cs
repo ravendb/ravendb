@@ -465,12 +465,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
                 var existingMetadata = RetrieveMetadata();
 
-                if (existingMetadata.ContainsKey("Content-MD5"))
+                if (!innerEsentMetadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
                 {
                     innerEsentMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
                 }
 
-                if (existingMetadata.ContainsKey("RavenFS-Size"))
+                if (!innerEsentMetadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
                 {
                     innerEsentMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
                 }

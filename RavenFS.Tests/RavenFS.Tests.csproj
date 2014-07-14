@@ -91,6 +91,7 @@
     <Compile Include="Bugs\UploadDownload.cs" />
     <Compile Include="ClientApi\FileSessionListenersTests.cs" />
     <Compile Include="ClientApi\FileSessionTests.cs" />
+    <Compile Include="ClientApi\SerializationTests.cs" />
     <Compile Include="CommandsUsage.cs" />
     <Compile Include="CompleteUsage.cs" />
     <Compile Include="Config.cs" />

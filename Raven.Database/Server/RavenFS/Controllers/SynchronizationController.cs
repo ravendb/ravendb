@@ -238,7 +238,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					FileName = fileName,
 					SourceServerUrl = sourceServer.FileSystemUrl,
-                    Status = ConflictStatus.Detected
+                    Status = ConflictStatus.Detected,
+                    RemoteFileHeader = new FileHeader(fileName, localMetadata)
 				});
 
 				Log.Debug(
@@ -458,7 +459,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        Status = ConflictStatus.Detected
+                        Status = ConflictStatus.Resolved
                     });
 				}
 
@@ -611,10 +612,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				StrategyAsGetCurrent(fileName);
 			}
-			else
+            else if (strategy == ConflictResolutionStrategy.RemoteVersion)
 			{
 				StrategyAsGetRemote(fileName);
 			}
+            else
+            {
+                throw new NotSupportedException("NoOperation conflict resolution strategy, is not supported.");
+            }
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -645,8 +650,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Version = remoteVersion
 			};
 
-            var remoteConflictHistory = RavenJArray.Load(new JsonTextReader(new StreamReader(contentStream)))
-                                                   .JsonDeserialization<HistoryItem>().ToList();
+            var remoteMetadata = RavenJObject.Load(new JsonTextReader(new StreamReader(contentStream)));
+
+            var remoteConflictHistory = Historian.DeserializeHistory(remoteMetadata);
 			remoteConflictHistory.Add(remote);
 
 			var conflict = new ConflictItem
@@ -663,7 +669,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				FileName = filename,
 				SourceServerUrl = remoteServerUrl,
-                Status = ConflictStatus.Detected
+                Status = ConflictStatus.Detected,
+                RemoteFileHeader = new FileHeader(filename, remoteMetadata)
 			});
 
 			Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);

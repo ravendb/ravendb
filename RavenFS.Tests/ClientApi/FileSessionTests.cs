@@ -300,6 +300,23 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Null(shouldNotExist);
             }
         }
+
+        [Fact]
+        public async void LoadMultipleFileHeaders()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                var files = await session.LoadFileAsync(new String[] { "/b/test1.file", "test1.file" });
+
+                Assert.NotNull(files);
+            }
+        }
   
     }
 }

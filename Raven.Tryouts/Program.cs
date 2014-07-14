@@ -5,8 +5,8 @@ using NLog;
 
 namespace Raven.Tryouts
 {
-	class Program
-	{
+    class Program
+    {
 
 		private static void Main(string[] args)
 		{
