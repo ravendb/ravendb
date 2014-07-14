@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using Voron.Trees;
 using Voron.Util;
 
@@ -52,6 +55,7 @@ namespace Voron.Impl
                 Size = size,
                 NumberOfPages = numberOfPages
             };
+
             _allocatedPages.Add(_lastUsedPage, result);
             _lastUsedPage += size;
 
@@ -75,19 +79,22 @@ namespace Voron.Impl
                 Size = size,
                 NumberOfPages = numberOfPages
             };
-            _allocatedPages.Add(val.Page, pageFromScratchBuffer);
+
+			_allocatedPages.Add(val.Page, pageFromScratchBuffer);
             {
                 result = pageFromScratchBuffer;
-                return true;
+				return true;
             }
         }
 
         public void Free(long page, long asOfTxId)
         {
             PageFromScratchBuffer value;
-            if (_allocatedPages.TryGetValue(page, out value) == false)
-                throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
-            _allocatedPages.Remove(page);
+			if (_allocatedPages.TryGetValue(page, out value) == false)
+	        {
+		        throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+	        }
+	        _allocatedPages.Remove(page);
             LinkedList<PendingPage> list;
             if (_freePagesBySize.TryGetValue(value.Size, out list) == false)
             {
@@ -123,7 +130,7 @@ namespace Voron.Impl
         public long Size;
         public int NumberOfPages;
 
-        public override bool Equals(object obj)
+	    public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -144,5 +151,10 @@ namespace Voron.Impl
                 return hashCode;
             }
         }
+
+	    public override string ToString()
+	    {
+		    return string.Format("PositionInScratchBuffer: {0}, Size: {1}, NumberOfPages: {2}", PositionInScratchBuffer, Size, NumberOfPages);
+	    }
     }
 }

@@ -338,16 +338,20 @@
     <TypeScriptCompile Include="App\common\jsonUtil.ts" />
     <TypeScriptCompile Include="App\common\chunkFetcher.ts" />
     <TypeScriptCompile Include="App\commands\resolveMergeCommand.ts" />
+    <TypeScriptCompile Include="App\common\svgDownloader.ts" />
+    <TypeScriptCompile Include="App\common\jsonDownloader.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\disableDatabaseToggleConfirm.html" />
+    <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
     <Content Include="App\views\sqlReplicationSimulationDialog.html" />
@@ -883,7 +887,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>56397</DevelopmentServerPort>
+          <DevelopmentServerPort>59658</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
