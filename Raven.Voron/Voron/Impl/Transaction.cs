@@ -117,19 +117,16 @@ namespace Voron.Impl
 			        _overflowPagesInTransaction += (numberOfPages - 1);
 		        }
 
-				_allocatedPagesInTransaction++;
+			    var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
+			   
+				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.PositionInScratchBuffer);
+			    NativeMethods.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
+
+			    _allocatedPagesInTransaction++;
+				
 				_dirtyPages.Add(page.PageNumber);
                 page.Dirty = true;
-			    var pageFromScratchBuffer = new PageFromScratchBuffer
-			    {
-				    NumberOfPages = numberOfPages,
-				    PositionInScratchBuffer = pages.PositionInScratchBuffer+i,
-				    Size = numberOfPages,		
-			    };
-				if(i == pages.NumberOfPages-1)
-				{
-					pageFromScratchBuffer.Size += pages.Size-pages.NumberOfPages;
-				}
+			    
 			    _scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
 				_transactionPages.Add(pageFromScratchBuffer);
 			

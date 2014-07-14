@@ -323,7 +323,6 @@ namespace Voron.Tests.Journal
 				WriteLotsOfTestDataForTree("TestTree2", shippingSourceEnv);
 			}
 
-			Console.Clear();
 
 			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
 			storageEnvironmentOptions.ManualFlushing = true;

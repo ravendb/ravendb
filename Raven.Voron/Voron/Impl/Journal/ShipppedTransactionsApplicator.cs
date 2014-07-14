@@ -70,10 +70,9 @@ namespace Voron.Impl.Journal
 
 						tx.WriteDirect(transactionHeader, decompressBuffer);
 				    }
-				    catch (Exception)
+				    finally 
 				    {
 						_env.ScratchBufferPool.Free(decompressBuffer.PositionInScratchBuffer, -1);
-					    throw;
 				    }
 				    tx.Commit();
 
