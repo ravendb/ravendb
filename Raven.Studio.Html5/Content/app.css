@@ -113,8 +113,8 @@ body {
 #editSQLReplication .edit-sql-replication-actions {
   padding-top: 0.5%;
 }
-#editSQLReplication .advanced {
-  padding-left: 0;
+#editSQLReplication .advanced-toggle .active {
+  background-color: #E3F8BE;
 }
 #editSQLReplication .checkbox {
   align-content: flex-start;

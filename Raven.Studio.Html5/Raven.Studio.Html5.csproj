@@ -121,6 +121,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\testSqlConnectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\toggleDatabaseDisabledCommand.ts" />
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />

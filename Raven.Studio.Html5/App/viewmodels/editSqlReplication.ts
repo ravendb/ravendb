@@ -301,14 +301,21 @@ class editSqlReplication extends viewModelBase {
         } 
     }
     resetSqlReplication() {
-        var replicationId = this.initialReplicationId;
-        new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-            .done(() => {
-                ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
-            })
-        .fail((foo) => {
-            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+
+        app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
+            .then((dialogResult:string) =>{
+            if (dialogResult === "Reset") {
+                var replicationId = this.initialReplicationId;
+                new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+                    .done(() => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
+                    })
+                    .fail((foo) => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+                    });
+            }
         });
+        
     }
 
     simulateSqlReplication() {

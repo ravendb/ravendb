@@ -181,6 +181,26 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
+        [Route("studio-tasks/test-sql-replication-connection")]
+        [Route("databases/{databaseName}/studio-tasks/test-sql-replication-connection")]
+        public async Task<HttpResponseMessage> TestSqlReplicationConnection(string factoryName, string connectionString)
+        {
+            try
+            {
+                RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
+                return GetEmptyMessage(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Connection failed",
+                    Exception = ex
+                }, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
         [Route("studio-tasks/createSampleDataClass")]
         [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
         public async Task<HttpResponseMessage> CreateSampleDataClass()
