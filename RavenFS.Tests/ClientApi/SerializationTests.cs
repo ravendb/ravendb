@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -22,7 +23,7 @@ namespace RavenFS.Tests.ClientApi
             var serializer = new JsonSerializer();
 
 
-            var metadata = new RavenJObject { {"Last-Modified", "2014-07-07T12:00:00.0000000"}, { "RavenFS-Size", "128" } };
+            var metadata = new RavenJObject { { Constants.LastModified, "2014-07-07T12:00:00.0000000" }, { "RavenFS-Size", "128" } };
             var fileHeader = new FileHeader("test1.file", metadata);
 
             var serializedValue = JsonExtensions.ToJObject(fileHeader);
@@ -41,7 +42,7 @@ namespace RavenFS.Tests.ClientApi
             var serializer = new JsonSerializer();
 
 
-            var metadata = new RavenJObject { { "Last-Modified", "2014-07-07T12:00:00.0000000" }, { "RavenFS-Size", "128" } };
+            var metadata = new RavenJObject { { Constants.LastModified, "2014-07-07T12:00:00.0000000" }, { "RavenFS-Size", "128" } };
             var fileHeader = new FileHeader("test1.file", metadata);
             var notification = new ConflictNotification() { FileName = "test1.file", SourceServerUrl = "http://destination", RemoteFileHeader = fileHeader, Status = ConflictStatus.Detected};
 

@@ -69,8 +69,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var readingStream = StorageStream.Reading(Storage, name);
             var result = StreamResult(name, readingStream);
 
-            var etag = new Etag(fileAndPages.Metadata.Value<string>("ETag"));
-            fileAndPages.Metadata.Remove("ETag");
+            var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
+            fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
             WriteHeaders(fileAndPages.Metadata, etag, result);
 
             return result.WithNoCache();
@@ -163,8 +163,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			var httpResponseMessage = GetEmptyMessage();
 
-            var etag = new Etag(fileAndPages.Metadata.Value<string>("ETag"));
-            fileAndPages.Metadata.Remove("ETag");
+            var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
+            fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
 
             WriteHeaders(fileAndPages.Metadata, etag, httpResponseMessage);
 
@@ -331,7 +331,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Search.Index(name, headers);                  
                 }));
 
-                log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>("ETag"));
+                log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
                 using (var contentStream = await Request.Content.ReadAsStreamAsync())
                 using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
@@ -358,7 +358,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Search.Index(name, headers);
                     Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
-                    log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
+                    log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
                     StartSynchronizeDestinationsInBackground();
                 }
@@ -393,45 +393,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None,
 								  TaskCreationOptions.None, TaskScheduler.Default);
 		}
-
-        private static void AddHeaders(HttpResponseMessage context, RavenJObject metadata)
-        {
-            foreach (var item in metadata)
-            {
-                if (item.Key == "ETag")
-                {
-                    var etag = item.Value.Value<Guid>();
-                    if (etag == null)
-                        continue;
-
-                    context.Headers.ETag = new EntityTagHeaderValue(@"""" + etag + @"""");
-                }
-                else
-                {
-                    //if (item.Key == "Last-Modified")
-                    //{
-                    //    string value = item.Value.Value<string>();
-                    //    context.Content.Headers.Add(item.Key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
-                    //}
-                    //else
-                    //{
-                        string value;
-                        switch (item.Value.Type)
-                        {
-                            // REVIEW: Can we just do item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None) everywhere?
-                            case JTokenType.Object:
-                            case JTokenType.Array:
-                                value = item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None);
-                                break;
-                            default:
-                                value = item.Value.Value<string>();
-                                break;
-                        }
-                        context.Content.Headers.Add(item.Key, value);
-                    //}
-                }
-            }
-        }
 
 		private class ReadFileToDatabase : IDisposable
 		{

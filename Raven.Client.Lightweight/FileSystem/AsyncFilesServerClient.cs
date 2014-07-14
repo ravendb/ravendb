@@ -404,7 +404,7 @@ namespace Raven.Client.FileSystem
                 var response = await request.ReadResponseJsonAsync();
 
                 var metadata = request.ResponseHeaders.HeadersToObject();
-                metadata["etag"] = new RavenJValue(Guid.Parse(request.ResponseHeaders["ETag"].Trim('\"')));
+                metadata["etag"] = new RavenJValue(Guid.Parse(request.ResponseHeaders[Constants.MetadataEtagField].Trim('\"')));
                 return metadata;
             }
             catch (Exception e)
@@ -1286,7 +1286,7 @@ namespace Raven.Client.FileSystem
                 request.AddHeaders(metadata);
                 request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
                 // REVIEW: (Oren) and also causes this.
-                request.AddHeader("ETag", "\"" + metadata.Value<string>("ETag") + "\"");
+                request.AddHeader(Constants.MetadataEtagField, "\"" + metadata.Value<string>(Constants.MetadataEtagField) + "\"");
 
                 try
                 {

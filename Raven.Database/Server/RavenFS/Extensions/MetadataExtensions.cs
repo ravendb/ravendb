@@ -3,21 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Newtonsoft.Json;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
+using Raven.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
-using System.Text.RegularExpressions;
-using Newtonsoft.Json;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
@@ -29,7 +23,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 	{ 
         public static RavenJObject WithETag(this RavenJObject metadata, Guid etag)
         {
-            metadata["ETag"] = new RavenJValue(etag);
+            metadata[Constants.MetadataEtagField] = new RavenJValue(etag);
             return metadata;
         }
 

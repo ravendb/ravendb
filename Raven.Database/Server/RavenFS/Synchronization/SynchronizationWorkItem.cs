@@ -14,6 +14,7 @@ using Raven.Json.Linq;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -47,7 +48,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public Guid FileETag
 		{
-			get { return FileMetadata.Value<Guid>("ETag"); }
+            get { return FileMetadata.Value<Guid>(Constants.MetadataEtagField); }
 		}
 
 		public bool IsCancelled

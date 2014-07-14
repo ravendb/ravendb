@@ -303,10 +303,10 @@ namespace RavenFS.Tests
 			// note that file upload modifies ETag twice
             await client.UploadAsync("test.bin", content, new RavenJObject());
             var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-            var etag0 = resultFileMetadata.Value<Guid>("ETag");
+            var etag0 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
             await client.UploadAsync("test.bin", content, new RavenJObject());
             resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-			var etag1 = resultFileMetadata.Value<Guid>("ETag");
+            var etag1 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
 			
 			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000002").ToByteArray(), etag0.ToByteArray()), 0);
 			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000004").ToByteArray(), etag1.ToByteArray()), 0);

@@ -20,6 +20,7 @@ using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -72,7 +73,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
             var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
 
             var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -265,7 +266,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
 
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -340,7 +341,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public HttpResponseMessage Delete(string fileSystemName, string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
@@ -425,7 +426,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Rename(string fileSystemName, string fileName, string rename)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
             var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,

@@ -19,6 +19,7 @@ using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Database.Server.RavenFS.Infrastructure;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -325,7 +326,7 @@ namespace RavenFS.Tests.Synchronization
 			webRequest.Method = "POST";
 
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
-			webRequest.Headers.Add("ETag", new Guid().ToString());
+            webRequest.Headers.Add(Constants.MetadataEtagField, new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 
 			var sb = new StringBuilder();
@@ -378,7 +379,7 @@ namespace RavenFS.Tests.Synchronization
             var serverId = await sourceClient.GetServerIdAsync();
             var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
-			Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>("ETag"), lastEtag.LastSourceFileEtag);
+            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag);
 		}
 
 		[Fact]

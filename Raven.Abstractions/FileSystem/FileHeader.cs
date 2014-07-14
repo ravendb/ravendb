@@ -39,9 +39,9 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var lastModified = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains("Last-Modified"))
+                if (this.Metadata.Keys.Contains(Constants.LastModified))
                 {
-                    lastModified = this.Metadata["Last-Modified"].Value<DateTimeOffset>();
+                    lastModified = this.Metadata[Constants.LastModified].Value<DateTimeOffset>();
                 }
                 return lastModified;
             }
@@ -65,9 +65,9 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 Etag parsedEtag = null;
-                if (this.Metadata.Keys.Contains("ETag"))
+                if (this.Metadata.Keys.Contains(Constants.MetadataEtagField))
                 {
-                    Etag.TryParse(this.Metadata["ETag"].Value<string>(), out parsedEtag);
+                    Etag.TryParse(this.Metadata[Constants.MetadataEtagField].Value<string>(), out parsedEtag);
                 }
 
                 return parsedEtag;

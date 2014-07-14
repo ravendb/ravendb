@@ -556,7 +556,7 @@ namespace Raven.Client.Connection
 
 				var headerName = prop.Key;
 				var value = prop.Value.Value<object>().ToString();
-				if (headerName == "ETag")
+                if (headerName == Constants.MetadataEtagField)
 				{
 					headerName = "If-None-Match";
 					if (!value.StartsWith("\""))
