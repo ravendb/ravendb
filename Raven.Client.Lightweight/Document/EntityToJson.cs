@@ -194,11 +194,7 @@ namespace Raven.Client.Document
         }
 
         private static Regex arrayEndRegex = new Regex(@"\[\], [\w\.-]+$",
-#if !NETFX_CORE
  RegexOptions.Compiled
-#else
-													   RegexOptions.None	
-#endif
 );
         private static bool ShouldSimplifyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
         {

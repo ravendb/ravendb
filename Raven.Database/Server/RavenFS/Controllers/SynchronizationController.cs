@@ -25,7 +25,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public class SynchronizationController : RavenFsApiController
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		private static readonly ConcurrentDictionary<Guid, ReaderWriterLockSlim> SynchronizationFinishLocks =
 			new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();

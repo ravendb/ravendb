@@ -18,7 +18,9 @@ namespace Raven.Tests.Indexes
 
 		private class Result
 		{
+#pragma warning disable 649
 			public string[] Tags;
+#pragma warning restore 649
 		}
 
 		[Fact]

@@ -354,6 +354,21 @@ namespace Raven.Database.Server.Controllers
 			return resMsg;
 		}
 
+		public virtual Task<HttpResponseMessage> GetMessageWithObjectAsTask(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+	    {
+			return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(item, code, etag));
+	    }
+
+		public Task<HttpResponseMessage> GetMessageWithStringAsTask(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+		{
+			return new CompletedTask<HttpResponseMessage>(GetMessageWithString(msg, code, etag));
+		}
+
+		public Task<HttpResponseMessage> GetEmptyMessageAsTask(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+		{
+			return new CompletedTask<HttpResponseMessage>(GetEmptyMessage(code, etag));
+		}
+
 		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
 		{
 			if (msg == null)

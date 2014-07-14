@@ -116,11 +116,16 @@ body {
 #editSQLReplication .advanced {
   padding-left: 0;
 }
+#editSQLReplication .checkbox {
+  align-content: flex-start;
+}
+#editSQLReplication .checkbox input[type=checkbox] {
+  font-size: large;
+  margin-left: 0;
+}
 .sqlReplication-Stats {
   width: 60vw;
   max-height: 60vh !important;
-  overflow-x: hidden !important;
-  overflow-y: hidden !important;
 }
 @media (max-width: 767px) {
   .sqlReplication-Stats {
@@ -140,6 +145,8 @@ body {
   max-height: 60vh!important;
   overflow-x: hidden!important;
   overflow-y: hidden!important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
 }
 @media (max-width: 767px) {
   .replicationSimulation {
@@ -340,6 +347,23 @@ body {
   pointer-events: none;
   cursor: default;
 }
+.documents-page {
+  margin-top: 10px;
+}
+@media (max-device-height: 1024px) {
+  .documents-page a {
+    font-size: 12px !important;
+    overflow: hidden;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+#loadingIndicator {
+  width: 30px;
+  height: 30px;
+}
 .document-collections li {
   outline: none;
   margin-left: -10px;
@@ -372,6 +396,17 @@ body {
   max-height: 80vh;
   direction: rtl;
   text-align: left;
+}
+.documents-select {
+  text-align: center;
+  background-color: #ffffcc;
+  margin-top: 5px;
+  border: 1px solid;
+  border-radius: 25px;
+}
+.documents-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
 }
 .index-panel {
   overflow: visible !important;
@@ -612,19 +647,6 @@ body {
 }
 #nprogress .peg {
   opacity: 0;
-}
-.documents-page {
-  margin-top: 10px;
-}
-@media (max-device-height: 1024px) {
-  .documents-page a {
-    font-size: 12px !important;
-    overflow: hidden;
-    -ms-text-overflow: ellipsis;
-    -o-text-overflow: ellipsis;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 .fieldControl {
   text-align: left !important;
@@ -883,9 +905,7 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*#goToDocInput {
-        width: 10em;
-    }*/
+  /*# sourceMappingURL=app.css.map */
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }

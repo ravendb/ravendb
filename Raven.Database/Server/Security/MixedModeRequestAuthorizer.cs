@@ -83,16 +83,15 @@ namespace Raven.Database.Server.Security
 				return true;
 			}
 
-			var oneTimeTokenAsHeader = controller.GetHeader("Single-Use-Auth-Token");
-			if (string.IsNullOrEmpty(oneTimeTokenAsHeader) == false)
+			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
+            if (string.IsNullOrEmpty(oneTimeToken))
 			{
-			    return TryAuthorizeSingleUseAuthToken(controller, oneTimeTokenAsHeader, out msg);
+			    oneTimeToken = controller.GetQueryStringValue("singleUseAuthToken");
 			}
-            
-			var oneTimeTokenAsQueryParam = controller.GetQueryStringValue("singleUseAuthToken");
-            if (string.IsNullOrEmpty(oneTimeTokenAsQueryParam) == false)
+
+            if (string.IsNullOrEmpty(oneTimeToken) == false)
             {
-                return TryAuthorizeSingleUseAuthToken(controller, oneTimeTokenAsQueryParam, out msg);
+                return TryAuthorizeSingleUseAuthToken(controller, oneTimeToken, out msg);
             }
 
 			var authHeader = controller.GetHeader("Authorization");

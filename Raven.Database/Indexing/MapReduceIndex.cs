@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
 						{
 							var documentId = GetDocumentId(currentDoc);
 							if (documentId != currentKey)
-							{
+							{								
 								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey);
 								currentDocumentResults.Clear();
 								currentKey = documentId;
@@ -189,7 +189,6 @@ namespace Raven.Database.Indexing
 			if (currentKey == null || currentDocumentResults.Count == 0)
 				return 0;
 
-
 			int count = 0;
 			var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition);
 			foreach (var doc in results)
@@ -207,7 +206,8 @@ namespace Raven.Database.Indexing
 
 				var data = GetMappedData(doc);
 
-                actions.MapReduce.PutMappedResult(indexId, currentKey, reduceKey, data);
+				logIndexing.Debug("Storing map result for document = {0}, recuce key = {1}, data = {2}", currentKey, reduceKey, data);
+				actions.MapReduce.PutMappedResult(indexId, currentKey, reduceKey, data);
 				statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
 				actions.General.MaybePulseTransaction();
 				changes.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(currentKey), reduceKey));

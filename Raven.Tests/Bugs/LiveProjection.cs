@@ -25,6 +25,9 @@ namespace Raven.Tests.Bugs
 			var purchaseHistoryIndex = new PurchaseHistoryIndex();
 			IDocumentStore documentStore = Store;
 			purchaseHistoryIndex.Execute(documentStore.DatabaseCommands, documentStore.Conventions);
+
+
+			new PurchaseHistoryTransformer().Execute(Store);
 		}
 
 		public EmbeddableDocumentStore Store { get; set; }
@@ -65,7 +68,7 @@ namespace Raven.Tests.Bugs
 
 				session.SaveChanges();
 
-				session.Query<Shipment, PurchaseHistoryIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
+				session.Query<Shipment, PurchaseHistoryIndex>().TransformWith<PurchaseHistoryTransformer, Shipment>().Customize(x => x.WaitForNonStaleResults()).Count();
 
 				var results = PurchaseHistoryView.Create(session, "user1");
 				Assert.Equal(2, results.Items.Length);
@@ -87,6 +90,7 @@ namespace Raven.Tests.Bugs
 					new PurchaseHistoryView()
 					{
 						Items = documentSession.Query<Shipment, PurchaseHistoryIndex>()
+									.TransformWith<PurchaseHistoryTransformer, Shipment>()
 									.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
 								   .Where(x => x.UserId == userId)
 								   .As<PurchaseHistoryViewItem>()
@@ -115,17 +119,24 @@ namespace Raven.Tests.Bugs
 									  UserId = doc.UserId,
 									  ProductId = product.ProductId
 								  },
-					TransformResults = (database, results) =>
-						from result in results
-						from item in result.Items
-						let product = database.Load<Product>(item.ProductId)
-						where product != null
-						select new
-						{
-							ProductId = item.ProductId,
-							ProductName = product.Name
-						}
 				}.ToIndexDefinition(Conventions);
+			}
+		}
+
+		public class PurchaseHistoryTransformer : AbstractTransformerCreationTask<Shipment>
+		{
+			public PurchaseHistoryTransformer()
+			{
+				TransformResults = results =>
+					from result in results
+					from item in result.Items
+					let product = LoadDocument<Product>(item.ProductId)
+					where product != null
+					select new
+					{
+						ProductId = item.ProductId,
+						ProductName = product.Name
+					};
 			}
 		}
 

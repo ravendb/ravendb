@@ -72,7 +72,6 @@ class exportDatabase extends viewModelBase {
             operateOnTypes += 8000;
         }
 
-
         var filtersToSend: filterSettingDto[] = [];
         filtersToSend.pushAll(this.filters());
 
@@ -85,7 +84,6 @@ class exportDatabase extends viewModelBase {
             });
         }
 
-
         var smugglerOptions = {
             OperateOnTypes: operateOnTypes,
             BatchSize: this.batchSize(),
@@ -97,6 +95,7 @@ class exportDatabase extends viewModelBase {
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
         $("#dbExportDownloadForm").submit();
     }
+
     selectOptions(){
         this.showAdvancedOptions(false);
     }

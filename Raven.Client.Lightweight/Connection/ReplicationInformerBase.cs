@@ -464,7 +464,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			{
 				switch (webException.Status)
 				{
-#if !NETFX_CORE
 					case WebExceptionStatus.Timeout:
 						timeout = true;
 						return true;
@@ -472,8 +471,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
 					case WebExceptionStatus.ConnectionClosed:
-
-#endif
 					case WebExceptionStatus.ConnectFailure:
 					case WebExceptionStatus.SendFailure:
 						return true;
@@ -487,9 +484,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				}
 			}
 			return
-#if !NETFX_CORE
  e.InnerException is SocketException ||
-#endif
  e.InnerException is IOException;
 		}
 

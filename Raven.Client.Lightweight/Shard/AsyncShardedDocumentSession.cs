@@ -468,12 +468,12 @@ namespace Raven.Client.Shard
 				 shardDbCommands.Values.ToList());
 		}
 
-		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
+		protected override IDocumentQuery<T> DocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
 		{
 			throw new NotSupportedException("The async sharded document store doesn't support synchronous operations");
 		}
 
-		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce)
+		protected override IAsyncDocumentQuery<T> DocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce)
 		{
 			return AsyncDocumentQuery<T>(indexName);
 		}

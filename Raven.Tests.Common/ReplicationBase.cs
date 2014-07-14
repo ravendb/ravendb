@@ -333,7 +333,7 @@ namespace Raven.Tests.Common
             return attachment;
         }
 
-        protected void WaitForDocument(IDatabaseCommands commands, string expectedId)
+        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId)
         {
             for (int i = 0; i < RetriesCount; i++)
             {

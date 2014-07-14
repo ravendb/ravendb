@@ -107,6 +107,8 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filename))
                 throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
 
+            IncrementRequestCount();
+
             return Commands.DownloadAsync(filename, metadata);
             
         }
@@ -123,6 +125,8 @@ namespace Raven.Client.FileSystem
         {
             if (string.IsNullOrWhiteSpace(directory))
                 throw new ArgumentNullException("directory", "The directory cannot be null, empty or whitespace.");
+
+            IncrementRequestCount();
 
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
             var searchResults = await Commands.SearchOnDirectoryAsync(directory);

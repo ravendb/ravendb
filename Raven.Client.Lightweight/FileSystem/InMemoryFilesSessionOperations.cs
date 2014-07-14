@@ -136,43 +136,64 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag); 
+            var operation = new UploadFileOperation(this, path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterUpload(FileHeader file, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
             var operation = new UploadFileOperation(this, file.Path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation);   
         }
 
         public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
             var operation = new UploadFileOperation(this, path, size, write, metadata, etag);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation);           
         }
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
             var operation = new UploadFileOperation(this, file.Path, size, write, metadata, etag);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation);     
         }
 
         public void RegisterFileDeletion(string path, Etag etag = null)
         {
             var operation = new DeleteFileOperation(this, path, etag);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation); 
         }
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
             var operation = new DeleteFileOperation(this, file.Path, etag);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation); 
         }
 
         public void RegisterRename(string sourceFile, string destinationFile)
         {
             var operation = new RenameFileOperation(this, sourceFile, destinationFile);
+
+            IncrementRequestCount();
+
             registeredOperations.Enqueue(operation);
         }
 

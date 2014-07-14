@@ -40,7 +40,6 @@ namespace Raven.Client.Util
 		{
 			get
 			{
-#if !NETFX_CORE
 				if (failedToGetAvailablePhysicalMemory)
 					return -1;
 
@@ -84,11 +83,6 @@ namespace Raven.Client.Util
 					return -1;
 				}
 #endif
-#else
-				return Math.Max(0, 1024 - (int)(GC.GetTotalMemory(false) / 1024 / 1024));
-
-#endif
-
 			}
 		}
 

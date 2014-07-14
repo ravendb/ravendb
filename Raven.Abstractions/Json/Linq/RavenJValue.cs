@@ -181,10 +181,8 @@ namespace Raven.Json.Linq
 		{
 			if (value == null)
 				return JTokenType.Null;
-#if !NETFX_CORE
 			else if (value == DBNull.Value)
 				return JTokenType.Null;
-#endif
 			else if (value is string)
 				return GetStringValueType(current);
 			else if (value is long || value is int || value is short || value is sbyte

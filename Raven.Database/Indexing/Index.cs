@@ -925,15 +925,16 @@ namespace Raven.Database.Indexing
 			private readonly FieldsToFetch fieldsToFetch;
 			private readonly HashSet<string> documentsAlreadySeenInPreviousPage = new HashSet<string>();
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
+			private readonly List<string> reduceKeys;
 
-			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults,
-										FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
 				this.indexQuery = indexQuery;
 				this.shouldIncludeInResults = shouldIncludeInResults;
 				this.fieldsToFetch = fieldsToFetch;
 				this.indexQueryTriggers = indexQueryTriggers;
+				this.reduceKeys = reduceKeys;
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
@@ -962,7 +963,17 @@ namespace Raven.Database.Indexing
 							{
 								ravenJObject.Remove(prop.Key);
 							}
-							yield return ravenJObject;
+
+							if (reduceKeys == null)
+								yield return ravenJObject;
+							else
+							{
+								RavenJToken reduceKeyValue;
+								if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceKeys.Any(x => reduceKeyValue.Equals(new RavenJValue(x))))
+								{
+									yield return ravenJObject;
+								}
+							}
 						}
 					}
 				}

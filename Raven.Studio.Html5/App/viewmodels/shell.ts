@@ -454,8 +454,11 @@ class shell extends viewModelBase {
         } else {
             this.currentAlert(alert);
             var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-            if (alert.type === alertType.danger || alert.type === alertType.warning) {
-                fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
+            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
+                fadeTime = 100000000;
+            }
+            else if (alert.type === alertType.danger || alert.type === alertType.warning) {
+                fadeTime = 4000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
             }
             setTimeout(() => {
                 this.closeAlertAndShowNext(alert);

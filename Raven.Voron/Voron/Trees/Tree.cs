@@ -702,5 +702,25 @@ namespace Voron.Trees
 			pos = null;
 			return false;
 		}
+
+		public Slice LastKeyOrDefault()
+		{
+			using (var it = Iterate())
+			{
+				if (it.Seek(Slice.AfterAllKeys) == false)
+					return null;
+				return it.CurrentKey.Clone();
+			}
+		}
+
+		public Slice FirstKeyOrDefault()
+		{
+			using (var it = Iterate())
+			{
+				if (it.Seek(Slice.BeforeAllKeys) == false)
+					return null;
+				return it.CurrentKey.Clone();
+			}
+		}
 	}
 }

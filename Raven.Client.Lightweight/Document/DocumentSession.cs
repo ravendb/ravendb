@@ -3,9 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Threading;
+
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-#if !NETFX_CORE
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,7 +20,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.WinRT.MissingFromWinRT;
+
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -908,7 +909,7 @@ namespace Raven.Client.Document
 
                 while (ExecuteLazyOperationsSingleStep(responseTimeDuration))
                 {
-                    ThreadSleep.Sleep(100);
+                    Thread.Sleep(100);
                 }
 
                 responseTimeDuration.ComputeServerTotal();
@@ -1014,5 +1015,3 @@ namespace Raven.Client.Document
         }
     }
 }
-
-#endif

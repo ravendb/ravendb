@@ -153,6 +153,7 @@ namespace Raven.Tests.MultiGet
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new Answers_ByAnswerEntity().Execute(store);
+				new Answers_ByAnswerEntityTransformer().Execute(store);
 
 				string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
 				// Working
@@ -161,7 +162,7 @@ namespace Raven.Tests.MultiGet
 					var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.Where(x => x.Id == answerId)
-						.As<AnswerEntity>()
+						.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						.Lazily();
 					Assert.NotNull(answerInfo.Value.ToArray().Length);
 				}

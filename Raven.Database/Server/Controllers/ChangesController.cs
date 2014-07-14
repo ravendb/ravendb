@@ -129,11 +129,6 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/changes/events")]
 		public HttpResponseMessage GetChangesEvents()
 		{
-			if (string.IsNullOrEmpty(GetQueryStringValue("singleUseAuthToken")))
-			{
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
-			}
-
 			var eventsTransport = new ChangesPushContent(this);
             eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 			Database.TransportState.Register(eventsTransport);

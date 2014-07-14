@@ -1,5 +1,4 @@
-﻿#if !NETFX_CORE
-using System;
+﻿using System;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
@@ -61,4 +60,3 @@ namespace Raven.Client.Bundles.MoreLikeThis
 		}
 	}
 }
-#endif

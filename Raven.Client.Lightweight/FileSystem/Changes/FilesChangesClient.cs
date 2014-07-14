@@ -13,10 +13,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
-
 namespace Raven.Client.FileSystem.Changes
 {
 

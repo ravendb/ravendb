@@ -24,6 +24,8 @@ namespace Raven.Tests.MailingList
 			{
 
 				new Data_Search().Execute(Store);
+				new Data_SearchTransformer().Execute(Store);
+
 				using (var session = Store.OpenSession())
 				{
 					foreach (var d in data) session.Store(d);
@@ -36,6 +38,7 @@ namespace Raven.Tests.MailingList
 					RavenQueryStatistics stats;
 
                     var tst = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
+						.SetResultTransformer("Data/SearchTransformer")
 						.WaitForNonStaleResults()
 						.Statistics(out stats)
 						.WhereEquals(x => x.Optional, null)
@@ -45,7 +48,7 @@ namespace Raven.Tests.MailingList
 					Assert.False(stats.IsStale, "Index is stale.");
 					Assert.True(tst.Count > 0, "Lucene query for reduce result JObject failed.");
 
-					var tst1 = Queryable.Where(session.Query<Data_Search.ReduceResult, Data_Search>()
+					var tst1 = Queryable.Where(session.Query<Data_Search.ReduceResult, Data_Search>().TransformWith<Data_SearchTransformer, Data_Search.ReduceResult>()
 							       .Statistics(out stats), x => x.Optional == null)
 						.OfType<Data_Search.ProjectionResult>()
 						.ToList();
@@ -53,7 +56,7 @@ namespace Raven.Tests.MailingList
 					Assert.False(stats.IsStale, "Index is stale.");
 					Assert.True(tst1.Count > 0, "Regular query for projection failed.");
 
-                    var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
+					var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>().SetResultTransformer("Data/SearchTransformer")
 						.Statistics(out stats)
 						.WhereEquals(x => x.Optional, null)
 						.SelectFields<Data_Search.ProjectionResult>(new string[0])
@@ -157,19 +160,25 @@ namespace Raven.Tests.MailingList
 								   Optional = i.Select(x => x.Optional).Where(x => x != -999).DefaultIfEmpty(-999).First()
 							   };
 
-				TransformResults = (db, ts) => from t in ts
-											   where t.MyDataIds.Count() > 0
-											   select new
-											   {
-												   Data = db.Load<Data>(t.DataId),
-												   MyDatas = db.Load<MyData>(t.MyDataIds)
-											   };
-
 				Index(x => x.Text, FieldIndexing.Analyzed);
 				Index(x => x.TranslatedText, FieldIndexing.Analyzed);
 
 				Analyze(x => x.Text, typeof(SimpleAnalyzer).FullName);
 				Analyze(x => x.TranslatedText, typeof(SimpleAnalyzer).FullName);
+			}
+		}
+
+		public class Data_SearchTransformer : AbstractTransformerCreationTask<Data_Search.ReduceResult>
+		{
+			public Data_SearchTransformer()
+			{
+				TransformResults = ts => from t in ts
+											   where t.MyDataIds.Count() > 0
+											   select new
+											   {
+												   Data = LoadDocument<Data_Search.Data>(t.DataId),
+												   MyDatas = LoadDocument<Data_Search.MyData>(t.MyDataIds)
+											   };
 			}
 		}
 	

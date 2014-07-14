@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
 using System.Diagnostics;
@@ -17,9 +18,17 @@ using System.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	public class RelationalDatabaseWriter : IDisposable
-	{
-		private readonly DocumentDatabase database;
+    public class RelationalDatabaseWriter : IDisposable
+    {
+        private static string[] SqlServerFactoryNames =
+        {
+            "System.Data.SqlClient",
+            "System.Data.SqlServerCe.4.0",
+            "MySql.Data.MySqlClient",
+            "System.Data.SqlServerCe.3.5"
+        };
+	
+	    private readonly DocumentDatabase database;
 		private readonly SqlReplicationConfig cfg;
 		private readonly DbProviderFactory providerFactory;
 		private readonly SqlReplicationStatistics replicationStatistics;
@@ -27,6 +36,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbConnection connection;
 		private readonly DbTransaction tx;
 		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
+        private bool IsSqlServerFactoryType = false;
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -47,6 +57,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			Debug.Assert(commandBuilder != null);
 
 			connection.ConnectionString = cfg.ConnectionString;
+            
+		    if (SqlServerFactoryNames.Contains(cfg.FactoryName))
+		    {
+                IsSqlServerFactoryType = true;
+		    }
 
 			try
 			{
@@ -155,7 +170,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
 					var sb = new StringBuilder("INSERT INTO ")
-						.Append(commandBuilder.QuoteIdentifier(tableName))
+                        .Append(GetTableNameString(tableName))
 						.Append(" (")
 						.Append(commandBuilder.QuoteIdentifier(pkName))
 						.Append(", ");
@@ -166,8 +181,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
 					}
 					sb.Length = sb.Length - 2;
-
+                    
 					var pkParam = cmd.CreateParameter();
+                    
 					pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, pkName);
 					pkParam.Value = itemToReplicate.DocumentId;
 					cmd.Parameters.Add(pkParam);
@@ -188,6 +204,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					sb.Length = sb.Length - 2;
 					sb.Append(")");
+
+                    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                    {
+                        sb.Append(" OPTION(RECOMPILE)");
+                    }
+
 					cmd.CommandText = sb.ToString();
 					try
 					{
@@ -206,104 +228,6 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 
 
-        public IEnumerable<string> SimulateExecuteCommandText(ConversionScriptResult scriptResult)
-        {
-            var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList();
-            
-            foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
-            {
-                // first, delete all the rows that might already exist there
-                foreach (string deleteQuery in GenerateDeleteItemsCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
-                    identifiers))
-                {
-                    yield return deleteQuery;
-                }
-            }
-
-            foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
-            {
-                List<ItemToReplicate> dataForTable;
-                if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
-                    continue;
-
-                foreach (string insertQuery in GenerteInsertItemCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable))
-                {
-                    yield return insertQuery;
-                }
-            }
-        }
-
-	    private IEnumerable<string>  GenerteInsertItemCommandText(string tableName, string pkName, List<ItemToReplicate> dataForTable)
-	    {
-            foreach (var itemToReplicate in dataForTable)
-            {
-
-                var sb = new StringBuilder ("INSERT INTO ")
-                        .Append(commandBuilder.QuoteIdentifier(tableName))
-                        .Append(" (")
-                        .Append(commandBuilder.QuoteIdentifier(pkName))
-                        .Append(", ");
-                foreach (var column in itemToReplicate.Columns)
-                {
-                    if (column.Key == pkName)
-                        continue;
-                    sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
-                }
-                sb.Length = sb.Length - 2;
-
-
-                sb.Append(") VALUES (")
-                    .Append(itemToReplicate.DocumentId)
-                    .Append(", ");
-
-                foreach (var column in itemToReplicate.Columns)
-                {
-                    if (column.Key == pkName)
-                        continue;
-                    DbParameter param = new OdbcParameter();
-                    SetParamValue(param, column.Value, stringParserList);
-                    sb.Append(param.Value).Append(", ");
-                }
-                sb.Length = sb.Length - 2;
-                sb.Append(");");
-                yield return sb.ToString();
-            }
-	    }
-
-        private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
-	    {
-	        const int maxParams = 1000;
-
-	        database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
-	        for (int i = 0; i < identifiers.Count; i += maxParams)
-	        {
-
-	            var sb = new StringBuilder("DELETE FROM ")
-	                .Append(commandBuilder.QuoteIdentifier(tableName))
-	                .Append(" WHERE ")
-	                .Append(commandBuilder.QuoteIdentifier(pkName))
-	                .Append(" IN (");
-
-	            for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
-	            {
-	                if (i != j)
-	                    sb.Append(", ");
-	                if (doNotParameterize == false)
-	                {
-	                    sb.Append(identifiers[j]);
-	                }
-	                else
-	                {
-	                    sb.Append("'").Append(SanitizeSqlValue(identifiers[j])).Append("'");
-	                }
-
-	            }
-	            sb.Append(");");
-	            yield return sb.ToString();
-	        }
-	        
-
-	    }
 
 	    public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
 		{
@@ -316,10 +240,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					cmd.Parameters.Clear();
 					var sb = new StringBuilder("DELETE FROM ")
-						.Append(commandBuilder.QuoteIdentifier(tableName))
-						.Append(" WHERE ")
-						.Append(commandBuilder.QuoteIdentifier(pkName))
-						.Append(" IN (");
+                        .Append(GetTableNameString(tableName))
+				        .Append(" WHERE ")
+					    .Append(commandBuilder.QuoteIdentifier(pkName))
+					    .Append(" IN (");
 
 					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
@@ -341,6 +265,10 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					sb.Append(")");
 
+				    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+				    {
+                        sb.Append(" OPTION(RECOMPILE)");
+				    }
 					cmd.CommandText = sb.ToString();
 
 					try
@@ -359,7 +287,19 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public static string SanitizeSqlValue(string sqlValue)
+        private string GetTableNameString(string tableName)
+        {
+            if (cfg.PerformTableQuatation)
+            {
+                return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
+            }
+            else
+            {
+                return tableName;
+            }
+        }
+
+        public static string SanitizeSqlValue(string sqlValue)
 		{
 			return sqlValue.Replace("'", "''");
 		}
@@ -399,12 +339,35 @@ namespace Raven.Database.Bundles.SqlReplication
 				switch (val.Type)
 				{
 					case JTokenType.None:
-					case JTokenType.Object:
 					case JTokenType.Uri:
 					case JTokenType.Raw:
 					case JTokenType.Array:
 						colParam.Value = val.Value<string>();
 						return;
+                    case JTokenType.Object:
+                        var objectValue = val as RavenJObject;
+                        if (objectValue != null && objectValue.Keys.Count >= 2 && objectValue.ContainsKey("Type")  && objectValue.ContainsKey("Value"))
+                        {
+                            var dbType = objectValue["Type"].Value<string>();
+                            var fieldValue = objectValue["Value"].Value<string>();
+                            
+                            colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType,false);
+                            
+                            colParam.Value = fieldValue;
+
+                            if (objectValue.ContainsKey("Size"))
+                            {
+                                var size = objectValue["Size"].Value<int>();
+                                colParam.Size = size;
+                            }
+                            return;
+                        }
+                        else
+                        {
+                            colParam.Value = val.Value<string>();
+                            return;
+                        }
+
 					case JTokenType.String:
 						var value = val.Value<string>();
 						if( value.Length > 0 && stringParsers != null ) {

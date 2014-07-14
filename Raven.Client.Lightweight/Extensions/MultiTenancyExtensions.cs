@@ -18,7 +18,6 @@ namespace Raven.Client.Extensions
     ///</summary>
     public static class MultiTenancyExtensions
     {
-#if !NETFX_CORE
         ///<summary>
         /// Ensures that the database exists, creating it if needed
         ///</summary>
@@ -69,8 +68,6 @@ namespace Raven.Client.Extensions
         {
             self.GlobalAdmin.CreateDatabase(databaseDocument);
         }
-
-#endif
 
         [Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
         public static Task EnsureDatabaseExists(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)

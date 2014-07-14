@@ -511,7 +511,7 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
-		protected void WaitForDocument(IDatabaseCommands databaseCommands, string id)
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
 		{
 			var done = SpinWait.SpinUntil(() =>
 			{

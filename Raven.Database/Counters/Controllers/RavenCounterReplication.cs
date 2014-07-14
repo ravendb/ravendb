@@ -432,7 +432,6 @@ namespace Raven.Database.Counters.Controllers
 
 			Task.Factory.StartNew(() => NotifySibling(notifications));
 
-			int skip = 0;
 			var replicationDestinations = GetReplicationDestinations();
 			foreach (var replicationDestination in replicationDestinations)
 			{

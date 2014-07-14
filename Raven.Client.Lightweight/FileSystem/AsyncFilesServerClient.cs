@@ -41,11 +41,7 @@ namespace Raven.Client.FileSystem
         private const int DefaultNumberOfCachedRequests = 2048;
         private static HttpJsonRequestFactory GetHttpJsonRequestFactory ()
         {
-#if !NETFX_CORE
               return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-#else
-			  return new HttpJsonRequestFactory();
-#endif
         }
 
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens = new ConcurrentDictionary<Guid, CancellationTokenSource>();

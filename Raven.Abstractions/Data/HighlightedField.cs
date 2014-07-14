@@ -16,11 +16,7 @@ namespace Raven.Abstractions.Data
     {
         private static readonly Regex FieldOptionMatch =
             new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+)(,(?<FragmentsField>\w+))?$",
-#if !NETFX_CORE
                 RegexOptions.Compiled
-#else
-                RegexOptions.None
-#endif
                 );
 
         public HighlightedField(string field, int fragmentLength, int fragmentCount, string fragmentsField)

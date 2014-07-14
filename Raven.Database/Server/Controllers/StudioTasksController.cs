@@ -20,6 +20,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Smuggler;
@@ -87,7 +88,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
             var requestString = smugglerOptionsJson.SmugglerOptions;
 	        SmugglerOptions smugglerOptions;
@@ -125,7 +126,7 @@ namespace Raven.Database.Server.Controllers
                 FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("dd MM yyyy HH-mm", CultureInfo.InvariantCulture))
             };
 			
-			return result;
+			return new CompletedTask<HttpResponseMessage>(result);
 		}
         
 		[HttpPost]
@@ -154,13 +155,13 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
-        [Route("studio-tasks/createSampleDataClass")]
+        [Route("studio-tasks/simulate-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
-        public async Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
+        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
         {
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (task == null)
-				return GetMessageWithObject(new
+				return GetMessageWithObjectAsTask(new
 				{
 					Error = "SQL Replication bundle is not installed"
 				}, HttpStatusCode.NotFound);
@@ -168,11 +169,11 @@ namespace Raven.Database.Server.Controllers
             {
                 var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplicationName);
 
-                return GetMessageWithObject(results.ToList());
+                return GetMessageWithObjectAsTask(results.ToList());
             }
             catch (Exception ex)
             {
-                    return GetMessageWithObject(new
+                    return GetMessageWithObjectAsTask(new
                     {
                         Error = "Executeion failed",
                         Exception = ex
@@ -183,18 +184,18 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("studio-tasks/createSampleDataClass")]
         [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
-        public async Task<HttpResponseMessage> CreateSampleDataClass()
+        public Task<HttpResponseMessage> CreateSampleDataClass()
         {
             using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
             {
                 if (sampleData == null)
-                    return GetEmptyMessage();
+                    return GetEmptyMessageAsTask();
                    
                 sampleData.Position = 0;
                 using (var reader = new StreamReader(sampleData, Encoding.UTF8))
                 {
                    var data = reader.ReadToEnd();
-                   return GetMessageWithObject(data);
+                   return GetMessageWithObjectAsTask(data);
                 }
             }
         }
@@ -236,11 +237,11 @@ namespace Raven.Database.Server.Controllers
         [HttpPost]
         [Route("studio-tasks/reset-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/reset-sql-replication")]
-        public async Task<HttpResponseMessage> ResetSqlReplication(string sqlReplicationName)
+        public Task<HttpResponseMessage> ResetSqlReplication(string sqlReplicationName)
         {
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (task == null)
-                return GetMessageWithObject(new
+                return GetMessageWithObjectAsTask(new
                 {
                     Error = "SQL Replication bundle is not installed"
                 }, HttpStatusCode.NotFound);
@@ -255,8 +256,7 @@ namespace Raven.Database.Server.Controllers
                 Database.Documents.Put(SqlReplicationTask.RavenSqlreplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
             }
 
-
-            return GetEmptyMessage(HttpStatusCode.NoContent);
+            return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
         }
 
         [HttpPost]
@@ -275,7 +275,7 @@ namespace Raven.Database.Server.Controllers
                 //ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                 Convert.FromBase64String(key);
             }
-            catch (Exception e)
+            catch (Exception)
             {
 				message = "The key must be in Base64 encoding format!";
             }
@@ -284,10 +284,8 @@ namespace Raven.Database.Server.Controllers
             return response;
         }
 
-        async Task FlushBatch(IEnumerable<RavenJObject> batch)
+        private Task FlushBatch(IEnumerable<RavenJObject> batch)
         {
-            var sw = Stopwatch.StartNew();
-
             var commands = (from doc in batch
                             let metadata = doc.Value<RavenJObject>("@metadata")
                             let removal = doc.Remove("@metadata")
@@ -299,6 +297,18 @@ namespace Raven.Database.Server.Controllers
                             }).ToArray();
 
             Database.Batch(commands, CancellationToken.None);
+	        return new CompletedTask();
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/resolveMerge")]
+        [Route("databases/{databaseName}/studio-tasks/resolveMerge")]
+        public Task<HttpResponseMessage> ResolveMerge(string documentId)
+        {
+            int nextPage = 0;
+            var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
+            var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
+            return GetMessageWithObjectAsTask(conflictsResolver.Resolve());
         }
 
 	    [HttpPost]

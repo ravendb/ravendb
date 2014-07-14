@@ -103,9 +103,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
@@ -1061,6 +1058,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Util\StackDump\x64\StackDump.exe" />
+    <EmbeddedResource Include="Util\StackDump\x86\StackDump.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
     <EmbeddedResource Include="Server\WebUI\studio.html" />
     <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />
@@ -1095,10 +1094,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="BeforeBuild">
   </Target>
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

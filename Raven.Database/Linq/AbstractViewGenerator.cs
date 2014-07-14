@@ -68,8 +68,6 @@ namespace Raven.Database.Linq
 
 		public IndexingFunc ReduceDefinition { get; set; }
 
-		public TranslatorFunc TransformResultsDefinition { get; set; }
-
 		public GroupByKeyFunc GroupByExtraction { get; set; }
 
 		public string ViewText { get; set; }

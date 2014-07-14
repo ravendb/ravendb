@@ -71,7 +71,7 @@ namespace Raven.Tests.Core.ChangesApi
                 {
                     untypedInterfaceInheritanceChangesClient.Task.Wait();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     
                 }
@@ -139,11 +139,12 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         private class MockReplicationInformerBase : IReplicationInformerBase
-        {
+		{
+#pragma warning disable 67
+			public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+#pragma warning restore 67
 
-            public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
-
-            public int DelayTimeInMiliSec
+			public int DelayTimeInMiliSec
             {
                 get
                 {

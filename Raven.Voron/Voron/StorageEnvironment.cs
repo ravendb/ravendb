@@ -39,12 +39,12 @@ namespace Voron
         private readonly HeaderAccessor _headerAccessor;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private ScratchBufferPool _scratchBufferPool;
+        private readonly ScratchBufferPool _scratchBufferPool;
 	    private DebugJournal _debugJournal;
 	    private EndOfDiskSpaceEvent _endOfDiskSpace;
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
-		private Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>(); 
+		private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>(); 
 
         public TransactionMergingWriter Writer { get; private set; }
 
@@ -67,7 +67,7 @@ namespace Voron
 	    }
 #endif
 
-        public unsafe StorageEnvironment(StorageEnvironmentOptions options)
+        public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
             {
@@ -134,10 +134,15 @@ namespace Voron
 
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
-            }
-        }
 
-        private unsafe void CreateNewDatabase()
+			}
+
+			_journal.Shipper.UpdatePreviousTransaction(_headerAccessor.Get(fileHeader => fileHeader->ShippedTransactionId));
+			_journal.Shipper.UpdatePreviousTransactionCrc(_headerAccessor.Get(fileHeader => fileHeader->ShippedTransactionCrc));
+		
+		}
+
+        private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
             State = new StorageEnvironmentState(null, null, initialNextPageNumber);
@@ -150,7 +155,11 @@ namespace Voron
                 tx.UpdateRootsIfNeeded(root, freeSpace);
 
                 tx.Commit();
-            }
+
+				//since this transaction is never shipped, this is the first previous transaction
+				//when applying shipped logs
+				_journal.Shipper.UpdatePreviousTransaction(tx.Id);
+			}
         }
 
         public IFreeSpaceHandling FreeSpaceHandling
