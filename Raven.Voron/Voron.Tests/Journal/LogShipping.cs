@@ -248,7 +248,7 @@ namespace Voron.Tests.Journal
 			{
 				var tree = Env.CreateTree(tx, "TestTree");
 				tree.Add("ABC", "Foo");
-				tx.Commit();				
+				tx.Commit();
 			}
 
 			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
@@ -262,7 +262,7 @@ namespace Voron.Tests.Journal
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
-						Assert.Equal("Foo",result.Reader.ToStringValue());
+						Assert.Equal("Foo", result.Reader.ToStringValue());
 					});
 				}
 			}
@@ -323,12 +323,14 @@ namespace Voron.Tests.Journal
 				WriteLotsOfTestDataForTree("TestTree2", shippingSourceEnv);
 			}
 
+			Console.Clear();
+
 			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
 			storageEnvironmentOptions.ManualFlushing = true;
 			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
 			{
 				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
-					Assert.DoesNotThrow(() => shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot,tx.PreviousTransactionCrc));
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
 
 				shippingDestinationEnv.FlushLogToDataFile();
 
@@ -336,6 +338,76 @@ namespace Voron.Tests.Journal
 				{
 					ValidateLotsOfTestDataForTree(snapshot, "TestTree");
 					ValidateLotsOfTestDataForTree(snapshot, "TestTree2");
+				}
+			}
+		}
+
+		[Fact]
+		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_new_trees()
+		{
+			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
+
+			using (var shippingSourceEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			{
+				shippingSourceEnv.Journal.OnTransactionCommit += tx =>
+				{
+					tx.CreatePagesSnapshot();
+					transactionsToShip.Add(tx);
+				};
+
+				using (var tx = shippingSourceEnv.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					shippingSourceEnv.CreateTree(tx, "TestTree");
+					tx.Commit();
+				}
+			}
+
+			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+			storageEnvironmentOptions.ManualFlushing = true;
+			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
+			{
+				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				shippingDestinationEnv.FlushLogToDataFile();
+
+				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
+				{
+					snapshot.Read("TestTree", "Foo");
+				}
+			}
+		}
+
+		[Fact]
+		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_new_trees_no_flushing()
+		{
+			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
+
+			using (var shippingSourceEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			{
+				shippingSourceEnv.Journal.OnTransactionCommit += tx =>
+				{
+					tx.CreatePagesSnapshot();
+					transactionsToShip.Add(tx);
+				};
+
+				using (var tx = shippingSourceEnv.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					shippingSourceEnv.CreateTree(tx, "TestTree");
+					tx.Commit();
+				}
+			}
+
+			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+			storageEnvironmentOptions.ManualFlushing = true;
+			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
+			{
+				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+
+				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
+				{
+					snapshot.Read("TestTree", "Foo");
 				}
 			}
 		}
