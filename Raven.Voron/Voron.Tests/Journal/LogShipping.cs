@@ -323,10 +323,14 @@ namespace Voron.Tests.Journal
 				WriteLotsOfTestDataForTree("TestTree2", shippingSourceEnv);
 			}
 
-			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+			storageEnvironmentOptions.ManualFlushing = true;
+			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
 			{
 				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
 					Assert.DoesNotThrow(() => shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot,tx.PreviousTransactionCrc));
+
+				shippingDestinationEnv.FlushLogToDataFile();
 
 				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
 				{
