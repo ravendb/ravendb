@@ -70,7 +70,7 @@
                 <i class="fa">C#</i>
             </button>
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
-                <i class="fa fa-refresh"></i>
+                <i class="fa fa-refresh fa-spin"></i>
             </button>
             <button class="btn btn-danger" title="Delete index" data-bind="click: deleteIndex">
                 <i class="fa fa-trash-o"></i>
@@ -264,6 +264,34 @@
                 </div>
                 <div class="col-md-1">
                     <button type="button" class="close pull-left"  data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                </div>
+            </div>
+            
+            <div class="form-group" data-bind="visible: $root.scriptedIndex" id="indexScriptPopover">
+                <label class="col-sm-1 control-label index-script-label" data-placement="auto right" data-original-title="Index Script" data-trigger="hover">
+                    Index Script
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-sm-11" data-bind="with: $root.scriptedIndex">
+                    <div class="row">
+                        <div class="col-md-11">
+                            <pre class="form-control map" data-bind="aceEditor: { code: indexScript, lang: 'ace/mode/javascript', completer: $root.scriptedIndexCompleter, completerHostObject: $root.scriptedIndexCompleter, typeName: 'map' }"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" data-bind="visible: $root.scriptedIndex" id="deleteScriptPopover">
+                <label class="col-sm-1 control-label delete-script-label" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
+                    Delete Script
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-sm-11" data-bind="with: $root.scriptedIndex">
+                    <div class="row">
+                        <div class="col-md-11">
+                            <pre class="form-control map" data-bind="aceEditor: { code: deleteScript, lang: 'ace/mode/javascript', completer: $root.scriptedIndexCompleter, completerHostObject: $root.scriptedIndexCompleeter, typeName: 'map' }"></pre>
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>
