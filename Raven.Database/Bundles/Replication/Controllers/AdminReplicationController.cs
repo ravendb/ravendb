@@ -85,9 +85,21 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/replication/schema")]
-		[Route("databases/{databaseName}/admin/replication/schema")]
-		public async Task<HttpResponseMessage> ReplicationSchema()
+		[Route("admin/replication/topology")]
+		[Route("databases/{databaseName}/admin/replication/topology")]
+		public Task<HttpResponseMessage> ReplicationTopology()
+		{
+			var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, new RavenJArray(), 10, Log);
+			var node = replicationSchemaDiscoverer.Discover();
+			var topology = node.Flatten();
+
+			return GetMessageWithObjectAsTask(topology);
+		}
+
+		[HttpPost]
+		[Route("admin/replication/topology/discover")]
+		[Route("databases/{databaseName}/admin/replication/topology/discover")]
+		public async Task<HttpResponseMessage> ReplicationTopologyDiscover()
 		{
 			var ttlAsString = GetQueryStringValue("ttl");
 
@@ -105,7 +117,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				from = await ReadJsonArrayAsync();
 			}
 
-			var replicationSchemaDiscoverer = new ReplicationSchemaDiscoverer(Database, from, ttl, Log);
+			var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, from, ttl, Log);
 			var node = replicationSchemaDiscoverer.Discover();
 
 			return GetMessageWithObject(node);

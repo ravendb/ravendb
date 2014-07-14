@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -29,7 +30,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ReplicationSchemaDiscovererSimpleTest()
+		public void ReplicationTopologyDiscovererSimpleTest()
 		{
 			using (var store1 = CreateStore())
 			using (var store2 = CreateStore())
@@ -51,90 +52,53 @@ namespace Raven.Tests.Issues
 
 				WaitForDocument<Person>(store5, "people/1");
 
-				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/schema";
+				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/topology";
 
 				var request = store1
 					.JsonRequestFactory
 					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "POST", store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
 
 				var json = (RavenJObject)request.ReadResponseJson();
-				var schema = json.Deserialize<ReplicationSchemaRootNode>(store1.Conventions);
+				var topology = json.Deserialize<ReplicationTopology>(store1.Conventions);
 
-				Assert.NotNull(schema);
-				Assert.Equal(0, schema.Sources.Count);
-				Assert.Equal(1, schema.Destinations.Count);
+				Assert.NotNull(topology);
+				Assert.Equal(5, topology.Servers.Count);
+				Assert.Equal(5, topology.Connections.Count);
 
-				var sources = schema.Sources;
-				var destinations = schema.Destinations;
+				topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store2.Url.ForDatabase(store2.DefaultDatabase) && x.Source == store1.Url.ForDatabase(store1.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store3.Url.ForDatabase(store3.DefaultDatabase) && x.Source == store2.Url.ForDatabase(store2.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store4.Url.ForDatabase(store4.DefaultDatabase) && x.Source == store3.Url.ForDatabase(store3.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store5.Url.ForDatabase(store5.DefaultDatabase) && x.Source == store4.Url.ForDatabase(store4.DefaultDatabase));
 
-				Assert.Equal(store2.Url.ForDatabase(store2.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
+				foreach (var connection in topology.Connections.Where(x => x.Destination != store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source != store5.Url.ForDatabase(store5.DefaultDatabase)))
+				{
+					Assert.Equal(ReplicatonNodeState.Online, connection.SourceToDestinationState);
+					Assert.Equal(ReplicatonNodeState.Online, connection.DestinationToSourceState);
+					Assert.NotNull(connection.Source);
+					Assert.NotNull(connection.Destination);
+					Assert.Equal(TransitiveReplicationOptions.Replicate, connection.ReplicationBehavior);
+					Assert.NotNull(connection.LastAttachmentEtag);
+					Assert.NotNull(connection.LastDocumentEtag);
+					Assert.NotNull(connection.SendServerId);
+					Assert.NotNull(connection.StoredServerId);
+				}
 
-				Assert.Equal(1, schema.Destinations[0].Sources.Count);
-				Assert.Equal(1, schema.Destinations[0].Destinations.Count);
-
-				sources = schema.Destinations[0].Sources;
-				destinations = schema.Destinations[0].Destinations;
-
-				Assert.Equal(store1.Url.ForDatabase(store1.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store3.Url.ForDatabase(store3.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
-
-				Assert.Equal(1, destinations[0].Sources.Count);
-				Assert.Equal(1, destinations[0].Destinations.Count);
-
-				sources = destinations[0].Sources;
-				destinations = destinations[0].Destinations;
-
-				Assert.Equal(store2.Url.ForDatabase(store2.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store4.Url.ForDatabase(store4.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
-
-				Assert.Equal(1, destinations[0].Sources.Count);
-				Assert.Equal(1, destinations[0].Destinations.Count);
-
-				sources = destinations[0].Sources;
-				destinations = destinations[0].Destinations;
-
-				Assert.Equal(store3.Url.ForDatabase(store3.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store5.Url.ForDatabase(store5.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
-
-				Assert.Equal(1, destinations[0].Sources.Count);
-				Assert.Equal(1, destinations[0].Destinations.Count);
-
-				sources = destinations[0].Sources;
-				destinations = destinations[0].Destinations;
-
-				Assert.Equal(store4.Url.ForDatabase(store4.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store1.Url.ForDatabase(store1.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
+				var c = topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
+				Assert.Equal(ReplicatonNodeState.Online, c.SourceToDestinationState);
+				Assert.Equal(ReplicatonNodeState.Offline, c.DestinationToSourceState);
+				Assert.NotNull(c.Source);
+				Assert.NotNull(c.Destination);
+				Assert.Equal(TransitiveReplicationOptions.Replicate, c.ReplicationBehavior);
+				Assert.Null(c.LastAttachmentEtag);
+				Assert.Null(c.LastDocumentEtag);
+				Assert.NotNull(c.SendServerId);
+				Assert.Equal(Guid.Empty, c.StoredServerId);
 			}
 		}
 
 		[Fact]
-		public void ReplicationSchemaDiscovererSimpleTestWithOAuth()
+		public void ReplicationTopologyDiscovererSimpleTestWithOAuth()
 		{
 			using (var store1 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None, configureStore: store => store.ApiKey = "Ayende/abc"))
 			using (var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None, configureStore: store => store.ApiKey = "Ayende/abc"))
@@ -171,85 +135,48 @@ namespace Raven.Tests.Issues
 
 				WaitForDocument<Person>(store5, "people/1");
 
-				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/schema";
+				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/topology";
 
 				var request = store1
 					.JsonRequestFactory
 					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "POST", store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
 
 				var json = (RavenJObject)request.ReadResponseJson();
-				var schema = json.Deserialize<ReplicationSchemaRootNode>(store1.Conventions);
+				var topology = json.Deserialize<ReplicationTopology>(store1.Conventions);
 
-				Assert.NotNull(schema);
-				Assert.Equal(0, schema.Sources.Count);
-				Assert.Equal(1, schema.Destinations.Count);
+				Assert.NotNull(topology);
+				Assert.Equal(5, topology.Servers.Count);
+				Assert.Equal(5, topology.Connections.Count);
 
-				var sources = schema.Sources;
-				var destinations = schema.Destinations;
+				topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store2.Url.ForDatabase(store2.DefaultDatabase) && x.Source == store1.Url.ForDatabase(store1.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store3.Url.ForDatabase(store3.DefaultDatabase) && x.Source == store2.Url.ForDatabase(store2.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store4.Url.ForDatabase(store4.DefaultDatabase) && x.Source == store3.Url.ForDatabase(store3.DefaultDatabase));
+				topology.Connections.Single(x => x.Destination == store5.Url.ForDatabase(store5.DefaultDatabase) && x.Source == store4.Url.ForDatabase(store4.DefaultDatabase));
 
-				Assert.Equal(store2.Url.ForDatabase(store2.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
+				foreach (var connection in topology.Connections.Where(x => x.Destination != store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source != store5.Url.ForDatabase(store5.DefaultDatabase)))
+				{
+					Assert.Equal(ReplicatonNodeState.Online, connection.SourceToDestinationState);
+					Assert.Equal(ReplicatonNodeState.Online, connection.DestinationToSourceState);
+					Assert.NotNull(connection.Source);
+					Assert.NotNull(connection.Destination);
+					Assert.Equal(TransitiveReplicationOptions.Replicate, connection.ReplicationBehavior);
+					Assert.NotNull(connection.LastAttachmentEtag);
+					Assert.NotNull(connection.LastDocumentEtag);
+					Assert.NotNull(connection.SendServerId);
+					Assert.NotNull(connection.StoredServerId);
+				}
 
-				Assert.Equal(1, schema.Destinations[0].Sources.Count);
-				Assert.Equal(1, schema.Destinations[0].Destinations.Count);
-
-				sources = schema.Destinations[0].Sources;
-				destinations = schema.Destinations[0].Destinations;
-
-				Assert.Equal(store1.Url.ForDatabase(store1.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store3.Url.ForDatabase(store3.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
-
-				Assert.Equal(1, destinations[0].Sources.Count);
-				Assert.Equal(1, destinations[0].Destinations.Count);
-
-				sources = destinations[0].Sources;
-				destinations = destinations[0].Destinations;
-
-				Assert.Equal(store2.Url.ForDatabase(store2.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store4.Url.ForDatabase(store4.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
-
-				Assert.Equal(1, destinations[0].Sources.Count);
-				Assert.Equal(1, destinations[0].Destinations.Count);
-
-				sources = destinations[0].Sources;
-				destinations = destinations[0].Destinations;
-
-				Assert.Equal(store3.Url.ForDatabase(store3.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store5.Url.ForDatabase(store5.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
-
-				Assert.Equal(1, destinations[0].Sources.Count);
-				Assert.Equal(1, destinations[0].Destinations.Count);
-
-				sources = destinations[0].Sources;
-				destinations = destinations[0].Destinations;
-
-				Assert.Equal(store4.Url.ForDatabase(store4.DefaultDatabase), sources[0].ServerUrl);
-				Assert.NotNull(sources[0].LastAttachmentEtag);
-				Assert.NotNull(sources[0].LastDocumentEtag);
-				Assert.Equal(ReplicatonNodeState.Online, sources[0].State);
-
-				Assert.Equal(store1.Url.ForDatabase(store1.DefaultDatabase), destinations[0].ServerUrl);
-				Assert.Equal(TransitiveReplicationOptions.Replicate, destinations[0].ReplicationBehavior);
-				Assert.Equal(ReplicatonNodeState.Online, destinations[0].State);
+				var c = topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
+				Assert.Equal(ReplicatonNodeState.Online, c.SourceToDestinationState);
+				Assert.Equal(ReplicatonNodeState.Offline, c.DestinationToSourceState);
+				Assert.NotNull(c.Source);
+				Assert.NotNull(c.Destination);
+				Assert.Equal(TransitiveReplicationOptions.Replicate, c.ReplicationBehavior);
+				Assert.Null(c.LastAttachmentEtag);
+				Assert.Null(c.LastDocumentEtag);
+				Assert.NotNull(c.SendServerId);
+				Assert.Equal(Guid.Empty, c.StoredServerId);
 			}
 		}
 	}

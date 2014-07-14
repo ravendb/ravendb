@@ -7,8 +7,8 @@ namespace Raven.Database.Bundles.Replication.Data
 {
 	public enum ReplicatonNodeState
 	{
-		Online,
 		Offline,
+		Online,
 		Disabled
 	}
 }

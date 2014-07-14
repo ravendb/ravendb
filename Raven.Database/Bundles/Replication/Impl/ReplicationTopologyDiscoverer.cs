@@ -14,7 +14,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Impl
 {
-	internal class ReplicationSchemaDiscoverer
+	internal class ReplicationTopologyDiscoverer
 	{
 		private readonly DocumentDatabase database;
 
@@ -26,7 +26,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 
 		private readonly HttpRavenRequestFactory requestFactory;
 
-		public ReplicationSchemaDiscoverer(DocumentDatabase database, RavenJArray @from, int ttl, ILog log)
+		public ReplicationTopologyDiscoverer(DocumentDatabase database, RavenJArray @from, int ttl, ILog log)
 		{
 			this.database = database;
 			this.ttl = ttl;
@@ -35,11 +35,11 @@ namespace Raven.Database.Bundles.Replication.Impl
 			requestFactory = new HttpRavenRequestFactory();
 		}
 
-		public ReplicationSchemaRootNode Discover()
+		public ReplicationTopologyRootNode Discover()
 		{
 			var nextStart = 0;
 
-			var root = new ReplicationSchemaRootNode(database.ServerUrl, database.TransactionalStorage.Id);
+			var root = new ReplicationTopologyRootNode(database.ServerUrl, database.TransactionalStorage.Id);
 
 			if (ttl <= 0)
 				return root;
@@ -53,9 +53,9 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return root;
 		}
 
-		private List<ReplicationSchemaSourceNode> HandleSources(IEnumerable<RavenJToken> sources, ReplicationSchemaRootNode root)
+		private List<ReplicationTopologySourceNode> HandleSources(IEnumerable<RavenJToken> sources, ReplicationTopologyRootNode root)
 		{
-			var nodes = new List<ReplicationSchemaSourceNode>();
+			var nodes = new List<ReplicationTopologySourceNode>();
 			foreach (var sourceAsJson in sources.Cast<RavenJObject>())
 			{
 				SourceReplicationInformation source = null;
@@ -75,7 +75,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return nodes;
 		}
 
-		private ReplicationSchemaSourceNode HandleSource(SourceReplicationInformation source)
+		private ReplicationTopologySourceNode HandleSource(SourceReplicationInformation source)
 		{
 			if (from.Contains(source.Source))
 			{
@@ -83,19 +83,19 @@ namespace Raven.Database.Bundles.Replication.Impl
 				switch (state)
 				{
 					case ReplicatonNodeState.Online:
-						return ReplicationSchemaSourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+						return ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
 					case ReplicatonNodeState.Offline:
-						return ReplicationSchemaSourceNode.Offline(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+						return ReplicationTopologySourceNode.Offline(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
 					default:
 						throw new NotSupportedException(state.ToString());
 				}
 			}
 
 			string error;
-			ReplicationSchemaRootNode rootNode;
+			ReplicationTopologyRootNode rootNode;
 			if (TryGetSchema(source.Source, new RavenConnectionStringOptions(), out rootNode, out error))
 			{
-				var node = ReplicationSchemaSourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+				var node = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
 				node.Destinations = rootNode.Destinations;
 				node.Sources = rootNode.Sources;
 				node.Errors = rootNode.Errors;
@@ -103,7 +103,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 				return node;
 			}
 
-			var offline = ReplicationSchemaSourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+			var offline = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
 
 			if (string.IsNullOrEmpty(error) == false)
 				offline.Errors.Add(error);
@@ -111,9 +111,9 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return offline;
 		}
 
-		private List<ReplicationSchemaDestinationNode> HandleDestinations(JsonDocument destinationsAsJson, ReplicationSchemaRootNode root)
+		private List<ReplicationTopologyDestinationNode> HandleDestinations(JsonDocument destinationsAsJson, ReplicationTopologyRootNode root)
 		{
-			var nodes = new List<ReplicationSchemaDestinationNode>();
+			var nodes = new List<ReplicationTopologyDestinationNode>();
 
 			if (destinationsAsJson == null)
 				return nodes;
@@ -135,12 +135,12 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return nodes;
 		}
 
-		private ReplicationSchemaDestinationNode HandleDestination(ReplicationDestination replicationDestination)
+		private ReplicationTopologyDestinationNode HandleDestination(ReplicationDestination replicationDestination)
 		{
 			var destination = ReplicationTask.GetConnectionOptions(replicationDestination, database);
 
 			if (replicationDestination.Disabled)
-				return ReplicationSchemaDestinationNode.Disabled(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+				return ReplicationTopologyDestinationNode.Disabled(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
 			if (from.Contains(destination.ConnectionStringOptions.Url))
 			{
@@ -148,19 +148,19 @@ namespace Raven.Database.Bundles.Replication.Impl
 				switch (state)
 				{
 					case ReplicatonNodeState.Online:
-						return ReplicationSchemaDestinationNode.Online(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+						return ReplicationTopologyDestinationNode.Online(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 					case ReplicatonNodeState.Offline:
-						return ReplicationSchemaDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+						return ReplicationTopologyDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 					default:
 						throw new NotSupportedException(state.ToString());
 				}
 			}
 
 			string error;
-			ReplicationSchemaRootNode rootNode;
+			ReplicationTopologyRootNode rootNode;
 			if (TryGetSchema(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out rootNode, out error))
 			{
-				var node = ReplicationSchemaDestinationNode.Online(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+				var node = ReplicationTopologyDestinationNode.Online(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 				node.Destinations = rootNode.Destinations;
 				node.Sources = rootNode.Sources;
 				node.Errors = rootNode.Errors;
@@ -168,7 +168,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 				return node;
 			}
 
-			var offline = ReplicationSchemaDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+			var offline = ReplicationTopologyDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
 			if (string.IsNullOrEmpty(error) == false)
 				offline.Errors.Add(error);
@@ -176,9 +176,9 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return offline;
 		}
 
-		private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out ReplicationSchemaRootNode rootNode, out string error)
+		private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out ReplicationTopologyRootNode rootNode, out string error)
 		{
-			var url = string.Format("{0}/admin/replication/schema?&ttl={1}", serverUrl, ttl - 1);
+			var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
 
 			var toSend = (RavenJArray)from.CloneToken();
 			toSend.Add(database.ServerUrl);
@@ -189,7 +189,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 				request.Write(toSend);
 
 				error = null;
-				rootNode = request.ExecuteRequest<ReplicationSchemaRootNode>();
+				rootNode = request.ExecuteRequest<ReplicationTopologyRootNode>();
 				return true;
 			}
 			catch (Exception e)
