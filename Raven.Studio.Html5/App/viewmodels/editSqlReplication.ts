@@ -26,6 +26,7 @@ import sqlReplicationConnections = require("models/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/predefinedSqlConnection");
 
 
+
 class editSqlReplication extends viewModelBase {
 
     static editSqlReplicationSelector = "#editSQLReplication";
@@ -101,8 +102,6 @@ class editSqlReplication extends viewModelBase {
                         ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(replicationToEditName) + " replication", null));
                         canActivateResult.resolve({ redirect: appUrl.forSqlReplications(this.activeDatabase()) });
                     });
-
-                return canActivateResult;
             } else {
                 this.isEditingNewReplication(true);
                 this.editedReplication(this.createSqlReplication());
@@ -317,6 +316,9 @@ class editSqlReplication extends viewModelBase {
         app.showDialog(viewModel);
     }
 
+    getSqlReplicationConnectionStringsUrl(sqlReplicationName: string) {
+        return appUrl.forSqlReplicationConnections(this.activeDatabase());
+    }
 
 }
 
