@@ -619,12 +619,12 @@ namespace Voron.Impl.Journal
 				// to read the most updated version)
 				foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
 				{
-					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, lastShippedTransaction);
+					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
 				}
 
 				foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
 				{
-					jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, lastShippedTransaction);
+					jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
 				}
 			}
 
