@@ -24,13 +24,7 @@ using System.Threading.Tasks;
 using Raven.Client.Document.Async;
 using Raven.Client.Util;
 
-#if NETFX_CORE
-using System.Collections.Concurrent;
-using Raven.Client.WinRT.Connection;
-#else
 using Raven.Client.Document.DTC;
-#endif
-
 
 namespace Raven.Client.Document
 {
@@ -48,18 +42,12 @@ namespace Raven.Client.Document
 		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
 		private bool aggressiveCachingUsed;
 
-
-#if NETFX_CORE
-		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
-		private readonly object replicationInformersLocker = new object();
-#else
 		/// <summary>
 		/// Generate new instance of database commands
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
 		private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
-#endif
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
@@ -88,7 +76,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
@@ -113,8 +100,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-#endif
-
 		protected Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
@@ -136,18 +121,10 @@ namespace Raven.Client.Document
 		public DocumentStore()
 		{
 			Replication = new ReplicationBehavior(this);
-#if !NETFX_CORE
 			Credentials = CredentialCache.DefaultNetworkCredentials;
-#endif
             ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
-
-#if !NETFX_CORE
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 			Conventions = new DocumentConvention();
-#else
-			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string, string>();
-			Conventions = new DocumentConvention { AllowMultipuleAsyncOperations = true };
-#endif
         }
 
 		private string identifier;
@@ -183,7 +160,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public string ApiKey { get; set; }
 
-#if !NETFX_CORE
 		private string connectionStringName;
 
 		/// <summary>
@@ -240,7 +216,6 @@ namespace Raven.Client.Document
 			connectionStringOptions.Parse();
 			return connectionStringOptions.ConnectionStringOptions;
 		}
-#endif
 
 		/// <summary>
 		/// Gets or sets the default database name.
@@ -295,7 +270,7 @@ namespace Raven.Client.Document
 				afterDispose(this, EventArgs.Empty);
 		}
 
-#if DEBUG && !NETFX_CORE
+#if DEBUG
 		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
 
 		~DocumentStore()
@@ -305,8 +280,6 @@ namespace Raven.Client.Document
 			Console.WriteLine(stacktraceDebug);
 		}
 #endif
-
-#if !NETFX_CORE
 
 		/// <summary>
 		/// Opens the session.
@@ -360,7 +333,6 @@ namespace Raven.Client.Document
 				databaseCommands.ForceReadFromMaster();
 			return databaseCommands;
 		}
-#endif
 
 		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
 		{
@@ -389,11 +361,8 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-#if !NETFX_CORE
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler);
-#else
-			jsonRequestFactory = new HttpJsonRequestFactory();
-#endif
+
 			try
 			{
 				InitializeSecurity();
@@ -414,7 +383,7 @@ namespace Raven.Client.Document
 
 				initialized = true;
 
-#if !NETFX_CORE && !MONO
+#if !MONO
 				RecoverPendingTransactions();
 
 				if (ensureDatabaseExists && 
@@ -424,7 +393,6 @@ namespace Raven.Client.Document
 					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
 #endif
-
 			}
 			catch (Exception)
 			{
@@ -458,7 +426,6 @@ namespace Raven.Client.Document
 			};
 		}
 
-#if !NETFX_CORE
 		private void RecoverPendingTransactions()
 		{
 			if (EnlistInDistributedTransactions == false)
@@ -467,7 +434,6 @@ namespace Raven.Client.Document
 			var pendingTransactionRecovery = new PendingTransactionRecovery(this);
 			pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
 		}
-#endif
 
 		private void InitializeSecurity()
 		{
@@ -614,8 +580,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected virtual void InitializeInternal()
 		{
-#if !NETFX_CORE
-
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
 			rootServicePoint.UseNagleAlgorithm = false;
@@ -634,7 +598,6 @@ namespace Raven.Client.Document
 					currentSessionId, GetReplicationInformerForDatabase, null,
                     Listeners.ConflictListeners));
 			};
-#endif
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
@@ -655,21 +618,8 @@ namespace Raven.Client.Document
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
-			IDocumentStoreReplicationInformer result;
 
-#if NETFX_CORE
-			lock (replicationInformersLocker)
-			{
-				if (!replicationInformers.TryGetValue(key, out result))
-				{
-					result = Conventions.ReplicationInformerFactory(key, jsonRequestFactory);
-					replicationInformers.Add(key, result);
-				}
-			}
-#else
-			result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory));
-
-#endif
+			var result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory));
 
 			if (FailoverServers == null)
 				return result;
@@ -699,14 +649,10 @@ namespace Raven.Client.Document
 		public override IDisposable DisableAggressiveCaching()
 		{
 			AssertInitialized();
-#if !NETFX_CORE
+
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = null;
 			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
-#else
-			// TODO: with netfx core, we don't currently support aggressive caching
-			return new DisposableAction(() => { });
-#endif
 		}
 
 		/// <summary>
@@ -755,7 +701,7 @@ namespace Raven.Client.Document
 		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
 			AssertInitialized();
-#if !NETFX_CORE
+
 			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
@@ -768,10 +714,6 @@ namespace Raven.Client.Document
 			{
 				jsonRequestFactory.AggressiveCacheDuration = old;
 			});
-#else
-			// TODO: with netfx core, we don't currently support aggressive caching
-			return new DisposableAction(() => { });
-#endif
 		}
 
 		/// <summary>
@@ -783,7 +725,6 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
 			AssertInitialized();
-#if !NETFX_CORE
 
 			var old = jsonRequestFactory.RequestTimeout;
 			jsonRequestFactory.RequestTimeout = timeout;
@@ -791,10 +732,6 @@ namespace Raven.Client.Document
 			return new DisposableAction(() => {
 				jsonRequestFactory.RequestTimeout = old;
 			});
-#else
-			// TODO: with netfx core, we don't currently support session timeout
-			return new DisposableAction(() => { });
-#endif
 		}
 
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName, IAsyncDatabaseCommands asyncDatabaseCommands)
@@ -853,7 +790,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override event EventHandler AfterDispose;
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Max number of cached requests (default: 2048)
 		/// </summary>
@@ -869,10 +805,7 @@ namespace Raven.Client.Document
 			}
 		}
 	    public HttpMessageHandler HttpMessageHandler { get; set; }
-#endif
 
-
-#if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
             return new BulkInsertOperation(database ?? DefaultDatabase, this, Listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
@@ -898,6 +831,5 @@ namespace Raven.Client.Document
 			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
 			return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}
-#endif
 	}
 }

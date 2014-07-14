@@ -1580,7 +1580,7 @@ namespace Raven.Imports.Newtonsoft.Json
       _value = null;
 
 			if (CloseInput && _reader != null)
-#if !(NETFX_CORE || PORTABLE)
+#if !(PORTABLE)
 				_reader.Close();
 #else
         _reader.Dispose();

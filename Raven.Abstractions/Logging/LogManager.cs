@@ -16,19 +16,10 @@ namespace Raven.Abstractions.Logging
 			GetLogger(typeof (LogManager));
 		}
 
-#if NETFX_CORE
-		private static int counter;
-#endif
 		public static ILog GetCurrentClassLogger()
 		{
-#if NETFX_CORE
-			// WinRT exceptions doesn't have an informative stack traces.
-			// This is an ugly hack to have something instead of a name class.
-			return GetLogger("Raven.WinRT-" + System.Threading.Interlocked.Increment(ref counter));
-#else
 			var stackFrame = new StackFrame(1, false);
 			return GetLogger(stackFrame.GetMethod().DeclaringType);
-#endif
 		}
 
 		private static ILogManager currentLogManager;

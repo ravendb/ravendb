@@ -40,7 +40,7 @@
                     <a href="#" data-bind="attr: { href: $parent.editUrl }"><span data-bind="text: $parent.cellMap[binding].data"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(binding) === 'externalIdTemplate' -->
-                    <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
+                    <span class="collection-color-strip" data-bind="css: $parent.calculateExternalIdCellColor($parent.cellMap[binding].data())"></span>
                     <a href="#" data-bind="attr: { href: $parents[1].getDocumentHref($parent.cellMap[binding].data()) }"><span data-bind="    text: $parent.cellMap[binding].data"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(binding) === 'customTemplate' -->

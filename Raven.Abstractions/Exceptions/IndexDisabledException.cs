@@ -12,10 +12,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when querying an index that was disabled because the error rate exceeded safety margins
     /// </summary>
-#if !NETFX_CORE
     [Serializable]
-#endif
-
 	public class IndexDisabledException : Exception
 	{
 		/// <summary>
@@ -51,7 +48,6 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !NETFX_CORE
         /// <summary>
 	/// Initializes a new instance of the <see cref="IndexDisabledException"/> class.
 	/// </summary>
@@ -64,8 +60,6 @@ namespace Raven.Abstractions.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
-
-#endif
 
 		/// <summary>
 		/// Gets or sets the information about the index failure 

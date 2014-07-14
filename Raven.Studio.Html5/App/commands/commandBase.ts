@@ -29,7 +29,7 @@ class commandBase {
         this.reportProgress(alertType.info, title, details);
     }
 
-    reportError(title: string, details?: string, httpStatusText?: string) {
+    reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = false) {
         this.reportProgress(alertType.danger, title, details, httpStatusText);
         if (console && console.log && typeof console.log === "function") {
             console.log("Error during command execution", title, details, httpStatusText);
@@ -311,12 +311,12 @@ class commandBase {
         ko.postbox.publish("LoadProgress", alertType.danger);
     }
 
-    private static  hideSpin() {
+    private static hideSpin() {
         ko.postbox.publish("LoadProgress", null);
     }
 
     private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details));
+        ko.postbox.publish("Alert", new alertArgs(type, title, details, httpStatusText));
     }
 }
 

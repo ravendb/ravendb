@@ -11,10 +11,19 @@ namespace Raven.Tests.Bugs.LiveProjections.Indexes
 			Map = docs => from t in docs
 						  select new { t.Start };
 
-			TransformResults = (database, results) => from result in results
-													  let giver = database.Load<Raven.Tests.Bugs.LiveProjections.Entities.User>("users/" + result.GiverId)
-													  let taker = database.Load<Raven.Tests.Bugs.LiveProjections.Entities.User>("users/" + result.TakerId)
-													  let place = database.Load<Place>("places/" + result.PlaceId)
+			IndexSortOptions.Add(s => s.Start, Raven.Abstractions.Indexing.SortOptions.String);
+		}
+	}
+
+	public class TaskSummaryTransformer : AbstractTransformerCreationTask<Task>
+	{
+		public TaskSummaryTransformer()
+		{
+
+			TransformResults = results => from result in results
+													  let giver = LoadDocument<Raven.Tests.Bugs.LiveProjections.Entities.User>("users/" + result.GiverId)
+													  let taker = LoadDocument<Raven.Tests.Bugs.LiveProjections.Entities.User>("users/" + result.TakerId)
+													  let place = LoadDocument<Place>("places/" + result.PlaceId)
 													  select new
 													  {
 														  Id = result.Id,
@@ -28,8 +37,6 @@ namespace Raven.Tests.Bugs.LiveProjections.Indexes
 														  PlaceId = result.PlaceId,
 														  PlaceName = place.Name
 													  };
-
-			IndexSortOptions.Add(s => s.Start, Raven.Abstractions.Indexing.SortOptions.String);
 		}
 	}
 }

@@ -1,5 +1,4 @@
-﻿#if !NETFX_CORE
-namespace Raven.Client.Document.DTC
+﻿namespace Raven.Client.Document.DTC
 {
 	public class IsolatedStorageTransactionRecoveryStorage : ITransactionRecoveryStorage
 	{
@@ -9,4 +8,3 @@ namespace Raven.Client.Document.DTC
 		}
 	}
 }
-#endif

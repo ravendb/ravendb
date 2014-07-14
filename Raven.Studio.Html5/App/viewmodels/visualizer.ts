@@ -1,14 +1,21 @@
-﻿import appUrl = require("common/appUrl");
+﻿/// <reference path="../../Scripts/typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
+
+import app = require("durandal/app");
+
+import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import generalUtils = require("common/generalUtils");
+import svgDownloader = require("common/svgDownloader");
+import jsonDownloader = require("common/jsonDownloader");
 
 import chunkFetcher = require("common/chunkFetcher");
 
 import router = require("plugins/router");
 
-
 import database = require("models/database");
 
+import visualizerKeys = require("viewmodels/visualizerKeys");
+import visualizerImport = require("viewmodels/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import queryIndexDebugDocsCommand = require("commands/queryIndexDebugDocsCommand");
@@ -25,13 +32,16 @@ class visualizer extends viewModelBase {
     indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
     indexName = ko.observable("Index Name");
 
+    onlineMode = ko.observable(true);
     showLoadingIndicator = ko.observable(false);
 
     docKey = ko.observable("");
-    docKeysSearchResults = ko.observableArray<string>();  
+    docKeys = ko.observableArray<string>();
+    docKeysSearchResults = ko.observableArray<string>();
 
     reduceKey = ko.observable("");
-    reduceKeysSearchResults = ko.observableArray<string>(); 
+    reduceKeys = ko.observableArray<string>();
+    reduceKeysSearchResults = ko.observableArray<string>();
 
     hasIndexSelected = ko.computed(() => {
         return this.indexName() !== "Index Name";
@@ -69,6 +79,10 @@ class visualizer extends viewModelBase {
     node: D3.Selection = null; // nodes selection
     link: D3.Selection = null; // links selection
 
+    hasSaveAsPngSupport = ko.computed(() => {
+        return !(navigator && navigator.msSaveBlob);
+    });
+
     activate(args) {
         super.activate(args);
 
@@ -87,6 +101,14 @@ class visualizer extends viewModelBase {
         this.docKey.throttle(250).subscribe(search => this.fetchDocKeySearchResults(search));
 
         this.selectedDocs.subscribe(() => this.repaintSelectedNodes());
+
+        $(document).bind("fullscreenchange", function () {
+            if ($(document).fullScreen()) {
+                $("#fullScreenButton i").removeClass("fa-expand").addClass("fa-compress");
+            } else {
+                $("#fullScreenButton i").removeClass("fa-compress").addClass("fa-expand");
+            }
+        });
 
         return this.fetchAllIndexes();
     }
@@ -107,6 +129,11 @@ class visualizer extends viewModelBase {
     }
 
     resetChart() {
+        this.tooltipClose();
+        this.reduceKey("");
+        this.reduceKeys([]);
+        this.docKey("");
+        this.docKeys([]);
         this.tree = {
             level: 5,
             name: 'root',
@@ -180,6 +207,10 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
+
+        if (key && !this.docKeys.contains(key)) {
+            this.docKeys.push(key);
+        }
         new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { sourceId: key }, 0, 1024)
             .execute()
             .then(results => {
@@ -190,7 +221,8 @@ class visualizer extends viewModelBase {
     addReduceKey(key: string) {
         this.showLoadingIndicator(true);
         var self = this;
-        if (key && !(key in this.colorMap)) {
+        if (key && !this.reduceKeys().contains(key)) {
+            this.reduceKeys.push(key);
 
             this.colorMap[key] = this.colors(Object.keys(this.colorMap).length);
             this.reduceKey("");
@@ -204,17 +236,24 @@ class visualizer extends viewModelBase {
                     self.updateGraph();
                 }
             }).always(() => this.showLoadingIndicator(false));
+        } else {
+            this.showLoadingIndicator(false);
         }
     }
 
     setSelectedIndex(indexName) {
         this.indexName(indexName);
-        this.reduceKey("");
-        this.docKey("");
         this.resetChart();
         this.updateGraph();
     }
-    
+
+    clearChart() {
+        this.indexName("Index Name");
+        this.onlineMode(true);
+        this.resetChart();
+        this.updateGraph();
+    }
+
     fetchAllIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
@@ -268,21 +307,31 @@ class visualizer extends viewModelBase {
         return this.boxSpacing * level1Nodes + this.margin.top + this.margin.bottom;
     }
 
+    goToDoc(docName) {
+        router.navigate(appUrl.forEditDoc(docName, null, null, this.activeDatabase()));
+    }
+
     getTooltip(data: visualizerDataObjectNodeDto) {
-        var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
-        var content = '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">׳</button>' +
+        var content = "";
+        if (data.level == 0) {
+            content += '<button data-bind="click: goToDoc.bind($root, \'' + data.name + '\')" class="btn" type="button">Go to document</button>';
+        } else {
+
+            var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
+            content += '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true">x</button>' +
             "<table> ";
 
-        if (data.level < 4) {
-            content += "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
-            "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
-            "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
-            "<tr><td><strong>Bucket</strong></td><td>" + data.payload.Bucket + "</td></tr>" +
-            "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>";
-        }
+            if (data.level < 4) {
+                content += "<tr><td><strong>Reduce Key</strong></td><td>" + data.payload.ReduceKey + "</td></tr>" +
+                "<tr><td><strong>Timestamp</strong></td><td>" + data.payload.Timestamp + "</td></tr>" +
+                "<tr><td><strong>Etag</strong></td><td>" + data.payload.Etag + "</td></tr>" +
+                "<tr><td><strong>Bucket</strong></td><td>" + data.payload.Bucket + "</td></tr>" +
+                "<tr><td><strong>Source</strong></td><td>" + data.payload.Source + "</td></tr>";
+            }
 
-        content += "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
-        "</table>";
+            content += "<tr><td><strong>Data</strong></td><td><pre>" + jsonUtil.syntaxHighlight(dataFormatted) + "</pre></td></tr>" +
+            "</table>";
+        }
         return content;
     }
 
@@ -303,19 +352,19 @@ class visualizer extends viewModelBase {
             .filter(l => l.target.level < 4)
             .map(l => {
             return {
-                source: {
-                    y: self.xScale(l.source.level),
-                    x: l.source.x + self.margin.top,
-                    origin: l.source
-                },
-                target: {
-                    y: self.xScale(l.target.level) + self.boxWidth,
-                    x: l.target.x + self.margin.top,
-                    origin: l.target
+                    source: {
+                        y: self.xScale(l.source.level),
+                        x: l.source.x + self.margin.top,
+                        origin: l.source
+                    },
+                    target: {
+                        y: self.xScale(l.target.level) + self.boxWidth,
+                        x: l.target.x + self.margin.top,
+                        origin: l.target
+                    }
                 }
-            }
         });
-        
+
         this.node = this.node.data(this.nodes);
         this.link = this.link.data(this.links);
 
@@ -359,15 +408,12 @@ class visualizer extends viewModelBase {
             .attr('rx', 5)
             .on("click", function (d) {
                 nv.tooltip.cleanup();
-                if (d.level === 0) {
-                    router.navigate(appUrl.forEditDoc(d.name, null, null, self.activeDatabase()));
-                } else {
-                    var offset = $(this).offset();
-                    nv.tooltip.show([offset.left + self.boxWidth / 2, offset.top], self.getTooltip(d), 'n', 25, null, "selectable-tooltip");
-                    $(".nvtooltip").each((i, elem) => {
-                        ko.applyBindings(self, elem);
-                    });
-                }
+                var offset = $(this).offset();
+                var containerOffset = $("#visualizerSection").offset();
+                nv.tooltip.show([offset.left - containerOffset.left + self.boxWidth / 2, offset.top - containerOffset.top], self.getTooltip(d), 'n', 25, document.getElementById("visualizerSection"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings(self, elem);
+                });
             });
 
         enteringNodes
@@ -403,101 +449,100 @@ class visualizer extends viewModelBase {
     }
 
     fetchDataFor(key: string) {
-        var allDataFetched = $.Deferred <visualizerDataObjectNodeDto>();
+        var allDataFetched = $.Deferred<visualizerDataObjectNodeDto>();
 
         var mapFetcherTask = new chunkFetcher<mappedResultInfo>((skip, take) => new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { key: key }, skip, take).execute()).execute();
-        var reduce1FetcherTask =  new chunkFetcher<mappedResultInfo>((skip, take) => new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 1, key, skip, take).execute()).execute();
+        var reduce1FetcherTask = new chunkFetcher<mappedResultInfo>((skip, take) => new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 1, key, skip, take).execute()).execute();
         var reduce2FetcherTask = new chunkFetcher<mappedResultInfo>((skip, take) => new queryIndexDebugReduceCommand(this.indexName(), this.activeDatabase(), 2, key, skip, take).execute()).execute();
         var indexEntryTask = new queryIndexDebugAfterReduceCommand(this.indexName(), this.activeDatabase(), [key]).execute();
 
         (<any>$.when(mapFetcherTask, reduce1FetcherTask, reduce2FetcherTask, indexEntryTask))
-            .then((map: mappedResultInfo[], reduce1: mappedResultInfo[], reduce2: mappedResultInfo[], indexEntries: any[]) =>
-        {
+            .then((map: mappedResultInfo[], reduce1: mappedResultInfo[], reduce2: mappedResultInfo[], indexEntries: any[]) => {
 
-            if (map.length == 0 && reduce1.length == 0 && reduce2.length == 0) {
-                allDataFetched.resolve({
-                    level: 4,
-                    name: key,
-                    children: []
-                });
-                return;
-            }
+                if (map.length == 0 && reduce1.length == 0 && reduce2.length == 0) {
+                    allDataFetched.resolve({
+                        level: 4,
+                        name: key,
+                        children: []
+                    });
+                    return;
+                }
 
-            var mapGroupedByBucket = d3
-                .nest()
-                .key(k => String(k.Bucket))
-                .map(map, d3.map);
+                var mapGroupedByBucket = d3
+                    .nest()
+                    .key(k => String(k.Bucket))
+                    .map(map, d3.map);
 
-            var reduce1GropedByBucket = d3
-                .nest()
-                .key(d => String(d.Bucket))
-                .map(reduce1, d3.map);
+                var reduce1GropedByBucket = d3
+                    .nest()
+                    .key(d => String(d.Bucket))
+                    .map(reduce1, d3.map);
 
-            var indexEntry = indexEntries[0];
+                var indexEntry = indexEntries[0];
 
-            if (reduce2.length == 0 && reduce1.length == 0) {
-                var subTree: visualizerDataObjectNodeDto[] = map.map((m: mappedResultInfo) => {
+                if (reduce2.length == 0 && reduce1.length == 0) {
+                    var subTree: visualizerDataObjectNodeDto[] = map.map((m: mappedResultInfo) => {
                     return {
-                        name: m.ReduceKey,
-                        payload: m,
-                        level: 1,
-                        children: [
-                            {
-                                name: m.Source,
-                                level: 0,
-                                children: []
-                            }
-                        ]
-                    }
+                            name: m.ReduceKey,
+                            payload: m,
+                            level: 1,
+                            children: [
+                                {
+                                    name: m.Source,
+                                    level: 0,
+                                    children: []
+                                }
+                            ]
+                        }
                 });
 
-                allDataFetched.resolve({
-                    level: 4,
-                    name: key,
-                    payload: { Data: indexEntry },
-                    children:  subTree 
-                });
-            }
+                    allDataFetched.resolve({
+                        level: 4,
+                        name: key,
+                        payload: { Data: indexEntry },
+                        children: subTree
+                    });
+                }
 
-            if (reduce2.length > 0 && reduce1.length > 0) {
-                var subTree: visualizerDataObjectNodeDto[] = reduce2.map(r2 => {
+                if (reduce2.length > 0 && reduce1.length > 0) {
+                    var subTree: visualizerDataObjectNodeDto[] = reduce2.map(r2 => {
                 return {
-                        name: r2.ReduceKey,
-                        payload: r2,
-                        level: 3,
-                        children: reduce1GropedByBucket.get(r2.Source).map((r1: mappedResultInfo) => {
+                            name: r2.ReduceKey,
+                            payload: r2,
+                            level: 3,
+                            children: reduce1GropedByBucket.get(r2.Source).map((r1: mappedResultInfo) => {
                         return {
-                                name: r1.ReduceKey,
-                                payload: r1,
-                                level: 2,
-                                children: mapGroupedByBucket.get(r1.Source).map((m: mappedResultInfo) => {
+                                    name: r1.ReduceKey,
+                                    payload: r1,
+                                    level: 2,
+                                    children: mapGroupedByBucket.get(r1.Source).map((m: mappedResultInfo) => {
                                 return {
-                                        name: m.ReduceKey,
-                                        payload: m,
-                                        level: 1,
-                                        children: [
-                                            {
-                                                name: m.Source,
-                                                level: 0,
-                                                children: []
-                                            }
-                                        ]
-                                    }
+                                            name: m.ReduceKey,
+                                            payload: m,
+                                            level: 1,
+                                            children: [
+                                                {
+                                                    name: m.Source,
+                                                    level: 0,
+                                                    children: []
+                                                }
+                                            ]
+                                        }
                             })
-                            }
+                                }
                     })
-                    }
+                        }
                 });
-                allDataFetched.resolve({
-                    level: 4,
-                    name: key,
-                    payload: { Data: indexEntry },
-                    children: subTree
-                });
-            }
-        }, () => {
+                    allDataFetched.resolve({
+                        level: 4,
+                        name: key,
+                        payload: { Data: indexEntry },
+                        children: subTree
+                    });
+                }
+            }, () => {
                 allDataFetched.reject();
-                });
+            });
         return allDataFetched;
     }
 
@@ -520,14 +565,21 @@ class visualizer extends viewModelBase {
         var nodes = this.selectedDocs();
         var queue: visualizerDataObjectNodeDto[] = [];
         queue.pushAll(nodes);
+
+        this.treeTranverse(queue, (node) => result.add(visualizer.makeNodeId(node)));
+
+        return result;
+    }
+
+    treeTranverse(queue: visualizerDataObjectNodeDto[], callback: (node:visualizerDataObjectNodeDto) => void, refPropName:string = "connections") {
         var everQueued = d3.set([]);
-        
+
         while (queue.length > 0) {
             var node = queue.shift();
-            result.add(visualizer.makeNodeId(node));
+            callback(node);
 
-            if (node.connections) {
-                node.connections.forEach(c => {
+            if (node[refPropName]) {
+                node[refPropName].forEach(c => {
                     var nodeId = visualizer.makeNodeId(c);
                     if (!everQueued.has(nodeId)) {
                         queue.push(c);
@@ -536,8 +588,15 @@ class visualizer extends viewModelBase {
                 });
             }
         }
+    }
 
-        return result;
+    exportTree(root: visualizerDataObjectNodeDto): visualizerDataObjectNodeDto {
+        return {
+            level: root.level,
+            name: root.name,
+            payload: root.payload,
+            children: root.children?$.map(root.children, (v, i) => this.exportTree(v)):undefined
+        }
     }
 
     computeLinks(nodes: D3.Set) {
@@ -577,7 +636,7 @@ class visualizer extends viewModelBase {
         outgoingLinks.forEach(name => d3.select("#" + name).classed("selected", false));
 
         this.currentlySelectedNodes = newClosure;
-        this.currentlySelectedLinks = newLinks; 
+        this.currentlySelectedLinks = newLinks;
     }
 
     remapNodesAndLinks() {
@@ -616,6 +675,64 @@ class visualizer extends viewModelBase {
             }
         });
     }
+
+    toggleFullscreen() {
+        if ($(document).fullScreen()) {
+            $("#visualizerSection").width('').height('');
+            $("#keysDialogBtn").removeAttr('disabled');
+        } else {
+            $("#visualizerSection").width("100%").height("100%");
+            $("#keysDialogBtn").attr('disabled', 'disabled');
+        }
+
+        $("#visualizerSection").toggleFullScreen();
+    }
+
+    displayKeyInfo() {
+        app.showDialog(new visualizerKeys(this));
+    }
+
+    saveAsSvg() {
+        svgDownloader.downloadSvg(d3.select('#visualizer').node());
+    }
+
+    saveAsPng() {
+        svgDownloader.downloadPng(d3.select('#visualizer').node());
+    }
+
+    saveAsJson() {
+        var model: visualizerExportDto = {
+            indexName: this.indexName(),
+            docKeys: this.docKeys(),
+            reduceKeys: this.reduceKeys(),
+            tree: this.exportTree(this.tree)
+        };
+
+        jsonDownloader.downloadAsJson(model, "visualizer.json");
+    }
+
+    chooseImportFile() {
+        var dialog = new visualizerImport(this);
+        dialog.task().
+            done((importedData: visualizerExportDto) => {
+                this.clearChart();
+                this.onlineMode(false);
+                this.docKeys(importedData.docKeys);
+                this.reduceKeys(importedData.reduceKeys);
+
+                importedData.reduceKeys.forEach(reduceKey => {
+                    this.colorMap[reduceKey] = this.colors(Object.keys(this.colorMap).length);
+                });
+
+                this.tree = importedData.tree;
+                this.indexName(importedData.indexName);
+                this.updateGraph();
+            });
+
+        app.showDialog(dialog);
+    }
+    
+
 }
 
 export = visualizer;

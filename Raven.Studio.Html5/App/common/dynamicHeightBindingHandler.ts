@@ -68,6 +68,11 @@ class dynamicHeightBindingHandler {
             var footerTop = $(targetSelector).position().top;
             var padding = 5 + bottomMargin;
             var desiredElementHeight = footerTop - elementTop - padding;
+            if ($(document).fullScreen()) {
+                var windowHeightKey = "ravenStudioLastDispatchedHeight";
+                var windowHeight: number = ko.utils.domData.get(element, windowHeightKey);
+                desiredElementHeight = windowHeight - elementTop - padding;
+            }
             var minimumHeight = 100;
             if (desiredElementHeight >= minimumHeight) {
                 $element.height(desiredElementHeight);

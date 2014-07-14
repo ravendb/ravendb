@@ -1,4 +1,6 @@
 import appUrl = require("common/appUrl");
+import alertArgs = require("common/alertArgs");
+import alertType = require("common/alertType");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
@@ -245,6 +247,14 @@ class viewModelBase {
             // For Safari
             return message;
         }
+    }
+
+    reportError(title: string) {
+        this.reportProgress(alertType.error, title);
+    }
+
+    private reportProgress(type: alertType, title: string) {
+        ko.postbox.publish("Alert", new alertArgs(type, title));
     }
 }
 

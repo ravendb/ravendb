@@ -1,5 +1,4 @@
 ﻿<style>
-
 .nvtooltip {
     -webkit-border-radius: 5px;
     -moz-border-radius: 5px;
@@ -88,9 +87,11 @@ text {
 
 </style>
 
-<section>
+<section id="visualizerSection">
     <form class="form-inline" role="form">
-        <div class="btn-group">
+        
+        <h4 class="pull-left" data-bind="visible: !onlineMode()">Offline analysis for index <strong data-bind="text: indexName"></strong>&nbsp;&nbsp;</h4>
+        <div class="btn-group" data-bind="visible: onlineMode">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: indexName"></span>
                 <span class="caret"></span>
@@ -101,7 +102,7 @@ text {
                 <!-- /ko -->
             </ul>
         </div>
-        <div class="form-group" data-bind="visible: hasIndexSelected">
+        <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
                 <input id="docKey" type="text" data-bind="value: docKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto" >
@@ -116,7 +117,7 @@ text {
                 </li>
             </ul>
         </div>
-        <div class="form-group" data-bind="visible: hasIndexSelected">
+        <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
                 <input id="itemKey" type="text" data-bind="value: reduceKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Reduce key" autocomplete="off">
                 <span class="input-group-btn" style="width: auto" >
@@ -131,11 +132,41 @@ text {
                 </li>
             </ul>
         </div>
+        <div class="btn-group">
+            <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected() && onlineMode()" title="Edit index"><i class="fa fa-pencil"></i></a>
+            <a class="btn btn-default"  data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected() && onlineMode()" title="Run query"><i class="fa fa-gears"></i></a>
+            <button id="fullScreenButton" class="btn btn-default" data-bind="visible: hasIndexSelected, click: toggleFullscreen" title="Fullscreen mode">
+                <i class="fa fa-expand"></i>
+            </button>
+            <button id="keysDialogBtn" class="btn btn-default" title="Displays information about inserted document ids and reduce keys" data-bind="visible: hasIndexSelected, click: displayKeyInfo">
+                <i class="fa fa-key"></i>
+            </button>
+            <button class="btn btn-danger" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
+                <i class="fa fa-trash-o"></i>
+            </button>
+        </div>
+        
         <div class="btn-group" data-bind="visible: hasIndexSelected">
-            <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected" title="Edit index"><i class="fa fa-pencil"></i></a>
-            <a class="btn btn-default"  data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected" title="Run query"><i class="fa fa-gears"></i></a>
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <i class="fa fa-download"></i>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li data-bind="click: saveAsPng, visible: hasSaveAsPngSupport"><a href="#"><i class="fa fa-file-image-o"></i> PNG</a></li>
+                <li data-bind="click: saveAsSvg"><a href="#"><i class="fa fa-file-image-o"></i> SVG</a></li>
+                <li data-bind="click: saveAsJson"><a href="#"><i class="fa fa-file-text-o"></i> JSON</a></li>
+            </ul>
+        </div>
+        
+        <div class="btn-group">
+            <button type="button" class="btn btn-default" data-bind="click: chooseImportFile">
+                <i class="fa fa-upload"></i>
+            </button>
+        </div>
+
+        <div class="btn-group" data-bind="visible: hasIndexSelected">
             <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
         </div>
+        
         
     </form>
 

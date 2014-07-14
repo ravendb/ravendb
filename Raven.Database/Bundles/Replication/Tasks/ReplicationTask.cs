@@ -729,12 +729,14 @@ namespace Raven.Bundles.Replication.Tasks
 					var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
 					int docsSinceLastReplEtag = 0;
-					List<JsonDocument> docsToReplicate;
+					List<JsonDocument> docsToReplicate = null;
 					List<JsonDocument> filteredDocsToReplicate;
 					result.LastEtag = lastEtag;
 
 					while (true)
 					{
+						docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+
 						docsToReplicate = GetDocsToReplicate(actions, result);
 
 						filteredDocsToReplicate =

@@ -93,8 +93,8 @@ namespace Raven.Client.UniqueConstraints
 			                     select
 			                         new
 			                         {
-			                             Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive),
-			                             Key = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive)
+			                             Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive),
+			                             Key = Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive)
 			                         }).ToList();
 
 
@@ -176,8 +176,8 @@ namespace Raven.Client.UniqueConstraints
                                   from item in propertyValue is IEnumerable && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
                                   select new
                                          {
-                                             Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
-                                             Key = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
+                                             Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
+                                             Key = Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
                                          }).ToList();
 
 			var constraintDocs = session
@@ -220,7 +220,7 @@ namespace Raven.Client.UniqueConstraints
 			var propertyName = body.Member.Name;
 		    var att = (UniqueConstraintAttribute) Attribute.GetCustomAttribute(body.Member, typeof (UniqueConstraintAttribute));
 
-            var escapedValue = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value,att.CaseInsensitive);
+            var escapedValue = Util.EscapeUniqueValue(value,att.CaseInsensitive);
 		    var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + escapedValue;
 
             var constraintDoc = await session
@@ -246,8 +246,8 @@ namespace Raven.Client.UniqueConstraints
                                   from item in propertyValue is IEnumerable && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
                                   select new
                                   {
-                                      Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
-                                      Key = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
+                                      Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
+                                      Key = Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
                                   }).ToList();
 
             var constraintDocs = await session

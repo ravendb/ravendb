@@ -15,7 +15,19 @@ namespace Raven.Database.Bundles.SqlReplication
         private readonly DbProviderFactory providerFactory;
         private readonly SqlReplicationStatistics replicationStatistics;
         private readonly DbCommandBuilder commandBuilder;
-        private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
+
+        public RelationalDatabaseWriterSimulator( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
+        {
+            this.database = database;
+            this.cfg = cfg;
+            this.replicationStatistics = replicationStatistics;
+            providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
+            commandBuilder = providerFactory.CreateCommandBuilder();
+            if (SqlServerFactoryNames.Contains(cfg.FactoryName))
+		    {
+		        IsSqlServerFactoryType = true;
+        }
+        }
         private bool IsSqlServerFactoryType = false;
         private static string[] SqlServerFactoryNames =
         {
@@ -24,20 +36,6 @@ namespace Raven.Database.Bundles.SqlReplication
             "MySql.Data.MySqlClient",
             "System.Data.SqlServerCe.3.5"
         };
-
-        public RelationalDatabaseWriterSimulator( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
-        {
-            this.database = database;
-            this.cfg = cfg;
-            this.replicationStatistics = replicationStatistics;
-            this.providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
-            commandBuilder = providerFactory.CreateCommandBuilder();
-            if (SqlServerFactoryNames.Contains(cfg.FactoryName))
-		    {
-		        IsSqlServerFactoryType = true;
-		    }
-        }
-
 
         public IEnumerable<string> SimulateExecuteCommandText(ConversionScriptResult scriptResult)
         {
@@ -94,7 +92,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     if (column.Key == pkName)
                         continue;
                     DbParameter param = new OdbcParameter();
-                    RelationalDatabaseWriter.SetParamValue(param, column.Value, stringParserList);
+                    RelationalDatabaseWriter.SetParamValue(param, column.Value, null);
                     sb.Append("'").Append(param.Value).Append("'").Append(", ");
                 }
                 sb.Length = sb.Length - 2;

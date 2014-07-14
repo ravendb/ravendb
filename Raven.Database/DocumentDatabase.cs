@@ -1156,7 +1156,5 @@ namespace Raven.Database
                 database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
             }
         }
-
-        private DisposableAction exitDocumentSerialLock;
     }
 }

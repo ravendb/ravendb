@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -39,6 +40,7 @@ namespace Raven.Tests.Issues.Ravendb718
 			using (var documentStore = NewDocumentStore())
 			{
 				new FoosAndBars().Execute(documentStore);
+				new FoosAndBarsTransformer().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -49,10 +51,9 @@ namespace Raven.Tests.Issues.Ravendb718
 
 				using (var session = documentStore.OpenSession())
 				{
-					var results = session.Query<Foo, FoosAndBars>()
-										 .Customize(x => x.WaitForNonStaleResults())
-										 .Where(x => x.DateTime == dt)
-										 .As<FooAndBar>()
+					var results = (Queryable.Where(session.Query<Foo, FoosAndBars>()
+											 .Customize(x => x.WaitForNonStaleResults()), x => x.DateTime == dt) as IRavenQueryable<Foo>)
+										 .TransformWith<FoosAndBarsTransformer, FooAndBar>()
 										 .First();
 
 					Assert.Equal(dt, results.FooDateTime);
@@ -94,16 +95,22 @@ namespace Raven.Tests.Issues.Ravendb718
 								  {
 									  foo.DateTime,
 								  };
+			}
+		}
 
-				TransformResults = (database, foos) => from foo in foos
-													   let bar = database.Load<Bar>(foo.BarId)
+		public class FoosAndBarsTransformer : AbstractTransformerCreationTask<Foo>
+		{
+			public FoosAndBarsTransformer()
+			{
+				TransformResults = foos => from foo in foos
+													   let bar = LoadDocument<Bar>(foo.BarId)
 													   select new
-														   {
-															   FooId = foo.Id,
-															   BarId = bar.Id,
-															   FooDateTime = foo.DateTime,
-															   BarDateTime = bar.DateTime
-														   };
+													   {
+														   FooId = foo.Id,
+														   BarId = bar.Id,
+														   FooDateTime = foo.DateTime,
+														   BarDateTime = bar.DateTime
+													   };
 			}
 		}
 	}

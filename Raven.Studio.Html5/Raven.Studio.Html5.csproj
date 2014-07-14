@@ -341,14 +341,20 @@
     <TypeScriptCompile Include="App\common\jsonUtil.ts" />
     <TypeScriptCompile Include="App\common\chunkFetcher.ts" />
     <TypeScriptCompile Include="App\commands\resolveMergeCommand.ts" />
+    <TypeScriptCompile Include="App\common\svgDownloader.ts" />
+    <TypeScriptCompile Include="App\common\jsonDownloader.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\visualizerImport.html" />
+    <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
     <Content Include="App\views\sqlReplicationSimulationDialog.html" />
     <Content Include="App\views\sqlReplicationConnectionStringsManagement.html" />
@@ -739,6 +745,7 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
@@ -788,6 +795,7 @@
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\d3\nvd3.d.ts" />
+    <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
@@ -882,7 +890,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>56397</DevelopmentServerPort>
+          <DevelopmentServerPort>59658</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
@@ -907,11 +915,12 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

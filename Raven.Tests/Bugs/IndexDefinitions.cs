@@ -129,10 +129,6 @@ namespace Raven.Tests.Bugs
 				                           		CorpusId = g.Select(x => x.CorpusId).FirstOrDefault(),
 				                           		Topics = g.SelectMany(x => x.Topics).Distinct().ToArray()
 				                           	};
-
-				TransformResults = (db, results) => from result in results
-				                                    let doc = db.Load<MyEntity1>(result.DocumentId)
-				                                    select doc;
 			}
 		}
 
@@ -176,9 +172,6 @@ namespace Raven.Tests.Bugs
 											Topics = g.SelectMany(x => x.Topics).Distinct().ToArray()
 										};
 
-				TransformResults = (db, results) => from result in results
-													let doc = db.Load<MyEntity1>(result.DocumentId)
-													select doc;
 			}
 		}
 

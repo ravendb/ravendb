@@ -139,9 +139,7 @@ namespace Raven.Abstractions.Extensions
 
         private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
         {
-#if !NETFX_CORE
             DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-#endif
         };
 
         private class DefaultServerContractResolver : DefaultContractResolver

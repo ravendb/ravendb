@@ -106,8 +106,10 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 		private class IndexDocument
 		{
+#pragma warning disable 0649
 			public string BookId;
 			public string Text;
+#pragma warning restore 0649
 		}
 
 

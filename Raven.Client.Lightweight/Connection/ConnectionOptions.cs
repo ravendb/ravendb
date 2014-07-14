@@ -13,13 +13,9 @@ namespace Raven.Client.Connection
 	{
 		public static IDisposable Expect100Continue(Uri uri)
 		{
-#if NETFX_CORE
-			return new DisposableAction(() => { });
-#else
 			var servicePoint = ServicePointManager.FindServicePoint(uri);
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
-#endif
 		}
 
 		public static IDisposable Expect100Continue(string url)

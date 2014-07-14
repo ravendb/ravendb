@@ -1,12 +1,7 @@
 using System;
 using System.Text;
-#if NETFX_CORE
-using Raven.Abstractions.Util;
-#else
-using System.Security.Cryptography;
-using Raven.Abstractions.Util.Encryptors;
 
-#endif
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Client.Connection
 {
@@ -20,11 +15,7 @@ namespace Raven.Client.Connection
 
 		private static byte[] GetHash(byte[] bytes)
 		{
-#if NETFX_CORE
-			return MD5Core.GetHash(bytes);
-#else
 		    return Encryptor.Current.Hash.Compute16(bytes);
-#endif
 		}
 	}
 }

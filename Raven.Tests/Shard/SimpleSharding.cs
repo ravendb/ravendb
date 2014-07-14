@@ -17,10 +17,10 @@ using Xunit;
 
 namespace Raven.Tests.Shard
 {
-	public class SimpleSharding : RavenTest, IDisposable
+	public class SimpleSharding : RavenTest
 	{
-		private RavenDbServer[] servers;
-		private ShardedDocumentStore documentStore;
+		private new readonly RavenDbServer[] servers;
+		private readonly ShardedDocumentStore documentStore;
 
 		public SimpleSharding()
 		{

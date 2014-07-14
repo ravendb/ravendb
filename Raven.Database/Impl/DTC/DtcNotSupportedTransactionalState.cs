@@ -38,14 +38,14 @@ namespace Raven.Database.Impl.DTC
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-        public new Etag AddDocumentInTransaction(
-            string key,
-            Etag etag,
-            RavenJObject data,
-            RavenJObject metadata,
-            TransactionInformation transactionInformation,
-            Etag committedEtag,
-            SequentialUuidGenerator uuidGenerator)
+		public new Etag AddDocumentInTransaction(
+			string key,
+			Etag etag,
+			RavenJObject data,
+			RavenJObject metadata,
+			TransactionInformation transactionInformation,
+			Etag committedEtag,
+			IUuidGenerator uuidGenerator)
         {
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
@@ -55,7 +55,7 @@ namespace Raven.Database.Impl.DTC
             string key,
             Etag etag,
             Etag committedEtag,
-            SequentialUuidGenerator uuidGenerator)
+			IUuidGenerator uuidGenerator)
         {
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }

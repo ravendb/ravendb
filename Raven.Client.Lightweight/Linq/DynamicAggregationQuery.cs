@@ -143,7 +143,6 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-#if !NETFX_CORE
 		public FacetResults ToList()
 		{
 			return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
@@ -154,7 +153,6 @@ namespace Raven.Client.Linq
 			var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
 			return new Lazy<FacetResults>(() => HandlRenames(facetsLazy.Value));
 		}
-#endif
 
 		public async Task<FacetResults> ToListAsync()
 		{

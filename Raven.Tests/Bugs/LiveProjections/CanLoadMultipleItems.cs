@@ -14,6 +14,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 			using (var store = NewDocumentStore())
 			{
 				new ParentAndChildrenNames().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);	
+				new ParentAndChildrenNames.ParentAndChildrenNamesTransformer().Execute(store);
 
 				using(var s = store.OpenSession())
 				{
@@ -33,6 +34,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 					s.SaveChanges();
 
 					var results = s.Query<dynamic, ParentAndChildrenNames>().Customize(x=>x.WaitForNonStaleResults())
+						.TransformWith<ParentAndChildrenNames.ParentAndChildrenNamesTransformer, dynamic>()
 						.ToArray();
 
 					Assert.Equal(1, results.Length);
