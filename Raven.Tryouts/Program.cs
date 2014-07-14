@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NLog;
-using Voron.Tests.Journal;
+//using Voron.Tests.Journal;
 
 namespace Raven.Tryouts
 {
