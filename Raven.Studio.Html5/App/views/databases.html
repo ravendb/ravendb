@@ -27,7 +27,7 @@
             </div>
         </div>
         <div id="databases-container" data-bind="foreach: databases">
-            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected }">
+            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: disabled }">
                 <div class="checkbox" data-bind="style: { display: isChecked() ? 'block' : '' }">
                     <input data-bind="checked: isChecked, click: function(){ $root.optionsClicked(true); return true; }" type="checkbox" name="checkbox" />
                 </div>
@@ -44,35 +44,31 @@
                     <!-- ko ifnot: $data.disabled -->
                     <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                     <!-- /ko -->
-                </div>
-                
-                <div class="disabled-status">
-                    <i class="fa fa-power-off" data-bind="attr: { title: !disabled() ? 'Database is Enabled' : 'Database is Disabled'}, css: { enabled : !disabled(), disabled: disabled() }"></i>
+                    <!-- ko if: $data.disabled -->
+                    <span class="text-muted">Disabled</span>
+                    <!-- /ko -->
                 </div>
 
-                <div class="btn-group pull-right" data-bind="click: function(){ $root.clickedDatabase($data); $root.optionsClicked(true); }">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
+                <div class="btn-group" data-bind="click: function(){ $root.clickedDatabase($data); $root.optionsClicked(true); }">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <i class="fa fa-cogs"></i>
                     </button>
                     <ul class="dropdown-menu" role="menu">
                         <li role="presentation">
-                            <a class="btn" data-bind="click: function () { $root.toggleSelectedDatabase($data); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
+                            <a class="btn" data-bind="click: function () { $root.toggleSelectedDatabases([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
                                 <i class="fa" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>&nbsp;
                                 <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
                             </a>
                         </li>
                         <li class="divider"></li>
                         <li role="presentation">
-                            <a class="btn" title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabase($data); return true; }">
+                            <a class="btn" title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabases([$data]); return true; }">
                                 <i class="fa fa-trash-o text-danger"></i>&nbsp;
                                 Delete
                             </a>
                         </li>
                     </ul>
                 </div>
-                
-                <!--<span class="margin"></span>-->
-
             </div>
         </div>
     </div>

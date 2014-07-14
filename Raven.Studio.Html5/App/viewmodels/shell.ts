@@ -285,7 +285,6 @@ class shell extends viewModelBase {
                             existingResource.disabled(dto.Disabled);
                             if (dto.Disabled == false && this.currentConnectedResource.name == receivedResourceName) {
                                 existingResource.activate();
-                                //todo activate according to current active resource
                             }
                         }
                         if (typeHash == "#databases") { //for databases, bundle change
@@ -503,7 +502,7 @@ class shell extends viewModelBase {
     }
 
     private updateDbChangesApi(db: database) {
-        if (this.currentConnectedResource.name != db.name) {
+        if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && db.disabled()) {
             // disconnect from the current database changes api and set the current connected database
             this.disconnectFromResourceChangesApi();
             this.currentConnectedResource = db;
@@ -522,7 +521,7 @@ class shell extends viewModelBase {
     }
 
     private updateFsChangesApi(fs: filesystem) {
-        if (this.currentConnectedResource.name != fs.name) {
+        if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && fs.disabled()) {
             // disconnect from the current filesystem changes api and set the current connected filesystem
             this.disconnectFromResourceChangesApi();
             this.currentConnectedResource = fs;
@@ -538,7 +537,7 @@ class shell extends viewModelBase {
     }
 
     private updateCsChangesApi(cs: counterStorage) {
-        if (this.currentConnectedResource.name != cs.name) {
+        if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
             // disconnect from the current filesystem changes api and set the current connected filesystem
             this.disconnectFromResourceChangesApi();
             this.currentConnectedResource = cs;

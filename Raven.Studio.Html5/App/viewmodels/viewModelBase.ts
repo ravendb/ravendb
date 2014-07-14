@@ -249,14 +249,6 @@ class viewModelBase {
         }
     }
 
-    reportSuccess(title: string) {
-        this.reportProgress(alertType.success, title);
-    }
-
-    reportInfo(title: string) {
-        this.reportProgress(alertType.info, title);
-    }
-
     reportError(title: string) {
         this.reportProgress(alertType.error, title);
     }

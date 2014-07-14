@@ -226,9 +226,16 @@ body {
 .fullScreen {
   overflow: hidden;
 }
+.dropdown-menu {
+  min-width: 0;
+}
 .dropdown-menu .selected {
   color: #555;
   background-color: #e7e7e7;
+}
+.dropdown-menu a.btn {
+  padding-left: 10px;
+  text-align: left;
 }
 .vertical-bottom-container {
   width: 10% !important;
@@ -300,7 +307,6 @@ body {
 }
 #database-page #databases-container .database .btn-group {
   float: right;
-  margin-right: -22px;
   margin-top: 33px;
   padding-left: 8px;
 }
@@ -313,6 +319,10 @@ body {
 #database-page #databases-container .database .btn-default:hover {
   -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
   box-shadow: 0 0 5px 0 #6aa3d5;
+}
+#database-page #databases-container .database.disabled {
+  -webkit-box-shadow: 0 0 6px 0 #cdcdcd;
+  box-shadow: 0 0 6px 0 #cdcdcd;
 }
 #database-page #databases-container .database:hover {
   background-color: white;
@@ -327,10 +337,6 @@ body {
 #database-page #databases-container .database.selected a,
 #database-page #databases-container .database.selected .text-muted {
   color: white;
-}
-#database-page #databases-container .database.selected a.btn {
-  color: black;
-  text-align: left;
 }
 #database-page #databases-container .database.selected .btn-default {
   border-color: #6aa3d5;
@@ -353,7 +359,7 @@ body {
 .resource-link {
   padding-left: 5px;
   overflow-x: hidden;
-  max-width: 130px;
+  max-width: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

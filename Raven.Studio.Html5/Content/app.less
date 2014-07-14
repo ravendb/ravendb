@@ -289,9 +289,16 @@ html, body {
 }
 
 .dropdown-menu {
+    min-width: 0;
+
     .selected {
         color: #555;
         background-color: #e7e7e7;
+    }
+
+    a.btn {
+        padding-left: 10px;
+        text-align: left;
     }
 }
 
@@ -351,7 +358,7 @@ html, body {
 
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
-            //@disabledColor: lighten(silver, 5%);
+            @disabledColor: lighten(silver, 5%);
 
             .checkbox{
                 display: none;
@@ -384,7 +391,6 @@ html, body {
 
             .btn-group {
                 float: right;
-                margin-right: -22px;
                 margin-top: 33px;
                 padding-left: 8px;
             }
@@ -401,16 +407,10 @@ html, body {
                 box-shadow: 0 0 5px 0 @hoverColor;
             }
 
-            //.margin {
-            //    clear: both;
-            //    display: block;
-            //    margin: 22px 0;
-            //}
-
-            //&.disabled {
-            //    -webkit-box-shadow: 0 0 6px 0 @disabledColor;
-            //    box-shadow: 0 0 6px 0 @disabledColor;
-            //}
+            &.disabled {
+                -webkit-box-shadow: 0 0 6px 0 @disabledColor;
+                box-shadow: 0 0 6px 0 @disabledColor;
+            }
 
             &:hover {
                 background-color: white;
@@ -425,11 +425,6 @@ html, body {
 
                 a, .text-muted {
                     color: white;
-                }
-
-                a.btn {
-                    color: black;
-                    text-align: left;
                 }
 
                 .btn-default {
@@ -462,7 +457,7 @@ html, body {
 .resource-link {
     padding-left: 5px;
     overflow-x: hidden;
-    max-width: 130px;
+    max-width: 20px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }

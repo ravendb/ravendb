@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -89,63 +90,12 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			bool result;
 			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
-			var message = DeleteDatabase(id, isHardDeleteNeeded);
 
+			var message = DeleteDatabase(id, isHardDeleteNeeded);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
-
-			return GetEmptyMessage();
-/*			if (IsSystemDatabase(id))
-				return GetMessageWithString("System Database document cannot be deleted", HttpStatusCode.Forbidden);
-
-			//get configuration even if the database is disabled
-			var configuration = DatabasesLandlord.CreateTenantConfiguration(id, true);
-
-			if (configuration == null)
-				return GetMessageWithString("Database doesn't exist", HttpStatusCode.BadRequest);
-
-			var docKey = "Raven/Databases/" + id;
-			Database.Documents.Delete(docKey, null, null);
-			
-			bool result;
-			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
-			{
-				IOExtensions.DeleteDirectory(configuration.DataDirectory);
-                if (configuration.IndexStoragePath != null)
-				    IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-                if (configuration.JournalsStoragePath != null)
-                    IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);
-			}
-
-			return GetEmptyMessage();*/
-		}
-
-		[HttpPost]
-		[Route("admin/databases/{*id}")]
-		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
-		{
-			if (IsSystemDatabase(id))
-				return GetMessageWithString("System Database document cannot be disabled", HttpStatusCode.Forbidden);
-
-			var docKey = "Raven/Databases/" + id;
-			var document = Database.Documents.Get(docKey, null);
-			if (document == null)
-				return GetMessageWithString("Database " + id + " wasn't found", HttpStatusCode.NotFound);
-
-			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-			if (dbDoc.Disabled == isSettingDisabled)
-			{
-				string state = isSettingDisabled ? "disabled" : "enabled";
-				return GetMessageWithString("Database " + id + " is already " + state, HttpStatusCode.BadRequest);
-			}
-
-			DatabasesLandlord.Unprotect(dbDoc);
-			dbDoc.Disabled = !dbDoc.Disabled;
-			var json = RavenJObject.FromObject(dbDoc);
-			json.Remove("Id");
-			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
 
 			return GetEmptyMessage();
 		}
@@ -156,25 +106,53 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			bool result;
 			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
-			string[] databasesToDelete = GetQueryStringValues("ids");
-			var successfulDeletes = 0;
+			string[] databasesToDelete = GetQueryStringValues("databaseIds");
+			var successfullyDeletedDatabase = new List<string>();
 
 			databasesToDelete.ForEach(databaseId =>
 			{
 				var message = DeleteDatabase(databaseId, isHardDeleteNeeded);
-				if (message.ErrorCode != HttpStatusCode.OK)
+				if (message.ErrorCode == HttpStatusCode.OK)
 				{
-					successfulDeletes++;
+					successfullyDeletedDatabase.Add(databaseId);
 				}
 
 			});
 
-			if (successfulDeletes < databasesToDelete.Count())
+			return GetMessageWithObject(successfullyDeletedDatabase.ToArray());
+		}
+
+		[HttpPost]
+		[Route("admin/databases/{*id}")]
+		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
+		{
+			var message = ToggeleDatabase(id, isSettingDisabled);
+			if (message.ErrorCode != HttpStatusCode.OK)
 			{
-				return GetMessageWithString("Only " + successfulDeletes + " databases were deleted!");
+				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
 			return GetEmptyMessage();
+		}
+
+		[HttpPost]
+		[Route("admin/databases/database-batch-toggle-disable")]
+		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
+		{
+			string[] databasesToToggle = GetQueryStringValues("databaseIds");
+			var successfullyToggledDatabase = new List<string>();
+
+			databasesToToggle.ForEach(databaseId =>
+			{
+				var message = ToggeleDatabase(databaseId, isSettingDisabled);
+				if (message.ErrorCode == HttpStatusCode.OK)
+				{
+					successfullyToggledDatabase.Add(databaseId);
+				}
+
+			});
+
+			return GetMessageWithObject(successfullyToggledDatabase.ToArray());
 		}
 
 		private MessageWithStatusCode DeleteDatabase(string databaseId, bool isHardDeleteNeeded)
@@ -201,32 +179,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			return new MessageWithStatusCode();
-		}
-
-		[HttpPost]
-		[Route("admin/databases/database-batch-toggle-disable")]
-		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
-		{
-			string[] databasesToToggle = GetQueryStringValues("ids");
-			var successfulToggles = 0;
-
-			databasesToToggle.ForEach(databaseId =>
-			{
-				var message = ToggeleDatabase(databaseId, isSettingDisabled);
-				if (message.ErrorCode != HttpStatusCode.OK)
-				{
-					successfulToggles++;
-				}
-
-			});
-
-			if (successfulToggles < databasesToToggle.Count())
-			{
-				var action = isSettingDisabled ? "disabled" : "enabled";
-				return GetMessageWithString("Only " + successfulToggles + " databases were " + action + "!");
-			}
-
-			return GetEmptyMessage();
 		}
 
 		private MessageWithStatusCode ToggeleDatabase(string databaseId, bool isSettingDisabled)
