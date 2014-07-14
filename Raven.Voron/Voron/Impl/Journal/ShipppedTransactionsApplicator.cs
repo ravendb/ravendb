@@ -33,13 +33,6 @@ namespace Voron.Impl.Journal
 
 	    public void ApplyShippedLog(byte[] txPagesRaw, uint previousTransactionCrc)
 	    {
-		    
-			//todo: uncompress the data & validate crc & previous transaction crc & transaction id vs prev transaction id
-		    //then write the _compressed_ data directly to disk
-		    //and apply them to the data directly by creating a virtual (just a number) transaction
-		    // no need to do a decompress, commit, compress cycle
-
-
 			fixed (byte* pages = txPagesRaw)
 		    {
 			    using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
