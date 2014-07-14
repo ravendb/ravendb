@@ -132,6 +132,7 @@
     <Compile Include="StorageStreamTest.cs" />
     <Compile Include="Synchronization\FileChangesPropagationTests.cs" />
     <Compile Include="Synchronization\WorkingWithConflictsTests.cs" />
+    <Compile Include="TaskAssert.cs" />
     <Compile Include="Tools\HttpWebRequestExtensions.cs" />
     <Compile Include="Tools\IisDeploymentUtil.cs" />
     <Compile Include="NarrowedStreamTests.cs" />
