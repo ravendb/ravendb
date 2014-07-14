@@ -252,6 +252,53 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
+        [Fact]
+        public async void MultipleConflictListeners_ConflictNotResolved()
+        {
+            var store = (FilesStore)filesStore;
+            var takeLocalConflictListener = new TakeLocalConflictListener();
+            var takeNewestConflictListener = new TakeNewestConflictsListener();
+            var noOpListener = new NoOpConflictListener();
+            anotherStore.Listeners.RegisterListener(takeLocalConflictListener);
+            anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(takeNewestConflictListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                Thread.Sleep(250);
+
+                Assert.Equal(1, takeLocalConflictListener.DetectedCount);
+                Assert.Equal(1, takeNewestConflictListener.DetectedCount);
+                Assert.Equal(1, noOpListener.DetectedCount);
+
+                // try to change content of file in destination2
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(140));
+
+                // Assert an exception is thrown because the conflict is still there
+                var aggregateException = Assert.Throws<AggregateException>(() => sessionDestination2.SaveChangesAsync().Wait());
+                Assert.IsType<NotSupportedException>(aggregateException.InnerException);
+
+                // try to change content of file in destination2
+                sessionDestination2.RegisterRename("test1.file", "test2.file");
+
+                // Assert an exception is thrown because the conflict is still there
+                aggregateException = Assert.Throws<AggregateException>(() => sessionDestination2.SaveChangesAsync().Wait());
+                Assert.IsType<NotSupportedException>(aggregateException.InnerException);
+            }
+        }
+
 
         private class NoOpDeleteFilesListener : IFilesDeleteListener
         {
