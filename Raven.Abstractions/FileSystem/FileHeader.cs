@@ -29,7 +29,7 @@ namespace Raven.Abstractions.FileSystem
             }
             set 
             {
-                this._totalSize = value;
+                this._totalSize = value; 
             }
         }
         public long UploadedSize { get; set; }
@@ -101,7 +101,9 @@ namespace Raven.Abstractions.FileSystem
         {
             if (!this._totalSize.HasValue && this.Metadata.Keys.Contains("RavenFS-Size"))
             {
-                this._totalSize = this.Metadata["RavenFS-Size"].Value<long>();
+                var metadataTotalSize = this.Metadata["RavenFS-Size"].Value<long>();
+                if (metadataTotalSize > 0)
+                    this._totalSize = metadataTotalSize;
             }
             
             if (this.UploadedSize <= 0)
