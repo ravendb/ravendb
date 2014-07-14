@@ -29,7 +29,7 @@
         <div id="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected }">
                 <div class="checkbox" data-bind="style: { display: isChecked() ? 'block' : '' }">
-                    <input data-bind="click: function () { checkboxToggle(); return true; }, clickBubble: false" type="checkbox" name="checkbox" />
+                    <input data-bind="checked: isChecked, click: function(){ $root.optionsClicked(true); return true; }" type="checkbox" name="checkbox" />
                 </div>
 
                 <div class="details">
@@ -50,11 +50,11 @@
                     <i class="fa fa-power-off" data-bind="attr: { title: !disabled() ? 'Database is Enabled' : 'Database is Disabled'}, css: { enabled : !disabled(), disabled: disabled() }"></i>
                 </div>
 
-                <div class="btn-group" data-bind="click: function(){ $root.clickedDatabase($data); $root.optionsClicked(true); }">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <div class="btn-group pull-right" data-bind="click: function(){ $root.clickedDatabase($data); $root.optionsClicked(true); }">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
                         <i class="fa fa-cogs"></i>
                     </button>
-                    <ul class="dropdown-menu col-sm-3" role="menu">
+                    <ul class="dropdown-menu" role="menu">
                         <li role="presentation">
                             <a class="btn" data-bind="click: function () { $root.toggleSelectedDatabase($data); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
                                 <i class="fa" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>&nbsp;
@@ -65,7 +65,7 @@
                         <li role="presentation">
                             <a class="btn" title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabase($data); return true; }">
                                 <i class="fa fa-trash-o text-danger"></i>&nbsp;
-                                Delete Database
+                                Delete
                             </a>
                         </li>
                     </ul>

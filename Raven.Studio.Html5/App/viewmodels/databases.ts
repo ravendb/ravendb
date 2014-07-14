@@ -211,8 +211,7 @@ class databases extends viewModelBase {
         return fullEncryptionName;
     }
 
-    deleteSelectedDatabase() {
-        var db: database = this.clickedDatabase();
+    deleteSelectedDatabase(db: database) {
         if (db) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(db, this.systemDb);
@@ -224,8 +223,12 @@ class databases extends viewModelBase {
         }
     }
 
-    toggleSelectedDatabase() {
-        var db: database = this.clickedDatabase();
+    deleteCheckedDatabases() {
+        var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
+
+    }
+
+    toggleSelectedDatabase(db: database) {
         if (db) {
             var desiredAction = db.disabled() ? "enable" : "disable";
             var desiredActionCapitalized = desiredAction.charAt(0).toUpperCase() + desiredAction.slice(1);
@@ -234,33 +237,38 @@ class databases extends viewModelBase {
             var confirmationMessageViewModel = this.confirmationMessage(desiredActionCapitalized + ' Database', 'Are you sure you want to ' + desiredAction + ' \'' + db.name +'\'?');
             confirmationMessageViewModel
                 .done(() => {
-                    this.toggleDatabase(db, action);
+                    require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
+                        var toggleTask = new toggleDatabaseDisabledCommand(db).execute();
+
+                        toggleTask.done(() => {
+                            //db.isSelected(false);
+                            db.disabled(action);
+                            db.isChecked(false);
+
+                            var activeDatabase: database = this.activeDatabase();
+                            if (!!activeDatabase && db.name == activeDatabase.name) {
+                                this.selectDatabase(db);
+                            }
+                            
+                        });
+                    });
                 });
         }
     }
 
-    private toggleDatabase(db: database, action: boolean, reportToggle: boolean = true) {
-        require(["commands/toggleDatabaseDisabledCommand"], toggleDatabaseDisabledCommand => {
-            var toggleTask = new toggleDatabaseDisabledCommand(db, reportToggle).execute();
-
-            toggleTask.done(() => {
-                    db.isSelected(false);
-                    db.disabled(action);
-                    this.selectDatabase(db);
-            });
-
-            return toggleTask;
-        });
-    }
-
     toggleCheckedDatabases() {
         var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
+
+        if (checkedDatabases.length == 1) {
+            this.toggleSelectedDatabase(checkedDatabases[0]);
+        }
+/*
         var action = !checkedDatabases[0].disabled();
 
         this.reportInfo((action ? 'Disabling' : 'Enabling') + " Databases...");
 
         var toggleTasks = [];
-        checkedDatabases.forEach(db => {
+        checkedDatabases.forEach((db: database) => {
             toggleTasks.push(this.toggleDatabase(db, action, false));
         });
 
@@ -268,15 +276,13 @@ class databases extends viewModelBase {
         $.when(toggleTasks)
             .done(() => {
                 this.reportSuccess("Databases were successfully " + desiredAction + "!");
+                checkedDatabases.forEach((db: database) => {
+                    db.isChecked(false);
+                });
             })
             .fail(() => {
                 this.reportError("Only part of the databases were " + desiredAction + "!");
-            });
-    }
-
-    deleteCheckedDatabases() {
-        var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
-
+            });*/
     }
 
     private addNewDatabase(databaseName: string): database {

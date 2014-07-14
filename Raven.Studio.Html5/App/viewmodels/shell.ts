@@ -49,8 +49,6 @@ class shell extends viewModelBase {
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     isDatabaseDisabled: KnockoutComputed<boolean>;
-    currentConnectedDatabase: database;
-    systemDb: database;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
@@ -58,17 +56,16 @@ class shell extends viewModelBase {
     static fileSystems = ko.observableArray<filesystem>();
     listedFileSystems: KnockoutComputed<filesystem[]>;
     isFileSystemDisabled: KnockoutComputed<boolean>;
-    currentConnectedFileSystem: filesystem;
     fileSystemsLoadedTask: JQueryPromise<any>;
     canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
 
     static counterStorages = ko.observableArray<counterStorage>();
     listedCounterStorages: KnockoutComputed<counterStorage[]>;
     isCounterStorageDisabled: KnockoutComputed<boolean>;
-    currentConnectedCounterStorage: counterStorage;
     counterStoragesLoadedTask: JQueryPromise<any>;
     canShowCountersNavbar = ko.computed(() => shell.counterStorages().length > 0 && this.appUrls.isAreaActive('counterstorages')());
 
+    currentConnectedResource: resource;
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
@@ -102,10 +99,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
-        this.systemDb = appUrl.getSystemDatabase();
-        this.currentConnectedDatabase = this.systemDb;
-        this.currentConnectedFileSystem = new filesystem(null);
-        this.currentConnectedCounterStorage = new counterStorage(null);
+        this.currentConnectedResource = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase();
 
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -289,6 +283,10 @@ class shell extends viewModelBase {
                     } else {
                         if (existingResource.disabled() != dto.Disabled) { //disable status change
                             existingResource.disabled(dto.Disabled);
+                            if (dto.Disabled == false && this.currentConnectedResource.name == receivedResourceName) {
+                                existingResource.activate();
+                                //todo activate according to current active resource
+                            }
                         }
                         if (typeHash == "#databases") { //for databases, bundle change
                             existingResource.activeBundles(dto.Settings["Raven/ActiveBundles"].split(";"));
@@ -505,41 +503,53 @@ class shell extends viewModelBase {
     }
 
     private updateDbChangesApi(db: database) {
-        if (!db.disabled() && (this.currentConnectedDatabase.name != db.name || !this.appUrls.isAreaActive('databases')()) ||
-                db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
+        if (this.currentConnectedResource.name != db.name) {
+            // disconnect from the current database changes api and set the current connected database
             this.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = db;
+        }
 
+        if (!db.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('databases')()) ||
+                db.name == "<system>" && this.currentConnectedResource.name == db.name) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(db, 5000));
             this.changeSubscriptionArray = [
                 shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
             ];
-
-            this.currentConnectedDatabase = db;
         }
     }
 
     private updateFsChangesApi(fs: filesystem) {
-        if (!fs.disabled() && (this.currentConnectedFileSystem.name != fs.name || !this.appUrls.isAreaActive('filesystems')())) {
+        if (this.currentConnectedResource.name != fs.name) {
+            // disconnect from the current filesystem changes api and set the current connected filesystem
             this.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = fs;
+        }
 
+        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
-
-            shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs));
-
-            this.currentConnectedFileSystem = fs;
+            this.changeSubscriptionArray = [
+                shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs))
+            ];
         }
     }
 
     private updateCsChangesApi(cs: counterStorage) {
-        //TODO: enable changes api for counter storages, server side
-        if (!cs.disabled() && (this.currentConnectedCounterStorage.name != cs.name || !this.appUrls.isAreaActive('counterstorages')())) {
+        if (this.currentConnectedResource.name != cs.name) {
+            // disconnect from the current filesystem changes api and set the current connected filesystem
             this.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = cs;
+        }
 
+        if (!cs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('counterstorages')())) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(cs, 5000));
-
-            this.currentConnectedCounterStorage = cs;
+            this.changeSubscriptionArray = [
+                //TODO: enable changes api for counter storages, server side
+            ];
         }
     }
 
