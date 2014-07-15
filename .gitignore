@@ -48,3 +48,5 @@ Testresults
 /Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js
 /*.shfbproj_Fitzchak
 Raven.Studio/Settings.dat
+
+/Raven.Web/Raven/CompiledIndexCache

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using NDesk.Options;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -65,11 +66,14 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
+		private int currentBatchSize, currentLimit;
+		private SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 		public override async Task ImportData(Stream stream, SmugglerOptions options)
 		{
-			SmugglerJintHelper.Initialize(options ?? SmugglerOptions);
+			jintHelper.Initialize(options ?? SmugglerOptions);
 
-			var batchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
+			currentBatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
+			currentLimit = options != null ? options.Limit : SmugglerOptions.Limit;
 
 			using (store = CreateStore())
 			{
@@ -79,7 +83,7 @@ namespace Raven.Smuggler
 				{
 					operation = store.BulkInsert(options: new BulkInsertOptions
 					{
-						BatchSize = batchSize,
+						BatchSize = currentBatchSize,
 						CheckForUpdates = true
 					});
 
@@ -115,18 +119,29 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override Task PutDocument(RavenJObject document)
+		private int storedDocumentCountInBatch;
+		protected override async Task PutDocument(RavenJObject document)
 		{
-			if (document != null)
+			if (document == null)
+				return;
+
+			var metadata = document.Value<RavenJObject>("@metadata");
+			var id = metadata.Value<string>("@id");
+			document.Remove("@metadata");
+
+			operation.Store(document, metadata, id);
+			storedDocumentCountInBatch++;
+			if (storedDocumentCountInBatch >= currentLimit && currentLimit > 0)
 			{
-				var metadata = document.Value<RavenJObject>("@metadata");
-				var id = metadata.Value<string>("@id");
-				document.Remove("@metadata");
+				storedDocumentCountInBatch = 0;
+				await operation.DisposeAsync();
 
-				operation.Store(document, metadata, id);
+				operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					BatchSize = currentBatchSize,
+					CheckForUpdates = true
+				});
 			}
-
-			return new CompletedTask();
 		}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)
@@ -384,7 +399,7 @@ namespace Raven.Smuggler
 
 		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
+			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
 		private Task FlushBatch()
