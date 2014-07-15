@@ -185,12 +185,12 @@ class viewModelBase {
         clearInterval(viewModelBase.modelPollingHandle);
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
         var messageView = app.showMessage(confirmationMessage, title, options);
 
         messageView.done((answer) => {
-            if (answer == options[0]) {
+            if (answer == options[1]) {
                 viewTask.resolve({ can: true });
             } else if (!forceRejectWithResolve) {
                 viewTask.reject();
