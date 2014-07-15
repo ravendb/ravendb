@@ -26,7 +26,7 @@
                 </button>
             </div>
         </div>
-        <div id="databases-container" data-bind="foreach: databases">
+        <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: disabled }">
                 <div class="checkbox" data-bind="style: { display: isChecked() ? 'block' : '' }">
                     <input data-bind="checked: isChecked, click: function(){ $root.optionsClicked(true); return true; }" type="checkbox" name="checkbox" />
@@ -35,17 +35,17 @@
                 <div class="details">
                     <h4>
                         <!-- ko ifnot: $data.disabled -->
-                        <a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
+                        <a class="database-name" data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
                         <!-- /ko -->
                         <!-- ko if: $data.disabled -->
-                        <a data-bind="text: name"></a>
+                        <a class="database-name disabled" data-bind="text: name"></a>
                         <!-- /ko -->
                     </h4>
                     <!-- ko ifnot: $data.disabled -->
-                    <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                    <span class="text-muted stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled -->
-                    <span class="text-muted">Disabled</span>
+                    <span class="text-muted disabled">Disabled</span>
                     <!-- /ko -->
                 </div>
 

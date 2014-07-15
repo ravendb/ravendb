@@ -158,9 +158,9 @@ class editIndex extends viewModelBase {
         checkedFieldsArray.push(this.indexScript);
         checkedFieldsArray.push(this.deleteScript);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
+        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
 
-        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.dirtyFlag().isDirty());
     }
 
     private editExistingIndex(unescapedIndexName: string) {
@@ -288,7 +288,7 @@ class editIndex extends viewModelBase {
                 var deleteViewModel = new deleteIndexesConfirm([indexName], db);
                 deleteViewModel.deleteTask.done(() => {
                     //prevent asking for unsaved changes
-                    viewModelBase.dirtyFlag().reset(); // Resync Changes
+                    this.dirtyFlag().reset(); // Resync Changes
                     router.navigate(appUrl.forIndexes(db));
                 });
 

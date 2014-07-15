@@ -81,10 +81,10 @@ class configuration extends viewModelBase {
             this.loadedConfiguration(this.currentKey().key);
         }
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
+        this.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
 
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -152,7 +152,7 @@ class configuration extends viewModelBase {
                 this.configurationKeyText(data);
                 this.loadedConfiguration(this.selectedKey().key);
             }).always(() => {
-                viewModelBase.dirtyFlag().reset();
+                this.dirtyFlag().reset();
                 this.isBusy(false);
             });
 
@@ -169,7 +169,7 @@ class configuration extends viewModelBase {
         var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
         var saveTask = saveCommand.execute();
         saveTask.done((result) => {
-            viewModelBase.dirtyFlag().reset(); // Resync Changes
+            this.dirtyFlag().reset(); // Resync Changes
         });
     }
 

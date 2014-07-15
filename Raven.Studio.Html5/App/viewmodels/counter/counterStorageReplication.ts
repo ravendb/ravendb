@@ -27,9 +27,9 @@ class counterStorageReplication extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
+        this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -50,7 +50,7 @@ class counterStorageReplication extends viewModelBase {
         if (counter) {
             new saveCounterStorageReplicationCommand(this.replicationsSetup().toDto(), counter)
                 .execute()
-                .done(()=> viewModelBase.dirtyFlag().reset());
+                .done(() => this.dirtyFlag().reset());
         }
     }
 
@@ -67,7 +67,7 @@ class counterStorageReplication extends viewModelBase {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
         canContinue.done(() => {
             this.fetchCountersDestinations(this.activeCounterStorage(), true)
-                .done(() => viewModelBase.dirtyFlag().reset());
+                .done(() => this.dirtyFlag().reset());
         });
     }
 }

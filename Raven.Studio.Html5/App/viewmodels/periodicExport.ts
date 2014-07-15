@@ -39,7 +39,7 @@ class periodicExport extends viewModelBase {
                 (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
         });
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
+        this.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
     fetchPeriodicExportSetup(db): JQueryPromise<any> {

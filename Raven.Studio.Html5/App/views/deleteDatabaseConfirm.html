@@ -20,7 +20,10 @@
             </ul>
         </div>
 
-        <div data-bind="visible: databasesToDelete().length > 1"><strong>You can export these databases if needed.</strong><br /></div>
+        <div data-bind="visible: databasesToDelete().length > 1">
+            <strong>You can export these databases if needed.</strong><br />
+
+        </div>
 
         <p data-bind="visible: databasesToDelete().length === 1">
             You can <a href="#" data-bind="click: navigateToExportDatabase">export the database</a> if needed.<br />
@@ -35,7 +38,7 @@
                 <input type="radio" name="options" id="option2"> Delete everything
             </label>
         </div>
-        
+
         <p data-bind="visible: databasesToDelete().length > 1">
             <strong>Note: </strong> Delete options will be applied to all <br /> of the deleted databases.
         </p>

@@ -45,11 +45,11 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         return def;
     }
 
-    activate() {
-        super.activate("sqlReplicationConnections");
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.connections]);
+    activate(args) {
+        super.activate(args);
+        this.dirtyFlag = new ko.DirtyFlag([this.connections]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty() === true && this.canActivateCalled() === true;
+            return this.dirtyFlag().isDirty() === true && this.canActivateCalled() === true;
         });
 
         if (this.canActivateCalled() === false) {
@@ -64,7 +64,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Connections", newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            viewModelBase.dirtyFlag().reset(); 
+            this.dirtyFlag().reset(); 
         });
     }
 

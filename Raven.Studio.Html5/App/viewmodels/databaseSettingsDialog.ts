@@ -18,6 +18,8 @@ class databaseSettingsDialog extends dialogViewModelBase {
     bundleMap = { quotas: "Quotas", versioning: "Versioning" };
     userDatabasePages = ko.observableArray([]);
 
+    dirtyFlag = new ko.DirtyFlag([]);
+
     constructor(bundles: Array<string>) {
         super();
 
@@ -83,7 +85,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
     }
 
     attached() {
-        viewModelBase.dirtyFlag().reset();
+        this.dirtyFlag().reset();
         this.showView(this.routes[0].moduleId);
     }
 
@@ -93,7 +95,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
 
     checkDirtyFlag(yesCallback: Function, noCallback?: Function) {
         var deferred: JQueryPromise<string>;
-        if (viewModelBase.dirtyFlag().isDirty()) {
+        if (this.dirtyFlag().isDirty()) {
             deferred = app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['Yes', 'No']);
         } else {
             deferred = $.Deferred().resolve("Yes");

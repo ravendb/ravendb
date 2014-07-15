@@ -102,9 +102,14 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/database-batch-delete")]
 		public HttpResponseMessage DatabasesBatchDelete()
 		{
+			string[] databasesToDelete = GetQueryStringValues("databaseIds");
+			if (databasesToDelete == null)
+			{
+				return GetMessageWithString("No databases to delete!", HttpStatusCode.BadRequest);
+			}
+
 			bool result;
 			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
-			string[] databasesToDelete = GetQueryStringValues("databaseIds");
 			var successfullyDeletedDatabase = new List<string>();
 
 			databasesToDelete.ForEach(databaseId =>
@@ -138,6 +143,11 @@ namespace Raven.Database.Server.Controllers.Admin
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("databaseIds");
+			if (databasesToToggle == null)
+			{
+				return GetMessageWithString("No databases to toggle!", HttpStatusCode.BadRequest);
+			}
+
 			var successfullyToggledDatabase = new List<string>();
 
 			databasesToToggle.ForEach(databaseId =>
