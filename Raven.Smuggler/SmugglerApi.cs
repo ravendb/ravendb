@@ -141,6 +141,8 @@ namespace Raven.Smuggler
 					BatchSize = currentBatchSize,
 					CheckForUpdates = true
 				});
+
+				operation.Report += text => ShowProgress(text);
 			}
 		}
 
