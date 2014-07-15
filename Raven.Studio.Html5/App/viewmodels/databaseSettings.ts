@@ -70,9 +70,9 @@ class databaseSettings extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -107,7 +107,7 @@ class databaseSettings extends viewModelBase {
                     this.docEditor.setReadOnly(true);
                     this.isEditingEnabled(false);
                     this.activateDoc();
-                    viewModelBase.dirtyFlag().reset(); //Resync Changes
+                    this.dirtyFlag().reset(); //Resync Changes
                 });
         });
     }
@@ -151,7 +151,7 @@ class databaseSettings extends viewModelBase {
                         this.docEditor.setReadOnly(true);
                         this.isEditingEnabled(false);
                         this.formatDocument();
-                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+                        this.dirtyFlag().reset(); //Resync Changes
                     });
                 }
                 catch (e) {

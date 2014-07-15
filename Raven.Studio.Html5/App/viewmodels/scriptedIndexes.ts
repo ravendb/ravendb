@@ -49,9 +49,9 @@ class scriptedIndexes extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
+        this.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -103,7 +103,7 @@ class scriptedIndexes extends viewModelBase {
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 this.updateIndexes(result);
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.dirtyFlag().reset(); //Resync Changes
             });
     }
 

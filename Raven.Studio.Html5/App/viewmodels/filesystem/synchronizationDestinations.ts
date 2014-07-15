@@ -34,9 +34,9 @@ class synchronizationDestinations extends viewModelBase {
     activate(args) {
         super.activate(args);
        
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
+        this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
