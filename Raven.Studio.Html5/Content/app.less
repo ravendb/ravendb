@@ -110,12 +110,7 @@ html, body {
             .btn-default:hover {
                 -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
-            }                       
-         /*   &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }*/
+            }
         }
     }
 
@@ -148,9 +143,11 @@ html, body {
     .edit-sql-replication-actions {
         padding-top: 0.5%;
     }
-    .advanced
+    .advanced-toggle
     {
-        padding-left:0;
+        .active{            
+            background-color:#E3F8BE;            
+        }
     }
     .checkbox{
         input[type=checkbox]{
@@ -293,13 +290,6 @@ html, body {
     overflow: hidden;
 }
 
-.dropdown-menu {
-    .selected {
-        color: #555;
-        background-color: #e7e7e7;
-    }
-}
-
 .vertical-bottom-container {
     width: 10% !important;
     padding: 0 40% 0 40% !important;    
@@ -329,7 +319,7 @@ html, body {
     width: 98%;
 }
 
-.database-page {
+#database-page {
 
     .btn-toolbar {
         margin-bottom: 20px;
@@ -337,45 +327,73 @@ html, body {
 
     .databases-container {
         margin-top: 10px;
+        
+        .database:hover .checkbox{
+            display : block;
+        }
 
         .database {
             cursor: pointer;
             border-radius: 10px;
             -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
-            min-width: 140px;
-            min-height: 60px;
+            min-width: 160px;
+            min-height: 70px;
             display: inline-block;
             padding: 8px;
             margin: 0 10px 14px 0;
-
+            position: relative;
+            
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
             @disabledColor: lighten(silver, 5%);
 
-            .database-name {
+            .checkbox{
+                display: none;
+                position: absolute;
+                top: -18px;
+                left: -4px;
+
+                input{
+                    width: 18px;
+                    height: 18px;
+                }
+            }
+
+            .details {
                 float: left;
+                line-height: 215%;
+
+                .disabled{
+                    pointer-events: none;
+                    cursor: default;
+                }
+
+                .text-muted.stats{
+                    color: #3A822D;
+                }
+
+                .text-muted.disabled{
+                    color: #d9534f;
+                }
             }
 
             .btn-group {
                 float: right;
-                margin-left: 5px;
-                margin-top: 3px;
+                margin-top: 39.3px;
+                padding-left: 8px;
             }
 
             .btn-default {
+                padding: 4px;
+                padding-left: 10px;
+                padding-right: 7px;
                 border-color: white;
             }
 
             .btn-default:hover {
                 -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
-            }
-
-            .margin {
-                clear: both;
-                display: block;
-                margin: 22px 0;
             }
 
             &.disabled {
@@ -394,13 +412,8 @@ html, body {
                 box-shadow: 0 0 6px 0 @selectColor;
                 background-color: @selectColor;
 
-                a, .text-muted {
-                    color: white;
-                }
-
-                a.btn {
-                    color: black;
-                    text-align: left;
+                .database-name, .text-muted {
+                    color: white !important;
                 }
 
                 .btn-default {
@@ -433,9 +446,24 @@ html, body {
 .resource-link {
     padding-left: 5px;
     overflow-x: hidden;
-    max-width: 130px;
+    max-width: 150px;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.dropdown-menu {
+    min-width: 0;
+
+    .selected {
+        color: #555;
+        background-color: #e7e7e7;
+    }
+
+    a.btn {
+        padding-left: 10px;
+        text-align: left;
+        color: black;
+    }
 }
 
 .resource-link-disabled {
@@ -578,8 +606,12 @@ html, body {
 
 
 .settings-container {
-    margin-top: 10px;
+    margin-top: 10px;    
 
+    .panel-body{
+        overflow-y:auto;
+        max-height:70vh;
+    }
     .api-key-card, .win-auth-card {
         display: inline-block;
         width: 500px;
@@ -638,6 +670,17 @@ html, body {
         .editor {
             height: 100px;
         }
+    }
+
+    .sql-replication-connection-card {
+         @media(max-device-height:1024px) {
+            display: inline-table;
+            width: 100%;
+            margin-right: 20px;
+        }
+        display: inline-table;
+        width: 40%;
+        margin-right: 20px;
     }
 }
 
@@ -1575,13 +1618,6 @@ footer {
 .ace-github .ace_null {
     font-weight: normal !important;
     color: rgb(0, 0, 255);
-}
-
-.animated-loader {
-    background-image: url('images/animated-loader.gif');
-    background-repeat: no-repeat;
-    background-position-x: center;
-    background-position-y: center;
 }
 
 .metricsContainer {

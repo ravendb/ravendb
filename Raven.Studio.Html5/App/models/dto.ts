@@ -457,10 +457,21 @@ interface sqlReplicationDto extends documentDto {
     FactoryName: string;
     ConnectionString: string;
     ConnectionStringName: string;
+    PredefinedConnectionStringSettingName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     PerformTableQuatation?:boolean;
+}
+
+interface sqlReplicationConnectionsDto extends documentDto {
+    PredefinedConnections: predefinedSqlConnectionDto[];
+}
+
+interface predefinedSqlConnectionDto {
+    Name:string;
+    FactoryName: string;
+    ConnectionString: string;
 }
 
 interface facetDto {

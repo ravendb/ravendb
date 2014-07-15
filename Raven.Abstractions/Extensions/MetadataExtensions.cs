@@ -53,7 +53,7 @@ namespace Raven.Abstractions.Extensions
 			"Content-Type",
 			"Expires",
 			// ignoring this header, we handle this internally
-			"Last-Modified",
+			Constants.LastModified,
 			// Ignoring this header, since it may
 			// very well change due to things like encoding,
 			// adding metadata, etc
@@ -87,7 +87,7 @@ namespace Raven.Abstractions.Extensions
 			"Accept-Ranges",
 			"Age",
 			"Allow",
-			"ETag",
+			Constants.MetadataEtagField,
 			"Location",
 			"Retry-After",
 			"Server",

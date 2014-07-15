@@ -22,8 +22,11 @@ using Raven.Json.Linq;
 
 using Voron;
 using Voron.Impl;
+using RavenConstants = Raven.Abstractions.Data.Constants;
+
 using System.Diagnostics;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
@@ -107,15 +110,15 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             var key = CreateKey(filename);
 
-            if (!metadata.ContainsKey("ETag"))
+            if (!metadata.ContainsKey(RavenConstants.MetadataEtagField))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
             ushort version;
             var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = innerMetadata.Value<Guid>("ETag");
-            innerMetadata.Remove("ETag");
+            var etag = innerMetadata.Value<Guid>(RavenConstants.MetadataEtagField);
+            innerMetadata.Remove(RavenConstants.MetadataEtagField);
 
             var file = new RavenJObject
                        {
@@ -330,18 +333,18 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException(filename);
 
-            if (!metadata.ContainsKey("ETag"))
+            if (!metadata.ContainsKey(RavenConstants.MetadataEtagField))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = innerMetadata.Value<Guid>("ETag");
-            innerMetadata.Remove("ETag");
+            var etag = innerMetadata.Value<Guid>(RavenConstants.MetadataEtagField);
+            innerMetadata.Remove(RavenConstants.MetadataEtagField);
 
             var existingMetadata = (RavenJObject) file["metadata"];
 
-            if (existingMetadata.ContainsKey("Content-MD5"))
+            if (!innerMetadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
                 innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
-            if (existingMetadata.ContainsKey("RavenFS-Size"))
+            if (!innerMetadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
                 innerMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
 
             var oldEtag = file.Value<Guid>("etag");
@@ -830,7 +833,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         private static FileHeader ConvertToFile(RavenJObject file)
         {
             var metadata = (RavenJObject)file["metadata"];
-            metadata["ETag"] = file["etag"];
+            metadata[RavenConstants.MetadataEtagField] = file["etag"];
+            // To avoid useless handling of conversions for special headers we return the same type we stored.
+            if (metadata.ContainsKey(RavenConstants.LastModified))
+                metadata[RavenConstants.LastModified] = metadata.Value<DateTimeOffset>(RavenConstants.LastModified);            
 
             return new FileHeader
                    {

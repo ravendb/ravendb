@@ -15,12 +15,12 @@ namespace Raven.Client.Connection
     {
         public static Etag GetEtagHeader(this NameValueCollection headers)
         {
-            return EtagHeaderToEtag(headers["ETag"]);
+            return EtagHeaderToEtag(headers[Constants.MetadataEtagField]);
         }
 
         public static Etag GetEtagHeader(this HttpWebResponse response)
         {
-            return EtagHeaderToEtag(response.GetResponseHeader("ETag"));
+            return EtagHeaderToEtag(response.GetResponseHeader(Constants.MetadataEtagField));
         }
 
         public static Etag GetEtagHeader(this HttpResponseMessage response)
@@ -30,12 +30,12 @@ namespace Raven.Client.Connection
 
         public static Etag GetEtagHeader(this GetResponse response)
         {
-            return EtagHeaderToEtag(response.Headers["ETag"]);
+            return EtagHeaderToEtag(response.Headers[Constants.MetadataEtagField]);
         }
 
         public static Etag GetEtagHeader(this HttpJsonRequest request)
         {
-            return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
+            return EtagHeaderToEtag(request.ResponseHeaders[Constants.MetadataEtagField]);
         }
 
         internal static Etag EtagHeaderToEtag(string responseHeader)

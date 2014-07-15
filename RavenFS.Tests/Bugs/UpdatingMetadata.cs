@@ -1,4 +1,5 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
 using Xunit;
@@ -58,9 +59,9 @@ namespace RavenFS.Tests.Bugs
 
             var metadata = await client.GetMetadataForAsync("abc.txt");
 
-            Assert.True(metadata.ContainsKey("Last-Modified"));
+            Assert.True(metadata.ContainsKey(Constants.LastModified));
             Assert.True(metadata.ContainsKey("RavenFS-Size"));
-            Assert.True(metadata.ContainsKey("Etag"));
+            Assert.True(metadata.ContainsKey(Constants.MetadataEtagField));
             Assert.True(metadata.ContainsKey("Content-MD5"));
             Assert.True(metadata.ContainsKey("Content-Length"));
         }		 

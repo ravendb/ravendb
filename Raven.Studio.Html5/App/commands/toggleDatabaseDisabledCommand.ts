@@ -4,25 +4,54 @@ import database = require("models/database");
 class toggleDatabaseDisabledCommand extends commandBase {
 
     /**
-    * @param database - The database to toggle
+    * @param db - The array of database names to toggle
+    * @param isSettingDisabled - The array of database names to toggle
     */
-    constructor(private db: database) {
+    constructor(private databaseNames: Array<string>, private isSettingDisabled: boolean) {
         super();
     }
 
     execute(): JQueryPromise<any> {
-        var action = this.db.disabled() ? "enable" : "disable";
-        var dbName = this.db.name;
-        this.reportInfo("Trying to " + action + " " + dbName + "...");
+        var action = this.isSettingDisabled ? "disable" : "enable";
+
+        var toggleTask;
+        if (this.databaseNames.length == 1) {
+            toggleTask = this.disableOneDatabse(action);
+        } else {
+            toggleTask = this.disableMultipleDatabases(action);
+        }
+
+        return toggleTask;
+    }
+
+    private disableOneDatabse(action: string): JQueryPromise<any> {
+        var databaseName = this.databaseNames[0];
+        this.reportInfo("Trying to " + action + " " + databaseName + "...");
 
         var args = {
-            isSettingDisabled: !this.db.disabled()
+            isSettingDisabled: this.isSettingDisabled
         };
 
-        var url = "/admin/databases/" + dbName + this.urlEncodeArgs(args);
+        var url = "/admin/databases/" + databaseName + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
-        toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + dbName, response.responseText, response.statusText));
-        toggleTask.done(() => this.reportSuccess(action.charAt(0).toUpperCase() + action.slice(1) + "d " + dbName));
+        toggleTask.done(() => this.reportSuccess("Succefully " + action + "d " + databaseName));
+        toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + databaseName, response.responseText, response.statusText));
+        
+        return toggleTask;
+    }
+
+    private disableMultipleDatabases(action: string): JQueryPromise<any> {
+        this.reportInfo("Trying to " + action + " " + this.databaseNames.length + " databases...");
+
+        var args = {
+            databaseIds: this.databaseNames,
+            isSettingDisabled: this.isSettingDisabled
+        };
+
+        var url = "/admin/databases/database-batch-toggle-disable" + this.urlEncodeArgs(args);
+        var toggleTask = this.post(url, null);
+        toggleTask.done((toggledDatabaseNames: string[]) => this.reportSuccess("Succefully " + action + "d " + toggledDatabaseNames.length + " databases!"));
+        toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " databases", response.responseText, response.statusText));
 
         return toggleTask;
     }

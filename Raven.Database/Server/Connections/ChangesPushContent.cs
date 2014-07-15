@@ -10,6 +10,8 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Connections
 {
@@ -106,11 +108,11 @@ namespace Raven.Database.Server.Connections
 
 		private async Task SendMessage(object message, StreamWriter writer)
 		{
-			var obj = JsonConvert.SerializeObject(message, Formatting.None, new EtagJsonConverter());
-			await writer.WriteAsync("data: ");
-			await writer.WriteAsync(obj);
-			await writer.WriteAsync("\r\n\r\n");
-			await writer.FlushAsync();
+            var o = JsonExtensions.ToJObject(message);        
+            await writer.WriteAsync("data: ");
+            await writer.WriteAsync(o.ToString(Formatting.None));
+            await writer.WriteAsync("\r\n\r\n");
+            await writer.FlushAsync();
 			lastMessageEnqueuedAndNotSent = null;
 			lastMessageSentTick = Environment.TickCount;
 		}

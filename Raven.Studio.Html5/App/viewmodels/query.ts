@@ -34,7 +34,6 @@ import transformerType = require("models/transformer");
 import transformerQueryType = require("models/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand");
 
-
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
