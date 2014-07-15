@@ -7,6 +7,7 @@ using Raven.Database.Server.RavenFS.Storage.Esent;
 
 using Xunit;
 using Raven.Json.Linq;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests
 {
@@ -22,7 +23,7 @@ namespace RavenFS.Tests
 				FileSystemDataDirectory = "test",
 				Settings = new NameValueCollection
 				           {
-					           { "ETag", Guid.Empty.ToString() }
+					           { Constants.MetadataEtagField, Guid.Empty.ToString() }
 				           }
 			};
 

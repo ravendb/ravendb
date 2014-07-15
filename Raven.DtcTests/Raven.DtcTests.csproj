@@ -67,6 +67,7 @@
     <Compile Include="AsyncCommit.cs" />
     <Compile Include="CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
     <Compile Include="ConcurrencyTests.cs" />
+    <Compile Include="DtcAndTouchDocument.cs" />
     <Compile Include="DtcBlues.cs" />
     <Compile Include="DtcIssue.cs" />
     <Compile Include="Embedded.cs" />

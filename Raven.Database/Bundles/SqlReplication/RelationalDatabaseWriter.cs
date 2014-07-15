@@ -42,6 +42,15 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		bool hadErrors;
 
+        public static void TestConnection(string factoryName, string connectionString)
+        {
+            var providerFactory = DbProviderFactories.GetFactory(factoryName);
+            var connection = providerFactory.CreateConnection();
+            connection.ConnectionString = connectionString;
+            connection.Open();
+            connection.Close();
+        }
+
 		public RelationalDatabaseWriter( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
 		{
 			this.database = database;

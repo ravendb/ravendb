@@ -53,7 +53,7 @@ namespace Raven.Abstractions.Extensions
 			"Content-Type",
 			"Expires",
 			// ignoring this header, we handle this internally
-			"Last-Modified",
+			Constants.LastModified,
 			// Ignoring this header, since it may
 			// very well change due to things like encoding,
 			// adding metadata, etc
@@ -87,7 +87,7 @@ namespace Raven.Abstractions.Extensions
 			"Accept-Ranges",
 			"Age",
 			"Allow",
-			"ETag",
+			Constants.MetadataEtagField,
 			"Location",
 			"Retry-After",
 			"Server",
@@ -112,10 +112,10 @@ namespace Raven.Abstractions.Extensions
 			"X-Forwarded-For",
 			"X-Original-URL",
 
-            // Azure specific
-            "X-LiveUpgrade",
-            "DISGUISED-HOST",
-            "X-SITE-DEPLOYMENT-ID",
+			// Azure specific
+			"X-LiveUpgrade",
+			"DISGUISED-HOST",
+			"X-SITE-DEPLOYMENT-ID",
 		};
 
 		private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>

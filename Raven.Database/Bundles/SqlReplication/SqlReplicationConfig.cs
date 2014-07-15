@@ -25,6 +25,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public string ConnectionString { get; set; }
 
+        public string PredefinedConnectionStringSettingName { get; set; }
 		public string ConnectionStringName { get; set; }
 		public string ConnectionStringSettingName { get; set; }
 
@@ -57,4 +58,20 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 	}
+
+    public class SqlReplicationConnections
+    {
+        public List<PredefinedSqlConnection> predefinedConnections { get; set; }
+
+        public SqlReplicationConnections()
+        {
+            predefinedConnections = new List<PredefinedSqlConnection>();
+        }
+        public class PredefinedSqlConnection
+        {
+            public string Name { get; set; }
+            public string FactoryName { get; set; }
+            public string ConnectionString { get; set; }
+        }
+    }
 }

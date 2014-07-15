@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using ICSharpCode.NRefactory.PatternMatching;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -55,7 +56,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public void Execute(DocumentDatabase database)
 		{
-			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
@@ -71,11 +72,11 @@ namespace Raven.Database.Bundles.SqlReplication
 					RecordDelete(notification.Id, metadata);
 				}
 
-				if (!notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase))
+				if (!notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase)
+                    && string.Compare(notification.Id, "Raven/SqlReplication/Connections", StringComparison.InvariantCultureIgnoreCase) != 0)
 					return;
 
 				replicationConfigs = null;
-				//statistics.Clear(); removed, should not be cleared on update
 				log.Debug(() => "Sql Replication configuration was changed.");
 			};
 
@@ -541,16 +542,51 @@ namespace Raven.Database.Bundles.SqlReplication
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
+                const string connectionsDocumentName = "Raven/SqlReplication/Connections";
+
+			    SqlReplicationConnections sqlReplicationConnections = null;
 				foreach (var document in accessor.Documents.GetDocumentsWithIdStartingWith(
 								prefix, 0, 256))
 				{
 					var cfg = document.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
+                    var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 					if (string.IsNullOrWhiteSpace(cfg.Name))
 					{
 						log.Warn("Could not find name for sql replication document {0}, ignoring", document.Key);
 						continue;
 					}
-					if (string.IsNullOrWhiteSpace(cfg.ConnectionStringName) == false)
+				    if (string.IsNullOrWhiteSpace(cfg.PredefinedConnectionStringSettingName) == false)
+				    {
+				        if (sqlReplicationConnections == null)
+				        {
+				            var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName, null);
+                            sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
+				        }
+
+				        var matchingConnection = sqlReplicationConnections.predefinedConnections.FirstOrDefault(x => string.Compare(x.Name, cfg.PredefinedConnectionStringSettingName,StringComparison.InvariantCultureIgnoreCase) == 0);
+				        if (matchingConnection != null)
+				        {
+				            cfg.ConnectionString = matchingConnection.ConnectionString;
+				            cfg.FactoryName = matchingConnection.FactoryName;
+				        }
+				        else
+				        {
+                            log.Warn("Could not find predefined connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+                                cfg.PredefinedConnectionStringSettingName,
+                                document.Key);
+                            replicationStats.LastAlert = new Alert()
+                            {
+                                AlertLevel = AlertLevel.Error,
+                                CreatedAt = DateTime.UtcNow,
+                                Title = "Could not start replication",
+                                Message = string.Format("Could not find predefined connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+                                cfg.PredefinedConnectionStringSettingName,
+                                document.Key)
+                            };
+                            continue;
+				        }
+				    }
+					else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringName) == false)
 					{
 						var connectionString = ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
 						if (connectionString == null)
@@ -558,6 +594,16 @@ namespace Raven.Database.Bundles.SqlReplication
 							log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 								cfg.ConnectionStringName,
 								document.Key);
+
+                            replicationStats.LastAlert = new Alert()
+                            {
+                                AlertLevel = AlertLevel.Error,
+                                CreatedAt = DateTime.UtcNow,
+                                Title = "Could not start replication",
+                                Message = string.Format("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+                                cfg.ConnectionStringName,
+                                document.Key)
+                            };
 							continue;
 						}
 						cfg.ConnectionString = connectionString.ConnectionString;
@@ -568,8 +614,17 @@ namespace Raven.Database.Bundles.SqlReplication
 						if (string.IsNullOrWhiteSpace(setting))
 						{
 							log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-								cfg.ConnectionStringName,
+                                cfg.ConnectionStringSettingName,
 								document.Key);
+                            replicationStats.LastAlert = new Alert()
+                            {
+                                AlertLevel = AlertLevel.Error,
+                                CreatedAt = DateTime.UtcNow,
+                                Title = "Could not start replication",
+                                Message = string.Format("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+                                cfg.ConnectionStringSettingName,
+                                document.Key)
+                            };
 							continue;
 						}
 					}

@@ -56,6 +56,10 @@ namespace Raven.Database.Config
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			{"Raven/NewIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing. Default: 64 MB."},
 			
+			// Prefetcher
+			{"Raven/Prefetcher/FetchingDocumentsFromDiskTimeout", "int", null, "Number of seconds after which prefetcher will stop reading documents from disk. Default: 5."},
+			{"Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage", "int", null, "Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256."},
+
             // Idle 
             {"Raven/TimeToWaitBeforeRunningIdleIndexes", "TimeSpan", "00:10:00", "How long the database should be idle for before updating low priority indexes, default: 10 minutes"},
             {"Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle", "TimeSpan", "1:00:00", "How long the database should wait before marking an index with the idle flag, default: 1 hour"},

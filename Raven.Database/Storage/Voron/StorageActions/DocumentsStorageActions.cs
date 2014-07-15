@@ -133,7 +133,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
 		{
 			if (take < 0)
 				throw new ArgumentException("must have zero or positive value", "take");
@@ -141,6 +141,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			if (string.IsNullOrEmpty(etag))
 				throw new ArgumentNullException("etag");
+
+			Stopwatch duration = null;
+			if (timeout != null)
+				duration = Stopwatch.StartNew();
 
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 											.Iterate(Snapshot, writeBatch.Value))
@@ -193,6 +197,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					}
 
 					yield return document;
+
+					if (timeout != null)
+					{
+						if (duration.Elapsed > timeout.Value)
+							yield break;
+					}
 				} while (iterator.MoveNext() && fetchedDocumentCount < take);
 			}
 		}

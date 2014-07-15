@@ -212,6 +212,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="Bugs\AccessingHostPropertyOnUri.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
@@ -245,15 +246,23 @@
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\CompilingIndexesCreatesCacheDirectory.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
+    <Compile Include="Bugs\DTC\NSB\DbShutDownMidTransaction.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
+    <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
+    <Compile Include="Bugs\PatchingWithDefault.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\RavenDB_2486.cs" />
     <Compile Include="Issues\RavenDB2408.cs" />
+    <Compile Include="Issues\RavenDB_2244.cs" />
+    <Compile Include="Issues\RavenDB_2314.cs" />
+    <Compile Include="Issues\RavenDB_2387.cs" />
+    <Compile Include="Issues\RavenDB_2502.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
@@ -593,6 +602,9 @@
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="Linq\WhereStringEquals.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
+    <Compile Include="MailingList\AsyncSpatial.cs" />
+    <Compile Include="MailingList\IndexesIgnoreNewtonsoftJsonPropertyAttributes.cs" />
+    <Compile Include="MailingList\TestIndexAndTransforSubcollections.cs" />
     <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
@@ -607,6 +619,7 @@
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\NestingTransformers.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
@@ -979,9 +992,7 @@
     </None>
     <EmbeddedResource Include="Patching\failingdump11.ravendump" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Bugs\DTC\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>

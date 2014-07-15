@@ -14,7 +14,24 @@ namespace Raven.Abstractions.FileSystem
         public RavenJObject Metadata { get; set; }
 
         public string Name { get; set; }
-        public long? TotalSize { get; set; }
+
+        private long? _totalSize;
+        public long? TotalSize
+        {
+            get
+            {
+                if (!_totalSize.HasValue)
+                {
+                    SetFileSize();
+                }
+
+                return _totalSize;
+            }
+            set 
+            {
+                this._totalSize = value; 
+            }
+        }
         public long UploadedSize { get; set; }
 
         public DateTimeOffset LastModified
@@ -22,9 +39,9 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var lastModified = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains("Last-Modified"))
+                if (this.Metadata.Keys.Contains(Constants.LastModified))
                 {
-                    lastModified = this.Metadata["Last-Modified"].Value<DateTimeOffset>();
+                    lastModified = this.Metadata[Constants.LastModified].Value<DateTimeOffset>();
                 }
                 return lastModified;
             }
@@ -48,9 +65,9 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 Etag parsedEtag = null;
-                if (this.Metadata.Keys.Contains("ETag"))
+                if (this.Metadata.Keys.Contains(Constants.MetadataEtagField))
                 {
-                    Etag.TryParse(this.Metadata["ETag"].Value<string>(), out parsedEtag);
+                    Etag.TryParse(this.Metadata[Constants.MetadataEtagField].Value<string>(), out parsedEtag);
                 }
 
                 return parsedEtag;
@@ -77,12 +94,21 @@ namespace Raven.Abstractions.FileSystem
         {
             this.Name = name;
             this.Metadata = metadata;
-            
-            if (this.TotalSize.HasValue && (this.TotalSize <= 0 || metadata.Keys.Contains("RavenFS-Size")))
+            SetFileSize();
+        }
+
+        private void SetFileSize()
+        {
+            if (!this._totalSize.HasValue && this.Metadata.Keys.Contains("RavenFS-Size"))
             {
-                this.TotalSize = metadata["RavenFS-Size"].Value<long>();
-                this.UploadedSize = this.TotalSize.HasValue ? this.TotalSize.Value : 0;
+                var metadataTotalSize = this.Metadata["RavenFS-Size"].Value<long>();
+                if (metadataTotalSize > 0)
+                    this._totalSize = metadataTotalSize;
             }
+            
+            if (this.UploadedSize <= 0)
+                this.UploadedSize = this._totalSize.HasValue ? this._totalSize.Value : 0;
+
         }
 
         public FileHeader()

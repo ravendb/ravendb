@@ -11,6 +11,9 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Lucene.Net.Store;
+
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -692,20 +695,33 @@ namespace Raven.Storage.Esent
             var txMode = configuration.TransactionMode == TransactionMode.Lazy
                 ? CommitTransactionGrbit.LazyFlush
                 : CommitTransactionGrbit.None;
-            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
-            {
-                var storageActionsAccessor = new StorageActionsAccessor(pht);
-				if(disableBatchNesting.Value == null)
-					current.Value = storageActionsAccessor;
-				action(storageActionsAccessor);
-                storageActionsAccessor.SaveAllTasks();
 
-                if (pht.UsingLazyCommit)
-                {
-                    txMode = CommitTransactionGrbit.None;
-                }
-                return pht.Commit(txMode);
-            }
+			bool lockTaken = false;
+	        if (transactionContext != null)
+		        Monitor.Enter(transactionContext, ref lockTaken);
+
+	        try
+	        {
+				using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
+				{
+					var storageActionsAccessor = new StorageActionsAccessor(pht);
+					if (disableBatchNesting.Value == null)
+						current.Value = storageActionsAccessor;
+					action(storageActionsAccessor);
+					storageActionsAccessor.SaveAllTasks();
+
+					if (pht.UsingLazyCommit)
+					{
+						txMode = CommitTransactionGrbit.None;
+					}
+					return pht.Commit(txMode);
+				}
+	        }
+	        finally
+	        {
+		        if (lockTaken)
+					Monitor.Exit(transactionContext);
+	        }
         }
 
 	    public IStorageActionsAccessor CreateAccessor()

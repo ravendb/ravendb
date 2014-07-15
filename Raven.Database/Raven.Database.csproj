@@ -332,10 +332,8 @@
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Linq\Ast\TransformFromClauses.cs" />
-    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
-    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\AssemblyExtractor.cs" />
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
@@ -512,6 +510,10 @@
     <Compile Include="Server\RavenFS\Util\SynchronizingFileStream.cs" />
     <Compile Include="Data\AddIncludesCommand.cs" />
     <Compile Include="Data\ExecutingQueryInfo.cs" />
+    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
+    <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
+    <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
+    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
@@ -1026,7 +1028,6 @@
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
-    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\BundlesHelper.cs" />

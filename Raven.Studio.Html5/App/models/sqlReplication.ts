@@ -5,14 +5,16 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
-    private CONNECTION_STRING = "Connection String";
-    private CONNECTION_STRING_NAME = "Connection String Name";
-    private CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
+    public CONNECTION_STRING = "Connection String";
+    public PREDEFINED_CONNECTION_STRING_NAME = "Predefined Connection String Name";
+    public CONNECTION_STRING_NAME = "Connection String Name";
+    public CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
     
     availableConnectionStringTypes = [
-        { label: "Connection String", value: this.CONNECTION_STRING },
-        { label: "Connection String Name", value: this.CONNECTION_STRING_NAME },
-        { label: "Connection String Setting Name", value: this.CONNECTION_STRING_SETTING_NAME }
+        this.CONNECTION_STRING ,
+        this.PREDEFINED_CONNECTION_STRING_NAME ,
+        this.CONNECTION_STRING_NAME,
+        this.CONNECTION_STRING_SETTING_NAME 
     ];
 
     public metadata: documentMetadata;
@@ -57,6 +59,8 @@ class sqlReplication extends document {
         this.connectionStringSourceFieldName = ko.computed(() => {
             if (this.connectionStringType() == this.CONNECTION_STRING) {
                 return "Connection String Text";
+            } else if (this.connectionStringType() == this.PREDEFINED_CONNECTION_STRING_NAME) {
+                return "Predefined connection string name";
             } else if (this.connectionStringType() == this.CONNECTION_STRING_NAME) {
                 return "Setting name in local machine configuration";
             } else {
@@ -102,6 +106,9 @@ class sqlReplication extends document {
         if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.ConnectionStringName);
+        } else if (dto.PredefinedConnectionStringSettingName) {
+            this.connectionStringType(this.PREDEFINED_CONNECTION_STRING_NAME);
+            this.connectionStringValue(dto.PredefinedConnectionStringSettingName);
         } else if (dto.ConnectionStringSettingName) {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
@@ -127,6 +134,7 @@ class sqlReplication extends document {
             Script: "",
             FactoryName: null,
             ConnectionString: null,
+            PredefinedConnectionStringSettingName:null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
             SqlReplicationTables: sqlReplicationTables,
@@ -147,6 +155,7 @@ class sqlReplication extends document {
             Script: this.script(),
             FactoryName: this.factoryName(),
             ConnectionString: this.prepareConnectionString(this.CONNECTION_STRING),
+            PredefinedConnectionStringSettingName: this.prepareConnectionString(this.PREDEFINED_CONNECTION_STRING_NAME),
             ConnectionStringName: this.prepareConnectionString(this.CONNECTION_STRING_NAME),
             ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
             ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),

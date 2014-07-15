@@ -87,7 +87,7 @@ namespace Raven.Database.Indexing
                         var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(context.Database, indexDefinition, viewGenerator, logIndexing);
                         var luceneDoc = new Document();
                         var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
-                            Field.Index.NOT_ANALYZED_NO_NORMS);
+                                                        Field.Index.NOT_ANALYZED_NO_NORMS);
 
                         using (CurrentIndexingScope.Current = new CurrentIndexingScope(context.Database, PublicName))
                         {
@@ -95,9 +95,18 @@ namespace Raven.Database.Indexing
                             int outputPerDocId = 0;
                             Action<Exception, object> onErrorFunc;
                             foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats,out onErrorFunc))
-                            {
+                        {
                                 float boost;
-                                IndexingResult indexingResult;
+	                            IndexingResult indexingResult;
+	                            try
+                                  {
+                                      indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+                                  }
+                                  catch (InvalidSpatialShapeException e)
+                                  {
+                                      onErrorFunc(e, doc);
+                                      continue;
+                                  }
 
                                 try
                                 {
@@ -121,36 +130,36 @@ namespace Raven.Database.Indexing
                                 }
                                 outputPerDocId++;
                                 EnsureValidNumberOfOutputsForDocument(currentDocId, outputPerDocId);
-                                Interlocked.Increment(ref count);
-                                luceneDoc.GetFields().Clear();
-                                luceneDoc.Boost = boost;
-                                documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
-                                luceneDoc.Add(documentIdField);
-                                foreach (var field in indexingResult.Fields)
-                                {
-                                    luceneDoc.Add(field);
-                                }
-                                batchers.ApplyAndIgnoreAllErrors(
-                                    exception =>
+                                    Interlocked.Increment(ref count);
+                                    luceneDoc.GetFields().Clear();
+                                    luceneDoc.Boost = boost;
+                                    documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+                                    luceneDoc.Add(documentIdField);
+                                    foreach (var field in indexingResult.Fields)
                                     {
-                                        logIndexing.WarnException(
+                                        luceneDoc.Add(field);
+                                    }
+                                    batchers.ApplyAndIgnoreAllErrors(
+                                        exception =>
+                                        {
+                                            logIndexing.WarnException(
                                             string.Format(
                                                 "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
                                                 indexId, indexingResult.NewDocId),
-                                            exception);
+                                                exception);
                                         context.AddError(indexId,
-                                            indexingResult.NewDocId,
-                                            exception.Message,
-                                            "OnIndexEntryCreated Trigger"
-                                            );
-                                    },
-                                    trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
-                                LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
-                                AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+                                                             indexingResult.NewDocId,
+                                                             exception.Message,
+                                                             "OnIndexEntryCreated Trigger"
+                                                );
+                                        },
+                                        trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
+                                    LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+                                    AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 
                                 Interlocked.Increment(ref stats.IndexingSuccesses);
                             }
-							allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
+	                        allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
                         }
                     });
@@ -178,10 +187,9 @@ namespace Raven.Database.Indexing
                         x => x.Dispose());
                     BatchCompleted("Current");
                 }
-                return new IndexedItemsInfo
+                return new IndexedItemsInfo(batch.HighestEtagBeforeFiltering)
                 {
-                    ChangedDocs = sourceCount,
-                    HighestETag = batch.HighestEtagInBatch
+                    ChangedDocs = sourceCount
                 };
             });
 
@@ -207,15 +215,15 @@ namespace Raven.Database.Indexing
             return upToDate;
         }
 
-        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
         {
-            if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
+            if (ShouldStoreCommitPoint(itemsInfo) && itemsInfo.HighestETag != null)
             {
                 context.IndexStorage.StoreCommitPoint(indexId.ToString(), new IndexCommitPoint
                 {
                     HighestCommitedETag = itemsInfo.HighestETag,
                     TimeStamp = LastIndexTime,
-                    SegmentsInfo = GetCurrentSegmentsInfo()
+					SegmentsInfo = segmentsInfo ?? IndexStorage.GetCurrentSegmentsInfo(indexDefinition.Name, directory)
                 });
 
                 LastCommitPointStoreTime = SystemTime.UtcNow;
@@ -226,31 +234,11 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private IndexSegmentsInfo GetCurrentSegmentsInfo()
+        private bool ShouldStoreCommitPoint(IndexedItemsInfo itemsInfo)
         {
-            var segmentInfos = new SegmentInfos();
-            var result = new IndexSegmentsInfo();
+			if (itemsInfo.DisableCommitPoint)
+				return false;
 
-            try
-            {
-                segmentInfos.Read(directory);
-
-                result.Generation = segmentInfos.Generation;
-                result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
-                result.ReferencedFiles = segmentInfos.Files(directory, false);
-            }
-            catch (CorruptIndexException ex)
-            {
-                logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", indexId), ex);
-
-                result.IsIndexCorrupted = true;
-            }
-
-            return result;
-        }
-
-        private bool ShouldStoreCommitPoint()
-        {
             if (directory is RAMDirectory) // no point in trying to store commits for ram index
                 return false;
             // no often than specified indexing interval
@@ -300,42 +288,45 @@ namespace Raven.Database.Indexing
 
         private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, DynamicJsonObject dynamicJsonObject)
         {
-            var newDocId = dynamicJsonObject.GetRootParentOrSelf().GetDocumentId();
+            var newDocIdAsObject = dynamicJsonObject.GetRootParentOrSelf().GetDocumentId();
+	        var newDocId = newDocIdAsObject is DynamicNullObject ? null : (string) newDocIdAsObject;
+	        List<AbstractField> abstractFields;
 
-            try
+	        try
+	        {
+		        abstractFields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList();
+	        }
+	        catch (InvalidShapeException e)
+	        {
+		        throw new InvalidSpatialShapeException(e,newDocId);
+	        }
+
+            return new IndexingResult
             {
-                return new IndexingResult
-                {
-                    Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList(),
-                    NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
-                    ShouldSkip = false
-                };
-            }
-            catch (InvalidShapeException e)
-            {
-                throw new InvalidSpatialShapeException(e, (string)newDocId);
-            }
+                Fields = abstractFields,
+                NewDocId = newDocId,
+                ShouldSkip = false
+            };
         }
 
         private readonly ConcurrentDictionary<Type, PropertyDescriptorCollection> propertyDescriptorCache = new ConcurrentDictionary<Type, PropertyDescriptorCollection>();
 
         private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
         {
-            PropertyDescriptorCollection properties;
-            var newDocId = GetDocumentIdByReflection(doc, out properties);
+	        PropertyDescriptorCollection properties;
+			var newDocId = GetDocumentIdByReflection(doc, out properties);
+
             List<AbstractField> abstractFields;
-
-
-            try
+	        try
             {
-                abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
-            }
-            catch (InvalidShapeException e)
-            {
-                throw new InvalidSpatialShapeException(e,newDocId);
-            }
+		        abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
+	        }
+	        catch (InvalidShapeException e)
+	        {
+		        throw new InvalidSpatialShapeException(e, newDocId);
+	        }
 
-            return new IndexingResult
+	        return new IndexingResult
             {
                 Fields = abstractFields,
                 NewDocId = newDocId,
@@ -374,13 +365,9 @@ namespace Raven.Database.Indexing
                     },
                     batcher => batcher.Dispose());
 
-                IndexStats currentIndexStats = null;
-                context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(indexId));
-
-                return new IndexedItemsInfo
+                return new IndexedItemsInfo(GetLastEtagFromStats())
                 {
                     ChangedDocs = keys.Length,
-                    HighestETag = currentIndexStats.LastIndexedEtag,
                     DeletedKeys = keys
                 };
             });
@@ -389,7 +376,7 @@ namespace Raven.Database.Indexing
         /// <summary>
         /// For index recovery purposes
         /// </summary>
-        internal void RemoveDirectlyFromIndex(string[] keys)
+        internal void RemoveDirectlyFromIndex(string[] keys, Etag lastEtag)
         {
             Write((writer, analyzer, stats) =>
             {
@@ -397,9 +384,10 @@ namespace Raven.Database.Indexing
 
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
 
-                return new IndexedItemsInfo // just commit, don't create commit point and add any infor about deleted keys
+				return new IndexedItemsInfo(lastEtag) // just commit, don't create commit point and add any infor about deleted keys
                 {
-                    ChangedDocs = keys.Length
+                    ChangedDocs = keys.Length,
+					DisableCommitPoint = true
                 };
             });
         }

@@ -14,6 +14,7 @@ using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -262,7 +263,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var sourceMetadataWithEtag = await sourceClient.GetMetadataForAsync("test.bin");
 
-			Assert.Equal(sourceMetadataWithEtag.Value<Guid>("ETag"), lastSynchronization.LastSourceFileEtag);
+            Assert.Equal(sourceMetadataWithEtag.Value<Guid>(Constants.MetadataEtagField), lastSynchronization.LastSourceFileEtag);
 		}
 
 		[Fact]
@@ -283,7 +284,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.Synchronization.StartAsync("test2.bin", destinationClient);
 			await sourceClient.Synchronization.StartAsync("test1.bin", destinationClient);
 
-			var lastSourceETag = sourceClient.GetMetadataForAsync("test2.bin").Result.Value<Guid>("ETag");
+            var lastSourceETag = sourceClient.GetMetadataForAsync("test2.bin").Result.Value<Guid>(Constants.MetadataEtagField);
 			var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerIdAsync());
 
 			Assert.Equal(lastSourceETag, lastSynchronization.LastSourceFileEtag);
@@ -371,11 +372,11 @@ namespace RavenFS.Tests.Synchronization
 			sourceClient.UploadAsync("test.bin", new RandomStream(10)).Wait();
 
 			destinationClient.UploadAsync("test.bin", new RandomStream(10)).Wait();
-			var destinationEtag = sourceClient.GetMetadataForAsync("test.bin").Result["ETag"];
+            var destinationEtag = sourceClient.GetMetadataForAsync("test.bin").Result[Constants.MetadataEtagField];
 
 			SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
-			var result = destinationClient.GetMetadataForAsync("test.bin").Result["ETag"];
+            var result = destinationClient.GetMetadataForAsync("test.bin").Result[Constants.MetadataEtagField];
 
 			Assert.True(destinationEtag != result, "Etag should be updated");
 		}

@@ -28,10 +28,10 @@ namespace Raven.Database.Impl.DTC
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-        public override void Prepare(string id)
-        {
-            throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
-        }
+	    public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
+	    {
+			throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
+	    }
 
         public override void Rollback(string id)
         {

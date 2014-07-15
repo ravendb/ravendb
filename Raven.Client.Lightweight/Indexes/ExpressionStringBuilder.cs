@@ -324,7 +324,10 @@ namespace Raven.Client.Indexes
 				foreach (var customAttribute in memberInfo.GetCustomAttributes(true))
 				{
 					string propName;
-					switch (customAttribute.GetType().Name)
+					var customAttributeType = customAttribute.GetType();
+					if (typeof (JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+						continue;
+					switch (customAttributeType.Name)
 					{
 						case "JsonPropertyAttribute":
 							propName = ((dynamic)customAttribute).PropertyName;
@@ -1053,6 +1056,9 @@ namespace Raven.Client.Indexes
 		private bool TypeExistsOnServer(Type type)
 		{
 			if (type.Assembly() == typeof(object).Assembly()) // mscorlib
+				return true;
+
+			if (type.Assembly == typeof (Uri).Assembly()) // System assembly
 				return true;
 
 			if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core

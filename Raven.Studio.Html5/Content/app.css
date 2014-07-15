@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -71,11 +71,6 @@ body {
   display: inline-block;
   padding: 8px;
   margin: 0 10px 14px 0;
-  /*   &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }*/
 }
 #sqlReplications .replications-container .replication .replication-name {
   float: left;
@@ -113,8 +108,8 @@ body {
 #editSQLReplication .edit-sql-replication-actions {
   padding-top: 0.5%;
 }
-#editSQLReplication .advanced {
-  padding-left: 0;
+#editSQLReplication .advanced-toggle .active {
+  background-color: #E3F8BE;
 }
 #editSQLReplication .checkbox {
   align-content: flex-start;
@@ -231,10 +226,6 @@ body {
 .fullScreen {
   overflow: hidden;
 }
-.dropdown-menu .selected {
-  color: #555;
-  background-color: #e7e7e7;
-}
 .vertical-bottom-container {
   width: 10% !important;
   padding: 0 40% 0 40% !important;
@@ -259,76 +250,95 @@ body {
   padding: 0 10px 20px 10px;
   width: 98%;
 }
-.database-page .btn-toolbar {
+#database-page .btn-toolbar {
   margin-bottom: 20px;
 }
-.database-page .databases-container {
+#database-page .databases-container {
   margin-top: 10px;
 }
-.database-page .databases-container .database {
+#database-page .databases-container .database:hover .checkbox {
+  display: block;
+}
+#database-page .databases-container .database {
   cursor: pointer;
   border-radius: 10px;
   -webkit-box-shadow: 0 0 5px 2px silver;
   box-shadow: 0 0 5px 2px silver;
-  min-width: 140px;
-  min-height: 60px;
+  min-width: 160px;
+  min-height: 70px;
   display: inline-block;
   padding: 8px;
   margin: 0 10px 14px 0;
+  position: relative;
 }
-.database-page .databases-container .database .database-name {
+#database-page .databases-container .database .checkbox {
+  display: none;
+  position: absolute;
+  top: -18px;
+  left: -4px;
+}
+#database-page .databases-container .database .checkbox input {
+  width: 18px;
+  height: 18px;
+}
+#database-page .databases-container .database .details {
   float: left;
+  line-height: 215%;
 }
-.database-page .databases-container .database .btn-group {
+#database-page .databases-container .database .details .disabled {
+  pointer-events: none;
+  cursor: default;
+}
+#database-page .databases-container .database .details .text-muted.stats {
+  color: #3A822D;
+}
+#database-page .databases-container .database .details .text-muted.disabled {
+  color: #d9534f;
+}
+#database-page .databases-container .database .btn-group {
   float: right;
-  margin-left: 5px;
-  margin-top: 3px;
+  margin-top: 39.3px;
+  padding-left: 8px;
 }
-.database-page .databases-container .database .btn-default {
+#database-page .databases-container .database .btn-default {
+  padding: 4px;
+  padding-left: 10px;
+  padding-right: 7px;
   border-color: white;
 }
-.database-page .databases-container .database .btn-default:hover {
+#database-page .databases-container .database .btn-default:hover {
   -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
   box-shadow: 0 0 5px 0 #6aa3d5;
 }
-.database-page .databases-container .database .margin {
-  clear: both;
-  display: block;
-  margin: 22px 0;
-}
-.database-page .databases-container .database.disabled {
+#database-page .databases-container .database.disabled {
   -webkit-box-shadow: 0 0 6px 0 #cdcdcd;
   box-shadow: 0 0 6px 0 #cdcdcd;
 }
-.database-page .databases-container .database:hover {
+#database-page .databases-container .database:hover {
   background-color: white;
   -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
   box-shadow: 0 0 5px 0 #6aa3d5;
 }
-.database-page .databases-container .database.selected {
+#database-page .databases-container .database.selected {
   -webkit-box-shadow: 0 0 6px 0 #428bca;
   box-shadow: 0 0 6px 0 #428bca;
   background-color: #428bca;
 }
-.database-page .databases-container .database.selected a,
-.database-page .databases-container .database.selected .text-muted {
-  color: white;
+#database-page .databases-container .database.selected .database-name,
+#database-page .databases-container .database.selected .text-muted {
+  color: white !important;
 }
-.database-page .databases-container .database.selected a.btn {
-  color: black;
-  text-align: left;
-}
-.database-page .databases-container .database.selected .btn-default {
+#database-page .databases-container .database.selected .btn-default {
   border-color: #6aa3d5;
 }
-.database-page .databases-container .database.system-database {
+#database-page .databases-container .database.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
-.database-page .databases-container .database.system-database.selected {
+#database-page .databases-container .database.system-database.selected {
   background-color: rgba(14, 14, 14, 0.21);
 }
-.database-page .databases-container .database.system-database.selected a,
-.database-page .databases-container .database.system-database.selected .text-muted {
+#database-page .databases-container .database.system-database.selected a,
+#database-page .databases-container .database.system-database.selected .text-muted {
   color: #3071a9;
 }
 .menu-item-disabled {
@@ -339,9 +349,21 @@ body {
 .resource-link {
   padding-left: 5px;
   overflow-x: hidden;
-  max-width: 130px;
+  max-width: 150px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.dropdown-menu {
+  min-width: 0;
+}
+.dropdown-menu .selected {
+  color: #555;
+  background-color: #e7e7e7;
+}
+.dropdown-menu a.btn {
+  padding-left: 10px;
+  text-align: left;
+  color: black;
 }
 .resource-link-disabled {
   pointer-events: none;
@@ -449,6 +471,10 @@ body {
 .settings-container {
   margin-top: 10px;
 }
+.settings-container .panel-body {
+  overflow-y: auto;
+  max-height: 70vh;
+}
 .settings-container .api-key-card,
 .settings-container .win-auth-card {
   display: inline-block;
@@ -493,6 +519,18 @@ body {
 }
 .settings-container .sql-replication-script-container .editor {
   height: 100px;
+}
+.settings-container .sql-replication-connection-card {
+  display: inline-table;
+  width: 40%;
+  margin-right: 20px;
+}
+@media (max-device-height: 1024px) {
+  .settings-container .sql-replication-connection-card {
+    display: inline-table;
+    width: 100%;
+    margin-right: 20px;
+  }
 }
 .collection-style-0 {
   background-color: #00c700;
@@ -905,7 +943,9 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*# sourceMappingURL=app.css.map */
+  /*#goToDocInput {
+        width: 10em;
+    }*/
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1262,12 +1302,6 @@ footer ul {
   font-weight: normal !important;
   color: #0000ff;
 }
-.animated-loader {
-  background-image: url('images/animated-loader.gif');
-  background-repeat: no-repeat;
-  background-position-x: center;
-  background-position-y: center;
-}
 .metricsContainer .nv-point {
   stroke-linecap: round;
   stroke-width: 5px;
@@ -1320,4 +1354,3 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
-/*# sourceMappingURL=app.css.map */

@@ -93,7 +93,7 @@ namespace Raven.Database
             Configuration = configuration;
             transportState = new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
-
+            
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
                 Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
@@ -102,7 +102,7 @@ namespace Raven.Database
 
                 initializer.InitializeEncryption();
                 initializer.ValidateLicense();
-
+                
                 initializer.SubscribeToDomainUnloadOrProcessExit();
                 initializer.ExecuteAlterConfiguration();
                 initializer.SatisfyImportsOnce();
@@ -134,7 +134,7 @@ namespace Raven.Database
                 catch (Exception)
                 {
                     if (TransactionalStorage != null)
-                        TransactionalStorage.Dispose();
+                    TransactionalStorage.Dispose();
                     throw;
                 }
 
@@ -160,7 +160,7 @@ namespace Raven.Database
 
                     CompleteWorkContextSetup();
 
-                    prefetcher = new Prefetcher(workContext);
+					prefetcher = new Prefetcher(workContext);
                     indexingExecuter = new IndexingExecuter(workContext, prefetcher);
 
                     RaiseIndexingWiringComplete();
@@ -192,11 +192,11 @@ namespace Raven.Database
         public static string ProductVersion
         {
             get
-            {
+        {
                 if (!string.IsNullOrEmpty(productVersion))
                 {
                     return productVersion;
-                }
+        }
 
                 productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
                 return productVersion;
@@ -210,8 +210,8 @@ namespace Raven.Database
                 long approximateTaskCount = 0;
                 TransactionalStorage.Batch(actions => { approximateTaskCount = actions.Tasks.ApproximateTaskCount; });
                 return approximateTaskCount;
+                }
             }
-        }
 
         [ImportMany]
         public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
@@ -221,7 +221,7 @@ namespace Raven.Database
 
         [ImportMany]
         public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
-
+		                   
         internal PutSerialLock DocumentLock { get; private set; }
 
         public AttachmentActions Attachments { get; private set; }
@@ -242,7 +242,7 @@ namespace Raven.Database
         public bool Disposed
         {
             get { return disposed; }
-        }
+                }
 
         [ImportMany]
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
@@ -258,19 +258,19 @@ namespace Raven.Database
         public AtomicDictionary<object> ExtensionsState { get; private set; }
 
         public bool HasTasks
-        {
-            get
             {
+            get
+                {
                 bool hasTasks = false;
                 TransactionalStorage.Batch(actions => { hasTasks = actions.Tasks.HasTasks; });
                 return hasTasks;
-            }
-        }
+                }
+                }
 
         public InFlightTransactionalState InFlightTransactionalState
-        {
+            {
             get { return inFlightTransactionalState; }
-        }
+	                    }
 
         [ImportMany]
         public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
@@ -298,7 +298,7 @@ namespace Raven.Database
         public LastCollectionEtags LastCollectionEtags
         {
             get { return lastCollectionEtags; }
-        }
+            }
 
         public MaintenanceActions Maintenance { get; private set; }
 
@@ -334,12 +334,12 @@ namespace Raven.Database
             {
                 string serverUrl = Configuration.ServerUrl;
                 if (string.IsNullOrEmpty(Name))
-                {
+            {
                     return serverUrl;
-                }
+            }
 
                 if (serverUrl.EndsWith("/"))
-                {
+        {
                     return serverUrl + "databases/" + Name;
                 }
 
@@ -360,17 +360,17 @@ namespace Raven.Database
                     Type = "Put"
                 })
                    .Concat(DeleteTriggers.Select(x => new TriggerInfo
-                   {
+                    {
                        Name = x.ToString(),
                        Type = "Delete"
                    }))
                    .Concat(ReadTriggers.Select(x => new TriggerInfo
-                   {
+                    {
                        Name = x.ToString(),
                        Type = "Read"
                    }))
                    .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
-                   {
+                        {
                        Name = x.ToString(),
                        Type = "Index Update"
                    })).ToList();
@@ -392,7 +392,7 @@ namespace Raven.Database
                     typeof (AbstractBackgroundTask),
                     typeof (IAlterConfiguration)).ToList();
                 return new PluginsInfo
-                {
+                            {
                     Triggers = triggerInfos,
                     Extensions = extensions,
                 };
@@ -407,7 +407,7 @@ namespace Raven.Database
                 {
                     CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
                     CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
-                    ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
+					IndexingBatchInfo = workContext.LastActualIndexingBatchInfo.ToArray(),
                     InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
                     Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
                     CountOfIndexes = IndexStorage.Indexes.Length,
@@ -415,7 +415,7 @@ namespace Raven.Database
                     Errors = workContext.Errors,
                     DatabaseId = TransactionalStorage.Id,
                     SupportsDtc = TransactionalStorage.SupportsDtc,
-                    
+
                 };
 
                 TransactionalStorage.Batch(actions =>
@@ -427,16 +427,16 @@ namespace Raven.Database
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
                     result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
                     result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
-                    {
+        {
                         Index indexInstance = IndexStorage.GetIndexInstance(indexId);
                         return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
                     }).Select(indexId =>
-                    {
+        {
                         Index index = IndexStorage.GetIndexInstance(indexId);
                         return index == null ? null : index.PublicName;
                     }).ToArray();
                     result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-                    {
+            {
                         Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
                         if (indexInstance != null)
                             x.PublicName = indexInstance.PublicName;
@@ -446,11 +446,11 @@ namespace Raven.Database
                 });
 
                 if (result.Indexes != null)
-                {
+        {
                     foreach (IndexStats index in result.Indexes)
-                    {
+            {
                         try
-                        {
+        {
                             IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
                             index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
                             index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
@@ -462,14 +462,14 @@ namespace Raven.Database
                             IndexSearcher searcher;
                             using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
                                 index.DocsCount = searcher.IndexReader.NumDocs();
-                        }
+            }
                         catch (Exception)
-                        {
+        {
                             // might happen if the index was deleted mid operation
                             // we don't really care for that, so we ignore this
-                        }
-                    }
-                }
+            }
+        }
+        }
 
                 return result;
             }
@@ -482,27 +482,27 @@ namespace Raven.Database
         public TransformerActions Transformers { get; private set; }
 
         public TransportState TransportState
-        {
+            {
             get { return transportState; }
-        }
+                                }
 
         public WorkContext WorkContext
-        {
+                                {
             get { return workContext; }
-        }
+                            }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
-        {
+                            {
             using (DocumentLock.Lock())
-            {
+                                {
                 bool shouldRetryIfGotConcurrencyError = commands.All(x => ((x is PatchCommandData || IsScriptedPatchCommandDataWithoutEtagProperty(x)) && (x.Etag == null)));
                 if (shouldRetryIfGotConcurrencyError)
-                {
+                    {
                     Stopwatch sp = Stopwatch.StartNew();
                     BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
                     Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
-                }
+                    }
 
                 BatchResult[] results = null;
                 TransactionalStorage.Batch(
@@ -512,45 +512,63 @@ namespace Raven.Database
             }
         }
 
-        public void Commit(string txId)
-        {
-            if (TransactionalStorage.SupportsDtc == false)
-                throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
+		public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
+		{
+			using (DocumentLock.Lock())
+			{
+				try
+				{
+					inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
+					Log.Debug("Prepare of tx {0} completed", txId);
+				}
+				catch (Exception e)
+				{
+					if (TransactionalStorage.HandleException(e))
+						return;
+					throw;
+				}
+			}
+		}
 
-            try
-            {
-                using (DocumentLock.Lock())
-                {
-                    try
-                    {
-                        inFlightTransactionalState.Commit(txId);
-                        Log.Debug("Commit of tx {0} completed", txId);
-                        workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
-                    }
-                    finally
-                    {
-                        inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                if (TransactionalStorage.HandleException(e))
-                    return;
+		public void Commit(string txId)
+		{
+			if (TransactionalStorage.SupportsDtc == false)
+				throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
 
-                throw;
-            }
-            finally
-            {
-                workContext.HandleWorkNotifications();
-            }
-        }
+			try
+			{
+				using (DocumentLock.Lock())
+				{
+					try
+					{
+						inFlightTransactionalState.Commit(txId);
+						Log.Debug("Commit of tx {0} completed", txId);
+						workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
+					}
+					finally
+					{
+						inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				if (TransactionalStorage.HandleException(e))
+					return;
+
+				throw;
+			}
+			finally
+			{
+				workContext.HandleWorkNotifications();
+			}
+		}
 
         public DatabaseMetrics CreateMetrics()
         {
             MetricsCountersManager metrics = WorkContext.MetricsCounters;
             return new DatabaseMetrics
-            {
+        {
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
                 IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
@@ -572,26 +590,26 @@ namespace Raven.Database
             double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
 
             return new HistogramData
-                {
+            {
                     Counter = histogram.Count,
                     Max = histogram.Max,
                     Mean = histogram.Mean,
                     Min = histogram.Min,
                     Stdev = histogram.StdDev,
                     Percentiles = new Dictionary<string, double>
-                    {
+                {
                         {"50%", percentiles[0]},
                         {"75%", percentiles[1]},
                         {"95%", percentiles[2]},
                         {"99%", percentiles[3]},
                         {"99.9%", percentiles[4]},
                         {"99.99%", percentiles[5]},
-                    }
+                }
                 };
-        }
+            }
 
         private static MeterData CreateMeterData(MeterMetric metric)
-        {
+            {
             return new MeterData
                    {
                        Count = metric.Count,
@@ -600,7 +618,7 @@ namespace Raven.Database
                        MeanRate = Math.Round(metric.MeanRate, 3),
                        OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
                    };
-        }
+            }
 
         /// <summary>
         ///     This API is provided solely for the use of bundles that might need to run
@@ -609,7 +627,7 @@ namespace Raven.Database
         /// </summary>
         /// <returns></returns>
         public IDisposable DisableAllTriggersForCurrentThread()
-        {
+            {
             if (disposed)
                 return new DisposableAction(() => { });
 
@@ -623,10 +641,10 @@ namespace Raven.Database
                 try
                 {
                     disableAllTriggers.Value = old;
-                }
+        }
                 catch (ObjectDisposedException)
-                {
-                }
+        {
+            }
             });
         }
 
@@ -639,56 +657,56 @@ namespace Raven.Database
 
             EventHandler onDisposing = Disposing;
             if (onDisposing != null)
-            {
-                try
-                {
+        {
+				try
+				{
                     onDisposing(this, EventArgs.Empty);
-                }
+					}
                 catch (Exception e)
-                {
+						{
                     Log.WarnException("Error when notifying about db disposal, ignoring error and continuing with disposal", e);
-                }
-            }
+							}
+							}
 
             var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
             exceptionAggregator.Execute(() =>
-            {
+							{
                 if (lastCollectionEtags != null)
                     lastCollectionEtags.Flush();
             });
 
             exceptionAggregator.Execute(() =>
-            {
+								{
                 if (prefetcher != null)
                     prefetcher.Dispose();
-            });
+								});
 
             exceptionAggregator.Execute(() =>
-            {
+							{
                 initializer.UnsubscribeToDomainUnloadOrProcessExit();
                 disposed = true;
 
                 if (workContext != null)
                     workContext.StopWorkRude();
-            });
+						});
 
             if (initializer != null)
-            {
+					{
                 exceptionAggregator.Execute(initializer.Dispose);
-            }
+				}
 
             exceptionAggregator.Execute(() =>
-            {
+        {
                 if (ExtensionsState == null)
-                    return;
+                return;
 
                 foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
                     exceptionAggregator.Execute(value.Dispose);
             });
 
             exceptionAggregator.Execute(() =>
-            {
+        {
                 if (toDispose == null)
                     return;
 
@@ -714,7 +732,7 @@ namespace Raven.Database
             });
 
             exceptionAggregator.Execute(() =>
-            {
+        {
                 var disposable = backgroundTaskScheduler as IDisposable;
                 if (disposable != null)
                     disposable.Dispose();
@@ -753,19 +771,19 @@ namespace Raven.Database
 
             string[] indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
             long totalIndexSize = indexes.Sum(file =>
-            {
-                try
                 {
+                    try
+                    {
                     return new FileInfo(file).Length;
-                }
+                    }
                 catch (UnauthorizedAccessException)
-                {
+                    {
                     return 0;
-                }
+                    }
                 catch (FileNotFoundException)
-                {
+        {
                     return 0;
-                }
+        }
             });
 
             return totalIndexSize;
@@ -786,7 +804,7 @@ namespace Raven.Database
                 return 0;
 
             return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk().AllocatedSizeInBytes;
-        }
+															}
 
         /// <summary>
         ///     Get the total size taken by the database on the disk.
@@ -803,38 +821,14 @@ namespace Raven.Database
         }
 
         public bool HasTransaction(string txId)
-        {
+            {
             return inFlightTransactionalState.HasTransaction(txId);
-        }
-
-        public void PrepareTransaction(string txId)
-        {
-            if (TransactionalStorage.SupportsDtc == false)
-                throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
-
-	        using (DocumentLock.Lock())
-	        {
-		        try
-		        {
-			        inFlightTransactionalState.Prepare(txId);
-			        Log.Debug("Prepare of tx {0} completed", txId);
-		        }
-		        catch (Exception e)
-		        {
-			        if (TransactionalStorage.HandleException(e))
-			        {
-				        return;
-			        }
-
-			        throw;
-		        }
-	        }
-        }
+            }
 
         public void Rollback(string txId)
         {
             inFlightTransactionalState.Rollback(txId);
-        }
+            }
 
         public void RunIdleOperations()
         {
@@ -852,11 +846,11 @@ namespace Raven.Database
             finally
             {
                 if (tryEnter)
-                {
+        {
                     Monitor.Exit(idleLocker);
-                }
-            }
         }
+        }
+                        }
 
         public void SpinBackgroundWorkers()
         {
@@ -886,10 +880,10 @@ namespace Raven.Database
             ReducingExecuter = new ReducingExecuter(workContext);
 
             reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-        }
+		}
 
         public void StopBackgroundWorkers()
-        {
+		{
             workContext.StopWork();
             if (indexingBackgroundTask != null)
                 indexingBackgroundTask.Wait();
@@ -898,28 +892,28 @@ namespace Raven.Database
                 reducingBackgroundTask.Wait();
 
             backgroundWorkersSpun = false;
-        }
+		}
 
         public void StopIndexingWorkers()
-        {
+		{
             workContext.StopIndexing();
             try
             {
                 indexingBackgroundTask.Wait();
-            }
+					}
             catch (Exception e)
-            {
+					{
                 Log.WarnException("Error while trying to stop background indexing", e);
-            }
+					}
 
-            try
-            {
+							try
+							{
                 reducingBackgroundTask.Wait();
-            }
+									}
             catch (Exception e)
-            {
+							{
                 Log.WarnException("Error while trying to stop background reducing", e);
-            }
+								}
 
             backgroundWorkersSpun = false;
         }
@@ -930,10 +924,10 @@ namespace Raven.Database
             OnIndexingWiringComplete = null; // we can only init once, release all actions
             if (indexingWiringComplete != null)
                 indexingWiringComplete();
-        }
+                }
 
         private static int GetBuildVersion()
-        {
+                    {
             string location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
 
             FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
@@ -941,12 +935,12 @@ namespace Raven.Database
                 return fileVersionInfo.FilePrivatePart;
 
             return fileVersionInfo.FileBuildPart;
-        }
+            }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
         {
             int retries = 128;
-            Random rand = null;
+		    Random rand = null;
             while (true)
             {
 				token.ThrowIfCancellationRequested();
@@ -979,12 +973,12 @@ namespace Raven.Database
             workContext.IndexStorage = IndexStorage;
             workContext.TransactionalStorage = TransactionalStorage;
             workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-        }
+            }
 
         private static decimal ConvertBytesToMBs(long bytes)
         {
             return Math.Round(bytes / 1024.0m / 1024.0m, 2);
-        }
+            }
 
 
         private void ExecuteStartupTasks()
@@ -995,14 +989,14 @@ namespace Raven.Database
                 {
                     var disposable = task.Value as IDisposable;
                     if (disposable != null)
-                    {
+            {
                         toDispose.Add(disposable);
-                    }
+            }
 
                     task.Value.Execute(this);
+        }
                 }
             }
-        }
 
         private void InitializeIndexCodecTriggers()
         {
@@ -1029,7 +1023,7 @@ namespace Raven.Database
             AttachmentReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
             IndexUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-        }
+                }
 
         private static bool IsScriptedPatchCommandDataWithoutEtagProperty(ICommandData commandData)
         {
@@ -1039,7 +1033,7 @@ namespace Raven.Database
             const string EtagKey = "etag";
 
             return scriptedPatchCommandData != null && scriptedPatchCommandData.Patch.Script.Replace(" ", string.Empty).Contains(ScriptEtagKey) == false && scriptedPatchCommandData.Patch.Values.ContainsKey(EtagKey) == false;
-        }
+            }
 
         private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
         {
@@ -1050,7 +1044,7 @@ namespace Raven.Database
 
                 ICommandData command = commands[index];
                 results[index] = command.ExecuteBatch(this);
-            }
+        }
 
             return results;
         }
@@ -1082,16 +1076,16 @@ namespace Raven.Database
             {
                 this.database = database;
                 this.configuration = configuration;
-            }
+                }
 
             public void ValidateLicense()
-            {
+                {
                 if (configuration.IsTenantDatabase)
                     return;
 
                 validateLicense = new ValidateLicense();
                 validateLicense.Execute(configuration);
-            }
+                }
 
             public void Dispose()
             {
@@ -1100,61 +1094,61 @@ namespace Raven.Database
             }
 
             public void SubscribeToDomainUnloadOrProcessExit()
-            {
+        {
                 AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
                 AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
-            }
+                                }
 
             public void UnsubscribeToDomainUnloadOrProcessExit()
-            {
+                                {
                 AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
                 AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
-            }
+                                }
 
 			public void InitializeEncryption()
-			{
+                        {
 				string fipsAsString;
 				bool fips;
 				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
-				{
+                            {
 					if (!fips && configuration.UseFips)
 						throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
-				}
+                            }
 
 				Encryptor.Initialize(configuration.UseFips);
 				Cryptography.FIPSCompliant = configuration.UseFips;
-			}
+                    }
 
             private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
-            {
+                {
                 Dispose();
-            }
+        }
 
             public void ExecuteAlterConfiguration()
-            {
+        {
                 foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
-                {
+        {
                     alterConfiguration.AlterConfiguration(configuration);
-                }
+        }
             }
 
             public void SatisfyImportsOnce()
-            {
+        {
                 configuration.Container.SatisfyImportsOnce(database);
-            }
+        }
 
             public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
-            {
+        {
                 string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
                 database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
-            }
+        }
 
             public void InitializeIndexStorage()
-            {
+        {
                 database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
                 database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
-            }
+                    }
+				}
+		}
         }
-    }
-}

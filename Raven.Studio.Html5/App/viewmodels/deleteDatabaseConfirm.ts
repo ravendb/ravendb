@@ -7,23 +7,23 @@ import router = require("plugins/router");
 
 class deleteDatabaseConfirm extends dialogViewModelBase {
     private isKeepingFiles = ko.observable(true);
+    private databasesToDelete = ko.observableArray<database>();
     public deleteTask = $.Deferred();
+    //dbToDelete = ko.observable<database>();
 
-    constructor(private dbToDelete: database, private systemDb: database) {
+    constructor(databases: Array<database>) {
         super();
 
-        if (!dbToDelete) {
-            throw new Error("Must specified database to delete.");
+        if (databases.length === 0) {
+            throw new Error("Must have at least one database to delete.");
         }
 
-        if (!systemDb) {
-            throw new Error("Must specify system database");
-        }
+        this.databasesToDelete(databases);
     }
 
     navigateToExportDatabase() {
         dialog.close(this);
-        router.navigate(appUrl.forExportDatabase(this.dbToDelete));
+        router.navigate(appUrl.forExportDatabase(this.databasesToDelete()[0]));
     }
 
     keepFiles() {
@@ -35,7 +35,8 @@ class deleteDatabaseConfirm extends dialogViewModelBase {
     }
 
     deleteDatabase() {
-        new deleteDatabaseCommand(this.dbToDelete.name, this.isKeepingFiles() === false, this.systemDb)
+        var databaseNames = this.databasesToDelete().map(db => db.name);
+        new deleteDatabaseCommand(databaseNames, this.isKeepingFiles() === false)
             .execute()
             .done(results => this.deleteTask.resolve(results))
             .fail(details => this.deleteTask.reject(details));

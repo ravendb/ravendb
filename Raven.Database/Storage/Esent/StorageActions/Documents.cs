@@ -14,6 +14,7 @@ using System.Threading;
 
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -68,7 +69,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return null;
 			}
 			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-			logger.Debug("Document with key '{0}' was found", key);
+			logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
 			var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
 			return createResult(new JsonDocumentMetadata()
 			{
@@ -171,10 +172,14 @@ namespace Raven.Storage.Esent.StorageActions
 			RavenJObject dataAsJson;
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
-				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregateStream = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
-					dataAsJson = aggregate.ToJObject();
-					docSize = (int)stream.Position;
+					var streamInUse = aggregateStream;
+					if (streamInUse != stream)
+						streamInUse = new CountingStream(aggregateStream);
+
+					dataAsJson = streamInUse.ToJObject();
+					docSize = (int)Math.Max(streamInUse.Position,stream.Position);
 				}
 			}
 
@@ -193,7 +198,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -201,6 +206,11 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 			long totalSize = 0;
 			int count = 0;
+		    Stopwatch duration = null;
+		    if (timeout != null)
+		    {
+		        duration = Stopwatch.StartNew();
+		    }
 			do
 			{
 				cancellationToken.ThrowIfCancellationRequested();
@@ -220,6 +230,11 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				yield return readCurrentDocument;
 				count++;
+			    if (timeout != null)
+			    {
+			        if (duration.Elapsed > timeout.Value)
+			            yield break;
+			    }
 			} while (Api.TryMoveNext(session, Documents) && count < take);
 		}
 
@@ -253,10 +268,10 @@ namespace Raven.Storage.Esent.StorageActions
                 stat.TotalSize += size;
 	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 	            {
-                    stat.System++;
+	                stat.System++;
                     stat.SystemSize += size;
 	            }
-	                
+
 
 	            var metadata =
 	                Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
@@ -264,7 +279,7 @@ namespace Raven.Storage.Esent.StorageActions
 	            var entityName = metadata.Value<string>(Constants.RavenEntityName);
 	            if (string.IsNullOrEmpty(entityName))
 	            {
-                    stat.NoCollection++;
+	                stat.NoCollection++;
 	                stat.NoCollectionSize += size;
 	            }
 	               
@@ -272,13 +287,13 @@ namespace Raven.Storage.Esent.StorageActions
 	            {
                     stat.IncrementCollection(entityName, size);
 	            }
-	               
+
 
 	            if (metadata.ContainsKey("Raven-Delete-Marker"))
 	                stat.Tombstones++;
 	        }
             var sortedStat = stat.Collections.OrderByDescending(x => x.Value.Size).ToDictionary(x => x.Key, x => x.Value);
-            stat.TimeToGenerate = sp.Elapsed;
+	        stat.TimeToGenerate = sp.Elapsed;
             stat.Collections = sortedStat;
 	       
 	        return stat;
@@ -325,6 +340,7 @@ namespace Raven.Storage.Esent.StorageActions
 			afterTouchEtag = newEtag;
 			try
 			{
+                logger.Debug("Touching document {0} {1} -> {2}", key, preTouchEtag, afterTouchEtag);
 				using (var update = new Update(session, Documents, JET_prep.Replace))
 				{
 					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
@@ -447,7 +463,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				throw new ConcurrencyException("Illegal duplicate key " + key, e);
 			}
-	}
+		}
 
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
@@ -470,47 +486,47 @@ namespace Raven.Storage.Esent.StorageActions
 
             try 
             {
-			    using (var update = new Update(session, Documents, prep))
-			    {
-				    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				    using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
-				    {
-					    if (isUpdate)
-						    columnStream.SetLength(0);
-					    using (Stream stream = new BufferedStream(columnStream))
-					    using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					    {
-						    data.WriteTo(finalStream);
-						    finalStream.Flush();
-					    }
-				    }
-				    Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-				    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				    DateTime savedAt = SystemTime.UtcNow;
-				    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+			using (var update = new Update(session, Documents, prep))
+			{
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				{
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+					{
+						data.WriteTo(finalStream);
+						finalStream.Flush();
+					}
+				}
+				Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+				DateTime savedAt = SystemTime.UtcNow;
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				    using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-				    {
-					    if (isUpdate)
-						    columnStream.SetLength(0);
-					    using (Stream stream = new BufferedStream(columnStream))
-					    {
-						    metadata.WriteTo(stream);
-						    stream.Flush();
-					    }
-				    }
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+				{
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						metadata.WriteTo(stream);
+						stream.Flush();
+					}
+				}
 
-				    update.Save();
+				update.Save();
 
-				    return new AddDocumentResult
-				    {
-					    Etag = newEtag,
-					    PrevEtag = existingETag,
-					    SavedAt = savedAt,
-					    Updated = isUpdate
-				    };
-			    }
-            }
+				return new AddDocumentResult
+				{
+					Etag = newEtag,
+					PrevEtag = existingETag,
+					SavedAt = savedAt,
+					Updated = isUpdate
+				};
+			}
+		}
             catch (EsentKeyDuplicateException e)
             {
                 throw new ConcurrencyException("Illegal duplicate key " + key, e);

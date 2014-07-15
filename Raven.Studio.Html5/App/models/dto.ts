@@ -457,10 +457,21 @@ interface sqlReplicationDto extends documentDto {
     FactoryName: string;
     ConnectionString: string;
     ConnectionStringName: string;
+    PredefinedConnectionStringSettingName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     PerformTableQuatation?:boolean;
+}
+
+interface sqlReplicationConnectionsDto extends documentDto {
+    PredefinedConnections: predefinedSqlConnectionDto[];
+}
+
+interface predefinedSqlConnectionDto {
+    Name:string;
+    FactoryName: string;
+    ConnectionString: string;
 }
 
 interface facetDto {
@@ -870,6 +881,13 @@ interface graphLinkDto {
 interface mergeResult {
   Document: string;
   Metadata: string;
+}
+
+interface visualizerExportDto {
+    indexName: string;
+    docKeys: string[];
+    reduceKeys: string[];
+    tree: visualizerDataObjectNodeDto;
 }
 
 interface operationIdDto {
