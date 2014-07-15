@@ -1,4 +1,58 @@
-﻿<section data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+﻿<section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <style type="text/css">
+		 svg {
+          background-color: #FFF;
+          cursor: default;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          -o-user-select: none;
+          user-select: none;
+        }
+
+        path.link {
+          fill: none;
+          stroke: green;
+          stroke-width: 5px;
+          cursor: default;
+        }
+
+        path.link.error {
+            stroke: red;
+        }
+
+        svg:not(.active):not(.ctrl) path.link {
+          cursor: pointer;
+        }
+
+        path.link.selected {
+          stroke-dasharray: 10,2;
+        }
+
+        path.link.hidden {
+          stroke-width: 0;
+        }
+
+        rect.node {
+          stroke-width: 1.5px;
+            fill: rgb(31, 119, 180);
+            stroke: rgb(21, 83, 125);
+          fill-opacity: .4 !important;
+        }
+
+        text {
+          font: 12px sans-serif;
+          pointer-events: none;
+        }
+
+        text.id {
+          text-anchor: middle;
+          font-weight: bold;
+        }
+
+	</style>
+    
+
     <div class="text-center" data-bind="visible: hasNoReplStatsAvailable">
         <h3 class="page-header text-info">No replication stats available. <small>Either this database isn't <a href="http://ravendb.net/docs/2.5/server/scaling-out/replication">setup for replication</a>, or replication hasn't occurred in some time.</small></h3>
     </div>
@@ -56,6 +110,161 @@
                                     <p class="form-control-static" data-bind="text: LastHeartbeatReceivedHumanized"></p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div>
+        <div class="panel-group">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#collapseOne" data-bind="attr: { href: '#replicationSetupCollapse' }">Replication Topology</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse" data-bind="attr: { id: 'replicationSetupCollapse'  }">
+                    <div class="panel-body">
+                        <div class="row" data-bind="with: topology">
+                            <div class="col-xs-8">
+                                <svg id="replicationTopology"></svg>    
+                            </div>
+                            <div class="col-xs-4">
+                                <div data-bind="if: !$root.currentLink()">
+                                    <div class="alert alert-info">
+                                        <i class="fa fa-info"></i> Click on link between nodes to display information about replication between nodes.
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <dl>
+                                            <dt style="color: green">Green</dt>
+                                            <dd>Endpoints can communicate each other</dd>
+                                        </dl>
+                                        <dl>
+                                            <dt style="color: red">Red</dt>
+                                            <dd>Error in communication</dd>
+                                        </dl>
+
+                                    </div>
+                                    
+                                </div>
+                                <div data-bind="with: $root.currentLink">
+                                    <table class="table table-striped table-condensed" data-bind="with: toRightPayload">
+                                        <thead>
+                                            <tr>
+                                                <th>Property</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Source</td>
+                                                <td data-bind="text: Source"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Destination</td>
+                                                <td data-bind="text: Destination"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>SendServerId</td>
+                                                <td data-bind="text: SendServerId"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>StoredServerId</td>
+                                                <td data-bind="text: StoredServerId"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>LastAttachmentEtag</td>
+                                                <td data-bind="text: LastAttachmentEtag"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>LastDocumentEtag</td>
+                                                <td data-bind="text: LastDocumentEtag"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>ReplicationBehavior</td>
+                                                <td data-bind="text: ReplicationBehavior"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>SourceToDestinationState</td>
+                                                <td data-bind="text: SourceToDestinationState"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>DestinationToSourceState</td>
+                                                <td data-bind="text: DestinationToSourceState"></td>
+                                            </tr>
+                                            <tr data-bind="if: Errors">
+                                                <td>Errors</td>
+                                                <td>
+                                                    <ul data-bind="foreach: Errors">
+                                                        <li data-bind="text: $data"></li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <table class="table table-striped table-condensed" data-bind="with: toLeftPayload">
+                                        <thead>
+                                            <tr>
+                                                <th>Property</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Source</td>
+                                                <td data-bind="text: Source"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Destination</td>
+                                                <td data-bind="text: Destination"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>SendServerId</td>
+                                                <td data-bind="text: SendServerId"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>StoredServerId</td>
+                                                <td data-bind="text: StoredServerId"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>LastAttachmentEtag</td>
+                                                <td data-bind="text: LastAttachmentEtag"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>LastDocumentEtag</td>
+                                                <td data-bind="text: LastDocumentEtag"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>ReplicationBehavior</td>
+                                                <td data-bind="text: ReplicationBehavior"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>SourceToDestinationState</td>
+                                                <td data-bind="text: SourceToDestinationState"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>DestinationToSourceState</td>
+                                                <td data-bind="text: DestinationToSourceState"></td>
+                                            </tr>
+                                            <tr data-bind="if: Errors">
+                                                <td>Errors</td>
+                                                <td>
+                                                    <ul data-bind="foreach: Errors">
+                                                        <li data-bind="text: $data"></li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="visible: topology() == null">
+                            <button data-bind="click: fetchTopology" class="btn btn-danger"><i class="fa fa-sitemap"></i> Fetch topology</button>
+                            
+                            <div class="alert alert-warning"><strong>This operation is time consuming.</strong> Fetches information about replication topology: statuses, connections, errors, etc. </div>
                         </div>
                     </div>
                 </div>

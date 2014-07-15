@@ -297,6 +297,7 @@
     <TypeScriptCompile Include="App\commands\queryIndexDebugReduceCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugAfterReduceCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugDocsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getReplicationTopology.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />

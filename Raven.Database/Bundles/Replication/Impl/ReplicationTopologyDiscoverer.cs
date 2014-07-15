@@ -47,6 +47,11 @@ namespace Raven.Database.Bundles.Replication.Impl
 			var destinations = database.Documents.Get(Constants.RavenReplicationDestinations, null);
 			var sources = database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, database.WorkContext.CancellationToken, ref nextStart);
 
+            if (@from.Contains(database.ServerUrl) == false)
+            {
+                @from.Add(database.ServerUrl);
+            }
+
 			root.Destinations = HandleDestinations(destinations, root);
 			root.Sources = HandleSources(sources, root);
 
@@ -180,16 +185,23 @@ namespace Raven.Database.Bundles.Replication.Impl
 		{
 			var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
 
-			var toSend = (RavenJArray)from.CloneToken();
-			toSend.Add(database.ServerUrl);
-
 			try
 			{
 				var request = requestFactory.Create(url, "POST", connectionStringOptions);
-				request.Write(toSend);
+                request.Write(from);
 
 				error = null;
 				rootNode = request.ExecuteRequest<ReplicationTopologyRootNode>();
+
+			    var visitedNodes = new HashSet<string>();
+			    FindVisitedNodes(rootNode, visitedNodes);
+                foreach (var visitedNode in visitedNodes)
+                {
+                    if (@from.Contains(visitedNode) == false)
+                    {
+                        @from.Add(visitedNode);
+                    }
+                }
 				return true;
 			}
 			catch (Exception e)
@@ -200,7 +212,20 @@ namespace Raven.Database.Bundles.Replication.Impl
 			}
 		}
 
-		private ReplicatonNodeState CheckSourceConnectionState(string sourceUrl)
+        private void FindVisitedNodes(ReplicationTopologyNodeBase rootNode, HashSet<string> visitedNodes)
+	    {
+	        visitedNodes.Add(rootNode.ServerUrl);
+	        foreach (var source in rootNode.Sources)
+	        {
+	            FindVisitedNodes(source, visitedNodes);
+	        }
+            foreach (var destinationNode in rootNode.Destinations)
+            {
+                FindVisitedNodes(destinationNode, visitedNodes);
+            }
+	    }
+
+	    private ReplicatonNodeState CheckSourceConnectionState(string sourceUrl)
 		{
 			return CheckConnectionState(sourceUrl, new RavenConnectionStringOptions());
 		}
