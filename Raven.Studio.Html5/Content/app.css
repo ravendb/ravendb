@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -108,8 +108,8 @@ body {
 #editSQLReplication .edit-sql-replication-actions {
   padding-top: 0.5%;
 }
-#editSQLReplication .advanced {
-  padding-left: 0;
+#editSQLReplication .advanced-toggle .active {
+  background-color: #E3F8BE;
 }
 #editSQLReplication .checkbox {
   align-content: flex-start;
@@ -471,6 +471,10 @@ body {
 .settings-container {
   margin-top: 10px;
 }
+.settings-container .panel-body {
+  overflow-y: auto;
+  max-height: 70vh;
+}
 .settings-container .api-key-card,
 .settings-container .win-auth-card {
   display: inline-block;
@@ -515,6 +519,18 @@ body {
 }
 .settings-container .sql-replication-script-container .editor {
   height: 100px;
+}
+.settings-container .sql-replication-connection-card {
+  display: inline-table;
+  width: 40%;
+  margin-right: 20px;
+}
+@media (max-device-height: 1024px) {
+  .settings-container .sql-replication-connection-card {
+    display: inline-table;
+    width: 100%;
+    margin-right: 20px;
+  }
 }
 .collection-style-0 {
   background-color: #00c700;
@@ -927,7 +943,9 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /*# sourceMappingURL=app.css.map */
+  /*#goToDocInput {
+        width: 10em;
+    }*/
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
@@ -1284,12 +1302,6 @@ footer ul {
   font-weight: normal !important;
   color: #0000ff;
 }
-.animated-loader {
-  background-image: url('images/animated-loader.gif');
-  background-repeat: no-repeat;
-  background-position-x: center;
-  background-position-y: center;
-}
 .metricsContainer .nv-point {
   stroke-linecap: round;
   stroke-width: 5px;
@@ -1342,4 +1354,3 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
-/*# sourceMappingURL=app.css.map */

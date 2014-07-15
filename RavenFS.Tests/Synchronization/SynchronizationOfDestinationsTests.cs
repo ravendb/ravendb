@@ -11,6 +11,7 @@ using Xunit;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -377,7 +378,7 @@ namespace RavenFS.Tests.Synchronization
 			                    destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
 				                    {
 					                    new Tuple<string, Guid>("test.bin"
-											,sourceClient.GetMetadataForAsync("test.bin").Result.Value<Guid>("ETag"))
+											,sourceClient.GetMetadataForAsync("test.bin").Result.Value<Guid>(Constants.MetadataEtagField))
 				                    });
 
 			var synchronizationConfirmations = confirmations as SynchronizationConfirmation[] ?? confirmations.ToArray();

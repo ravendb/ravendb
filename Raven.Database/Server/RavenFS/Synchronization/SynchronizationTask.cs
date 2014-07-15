@@ -24,6 +24,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Client.FileSystem.Connection;
 using System.Collections.Concurrent;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -374,7 +375,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 					if (reason == NoSyncReason.ContainedInDestinationHistory)
 					{
-						var etag = localMetadata.Value<Guid>("ETag");
+                        var etag = localMetadata.Value<Guid>(Constants.MetadataEtagField);
                         await destination.IncrementLastETagAsync(storage.Id, baseUrl, etag);
                         RemoveSyncingConfiguration(file, baseUrl);
 					}
@@ -752,7 +753,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
         private static void LogFilesInfo(string message, ICollection<FileHeader> files)
 		{
 			Log.Debug(message, files.Count,
-					  string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.Name, x.Metadata.Value<Guid>("ETag")))));
+                      string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.Name, x.Metadata.Value<Guid>(Constants.MetadataEtagField)))));
 		}
 	}
 }

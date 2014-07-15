@@ -22,6 +22,9 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMet
 import documentMetadata = require("models/documentMetadata");
 import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
 import sqlReplicationSimulationDialog = require("viewmodels/sqlReplicationSimulationDialog");
+import sqlReplicationConnections = require("models/sqlReplicationConnections");
+import predefinedSqlConnection = require("models/predefinedSqlConnection");
+
 
 
 class editSqlReplication extends viewModelBase {
@@ -46,6 +49,7 @@ class editSqlReplication extends viewModelBase {
     sqlReplicationName: KnockoutComputed<string>;
     isEditingNewReplication = ko.observable(false);
     isBasicView = ko.observable(true);
+    availableConnectionStrings = ko.observableArray<string>();
     
     
     appUrls: computedAppUrls;
@@ -75,22 +79,36 @@ class editSqlReplication extends viewModelBase {
         });
     }
 
-    canActivate(replicationToEditName: string) {
-        if (replicationToEditName) {
-            var canActivateResult = $.Deferred();
-            this.loadSqlReplication(replicationToEditName)
-                .done(() => canActivateResult.resolve({ can: true }))
-                .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(replicationToEditName) + " replication", null));
-                    canActivateResult.resolve({ redirect: appUrl.forSqlReplications(this.activeDatabase()) });
-                });
+    loadSqlReplicationConnections() :JQueryPromise<any> {
+        return new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+            .execute()
+            .done((x: document) => {
+                var dto: any = x.toDto(true);
+                var connections = new sqlReplicationConnections(dto);
 
-            return canActivateResult;
-        } else {
-            this.isEditingNewReplication(true);
-            this.editedReplication(this.createSqlReplication());
-            return $.Deferred().resolve({ can: true });
-        }
+                if (connections.predefinedConnections().length > 0) {
+                    connections.predefinedConnections().forEach(x => this.availableConnectionStrings.push(x.name()));
+                }
+            });
+    }
+
+    canActivate(replicationToEditName: string) {
+        var canActivateResult = $.Deferred();
+        this.loadSqlReplicationConnections().always(() => {
+            if (replicationToEditName) {
+                this.loadSqlReplication(replicationToEditName)
+                    .done(() => canActivateResult.resolve({ can: true }))
+                    .fail(() => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(replicationToEditName) + " replication", null));
+                        canActivateResult.resolve({ redirect: appUrl.forSqlReplications(this.activeDatabase()) });
+                    });
+            } else {
+                this.isEditingNewReplication(true);
+                this.editedReplication(this.createSqlReplication());
+                canActivateResult.resolve({ can: true });
+            }
+        });
+        return canActivateResult;
     }
 
     activate(replicationToEditName: string) {
@@ -283,14 +301,21 @@ class editSqlReplication extends viewModelBase {
         } 
     }
     resetSqlReplication() {
-        var replicationId = this.initialReplicationId;
-        new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-            .done(() => {
-                ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
-            })
-        .fail((foo) => {
-            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+
+        app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
+            .then((dialogResult:string) =>{
+            if (dialogResult === "Reset") {
+                var replicationId = this.initialReplicationId;
+                new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+                    .done(() => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
+                    })
+                    .fail((foo) => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+                    });
+            }
         });
+        
     }
 
     simulateSqlReplication() {
@@ -298,6 +323,9 @@ class editSqlReplication extends viewModelBase {
         app.showDialog(viewModel);
     }
 
+    getSqlReplicationConnectionStringsUrl(sqlReplicationName: string) {
+        return appUrl.forSqlReplicationConnections(this.activeDatabase());
+    }
 
 }
 

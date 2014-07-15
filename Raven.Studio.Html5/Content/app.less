@@ -143,9 +143,11 @@ html, body {
     .edit-sql-replication-actions {
         padding-top: 0.5%;
     }
-    .advanced
+    .advanced-toggle
     {
-        padding-left:0;
+        .active{            
+            background-color:#E3F8BE;            
+        }
     }
     .checkbox{
         input[type=checkbox]{
@@ -604,8 +606,12 @@ html, body {
 
 
 .settings-container {
-    margin-top: 10px;
+    margin-top: 10px;    
 
+    .panel-body{
+        overflow-y:auto;
+        max-height:70vh;
+    }
     .api-key-card, .win-auth-card {
         display: inline-block;
         width: 500px;
@@ -664,6 +670,17 @@ html, body {
         .editor {
             height: 100px;
         }
+    }
+
+    .sql-replication-connection-card {
+         @media(max-device-height:1024px) {
+            display: inline-table;
+            width: 100%;
+            margin-right: 20px;
+        }
+        display: inline-table;
+        width: 40%;
+        margin-right: 20px;
     }
 }
 
@@ -1601,13 +1618,6 @@ footer {
 .ace-github .ace_null {
     font-weight: normal !important;
     color: rgb(0, 0, 255);
-}
-
-.animated-loader {
-    background-image: url('images/animated-loader.gif');
-    background-repeat: no-repeat;
-    background-position-x: center;
-    background-position-y: center;
 }
 
 .metricsContainer {

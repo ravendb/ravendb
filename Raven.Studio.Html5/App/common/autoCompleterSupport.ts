@@ -11,7 +11,7 @@ class autoCompleterSupport {
 
     if (typedWord.length >= 1) {
       this.autoCompleteResults(this.autoCompleteBase().filter((value) =>
-        this.wordMatches(typedWord, value()) &&
+        autoCompleterSupport.wordMatches(typedWord, value()) &&
         (value() !== input.val()) &&
         (value() !== typedWord) &&
         (value().indexOf(' ') === -1)
@@ -72,7 +72,7 @@ class autoCompleterSupport {
     return $input.val().substring(beginIndex, cursorPosition).trim();
   }
 
-  private wordMatches(toCheck: string, toMatch: string): boolean {
+  public static wordMatches(toCheck: string, toMatch: string): boolean {
     // ignore the case
     toCheck = toCheck.toLowerCase();
     toMatch = toMatch.toLowerCase();

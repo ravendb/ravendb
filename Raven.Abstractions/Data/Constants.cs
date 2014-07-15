@@ -154,5 +154,8 @@ namespace Raven.Abstractions.Data
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
+
+
+        public const string MetadataEtagField = "ETag";        
 	}
 }

@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Raven.Client.FileSystem.Extensions;
+using System.Threading;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -14,11 +16,14 @@ namespace RavenFS.Tests.ClientApi
     {
 
         private readonly IFilesStore filesStore;
+        private readonly IFilesStore anotherStore;
 
         public FileSessionListenersTests()
-		{
-			filesStore = this.NewStore();
-		}
+        {
+            filesStore = this.NewStore(1);
+            anotherStore = this.NewStore(2);
+
+        }
 
         [Fact]
         public async void DoNotDeleteReadOnlyFiles()
@@ -106,6 +111,148 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
+        [Fact]
+        public async void ConflictListeners_LocalVersion()
+        {
+            var store = (FilesStore)filesStore;
+            var conflictsListener = new TakeLocalConflictListener();
+            anotherStore.Listeners.RegisterListener(conflictsListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                Thread.Sleep(250);
+
+                Assert.Equal(1, conflictsListener.DetectedCount);
+                Assert.Equal(1, conflictsListener.ResolvedCount);
+
+                var file = await sessionDestination1.LoadFileAsync("test1.file");
+                var file2 = await sessionDestination2.LoadFileAsync("test1.file");
+
+                Assert.Equal(128, file.TotalSize);
+                Assert.Equal(130, file2.TotalSize);
+            }
+        }
+
+        [Fact]
+        public async void ConflictListeners_RemoteVersion()
+        {
+            var store = (FilesStore)filesStore;
+            var conflictsListener = new TakeNewestConflictsListener();
+            anotherStore.Listeners.RegisterListener(conflictsListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+                
+                var file = await sessionDestination1.LoadFileAsync("test1.file");
+                var file2 = await sessionDestination2.LoadFileAsync("test1.file");
+                Assert.Equal(128, file.TotalSize);
+                Assert.Equal(130, file2.TotalSize);
+
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                Assert.Equal(1, conflictsListener.DetectedCount);
+
+                //We need to sync again after conflict resolution because strategy was to resolve with remote
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                Assert.Equal(1, conflictsListener.ResolvedCount);
+
+                file = await sessionDestination1.LoadFileAsync("test1.file");
+                file2 = await sessionDestination2.LoadFileAsync("test1.file");
+
+                Assert.Equal(128, file.TotalSize);
+                Assert.Equal(128, file2.TotalSize);
+            }
+        }
+
+        [Fact]
+        public async void MultipleConflictListeners_OnlyOneWithResolution()
+        {
+            var store = (FilesStore)filesStore;
+            var conflictsListener = new TakeLocalConflictListener();
+            var noOpListener = new NoOpConflictListener();
+            anotherStore.Listeners.RegisterListener(conflictsListener);
+            anotherStore.Listeners.RegisterListener(noOpListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                Thread.Sleep(250);
+
+                Assert.Equal(1, conflictsListener.DetectedCount);
+                Assert.Equal(1, conflictsListener.ResolvedCount);
+
+                Assert.Equal(1, noOpListener.DetectedCount);
+                Assert.Equal(1, noOpListener.ResolvedCount);
+            }
+        }
+
+        [Fact]
+        public async void MultipleConflictListeners_MultipleResolutionListeners()
+        {
+            var store = (FilesStore)filesStore;
+            var conflictsListener = new TakeLocalConflictListener();
+            var noOpListener = new NoOpConflictListener();
+            anotherStore.Listeners.RegisterListener(conflictsListener);
+            anotherStore.Listeners.RegisterListener(noOpListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                Thread.Sleep(250);
+
+                Assert.Equal(1, conflictsListener.DetectedCount);
+                Assert.Equal(1, conflictsListener.ResolvedCount);
+
+                Assert.Equal(1, noOpListener.DetectedCount);
+                Assert.Equal(1, noOpListener.ResolvedCount);
+            }
+        }
+
+
         private class NoOpDeleteFilesListener : IFilesDeleteListener
         {
             public int AfterCount { get; protected set; }
@@ -137,6 +284,60 @@ namespace RavenFS.Tests.ClientApi
             public void AfterDelete(FileHeader instance)
             {
                 AfterCount++;
+            }
+        }
+
+        private class TakeNewestConflictsListener : IFilesConflictListener
+        {
+            public int ResolvedCount { get; protected set; }
+            public int DetectedCount { get; protected set; }
+
+            public ConflictResolutionStrategy ConflictDetected(FileHeader local, FileHeader remote, string destinationSourceUri)
+            {
+                DetectedCount++;
+                if (local.LastModified.CompareTo(remote.LastModified) >= 0)
+                    return ConflictResolutionStrategy.CurrentVersion;
+                else
+                    return ConflictResolutionStrategy.RemoteVersion;
+            }
+
+            public void ConflictResolved(FileHeader header)
+            {
+                ResolvedCount++;
+            }
+        }
+
+        private class TakeLocalConflictListener : IFilesConflictListener
+        {
+            public int ResolvedCount { get; protected set; }
+            public int DetectedCount { get; protected set; }
+
+            public ConflictResolutionStrategy ConflictDetected(FileHeader local, FileHeader remote, string destinationSourceUri)
+            {
+                DetectedCount++;
+                return ConflictResolutionStrategy.CurrentVersion;
+            }
+
+            public void ConflictResolved(FileHeader header)
+            {
+                ResolvedCount++;
+            }
+        }
+
+        private class NoOpConflictListener : IFilesConflictListener
+        {
+            public int ResolvedCount { get; protected set; }
+            public int DetectedCount { get; protected set; }
+
+            public ConflictResolutionStrategy ConflictDetected(FileHeader local, FileHeader remote, string destinationSourceUri)
+            {
+                DetectedCount++;
+                return ConflictResolutionStrategy.NoResolution;
+            }
+
+            public void ConflictResolved(FileHeader header)
+            {
+                ResolvedCount++;
             }
         }
     }

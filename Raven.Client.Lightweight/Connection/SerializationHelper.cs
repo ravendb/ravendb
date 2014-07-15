@@ -216,7 +216,7 @@ namespace Raven.Client.Connection
 			var jsonData = (RavenJObject)requestJson;
 			var meta = headers.FilterHeadersToObject();
 
-			var etag = headers["ETag"];
+            var etag = headers[Constants.MetadataEtagField];
 
 			return new JsonDocument
 			{
@@ -298,7 +298,7 @@ namespace Raven.Client.Connection
 			{
 				throw new JsonReaderException("Invalid Json Response", jre);
 			}
-			var etag = headers["ETag"];
+            var etag = headers[Constants.MetadataEtagField];
 			string lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
 			var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);

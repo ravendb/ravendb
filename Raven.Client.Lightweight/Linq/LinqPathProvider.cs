@@ -25,9 +25,9 @@ namespace Raven.Client.Linq
 		    public PropertyInfo MaybeProperty;
 		}
 
-		private readonly DocumentConvention conventions;
+		private readonly Convention conventions;
 
-		public LinqPathProvider(DocumentConvention conventions)
+		public LinqPathProvider(Convention conventions)
 		{
 			this.conventions = conventions;
 		}

@@ -38,6 +38,29 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(filesStore.Identifier, session.Advanced.StoreIdentifier.Split(';')[0]);
                 Assert.Equal(store.DefaultFileSystem, session.Advanced.StoreIdentifier.Split(';')[1]);
             }
+
+            store.Conventions.MaxNumberOfRequestsPerSession = 10;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 10);
+            }
+        }
+
+        [Fact]
+        public void EnsureMaxNumberOfRequestsPerSessionIsHonored()
+        {
+            var store = (FilesStore)filesStore;
+            store.Conventions.MaxNumberOfRequestsPerSession = 0;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                TaskAssert.Throws<InvalidOperationException>(() => session.LoadFileAsync("test1.file"));
+                TaskAssert.Throws<InvalidOperationException>(() => session.DownloadAsync("test1.file"));
+                Assert.Throws<InvalidOperationException>(() => session.RegisterFileDeletion("test1.file"));
+                Assert.Throws<InvalidOperationException>(() => session.RegisterRename("test1.file", "test2.file"));
+                Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
+            }
         }
 
         [Fact]
@@ -86,17 +109,7 @@ namespace RavenFS.Tests.ClientApi
                         x.WriteByte(i);
                 });
 
-                Assert.Throws<BadRequestException>(() =>
-                {
-                    try
-                    {
-                        session.SaveChangesAsync().Wait();
-                    }
-                    catch (AggregateException e)
-                    {
-                        throw e.SimplifyException();
-                    }
-                });
+                TaskAssert.Throws<BadRequestException>(() => session.SaveChangesAsync());
             }
         }
 
@@ -116,17 +129,7 @@ namespace RavenFS.Tests.ClientApi
                     throw new Exception();
                 });
 
-                Assert.Throws<BadRequestException>(() =>
-                {
-                    try
-                    {
-                        session.SaveChangesAsync().Wait();
-                    }
-                    catch (AggregateException e)
-                    {
-                        throw e.SimplifyException();
-                    }
-                });
+                TaskAssert.Throws<BadRequestException>(() => session.SaveChangesAsync());
             }
         }
 
@@ -289,22 +292,29 @@ namespace RavenFS.Tests.ClientApi
                 });
                 session.RegisterRename("test2.file", "test3.file");
 
-                Assert.Throws<BadRequestException>(() =>
-                {
-                    try
-                    {
-                        session.SaveChangesAsync().Wait();
-                    }
-                    catch (AggregateException e)
-                    {
-                        throw e.SimplifyException();
-                    }
-                });
+                TaskAssert.Throws<BadRequestException>(() => session.SaveChangesAsync());
 
                 var shouldExist = await session.LoadFileAsync("test2.file");
                 Assert.NotNull(shouldExist);
                 var shouldNotExist = await session.LoadFileAsync("test3.file");
                 Assert.Null(shouldNotExist);
+            }
+        }
+
+        [Fact]
+        public async void LoadMultipleFileHeaders()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                var files = await session.LoadFileAsync(new String[] { "/b/test1.file", "test1.file" });
+
+                Assert.NotNull(files);
             }
         }
   
