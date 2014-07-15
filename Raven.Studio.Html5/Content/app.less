@@ -288,20 +288,6 @@ html, body {
     overflow: hidden;
 }
 
-.dropdown-menu {
-    min-width: 0;
-
-    .selected {
-        color: #555;
-        background-color: #e7e7e7;
-    }
-
-    a.btn {
-        padding-left: 10px;
-        text-align: left;
-    }
-}
-
 .vertical-bottom-container {
     width: 10% !important;
     padding: 0 40% 0 40% !important;    
@@ -337,7 +323,7 @@ html, body {
         margin-bottom: 20px;
     }
 
-    #databases-container {
+    .databases-container {
         margin-top: 10px;
         
         .database:hover .checkbox{
@@ -349,13 +335,13 @@ html, body {
             border-radius: 10px;
             -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
-            min-width: 140px;
-            min-height: 60px;
+            min-width: 160px;
+            min-height: 70px;
             display: inline-block;
             padding: 8px;
             margin: 0 10px 14px 0;
             position: relative;
-
+            
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
             @disabledColor: lighten(silver, 5%);
@@ -363,8 +349,8 @@ html, body {
             .checkbox{
                 display: none;
                 position: absolute;
-                top: -19px;
-                left: -5px;
+                top: -18px;
+                left: -4px;
 
                 input{
                     width: 18px;
@@ -374,24 +360,25 @@ html, body {
 
             .details {
                 float: left;
-            }
+                line-height: 215%;
 
-            .disabled-status{
-                float: right;
-                margin-right: 6px;
-
-                .enabled {
-                    color: #58cc46;
+                .disabled{
+                    pointer-events: none;
+                    cursor: default;
                 }
 
-                .disabled {
-                    color: red;
+                .text-muted.stats{
+                    color: #3A822D;
+                }
+
+                .text-muted.disabled{
+                    color: #d9534f;
                 }
             }
 
             .btn-group {
                 float: right;
-                margin-top: 33px;
+                margin-top: 39.3px;
                 padding-left: 8px;
             }
 
@@ -423,8 +410,8 @@ html, body {
                 box-shadow: 0 0 6px 0 @selectColor;
                 background-color: @selectColor;
 
-                a, .text-muted {
-                    color: white;
+                .database-name, .text-muted {
+                    color: white !important;
                 }
 
                 .btn-default {
@@ -457,9 +444,24 @@ html, body {
 .resource-link {
     padding-left: 5px;
     overflow-x: hidden;
-    max-width: 20px;
+    max-width: 150px;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.dropdown-menu {
+    min-width: 0;
+
+    .selected {
+        color: #555;
+        background-color: #e7e7e7;
+    }
+
+    a.btn {
+        padding-left: 10px;
+        text-align: left;
+        color: black;
+    }
 }
 
 .resource-link-disabled {
