@@ -6,9 +6,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Transactions;
+using Amazon.Route53.Model;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -112,13 +112,6 @@ namespace Raven.Database.Impl.DTC
 			if (currentlyCommittingTransaction.Value == existing.transactionId)
 				return null;
 
-			TransactionState value;
-			if (transactionStates.TryGetValue(existing.transactionId, out value) == false ||
-				SystemTime.UtcNow > value.lastSeen.Value)
-			{
-				Rollback(existing.transactionId);
-				return null;
-			}
 			return document =>
 			{
 				if (document == null)
@@ -158,7 +151,7 @@ namespace Raven.Database.Impl.DTC
 
 		public abstract void Commit(string id);
 
-		public abstract void Prepare(string id);
+		public abstract void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation);
 
 		private Etag AddToTransactionState(string key,
 			Etag etag,
@@ -180,9 +173,9 @@ namespace Raven.Database.Impl.DTC
 					if (currentTxVal != null)
 					{
 						EnsureValidEtag(key, etag, committedEtag, currentTxVal);
-						state.changes.Remove(currentTxVal);
+					    state.changes.Remove(currentTxVal);
 					}
-					var result = changedInTransaction.AddOrUpdate(key, s =>
+				    var result = changedInTransaction.AddOrUpdate(key, s =>
 					{
 						EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 
@@ -201,26 +194,9 @@ namespace Raven.Database.Impl.DTC
 							return existing;
 						}
 
-						TransactionState transactionState;
-						if (transactionStates.TryGetValue(existing.transactionId, out transactionState) == false ||
-							SystemTime.UtcNow > transactionState.lastSeen.Value)
-						{
-							Rollback(existing.transactionId);
-
-							EnsureValidEtag(key, etag, committedEtag, currentTxVal);
-
-							return new ChangedDoc
-							{
-								transactionId = transactionInformation.Id,
-								committedEtag = committedEtag,
-								currentEtag = item.Etag
-							};
-						}
-
 						throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
 					});
 
-					item.CommittedEtag = committedEtag;
 					state.changes.Add(item);
 
 					return result.currentEtag;
@@ -258,7 +234,7 @@ namespace Raven.Database.Impl.DTC
 				throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
 	    }
 
-		public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
+	    public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
 		{
 			return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocument
 			{
@@ -312,19 +288,20 @@ namespace Raven.Database.Impl.DTC
 			return transactionStates.ContainsKey(txId);
 		}
 
-		//return list of document Ids that were added in the operation
-		protected HashSet<string> RunOperationsInTransaction(string id)
+        protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
 		{
+            changes = null;
 			TransactionState value;
 		    if (transactionStates.TryGetValue(id, out value) == false)
 		        return null; // no transaction, cannot do anything to this
 
+            changes = value.changes;
 			lock (value)
 			{
 				currentlyCommittingTransaction.Value = id;
 				try
 				{
-					var documentIdsToTouch = new HashSet<string>();
+				    var documentIdsToTouch = new HashSet<string>();
 					foreach (var change in value.changes)
 					{
 						var doc = new DocumentInTransactionData
@@ -333,27 +310,27 @@ namespace Raven.Database.Impl.DTC
 							Data = change.Data == null ? null : (RavenJObject) change.Data.CreateSnapshot(),
 							Delete = change.Delete,
 							Etag = change.Etag,
-							CommittedEtag = change.CommittedEtag,
 							LastModified = change.LastModified,
 							Key = change.Key
 						};
 
 						log.Debug("Commit of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
+						Trace.WriteLine(String.Format("RunOperationsInTransaction (Prepare Phase) of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key));
+
 						// doc.Etag - represent the _modified_ document etag, and we already
 						// checked etags on previous PUT/DELETE, so we don't pass it here
 						if (doc.Delete)
 						{
-							databaseDelete(doc.Key, doc.CommittedEtag, null);
+							databaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
 							documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
 						}
 						else
 						{
-							databasePut(doc.Key, doc.CommittedEtag, doc.Data, doc.Metadata, null);
+							databasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
 							documentIdsToTouch.Add(doc.Key);
-						}
 					}
-
-					return documentIdsToTouch;
+				}
+				    return documentIdsToTouch;
 				}
 				finally
 				{
@@ -361,5 +338,25 @@ namespace Raven.Database.Impl.DTC
 				}
 			}
 		}
+
+	    public void RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+	    {
+            var txInfo = new TransactionInformation
+            {
+                Id = id,
+                Timeout = TimeSpan.FromMinutes(5)
+            };
+	        foreach (var changedDoc in changes)
+	        {
+                changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+                changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
+		        
+				//we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
+				//that happened during the transaction, which changed the committed etag. That is fine when we are just running
+				//the transaction, since we can just report the error and abort. But it isn't fine when we recover
+				//var etag = changedDoc.CommittedEtag;
+		        Etag etag = null; 
+	            AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
 	}
+}	}
 }

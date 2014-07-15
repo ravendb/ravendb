@@ -63,7 +63,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
 	        base.SetResultTransformer(resultsTransformer);
 	        return this;
@@ -883,7 +883,7 @@ namespace Raven.Client.Document
 			this.SetHighlighterTags(preTags, postTags);
 			return this;
 		}
-        
+
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>

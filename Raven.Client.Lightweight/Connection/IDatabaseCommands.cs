@@ -479,11 +479,10 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		void DeleteTransformer(string name);
 
-		/// <summary>
-		/// Prepares the transaction on the server.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void PrepareTransaction(string txId);
+	    /// <summary>
+	    /// Prepares the transaction on the server.
+	    /// </summary>
+	    void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
 	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
         IndexMergeResults GetIndexMergeSuggestions();

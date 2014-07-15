@@ -82,7 +82,7 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-
+			
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
@@ -329,7 +329,7 @@ namespace Raven.Database.Config
 				var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
 				return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
 			}
-		}
+		} 
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
@@ -878,6 +878,8 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
+		public int MemoryLimitForIndexingInMB { get; set; }
+
         public string JournalsStoragePath
         {
             get
@@ -945,7 +947,7 @@ namespace Raven.Database.Config
 		public int MaxIndexOutputsPerDocument { get; set; }
 
 		[Browsable(false)]
-        /// <summary>
+		/// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
         /// the facet cache when finishing an indexing batch
         /// </summary>
@@ -957,6 +959,16 @@ namespace Raven.Database.Config
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
+
+		/// <summary>
+		/// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
+		/// </summary>
+		public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+		/// <summary>
+		/// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
+		/// </summary>
+		public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
 
         /// <summary>
         /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
@@ -1036,7 +1048,7 @@ namespace Raven.Database.Config
 
         //TODO : perhaps refactor with enums?
 	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
-	    {
+		{
 	        switch (typeName.ToLowerInvariant())
 	        {
 	            case EsentTypeName:

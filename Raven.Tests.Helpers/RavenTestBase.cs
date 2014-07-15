@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
@@ -82,7 +83,7 @@ namespace Raven.Tests.Helpers
 
 			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref pathCount)));
 		    if (forceCreateDir && Directory.Exists(newDataDir) == false)
-		        Directory.CreateDirectory(newDataDir);
+			Directory.CreateDirectory(newDataDir);
 			pathsToDelete.Add(newDataDir);
 			return newDataDir;
 		}
@@ -168,9 +169,9 @@ namespace Raven.Tests.Helpers
 		}
 
 		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
-				bool runInMemory = true,
-				string dataDirectory = null,
-				string requestedStorage = null,
+			bool runInMemory = true,
+			string dataDirectory = null,
+			string requestedStorage = null,
 				bool enableAuthentication = false,
                 bool ensureDatabaseExists = true,
 				Action<DocumentStore> configureStore = null)
@@ -201,7 +202,7 @@ namespace Raven.Tests.Helpers
 		{
 			if (fiddler)
 			{
-			    if (Process.GetProcessesByName("fiddler").Any())
+				if (Process.GetProcessesByName("fiddler").Any())
 			        return serverUrl.Replace("localhost", "localhost.fiddler");
 			}
             return serverUrl;
@@ -222,9 +223,9 @@ namespace Raven.Tests.Helpers
 
 	    protected bool checkPorts = false;
 
-		protected RavenDbServer GetNewServer(int port = 8079, 
+		protected RavenDbServer GetNewServer(int port = 8079,
 			string dataDirectory = null,
-			bool runInMemory = true, 
+			bool runInMemory = true,
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
@@ -253,7 +254,7 @@ namespace Raven.Tests.Helpers
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
 				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
-			
+
             ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
 			if (activeBundles != null)
@@ -356,8 +357,8 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
-		    if (spinUntil == false)
+		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) :TimeSpan.FromSeconds(20)));
+		    if (spinUntil == false && store is EmbeddableDocumentStore)
 		        WaitForUserToContinueTheTest(store);
 		    Assert.True(spinUntil, "Indexes took took long to become unstale");
 		}
@@ -479,18 +480,18 @@ namespace Raven.Tests.Helpers
 			var systemDatabaseCommands = databaseCommands.ForSystemDatabase(); // need to be sure that we are checking system database
 
 			var failureMessages = new[]
-			                      {
+			{
 				                      "Esent Restore: Failure! Could not restore database!", 
 									  "Error: Restore Canceled", 
 									  "Restore Operation: Failure! Could not restore database!"
 			                      };
 
-			var restoreFinishMessages = new[]
-			                            {
-				                            "The new database was created", 
-											"Esent Restore: Restore Complete", 
-											"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
-			                            };
+				var restoreFinishMessages = new[]
+				{
+					"The new database was created",
+					"Esent Restore: Restore Complete", 
+					"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
+				};
 
 			var done = SpinWait.SpinUntil(() =>
 			{
@@ -543,7 +544,16 @@ namespace Raven.Tests.Helpers
 
 			using (server)
 			{
-				Process.Start(url); // start the server
+				server.StartListening();
+
+				try
+				{
+                Process.Start(url); // start the server
+				}
+				catch (Win32Exception e)
+				{
+					Console.WriteLine("Failed to open the browser. Please open it manually at {0}. {1}", documentStore.Configuration.ServerUrl, e);
+				}
 
 				do
 				{
@@ -587,7 +597,7 @@ namespace Raven.Tests.Helpers
 				Url = url ?? "http://localhost:8079"
 			}.Initialize())
 			{
-			
+
 				Process.Start(documentStore.Url); // start the server
 
 				do
@@ -628,17 +638,17 @@ namespace Raven.Tests.Helpers
 
 			var errors = new List<Exception>();
 
-				foreach (var store in stores)
+			foreach (var store in stores)
+			{
+				try
 				{
-					try
-					{
-						store.Dispose();
-					}
-					catch (Exception e)
-					{
-						errors.Add(e);
-					}
+					store.Dispose();
 				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
 
 				stores.Clear();
 
@@ -678,7 +688,7 @@ namespace Raven.Tests.Helpers
 						)
 					{
 						errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory, but failed", pathToDelete)));
-					}
+			}
 				}
 			}
 
@@ -742,7 +752,7 @@ namespace Raven.Tests.Helpers
 	        {
 				DatabaseNames.Add(databaseName);
 		        return databaseName;
-	        }
+	}
 
 	        var prefix = databaseName.Substring(0, 30);
             var suffix = databaseName.Substring(databaseName.Length - 10, 10);
@@ -753,6 +763,5 @@ namespace Raven.Tests.Helpers
 	        DatabaseNames.Add(name);
 
 	        return name;
-        }
-	}
+}	}
 }

@@ -964,12 +964,11 @@ namespace Raven.Client.Document
 			shouldExplainScores = true;
 			return this;
 
-        }
+	}
 
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
 	    {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
 	        return this;
-		}
-	}
+}	}
 }

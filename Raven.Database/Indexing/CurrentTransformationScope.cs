@@ -7,22 +7,38 @@ namespace Raven.Database.Indexing
 {
 	public class CurrentTransformationScope : IDisposable
 	{
-		[ThreadStatic]
-		private static DocumentRetriever current;
+		private readonly DocumentDatabase database;
+		private readonly DocumentRetriever retriever;
 
-	    public static DocumentRetriever Current
+		[ThreadStatic] private static CurrentTransformationScope current;
+		private CurrentTransformationScope old;
+
+		public static CurrentTransformationScope Current
 	    {
-	        get { return current; }
+			get { return current; }
 	    }
 
-	    public CurrentTransformationScope(DocumentRetriever documentRetriever)
-		{
-			current = documentRetriever;
-		}
+	    public CurrentTransformationScope(DocumentDatabase database, DocumentRetriever documentRetriever)
+	    {
+		    this.database = database;
+		    retriever = documentRetriever;
+		    old = current;
+			current = this;
+			
+	    }
 
 		public void Dispose()
 		{
-			current = null;
+			current = old;
+		}
+
+		public DocumentDatabase Database
+		{
+			get { return database; }
+		}
+		public DocumentRetriever Retriever
+		{
+			get { return retriever; }
 		}
 	}
 }

@@ -65,8 +65,8 @@ namespace Raven.Database.Json
 				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
 				var resultDocument = ApplySingleScript(document, patch, size, docId, scope);
-				if (resultDocument != null)
-					document = resultDocument;
+			if (resultDocument != null)
+				document = resultDocument;
 			
 			return document;
 		}
@@ -100,7 +100,7 @@ namespace Raven.Database.Json
 
 			    CleanupEngine(patch, jintEngine, scope);
 
-				OutputLog(jintEngine);
+			    OutputLog(jintEngine);
 
 			    ScriptsCache.CheckinScript(patch, jintEngine);
 
@@ -129,7 +129,7 @@ namespace Raven.Database.Json
 
 				throw new InvalidOperationException(errorMsg, errorEx);
 			}
-		}
+			}
 
 		private void CleanupEngine(ScriptedPatchRequest patch, Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
@@ -152,26 +152,26 @@ namespace Raven.Database.Json
 			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
 			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
 			jintEngine.SetValue("__document_id", docId);
-
+					        
 			foreach (var kvp in patch.Values)
-			{
+			    {
 				var token = kvp.Value as RavenJToken;
 				if (token != null)
-				{
+			        {
 					jintEngine.SetValue(kvp.Key, scope.ToJsInstance(jintEngine, token));
-				}
+			        }
 				else
-				{
+			        {
 					var rjt = RavenJToken.FromObject(kvp.Value);
 					var jsInstance = scope.ToJsInstance(jintEngine, rjt);
 					jintEngine.SetValue(kvp.Key, jsInstance);
-				}
+			        }
 			}
 
 			jintEngine.ResetStatementsCount();
 			if (size != 0)
 				jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
-		}
+			}
 
 		private Engine CreateEngine(ScriptedPatchRequest patch)
 		{
@@ -195,8 +195,8 @@ function ExecutePatchScript(docInner){{
 			});
 
             AddScript(jintEngine, "Raven.Database.Json.lodash.js");
-            AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
-            AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
+			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
+			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
 
             jintEngine.Execute(wrapperScript);
 
@@ -244,7 +244,7 @@ for(var customFunction in customFunctions) {{
 		{
 		    RavenJToken functions;
 		    if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
-                return;
+				return;
 
 			engine.Execute(@"
 if(customFunctions) { 
@@ -256,7 +256,7 @@ if(customFunctions) {
 		}
 
 		private void OutputLog(Engine engine)
-		{
+			{
 			var arr = engine.GetValue("debug_outputs");
 			if (arr == JsValue.Null || arr.IsArray() == false)
 				return;

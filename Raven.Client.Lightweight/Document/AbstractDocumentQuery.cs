@@ -83,7 +83,7 @@ namespace Raven.Client.Document
 
 		private int currentClauseDepth;
 
-		protected KeyValuePair<string, string> lastEquality;
+	    protected KeyValuePair<string, string> lastEquality;
 
 		protected Dictionary<string, RavenJToken> transformerParameters = new Dictionary<string, RavenJToken>();
 
@@ -163,15 +163,15 @@ namespace Raven.Client.Document
 		/// Should we wait for non stale results
 		/// </summary>
 		protected bool theWaitForNonStaleResults;
-        /// <summary>
+		/// <summary>
         /// Should we wait for non stale results as of now?
-        /// </summary>
+		/// </summary>
 	    protected bool theWaitForNonStaleResultsAsOfNow;
 		/// <summary>
 		/// The paths to include when loading the query
 		/// </summary>
 		protected HashSet<string> includes = new HashSet<string>();
-	
+
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
@@ -673,13 +673,13 @@ namespace Raven.Client.Document
 			InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
 		}
 
-        protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
-        {
+		protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
+		{
             foreach (var key in dbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
-            {
-                dbCommands.OperationsHeaders.Remove(key);
-            }
-        }
+			{
+				dbCommands.OperationsHeaders.Remove(key);
+			}
+		}
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -757,7 +757,7 @@ namespace Raven.Client.Document
 		{
 			var result = await InitAsync();
 			return result.CurrentQueryResults.CreateSnapshot();
-		}
+			}
 
 		protected virtual async Task<QueryOperation> InitAsync()
 		{
@@ -1002,13 +1002,13 @@ If you really want to do in memory filtering on the data returned from the query
 		///   that is nearly always a mistake.
 		/// </summary>
 		[Obsolete(
-            @"
+			@"
 You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.Advanced.DocumentQuery<T>().ToList().Count()
 "
-            , true)]
+			, true)]
 		public int Count()
 		{
 			throw new NotSupportedException();
@@ -1073,7 +1073,7 @@ If you really want to do in memory filtering on the data returned from the query
             return queryOperation.Complete<T>();
         }
 
-	    /// <summary>
+		/// <summary>
 		///   Filter the results from the index using the specified where clause.
 		/// </summary>
 		/// <param name = "whereClause">The where clause.</param>
@@ -1230,7 +1230,7 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 			fieldName = EnsureValidFieldName(whereParams);
 
-			var list = UnpackEnumerable(values).ToList();
+            var list = UnpackEnumerable(values).ToList();
 
 			if (list.Count == 0)
 			{
@@ -1786,18 +1786,18 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				using (queryOperation.EnterQueryContext())
 				{
-					queryOperation.LogQuery();
+				queryOperation.LogQuery();
 					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
 
 					if (queryOperation.IsAcceptable(result) == false)
 					{
 						await Task.Delay(100);
 						continue;
-					}
-					InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+						}
+						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
 					return queryOperation;
-				}
 			}
+		}
 		}
 
 		/// <summary>
@@ -1876,7 +1876,7 @@ If you really want to do in memory filtering on the data returned from the query
 		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
 			RegexOptions.Compiled
 			);
-		protected QueryOperator defaultOperator;
+	    protected QueryOperator defaultOperator;
 		protected bool isDistinct;
 	    protected bool allowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
@@ -2244,9 +2244,15 @@ If you really want to do in memory filtering on the data returned from the query
             this.resultsTransformer = transformer;
 	    }
 
+
+        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        {
+            this.queryInputs = queryInputs;
+	}
+
 		public void Distinct()
 		{
 			isDistinct = true;
-		}
+}
 	}
 }

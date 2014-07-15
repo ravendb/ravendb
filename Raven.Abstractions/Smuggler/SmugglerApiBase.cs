@@ -321,7 +321,7 @@ namespace Raven.Abstractions.Smuggler
 			                {
 			                    hasDocs = true;
 			                    var document = documents.Current;
-                                
+
 			                    var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
 				                Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
@@ -22,10 +23,19 @@ namespace Raven.Database.Indexing
 			set { current = value; }
 		}
 
-		public CurrentIndexingScope(DocumentDatabase database,string index)
+		public CurrentIndexingScope(DocumentDatabase database, string index)
 		{
-			this.database = database;
-			this.index = index;
+		    this.database = database;
+		    this.index = index;
+		}
+
+        public IDictionary<string, HashSet<string>> ReferencedDocuments
+		{
+			get { return referencedDocuments; }
+		}
+		public IDictionary<string, Etag> ReferencesEtags
+		{
+			get { return referencesEtags; }
 		}
 
 		public dynamic Source { get; set; }
@@ -39,7 +49,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-		private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>(); 
+		private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>();
 		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
 
 		public dynamic LoadDocument(string key)
@@ -73,12 +83,12 @@ namespace Raven.Database.Indexing
 			var doc = database.Documents.Get(key, null);
 
 			if (doc == null)
-			{
-				log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
+            {
+			    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
 
 				ReferencesEtags.Add(key, Etag.Empty);
 				value = new DynamicNullObject();
-			}
+            }
 			else
 			{
 				log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());

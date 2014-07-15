@@ -112,10 +112,10 @@ namespace Raven.Abstractions.Extensions
 			"X-Forwarded-For",
 			"X-Original-URL",
 
-            // Azure specific
-            "X-LiveUpgrade",
-            "DISGUISED-HOST",
-            "X-SITE-DEPLOYMENT-ID",
+			// Azure specific
+			"X-LiveUpgrade",
+			"DISGUISED-HOST",
+			"X-SITE-DEPLOYMENT-ID",
 		};
 
 		private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>

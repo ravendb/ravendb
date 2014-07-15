@@ -48,11 +48,13 @@ namespace Raven.Database.Indexing
 			{
 				if (singleStepReduceKeys.Length > 0)
 				{
+					Log.Debug("SingleStep reduce for keys: {0}",singleStepReduceKeys.Select(x => x + ","));
 					SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete);
 				}
 
 				if (multiStepsReduceKeys.Length > 0)
 				{
+					Log.Debug("MultiStep reduce for keys: {0}", singleStepReduceKeys.Select(x => x + ","));
 					MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
 				}
 			}
@@ -86,7 +88,7 @@ namespace Raven.Database.Indexing
 	        context.MetricsCounters.StaleIndexReduces.Update(staleCount);
 	    }
 
-	    private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
+		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();
 			transactionalStorage.Batch(actions =>
@@ -124,6 +126,9 @@ namespace Raven.Database.Indexing
 				bool retry = true;
 				while (retry && reduceParams.ReduceKeys.Count > 0)
 				{
+					var reduceBatchAutoThrottlerId = Guid.NewGuid();
+					try
+					{
 					transactionalStorage.Batch(actions =>
 					{
 						context.CancellationToken.ThrowIfCancellationRequested();
@@ -140,6 +145,7 @@ namespace Raven.Database.Indexing
 
 						var count = persistedResults.Count;
 						var size = persistedResults.Sum(x => x.Size);
+							autoTuner.CurrentlyUsedBatchSizes.GetOrAdd(reduceBatchAutoThrottlerId, size);
 
 						if (Log.IsDebugEnabled)
 						{
@@ -182,7 +188,7 @@ namespace Raven.Database.Indexing
 							.ToArray();
 						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
 															 StringComparer.InvariantCultureIgnoreCase);
-                    
+
                         context.MetricsCounters.ReducedPerSecond.Mark(results.Length);
 
 						context.CancellationToken.ThrowIfCancellationRequested();
@@ -196,6 +202,12 @@ namespace Raven.Database.Indexing
 
 						autoTuner.AutoThrottleBatchSize(count, size, batchDuration);
 					});
+				}
+					finally
+					{
+						long _;
+						autoTuner.CurrentlyUsedBatchSizes.TryRemove(reduceBatchAutoThrottlerId, out _);
+			}
 				}
 			}
 
@@ -218,6 +230,9 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var size = 0;
 			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
+			var reducingBatchThrottlerId = Guid.NewGuid();
+			try
+			{
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 			{
 				var localNeedToMoveToSingleStep = new HashSet<string>();
@@ -227,6 +242,7 @@ namespace Raven.Database.Indexing
 				{
 					localKeys.Add(enumerator.Current);
 				}
+
 				transactionalStorage.Batch(actions =>
 				{
 					var getItemsToReduceParams = new GetItemsToReduceParams(index: index.IndexId, reduceKeys: localKeys, level: 0,
@@ -235,8 +251,10 @@ namespace Raven.Database.Indexing
 					{
 						Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
 					};
-					var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
 
+					
+						var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
+						autoTuner.CurrentlyUsedBatchSizes.GetOrAdd(reducingBatchThrottlerId, scheduledItems.Sum(x => x.Size));
 					if (scheduledItems.Count == 0)
 					{
 						if (Log.IsWarnEnabled)
@@ -303,7 +321,7 @@ namespace Raven.Database.Indexing
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
-         
+
             context.MetricsCounters.ReducedPerSecond.Mark(results.Length);
 
 			context.TransactionalStorage.Batch(actions =>
@@ -324,6 +342,12 @@ namespace Raven.Database.Indexing
 				string localReduceKey = reduceKey;
 				transactionalStorage.Batch(actions =>
 					actions.MapReduce.UpdatePerformedReduceType(index.IndexId, localReduceKey, ReduceType.SingleStep));
+			}
+		}
+			finally
+			{
+				long _;
+				autoTuner.CurrentlyUsedBatchSizes.TryRemove(reducingBatchThrottlerId, out _);
 			}
 		}
 

@@ -22,6 +22,8 @@ namespace Raven.Database.Util
 			dic = new ConcurrentDictionary<T, object>(equalityComparer);
 		}
 
+	    public int Count { get { return queue.Count; }}
+
 		public bool Add(T item)
 		{
 			if (dic.TryAdd(item, null) == false)
@@ -55,5 +57,9 @@ namespace Raven.Database.Util
 		{
 			return queue.ToArray();
 		}
+
+	    public TAccumolate Aggregate<TAccumolate>(TAccumolate seed, Func<TAccumolate, T, TAccumolate> aggregate)
+	    {
+	        return queue.Aggregate(seed, aggregate);
 	}
 }

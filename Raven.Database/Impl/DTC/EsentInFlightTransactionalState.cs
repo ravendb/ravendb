@@ -6,12 +6,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Storage.Esent;
 
@@ -21,6 +25,7 @@ namespace Raven.Database.Impl.DTC
 	{
 		private readonly DocumentDatabase _database;
 		private readonly TransactionalStorage storage;
+		private readonly DocumentDatabase docDb;
 		private readonly CommitTransactionGrbit txMode;
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
 			new ConcurrentDictionary<string, EsentTransactionContext>();
@@ -33,6 +38,7 @@ namespace Raven.Database.Impl.DTC
 		{
 			_database = database;
 			this.storage = storage;
+			this.docDb = docDb;
 			this.txMode = txMode;
 			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 		}
@@ -97,6 +103,34 @@ namespace Raven.Database.Impl.DTC
 
 					context.Transaction.Commit(txMode);
 
+					if (context.DocumentIdsToTouch != null)
+					{
+						using (docDb.DocumentLock.Lock())
+						{
+							using (storage.DisableBatchNesting())
+							{
+								storage.Batch(accessor =>
+								{
+									foreach (var docId in context.DocumentIdsToTouch)
+									{
+										docDb.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
+										try
+										{
+											Etag preTouchEtag;
+											Etag afterTouchEtag;
+											accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+										}
+										catch (ConcurrencyException)
+										{
+                                            log.Info("Concurrency exception when touching {0}", docId);
+               
+										}
+									}
+								});
+							}
+						}
+					}
+					
 					foreach (var afterCommit in context.ActionsAfterCommit)
 					{
 						afterCommit();
@@ -105,7 +139,7 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-		public override void Prepare(string id)
+		public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
 			EsentTransactionContext context;
 			if (transactionContexts.TryGetValue(id, out context) == false)
@@ -124,15 +158,39 @@ namespace Raven.Database.Impl.DTC
 
 			try
 			{
+			    List<DocumentInTransactionData> changes = null;
 				using (storage.SetTransactionContext(context))
 				{
 					storage.Batch(accessor =>
 					{
-						var documentIdsToTouch = RunOperationsInTransaction(id);
-						context.DocumentIdsToTouch = documentIdsToTouch;
+					    var documentsToTouch = RunOperationsInTransaction(id, out changes);
+					    context.DocumentIdsToTouch = documentsToTouch;
 					});
-					
 				}
+
+			    if (changes == null) 
+                    return;
+
+			    // independent storage transaction, will actually commit here
+			    storage.Batch(accessor =>
+			    {
+			        var data = new RavenJObject
+			        {
+			            {"Changes", RavenJToken.FromObject(changes, new JsonSerializer
+			            {
+			                Converters =
+			                {
+			                    new JsonToJsonConverter(),
+                                new EtagJsonConverter()
+			}
+			            })
+			            },
+			            {"ResourceManagerId", resourceManagerId.ToString()},
+			            {"RecoveryInformation", recoveryInformation}
+			        };
+			        accessor.Lists.Set("Raven/Transactions/Pending", id, data,
+			            UuidType.DocumentTransactions);
+			    });
 			}
 			catch (Exception)
 			{
@@ -149,7 +207,19 @@ namespace Raven.Database.Impl.DTC
 			if (transactionContexts.TryRemove(id, out context) == false)
 				return;
 
+			var lockTaken = false;
+			Monitor.Enter(context, ref lockTaken);
+			try
+			{
+                storage.Batch(accessor => accessor.Lists.Remove("Raven/Transactions/Pending", id));
+
 			context.Dispose();
+		}
+			finally
+			{
+				if (lockTaken)
+					Monitor.Exit(context);
+			}
 		}
 
 		public void Dispose()

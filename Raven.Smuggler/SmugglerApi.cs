@@ -61,13 +61,13 @@ namespace Raven.Smuggler
 
 
 	    protected override void PurgeTombstones(ExportDataResult result)
-	    {
+		{
 	        throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
-	    }
+		}
 
 	    protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
 	                                            LastEtagsInfo maxEtagsToFetch)
-	    {
+		{
 	        throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
 	    }
 
@@ -83,7 +83,7 @@ namespace Raven.Smuggler
 	    }
 
 	    protected override Task DeleteDocument(string documentId)
-	    {
+			{
 	        return Commands.DeleteDocumentAsync(documentId);
         }
 
@@ -116,7 +116,7 @@ namespace Raven.Smuggler
 				}
 				finally
 				{
-					 disposeTask = operation.DisposeAsync();
+					disposeTask = operation.DisposeAsync();
 				}
 
 				if (disposeTask != null)
@@ -140,15 +140,15 @@ namespace Raven.Smuggler
                 return;
 
 
-		    var metadata = document.Value<RavenJObject>("@metadata");
-		    var id = metadata.Value<string>("@id");
+				var metadata = document.Value<RavenJObject>("@metadata");
+				var id = metadata.Value<string>("@id");
 		    if(String.IsNullOrWhiteSpace(id))
 		        throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
 
-		    document.Remove("@metadata");
+				document.Remove("@metadata");
 
 		    operation.Store(document, metadata, id, size);
-		}
+			}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)
 		{
@@ -200,7 +200,7 @@ namespace Raven.Smuggler
 		}
 
         protected DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
-        {
+		{
 	        var credentials = connectionStringOptions.Credentials as NetworkCredential;
 	        if (credentials != null && //precaution
 				(String.IsNullOrWhiteSpace(credentials.UserName) || 
@@ -209,35 +209,35 @@ namespace Raven.Smuggler
 		        credentials = CredentialCache.DefaultNetworkCredentials;
 	        }
 		
-            var s = new DocumentStore
-            {
+			var s = new DocumentStore
+			{
                 Url = connectionStringOptions.Url,
                 ApiKey = connectionStringOptions.ApiKey,
 				Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials
-            };
+			};
 
-            s.Initialize();
+			s.Initialize();
 
             ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
 
             s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
 
-            return s;
-        }
+		    return s;
+		}
 
         protected override JsonDocument GetDocument(string key)
-        {
+	    {
             return store.DatabaseCommands.Get(key);
-        }
+	        }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
-		{
+	        {
 			if (IsDocsStreamingSupported)
 			{
 				ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
 				return await Commands.StreamDocsAsync(lastEtag, pageSize: take);
 			}
-
+			
 			int retries = RetriesCount;
 			while (true)
 			{
@@ -318,7 +318,7 @@ namespace Raven.Smuggler
 			            totalCount++;
                         lastEtag = Etag.Parse(item.Value<string>("Etag"));
 			        }
-
+			        
 			    }
 			    catch (Exception e)
 			    {
@@ -403,8 +403,8 @@ namespace Raven.Smuggler
 		{
 			try
 			{
-				Console.WriteLine(format, args);
-			}
+			Console.WriteLine(format, args);
+		}
 			catch (FormatException e)
 			{
 				throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
@@ -455,7 +455,7 @@ namespace Raven.Smuggler
                                    : s.DatabaseCommands;
 
                 commands.GetStatistics(); // check if database exist
-            }
+		}
             catch (Exception e)
             {
                 shouldDispose = true;
@@ -475,9 +475,8 @@ namespace Raven.Smuggler
                     if (webException != null)
                     {
                         throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
-                    }
-                }
-
+	}
+}
                 throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
             }
             finally
