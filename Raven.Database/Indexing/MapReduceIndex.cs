@@ -426,19 +426,18 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-				if (doc is IDynamicJsonObject)
-				{
-						fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject) doc).Inner, Field.Store.NO);
+					if (doc is IDynamicJsonObject)
+					{
+						fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.NO);
+					}
+					else
+					{
+						properties = properties ?? TypeDescriptor.GetProperties(doc);
+						fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
+					}
 				}
-				else
+				catch (InvalidShapeException)
 				{
-					properties = properties ?? TypeDescriptor.GetProperties(doc);
-					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
-				}
-				}
-				catch (InvalidShapeException e)
-				{
-					
 				}
 
 				if (Math.Abs(boost - 1) > float.Epsilon)
