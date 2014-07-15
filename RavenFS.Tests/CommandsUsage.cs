@@ -303,10 +303,10 @@ namespace RavenFS.Tests
 			// note that file upload modifies ETag twice
             await client.UploadAsync("test.bin", content, new RavenJObject());
             var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-            var etag0 = resultFileMetadata.Value<Guid>("ETag");
+            var etag0 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
             await client.UploadAsync("test.bin", content, new RavenJObject());
             resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-			var etag1 = resultFileMetadata.Value<Guid>("ETag");
+            var etag1 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
 			
 			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000002").ToByteArray(), etag0.ToByteArray()), 0);
 			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000004").ToByteArray(), etag1.ToByteArray()), 0);
@@ -636,6 +636,21 @@ namespace RavenFS.Tests
             Assert.Equal(".txt", fileMetadata[1].Extension);
             Assert.Equal("", fileMetadata[0].Path);
             Assert.Equal("\\a\\b", fileMetadata[1].Path);
+        }
+
+        [Fact]
+        public async Task Can_call_different_filesystem_from_client()
+        {
+            var client = NewAsyncClient(1);
+            var client2 = NewAsyncClient(2);
+
+            await client.UploadAsync("1.txt", new RandomStream(128));
+
+            await client2.UploadAsync("2.txt", new RandomStream(128));
+
+            //client.ForFileSystem(client2.)
+
+
         }
 
 

@@ -14,6 +14,7 @@ using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -81,7 +82,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                 new DataInfo
 					                                            {
 						                                            Name = filename,
-						                                            CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>("Last-Modified"))
+                                                                    CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>(Constants.LastModified))
 								                                                       .ToUniversalTime()
 					                                            });
 				signatureManifest.FileLength = fileLength ?? 0;
