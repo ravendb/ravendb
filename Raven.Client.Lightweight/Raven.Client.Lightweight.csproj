@@ -39,9 +39,10 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>

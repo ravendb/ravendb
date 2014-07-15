@@ -67,6 +67,8 @@
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
+    <Compile Include="Impl\Journal\TransactionToShip.cs" />
     <Compile Include="Impl\MemoryMapNativeMethods.cs" />
     <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="PrefixComparisonCache.cs" />

@@ -872,6 +872,13 @@ interface mergeResult {
   Metadata: string;
 }
 
+interface visualizerExportDto {
+    indexName: string;
+    docKeys: string[];
+    reduceKeys: string[];
+    tree: visualizerDataObjectNodeDto;
+}
+
 interface operationIdDto {
     OperationId: number;
 }
