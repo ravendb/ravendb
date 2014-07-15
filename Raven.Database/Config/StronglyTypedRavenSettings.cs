@@ -16,8 +16,11 @@ namespace Raven.Database.Config
 	{
 		private readonly NameValueCollection settings;
 
+		public ReplicationConfiguration Replication { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
+			Replication = new ReplicationConfiguration();
 			this.settings = settings;
 		}
 
@@ -169,6 +172,8 @@ namespace Raven.Database.Config
 			MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
             VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
+
+			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 		}
 
 		private string GetDefaultWebDir()
@@ -319,5 +324,10 @@ namespace Raven.Database.Config
 		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
         public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
 		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
+
+		public class ReplicationConfiguration
+		{
+			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
+		}
 	}
 }
