@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
-using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -18,8 +17,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (EmbeddableDocumentStore store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
+				EnsureDtcIsSupported(store);
+
 				PutResult putResult = store.DocumentDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), null);
 
 				var transactionInformation = new TransactionInformation
