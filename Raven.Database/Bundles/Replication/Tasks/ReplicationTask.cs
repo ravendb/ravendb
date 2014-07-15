@@ -742,6 +742,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
+			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
+			var duration = Stopwatch.StartNew();
 			var result = new JsonDocumentsToReplicate();
 			try
 			{
@@ -752,7 +754,7 @@ namespace Raven.Bundles.Replication.Tasks
 				    var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
 					int docsSinceLastReplEtag = 0;
-					List<JsonDocument> docsToReplicate = null;
+					List<JsonDocument> docsToReplicate;
 					List<JsonDocument> filteredDocsToReplicate;
 					result.LastEtag = lastEtag;
 
@@ -804,6 +806,9 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 
 						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", result.LastEtag);
+
+						if (duration.Elapsed > timeout)
+							break;
 					}
 
 					log.Debug(() =>
@@ -843,7 +848,7 @@ namespace Raven.Bundles.Replication.Tasks
 														.Select(x =>
 														{
 															DocumentRetriever.EnsureIdInMetadata(x);
-							EnsureReplicationInformationInMetadata(x.Metadata, docDb);
+															EnsureReplicationInformationInMetadata(x.Metadata, docDb);
 															return x;
 														})
 														.Select(x => x.ToJson()));
@@ -882,6 +887,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
+			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
+			var duration = Stopwatch.StartNew();
+
 			RavenJArray attachments = null;
 			Etag lastAttachmentEtag = Etag.Empty;
 			try
@@ -913,6 +921,9 @@ namespace Raven.Bundles.Replication.Tasks
 						Etag attachmentEtag = jsonDocument.Etag;
 						log.Debug("All the attachments were filtered, trying another batch from etag [>{0}]", attachmentEtag);
 						lastAttachmentEtag = attachmentEtag;
+
+						if (duration.Elapsed > timeout)
+							break;
 					}
 
 					log.Debug(() =>
@@ -953,7 +964,7 @@ namespace Raven.Bundles.Replication.Tasks
 															  data = actions.Attachments.GetAttachment(x.Key).Data().ReadData();
 														  }
 
-							ReplicationTask.EnsureReplicationInformationInMetadata(x.Metadata, docDb);
+														  EnsureReplicationInformationInMetadata(x.Metadata, docDb);
 
 														  return new RavenJObject
 							                                           {

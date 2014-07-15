@@ -44,9 +44,12 @@ namespace Raven.Database.Config
 		private string pluginsDirectory;
 		private string fileSystemDataDirectory;
 
+		public ReplicationConfiguration Replication { get; private set; }
 
 		public InMemoryRavenConfiguration()
 		{
+			Replication = new ReplicationConfiguration();
+
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = true;
@@ -259,6 +262,8 @@ namespace Raven.Database.Config
 
 		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
 			VoronInitialFileSize = ravenSettings.VoronInitialFileSize.Value;
+
+			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
 
 			PostInit();
 		}
@@ -1138,6 +1143,14 @@ namespace Raven.Database.Config
 		public IEnumerable<string> GetConfigOptionsDocs()
 		{
 			return ConfigOptionDocs.OptionsDocs;
+		}
+
+		public class ReplicationConfiguration
+		{
+			/// <summary>
+			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
+			/// </summary>
+			public int FetchingFromDiskTimeoutInSeconds { get; set; }
 		}
 	}
 }
