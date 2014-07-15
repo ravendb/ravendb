@@ -141,11 +141,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public QueryOperator DefaultOperator { get; set; }
 
-        /// <summary>
+		/// <summary>
         /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
         /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
         /// called just once for each document in the result set
-        /// </summary>
+		/// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
 		/// <summary>
@@ -179,12 +179,12 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string ResultsTransformer { get; set; }
 
-        /// <summary>
+		/// <summary>
 		/// Whatever we should disable caching of query results
 		/// </summary>
 		public bool DisableCaching { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Allow to skip duplicate checking during queries
 		/// </summary>
 		public bool SkipDuplicateChecking { get; set; }
@@ -244,7 +244,7 @@ namespace Raven.Abstractions.Data
 
 			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
 				path.Append("&pageSize=").Append(PageSize);
-
+			
 
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                 path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
@@ -349,10 +349,10 @@ namespace Raven.Abstractions.Data
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) && 
-                   Cutoff.Equals(other.Cutoff) &&
+                   Cutoff.Equals(other.Cutoff) && 
 				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
 				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-				   Equals(CutoffEtag, other.CutoffEtag) && 
+                   Equals(CutoffEtag, other.CutoffEtag) && 
                    String.Equals(DefaultField, other.DefaultField) && 
                    DefaultOperator == other.DefaultOperator && 
                    Equals(SkippedResults, other.SkippedResults) && 
@@ -360,7 +360,7 @@ namespace Raven.Abstractions.Data
                    Equals(HighlightedFields, other.HighlightedFields) && 
                    Equals(HighlighterPreTags, other.HighlighterPreTags) && 
                    Equals(HighlighterPostTags, other.HighlighterPostTags) && 
-                   String.Equals(ResultsTransformer, other.ResultsTransformer) &&
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
 				   ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching);
         }

@@ -162,7 +162,7 @@ namespace Raven.Database.Actions
 
                             if (storedTransformer != null)
                             {
-                                using (new CurrentTransformationScope(documentRetriever))
+                                using (new CurrentTransformationScope(Database, documentRetriever))
                                 {
                                     var transformed =
                                         storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
@@ -465,7 +465,7 @@ namespace Raven.Database.Actions
             actions =>
             {
                 docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
-                using (new CurrentTransformationScope(docRetriever))
+                using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
                     if (document == null)

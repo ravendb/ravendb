@@ -58,6 +58,7 @@ namespace Raven.Database.Data
 					return new ScriptedPatchCommandData
 					{
 						Key = key,
+						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						Etag = GetEtagFromCommand(jsonCommand),
 						TransactionInformation = transactionInformation,
 						Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),

@@ -21,8 +21,16 @@ namespace Raven.Abstractions.MEF
 		
 		public IEnumerator<Lazy<T, IPartMetadata>> GetEnumerator()
 		{
-			if (disableApplication != null && disableApplication.Value)
+			try
+			{
+				if (disableApplication != null && disableApplication.Value)
+					return Enumerable.Empty<Lazy<T, IPartMetadata>>().GetEnumerator();
+			}
+			catch (ObjectDisposedException) // The database was disposed while we got here
+			{
 				return Enumerable.Empty<Lazy<T, IPartMetadata>>().GetEnumerator();
+			}
+
 			return inner.GetEnumerator();
 		}
 

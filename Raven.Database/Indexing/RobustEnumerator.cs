@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -28,40 +29,40 @@ namespace Raven.Database.Indexing
 		}
 
 
-        public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, IndexingFunc func)
-        {
+		public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, IndexingFunc func)
+		{
             using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input))
-            {
-                IEnumerator<dynamic> en;
-                using (en = func(wrapped).GetEnumerator())
-                {
-                    int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
-                    do
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var moveSuccessful = MoveNext(en, wrapped);
-                        if (moveSuccessful == false)
-                            break;
-                        if (moveSuccessful == true)
-                        {
-                            maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
+		{
+					IEnumerator<dynamic> en;
+					using (en = func(wrapped).GetEnumerator())
+					{
+						int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
+						do
+						{
+							cancellationToken.ThrowIfCancellationRequested();
+							var moveSuccessful = MoveNext(en, wrapped);
+							if (moveSuccessful == false)
+								break;
+							if (moveSuccessful == true)
+							{
+								maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
 
-                            yield return en.Current;
-                        }
-                        else
-                        {
-                            // we explicitly do not dispose the enumerator, since that would not allow us 
-                            // to continue on with the next item in the list.
-                            // Not actually a problem, because we are iterating only over in memory data
-                            // en.Dispose();
+								yield return en.Current;
+							}
+							else
+							{
+								// we explicitly do not dispose the enumerator, since that would not allow us 
+								// to continue on with the next item in the list.
+								// Not actually a problem, because we are iterating only over in memory data
+								// en.Dispose();
 
-                            en = func(wrapped).GetEnumerator();
-                            maxNumberOfConsecutiveErrors--;
-                        }
-                    } while (maxNumberOfConsecutiveErrors > 0);
-                }
-            }
-        }
+								en = func(wrapped).GetEnumerator();
+								maxNumberOfConsecutiveErrors--;
+							}
+						} while (maxNumberOfConsecutiveErrors > 0);
+					}
+				}
+			}
 
         public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, List<IndexingFunc> funcs)
         {
@@ -69,8 +70,8 @@ namespace Raven.Database.Indexing
             {
                 foreach (var item in RobustEnumeration(input, funcs[0]))
                 {
-                    yield return item;
-                }
+                    yield return item;                    
+		}
                 yield break;
             }
             var onlyIterateOverEnumableOnce = new List<object>();
