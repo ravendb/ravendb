@@ -2183,19 +2183,29 @@ namespace Raven.Client.Connection.Async
 			return httpJsonRequest.ReadResponseJsonAsync();
 		}
 
-		public Task PrepareTransactionAsync(string txId)
+		public Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
 		{
-			return ExecuteWithReplication("POST", operationMetadata => DirectPrepareTransaction(txId, operationMetadata));
+			return ExecuteWithReplication("POST", operationMetadata => DirectPrepareTransaction(txId, operationMetadata, resourceManagerId, recoveryInformation));
 		}
 
-		private Task DirectPrepareTransaction(string txId, OperationMetadata operationMetadata)
+		private async Task DirectPrepareTransaction(string txId, OperationMetadata operationMetadata, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
+			var opUrl = operationMetadata.Url + "/transaction/prepare?tx=" + txId;
+			if (resourceManagerId != null)
+				opUrl += "&resourceManagerId=" + resourceManagerId;
+
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST", operationMetadata.Credentials, convention)
+					new CreateHttpJsonRequestParams(this, opUrl, "POST", operationMetadata.Credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))
 							.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return httpJsonRequest.ReadResponseJsonAsync();
+			if (recoveryInformation != null)
+			{
+				var ms = new MemoryStream(recoveryInformation);
+				await httpJsonRequest.WriteAsync(ms);
+			}
+
+			await httpJsonRequest.ReadResponseJsonAsync();
 		}
 
 		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)

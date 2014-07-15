@@ -438,7 +438,7 @@ namespace Raven.Client.Connection.Async
 		/// Prepares the transaction on the server.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		Task PrepareTransactionAsync(string txId);
+		Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
 		/// <summary>
 		/// Perform a set based update using the specified index.
