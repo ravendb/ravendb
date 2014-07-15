@@ -35,7 +35,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
 			if (conflict != null)
-				return ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.FileSystemUrl, log);
+                return ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
 
             return destination.UpdateMetadataAsync(FileName, FileMetadata, ServerInfo);
 		}

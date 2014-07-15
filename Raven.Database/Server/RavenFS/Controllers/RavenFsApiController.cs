@@ -32,6 +32,7 @@ using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System.Collections.Generic;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -446,7 +447,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             "Content-Type",
             "Expires",
 			// ignoring this header, we handle this internally
-			"Last-Modified",
+			Constants.LastModified,
 			// Ignoring this header, since it may
 			// very well change due to things like encoding,
 			// adding metadata, etc
@@ -480,7 +481,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			"Accept-Ranges",
 			"Age",
 			"Allow",
-			"ETag",
+			Constants.MetadataEtagField,
 			"Location",
 			"Origin",
 			"Retry-After",
@@ -506,7 +507,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             "X-SITE-DEPLOYMENT-ID",
 		};
 
-        protected static readonly IList<string> ReadOnlyHeaders = new List<string> { "Last-Modified", "ETag" }.AsReadOnly();
+        protected static readonly IList<string> ReadOnlyHeaders = new List<string> { Constants.LastModified, Constants.MetadataEtagField }.AsReadOnly();
 
         protected virtual RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
         {            

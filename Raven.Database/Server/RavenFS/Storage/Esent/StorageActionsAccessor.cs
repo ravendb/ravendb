@@ -25,6 +25,7 @@ using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
@@ -176,12 +177,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"], BitConverter.GetBytes(0));
 
-                if (!metadata.ContainsKey("ETag"))
+                if (!metadata.ContainsKey(Constants.MetadataEtagField))
                     throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
                 var innerEsentMetadata = new RavenJObject(metadata);
-                var etag = innerEsentMetadata.Value<Guid>("ETag");
-                innerEsentMetadata.Remove("ETag");
+                var etag = innerEsentMetadata.Value<Guid>(Constants.MetadataEtagField);
+                innerEsentMetadata.Remove(Constants.MetadataEtagField);
 
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], etag.TransformToValueForEsentSorting());
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], ToQueryString(innerEsentMetadata), Encoding.Unicode);
@@ -370,7 +371,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             var metadataAsString = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
 
             var metadata = RavenJObject.Parse(metadataAsString);
-            metadata["ETag"] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
+            metadata[Constants.MetadataEtagField] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
             
             return metadata;
         }
@@ -454,23 +455,23 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
             using (var update = new Update(session, Files, JET_prep.Replace))
             {
-                if (!metadata.ContainsKey("ETag"))
+                if (!metadata.ContainsKey(Constants.MetadataEtagField))
                 {
                     throw new InvalidOperationException("Metadata of file {0} does not contain 'ETag' key " + filename);
                 }
 
                 var innerEsentMetadata = new RavenJObject(metadata);
-                var etag = innerEsentMetadata.Value<Guid>("ETag");
-                innerEsentMetadata.Remove("ETag");
+                var etag = innerEsentMetadata.Value<Guid>(Constants.MetadataEtagField);
+                innerEsentMetadata.Remove(Constants.MetadataEtagField);
 
                 var existingMetadata = RetrieveMetadata();
 
-                if (existingMetadata.ContainsKey("Content-MD5"))
+                if (!innerEsentMetadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
                 {
                     innerEsentMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
                 }
 
-                if (existingMetadata.ContainsKey("RavenFS-Size"))
+                if (!innerEsentMetadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
                 {
                     innerEsentMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
                 }

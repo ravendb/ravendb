@@ -122,7 +122,7 @@ namespace Raven.Client.FileSystem
         
         Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25);
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
-        Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, IEnumerable<HistoryItem> remoteHistory, string remoteServerUrl);
+        Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
 
         Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Guid>> sentFiles);
 

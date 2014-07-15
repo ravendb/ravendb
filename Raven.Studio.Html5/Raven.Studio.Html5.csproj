@@ -183,6 +183,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\disableDatabaseToggleConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\editSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFolderInFilesystem.ts" />
@@ -353,6 +354,7 @@
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\disableDatabaseToggleConfirm.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />

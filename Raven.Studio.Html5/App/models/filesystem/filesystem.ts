@@ -9,6 +9,14 @@ class filesystem extends resource {
         super(name, 'filesystem');
         this.disabled(isDisabled);
         this.itemCount = ko.computed(() => this.statistics() ? this.statistics().FileCount : 0);
+        this.itemCountText = ko.computed(() => {
+            var itemCount = this.itemCount();
+            var text = itemCount + ' file';
+            if (itemCount != 1) {
+                text = text + 's';
+            }
+            return text;
+        });
     }
 
     activate() {
