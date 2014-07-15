@@ -108,8 +108,8 @@ body {
 #editSQLReplication .edit-sql-replication-actions {
   padding-top: 0.5%;
 }
-#editSQLReplication .advanced {
-  padding-left: 0;
+#editSQLReplication .advanced-toggle .active {
+  background-color: #E3F8BE;
 }
 #editSQLReplication .checkbox {
   align-content: flex-start;
@@ -469,6 +469,10 @@ body {
 .settings-container {
   margin-top: 10px;
 }
+.settings-container .panel-body {
+  overflow-y: auto;
+  max-height: 70vh;
+}
 .settings-container .api-key-card,
 .settings-container .win-auth-card {
   display: inline-block;
@@ -513,6 +517,18 @@ body {
 }
 .settings-container .sql-replication-script-container .editor {
   height: 100px;
+}
+.settings-container .sql-replication-connection-card {
+  display: inline-table;
+  width: 40%;
+  margin-right: 20px;
+}
+@media (max-device-height: 1024px) {
+  .settings-container .sql-replication-connection-card {
+    display: inline-table;
+    width: 100%;
+    margin-right: 20px;
+  }
 }
 .collection-style-0 {
   background-color: #00c700;

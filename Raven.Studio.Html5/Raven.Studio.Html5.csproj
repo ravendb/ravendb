@@ -121,6 +121,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\testSqlConnectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\toggleDatabaseDisabledCommand.ts" />
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
@@ -160,10 +161,12 @@
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
     <TypeScriptCompile Include="App\models\luceneField.ts" />
+    <TypeScriptCompile Include="App\models\predefinedSqlConnection.ts" />
     <TypeScriptCompile Include="App\models\querySort.ts" />
     <TypeScriptCompile Include="App\models\resource.ts" />
     <TypeScriptCompile Include="App\models\counter\counterServerValue.ts" />
     <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
+    <TypeScriptCompile Include="App\models\sqlReplicationConnections.ts" />
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\models\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
@@ -244,6 +247,7 @@
     </TypeScriptCompile>
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationSimulationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
     <TypeScriptCompile Include="App\viewmodels\toggleIndexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
@@ -355,6 +359,7 @@
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
     <Content Include="App\views\sqlReplicationSimulationDialog.html" />
+    <Content Include="App\views\sqlReplicationConnectionStringsManagement.html" />
     <Content Include="App\views\visualizer.html" />
     <Content Include="App\views\metricsPrefetches.html" />
     <Content Include="App\views\metricsRequests.html" />
