@@ -448,10 +448,14 @@ class editIndex extends viewModelBase {
     }
 
     private scriptedIndexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        var completions = ["LoadDocument", "PutDocument", "DeleteDocument"];
+      var completions = [ 
+        { name: "LoadDocument", args: "id" },
+        { name: "PutDocument", args: "id, doc" },
+        { name: "DeleteDocument", args: "id" }
+      ];
         var result = completions
-            .filter(value => autoCompleterSupport.wordMatches(prefix, value))
-            .map(value => { return { name: value, value: value, score: 100, meta: "suggestion" } });
+            .filter(entry => autoCompleterSupport.wordMatches(prefix, entry.name))
+            .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
 
         callback(null, result);
     }
