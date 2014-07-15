@@ -15,7 +15,7 @@ namespace Raven.Database.Prefetching
 	public class Prefetcher
 	{
 		private readonly WorkContext workContext;
-		private List<PrefetchingBehavior> prefetchingBehaviors = new List<PrefetchingBehavior>();
+		private IDictionary<PrefetchingUser, PrefetchingBehavior> prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>();
 
 		public Prefetcher(WorkContext workContext)
 		{
@@ -24,16 +24,21 @@ namespace Raven.Database.Prefetching
 
 		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
 		{
+			PrefetchingBehavior value;
+			if (prefetchingBehaviors.TryGetValue(user, out value))
+				return value;
 			lock (this)
 			{
-				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext));
+				if (prefetchingBehaviors.TryGetValue(user, out value))
+					return value;
 
-				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
+				value = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user));
+
+				prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>(prefetchingBehaviors)
 				{
-					newPrefetcher
+					{user, value}
 				};
-
-				return newPrefetcher;
+				return value;
 			}
 		}
 
@@ -41,7 +46,7 @@ namespace Raven.Database.Prefetching
 		{
 			foreach (var behavior in prefetchingBehaviors)
 			{
-				behavior.AfterDelete(key, deletedEtag);
+				behavior.Value.AfterDelete(key, deletedEtag);
 			}
 		}
 
@@ -49,23 +54,24 @@ namespace Raven.Database.Prefetching
 		{
 			foreach (var behavior in prefetchingBehaviors)
 			{
-				behavior.AfterUpdate(key, etagBeforeUpdate);
+				behavior.Value.AfterUpdate(key, etagBeforeUpdate);
 			}
 		}
 
 		public int GetInMemoryIndexingQueueSize(PrefetchingUser user)
 		{
-			var value = prefetchingBehaviors.FirstOrDefault(x => x.PrefetchingUser == user);
-			if (value != null)
+			PrefetchingBehavior value;
+			if (prefetchingBehaviors.TryGetValue(user, out value))
 				return value.InMemoryIndexingQueueSize;
 			return -1;
 		}
 
 		public void AfterStorageCommitBeforeWorkNotifications(PrefetchingUser user, JsonDocument[] documents)
 		{
-			foreach (var prefetcher in prefetchingBehaviors.Where(x => x.PrefetchingUser == user))
-			{
-				prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
+			PrefetchingBehavior value;
+			if (prefetchingBehaviors.TryGetValue(user, out value) == false)
+				return;
+			value.AfterStorageCommitBeforeWorkNotifications(documents);
 		}
 
 		public void Dispose()
@@ -73,6 +79,7 @@ namespace Raven.Database.Prefetching
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
 				prefetchingBehavior.Value.Dispose();
+			}
+		}
 	}
-}	}
 }

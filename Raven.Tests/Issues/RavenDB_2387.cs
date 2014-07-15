@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
 					Id = "tx",
 					Timeout = TimeSpan.FromDays(1)
 				};
-				store.DocumentDatabase.Put("child/2", null, new RavenJObject {{"Data", "Bar"}}, new RavenJObject(), tx);
+				store.DocumentDatabase.Documents.Put("child/2", null, new RavenJObject {{"Data", "Bar"}}, new RavenJObject(), tx);
 
 				store.DocumentDatabase.PrepareTransaction("tx");
 

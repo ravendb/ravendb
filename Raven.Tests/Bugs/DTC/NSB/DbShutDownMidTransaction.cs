@@ -7,6 +7,8 @@ using System;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.DTC.NSB
@@ -35,7 +37,7 @@ namespace Raven.Tests.Bugs.DTC.NSB
                     Timeout = TimeSpan.FromHours(1)
                 };
 
-                store.DocumentDatabase.Put("test", null, new RavenJObject(), new RavenJObject(), tx);
+                store.DocumentDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), tx);
 
                 store.DocumentDatabase.PrepareTransaction("tx");
             }
@@ -45,7 +47,7 @@ namespace Raven.Tests.Bugs.DTC.NSB
                 store.DocumentDatabase.Commit("tx");
 
 
-                Assert.NotNull(store.DocumentDatabase.Get("test", null));
+				Assert.NotNull(store.DocumentDatabase.Documents.Get("test", null));
             }
         }
     }

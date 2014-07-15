@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Tests;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Newtonsoft.Json

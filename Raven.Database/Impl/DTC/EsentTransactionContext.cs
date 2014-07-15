@@ -15,7 +15,6 @@ namespace Raven.Database.Impl.DTC
 		private readonly IntPtr sessionContext;
 	    public HashSet<string> DocumentIdsToTouch; 
 
-		public HashSet<string> DocumentIdsToTouch; 
 		public EsentTransactionContext(Session session, IntPtr context, DateTime createdAt)
 		{
 			sessionContext = context;

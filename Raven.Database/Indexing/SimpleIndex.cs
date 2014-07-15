@@ -223,7 +223,7 @@ namespace Raven.Database.Indexing
                 {
                     HighestCommitedETag = itemsInfo.HighestETag,
                     TimeStamp = LastIndexTime,
-					SegmentsInfo = segmentsInfo ?? IndexStorage.GetCurrentSegmentsInfo(name, directory)
+					SegmentsInfo = segmentsInfo ?? IndexStorage.GetCurrentSegmentsInfo(indexDefinition.Name, directory)
                 });
 
                 LastCommitPointStoreTime = SystemTime.UtcNow;
@@ -341,13 +341,6 @@ namespace Raven.Database.Indexing
             properties = propertyDescriptorCache.GetOrAdd(type, TypeDescriptor.GetProperties);
             return properties.Find(Constants.DocumentIdFieldName, false).GetValue(doc) as string;
         }
-
-		private string GetDocumentIdByReflection(object doc, out PropertyDescriptorCollection properties)
-		{
-			Type type = doc.GetType();
-			properties = propertyDescriptorCache.GetOrAdd(type, TypeDescriptor.GetProperties);
-			return properties.Find(Constants.DocumentIdFieldName, false).GetValue(doc) as string;
-		}
 
         public override void Remove(string[] keys, WorkContext context)
         {

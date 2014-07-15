@@ -171,8 +171,6 @@ namespace Raven.Database.Config
 			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 		}
 
-		public IntegerSetting MemoryLimitForIndexing { get;private set; }
-
 		private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");

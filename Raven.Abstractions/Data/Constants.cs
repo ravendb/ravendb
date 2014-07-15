@@ -58,12 +58,6 @@ namespace Raven.Abstractions.Data
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 
-		// Server
-		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
-		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
-
-		// Indexing
-		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 		public const string RavenLogsPath = "Raven/Esent/LogsPath";

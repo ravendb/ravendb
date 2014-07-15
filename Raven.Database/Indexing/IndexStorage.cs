@@ -135,7 +135,7 @@ namespace Raven.Database.Indexing
 						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery, GetLastEtagForIndex(simpleIndex));
 					}
 
-					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
+					LoadExistingSuggestionsExtentions(indexDefinition.Name, indexImplementation);
 
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
@@ -458,7 +458,7 @@ namespace Raven.Database.Indexing
 		{
 			documentDatabase.TransactionalStorage.Batch(
 				accessor =>
-				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastIndexedEtag, timestamp));
+				accessor.Indexing.UpdateLastIndexed(indexDefinition.IndexId, lastIndexedEtag, timestamp));
 		}
 
         internal Etag GetLastEtagForIndex(Index index)
@@ -467,7 +467,7 @@ namespace Raven.Database.Indexing
 				return null;
 
             IndexStats stats = null;
-            documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.name));
+            documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.IndexId));
 
 	        return stats != null ? stats.LastIndexedEtag : Etag.Empty;
 		}

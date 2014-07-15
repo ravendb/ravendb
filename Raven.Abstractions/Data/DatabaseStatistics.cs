@@ -18,12 +18,12 @@ namespace Raven.Abstractions.Data
 
 		public long CountOfDocuments { get; set; }
 
-        public long CountOfAttachments { get; set; }
+		public long CountOfAttachments { get; set; }
 
 		public string[] StaleIndexes { get; set; }
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
-		
+
 		public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
 
 		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
@@ -36,31 +36,24 @@ namespace Raven.Abstractions.Data
 
 		public IEnumerable<ExtensionsLog> Extensions { get; set; }
 
-		public ActualIndexingBatchSize[] ActualIndexingBatchSize { get; set; }
-		public FutureBatchStats[] Prefetches { get; set; }
-
-		public Guid DatabaseId { get; set; }
-
-        public bool SupportsDtc { get; set; }
-	}
-
-
-		public class TriggerInfo
-		{
-			public string Type { get; set; }
-			public string Name { get; set; }
-		}
-
 		public IndexingBatchInfo[] IndexingBatchInfo { get; set; }
+
 		public FutureBatchStats[] Prefetches { get; set; }
 
 		public Guid DatabaseId { get; set; }
-	}
+
+		public bool SupportsDtc { get; set; }
 	}
 
-    public class PluginsInfo
-    {
-        public List<ExtensionsLog> Extensions { get; set; }
-        public List<TriggerInfo> Triggers { get; set; } 
-}
+	public class TriggerInfo
+	{
+		public string Type { get; set; }
+		public string Name { get; set; }
+	}
+
+	public class PluginsInfo
+	{
+		public List<ExtensionsLog> Extensions { get; set; }
+		public List<TriggerInfo> Triggers { get; set; }
+	}
 }

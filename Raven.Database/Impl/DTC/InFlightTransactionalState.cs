@@ -6,16 +6,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
-using System.Transactions;
-using Amazon.Route53.Model;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;

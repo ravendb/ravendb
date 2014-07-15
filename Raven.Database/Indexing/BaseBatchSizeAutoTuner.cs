@@ -133,8 +133,9 @@ namespace Raven.Database.Indexing
 
 		public bool IsIndexingUsingTooMuchMemory
 		{
+			get
 			{
-				return CurrentlyUsedBatchSizesInBytes.Values.Sum() * 4 > memoryLimitForIndexingInBytes;
+				return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > memoryLimitForIndexingInBytes;
 			}
 		}
 

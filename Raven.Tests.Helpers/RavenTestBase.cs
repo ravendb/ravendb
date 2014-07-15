@@ -544,15 +544,13 @@ namespace Raven.Tests.Helpers
 
 			using (server)
 			{
-				server.StartListening();
-
 				try
 				{
-                Process.Start(url); // start the server
+					Process.Start(url); // start the server
 				}
 				catch (Win32Exception e)
 				{
-					Console.WriteLine("Failed to open the browser. Please open it manually at {0}. {1}", documentStore.Configuration.ServerUrl, e);
+					Console.WriteLine("Failed to open the browser. Please open it manually at {0}. {1}", url, e);
 				}
 
 				do

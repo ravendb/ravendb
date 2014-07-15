@@ -407,7 +407,7 @@ namespace Raven.Database
                 {
                     CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
                     CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
-                    ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
+					IndexingBatchInfo = workContext.LastActualIndexingBatchInfo.ToArray(),
                     InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
                     Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
                     CountOfIndexes = IndexStorage.Indexes.Length,
@@ -512,57 +512,57 @@ namespace Raven.Database
             }
         }
 
-        public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
-        {
-            using (DocumentLock.Lock())
-            {
+		public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
+		{
+			using (DocumentLock.Lock())
+			{
+				try
+				{
+					inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
+					Log.Debug("Prepare of tx {0} completed", txId);
+				}
+				catch (Exception e)
+				{
+					if (TransactionalStorage.HandleException(e))
+						return;
+					throw;
+				}
+			}
+		}
+
+		public void Commit(string txId)
+		{
+			if (TransactionalStorage.SupportsDtc == false)
+				throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
+
 			try
 			{
-                    inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
-				log.Debug("Prepare of tx {0} completed", txId);
+				using (DocumentLock.Lock())
+				{
+					try
+					{
+						inFlightTransactionalState.Commit(txId);
+						Log.Debug("Commit of tx {0} completed", txId);
+						workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
+					}
+					finally
+					{
+						inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+					}
+				}
 			}
 			catch (Exception e)
 			{
 				if (TransactionalStorage.HandleException(e))
 					return;
+
 				throw;
 			}
+			finally
+			{
+				workContext.HandleWorkNotifications();
+			}
 		}
-        }
-
-        public void Commit(string txId)
-        {
-if (TransactionalStorage.SupportsDtc == false)
-                throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
-
-            try
-            {
-                using (DocumentLock.Lock())
-                {
-                    try
-                    {
-                        inFlightTransactionalState.Commit(txId);
-                        Log.Debug("Commit of tx {0} completed", txId);
-                        workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
-                    }
-                    finally
-                    {
-                        inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-	            if (TransactionalStorage.HandleException(e))
-		            return;
-
-	            throw;
-            }
-            finally
-            {
-	            workContext.HandleWorkNotifications();
-            }
-        }
 
         public DatabaseMetrics CreateMetrics()
         {
@@ -823,30 +823,6 @@ if (TransactionalStorage.SupportsDtc == false)
         public bool HasTransaction(string txId)
             {
             return inFlightTransactionalState.HasTransaction(txId);
-            }
-
-        public void PrepareTransaction(string txId)
-        {
-            if (TransactionalStorage.SupportsDtc == false)
-                throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
-
-	        using (DocumentLock.Lock())
-            {
-		        try
-                {
-			        inFlightTransactionalState.Prepare(txId);
-			        Log.Debug("Prepare of tx {0} completed", txId);
-		        }
-		        catch (Exception e)
-												{
-			        if (TransactionalStorage.HandleException(e))
-													{
-				        return;
-															}
-
-			        throw;
-														}
-                }
             }
 
         public void Rollback(string txId)

@@ -2232,27 +2232,21 @@ If you really want to do in memory filtering on the data returned from the query
 			return propertyName;
 		}
 
-	    public void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(
-	        bool val)
-	    {
-	        this.allowMultipleIndexEntriesForSameDocumentToResultTransformer =
-	            val;
-	    }
+		public void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(
+			bool val)
+		{
+			this.allowMultipleIndexEntriesForSameDocumentToResultTransformer =
+				val;
+		}
 
-        public void SetResultTransformer(string transformer)
-	    {
-            this.resultsTransformer = transformer;
-	    }
-
-
-        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
-        {
-            this.queryInputs = queryInputs;
-	}
+		public void SetResultTransformer(string transformer)
+		{
+			this.resultsTransformer = transformer;
+		}
 
 		public void Distinct()
 		{
 			isDistinct = true;
-}
+		}
 	}
 }

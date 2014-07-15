@@ -1489,7 +1489,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
 		{
 			var q = queryGenerator.Query<T>(indexName, isMapReduce);
-			q.SetQueryInputs(queryInputs);
+			q.SetTransformerParameters(transformerParameters);
 
 			documentQuery = (IAbstractDocumentQuery<T>)q;
 			documentQuery.SetResultTransformer(resultsTransformer);

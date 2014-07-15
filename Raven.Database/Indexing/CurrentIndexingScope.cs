@@ -39,14 +39,6 @@ namespace Raven.Database.Indexing
 		}
 
 		public dynamic Source { get; set; }
-		public IDictionary<string, HashSet<string>> ReferencedDocuments
-		{
-			get { return referencedDocuments; }
-		}
-		public IDictionary<string, Etag> ReferencesEtags
-		{
-			get { return referencesEtags; }
-		}
 
 		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 		private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>();

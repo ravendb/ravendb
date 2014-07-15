@@ -149,13 +149,6 @@ namespace Raven.Abstractions.Data
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
 		/// <summary>
-        /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
-        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
-        /// called just once for each document in the result set
-        /// </summary>
-        public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
-
-		/// <summary>
 		/// Gets or sets the number of skipped results.
 		/// </summary>
 		/// <value>The skipped results.</value>

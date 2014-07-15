@@ -145,7 +145,7 @@ namespace Raven.Database.Indexing
 
 						var count = persistedResults.Count;
 						var size = persistedResults.Sum(x => x.Size);
-							autoTuner.CurrentlyUsedBatchSizes.GetOrAdd(reduceBatchAutoThrottlerId, size);
+							autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reduceBatchAutoThrottlerId, size);
 
 						if (Log.IsDebugEnabled)
 						{
@@ -206,7 +206,7 @@ namespace Raven.Database.Indexing
 					finally
 					{
 						long _;
-						autoTuner.CurrentlyUsedBatchSizes.TryRemove(reduceBatchAutoThrottlerId, out _);
+						autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(reduceBatchAutoThrottlerId, out _);
 			}
 				}
 			}
@@ -254,7 +254,7 @@ namespace Raven.Database.Indexing
 
 					
 						var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
-						autoTuner.CurrentlyUsedBatchSizes.GetOrAdd(reducingBatchThrottlerId, scheduledItems.Sum(x => x.Size));
+						autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reducingBatchThrottlerId, scheduledItems.Sum(x => x.Size));
 					if (scheduledItems.Count == 0)
 					{
 						if (Log.IsWarnEnabled)
@@ -347,7 +347,7 @@ namespace Raven.Database.Indexing
 			finally
 			{
 				long _;
-				autoTuner.CurrentlyUsedBatchSizes.TryRemove(reducingBatchThrottlerId, out _);
+				autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(reducingBatchThrottlerId, out _);
 			}
 		}
 

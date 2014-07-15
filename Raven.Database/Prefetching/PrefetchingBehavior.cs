@@ -221,12 +221,11 @@ namespace Raven.Database.Prefetching
 					.GetDocumentsAfter(
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
-						maxSize: autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: untilEtag,
-                        timeout: autoTuner.FetchingDocumentsFromDiskTimeout)
 						context.CancellationToken,
-                        maxSize,
-			            untilEtag)
+						maxSize,
+						untilEtag,
+						autoTuner.FetchingDocumentsFromDiskTimeout
+					)
 					.Where(x => x != null)
 					.Select(doc =>
 					{
@@ -251,7 +250,7 @@ namespace Raven.Database.Prefetching
 				return;
 			if (past.Count == 0)
 				return;
-		    if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorage)
+		    if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes)
 		        return; // already have too much in memory
             // don't keep _too_ much in memory
 		    if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 2)
@@ -558,11 +557,11 @@ namespace Raven.Database.Prefetching
 		{
 			var batchId = Guid.NewGuid();
 
-			autoTuner.CurrentlyUsedBatchSizes.TryAdd(batchId, jsonDocuments.Sum(x => x.SerializedSizeOnDisk));
+			autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, jsonDocuments.Sum(x => x.SerializedSizeOnDisk));
 			return new DisposableAction(() =>
 			{
 				long _;
-                autoTuner.CurrentlyUsedBatchSizes.TryRemove(batchId, out _);
+                autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(batchId, out _);
 			});
 		}
 
@@ -596,7 +595,7 @@ namespace Raven.Database.Prefetching
 
         public void OutOfMemoryExceptionHappened()
 	    {
-	        autoTuner.OutOfMemoryExceptionHappened();
+	        autoTuner.HandleOutOfMemory();
 	}
 }
 }

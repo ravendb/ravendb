@@ -372,7 +372,7 @@ namespace Raven.Storage.Esent.StorageActions
 						continue;
 					}
 
-					logger.Debug("UpdateDocumentReferences() --> delete {0} -> {1} on index {2}", key, reference, view);
+					logger.Debug("UpdateDocumentReferences() --> delete {0} -> {1} on index {2}", key, reference, id);
 					Api.JetDelete(session, IndexedDocumentsReferences);
 
 				} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
@@ -380,7 +380,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			foreach (var reference in references)
 			{
-			    logger.Debug("Adding reference {0} -> {1} on index {2}", key, reference, view);
+			    logger.Debug("Adding reference {0} -> {1} on index {2}", key, reference, id);
 				using (var update = new Update(session, IndexedDocumentsReferences, JET_prep.Insert))
 				{
 					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["key"], key, Encoding.Unicode);

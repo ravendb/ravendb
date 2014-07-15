@@ -230,7 +230,7 @@ namespace Raven.Database.Actions
 
             public void Execute(Action<RavenJObject> onResult)
             {
-                using (new CurrentTransformationScope(docRetriever))
+                using (new CurrentTransformationScope(database, docRetriever))
                 {
                     foreach (var result in results)
                     {

@@ -25,7 +25,6 @@ namespace Raven.Database.Impl.DTC
 	{
 		private readonly DocumentDatabase _database;
 		private readonly TransactionalStorage storage;
-		private readonly DocumentDatabase docDb;
 		private readonly CommitTransactionGrbit txMode;
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
 			new ConcurrentDictionary<string, EsentTransactionContext>();
@@ -38,7 +37,6 @@ namespace Raven.Database.Impl.DTC
 		{
 			_database = database;
 			this.storage = storage;
-			this.docDb = docDb;
 			this.txMode = txMode;
 			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 		}
@@ -105,7 +103,7 @@ namespace Raven.Database.Impl.DTC
 
 					if (context.DocumentIdsToTouch != null)
 					{
-						using (docDb.DocumentLock.Lock())
+						using (_database.DocumentLock.Lock())
 						{
 							using (storage.DisableBatchNesting())
 							{
@@ -113,7 +111,7 @@ namespace Raven.Database.Impl.DTC
 								{
 									foreach (var docId in context.DocumentIdsToTouch)
 									{
-										docDb.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
+										_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
 										try
 										{
 											Etag preTouchEtag;

@@ -48,9 +48,6 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Spatial4n.Core.NTS">
-      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
-    </Reference>
     <Reference Include="Spatial4n.Core.NTS, Version=0.3.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
@@ -193,7 +190,6 @@
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
-    <Compile Include="Exceptions\InvalidSpatialShapeExceptions.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />

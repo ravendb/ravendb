@@ -97,7 +97,7 @@ namespace Raven.Database.Linq
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
 	        RavenJToken value;
-	        if(CurrentTransformationScope.Current.TransformerParameters.TryGetValue(key, out value) == false)
+	        if(CurrentTransformationScope.Current.Retriever.TransformerParameters.TryGetValue(key, out value) == false)
                 throw new InvalidOperationException("Query parameter "+key+ " was accessed, but it wasn't provided for this query.");
 	        return value;
 
@@ -109,7 +109,7 @@ namespace Raven.Database.Linq
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
             RavenJToken value;
-            if (CurrentTransformationScope.Current.TransformerParameters.TryGetValue(key, out value) == false)
+            if (CurrentTransformationScope.Current.Retriever.TransformerParameters.TryGetValue(key, out value) == false)
                 return RavenJToken.FromObject(val);
             return value;
 

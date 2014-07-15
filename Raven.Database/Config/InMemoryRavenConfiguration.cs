@@ -878,8 +878,6 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
-		public int MemoryLimitForIndexingInMB { get; set; }
-
         public string JournalsStoragePath
         {
             get

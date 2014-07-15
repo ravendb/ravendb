@@ -198,7 +198,7 @@ namespace Raven.Database.Indexing
 	            if (logIndexing.IsDebugEnabled)
 	            {
 	                var sb = new StringBuilder()
-	                    .AppendFormat("Index {0} for document {1} resulted in:", name, currentKey)
+	                    .AppendFormat("Index {0} for document {1} resulted in:", PublicName, currentKey)
 	                    .AppendLine();
 	                foreach (var currentDocumentResult in currentDocumentResults)
 	                {
@@ -224,8 +224,8 @@ namespace Raven.Database.Indexing
 
 				var data = GetMappedData(doc);
 
-	                logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", name, currentKey, reduceKey, data);
-				actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
+	                logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
+				actions.MapReduce.PutMappedResult(indexId, currentKey, reduceKey, data);
 				statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
 				actions.General.MaybePulseTransaction();
 				changes.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(currentKey), reduceKey));
@@ -343,7 +343,7 @@ namespace Raven.Database.Indexing
 			Write((writer, analyzer, stats) =>
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
-				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
+				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
 				writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
 				return new IndexedItemsInfo(null)
 				{

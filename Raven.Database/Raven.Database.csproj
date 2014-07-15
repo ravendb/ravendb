@@ -318,7 +318,6 @@
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\CancellationTokenSource.cs" />
-    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\PutSerialLock.cs" />
@@ -329,10 +328,8 @@
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Linq\Ast\TransformFromClauses.cs" />
-    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
-    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\AssemblyExtractor.cs" />
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
@@ -512,19 +509,7 @@
     <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
     <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
-    <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
-    <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
-    <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugTasks.cs" />
-    <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugPrefetchStatus.cs" />
-    <Compile Include="Server\Responders\SingleAuthToken.cs" />
-    <Compile Include="Server\Responders\TransactionPrepare.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
@@ -1039,7 +1024,6 @@
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
-    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\BundlesHelper.cs" />

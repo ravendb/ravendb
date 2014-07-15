@@ -507,7 +507,7 @@ namespace Raven.Database.Indexing
 			if (directory is RAMDirectory)
 				return null;
 
-			return IndexStorage.GetCurrentSegmentsInfo(name, directory);
+			return IndexStorage.GetCurrentSegmentsInfo(indexDefinition.Name, directory);
 		}
 
 		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo);
@@ -1620,64 +1620,64 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-        protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
-            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
+		protected void UpdateDocumentReferences(IStorageActionsAccessor actions,
+			ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
 			ConcurrentQueue<IDictionary<string, Etag>> missingReferencedDocs)
-        {
+		{
 
 			IDictionary<string, HashSet<string>> merged = new Dictionary<string, HashSet<string>>(StringComparer.InvariantCultureIgnoreCase);
-            IDictionary<string, HashSet<string>> result;
-            while (allReferencedDocs.TryDequeue(out result))
-            {
-	            foreach (var kvp in result)
-                {
-		            HashSet<string> set;
-		            if (merged.TryGetValue(kvp.Key, out set))
-		            {
+			IDictionary<string, HashSet<string>> result;
+			while (allReferencedDocs.TryDequeue(out result))
+			{
+				foreach (var kvp in result)
+				{
+					HashSet<string> set;
+					if (merged.TryGetValue(kvp.Key, out set))
+					{
 						logIndexing.Debug("Merging references for key = {0}, references = {1}", kvp.Key, String.Join(",", set));
-			            set.UnionWith(kvp.Value);
-		            }
-		            else
-		            {
-			            merged.Add(kvp.Key, kvp.Value);
-		            }
-	            }
-            }
+						set.UnionWith(kvp.Value);
+					}
+					else
+					{
+						merged.Add(kvp.Key, kvp.Value);
+					}
+				}
+			}
 
 			foreach (var referencedDocument in merged)
 			{
-				actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
-                    actions.General.MaybePulseTransaction();
-                }
-            }
+				actions.Indexing.UpdateDocumentReferences(indexId, referencedDocument.Key, referencedDocument.Value);
+				actions.General.MaybePulseTransaction();
+			}
 			var task = new TouchReferenceDocumentIfChangedTask
-            {
+			{
 				Index = indexId, // so we will get IsStale properly
-                ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
-            };
+				ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
+			};
 
 			IDictionary<string, Etag> docs;
-            while (missingReferencedDocs.TryDequeue(out docs))
-            {
-                foreach (var doc in docs)
-                {
-                    Etag etag;
-                    if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
-                    {
-                        task.ReferencesToCheck[doc.Key] = doc.Value;
-                        continue;
-                }
+			while (missingReferencedDocs.TryDequeue(out docs))
+			{
+				foreach (var doc in docs)
+				{
+					Etag etag;
+					if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
+					{
+						task.ReferencesToCheck[doc.Key] = doc.Value;
+						continue;
+					}
 					if (etag == doc.Value)
 						continue;
 					task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
-            }
+				}
+
+				logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
 			}
 			if (task.ReferencesToCheck.Count == 0)
-                return;
-            actions.Tasks.AddTask(task, SystemTime.UtcNow);
-        }
-
-                  
+				return;
+			actions.Tasks.AddTask(task, SystemTime.UtcNow);
+		}
+        
 		public void ForceWriteToDisk()
 		{
 			forceWriteToDisk = true;

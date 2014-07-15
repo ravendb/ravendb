@@ -63,10 +63,17 @@ namespace Raven.Client
 		/// </summary>
 		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize);
 
-        /// <summary>
-        /// Sets user defined inputs to the query
-        /// </summary>
-        /// <param name="queryInputs"></param>
-        void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+		/// <summary>
+		/// User definied inputs that can be used in transformer
+		/// </summary>
+		/// <param name="queryInputs"></param>
+		[Obsolete("Use SetTransformerParameters instead.")]
+		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+
+		/// <summary>
+		/// User definied inputs that can be used in transformer
+		/// </summary>
+		/// <param name="transformerParameters"></param>
+		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
 	}
 }

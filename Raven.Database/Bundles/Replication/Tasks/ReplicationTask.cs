@@ -1186,6 +1186,7 @@ namespace Raven.Bundles.Replication.Tasks
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
 				prefetchingBehavior.Value.Dispose();
+			}
 		}
 
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);

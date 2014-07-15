@@ -21,17 +21,17 @@ namespace Raven.Tests.MailingList
 
 				using (IAsyncDocumentSession session = db.OpenAsyncSession())
 				{
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "IPHONES",
 						Coordinate = new Coordinate {latitude = 41.145556, longitude = -73.995}
 					});
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "ANDROIDS",
 						Coordinate = new Coordinate {latitude = 41.145533, longitude = -73.999}
 					});
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "BLACKBERRY",
 						Coordinate = new Coordinate {latitude = 12.233, longitude = -73.995}

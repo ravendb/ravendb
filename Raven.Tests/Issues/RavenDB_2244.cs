@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Common;
+
 namespace Raven.Tests.Issues
 {
     using System.Transactions;

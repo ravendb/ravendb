@@ -7,6 +7,8 @@ using System;
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -18,7 +20,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (EmbeddableDocumentStore store = NewDocumentStore())
 			{
-				PutResult putResult = store.DocumentDatabase.Put("test", null, new RavenJObject(), new RavenJObject(), null);
+				PutResult putResult = store.DocumentDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), null);
 
 				var transactionInformation = new TransactionInformation
 				{
@@ -27,7 +29,7 @@ namespace Raven.Tests.Bugs
 				};
 				Raven.Abstractions.Data.Etag etag;
 				
-				store.DocumentDatabase.Put("test", putResult.ETag, new RavenJObject(), new RavenJObject(), transactionInformation);
+				store.DocumentDatabase.Documents.Put("test", putResult.ETag, new RavenJObject(), new RavenJObject(), transactionInformation);
 
 				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 					accessor.Documents.TouchDocument("test", out etag, out etag));
