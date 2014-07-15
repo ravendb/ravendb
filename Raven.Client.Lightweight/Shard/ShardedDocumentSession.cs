@@ -205,9 +205,10 @@ namespace Raven.Client.Shard
         {
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
 
-			if (!idsToLoad.Any())
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
+
+			if (idsToLoad.Count == 0)
 				return results;
 
 			IncrementRequestCount();
@@ -307,7 +308,7 @@ namespace Raven.Client.Shard
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null);
 
 			if (!idsToLoad.Any())
 				return results;
@@ -496,23 +497,23 @@ namespace Raven.Client.Shard
 
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
 		{
-			var cmds = GetCommandsToOperateOn(new ShardRequestData
-			{
-				Keys = { id },
-				EntityType = typeof(TTransformer)
-			});
-
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
-			{
-				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
-				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-			}, id), HandleInternalMetadata);
-			return AddLazyOperation<TResult>(lazyLoadOperation, null, cmds);
+			var lazy = Lazily.Load<TTransformer, TResult>(new[] {id});
+			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
 		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(params string[] ids)
 		{
-			return LazyLoadInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], null);
+			var cmds = GetCommandsToOperateOn(new ShardRequestData
+			{
+				Keys = ids,
+				EntityType = typeof(TTransformer)
+			});
+			var transformer = new TTransformer().TransformerName;
+			var op = new LoadTransformerOperation(this, transformer, ids);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer, op, false);
+
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		}
 
 		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
