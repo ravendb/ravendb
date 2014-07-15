@@ -184,16 +184,16 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("studio-tasks/test-sql-replication-connection")]
         [Route("databases/{databaseName}/studio-tasks/test-sql-replication-connection")]
-        public async Task<HttpResponseMessage> TestSqlReplicationConnection(string factoryName, string connectionString)
+        public Task<HttpResponseMessage> TestSqlReplicationConnection(string factoryName, string connectionString)
         {
             try
             {
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
-                return GetEmptyMessage(HttpStatusCode.NoContent);
+                return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
             }
             catch (Exception ex)
             {
-                return GetMessageWithObject(new
+                return GetMessageWithObjectAsTask(new
                 {
                     Error = "Connection failed",
                     Exception = ex
