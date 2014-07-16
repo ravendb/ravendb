@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ namespace Raven.Client.FileSystem.Impl
 {
     internal interface IFilesOperation 
     {
-        Task Execute(IAsyncFilesSession session);
+        String Filename { get; set; }
+        Task<FileHeader> Execute(IAsyncFilesSession session);
     }
 }

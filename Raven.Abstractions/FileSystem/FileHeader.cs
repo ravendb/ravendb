@@ -12,6 +12,7 @@ namespace Raven.Abstractions.FileSystem
     public class FileHeader
     {
         public RavenJObject Metadata { get; set; }
+        public RavenJObject OriginalMetadata { get; set; }
 
         public string Name { get; set; }
 
@@ -94,7 +95,13 @@ namespace Raven.Abstractions.FileSystem
         {
             this.Name = name;
             this.Metadata = metadata;
+            //this.OriginalMetadata = (RavenJObject)metadata.CloneToken();
             SetFileSize();
+        }
+
+        public void Refresh()
+        {
+            this.SetFileSize();
         }
 
         private void SetFileSize()

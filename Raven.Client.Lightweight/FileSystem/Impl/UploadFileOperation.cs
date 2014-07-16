@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using System;
@@ -11,7 +12,7 @@ namespace Raven.Client.FileSystem.Impl
     {
         protected readonly InMemoryFilesSessionOperations sessionOperations;
 
-        public string Path { get; private set; }
+        public String Filename { get; set; }
         public RavenJObject Metadata { get; private set; }
         public Etag Etag { get; private set; }
 
@@ -27,7 +28,7 @@ namespace Raven.Client.FileSystem.Impl
 
             this.sessionOperations = sessionOperations;
 
-            this.Path = path;
+            this.Filename = path;
             this.Metadata = metadata;
             this.Etag = etag;
 
@@ -35,7 +36,7 @@ namespace Raven.Client.FileSystem.Impl
             this.Size = size;
         }
 
-        public async Task Execute(IAsyncFilesSession session)
+        public async Task<FileHeader> Execute(IAsyncFilesSession session)
         {
             var commands = session.Commands;
 
@@ -45,8 +46,10 @@ namespace Raven.Client.FileSystem.Impl
                            .ContinueWith(x => { pipe.CompleteWriting(); })
                            .ConfigureAwait(false);
 
-            await commands.UploadAsync(Path, pipe, Metadata, Size, null)
+            await commands.UploadAsync(Filename, pipe, Metadata, Size, null)
                           .ConfigureAwait(false);
+
+            return await session.LoadFileAsync(Filename);
         }
     }
 }

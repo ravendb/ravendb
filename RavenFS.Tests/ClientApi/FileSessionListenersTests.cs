@@ -176,6 +176,8 @@ namespace RavenFS.Tests.ClientApi
 
                 //We need to sync again after conflict resolution because strategy was to resolve with remote
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                Thread.Sleep(250);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
                 file = await sessionDestination1.LoadFileAsync("test1.file");
@@ -311,7 +313,7 @@ namespace RavenFS.Tests.ClientApi
                 return true;
             }
 
-            public void AfterDelete(FileHeader instance)
+            public void AfterDelete(string fileName)
             {
                 AfterCount++;
             }
@@ -328,7 +330,7 @@ namespace RavenFS.Tests.ClientApi
                 return !instance.Metadata.Value<bool>("Read-Only");
             }
 
-            public void AfterDelete(FileHeader instance)
+            public void AfterDelete(string instance)
             {
                 AfterCount++;
             }
