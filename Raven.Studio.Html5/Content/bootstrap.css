@@ -1,4 +1,4 @@
-@import url("//fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700");
+﻿@import url("//fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700");
 /*!
  * Bootswatch v3.2.0
  * Homepage: http://bootswatch.com
@@ -910,7 +910,7 @@ a {
 }
 a:hover,
 a:focus {
-  color: #c10034;
+  color: #ca1816;
   text-decoration: underline;
 }
 a:focus {
@@ -2895,8 +2895,8 @@ fieldset[disabled] .btn-default.active {
 }
 .btn-primary {
   color: #ffffff;
-  background-color: #c10034;
-  border-color: #8e0026;
+  background-color: #ca1816;
+  border-color: #9c1311;
 }
 .btn-primary:hover,
 .btn-primary:focus,
@@ -2904,8 +2904,8 @@ fieldset[disabled] .btn-default.active {
 .btn-primary.active,
 .open > .dropdown-toggle.btn-primary {
   color: #ffffff;
-  background-color: #8e0026;
-  border-color: #75001f;
+  background-color: #9c1311;
+  border-color: #85100e;
 }
 .btn-primary:active,
 .btn-primary.active,
@@ -2931,7 +2931,7 @@ fieldset[disabled] .btn-primary.active {
   border-color: dimgray;
 }
 .btn-primary .badge {
-  color: #c10034;
+  color: #ca1816;
   background-color: #ffffff;
 }
 .btn-success {
@@ -3253,7 +3253,7 @@ tbody.collapse.in {
 .dropdown-menu > li > a:focus {
   text-decoration: none;
   color: #ffffff;
-  background-color: #c10034;
+  background-color: #ca1816;
 }
 .dropdown-menu > .active > a,
 .dropdown-menu > .active > a:hover,
@@ -3783,7 +3783,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .nav-pills > li.active > a:hover,
 .nav-pills > li.active > a:focus {
   color: #ffffff;
-  background-color: #c10034;
+  background-color: #ca1816;
 }
 .nav-stacked > li {
   float: none;
@@ -3870,8 +3870,8 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
   padding-right: 15px;
   padding-left: 15px;
   border-top: 1px solid transparent;
-  border-bottom: 5px solid #c10034;
-  border-color: #c10034;
+  border-bottom: 5px solid #ca1816;
+  border-color: #ca1816;
   box-shadow: 0 1px 2px 5px green;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   -webkit-overflow-scrolling: touch;
@@ -4193,7 +4193,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 }
 .navbar-default .navbar-nav > li > a:hover,
 .navbar-default .navbar-nav > li > a:focus {
-  color: #c10034;
+  color: #ca1816;
   background-color: transparent;
   text-shadow: 0 0 1px silver;
 }
@@ -4201,7 +4201,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .navbar-default .navbar-nav > .active > a:hover,
 .navbar-default .navbar-nav > .active > a:focus {
   color: white;
-  background-color: #c10034;
+  background-color: #ca1816;
 }
 .navbar-default .navbar-nav > .disabled > a,
 .navbar-default .navbar-nav > .disabled > a:hover,
@@ -4222,7 +4222,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .navbar-default .navbar-nav > .open > a,
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus {
-  background-color: #c10034;
+  background-color: #ca1816;
   color: white;
 }
 @media (max-width: 767px) {
@@ -4380,7 +4380,7 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
   color: #cccccc;
 }
 .breadcrumb > .active {
-  color: #c10034;
+  color: #ca1816;
 }
 .pagination {
   display: inline-block;
@@ -6339,8 +6339,8 @@ button.close {
     background-repeat: no-repeat;
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff6d94bf', endColorstr='#ff3e648d', GradientType=0);
     filter: none;*/
-  background-color: #c10034;
-  border: 1px solid #8e0026;
+  background-color: #ca1816;
+  border: 1px solid #9c1311;
 }
 .btn-primary:hover {
   /*@firstGradient: lighten(@raven-color, 7%);
@@ -6353,8 +6353,8 @@ button.close {
         filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff5f8ab9', endColorstr='#ff385a7f', GradientType=0);
         filter: none;
         border: 1px solid #2e4b69;*/
-  background-color: #a8002d;
-  border: 1px solid #c10034;
+  background-color: #b31513;
+  border: 1px solid #ca1816;
 }
 .btn-success {
   background-image: -webkit-linear-gradient(#61dd45, #3cb521 50%, #36a41e);
@@ -6437,4 +6437,3 @@ button.close {
 .panel-primary .panel-title {
   color: #fff;
 }
-/*# sourceMappingURL=bootstrap.css.map */

@@ -292,7 +292,7 @@ html, body {
     width: 98%;
 }
 
-.database-page {
+#databasePage {
 
     .btn-toolbar {
         margin-bottom: 20px;
@@ -301,10 +301,13 @@ html, body {
     .databases-container {
         margin-top: 10px;
 
+        .database:hover .checkbox{
+            display : block;
+        }
+
         .database {
             cursor: pointer;
             border-radius: 2px;
-            -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
             min-width: 140px;
             min-height: 60px;
@@ -318,6 +321,36 @@ html, body {
 
             .database-name {
                 float: left;
+            }
+
+            .checkbox{
+                display: none;
+                position: absolute;
+                top: -18px;
+                left: -4px;
+
+                input{
+                    width: 18px;
+                    height: 18px;
+                }
+            }
+
+            .details {
+                float: left;
+                line-height: 215%;
+
+                .disabled{
+                    pointer-events: none;
+                    cursor: default;
+                }
+
+                .text-muted.stats{
+                    color: #3A822D;
+                }
+
+                .text-muted.disabled{
+                    color: #d9534f;
+                }
             }
 
             .btn-group {
@@ -398,7 +431,9 @@ html, body {
 .resource-link {
     padding-left: 5px;
     overflow-x: hidden;
-    max-width: 130px;
+    max-width: 150px;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
     text-overflow: ellipsis;
     white-space: nowrap;
 }

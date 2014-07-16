@@ -1,4 +1,4 @@
-﻿<section id="database-page">
+﻿<section id="databasePage">
     <div>
         <ul class="breadcrumb">
             <li>
@@ -18,10 +18,10 @@
                 <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+/)">
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-danger" data-bind="click: deleteCheckedDatabases, visible: isAnyDatabaseSelected" title="Delete Selected Databases"><i class="fa fa-trash-o"></i></button>
+                <button type="button" class="btn btn-danger" data-bind="click: deleteCheckedDatabases, visible: isAnyDatabaseSelected" title="Delete selected databases"><i class="fa fa-trash-o"></i></button>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default" data-bind="click: toggleCheckedDatabases, visible: allCheckedDatabasesDisabled() != null, attr: { title: allCheckedDatabasesDisabled() ? 'Enable Selected Databases' : 'Disable Selected Databases' }">
+                <button type="button" class="btn btn-default" data-bind="click: toggleCheckedDatabases, visible: allCheckedDatabasesDisabled() != null, attr: { title: allCheckedDatabasesDisabled() ? 'Enable selected databases' : 'Disable selected databases' }">
                     <i class="fa" data-bind="css: { 'fa-lock': !allCheckedDatabasesDisabled(), 'fa-unlock': allCheckedDatabasesDisabled }"></i>
                 </button>
             </div>
@@ -41,6 +41,7 @@
                         <a class="database-name disabled" data-bind="text: name"></a>
                         <!-- /ko -->
                     </h4>
+                    <br />
                     <!-- ko ifnot: $data.disabled -->
                     <span class="text-muted stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                     <!-- /ko -->
