@@ -32,7 +32,7 @@ namespace Raven.Abstractions.Smuggler
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
 			ShouldExcludeExpired = false;
-		    Limit = int.MaxValue;
+			Limit = 64*1024;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
 		}
