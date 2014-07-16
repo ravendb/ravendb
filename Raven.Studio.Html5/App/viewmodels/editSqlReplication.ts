@@ -105,7 +105,7 @@ class editSqlReplication extends viewModelBase {
             } else {
                 this.isEditingNewReplication(true);
                 this.editedReplication(this.createSqlReplication());
-                canActivateResult.resolve({ can: true });
+                this.fetchCollections(this.activeDatabase()).always(() =>canActivateResult.resolve({ can: true }));
             }
         });
         return canActivateResult;
@@ -186,9 +186,9 @@ class editSqlReplication extends viewModelBase {
     refreshSqlReplication() {
         if (this.isEditingNewReplication() === false) {
             var docId = this.initialReplicationId;
-
             this.loadSqlReplication(docId);
         } else {
+
             this.editedReplication(this.createSqlReplication());
         }
     }
@@ -319,7 +319,7 @@ class editSqlReplication extends viewModelBase {
     }
 
     simulateSqlReplication() {
-        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication().name());
+        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication());
         app.showDialog(viewModel);
     }
 

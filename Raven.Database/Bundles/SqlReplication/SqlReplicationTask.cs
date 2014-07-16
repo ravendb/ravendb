@@ -522,13 +522,12 @@ namespace Raven.Database.Bundles.SqlReplication
 			return lastEtag;
 		}
 
-        public IEnumerable<string> SimulateSqlReplicationSQLQueries(string strDocumentId, string replicationName)
+        public IEnumerable<string> SimulateSqlReplicationSQLQueries(string strDocumentId, SqlReplicationConfig sqlReplication)
 	    {
-            var replicationConfig = replicationConfigs.First(x => x.Name == replicationName);
-            var stats = new SqlReplicationStatistics(replicationName);
+            var stats = new SqlReplicationStatistics(sqlReplication.Name);
             var docs = new List<JsonDocument>() { Database.Documents.Get(strDocumentId, null) };
-            var scriptResult = ApplyConversionScript(replicationConfig, docs);
-            var writer = new RelationalDatabaseWriterSimulator(Database, replicationConfig, stats);
+            var scriptResult = ApplyConversionScript(sqlReplication, docs);
+            var writer = new RelationalDatabaseWriterSimulator(Database, sqlReplication, stats);
             return writer.SimulateExecuteCommandText(scriptResult);
 	    }
 

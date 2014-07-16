@@ -6,6 +6,7 @@ import document = require("models/document");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import dialog = require("plugins/dialog");
 import collection = require("models/collection");
+import sqlReplication = require("models/sqlReplication");
 
 class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
@@ -13,9 +14,9 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
     documentAutocompletes = ko.observableArray<string>();
     documentId = ko.observable<string>();
     lastSearchedDocumentID = ko.observable<string>("");
-    isAutoCompleteVisible : KnockoutComputed<boolean>;
+    isAutoCompleteVisible: KnockoutComputed<boolean>;
     
-    constructor(private db: database, private sqlReplicationName: string) {
+    constructor(private db: database, private simulatedSqlReplication: sqlReplication) {
         super();
         this.documentId.throttle(250).subscribe(search => this.fetchDocumentIdAutocompletes(search));
         this.isAutoCompleteVisible = ko.computed(() => {
@@ -26,7 +27,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
     getResults() {
         this.lastSearchedDocumentID(this.documentId());
-        new simulateSqlReplicationCommand(this.db, this.sqlReplicationName, this.documentId())
+        new simulateSqlReplicationCommand(this.db, this.simulatedSqlReplication, this.documentId())
             .execute()
             .done((results: string[]) => this.simulationResults(results))
             .fail(() => this.simulationResults.removeAll());

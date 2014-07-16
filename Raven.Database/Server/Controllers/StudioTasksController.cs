@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -157,8 +158,9 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("studio-tasks/simulate-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
-        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
+        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId)
         {
+
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (task == null)
 				return GetMessageWithObjectAsTask(new
@@ -167,7 +169,10 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.NotFound);
             try
             {
-                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplicationName);
+                var sqlReplication =
+                    JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
+                
+                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication);
 
                 return GetMessageWithObjectAsTask(results.ToList());
             }
