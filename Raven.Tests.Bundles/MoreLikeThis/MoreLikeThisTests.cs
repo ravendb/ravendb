@@ -178,6 +178,45 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 			}
 		}
 
+		public void IncludesShouldWorkWithMoreLikeThis()
+		{
+			string id;
+
+			new Transformer2().Execute(store);
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(true, false).Execute(store);
+
+				session.Store(new { Name = "Name1" }, "test");
+
+				var list = GetDataList();
+				list.ForEach(session.Store);
+				session.SaveChanges();
+
+				id = session.Advanced.GetDocumentId(list.First());
+				WaitForIndexing(store);
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
+				{
+					DocumentId = id,
+					Fields = new[] { "Body" },
+					Includes = new[] { "Body" }
+				});
+
+				Assert.NotEmpty(list);
+
+				var numberOfRequests = session.Advanced.NumberOfRequests;
+				var person = session.Load<dynamic>("test");
+				Assert.NotNull(person);
+				Assert.Equal("Name1", person.Name);
+				Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+			}
+		}
+
 		[Fact]
 		public void CanGetResultsUsingTermVectors()
 		{

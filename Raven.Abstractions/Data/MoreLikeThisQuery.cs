@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Collections.Specialized;
 
@@ -105,6 +106,8 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public string ResultsTransformer { get; set; }
 
+		public string[] Includes { get; set; }
+
 		/// <summary>
 		/// Additional query inputs
 		/// </summary>
@@ -176,6 +179,9 @@ namespace Raven.Abstractions.Data
 					uri.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
 				}
 			}
+
+			if (Includes != null && Includes.Length > 0)
+				uri.Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
 
 			return uri.ToString();
 		}

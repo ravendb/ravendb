@@ -25,6 +25,7 @@ namespace Raven.Database.Server.Controllers
 			var parameters = GetParametersFromPath(GetRequestUrl(), nameValueCollection);
 			parameters.TransformerParameters = ExtractTransformerParameters();
 			parameters.ResultsTransformer = GetQueryStringValue("resultsTransformer");
+			parameters.Includes = GetQueryStringValues("include");
 
 			var index = Database.IndexStorage.GetIndexInstance(parameters.IndexName);
 			if (index == null)
@@ -38,7 +39,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			
-			var result = Database.ExecuteMoreLikeThisQuery(parameters, GetRequestTransaction(), GetPageSize(Database.Configuration.MaxPageSize), GetQueryStringValues("include"));
+			var result = Database.ExecuteMoreLikeThisQuery(parameters, GetRequestTransaction(), GetPageSize(Database.Configuration.MaxPageSize));
 
 			if (MatchEtag(result.Etag))
 				return GetEmptyMessage(HttpStatusCode.NotModified);

@@ -39,7 +39,7 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25, string[] include = null)
+		public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25)
 		{
 			if (query == null) throw new ArgumentNullException("query");
 
@@ -120,7 +120,7 @@ namespace Raven.Database.Queries
 					{
 						includedEtags.AddRange(etag.ToByteArray());
 						result.Includes.Add(includedDoc);
-					}, include ?? new string[0], loadedIds);
+					}, query.Includes ?? new string[0], loadedIds);
 
 					idsToLoad = new HashSet<string>();
 
