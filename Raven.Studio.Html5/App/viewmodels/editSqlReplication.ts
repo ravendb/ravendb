@@ -240,14 +240,14 @@ class editSqlReplication extends viewModelBase {
     }
 
     private initializeAceValidity(element: Element) {
-        var editor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
-        if (editor)
-        {
-        var editorValue = editor.getSession().getValue();
-        if (editorValue === "") {
-            var textarea: any = $(element).find('textarea')[0];
-            textarea.setCustomValidity("Please fill out this field.");
-        }
+        var editorElement = $("#aceEditor");
+        if (editorElement.length > 0) {
+            var editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+            var editorValue = editor.getSession().getValue();
+            if (editorValue === "") {
+                var textarea: any = $(element).find('textarea')[0];
+                textarea.setCustomValidity("Please fill out this field.");
+            }
         }
     }
 

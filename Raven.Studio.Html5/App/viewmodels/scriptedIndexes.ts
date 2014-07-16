@@ -50,9 +50,7 @@ class scriptedIndexes extends viewModelBase {
         super.activate(args);
 
         this.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
-        this.isSaveEnabled = ko.computed(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
@@ -62,9 +60,11 @@ class scriptedIndexes extends viewModelBase {
         this.initializeCollapsedInvalidElements();
 
         $('pre').each((index, currentPreElement) => {
-            var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
-            var editorValue = editor.getSession().getValue();
-            this.initializeAceValidity(currentPreElement, editorValue);
+            if (currentPreElement) {
+                var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
+                var editorValue = editor.getSession().getValue();
+                this.initializeAceValidity(currentPreElement, editorValue);
+            }
         });
     }
 

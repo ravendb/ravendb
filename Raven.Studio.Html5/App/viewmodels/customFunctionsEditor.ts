@@ -40,7 +40,12 @@ class customFunctionsEditor extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.docEditor = ko.utils.domData.get($(".custom-functions-form .editor")[0], "aceEditor");
+
+        var editorElement = $(".custom-functions-form .editor");
+        if (editorElement.length > 0) {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
         this.fetchCustomFunctions();
     }
 

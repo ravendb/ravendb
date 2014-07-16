@@ -274,12 +274,13 @@ body {
 #database-page .databases-container .database .checkbox {
   display: none;
   position: absolute;
-  top: -18px;
-  left: -4px;
+  top: 0;
+  left: 134px;
+  margin: 0;
+  padding: 0;
 }
-#database-page .databases-container .database .checkbox input {
-  width: 18px;
-  height: 18px;
+#database-page .databases-container .database .checkbox img {
+  height: 25px;
 }
 #database-page .databases-container .database .details {
   float: left;

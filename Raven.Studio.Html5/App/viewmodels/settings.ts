@@ -88,7 +88,9 @@ class settings extends viewModelBase {
         var bundelName = pathArr[pathArr.length - 1].toLowerCase();
         var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
         var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
-        var isSystemDbOnlyPath = instruction.fragment.indexOf("windowsAuth") >= 0 || instruction.fragment.indexOf("apiKeys") >= 0 || instruction.fragment === "settings";
+        var isApiKeysPath = instruction.fragment.indexOf("apiKeys") >= 0;
+        var isWindowsAuthPath = instruction.fragment.indexOf("windowsAuth") >= 0;
+        var isSystemDbOnlyPath = isApiKeysPath || isWindowsAuthPath || instruction.fragment === "settings";
         var isUserDbOnlyPath = !isSystemDbOnlyPath;
 
         if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){

@@ -276,7 +276,12 @@ class editDocument extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.docEditor = ko.utils.domData.get($("#docEditor")[0], "aceEditor");
+
+        var editorElement = $("#docEditor");
+        if (editorElement.length > 0) {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
         this.focusOnEditor();
     }
 
