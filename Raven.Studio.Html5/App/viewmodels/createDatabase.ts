@@ -46,15 +46,16 @@ class createDatabase extends dialogViewModelBase {
     constructor(databases) {
         super();
         this.databases = databases;
-        this.isCompressionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.compression === "true");
-        this.isEncryptionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.encryption === "true");
-        this.isExpirationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.documentExpiration === "true");
-        this.isQuotasBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.quotas === "true");
-        this.isReplicationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.replication === "true");
-        this.isSqlReplicationBundleActive = ko.computed<boolean>(() => true);
-        this.isVersioningBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.versioning === "true");
-        this.isPeriodicExportBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().Attributes.periodicBackup === "true");
+        this.isCompressionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false || this.licenseStatus().Attributes.compression === "true");
+        this.isEncryptionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.encryption === "true");
+        this.isExpirationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.documentExpiration === "true");
+        this.isQuotasBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.quotas === "true");
+        this.isReplicationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.replication === "true");
+        this.isVersioningBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.versioning === "true");
+        this.isPeriodicExportBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.periodicBackup === "true");
+
         this.isScriptedIndexBundleActive = ko.computed<boolean>(() => true);
+        this.isSqlReplicationBundleActive = ko.computed<boolean>(() => true);
     }
 
     attached() {
