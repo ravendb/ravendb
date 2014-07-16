@@ -2,8 +2,7 @@ enum alertType {
     info,
     success,
     warning,
-    danger,
-    error
+    danger
 }
 
 export = alertType;

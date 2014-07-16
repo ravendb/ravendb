@@ -47,7 +47,7 @@ class replications extends viewModelBase {
         var combinedFlag = ko.computed(() => {
             return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
         });
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+        this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
 
     fetchAutomaticConflictResolution(db): JQueryPromise<any> {

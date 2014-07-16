@@ -440,7 +440,7 @@ class shell extends viewModelBase {
     }
 
     showAlert(alert: alertArgs) {
-        if (alert.type === alertType.danger || alert.type === alertType.warning) {
+        if (alert.displayInRecentErrors && (alert.type === alertType.danger || alert.type === alertType.warning)) {
             this.recordedErrors.unshift(alert);
         }
 
