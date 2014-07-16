@@ -173,7 +173,7 @@ class databases extends viewModelBase {
                         }
 
                         this.createDefaultSettings(newDatabase, bundles).always(() => {
-                            if (bundles.contains("Quotas") || bundles.contains("Versioning")) {
+                            if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                                 encryptionConfirmationDialogPromise.always(() => {
                                     var settingsDialog = new databaseSettingsDialog(bundles);
                                     app.showDialog(settingsDialog);

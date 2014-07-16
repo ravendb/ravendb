@@ -523,13 +523,13 @@ body {
 }
 .settings-container .sql-replication-connection-card {
   display: inline-table;
-  width: 40%;
+  width: 30vw;
   margin-right: 20px;
 }
 @media (max-device-height: 1024px) {
   .settings-container .sql-replication-connection-card {
     display: inline-table;
-    width: 100%;
+    width: 55vw;
     margin-right: 20px;
   }
 }

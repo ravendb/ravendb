@@ -44,9 +44,12 @@ namespace Raven.Database.Config
 		private string pluginsDirectory;
 		private string fileSystemDataDirectory;
 
+		public ReplicationConfiguration Replication { get; private set; }
 
 		public InMemoryRavenConfiguration()
 		{
+			Replication = new ReplicationConfiguration();
+
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = true;
@@ -82,7 +85,7 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-
+			
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
@@ -260,6 +263,8 @@ namespace Raven.Database.Config
 		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
 			VoronInitialFileSize = ravenSettings.VoronInitialFileSize.Value;
 
+			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
+
 			PostInit();
 		}
 
@@ -329,7 +334,7 @@ namespace Raven.Database.Config
 				var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
 				return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
 			}
-		}
+		} 
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
@@ -945,7 +950,7 @@ namespace Raven.Database.Config
 		public int MaxIndexOutputsPerDocument { get; set; }
 
 		[Browsable(false)]
-        /// <summary>
+		/// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
         /// the facet cache when finishing an indexing batch
         /// </summary>
@@ -957,6 +962,16 @@ namespace Raven.Database.Config
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
+
+		/// <summary>
+		/// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
+		/// </summary>
+		public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+		/// <summary>
+		/// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
+		/// </summary>
+		public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
 
         /// <summary>
         /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
@@ -1036,7 +1051,7 @@ namespace Raven.Database.Config
 
         //TODO : perhaps refactor with enums?
 	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
-	    {
+		{
 	        switch (typeName.ToLowerInvariant())
 	        {
 	            case EsentTypeName:
@@ -1128,6 +1143,14 @@ namespace Raven.Database.Config
 		public IEnumerable<string> GetConfigOptionsDocs()
 		{
 			return ConfigOptionDocs.OptionsDocs;
+		}
+
+		public class ReplicationConfiguration
+		{
+			/// <summary>
+			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
+			/// </summary>
+			public int FetchingFromDiskTimeoutInSeconds { get; set; }
 		}
 	}
 }

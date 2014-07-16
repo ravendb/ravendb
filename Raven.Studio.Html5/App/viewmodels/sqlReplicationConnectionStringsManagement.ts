@@ -15,38 +15,38 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
     htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
-    isSaveEnabled = ko.observable<boolean>();
-    
-    constructor(private db:database) {
+    isSaveEnabled :KnockoutComputed<boolean>;
+    constructor() {
         super();
+    }
+
+    loadConnections():JQueryPromise<any> {
+        return new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+            .execute()
+            .done((x: document) => {
+                var dto: any = x.toDto(true);
+                this.connections(new sqlReplicationConnections(dto));
+                if (this.connections().predefinedConnections().length > 0) {
+                    this.connections().predefinedConnections().forEach(x=> this.subscribeToSqlReplicationConnectionName(x));
+                }
+            })
+            .fail(() => {
+                this.connections(sqlReplicationConnections.empty());
+            });
     }
 
     canActivate() {
         var def = $.Deferred();
-        new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
-            .execute()
-            .done( (x:document) => {
-                var dto:any = x.toDto(true);
-                this.connections(new sqlReplicationConnections(dto));
-                if (this.connections().predefinedConnections().length > 0) {
-                    this.connections().predefinedConnections().forEach(x=>this.subscribeToSqlReplicationConnectionName(x));
-                }
-                def.resolve({ can: true });
-            })
-            .fail((err) => {
-                this.connections(sqlReplicationConnections.empty());
-                def.resolve({ can: true });
-            });
-
+        this.loadConnections()
+            .always(() => def.resolve({ can: true }));
         return def;
     }
 
-    activate() {
-        super.activate("sqlReplicationConnections");
+    activate(args) {
+        super.activate(args);
         this.dirtyFlag = new ko.DirtyFlag([this.connections]);
-        this.isSaveEnabled = ko.computed(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+        
     }
 
     save() {
@@ -126,10 +126,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
                         matchingConnectionStringValue
                     );
                 }
-
             }
         }
-
     }
 
     testConnection(data: predefinedSqlConnection) {

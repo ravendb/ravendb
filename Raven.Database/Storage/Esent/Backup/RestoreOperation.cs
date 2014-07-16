@@ -104,7 +104,8 @@ namespace Raven.Database.Storage.Esent.Backup
 				foreach (var file in Directory.GetFiles(directory, "RVN*.log"))
 				{
 					var justFile = Path.GetFileName(file);
-					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
+                    output(string.Format("Copying incremental log : {0}", justFile));
+                    File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
 				}
 			}
 		}

@@ -10,7 +10,9 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
-	public class Prefetcher : IDisposable
+	using System.Linq;
+
+	public class Prefetcher
 	{
 		private readonly WorkContext workContext;
 		private IDictionary<PrefetchingUser, PrefetchingBehavior> prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>();
@@ -20,7 +22,7 @@ namespace Raven.Database.Prefetching
 			this.workContext = workContext;
 		}
 
-		public PrefetchingBehavior GetPrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
+		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
 		{
 			PrefetchingBehavior value;
 			if (prefetchingBehaviors.TryGetValue(user, out value))
@@ -30,7 +32,7 @@ namespace Raven.Database.Prefetching
 				if (prefetchingBehaviors.TryGetValue(user, out value))
 					return value;
 
-			    value = new PrefetchingBehavior(workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user));
+				value = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user));
 
 				prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>(prefetchingBehaviors)
 				{
@@ -77,7 +79,7 @@ namespace Raven.Database.Prefetching
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
 				prefetchingBehavior.Value.Dispose();
-			}	
+			}
 		}
 	}
 }

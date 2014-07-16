@@ -12,9 +12,6 @@ namespace Raven.Database.Storage
 	public class DocumentInTransactionData
 	{
 		public Etag Etag { get; set; }
-
-		public Etag CommittedEtag { get; set; }
-
 		public bool Delete { get; set; }
 		public RavenJObject Metadata { get; set; }
 		public RavenJObject Data { get; set; }

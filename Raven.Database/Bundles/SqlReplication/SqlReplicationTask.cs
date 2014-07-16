@@ -56,7 +56,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public void Execute(DocumentDatabase database)
 		{
-			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>

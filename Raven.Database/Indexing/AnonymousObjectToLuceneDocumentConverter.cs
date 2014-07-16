@@ -180,11 +180,11 @@ namespace Raven.Database.Indexing
 					    sortOptions.Value == SortOptions.Custom)
 
 					{
-						yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-							Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-					}
+					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
+														Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+				    }
 
-					foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
+				    foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
                         yield return field;
                    
                  }
@@ -376,7 +376,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static object GetNullValueForSorting(SortOptions? sortOptions)
+	    private static object GetNullValueForSorting(SortOptions? sortOptions)
 	    {
 	        switch (sortOptions)
 	        {
@@ -385,7 +385,7 @@ namespace Raven.Database.Indexing
 	                return int.MinValue;
 	            case SortOptions.Double:
 	                return double.MinValue;
-		        case SortOptions.Float:
+	            case SortOptions.Float:
 	                return float.MinValue;
 
 // ReSharper disable RedundantCaseLabel
@@ -419,18 +419,18 @@ namespace Raven.Database.Indexing
 			{
 				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
 			}
-            else if (value is int)
-            {
+			else if (value is int)
+			{
                 if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
-                    yield return numericField.SetLongValue((int)value);
+					yield return numericField.SetLongValue((int)value);
                 else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue((int)value);
                 else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
-                    yield return numericField.SetDoubleValue((int)value);
-                else
-                    yield return numericField.SetIntValue((int)value);
-            }
-            else if (value is long)
+					yield return numericField.SetDoubleValue((int)value);
+				else
+					yield return numericField.SetIntValue((int)value);
+			}
+			else if (value is long)
 			{
 				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((long)value);

@@ -4,16 +4,22 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
 {
 	public class RavenIndexWriter : IDisposable
 	{
+		public const long CommitMarker = 0x1A4B93AB93BBC143;
+
 		private static readonly ILog LogIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 
 		private readonly int maximumNumberOfWritesBeforeRecreate;
@@ -97,9 +103,17 @@ namespace Raven.Database.Indexing
 			return indexWriter.GetReader();
 		}
 
-		public void Commit()
+		public void Commit(Etag lastEtag)
 		{
-			indexWriter.Commit();
+			var commitData = new Dictionary<string, string>
+			                 {
+				                 { "Marker", CommitMarker.ToString(CultureInfo.InvariantCulture) }
+			                 };
+
+			if (lastEtag != null)
+				commitData.Add("LastEtag", lastEtag);
+
+			indexWriter.Commit(commitData);
 			RecreateIfNecessary();
 		}
 

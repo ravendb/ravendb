@@ -34,7 +34,7 @@ class quotas extends viewModelBase {
 
         this.initializeDirtyFlag();
 
-        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
     }
 
     private fetchQuotas(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {

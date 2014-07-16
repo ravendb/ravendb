@@ -95,8 +95,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="Jint, Version=2.1.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Jint">
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
@@ -328,10 +327,8 @@
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Linq\Ast\TransformFromClauses.cs" />
-    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
-    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\AssemblyExtractor.cs" />
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
@@ -508,6 +505,10 @@
     <Compile Include="Server\RavenFS\Util\SynchronizingFileStream.cs" />
     <Compile Include="Data\AddIncludesCommand.cs" />
     <Compile Include="Data\ExecutingQueryInfo.cs" />
+    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
+    <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
+    <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
+    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
@@ -1022,7 +1023,6 @@
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
-    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\BundlesHelper.cs" />
