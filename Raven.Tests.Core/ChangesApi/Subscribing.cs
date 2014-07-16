@@ -12,6 +12,7 @@ namespace Raven.Tests.Core.ChangesApi
     public class Subscribing : RavenReplicationCoreTest
     {
         private volatile string output, output2;
+
         [Fact]
         public void CanSubscribeToDocumentChanges()
         {
@@ -19,7 +20,7 @@ namespace Raven.Tests.Core.ChangesApi
             {
 
                 store.Changes().Task.Result
-                    .ForAllDocuments().Task.Result
+                    .ForAllDocuments()
                     .Subscribe(change =>
                     {
                         if (output == null)
@@ -27,14 +28,28 @@ namespace Raven.Tests.Core.ChangesApi
                     });
 
                 store.Changes().Task.Result
-                    .ForDocumentsStartingWith("companies").Task.Result
+                    .ForDocumentsStartingWith("companies")
                     .Subscribe(change => 
                     {
                         output = "passed_forfordocumentsstartingwith";
                     });
 
                 store.Changes().Task.Result
-                    .ForDocument("companies/1").Task.Result
+                    .ForDocumentsInCollection("posts")
+                    .Subscribe(change =>
+                    {
+                        output = "passed_ForDocumentsInCollection";
+                    });
+
+                store.Changes().Task.Result
+                    .ForDocumentsOfType(new Camera().GetType())
+                    .Subscribe(changes =>
+                    {
+                        output = "passed_ForDocumentsOfType";
+                    });
+
+                store.Changes().Task.Result
+                    .ForDocument("companies/1")
                     .Subscribe(change => 
                     {
                         if (change.Type == DocumentChangeTypes.Delete)
@@ -58,6 +73,20 @@ namespace Raven.Tests.Core.ChangesApi
                     });
                     session.SaveChanges();
                     WaitUntilOutput("passed_forfordocumentsstartingwith");
+
+                    session.Store(new Post
+                    {
+                        Id = "posts/1"
+                    });
+                    session.SaveChanges();
+                    WaitUntilOutput("passed_ForDocumentsInCollection");
+
+                    session.Store(new Camera
+                    {
+                        Id = "cameras/1"
+                    });
+                    session.SaveChanges();
+                    WaitUntilOutput("passed_ForDocumentsOfType");
 
                     session.Delete("companies/1");
                     session.SaveChanges();
@@ -181,6 +210,25 @@ namespace Raven.Tests.Core.ChangesApi
                 source.Replication.WaitAsync(eTag, replicas: 1).Wait();
 
                 WaitUntilOutput("conflict");
+            }
+        }
+
+        [Fact]
+        public void CanSubscribeToBulkInsert()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var bulkInsert = store.BulkInsert();
+
+                store.Changes().Task.Result
+                    .ForBulkInsert(bulkInsert.OperationId)
+                    .Subscribe(changes =>
+                    {
+                        output = "passed_bulkInsert";
+                    });
+
+                bulkInsert.Store(new User { Name = "User" });
+                WaitUntilOutput("passed_bulkInsert");
             }
         }
     }
