@@ -184,6 +184,7 @@
     <Compile Include="EtagIssue.cs" />
     <Compile Include="EtagUsage.cs" />
     <Compile Include="Everett616.cs" />
+    <Compile Include="Everett\CanReadBytes.cs" />
     <Compile Include="FacetCountTest.cs" />
     <Compile Include="FacetHits.cs" />
     <Compile Include="FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
@@ -216,6 +217,7 @@
     <Compile Include="IisQueryLengthIssues.cs" />
     <Compile Include="IncludeOnDictionary.cs" />
     <Compile Include="IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
+    <Compile Include="IndexesIgnoreNewtonsoftJsonPropertyAttributes.cs" />
     <Compile Include="IndexMetadata.cs" />
     <Compile Include="IndexTest.cs" />
     <Compile Include="IndexTest2.cs" />
@@ -493,6 +495,9 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Everett\DocumentWithBytes.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
