@@ -1394,6 +1394,28 @@ footer {
     .error-details, .http-status {
         width: 100%;
     }
+
+    .recentErrorsResizer {
+        //background-color: red;
+        width: 20px;
+        height: 20px;
+        position: absolute;
+        bottom: 0px;
+        right: 0px;
+        display: inline-block;
+        cursor: se-resize;
+        border-radius: 0 0 6px 0;
+        /* IE9 SVG, needs conditional override of 'filter' to 'none' */
+        /* IE9 SVG, needs conditional override of 'filter' to 'none' */
+        background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDxzdG9wIG9mZnNldD0iNTMlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);
+        background: -moz-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%, hsla(0,0%,0%,0) 53%, hsla(0,0%,0%,1) 100%); /* FF3.6+ */
+        background: -webkit-gradient(linear, left top, right bottom, color-stop(0%,hsla(0,0%,0%,0)), color-stop(53%,hsla(0,0%,0%,0)), color-stop(100%,hsla(0,0%,0%,1))); /* Chrome,Safari4+ */
+        background: -webkit-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* Chrome10+,Safari5.1+ */
+        background: -o-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* Opera 11.10+ */
+        background: -ms-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* IE10+ */
+        background: linear-gradient(135deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* W3C */
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#000000',GradientType=1 ); /* IE6-8 fallback on horizontal gradient */
+    }
 }
 
 #scriptedIndex {
