@@ -207,6 +207,50 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(2, comments.Length);
                 Assert.Equal("Comment 1", comments[0].Value<string>("Title"));
                 Assert.Equal("[Raven] Comment 2", comments[1].Value<string>("Title"));
+
+
+                store.DatabaseCommands.Put(
+                    "posts/4",
+                    null,
+                    RavenJObject.FromObject(new Post
+                    {
+                        Title = "Post 4",
+                        AttachmentIds = new string[] {"posts/5"}
+                    }),
+                    new RavenJObject());
+                store.DatabaseCommands.Put(
+                    "posts/5",
+                    null,
+                    RavenJObject.FromObject(new Post
+                    {
+                        Title = "Post 5"
+                    }),
+                    new RavenJObject());
+                store.DatabaseCommands.Patch(
+                    "posts/4",
+                    new ScriptedPatchRequest()
+                    {
+                        Script = @"
+                            var loaded = LoadDocument(this.AttachmentIds[0]);
+                            this.Title = loaded.Title;
+                        "
+                    });
+                result = store.DatabaseCommands.Get("posts/4");
+                Assert.Equal("Post 5", result.DataAsJson.Value<string>("Title"));
+
+
+                var output = store.DatabaseCommands.Patch(
+                    "posts/4",
+                    new ScriptedPatchRequest()
+                    {
+                        Script = @"
+                            var loaded = LoadDocument(this.AttachmentIds[0]);
+                            this.Title = loaded.Title;
+                            output(this.Title); 
+                        "
+                    });
+                var debugInfo = output.Value<RavenJArray>("Debug");
+                Assert.Equal("Post 5", debugInfo[0]);
             }
         }
     }
