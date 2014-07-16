@@ -2300,7 +2300,7 @@ namespace Raven.Database
             }
         }
 
-        /// <summary>
+	    /// <summary>
         /// Get the total index storage size taken by the indexes on the disk.
         /// This explicitly does NOT include in memory indexes.
         /// </summary>
@@ -2615,5 +2615,6 @@ namespace Raven.Database
         {
             return IndexDefinitionStorage.GetTransformerDefinition(name);
         }
+
     }
 }

@@ -65,7 +65,6 @@ namespace Raven.Database.Server
 		protected readonly AtomicDictionary<Task<DocumentDatabase>> ResourcesStoresCache =
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
-		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
         private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
@@ -228,15 +227,11 @@ namespace Raven.Database.Server
 						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
 						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
 						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						let lastUsed = documentDatabase.Database.WorkContext.LastWorkTime
 						select new LoadedDatabaseStatistics
 						{
 							Name = documentDatabase.Name,
-							LastActivity = new[]
-							{
-								lastUsed,
-								documentDatabase.Database.WorkContext.LastWorkTime
-							}.Max(),
+							LastActivity = lastUsed,
 							TransactionalStorageSize = transactionalStorageSize,
 							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize),
 							IndexStorageSize = indexStorageSize,
@@ -463,6 +458,7 @@ namespace Raven.Database.Server
 				logger.ErrorException("Error during idle operation run for system database", e);
 			}
 
+			var databasesToCleanup = new List<DocumentDatabase>();
 			foreach (var documentDatabase in ResourcesStoresCache)
 			{
 				try
@@ -472,6 +468,8 @@ namespace Raven.Database.Server
 				    var database = documentDatabase.Value.Result;
 				    if (DatabaseHadRecentWritesRequests(database) == false)
                         database.RunIdleOperations();
+					if((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > maxTimeDatabaseCanBeIdle)
+						databasesToCleanup.Add(database);
 				}
 				catch (Exception e)
 				{
@@ -479,20 +477,14 @@ namespace Raven.Database.Server
 				}
 			}
 
-			var databasesToCleanup = databaseLastRecentlyUsed
-				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
-				.Select(x => x)
-				.ToArray();
-
 			foreach (var db in databasesToCleanup)
 			{
 				logger.Info("Database {0}, had no incoming requests idle for {1}, trying to shut it down",
-					db.Key,
-					(SystemTime.UtcNow - db.Value));
+					db.Name, (SystemTime.UtcNow - db.WorkContext.LastWorkTime));
 
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db.Key, skipIfActive: true);
+				CleanupDatabase(db.Name, skipIfActive: true);
 
 			}
 		}
@@ -517,12 +509,10 @@ namespace Raven.Database.Server
 				Task<DocumentDatabase> databaseTask;
 				if (ResourcesStoresCache.TryGetValue(db, out databaseTask) == false)
 				{
-					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
 				if (databaseTask.Status == TaskStatus.Faulted || databaseTask.Status == TaskStatus.Canceled)
 				{
-					databaseLastRecentlyUsed.TryRemove(db, out time);
 					ResourcesStoresCache.TryRemove(db, out databaseTask);
 					return;
 				}
@@ -562,7 +552,7 @@ namespace Raven.Database.Server
 					logger.ErrorException("Could not cleanup tenant database: " + db, e);
 					return;
 				}
-				databaseLastRecentlyUsed.TryRemove(db, out time);
+				
 				ResourcesStoresCache.TryRemove(db, out databaseTask);
 
 				var onDatabaseCleanupOccured = DatabaseCleanupOccured;
@@ -933,7 +923,7 @@ namespace Raven.Database.Server
 				currentTenantId.Value = Constants.SystemDatabase;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
-				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+				SystemDatabase.WorkContext.UpdateFoundWork();
 				if (onBeforeRequest != null)
 				{
 					var args = new BeforeRequestEventArgs
@@ -996,7 +986,7 @@ namespace Raven.Database.Server
 				}
 				var resourceStore = resourceStoreTask.Result;
 
-				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+				resourceStore.WorkContext.UpdateFoundWork();
 
 				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 				{
@@ -1069,8 +1059,6 @@ namespace Raven.Database.Server
 				if (database.IsFaulted || database.IsCanceled)
 				{
 					ResourcesStoresCache.TryRemove(tenantId, out database);
-					DateTime time;
-					databaseLastRecentlyUsed.TryRemove(tenantId, out time);
 					// and now we will try creating it again
 				}
 				else
@@ -1096,7 +1084,7 @@ namespace Raven.Database.Server
 				InitializeRequestResponders(documentDatabase);
 
 				// if we have a very long init process, make sure that we reset the last idle time for this db.
-				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+				documentDatabase.WorkContext.UpdateFoundWork();
 				return documentDatabase;
 			}).ContinueWith(task =>
 			{
