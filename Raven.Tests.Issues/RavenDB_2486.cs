@@ -3,12 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Lucene.Net.Analysis;
-using Raven.Abstractions.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs.MultiMap;
 using Raven.Tests.Helpers;
 using Xunit;
 
