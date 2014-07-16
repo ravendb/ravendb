@@ -127,7 +127,7 @@ interface licenseStatusDto {
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
-        periodicExport: string;
+        periodicBackup: string;
         encryption: string;
         compression: string;
         quotas: string;
