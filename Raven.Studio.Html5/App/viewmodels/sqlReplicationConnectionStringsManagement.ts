@@ -15,7 +15,6 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
     htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
-    canActivateCalled = ko.observable<boolean>(false);
     isSaveEnabled :KnockoutComputed<boolean>;
     constructor() {
         super();
@@ -40,21 +39,14 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         var def = $.Deferred();
         this.loadConnections()
             .always(() => def.resolve({ can: true }));
-        this.canActivateCalled(true);
-
         return def;
     }
 
     activate(args) {
         super.activate(args);
         this.dirtyFlag = new ko.DirtyFlag([this.connections]);
-        this.isSaveEnabled = ko.computed(() => {
-            return this.dirtyFlag().isDirty() === true && this.canActivateCalled() === true;
-        });
-
-        if (this.canActivateCalled() === false) {
-            this.loadConnections().always(() => this.canActivateCalled(true));
-        }
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+        
     }
 
     save() {

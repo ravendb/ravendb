@@ -14,7 +14,6 @@ class quotas extends viewModelBase {
     warningThresholdForDocs = ko.observable<number>();
  
     isSaveEnabled: KnockoutComputed<boolean>;
-    canActivateCalled = ko.observable<boolean>(false);
 
     canActivate(args: any): any {
         super.canActivate(args);
@@ -27,7 +26,6 @@ class quotas extends viewModelBase {
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
         }
-        this.canActivateCalled(true);
         return deferred;
     }
 
@@ -36,15 +34,7 @@ class quotas extends viewModelBase {
 
         this.initializeDirtyFlag();
 
-        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true && this.canActivateCalled() === true);
-
-        var db = this.activeDatabase();
-        if (db) {
-            // fetch current quotas from the database
-            this.fetchQuotas(db)
-                .done(() => this.canActivateCalled(true));
-                
-        }
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
     }
 
     private fetchQuotas(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
