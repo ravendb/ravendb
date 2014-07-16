@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Exceptions;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 // -----------------------------------------------------------------------
 //  <copyright file="UnitOfWork.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -6,6 +7,8 @@
 // -----------------------------------------------------------------------
 using Raven.Tests.Core.Utils.Entities;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace Raven.Tests.Core.Session
@@ -35,6 +38,11 @@ namespace Raven.Tests.Core.Session
 					user.AddressId = "addresses/1";
 					Assert.True(session.Advanced.HasChanged(user));
 					Assert.True(session.Advanced.HasChanges);
+
+                    var whatChanged = session.Advanced.WhatChanged();
+                    Assert.Equal("AddressId", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldName);
+                    Assert.Equal("", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldOldValue);
+                    Assert.Equal("addresses/1", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldNewValue);
 
 					session.Advanced.Clear();
 					Assert.False(session.Advanced.HasChanges);
