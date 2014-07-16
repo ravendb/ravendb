@@ -6,16 +6,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Threading;
+
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Bundles.MoreLikeThis;
 using Raven.Database.Data;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
+using Raven.Database.Linq;
+using Raven.Json.Linq;
+
 using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Database.Queries
@@ -23,6 +29,10 @@ namespace Raven.Database.Queries
 	public class MoreLikeThisQueryRunner
 	{
 		private readonly DocumentDatabase database;
+
+		private HashSet<string> idsToLoad;
+
+		private DocumentRetriever documentRetriever;
 
 		public MoreLikeThisQueryRunner(DocumentDatabase database)
 		{
@@ -112,11 +122,23 @@ namespace Raven.Database.Queries
 						result.Includes.Add(includedDoc);
 					}, include ?? new string[0], loadedIds);
 
-					foreach (var jsonDocument in jsonDocuments)
+					idsToLoad = new HashSet<string>();
+
+					database.TransactionalStorage.Batch(actions =>
 					{
-						result.Results.Add(jsonDocument.ToJson());
-						addIncludesCommand.Execute(jsonDocument.DataAsJson);
-					}
+						documentRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
+
+						using (new CurrentTransformationScope(database, documentRetriever))
+						{
+							foreach (var document in ProcessResults(query, jsonDocuments, database.WorkContext.CancellationToken))
+							{
+								result.Results.Add(document);
+								addIncludesCommand.Execute(document);
+							}
+						}
+					});
+
+					addIncludesCommand.AlsoInclude(idsToLoad);
 
 				    var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
                     Etag computedEtag = Etag.Parse(computeHash);
@@ -137,6 +159,43 @@ namespace Raven.Database.Queries
 					}
 				}
 			}
+		}
+
+		private IEnumerable<RavenJObject> ProcessResults(MoreLikeThisQuery query, IEnumerable<JsonDocument> documents, CancellationToken token)
+		{
+			IndexingFunc transformFunc = null;
+
+			if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
+			{
+				var transformGenerator = database.IndexDefinitionStorage.GetTransformer(query.ResultsTransformer);
+
+				if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
+					transformFunc = transformGenerator.TransformResultsDefinition;
+				else
+					throw new InvalidOperationException("The transformer " + query.ResultsTransformer + " was not found");
+			}
+
+			IEnumerable<RavenJObject> results;
+			var transformerErrors = new List<string>();
+
+			if (transformFunc == null)
+				results = documents.Select(x => x.ToJson());
+			else
+			{
+				var robustEnumerator = new RobustEnumerator(token, 100)
+				{
+					OnError =
+						(exception, o) =>
+						transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+															exception.Message))
+				};
+
+				results = robustEnumerator
+					.RobustEnumeration(documents.Select(x => new DynamicJsonObject(x.ToJson())).GetEnumerator(), transformFunc)
+					.Select(JsonExtensions.ToJObject);
+			}
+
+			return results;
 		}
 
 		private JsonDocument[] GetJsonDocuments(MoreLikeThisQuery parameters, IndexSearcher searcher, Index index, string indexName, IEnumerable<ScoreDoc> hits, int baseDocId)

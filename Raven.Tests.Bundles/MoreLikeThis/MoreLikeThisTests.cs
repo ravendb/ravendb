@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading.Tasks;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Data;
@@ -11,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
 
 using Xunit;
 
@@ -18,6 +21,44 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 {
 	public class MoreLikeThisTests : RavenTest
 	{
+		private class Transformer1 : AbstractTransformerCreationTask<Data>
+		{
+			public class Result
+			{
+				public string TransformedBody { get; set; }
+			}
+
+			public Transformer1()
+			{
+				TransformResults = results => from result in results
+											  select new
+											         {
+												         TransformedBody = result.Body + "123"
+											         };
+			}
+		}
+
+		private class Transformer2 : AbstractTransformerCreationTask<Data>
+		{
+			public class Result
+			{
+				public string TransformedBody { get; set; }
+
+				public string Name { get; set; }
+			}
+
+			public Transformer2()
+			{
+				TransformResults = results => from result in results
+											  let _ = Include<Person>("people/1")
+											  select new
+											  {
+												  TransformedBody = result.Body + "321",
+												  Name = LoadDocument<Person>("people/1").Name
+											  };
+			}
+		}
+
 		private readonly IDocumentStore store;
 
 		public MoreLikeThisTests()
@@ -57,7 +98,86 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 			return list;
 		}
-			
+
+		public void TransformersShouldWorkWithMoreLikeThis1()
+		{
+			string id;
+
+			new Transformer1().Execute(store);
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(true, false).Execute(store);
+
+				var list = GetDataList();
+				list.ForEach(session.Store);
+				session.SaveChanges();
+
+				id = session.Advanced.GetDocumentId(list.First());
+				WaitForIndexing(store);
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery
+				{
+					DocumentId = id,
+					Fields = new[] { "Body" }
+				});
+
+				Assert.NotEmpty(list);
+				foreach (var result in list)
+				{
+					Assert.NotEmpty(result.TransformedBody);
+					Assert.True(result.TransformedBody.EndsWith("123"));
+				}
+			}
+		}
+
+		public void TransformersShouldWorkWithMoreLikeThis2()
+		{
+			string id;
+
+			new Transformer2().Execute(store);
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(true, false).Execute(store);
+
+				session.Store(new Person { Name = "Name1" });
+
+				var list = GetDataList();
+				list.ForEach(session.Store);
+				session.SaveChanges();
+
+				id = session.Advanced.GetDocumentId(list.First());
+				WaitForIndexing(store);
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery
+				{
+					DocumentId = id,
+					Fields = new[] { "Body" }
+				});
+
+				Assert.NotEmpty(list);
+				foreach (var result in list)
+				{
+					Assert.NotEmpty(result.TransformedBody);
+					Assert.True(result.TransformedBody.EndsWith("321"));
+					Assert.Equal("Name1", result.Name);
+				}
+
+				var numberOfRequests = session.Advanced.NumberOfRequests;
+				var person = session.Load<Person>("people/1");
+				Assert.NotNull(person);
+				Assert.Equal("Name1", person.Name);
+				Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+			}
+		}
+
 		[Fact]
 		public void CanGetResultsUsingTermVectors()
 		{
@@ -76,6 +196,26 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 			}
 
 			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
+		}
+
+		[Fact]
+		public async Task CanGetResultsUsingTermVectorsAsync()
+		{
+			string id;
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(true, false).Execute(store);
+
+				var list = GetDataList();
+				list.ForEach(session.Store);
+				session.SaveChanges();
+
+				id = session.Advanced.GetDocumentId(list.First());
+				WaitForIndexing(store);
+			}
+
+			await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(id);
 		}
 
 		[Fact]
@@ -440,6 +580,20 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				{
 					DocumentId = documentKey,
 					Fields = new[] {"Body"}
+				});
+
+				Assert.NotEmpty(list);
+			}
+		}
+
+		private async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
+		{
+			using (var session = store.OpenAsyncSession())
+			{
+				var list = await session.Advanced.MoreLikeThisAsync<T, TIndex>(new MoreLikeThisQuery
+				{
+					DocumentId = documentKey,
+					Fields = new[] { "Body" }
 				});
 
 				Assert.NotEmpty(list);
