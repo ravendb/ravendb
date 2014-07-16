@@ -1,4 +1,5 @@
 ﻿@import "bootstrap.less";
+
 @selectionColor: #ffc;
 /*@selectionColor: black;*/
 
@@ -315,7 +316,7 @@ html, body {
             padding: 8px;
             margin: 0 10px 14px 0;
 
-            @selectColor: @raven-color;
+            @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
             @disabledColor: lighten(silver, 5%);
 
@@ -396,7 +397,7 @@ html, body {
             }
 
             &.selected {
-                box-shadow: -5px 0 0 0 @raven-color, 0 0 5px 2px silver;
+                box-shadow: -5px 0 0 0 @brand-primary, 0 0 5px 2px silver;
                 //background-image: linear-gradient(#5f6060, #474949 50%, #3d3f3f);
                 /*a, .text-muted {
                     color: white;
@@ -943,7 +944,7 @@ html, body {
         }
 
         &.checked {
-            box-shadow: 5px 0 0 0 @raven-color inset, -5px 0 0 0 @raven-color inset;
+            box-shadow: 5px 0 0 0 @brand-primary inset, -5px 0 0 0 @brand-primary inset;
             background-color: @selectionColor;
             
         }

@@ -763,6 +763,8 @@
     </Content>
     <Content Include="readme-optimized-build.md" />
     <Content Include="Content\bootstrap.less" />
+    <Content Include="Content\variables.less" />
+    <Content Include="Content\functions.less" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
