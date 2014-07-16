@@ -4,20 +4,38 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/getWindowsAuthCommand");
 import saveWindowsAuthCommand = require("commands/saveWindowsAuthCommand");
 
-class windowsAuth {
+class windowsAuth extends viewModelBase {
 
-    setup = ko.observable<windowsAuthSetup>();
+    setup = ko.observable<windowsAuthSetup>().extend({ required: true });
+    isSaveEnabled: KnockoutComputed<boolean>;
 
-    activate() {
+    canActivate(args) {
+        super.canActivate(args);
+
+        var deffered = $.Deferred();
         this.setup(new windowsAuthSetup({ RequiredUsers: [], RequiredGroups: [] }));
+        this.fetchWindowsAuth().always(() => deffered.resolve({ can: true }));
 
-        new getWindowsAuthCommand()
+        return deffered;
+    }
+
+    activate(args) {
+        super.activate(args);
+
+        this.dirtyFlag = new ko.DirtyFlag([this.setup]);
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+    }
+
+    private fetchWindowsAuth(): JQueryPromise<any> {
+        return new getWindowsAuthCommand()
             .execute()
             .done(result => this.setup(result));
     }
 
     saveChanges() {
-        new saveWindowsAuthCommand(this.setup().toDto()).execute();
+        new saveWindowsAuthCommand(this.setup().toDto())
+            .execute()
+            .done(() => this.dirtyFlag().reset());
     }
 
     addUserSettings() {

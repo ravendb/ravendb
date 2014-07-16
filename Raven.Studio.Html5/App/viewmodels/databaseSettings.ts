@@ -71,18 +71,16 @@ class databaseSettings extends viewModelBase {
         super.activate(args);
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
-        this.isSaveEnabled = ko.computed(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
 
-        var dbDocEditor = $("#dbDocEditor");
-        if (dbDocEditor.length > 0)
+        var editorElement = $("#dbDocEditor");
+        if (editorElement.length > 0)
         {
-            this.docEditor = ko.utils.domData.get(dbDocEditor[0], "aceEditor");
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
     }
 

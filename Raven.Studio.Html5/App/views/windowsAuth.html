@@ -1,7 +1,7 @@
 ﻿<nav class="navbar navbar-default" role="navigation">
     <div class="collapse navbar-collapse">
         <form class="navbar-form navbar-left">
-            <button type="button" class="btn btn-primary" data-bind="click: saveChanges" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
+            <button type="button" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
         </form>
     </div>
 </nav>
@@ -67,7 +67,7 @@
                                         <tr class="database-row">
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: tenantId" />
+                                                    <input type="text" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeyup'" />
                                                 </div>
                                             </td>
                                             <td class="text-center"><input type="checkbox" data-bind="checked: admin"/></td>

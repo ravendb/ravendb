@@ -23,7 +23,7 @@ class databases extends viewModelBase {
 
     constructor() {
         super();
-
+        
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);

@@ -251,7 +251,7 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
         return path;
     }
 
@@ -285,12 +285,12 @@ class appUrl {
 
     static forApiKeys(): string {
         // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/apiKeys";
+        return "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
     }
 
     static forWindowsAuth(): string {
         // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/windowsAuth";
+        return "#databases/settings/windowsAuth?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
     }
 
     static forDatabaseSettings(db: database): string {
