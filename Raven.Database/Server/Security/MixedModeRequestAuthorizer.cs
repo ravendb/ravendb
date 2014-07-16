@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Security.Principal;
 using Mono.CSharp;
 using Raven.Abstractions;
@@ -21,9 +22,10 @@ namespace Raven.Database.Server.Security
 
 		private class OneTimeToken
 		{
+			readonly Stopwatch age = Stopwatch.StartNew();
+
 			private IPrincipal user;
 			public string DatabaseName { get; set; }
-			public DateTime GeneratedAt { get; set; }
 			public IPrincipal User
 			{
 				get
@@ -42,6 +44,10 @@ namespace Raven.Database.Server.Security
 						Name = value.Identity.Name
 					};
 				}
+			}
+			public TimeSpan Age
+			{
+				get { return age.Elapsed; }
 			}
 		}
 
@@ -113,12 +119,12 @@ namespace Raven.Database.Server.Security
 				});
 				return false;
 			}
-			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
+			if (value.Age.TotalMinutes > 2.5) // if the value is over 2.5 minutes old, reject it
 			{
 				context.SetStatusToForbidden();
 				context.WriteJson(new
 				{
-					Error = "This single use token has expired"
+					Error = "This single use token has expired after " + value.Age.TotalSeconds + " seconds"
 				});
 				return false;
 			}
@@ -171,7 +177,6 @@ namespace Raven.Database.Server.Security
 			var token = new OneTimeToken
 			{
 				DatabaseName = TenantId,
-				GeneratedAt = SystemTime.UtcNow,
 				User = user
 			};
 			var tokenString = Guid.NewGuid().ToString();
@@ -180,7 +185,7 @@ namespace Raven.Database.Server.Security
 
 			if (singleUseAuthTokens.Count > 25)
 			{
-				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => (x.Value.GeneratedAt - SystemTime.UtcNow).TotalMinutes > 5))
+				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => x.Value.Age.TotalMinutes > 3))
 				{
 					OneTimeToken value;
 					singleUseAuthTokens.TryRemove(oneTimeToken.Key, out value);
