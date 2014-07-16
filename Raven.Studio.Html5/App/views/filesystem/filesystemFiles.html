@@ -38,8 +38,8 @@
         <div class="col-md-10">
             <div class="btn-toolbar" role="toolbar">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-default" data-bind="click: toggleSelectAll" title="Select all or none">
-                        <img style="height: 18px;" data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                    <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll" title="Select all or none">
+                        <img data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
                     </button>
                 </div>
                 <div class="btn-group" data-bind="visible: hasAnyFileSelected">
