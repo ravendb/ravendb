@@ -15,7 +15,7 @@ $result = $host.ui.PromptForChoice($title, $message, $options, 1)
 switch ($result)
     {
         0 {
-			Get-ChildItem $path -Include bin,obj,build -Recurse -Force | Select -ExpandProperty FullName | Where {$_ -notlike '*Imports*'} | Remove-Item -Force -Recurse
+			Get-ChildItem $path -Include bin,obj,build -Recurse -Force | Select -ExpandProperty FullName | Where {$_ -notlike '*Imports*' -and $_ -notlike '*pvc-packages*'} | Remove-Item -Force -Recurse
 			&"git" clean -f -x -d
 		}
         1 { return; }
