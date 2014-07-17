@@ -5,8 +5,10 @@ using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Raven.Tests.Core.Utils.Transformers;
 
 namespace Raven.Tests.Core.ChangesApi
 {
@@ -230,6 +232,34 @@ namespace Raven.Tests.Core.ChangesApi
 
                 bulkInsert.Store(new User { Name = "User" });
                 WaitUntilOutput("passed_bulkInsert");
+            }
+        }
+
+        [Fact]
+        public void CanSubscribeToAllTransformers()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Changes().Task.Result
+                    .ForAllTransformers()
+                    .Subscribe(changes => 
+                    {
+                        if (changes.Type == TransformerChangeTypes.TransformerAdded)
+                        {
+                            output = "passed_CanSubscribeToAllTransformers_TransformerAdded";
+                        }
+                        if (changes.Type == TransformerChangeTypes.TransformerRemoved)
+                        {
+                            output = "passed_CanSubscribeToAllTransformers_TransformerRemoved";
+                        }
+                    });
+
+                var transformer = new CompanyFullAddressTransformer();
+                transformer.Execute(store);
+                WaitUntilOutput("passed_CanSubscribeToAllTransformers_TransformerAdded");
+
+                store.DatabaseCommands.DeleteTransformer(transformer.TransformerName);
+                WaitUntilOutput("passed_CanSubscribeToAllTransformers_TransformerRemoved");
             }
         }
     }
