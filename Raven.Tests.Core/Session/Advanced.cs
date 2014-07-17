@@ -289,5 +289,38 @@ namespace Raven.Tests.Core.Session
                 }
             }
         }
+
+        [Fact]
+        public void CanUseMaxNumberOfRequestsPerSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 2;
+
+                    var company = new Company();
+                    session.Store(company);
+                    session.SaveChanges();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    company.Name = "1";
+                    session.Store(company);
+                    session.SaveChanges();
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    try
+                    {
+                        company.Name = "2";
+                        session.Store(company);
+                        session.SaveChanges();
+                        Assert.False(true, "I expected InvalidOperationException to be thrown here.");
+                    }
+                    catch (InvalidOperationException)
+                    {
+                    }
+                }
+            }
+        }
     }
 }
