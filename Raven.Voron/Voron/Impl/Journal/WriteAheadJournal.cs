@@ -40,7 +40,6 @@ namespace Voron.Impl.Journal
 
 		private readonly HeaderAccessor _headerAccessor;
 		private readonly IVirtualPager _compressionPager;
-		private uint _previousTransactionCrc;
 
 		public event Action<TransactionToShip> OnTransactionCommit;
 
@@ -53,27 +52,16 @@ namespace Voron.Impl.Journal
 			_updateLogInfo = header =>
 			{
 				var journalFilesCount = _files.Count;
-				header->Journal.CurrentJournal = journalFilesCount > 0 ? _journalIndex : -1;
+				var currentJournal = journalFilesCount > 0 ? _journalIndex : -1;
+				header->Journal.CurrentJournal = currentJournal;
 				header->Journal.JournalFilesCount = journalFilesCount;
 				header->IncrementalBackup.LastCreatedJournal = _journalIndex;
 			};
-			
-			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env,
-				_headerAccessor.Get(header => header->ShippedTransactionId), 
-				_headerAccessor.Get(header => header->ShippedTransactionCrc));
 
-			_previousTransactionCrc = _shipppedTransactionsApplicator.PreviousTransactionCrc;
+			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env, 0, _env.NextWriteTransactionId - 1);
 
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
-
 			_journalApplicator = new JournalApplicator(this, _journalLock);
-
-			_shipppedTransactionsApplicator.TransactionApplied += (previousTransactionId, previousTransactionCrc) => 
-				_headerAccessor.Modify(header =>
-				{
-					header->ShippedTransactionId = previousTransactionId;
-					header->ShippedTransactionCrc = previousTransactionCrc;
-				});
 		}
 
 		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
@@ -146,6 +134,8 @@ namespace Voron.Impl.Journal
 			var journalFiles = new List<JournalFile>();
 			long lastSyncedTxId = -1;
 			long lastSyncedJournal = logInfo.LastSyncedJournal;
+			long lastShippedTxId = -1;
+			uint lastShippedTxCrc = 0;
 			for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
 			{
 				using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
@@ -172,6 +162,11 @@ namespace Voron.Impl.Journal
 
 						*txHeader = *lastReadHeaderPtr;
 						lastSyncedTxId = txHeader->TransactionId;
+						if (lastSyncedTxId > lastShippedTxId)
+						{
+							lastShippedTxId = lastSyncedTxId;
+							lastShippedTxCrc = txHeader->Crc;
+						}
 						lastSyncedJournal = journalNumber;
 					}
 
@@ -193,8 +188,11 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			_files = _files.AppendRange(journalFiles);
+			Shipper.SetPreviousTransaction(lastShippedTxId,lastShippedTxCrc);
+			
 
+			_files = _files.AppendRange(journalFiles);
+			
 			Debug.Assert(lastSyncedTxId >= 0);
 			Debug.Assert(lastSyncedJournal >= 0);
 
@@ -208,6 +206,7 @@ namespace Voron.Impl.Journal
 					header->Journal.CurrentJournal = lastSyncedJournal;
 					header->Journal.JournalFilesCount = _files.Count;
 					header->IncrementalBackup.LastCreatedJournal = _journalIndex;
+					header->PreviousTransactionCrc = lastShippedTxCrc;
 				});
 
 			CleanupInvalidJournalFiles(lastSyncedJournal);
@@ -511,7 +510,7 @@ namespace Voron.Impl.Journal
 						_lastSyncedTransactionId = lastFlushedTransactionId;
 
 						_lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
-
+						
 						if (unusedJournals.Count > 0)
 						{
 							var lastUnusedJournalNumber = unusedJournals.Last().Number;
@@ -521,7 +520,7 @@ namespace Voron.Impl.Journal
 						if (_waj._files.Count == 0)
 							_waj.CurrentFile = null;
 
-						FreeScratchPages(unusedJournals, txw, _waj.Shipper.PreviousTransaction);
+						FreeScratchPages(unusedJournals, txw);
 
 						if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
 							DateTime.Now - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
@@ -612,7 +611,7 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw, long lastShippedTransaction)
+			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
 			{
 				// we have to free pages of the unused journals before the remaining ones that are still in use
 				// to prevent reading from them by any read transaction (read transactions search journals from the newest
@@ -668,7 +667,7 @@ namespace Voron.Impl.Journal
 
 					txPos += compressedPages + 1;
 				}
-
+				
 				Debug.Assert(_lastSyncedJournal != -1);
 				Debug.Assert(_lastSyncedTransactionId != -1);
 
@@ -682,6 +681,8 @@ namespace Voron.Impl.Journal
 
 					header->Root = lastReadTxHeader.Root;
 					header->FreeSpace = lastReadTxHeader.FreeSpace;
+
+					header->PreviousTransactionCrc = _waj.Shipper.PreviousTransactionCrc;
 
 					_waj._updateLogInfo(header);
 				});
@@ -708,43 +709,35 @@ namespace Voron.Impl.Journal
 
 		public void WriteToJournal(Transaction tx, int pageCount)
 		{
-			var pages = CompressPages(tx, pageCount, _compressionPager);
+			var pages = CompressPages(tx, pageCount, _compressionPager, Shipper.PreviousTransactionCrc);
 
 			if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
 			{
 				CurrentFile = NextFile(pages.Length);
 			}
 
-			var transactionHeader = *(TransactionHeader*)pages[0];
-
 			CurrentFile.Write(tx, pages);
+
+			var transactionHeader = *(TransactionHeader*)pages[0];
 
 			var onTransactionCommit = OnTransactionCommit;
 			if (onTransactionCommit != null)
 			{
 				var transactionToShip = new TransactionToShip(transactionHeader)
 				{
-					CompressedPages = pages,
-					PreviousTransactionCrc = _previousTransactionCrc
+					CompressedPages = pages
 				};
 
 				onTransactionCommit(transactionToShip);
 			}
 
-			if (tx.Id == 1) 
-			{
-				Shipper.UpdatePreviousTransactionCrc(transactionHeader.Crc);
-			}
-
-			_previousTransactionCrc = transactionHeader.Crc;
+			Shipper.SetPreviousTransaction(transactionHeader.TransactionId, transactionHeader.Crc);
 
 			if (CurrentFile.AvailablePages == 0)
 				CurrentFile = null;
-
 		}
 
-
-		private byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
+		private byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager,uint previousTransactionCrc)
 		{
 			// numberOfPages include the tx header page, which we don't compress
 			var dataPagesCount = numberOfPages - 1;
@@ -788,6 +781,7 @@ namespace Voron.Impl.Journal
 			txHeader->Compressed = true;
 			txHeader->CompressedSize = len;
 			txHeader->UncompressedSize = sizeInBytes;
+			txHeader->PreviousTransactionCrc = previousTransactionCrc;
 
 			pages[0] = txHeaderBase;
 			for (int index = 0; index < compressedPages; index++)

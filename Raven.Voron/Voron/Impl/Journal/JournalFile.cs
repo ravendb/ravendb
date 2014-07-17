@@ -91,6 +91,7 @@ namespace Voron.Impl.Journal
 
 #if DEBUG
         private readonly StackTrace _st = new StackTrace(true);
+	    private long _lastTxHeaderWritePos;
 #endif
 
         ~JournalFile()
@@ -148,7 +149,7 @@ namespace Voron.Impl.Journal
 
         public JournalSnapshot GetSnapshot()
         {
-            var lastTxId = _pageTranslationTable.GetLastSeenTransaction();
+            var lastTxId = _pageTranslationTable.GetLastSeenTransactionId();
             return new JournalSnapshot
             {
                 Number = Number,
@@ -182,7 +183,7 @@ namespace Voron.Impl.Journal
 
 			var ptt = new Dictionary<long, PagePosition>();
 			var unused = new HashSet<PagePosition>();
-			var writePagePos = _writePage;
+			var pageWritePos = _writePage;
 
 			UpdatePageTranslationTable(tx, txPages, unused, ptt);
 
@@ -195,10 +196,11 @@ namespace Voron.Impl.Journal
 				_unusedPages.AddRange(unused);
 			}
 
-			var position = writePagePos * AbstractPager.PageSize;
+			var position = pageWritePos * AbstractPager.PageSize;
 			_journalWriter.WriteGather(position, pages);
+			_lastTxHeaderWritePos = pageWritePos;
 
-			return writePagePos;
+			return pageWritePos;
 		}      
 
 	    private void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
@@ -216,7 +218,7 @@ namespace Voron.Impl.Journal
 			    PagePosition pagePosition;
 			    if (ptt.TryGetValue(pageNumber, out pagePosition))
 				    unused.Add(pagePosition);
-
+				
 				ptt[pageNumber] = new PagePosition
 				{
 					ScratchPos = txPage.PositionInScratchBuffer,
@@ -233,8 +235,16 @@ namespace Voron.Impl.Journal
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
+	    
+		public long LastTxHeaderWritePos
+	    {
+		    get
+		    {
+			    return _lastTxHeaderWritePos;
+		    }
+	    }
 
-        public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
+	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
         {
             List<KeyValuePair<long, PagePosition>> unusedPages;
 

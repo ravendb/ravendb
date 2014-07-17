@@ -10,9 +10,6 @@ namespace Voron.Impl.Journal
 		private byte[] _copiedPages;
 		public TransactionHeader Header { get; private set; }
 
-		public uint PreviousTransactionCrc { get; set; }
-
-
 		public byte[] PagesSnapshot
 		{
 			get
