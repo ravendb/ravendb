@@ -14,6 +14,9 @@ using System.Net;
 using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Lucene.Net.Documents;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -1113,7 +1116,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				return GetConnectionOptions(x);
+				return GetConnectionOptions(x, docDb);
 			}
 			catch (Exception e)
 			{
@@ -1126,12 +1129,12 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private ReplicationStrategy GetConnectionOptions(ReplicationDestination x)
+		public static ReplicationStrategy GetConnectionOptions(ReplicationDestination x, DocumentDatabase database)
 		{
 			var replicationStrategy = new ReplicationStrategy
 			{
 				ReplicationOptionsBehavior = x.TransitiveReplicationBehavior,
-				CurrentDatabaseId = docDb.TransactionalStorage.Id.ToString()
+				CurrentDatabaseId = database.TransactionalStorage.Id.ToString()
 			};
 			return CreateReplicationStrategyFromDocument(x, replicationStrategy);
 		}

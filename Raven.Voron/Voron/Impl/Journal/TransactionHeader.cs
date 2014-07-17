@@ -50,5 +50,8 @@ namespace Voron.Impl.Journal
 
 		[FieldOffset(174)]
 		public int UncompressedSize;
+
+		[FieldOffset(178)]
+		public uint PreviousTransactionCrc;
 	}
 }

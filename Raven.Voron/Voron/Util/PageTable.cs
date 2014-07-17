@@ -38,6 +38,7 @@ namespace Voron.Util
 		public void SetItems(Transaction tx, Dictionary<long, JournalFile.PagePosition> items)
 		{
 			UpdateMaxSeenTxId(tx);
+
 			foreach (var item in items)
 			{
 				var copy = item;
@@ -51,7 +52,7 @@ namespace Voron.Util
 					Value = copy.Value
 				}));
 			}
-		}
+		}	
 
 		private void UpdateMaxSeenTxId(Transaction tx)
 		{
@@ -120,10 +121,9 @@ namespace Voron.Util
 				return val.Value.TransactionId < oldestActiveTransaction;
 			}).Select(x => new KeyValuePair<long, JournalFile.PagePosition>(x.Key, x.Value[x.Value.Count - 1].Value))
 				.ToList();
-
 		}
 
-		public long GetLastSeenTransaction()
+		public long GetLastSeenTransactionId()
 		{
 			return Thread.VolatileRead(ref _maxSeenTransaction);
 		}
