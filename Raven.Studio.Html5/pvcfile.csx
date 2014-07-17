@@ -1,6 +1,7 @@
 pvc.Task("optimized-build", () => {
 	var outputDirectory = "optimized-build";
-	new DirectoryInfo(outputDirectory).Delete(true);
+	if (Directory.Exists(outputDirectory))
+		Directory.Delete(outputDirectory, true);
 
 	pvc.Source(
 		"Scripts/typings/**/*.d.ts", 

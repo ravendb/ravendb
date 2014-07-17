@@ -65,16 +65,11 @@ task CompileHtml5 {
 	
 	Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
 	Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
-	Copy-Item $base_dir\Raven.Studio.Html5 $build_dir\Html5 -Recurse
-
-	Remove-Item $build_dir\Html5\web*.config -Force -Recurse
-	Remove-Item $build_dir\Html5\packages.config -Force -Recurse
-	Remove-Item $build_dir\Html5\Raven.Studio.Html5.csproj* -Force -Recurse
-	Remove-Item $build_dir\Html5\App_Readme -Force -Recurse  -ErrorAction SilentlyContinue
-	Remove-Item $build_dir\Html5\bin -Force -Recurse
-	Remove-Item $build_dir\Html5\obj -Force -Recurse
-	Remove-Item $build_dir\Html5\Properties -Force -Recurse
-	Remove-Item $build_dir\Html5\build -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
+	
+	Set-Location $base_dir\Raven.Studio.Html5
+	exec { & $tools_dir\Pvc\pvc.exe optimized-build }
+	
+	Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
 
 	Set-Location $build_dir\Html5
 	exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
