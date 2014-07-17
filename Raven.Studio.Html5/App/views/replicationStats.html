@@ -120,9 +120,20 @@
         <div class="panel-group">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <h4 class="panel-title">
+                    <h4 class="panel-title pull-left">
                         <a data-toggle="collapse" href="#collapseOne" data-bind="attr: { href: '#replicationSetupCollapse' }">Replication Topology</a>
                     </h4>
+                    <div class="pull-right btn-group" data-bind="if: topology">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <i class="fa fa-download"></i>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <li data-bind="click: saveAsPng, visible: hasSaveAsPngSupport"><a href="#"><i class="fa fa-file-image-o"></i> PNG</a></li>
+                            <li data-bind="click: saveAsSvg"><a href="#"><i class="fa fa-file-image-o"></i> SVG</a></li>
+                            <li data-bind="click: saveAsJson"><a href="#"><i class="fa fa-file-text-o"></i> JSON</a></li>
+                        </ul>
+                    </div>
+                    <div class="clearfix"></div>
                 </div>
                 <div class="panel-collapse collapse" data-bind="attr: { id: 'replicationSetupCollapse'  }">
                     <div class="panel-body">

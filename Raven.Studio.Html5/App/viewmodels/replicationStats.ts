@@ -2,6 +2,9 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/getReplicationStatsCommand");
 import moment = require("moment");
 
+import svgDownloader = require("common/svgDownloader");
+import jsonDownloader = require("common/jsonDownloader");
+
 import getReplicationTopology = require("commands/getReplicationTopology");
 
 import d3 = require('d3/d3');
@@ -25,6 +28,10 @@ class replicationStats extends viewModelBase {
     circle: D3.UpdateSelection;
     force: D3.Layout.ForceLayout;
     colors = d3.scale.category10();
+
+    hasSaveAsPngSupport = ko.computed(() => {
+        return !(navigator && navigator.msSaveBlob);
+    });
 
     constructor() {
         super();
@@ -114,8 +121,9 @@ class replicationStats extends viewModelBase {
         this.height = 600;
 
         this.svg = d3.select("#replicationTopology")
-            .attr('width', self.width)
-            .attr('height', self.height); 
+            .style({ height: self.height + 'px' })
+            .style({ width: self.width + 'px' })
+            .attr("viewBox", "0 0 " + self.width + " " + self.height);
 
         this.nodes = this.topology().Servers.map((s, idx) => {
             return { id: s, idx: idx + 1 }
@@ -343,6 +351,17 @@ class replicationStats extends viewModelBase {
             }); 
     }
 
+    saveAsPng() {
+        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', svgDownloader.extractInlineCss);
+    }
+
+    saveAsSvg() {
+        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', svgDownloader.extractInlineCss);
+    }
+
+    saveAsJson() {
+
+    }
 }
 
 export = replicationStats;

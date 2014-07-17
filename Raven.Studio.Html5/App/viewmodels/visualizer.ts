@@ -693,11 +693,11 @@ class visualizer extends viewModelBase {
     }
 
     saveAsSvg() {
-        svgDownloader.downloadSvg(d3.select('#visualizer').node());
+        svgDownloader.downloadSvg(d3.select('#visualizer').node(), 'visualization.svg', (e) => visualizer.visualizationCss);
     }
 
     saveAsPng() {
-        svgDownloader.downloadPng(d3.select('#visualizer').node());
+        svgDownloader.downloadPng(d3.select('#visualizer').node(), 'visualization.png', (e) => visualizer.visualizationCss);
     }
 
     saveAsJson() {
@@ -732,6 +732,17 @@ class visualizer extends viewModelBase {
         app.showDialog(dialog);
     }
     
+
+    static visualizationCss = '* { box-sizing: border-box; }\n' +
+    '.hidden { display: none !important; visibility: hidden !important; }\n' +
+    'svg text { font-style: normal; font-variant: normal; font-weight: normal; font-size: 12px; line-height: normal; font-family: Arial; }\n' +
+    '.nodeRect { stroke: rgb(119, 119, 119); stroke-width: 1.5px; fill-opacity: 0.4 !important; }\n' +
+    '.nodeCheck { stroke-width: 2px; stroke: rgb(0, 0, 0); fill: rgb(255, 255, 255); }\n' +
+    '.hidden { display: none; }\n' +
+    'g { font-style: normal; font-variant: normal; font-weight: normal; font-size: 10px; line-height: normal; font-family: sans - serif; cursor: pointer; }\n' +
+    '.link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n' +
+    'text { pointer-events: none; text-anchor: middle; }\n' +
+    '.link.selected { fill: none; stroke: black; stroke-width: 2.5px; } \n';
 
 }
 
