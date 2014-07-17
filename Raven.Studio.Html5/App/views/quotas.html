@@ -11,7 +11,7 @@
             <div class="col-md-4 control-label">Maximum size:</div>
             <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="numericValue: maximumSize" />
+                    <input required type="number" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">MB</span>
                 </div>
             </div>
@@ -21,7 +21,7 @@
             <div class="col-md-4 control-label">Warning limit threshold:</div>
             <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="numericValue: warningLimitThreshold" />
+                    <input required type="number" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">MB</span>
                 </div>
             </div>
@@ -31,7 +31,7 @@
             <div class="col-md-4 control-label">Maximum number of docs:</div>
             <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="numericValue: maxNumberOfDocs" />
+                    <input required type="number" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">docs</span>
                 </div>
             </div>
@@ -41,7 +41,7 @@
             <div class="col-md-4 control-label">Warning threshold for docs:</div>
             <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="numericValue: warningThresholdForDocs" />
+                    <input required type="number" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">docs</span>
                 </div>
             </div>

@@ -113,9 +113,9 @@ class editSqlReplication extends viewModelBase {
 
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -163,7 +163,7 @@ class editSqlReplication extends viewModelBase {
             var sqlReplicationDto: any = document.toDto(true);
             this.editedReplication(new sqlReplication(sqlReplicationDto));
             this.initialReplicationId = this.editedReplication().name();
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
+            this.dirtyFlag().reset(); //Resync Changes
         });
         loadDocTask.always(() => this.isBusy(false));
         this.isBusy(true);
@@ -240,14 +240,14 @@ class editSqlReplication extends viewModelBase {
     }
 
     private initializeAceValidity(element: Element) {
-        var editor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
-        if (editor)
-        {
-        var editorValue = editor.getSession().getValue();
-        if (editorValue === "") {
-            var textarea: any = $(element).find('textarea')[0];
-            textarea.setCustomValidity("Please fill out this field.");
-        }
+        var editorElement = $("#aceEditor");
+        if (editorElement.length > 0) {
+            var editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+            var editorValue = editor.getSession().getValue();
+            if (editorValue === "") {
+                var textarea: any = $(element).find('textarea')[0];
+                textarea.setCustomValidity("Please fill out this field.");
+            }
         }
     }
 
@@ -266,7 +266,7 @@ class editSqlReplication extends viewModelBase {
         var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Configuration/" + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
+            this.dirtyFlag().reset(); //Resync Changes
             this.loadSqlReplication(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
             this.isEditingNewReplication(false);
@@ -293,7 +293,7 @@ class editSqlReplication extends viewModelBase {
         if (newDoc) {
             var viewModel = new deleteDocuments([newDoc]);
             viewModel.deletionTask.done(() => {
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.dirtyFlag().reset(); //Resync Changes
                 router.navigate(appUrl.forCurrentDatabase().sqlReplications());
             });
             app.showDialog(viewModel, editSqlReplication.editSqlReplicationSelector);

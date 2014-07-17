@@ -23,7 +23,7 @@ class databases extends viewModelBase {
 
     constructor() {
         super();
-
+        
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
@@ -48,7 +48,7 @@ class databases extends viewModelBase {
                 if (db.isChecked()) {
                     if (disabledStatus == null) {
                         disabledStatus = db.disabled();
-                    } else if (disabledStatus != db.disabled()){
+                    } else if (disabledStatus != db.disabled()) {
                         return null;
                     }
                 }
@@ -88,8 +88,8 @@ class databases extends viewModelBase {
     }
 
     selectDatabase(db: database, activateDatabase: boolean = true) {
-        if (this.optionsClicked() == false){
-            this.databases().forEach((d: database)=> d.isSelected(d.name === db.name));
+        if (this.optionsClicked() == false) {
+            this.databases().forEach((d: database) => d.isSelected(d.name === db.name));
             if (activateDatabase) {
                 db.activate();
             }
@@ -173,7 +173,7 @@ class databases extends viewModelBase {
                         }
 
                         this.createDefaultSettings(newDatabase, bundles).always(() => {
-                            if (bundles.contains("Quotas") || bundles.contains("Versioning")) {
+                            if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                                 encryptionConfirmationDialogPromise.always(() => {
                                     var settingsDialog = new databaseSettingsDialog(bundles);
                                     app.showDialog(settingsDialog);
@@ -277,7 +277,7 @@ class databases extends viewModelBase {
                                 }
                             }
                         });
-                });
+                    });
 
                 app.showDialog(disableDatabaseToggleViewModel);
             });

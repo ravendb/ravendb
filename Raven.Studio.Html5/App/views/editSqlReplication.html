@@ -123,7 +123,7 @@
                 <label class="col-sm-4 control-label">SQL Provider</label>
                 <div class="col-sm-8">
                     <select tabindex="5" required class="form-control"
-                            data-bind=" event:{change:$root.providerChanged.bind($root)}, options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
+                            data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null}, event:{change:$root.providerChanged.bind($root)}, options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
                 </div>
             </div>
             <div class="form-group col-sm-6" data-bind="visible:$root.isBasicView() == false">

@@ -50,7 +50,7 @@ class indexes extends viewModelBase {
 
         $.when(this.fetchIndexes(), this.fetchRecentQueries())
             .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ redirect: appUrl.forDatabases() }));
+            .fail(() => deferred.resolve({ can: false }));
 
         return deferred;
     }

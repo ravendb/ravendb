@@ -34,7 +34,7 @@ class quotas extends viewModelBase {
 
         this.initializeDirtyFlag();
 
-        this.isSaveEnabled = ko.computed(() => viewModelBase.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
     }
 
     private fetchQuotas(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
@@ -50,7 +50,7 @@ class quotas extends viewModelBase {
     }
 
     initializeDirtyFlag() {
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([
+        this.dirtyFlag = new ko.DirtyFlag([
             this.maximumSize,
             this.warningLimitThreshold,
             this.maxNumberOfDocs,
@@ -69,7 +69,7 @@ class quotas extends viewModelBase {
             var saveTask = new saveDatabaseSettingsCommand(db, document).execute();
             saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
                 this.settingsDocument().__metadata['@etag'] = idAndEtag.ETag;
-                viewModelBase.dirtyFlag().reset();
+                this.dirtyFlag().reset();
             });
         }
     }
