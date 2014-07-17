@@ -522,14 +522,58 @@ namespace Raven.Database.Bundles.SqlReplication
 			return lastEtag;
 		}
 
-        public IEnumerable<string> SimulateSqlReplicationSQLQueries(string strDocumentId, SqlReplicationConfig sqlReplication)
-	    {
-            var stats = new SqlReplicationStatistics(sqlReplication.Name);
-            var docs = new List<JsonDocument>() { Database.Documents.Get(strDocumentId, null) };
-            var scriptResult = ApplyConversionScript(sqlReplication, docs);
-            var writer = new RelationalDatabaseWriterSimulator(Database, sqlReplication, stats);
-            return writer.SimulateExecuteCommandText(scriptResult);
-	    }
+        public RelationalDatabaseWriter.TableQuerySummary[] SimulateSqlReplicationSQLQueries(string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert)
+        {
+            alert = null;
+            RelationalDatabaseWriter.TableQuerySummary[] resutls = null;
+            
+            try
+            {
+                var stats = new SqlReplicationStatistics(sqlReplication.Name);
+                var docs = new List<JsonDocument>() { Database.Documents.Get(strDocumentId, null) };
+                var scriptResult = ApplyConversionScript(sqlReplication, docs);
+
+                if (performRolledbackTransaction)
+                {
+                    using (var writer = new RelationalDatabaseWriter(Database, sqlReplication, stats))
+                    {
+                        resutls = writer.RolledBackExecute(scriptResult).ToArray();
+                    }
+                }
+                else
+                {
+                    var simulatedwriter = new RelationalDatabaseWriterSimulator(Database, sqlReplication, stats);
+                    resutls = new List<RelationalDatabaseWriter.TableQuerySummary>()
+                    {
+                        new RelationalDatabaseWriter.TableQuerySummary()
+                        {
+                            Commands = simulatedwriter.SimulateExecuteCommandText(scriptResult)
+                            .Select(x=> new RelationalDatabaseWriter.TableQuerySummary.CommandData()
+                            {
+                                CommandText = x
+                            }).ToArray()
+                        }
+                    }.ToArray();
+
+
+                }
+
+                alert = stats.LastAlert;
+            }
+            catch (Exception e)
+            {
+                alert = new Alert()
+                {
+                    AlertLevel = AlertLevel.Error,
+                    CreatedAt = SystemTime.UtcNow,
+                    Message = "Last SQL eplication operation for " + sqlReplication.Name + " was failed",
+                    Title = "SQL replication error",
+                    Exception = e.ToString(),
+                    UniqueKey = "Sql Replication Error: " + sqlReplication.Name
+                };
+            }
+            return resutls;
+        }
 
 		private List<SqlReplicationConfig> GetConfiguredReplicationDestinations()
 		{

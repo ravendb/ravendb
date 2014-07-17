@@ -181,6 +181,7 @@ html, body {
 }
 
 .replicationSimulation{
+
     width:60vw;    
      @media(max-width: 767px) {
          width:80vw;
@@ -188,20 +189,32 @@ html, body {
     max-height:60vh!important;
     overflow-x:hidden!important;
     overflow-y:hidden!important;
+        
+    label {
+        text-align: left;
+        font-size:large;
+    }    
+
+
     .replicationSimulationData
     {
         max-height:35vh!important;
         height:35vh!important;
         overflow-x:hidden;
-        overflow-y:auto;
+        overflow-y:hidden;
 
+        .form-group{
+            max-height:25vh!important;
+            height:35vh!important;
+            overflow-x:hidden;
+            overflow-y:auto;
+        }
         .additional-action{
             margin-left:50%;
             padding:0;
         }
 
-        .simulationResultContainer{                
-             margin-top:2.5%;
+        .simulationResultContainer{                             
            .simulationResult
             {
                 font-weight:bold;
@@ -211,8 +224,13 @@ html, body {
        }
     }
 
-    overflow-x: hidden !important;
-    overflow-y: hidden !important;
+    nav{
+        .btn-toolbar{
+            padding-top: 0.5%;
+        }
+    }
+
+    
 }
 
 .query-stats {
