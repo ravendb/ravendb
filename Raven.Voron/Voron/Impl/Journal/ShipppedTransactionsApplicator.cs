@@ -26,10 +26,9 @@ namespace Voron.Impl.Journal
 		    get { return _previousTransactionId; }
 	    }
 
-		//this value is read in a flushing thread
 	    public uint PreviousTransactionCrc
 	    {
-		    get { return Thread.VolatileRead(ref _previousTransactionCrc); }
+		    get { return _previousTransactionCrc; }
 	    }
 
 	    public void SetPreviousTransaction(long transactionId, uint previousTransactionCrc)

@@ -134,7 +134,6 @@ namespace Voron.Impl.Journal
 			var journalFiles = new List<JournalFile>();
 			long lastSyncedTxId = -1;
 			long lastSyncedJournal = logInfo.LastSyncedJournal;
-			long lastShippedTxId = -1;
 			uint lastShippedTxCrc = 0;
 			for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
 			{
@@ -162,11 +161,7 @@ namespace Voron.Impl.Journal
 
 						*txHeader = *lastReadHeaderPtr;
 						lastSyncedTxId = txHeader->TransactionId;
-						if (lastSyncedTxId > lastShippedTxId)
-						{
-							lastShippedTxId = lastSyncedTxId;
-							lastShippedTxCrc = txHeader->Crc;
-						}
+						lastShippedTxCrc = txHeader->Crc;
 						lastSyncedJournal = journalNumber;
 					}
 
@@ -188,7 +183,7 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			Shipper.SetPreviousTransaction(lastShippedTxId,lastShippedTxCrc);
+			Shipper.SetPreviousTransaction(lastSyncedTxId, lastShippedTxCrc);
 			
 
 			_files = _files.AppendRange(journalFiles);

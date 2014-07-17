@@ -22,7 +22,6 @@ namespace Voron.Impl.Journal
     public unsafe class JournalFile : IDisposable
     {
         private readonly IJournalWriter _journalWriter;
-		private long _lastTxHeaderWritePos;
 		private long _writePage;
         private bool _disposed;
         private int _refs;
@@ -198,7 +197,6 @@ namespace Voron.Impl.Journal
 
 			var position = pageWritePos * AbstractPager.PageSize;
 			_journalWriter.WriteGather(position, pages);
-			_lastTxHeaderWritePos = pageWritePos;
 
 			return pageWritePos;
 		}      
@@ -236,14 +234,6 @@ namespace Voron.Impl.Journal
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 	    
-		public long LastTxHeaderWritePos
-	    {
-		    get
-		    {
-			    return _lastTxHeaderWritePos;
-		    }
-	    }
-
 	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
         {
             List<KeyValuePair<long, PagePosition>> unusedPages;
