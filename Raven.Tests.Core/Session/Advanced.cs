@@ -1,4 +1,5 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using Raven.Json.Linq;
+using Raven.Tests.Core.Utils.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,32 @@ namespace Raven.Tests.Core.Session
                     Assert.Equal("/databases/"+store.DefaultDatabase+"/docs/companies/1", uri.AbsolutePath);
                 }
             }
+        }
+
+        [Fact]
+        public void CanGetDocumentMetadata()
+        {
+            const string companyId = "companies/1";
+            const string attrKey = "SetDocumentMetadataTestKey";
+            const string attrVal = "SetDocumentMetadataTestValue";
+
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    companyId,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = companyId }),
+                    new RavenJObject { { attrKey, attrVal } }
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>(companyId);
+                    var result = session.Advanced.GetMetadataFor<Company>(company);
+                    Assert.NotNull(result);
+                    Assert.Equal(attrVal, result.Value<string>(attrKey));
+                }
+             }
         }
     }
 }
