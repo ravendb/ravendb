@@ -351,5 +351,25 @@ namespace Raven.Tests.Core.Session
                 }
             }
         }
+
+        [Fact]
+        public void CanGetEtagFor()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    "companies/1",
+                    null,
+                    RavenJObject.FromObject(new Company { Id = "companies/1" }),
+                    new RavenJObject()
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    Assert.Equal("01000000-0000-0001-0000-000000000001", session.Advanced.GetEtagFor<Company>(company).ToString());
+                }
+            }
+        }
     }
 }
