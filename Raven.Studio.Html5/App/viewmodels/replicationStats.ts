@@ -4,6 +4,7 @@ import moment = require("moment");
 
 import svgDownloader = require("common/svgDownloader");
 import jsonDownloader = require("common/jsonDownloader");
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 
 import getReplicationTopology = require("commands/getReplicationTopology");
 
@@ -13,6 +14,8 @@ class replicationStats extends viewModelBase {
 
     topology = ko.observable<replicationTopologyDto>(null);
     currentLink = ko.observable<replicationTopologyLinkDto>(null);
+
+    hasReplicationEnabled = ko.observable(false); 
 
     showLoadingIndicator = ko.observable(false); 
     replStatsDoc = ko.observable<replicationStatsDocumentDto>();
@@ -35,10 +38,6 @@ class replicationStats extends viewModelBase {
     });
 
 
-    hasReplicationEnabled = ko.computed(() => {
-        return this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication");
-    });
-
     constructor() {
         super();
 
@@ -48,13 +47,26 @@ class replicationStats extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.activeDatabase.subscribe(() => this.fetchReplStats());
+        this.activeDatabase.subscribe(() => {
+            this.fetchReplStats();
+            this.checkIfHasReplicationEnabled();
+        });
         this.fetchReplStats();
+    }
+
+    checkIfHasReplicationEnabled() {
+        new getDatabaseSettingsCommand(this.activeDatabase())
+            .execute()
+            .done(document => {
+                var documentSettings = document.Settings["Raven/ActiveBundles"];
+                this.hasReplicationEnabled(documentSettings.indexOf("Replication") !== -1);
+            });
     }
 
     attached() {
         this.resize();
         d3.select(window).on("resize", this.resize.bind(this));
+        this.checkIfHasReplicationEnabled();
     }
 
     resize() {
