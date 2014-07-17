@@ -28,7 +28,11 @@ class databases extends viewModelBase {
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.selectDatabase(db, false));
+
+        var currentDatabse = this.activeDatabase();
+        if (!!currentDatabse) {
+            this.selectDatabase(currentDatabse, false);
+        }
 
         this.isAnyDatabaseSelected = ko.computed(() => {
             for (var i = 0; i < this.databases().length; i++) {
@@ -89,7 +93,9 @@ class databases extends viewModelBase {
 
     selectDatabase(db: database, activateDatabase: boolean = true) {
         if (this.optionsClicked() == false) {
-            this.databases().forEach((d: database) => d.isSelected(d.name === db.name));
+            this.databases().forEach((d: database) => {
+                d.isSelected(d.name === db.name);
+            });
             if (activateDatabase) {
                 db.activate();
             }

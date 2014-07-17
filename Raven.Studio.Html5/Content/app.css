@@ -6815,10 +6815,6 @@ body {
 .fullScreen {
   overflow: hidden;
 }
-.dropdown-menu .selected {
-  color: #555;
-  background-color: #e7e7e7;
-}
 .vertical-bottom-container {
   width: 10% !important;
   padding: 0 40% 0 40% !important;
@@ -6856,14 +6852,12 @@ body {
   cursor: pointer;
   border-radius: 2px;
   box-shadow: 0 0 5px 2px silver;
-  min-width: 140px;
-  min-height: 60px;
+  min-width: 160px;
+  min-height: 70px;
   display: inline-block;
   padding: 8px;
   margin: 0 10px 14px 0;
-}
-#databasePage .databases-container .database .database-name {
-  float: left;
+  position: relative;
 }
 #databasePage .databases-container .database .checkbox {
   display: none;
@@ -6880,56 +6874,50 @@ body {
   float: left;
   line-height: 215%;
 }
+#databasePage .databases-container .database .details .database-name {
+  float: left;
+}
 #databasePage .databases-container .database .details .disabled {
   pointer-events: none;
-  cursor: default;
 }
-#databasePage .databases-container .database .details .text-muted.stats {
-  color: #3A822D;
+#databasePage .databases-container .database .details .stats {
+  color: #3a822d;
 }
-#databasePage .databases-container .database .details .text-muted.disabled {
+#databasePage .databases-container .database .details .stats-disabled {
   color: #d9534f;
 }
 #databasePage .databases-container .database .btn-group {
   float: right;
-  margin-left: 5px;
-  margin-top: 8px;
+  margin-left: 39.3px;
+  margin-top: 45.3px;
 }
-#databasePage .databases-container .database .btn-group a:hover .fa-trash-o {
-  color: white;
+#databasePage .databases-container .database .btn-group .dropdown-menu .fa-trash-o {
+  color: #eba5a3;
+}
+#databasePage .databases-container .database .btn-group .dropdown-menu .delete-database:hover .fa-trash-o {
+  color: #d9534f;
 }
 #databasePage .databases-container .database .btn-default {
+  padding: 4px;
+  padding-left: 10px;
+  padding-right: 7px;
   border-color: white;
 }
 #databasePage .databases-container .database .btn-default:hover {
   -webkit-box-shadow: 0 0 5px 0 #106a8c;
   box-shadow: 0 0 5px 0 #106a8c;
 }
-#databasePage .databases-container .database .margin {
-  clear: both;
-  display: block;
-  margin: 22px 0;
-}
-#databasePage .databases-container .database.disabled {
-  -webkit-box-shadow: 0 0 6px 0 #cdcdcd;
-  box-shadow: 0 0 6px 0 #cdcdcd;
-}
-#databasePage .databases-container .database:hover {
-  -webkit-box-shadow: -5px 0 0 0 #106a8c, 0 0 5px 2px #c0c0c0;
-  box-shadow: -5px 0 0 0 #106a8c, 0 0 5px 2px #c0c0c0;
-}
 #databasePage .databases-container .database .fa-cogs {
   color: black;
 }
+#databasePage .databases-container .database:hover {
+  background-color: white;
+  -webkit-box-shadow: 0 0 5px 0 #106a8c;
+  box-shadow: 0 0 5px 0 #106a8c;
+}
 #databasePage .databases-container .database.selected {
-  box-shadow: -5px 0 0 0 #158cba, 0 0 5px 2px #c0c0c0;
-  /*a, .text-muted {
-                    color: white;
-                }
-                a.btn {
-                    color: black;
-                    text-align: left;
-                }*/
+  -webkit-box-shadow: 0 0 17px 0 #158cba;
+  box-shadow: 0 0 17px 0 #158cba;
 }
 #databasePage .databases-container .database.system-database {
   background-color: rgba(192, 192, 192, 0.21);
@@ -6958,6 +6946,18 @@ body {
 .resource-link-disabled {
   pointer-events: none;
   cursor: default;
+}
+.dropdown-menu {
+  min-width: 0;
+}
+.dropdown-menu .selected {
+  color: #555;
+  background-color: #e7e7e7;
+}
+.dropdown-menu a.btn {
+  padding-left: 10px;
+  text-align: left;
+  color: black;
 }
 .document-collections li {
   outline: none;
@@ -7222,6 +7222,17 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+.documents-page .documents-select {
+  text-align: center;
+  background-color: #ffffcc;
+  margin-top: 5px;
+  border: 1px solid;
+  border-radius: 25px;
+}
+.documents-page .documents-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
 }
 .fieldControl {
   text-align: left !important;
@@ -7925,3 +7936,4 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
+/*# sourceMappingURL=app.css.map */

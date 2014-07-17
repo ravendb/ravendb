@@ -39,35 +39,34 @@
                         <a class="database-name" data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
                         <!-- /ko -->
                         <!-- ko if: $data.disabled -->
-                        <a class="database-name disabled" data-bind="text: name"></a>
+                        <a class="database-name qwe" data-bind="text: name"></a>
                         <!-- /ko -->
                     </h4>
                     <br />
                     <!-- ko ifnot: $data.disabled -->
-                    <span class="text-muted stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                    <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled -->
-                    <span class="text-muted disabled">Disabled</span>
+                    <span class="stats-disabled">Disabled</span>
                     <!-- /ko -->
                 </div>
 
                 <div class="btn-group" data-bind="click: function(){ $root.clickedDatabase($data); $root.optionsClicked(true); }">
                     <a class="dropdown-toggle" data-toggle="dropdown">
-                        <i class="fa fa-cogs"></i>
+                        <i class="fa fa-cogs fa-lg"></i>
                     </a>
                     <ul class="dropdown-menu" role="menu">
                         <li role="presentation">
                             <a data-bind="click: function () { $root.toggleSelectedDatabases([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
-                                <i class="fa" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>&nbsp;
+                                <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
                                 <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
                             </a>
                         </li>
                         <li class="divider"></li>
-                        <li role="presentation">
+                        <li role="presentation" class="delete-database">
                             <a title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabases([$data]); return true; }">
-                                <i class="fa fa-trash-o text-danger"></i>
-
-                                Delete
+                                <i class="fa fa-fw fa-trash-o"></i>
+                                <span>Delete</span>
                             </a>
                         </li>
                     </ul>
