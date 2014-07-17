@@ -95,7 +95,7 @@ namespace Raven.Abstractions.FileSystem
         {
             this.Name = name;
             this.Metadata = metadata;
-            //this.OriginalMetadata = (RavenJObject)metadata.CloneToken();
+            this.OriginalMetadata = (RavenJObject)metadata.CloneToken();
             SetFileSize();
         }
 

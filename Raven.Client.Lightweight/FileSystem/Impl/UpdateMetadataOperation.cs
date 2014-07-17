@@ -31,21 +31,33 @@ namespace Raven.Client.FileSystem.Impl
         {
             var commands = session.Commands;
 
+            if (sessionOperations.IsDeleted(Filename))
+                return FileHeader;
+
+            bool update = true;
             foreach ( var listener in sessionOperations.Listeners.MetadataChangeListeners )
             {
-                listener.BeforeChange( FileHeader, Metadata, FileHeader.OriginalMetadata);
+                if (!listener.BeforeChange( FileHeader, Metadata, FileHeader.OriginalMetadata))
+                {
+                    update = false;
+                }
             }
 
-            await commands.UpdateMetadataAsync(Filename, Metadata);
-
-            foreach ( var listener in sessionOperations.Listeners.MetadataChangeListeners )
+            if (update)
             {
-                listener.AfterChange(FileHeader, Metadata);
+                await commands.UpdateMetadataAsync(Filename, Metadata);
+                
+                foreach ( var listener in sessionOperations.Listeners.MetadataChangeListeners )
+                {
+                    listener.AfterChange(FileHeader, Metadata);
+                }
             }
 
-            sessionOperations.RegisterMissing(Filename);
+            var metadata = await commands.GetMetadataForAsync(Filename);
+            if (metadata == null)
+                return null;
 
-            return await session.LoadFileAsync(Filename);
+            return new FileHeader(Filename, metadata);
         }
     }
 }

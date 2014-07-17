@@ -49,7 +49,11 @@ namespace Raven.Client.FileSystem.Impl
             await commands.UploadAsync(Filename, pipe, Metadata, Size, null)
                           .ConfigureAwait(false);
 
-            return await session.LoadFileAsync(Filename);
+            var metadata = await commands.GetMetadataForAsync(Filename);
+            if (metadata == null)
+                return null;
+
+            return new FileHeader(Filename, metadata);
         }
     }
 }

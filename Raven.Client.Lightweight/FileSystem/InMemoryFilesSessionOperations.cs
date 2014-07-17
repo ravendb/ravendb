@@ -224,12 +224,17 @@ namespace Raven.Client.FileSystem
         /// </summary>
         public bool IsDeleted(string id)
         {
-            return knownMissingIds.Contains(id);
+            return knownMissingIds.Contains(id) || deletedEntities.Contains(id);
         }
 
         public void RegisterMissing(string id)
         {
             knownMissingIds.Add(id);
+        }
+
+        public void RegisterDeleted(string id)
+        {
+            deletedEntities.Add(id);
         }
 
         public async Task SaveChangesAsync()
@@ -268,17 +273,7 @@ namespace Raven.Client.FileSystem
 
             foreach (var op in operations)
             {
-                if (typeof(RenameFileOperation) == op.GetType())
-                {
-                    var renamedEntity = (FileHeader)entitiesByKey[op.Filename];
-                    renamedEntity.Name = ((RenameFileOperation)op).Destination;
-                    changes.Entities.Add(renamedEntity);
-                    entitiesByKey.Remove(op.Filename);
-                }
-
-                if (entitiesByKey.ContainsKey(op.Filename))
-                    changes.Entities.Add( entitiesByKey[op.Filename] as FileHeader );
-
+                changes.Entities.Add(op.Filename);
                 changes.Operations.Add(op);
             }
 
@@ -290,20 +285,15 @@ namespace Raven.Client.FileSystem
             var resultingOperations = new List<IFilesOperation>();
             foreach (var op in deleteOperations)
             {
-                bool delete = true;
-                foreach (var deleteListener in Listeners.DeleteListeners)
-                {
-                    if (!deleteListener.BeforeDelete(entitiesByKey[op.Filename] as FileHeader))
-                        delete = false;
-                }
 
-                if ( delete )
-                {
-                    deletedEntities.Add(op.Filename);
-                    entitiesByKey.Remove(op.Filename);
+                changes.Operations.Add(op);
+                changes.Entities.Add(op.Filename);
 
-                    changes.Operations.Add(op);
-                }
+                //object entity = null;
+                //if (entitiesByKey.TryGetValue(op.Filename, out entity))
+                //{
+                //    entitiesByKey.Remove(op.Filename);
+                //}
             }
         }
 
@@ -311,14 +301,11 @@ namespace Raven.Client.FileSystem
         {
             foreach( var key in entitiesByKey.Keys)
             {
-                if (deletedEntities.Contains(key))
-                    continue;
-
                 var fileHeader = entitiesByKey[key] as FileHeader;
                 if (EntityChanged(fileHeader))
                 {
                     changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
-                    changes.Entities.Add(entitiesByKey[key] as FileHeader);
+                    changes.Entities.Add(fileHeader.Name);
                 }
             }
         }
@@ -328,15 +315,26 @@ namespace Raven.Client.FileSystem
 			for (var i = 0; i < results.Count; i++)
 			{
 				var result = results[i];
+                var savedEntity = data.Entities[i];
 
 				object existingEntity;
-                if (entitiesByKey.TryGetValue(result.Name, out existingEntity) == false)
+                if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
 					continue;
 
                 var existingFileHeader = (FileHeader)existingEntity;
                 existingFileHeader.Metadata = result.Metadata;
                 existingFileHeader.OriginalMetadata = (RavenJObject)result.Metadata.CloneToken();
                 existingFileHeader.Refresh();
+
+                if (savedEntity != result.Name)
+                {
+                    if ( !entitiesByKey.ContainsKey(result.Name) )
+                    {
+                        entitiesByKey.Add(result.Name, existingFileHeader);
+                        entitiesByKey.Remove(savedEntity);
+                    }
+                }
+
 			}
         }
 
@@ -382,7 +380,7 @@ more responsive application.",
             public SaveChangesData()
             {
                 Operations = new List<IFilesOperation>();
-                Entities = new List<FileHeader>();
+                Entities = new List<String>();
             }
 
             /// <summary>
@@ -395,7 +393,7 @@ more responsive application.",
             /// Gets or sets the entities.
             /// </summary>
             /// <value>The entities.</value>
-            internal IList<FileHeader> Entities { get; set; }
+            internal IList<String> Entities { get; set; }
 
         }
 
