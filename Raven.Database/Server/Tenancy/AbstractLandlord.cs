@@ -109,6 +109,10 @@ namespace Raven.Database.Server.Tenancy
 	            {
 		            TransportState transportState;
 		            ResourseTransportStates.TryRemove(resource, out transportState);
+		            if (transportState != null)
+		            {
+			            transportState.Dispose();
+		            }
 	            }
 
 	            var onResourceCleanupOccured = CleanupOccured;
