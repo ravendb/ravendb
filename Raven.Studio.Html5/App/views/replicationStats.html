@@ -273,7 +273,9 @@
                             </div>
                         </div>
                         <div data-bind="visible: topology() == null">
-                            <button data-bind="click: fetchTopology" class="btn btn-danger"><i class="fa fa-sitemap"></i> Fetch topology</button>
+                            <button data-bind="click: fetchTopology" class="btn btn-danger"><i class="fa fa-sitemap"></i> Fetch topology</button> 
+                            
+                            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
                             
                             <div class="alert alert-warning"><strong>This operation is time consuming.</strong> Fetches information about replication topology: statuses, connections, errors, etc. </div>
                         </div>

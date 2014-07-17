@@ -14,6 +14,7 @@ class replicationStats extends viewModelBase {
     topology = ko.observable<replicationTopologyDto>(null);
     currentLink = ko.observable<replicationTopologyLinkDto>(null);
 
+    showLoadingIndicator = ko.observable(false); 
     replStatsDoc = ko.observable<replicationStatsDocumentDto>();
     hasNoReplStatsAvailable = ko.observable(false);
     now = ko.observable<Moment>();
@@ -177,8 +178,6 @@ class replicationStats extends viewModelBase {
             .charge(-2500)
             .on('tick', self.tick.bind(self));
 
-        this.defineArrowMarkers();
-
         this.path = <D3.UpdateSelection>this.svg.append('svg:g').selectAll('path');
         this.circle = <D3.UpdateSelection>this.svg.append('svg:g').selectAll('g');
 
@@ -208,15 +207,25 @@ class replicationStats extends viewModelBase {
             var dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
                 normX = deltaX / dist,
                 normY = deltaY / dist,
-                sourcePadding =  distance + (d.left ? 5 : 0),
+                sourcePadding = distance + (d.left ? 5 : 0),
                 targetPadding = distance + (d.right ? 5 : 0),
+                theta = Math.atan2(deltaY, deltaX),
+                d90 = Math.PI / 2,
                 sourceX = d.source.x + (sourcePadding * normX),
                 sourceY = d.source.y + (sourcePadding * normY),
                 targetX = d.target.x - (targetPadding * normX),
                 targetY = d.target.y - (targetPadding * normY);
-            return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
+
+            return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY +
+                (d.right ? "M" + targetX + "," + targetY +
+                "l" + (3.5 * Math.cos(d90 - theta) - 10 * Math.cos(theta)) + "," + (-3.5 * Math.sin(d90 - theta) - 10 * Math.sin(theta)) +
+                "L" + (targetX - 3.5 * Math.cos(d90 - theta) - 10 * Math.cos(theta)) + "," + (targetY + 3.5 * Math.sin(d90 - theta) - 10 * Math.sin(theta)) + "z" : '') +
+                (d.left ? "M" + sourceX + "," + sourceY +
+                "l" + (-3.5 * Math.cos(d90 - theta) + 10 * Math.cos(theta)) + "," + (3.5 * Math.sin(d90 - theta) + 10 * Math.sin(theta)) +
+                "L" + (sourceX + 3.5 * Math.cos(d90 - theta) + 10 * Math.cos(theta)) + "," + (sourceY - 3.5 * Math.sin(d90 - theta) + 10 * Math.sin(theta)) + "z" : '');
+
         });
-         
+
         this.circle.attr('transform', function (d) {
             return 'translate(' + d.x + ',' + d.y + ')';
         });
@@ -237,24 +246,21 @@ class replicationStats extends viewModelBase {
             .append('svg:path')
             .attr('class', 'link')
             .classed('error', self.linkHasError)
-            .style('marker-start', (d: replicationTopologyLinkDto) => {
-                if (!d.left) {
-                    return '';
-                }
-                return self.linkHasError(d) ? 'url(#start-arrow-red)' : 'url(#start-arrow-green)';
-            })
-            .style('marker-end', (d: replicationTopologyLinkDto) => {
-                if (!d.right) {
-                    return '';
-                }
-                return self.linkHasError(d) ? 'url(#end-arrow-red)' : 'url(#end-arrow-green)';
-            })
             .on("click", function (d) {
                 var currentSelection = d3.select(".selected").node();
-                d3.selectAll(".selected").classed("selected", false); 
+                d3.selectAll(".selected").classed("selected", false);
                 d3.select(this).classed('selected', currentSelection != this);
-                self.currentLink( currentSelection != this ? d : null)
-             });
+                self.currentLink(currentSelection != this ? d : null)
+             })
+            .on('mouseover', d => {
+                d.source.fixed = true;
+                d.target.fixed = true;
+            })
+            .on('mouseout', d => {
+                d.source.fixed = false;
+                d.target.fixed = false;
+            });
+
 
         // remove old links
         this.path.exit().remove();
@@ -294,61 +300,15 @@ class replicationStats extends viewModelBase {
     }
 
 
-    defineArrowMarkers() {
-
-        // define arrow markers for graph links
-        this.svg.append('svg:defs').append('svg:marker')
-            .attr('id', 'end-arrow-red')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 6)
-            .attr('markerWidth', 3)
-            .attr('markerHeight', 3)
-            .attr('orient', 'auto')
-            .append('svg:path')
-            .attr('d', 'M0,-5L10,0L0,5')
-            .attr('fill', 'red');
-
-        this.svg.append('svg:defs').append('svg:marker')
-            .attr('id', 'start-arrow-red')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 4)
-            .attr('markerWidth', 3)
-            .attr('markerHeight', 3)
-            .attr('orient', 'auto')
-            .append('svg:path')
-            .attr('d', 'M10,-5L0,0L10,5')
-            .attr('fill', 'red');
-
-        this.svg.append('svg:defs').append('svg:marker')
-            .attr('id', 'end-arrow-green')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 6)
-            .attr('markerWidth', 3)
-            .attr('markerHeight', 3)
-            .attr('orient', 'auto')
-            .append('svg:path')
-            .attr('d', 'M0,-5L10,0L0,5')
-            .attr('fill', 'green');
-
-        this.svg.append('svg:defs').append('svg:marker')
-            .attr('id', 'start-arrow-green')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 4)
-            .attr('markerWidth', 3)
-            .attr('markerHeight', 3)
-            .attr('orient', 'auto')
-            .append('svg:path')
-            .attr('d', 'M10,-5L0,0L10,5')
-            .attr('fill', 'green');
-    }
-
     fetchTopology() {
+        this.showLoadingIndicator(true);
         new getReplicationTopology(this.activeDatabase())
             .execute()
             .done((topo) => {
                 this.topology(topo); 
                 this.createReplicationTopology();
-            }); 
+            })
+            .always(() => this.showLoadingIndicator(false)); 
     }
 
     saveAsPng() {
@@ -360,7 +320,7 @@ class replicationStats extends viewModelBase {
     }
 
     saveAsJson() {
-
+        jsonDownloader.downloadAsJson(this.topology(), "topology.json");
     }
 }
 
