@@ -34,6 +34,11 @@ class replicationStats extends viewModelBase {
         return !(navigator && navigator.msSaveBlob);
     });
 
+
+    hasReplicationEnabled = ko.computed(() => {
+        return this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication");
+    });
+
     constructor() {
         super();
 
