@@ -235,9 +235,13 @@ class databases extends viewModelBase {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(databases);
 
                 confirmDeleteViewModel.deleteTask.done((deletedDatabaseNames: string[]) => {
-                    deletedDatabaseNames.forEach(databaseName => {
-                        this.onDatabaseDeleted(databaseName);
-                    });
+                    if (databases.length == 1) {
+                        this.onDatabaseDeleted(databases[0].name);
+                    } else {
+                        deletedDatabaseNames.forEach(databaseName => {
+                            this.onDatabaseDeleted(databaseName);
+                        });
+                    }
                 });
 
                 app.showDialog(confirmDeleteViewModel);
