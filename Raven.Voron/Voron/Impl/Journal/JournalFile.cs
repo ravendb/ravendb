@@ -22,7 +22,8 @@ namespace Voron.Impl.Journal
     public unsafe class JournalFile : IDisposable
     {
         private readonly IJournalWriter _journalWriter;
-        private long _writePage;
+		private long _lastTxHeaderWritePos;
+		private long _writePage;
         private bool _disposed;
         private int _refs;
         private readonly PageTable _pageTranslationTable = new PageTable();
@@ -91,7 +92,6 @@ namespace Voron.Impl.Journal
 
 #if DEBUG
         private readonly StackTrace _st = new StackTrace(true);
-	    private long _lastTxHeaderWritePos;
 #endif
 
         ~JournalFile()
