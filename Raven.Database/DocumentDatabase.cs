@@ -44,473 +44,473 @@ using metrics.Core;
 
 namespace Raven.Database
 {
-    public class DocumentDatabase : IDisposable
-    {
-        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+	public class DocumentDatabase : IDisposable
+	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-        private static string buildVersion;
+		private static string buildVersion;
 
-        private static string productVersion;
+		private static string productVersion;
 
-        private readonly TaskScheduler backgroundTaskScheduler;
+		private readonly TaskScheduler backgroundTaskScheduler;
 
-        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 
-        private readonly object idleLocker = new object();
+		private readonly object idleLocker = new object();
 
-        private readonly InFlightTransactionalState inFlightTransactionalState;
+		private readonly InFlightTransactionalState inFlightTransactionalState;
 
-        private readonly IndexingExecuter indexingExecuter;
+		private readonly IndexingExecuter indexingExecuter;
 
-        private readonly LastCollectionEtags lastCollectionEtags;
+		private readonly LastCollectionEtags lastCollectionEtags;
 
-        private readonly Prefetcher prefetcher;
+		private readonly Prefetcher prefetcher;
 
-        private readonly SequentialUuidGenerator uuidGenerator;
+		private readonly SequentialUuidGenerator uuidGenerator;
 
-        private readonly List<IDisposable> toDispose = new List<IDisposable>();
+		private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
-        private readonly TransportState transportState;
+		private readonly TransportState transportState;
 
-        private readonly WorkContext workContext;
+		private readonly WorkContext workContext;
 
-        private volatile bool backgroundWorkersSpun;
+		private volatile bool backgroundWorkersSpun;
 
-        private volatile bool disposed;
+		private volatile bool disposed;
 
-        private Task indexingBackgroundTask;
+		private Task indexingBackgroundTask;
 
-        private Task reducingBackgroundTask;
+		private Task reducingBackgroundTask;
 
-        private readonly DocumentDatabaseInitializer initializer;
+		private readonly DocumentDatabaseInitializer initializer;
 
-        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
+		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration)
-        {
-            DocumentLock = new PutSerialLock();
-            Name = configuration.DatabaseName;
-            Configuration = configuration;
-            transportState = new TransportState();
-            ExtensionsState = new AtomicDictionary<object>();
-            
-            using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
-            {
-                Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
+		public DocumentDatabase(InMemoryRavenConfiguration configuration)
+		{
+			DocumentLock = new PutSerialLock();
+			Name = configuration.DatabaseName;
+			Configuration = configuration;
+			transportState = new TransportState();
+			ExtensionsState = new AtomicDictionary<object>();
 
-                initializer = new DocumentDatabaseInitializer(this, configuration);
+			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
+			{
+				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
-                initializer.InitializeEncryption();
-                initializer.ValidateLicense();
-                
-                initializer.SubscribeToDomainUnloadOrProcessExit();
-                initializer.ExecuteAlterConfiguration();
-                initializer.SatisfyImportsOnce();
+				initializer = new DocumentDatabaseInitializer(this, configuration);
 
-                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
+				initializer.InitializeEncryption();
+				initializer.ValidateLicense();
+
+				initializer.SubscribeToDomainUnloadOrProcessExit();
+				initializer.ExecuteAlterConfiguration();
+				initializer.SatisfyImportsOnce();
+
+				backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
 
-                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
+				recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
-                configuration.Container.SatisfyImportsOnce(this);
+				configuration.Container.SatisfyImportsOnce(this);
 
-                workContext = new WorkContext
-                {
-                    Database = this,
-                    DatabaseName = Name,
-                    IndexUpdateTriggers = IndexUpdateTriggers,
-                    ReadTriggers = ReadTriggers,
-                    TaskScheduler = backgroundTaskScheduler,
-                    Configuration = configuration,
-                    IndexReaderWarmers = IndexReaderWarmers
-                };
+				workContext = new WorkContext
+				{
+					Database = this,
+					DatabaseName = Name,
+					IndexUpdateTriggers = IndexUpdateTriggers,
+					ReadTriggers = ReadTriggers,
+					TaskScheduler = backgroundTaskScheduler,
+					Configuration = configuration,
+					IndexReaderWarmers = IndexReaderWarmers
+				};
 
-                try
-                {
-                    uuidGenerator = new SequentialUuidGenerator();
-                    initializer.InitializeTransactionalStorage(uuidGenerator);
-                    lastCollectionEtags = new LastCollectionEtags(TransactionalStorage, WorkContext);
-                }
-                catch (Exception)
-                {
-                    if (TransactionalStorage != null)
-                    TransactionalStorage.Dispose();
-                    throw;
-                }
+				try
+				{
+					uuidGenerator = new SequentialUuidGenerator();
+					initializer.InitializeTransactionalStorage(uuidGenerator);
+					lastCollectionEtags = new LastCollectionEtags(TransactionalStorage, WorkContext);
+				}
+				catch (Exception)
+				{
+					if (TransactionalStorage != null)
+						TransactionalStorage.Dispose();
+					throw;
+				}
 
-                try
-                {
-                    TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+				try
+				{
+					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
-                    // Index codecs must be initialized before we try to read an index
-                    InitializeIndexCodecTriggers();
-                    initializer.InitializeIndexStorage();
+					// Index codecs must be initialized before we try to read an index
+					InitializeIndexCodecTriggers();
+					initializer.InitializeIndexStorage();
 
-                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
-                    Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-                    Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
-                    Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
-                    Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
-                    Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
-                    Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
-                    Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+					Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
+					Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
+					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
+					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+					Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
+					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
+					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
+					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
 
-                    inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
-                    CompleteWorkContextSetup();
+					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
-                    indexingExecuter = new IndexingExecuter(workContext, prefetcher);
+					indexingExecuter = new IndexingExecuter(workContext, prefetcher);
 
-                    RaiseIndexingWiringComplete();
+					RaiseIndexingWiringComplete();
 
-                    InitializeTriggersExceptIndexCodecs();
-                    SecondStageInitialization();
-                    ExecuteStartupTasks();
-                    lastCollectionEtags.Initialize();
+					InitializeTriggersExceptIndexCodecs();
+					SecondStageInitialization();
+					ExecuteStartupTasks();
+					lastCollectionEtags.Initialize();
 
-                    Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
-                }
-                catch (Exception)
-                {
-                    Dispose();
-                    throw;
-                }
-            }
-        }
+					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+				}
+				catch (Exception)
+				{
+					Dispose();
+					throw;
+				}
+			}
+		}
 
-        public event EventHandler Disposing;
+		public event EventHandler Disposing;
 
-        public event Action OnIndexingWiringComplete;
+		public event Action OnIndexingWiringComplete;
 
-        public static string BuildVersion
-        {
-            get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
-        }
+		public static string BuildVersion
+		{
+			get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
+		}
 
-        public static string ProductVersion
-        {
-            get
-        {
-                if (!string.IsNullOrEmpty(productVersion))
-                {
-                    return productVersion;
-        }
+		public static string ProductVersion
+		{
+			get
+			{
+				if (!string.IsNullOrEmpty(productVersion))
+				{
+					return productVersion;
+				}
 
-                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
-                return productVersion;
-            }
-        }
+				productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
+				return productVersion;
+			}
+		}
 
-        public long ApproximateTaskCount
-        {
-            get
-            {
-                long approximateTaskCount = 0;
-                TransactionalStorage.Batch(actions => { approximateTaskCount = actions.Tasks.ApproximateTaskCount; });
-                return approximateTaskCount;
-                }
-            }
+		public long ApproximateTaskCount
+		{
+			get
+			{
+				long approximateTaskCount = 0;
+				TransactionalStorage.Batch(actions => { approximateTaskCount = actions.Tasks.ApproximateTaskCount; });
+				return approximateTaskCount;
+			}
+		}
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
-		                   
-        internal PutSerialLock DocumentLock { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
-        public AttachmentActions Attachments { get; private set; }
+		internal PutSerialLock DocumentLock { get; private set; }
 
-        public TaskScheduler BackgroundTaskScheduler
-        {
-            get { return backgroundTaskScheduler; }
-        }
+		public AttachmentActions Attachments { get; private set; }
 
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+		public TaskScheduler BackgroundTaskScheduler
+		{
+			get { return backgroundTaskScheduler; }
+		}
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }
+		public InMemoryRavenConfiguration Configuration { get; private set; }
 
-        /// <summary>
-        ///     Whatever this database has been disposed
-        /// </summary>
-        public bool Disposed
-        {
-            get { return disposed; }
-                }
+		[ImportMany]
+		public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+		/// <summary>
+		///     Whatever this database has been disposed
+		/// </summary>
+		public bool Disposed
+		{
+			get { return disposed; }
+		}
 
-        public DocumentActions Documents { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
+		public DocumentActions Documents { get; private set; }
 
-        /// <summary>
-        ///     This is used to hold state associated with this instance by external extensions
-        /// </summary>
-        public AtomicDictionary<object> ExtensionsState { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
-        public bool HasTasks
-            {
-            get
-                {
-                bool hasTasks = false;
-                TransactionalStorage.Batch(actions => { hasTasks = actions.Tasks.HasTasks; });
-                return hasTasks;
-                }
-                }
+		/// <summary>
+		///     This is used to hold state associated with this instance by external extensions
+		/// </summary>
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
-        public InFlightTransactionalState InFlightTransactionalState
-            {
-            get { return inFlightTransactionalState; }
-	                    }
+		public bool HasTasks
+		{
+			get
+			{
+				bool hasTasks = false;
+				TransactionalStorage.Batch(actions => { hasTasks = actions.Tasks.HasTasks; });
+				return hasTasks;
+			}
+		}
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
+		public InFlightTransactionalState InFlightTransactionalState
+		{
+			get { return inFlightTransactionalState; }
+		}
 
-        public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers { get; set; }
+		public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers { get; set; }
 
-        public IndexStorage IndexStorage { get; set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+		public IndexStorage IndexStorage { get; set; }
 
-        public IndexActions Indexes { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
-        public IndexingExecuter IndexingExecuter
-        {
-            get { return indexingExecuter; }
-        }
+		public IndexActions Indexes { get; private set; }
 
-        public LastCollectionEtags LastCollectionEtags
-        {
-            get { return lastCollectionEtags; }
-            }
+		public IndexingExecuter IndexingExecuter
+		{
+			get { return indexingExecuter; }
+		}
 
-        public MaintenanceActions Maintenance { get; private set; }
+		public LastCollectionEtags LastCollectionEtags
+		{
+			get { return lastCollectionEtags; }
+		}
 
-        /// <summary>
-        ///     The name of the database.
-        ///     Defaults to null for the root database (or embedded database), or the name of the database if this db is a tenant
-        ///     database
-        /// </summary>
-        public string Name { get; private set; }
+		public MaintenanceActions Maintenance { get; private set; }
 
-        public NotificationActions Notifications { get; private set; }
+		/// <summary>
+		///     The name of the database.
+		///     Defaults to null for the root database (or embedded database), or the name of the database if this db is a tenant
+		///     database
+		/// </summary>
+		public string Name { get; private set; }
 
-        public PatchActions Patches { get; private set; }
+		public NotificationActions Notifications { get; private set; }
 
-        public Prefetcher Prefetcher
-        {
-            get { return prefetcher; }
-        }
+		public PatchActions Patches { get; private set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
+		public Prefetcher Prefetcher
+		{
+			get { return prefetcher; }
+		}
 
-        public QueryActions Queries { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
+		public QueryActions Queries { get; private set; }
 
-        public ReducingExecuter ReducingExecuter { get; private set; }
+		[ImportMany]
+		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 
-        public string ServerUrl
-        {
-            get
-            {
-                string serverUrl = Configuration.ServerUrl;
-                if (string.IsNullOrEmpty(Name))
-            {
-                    return serverUrl;
-            }
+		public ReducingExecuter ReducingExecuter { get; private set; }
 
-                if (serverUrl.EndsWith("/"))
-        {
-                    return serverUrl + "databases/" + Name;
-                }
+		public string ServerUrl
+		{
+			get
+			{
+				string serverUrl = Configuration.ServerUrl;
+				if (string.IsNullOrEmpty(Name))
+				{
+					return serverUrl;
+				}
 
-                return serverUrl + "/databases/" + Name;
-            }
-        }
+				if (serverUrl.EndsWith("/"))
+				{
+					return serverUrl + "databases/" + Name;
+				}
 
-        [ImportMany]
-        public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
+				return serverUrl + "/databases/" + Name;
+			}
+		}
 
-        public PluginsInfo PluginsInfo
-        {
-            get
-            {
-                var triggerInfos = PutTriggers.Select(x => new TriggerInfo
-                {
-                    Name = x.ToString(),
-                    Type = "Put"
-                })
-                   .Concat(DeleteTriggers.Select(x => new TriggerInfo
-                    {
-                       Name = x.ToString(),
-                       Type = "Delete"
-                   }))
-                   .Concat(ReadTriggers.Select(x => new TriggerInfo
-                    {
-                       Name = x.ToString(),
-                       Type = "Read"
-                   }))
-                   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
-                        {
-                       Name = x.ToString(),
-                       Type = "Index Update"
-                   })).ToList();
+		[ImportMany]
+		public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
 
-                var extensions = Configuration.ReportExtensions(
-                    typeof (IStartupTask),
-                    typeof (AbstractReadTrigger),
-                    typeof (AbstractDeleteTrigger),
-                    typeof (AbstractPutTrigger),
-                    typeof (AbstractDocumentCodec),
-                    typeof (AbstractIndexCodec),
-                    typeof (AbstractDynamicCompilationExtension),
-                    typeof (AbstractIndexQueryTrigger),
-                    typeof (AbstractIndexUpdateTrigger),
-                    typeof (AbstractAnalyzerGenerator),
-                    typeof (AbstractAttachmentDeleteTrigger),
-                    typeof (AbstractAttachmentPutTrigger),
-                    typeof (AbstractAttachmentReadTrigger),
-                    typeof (AbstractBackgroundTask),
-                    typeof (IAlterConfiguration)).ToList();
-                return new PluginsInfo
-                            {
-                    Triggers = triggerInfos,
-                    Extensions = extensions,
-                };
-            }
-        }
+		public PluginsInfo PluginsInfo
+		{
+			get
+			{
+				var triggerInfos = PutTriggers.Select(x => new TriggerInfo
+				{
+					Name = x.ToString(),
+					Type = "Put"
+				})
+				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
+					{
+						Name = x.ToString(),
+						Type = "Delete"
+					}))
+				   .Concat(ReadTriggers.Select(x => new TriggerInfo
+					{
+						Name = x.ToString(),
+						Type = "Read"
+					}))
+				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
+						{
+							Name = x.ToString(),
+							Type = "Index Update"
+						})).ToList();
 
-        public DatabaseStatistics Statistics
-        {
-            get
-            {
-                var result = new DatabaseStatistics
-                {
-                    CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
-                    CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
+				var extensions = Configuration.ReportExtensions(
+					typeof(IStartupTask),
+					typeof(AbstractReadTrigger),
+					typeof(AbstractDeleteTrigger),
+					typeof(AbstractPutTrigger),
+					typeof(AbstractDocumentCodec),
+					typeof(AbstractIndexCodec),
+					typeof(AbstractDynamicCompilationExtension),
+					typeof(AbstractIndexQueryTrigger),
+					typeof(AbstractIndexUpdateTrigger),
+					typeof(AbstractAnalyzerGenerator),
+					typeof(AbstractAttachmentDeleteTrigger),
+					typeof(AbstractAttachmentPutTrigger),
+					typeof(AbstractAttachmentReadTrigger),
+					typeof(AbstractBackgroundTask),
+					typeof(IAlterConfiguration)).ToList();
+				return new PluginsInfo
+							{
+								Triggers = triggerInfos,
+								Extensions = extensions,
+							};
+			}
+		}
+
+		public DatabaseStatistics Statistics
+		{
+			get
+			{
+				var result = new DatabaseStatistics
+				{
+					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
+					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					IndexingBatchInfo = workContext.LastActualIndexingBatchInfo.ToArray(),
-                    InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
-                    Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
-                    CountOfIndexes = IndexStorage.Indexes.Length,
-                    DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-                    Errors = workContext.Errors,
-                    DatabaseId = TransactionalStorage.Id,
-                    SupportsDtc = TransactionalStorage.SupportsDtc,
+					InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
+					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
+					CountOfIndexes = IndexStorage.Indexes.Length,
+					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+					Errors = workContext.Errors,
+					DatabaseId = TransactionalStorage.Id,
+					SupportsDtc = TransactionalStorage.SupportsDtc,
 
-                };
+				};
 
-                TransactionalStorage.Batch(actions =>
-                {
-                    result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
-                    result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
+				TransactionalStorage.Batch(actions =>
+				{
+					result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+					result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
 
-                    result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
-                    result.CountOfDocuments = actions.Documents.GetDocumentsCount();
-                    result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
-                    result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
-        {
-                        Index indexInstance = IndexStorage.GetIndexInstance(indexId);
-                        return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
-                    }).Select(indexId =>
-        {
-                        Index index = IndexStorage.GetIndexInstance(indexId);
-                        return index == null ? null : index.PublicName;
-                    }).ToArray();
-                    result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-            {
-                        Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-                        if (indexInstance != null)
-                            x.PublicName = indexInstance.PublicName;
+					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
+					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
+					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
+					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
+		{
+			Index indexInstance = IndexStorage.GetIndexInstance(indexId);
+			return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+		}).Select(indexId =>
+		{
+			Index index = IndexStorage.GetIndexInstance(indexId);
+			return index == null ? null : index.PublicName;
+		}).ToArray();
+					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
+			{
+				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+				if (indexInstance != null)
+					x.PublicName = indexInstance.PublicName;
 
-                        return x;
-                    }).ToArray();
-                });
+				return x;
+			}).ToArray();
+				});
 
-                if (result.Indexes != null)
-        {
-                    foreach (IndexStats index in result.Indexes)
-            {
-                        try
-        {
-                            IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
-                            index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
-                            index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
-                            index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-                            if (indexDefinition != null)
-                                index.LockMode = indexDefinition.LockMode;
+				if (result.Indexes != null)
+				{
+					foreach (IndexStats index in result.Indexes)
+					{
+						try
+						{
+							IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
+							index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
+							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
+							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
+							if (indexDefinition != null)
+								index.LockMode = indexDefinition.LockMode;
 
-                            index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToList();
-                            IndexSearcher searcher;
-                            using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
-                                index.DocsCount = searcher.IndexReader.NumDocs();
-            }
-                        catch (Exception)
-        {
-                            // might happen if the index was deleted mid operation
-                            // we don't really care for that, so we ignore this
-            }
-        }
-        }
+							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToList();
+							IndexSearcher searcher;
+							using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
+								index.DocsCount = searcher.IndexReader.NumDocs();
+						}
+						catch (Exception)
+						{
+							// might happen if the index was deleted mid operation
+							// we don't really care for that, so we ignore this
+						}
+					}
+				}
 
-                return result;
-            }
-        }
+				return result;
+			}
+		}
 
-        public TaskActions Tasks { get; private set; }
+		public TaskActions Tasks { get; private set; }
 
-        public ITransactionalStorage TransactionalStorage { get; private set; }
+		public ITransactionalStorage TransactionalStorage { get; private set; }
 
-        public TransformerActions Transformers { get; private set; }
+		public TransformerActions Transformers { get; private set; }
 
-        public TransportState TransportState
-            {
-            get { return transportState; }
-                                }
+		public TransportState TransportState
+		{
+			get { return transportState; }
+		}
 
-        public WorkContext WorkContext
-                                {
-            get { return workContext; }
-                            }
+		public WorkContext WorkContext
+		{
+			get { return workContext; }
+		}
 
-        public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
-                            {
-            using (DocumentLock.Lock())
-                                {
-                bool shouldRetryIfGotConcurrencyError = commands.All(x => ((x is PatchCommandData || IsScriptedPatchCommandDataWithoutEtagProperty(x)) && (x.Etag == null)));
-                if (shouldRetryIfGotConcurrencyError)
-                    {
-                    Stopwatch sp = Stopwatch.StartNew();
-                    BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
-                    Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
-                    return result;
-                    }
+		public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
+		{
+			using (DocumentLock.Lock())
+			{
+				bool shouldRetryIfGotConcurrencyError = commands.All(x => ((x is PatchCommandData || IsScriptedPatchCommandDataWithoutEtagProperty(x)) && (x.Etag == null)));
+				if (shouldRetryIfGotConcurrencyError)
+				{
+					Stopwatch sp = Stopwatch.StartNew();
+					BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
+					Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
+					return result;
+				}
 
-                BatchResult[] results = null;
-                TransactionalStorage.Batch(
-                    actions => { results = ProcessBatch(commands, token); });
+				BatchResult[] results = null;
+				TransactionalStorage.Batch(
+					actions => { results = ProcessBatch(commands, token); });
 
-                return results;
-            }
-        }
+				return results;
+			}
+		}
 
 		public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
 		{
@@ -564,39 +564,39 @@ namespace Raven.Database
 			}
 		}
 
-        public DatabaseMetrics CreateMetrics()
-        {
-            MetricsCountersManager metrics = WorkContext.MetricsCounters;
-            return new DatabaseMetrics
-        {
-                RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-                DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
-                IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-                ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-                RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
-                Requests = CreateMeterData(metrics.ConcurrentRequests),
-                Gauges = metrics.Gauges,
-                StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
-                StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
-                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-                ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-            };
-        }
+		public DatabaseMetrics CreateMetrics()
+		{
+			MetricsCountersManager metrics = WorkContext.MetricsCounters;
+			return new DatabaseMetrics
+		{
+			RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
+			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
+			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
+			RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
+			Requests = CreateMeterData(metrics.ConcurrentRequests),
+			Gauges = metrics.Gauges,
+			StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
+			StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
+			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+			ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+		};
+		}
 
-        private static HistogramData CreateHistogramData(HistogramMetric histogram)
-        {
-            double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
+		private static HistogramData CreateHistogramData(HistogramMetric histogram)
+		{
+			double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
 
-            return new HistogramData
-            {
-                    Counter = histogram.Count,
-                    Max = histogram.Max,
-                    Mean = histogram.Mean,
-                    Min = histogram.Min,
-                    Stdev = histogram.StdDev,
-                    Percentiles = new Dictionary<string, double>
+			return new HistogramData
+			{
+				Counter = histogram.Count,
+				Max = histogram.Max,
+				Mean = histogram.Mean,
+				Min = histogram.Min,
+				Stdev = histogram.StdDev,
+				Percentiles = new Dictionary<string, double>
                 {
                         {"50%", percentiles[0]},
                         {"75%", percentiles[1]},
@@ -605,550 +605,550 @@ namespace Raven.Database
                         {"99.9%", percentiles[4]},
                         {"99.99%", percentiles[5]},
                 }
-                };
-            }
+			};
+		}
 
-        private static MeterData CreateMeterData(MeterMetric metric)
-            {
-            return new MeterData
-                   {
-                       Count = metric.Count,
-                       FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, 3),
-                       FiveMinuteRate = Math.Round(metric.FiveMinuteRate, 3),
-                       MeanRate = Math.Round(metric.MeanRate, 3),
-                       OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
-                   };
-            }
+		private static MeterData CreateMeterData(MeterMetric metric)
+		{
+			return new MeterData
+				   {
+					   Count = metric.Count,
+					   FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, 3),
+					   FiveMinuteRate = Math.Round(metric.FiveMinuteRate, 3),
+					   MeanRate = Math.Round(metric.MeanRate, 3),
+					   OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
+				   };
+		}
 
-        /// <summary>
-        ///     This API is provided solely for the use of bundles that might need to run
-        ///     without any other bundle interfering. Specifically, the replication bundle
-        ///     need to be able to run without interference from any other bundle.
-        /// </summary>
-        /// <returns></returns>
-        public IDisposable DisableAllTriggersForCurrentThread()
-            {
-            if (disposed)
-                return new DisposableAction(() => { });
+		/// <summary>
+		///     This API is provided solely for the use of bundles that might need to run
+		///     without any other bundle interfering. Specifically, the replication bundle
+		///     need to be able to run without interference from any other bundle.
+		/// </summary>
+		/// <returns></returns>
+		public IDisposable DisableAllTriggersForCurrentThread()
+		{
+			if (disposed)
+				return new DisposableAction(() => { });
 
-            bool old = disableAllTriggers.Value;
-            disableAllTriggers.Value = true;
-            return new DisposableAction(() =>
-            {
-                if (disposed)
-                    return;
+			bool old = disableAllTriggers.Value;
+			disableAllTriggers.Value = true;
+			return new DisposableAction(() =>
+			{
+				if (disposed)
+					return;
 
-                try
-                {
-                    disableAllTriggers.Value = old;
-        }
-                catch (ObjectDisposedException)
-        {
-            }
-            });
-        }
-
-        public void Dispose()
-        {
-            if (disposed)
-                return;
-
-            Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
-
-            EventHandler onDisposing = Disposing;
-            if (onDisposing != null)
-        {
 				try
 				{
-                    onDisposing(this, EventArgs.Empty);
-					}
-                catch (Exception e)
-						{
-                    Log.WarnException("Error when notifying about db disposal, ignoring error and continuing with disposal", e);
-							}
-							}
+					disableAllTriggers.Value = old;
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			});
+		}
 
-            var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
+		public void Dispose()
+		{
+			if (disposed)
+				return;
 
-            exceptionAggregator.Execute(() =>
+			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+
+			EventHandler onDisposing = Disposing;
+			if (onDisposing != null)
+			{
+				try
+				{
+					onDisposing(this, EventArgs.Empty);
+				}
+				catch (Exception e)
+				{
+					Log.WarnException("Error when notifying about db disposal, ignoring error and continuing with disposal", e);
+				}
+			}
+
+			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
+
+			exceptionAggregator.Execute(() =>
 							{
-                if (lastCollectionEtags != null)
-                    lastCollectionEtags.Flush();
-            });
+								if (lastCollectionEtags != null)
+									lastCollectionEtags.Flush();
+							});
 
-            exceptionAggregator.Execute(() =>
+			exceptionAggregator.Execute(() =>
 								{
-                if (prefetcher != null)
-                    prefetcher.Dispose();
+									if (prefetcher != null)
+										prefetcher.Dispose();
 								});
 
-            exceptionAggregator.Execute(() =>
+			exceptionAggregator.Execute(() =>
 							{
-                initializer.UnsubscribeToDomainUnloadOrProcessExit();
-                disposed = true;
+								initializer.UnsubscribeToDomainUnloadOrProcessExit();
+								disposed = true;
 
-                if (workContext != null)
-                    workContext.StopWorkRude();
-						});
+								if (workContext != null)
+									workContext.StopWorkRude();
+							});
 
-            if (initializer != null)
+			if (initializer != null)
+			{
+				exceptionAggregator.Execute(initializer.Dispose);
+			}
+
+			exceptionAggregator.Execute(() =>
+		{
+			if (ExtensionsState == null)
+				return;
+
+			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+				exceptionAggregator.Execute(value.Dispose);
+		});
+
+			exceptionAggregator.Execute(() =>
+		{
+			if (toDispose == null)
+				return;
+
+			foreach (IDisposable shouldDispose in toDispose)
+				exceptionAggregator.Execute(shouldDispose.Dispose);
+		});
+
+			exceptionAggregator.Execute(() =>
+			{
+				if (Tasks != null)
+					Tasks.Dispose(exceptionAggregator);
+			});
+
+			exceptionAggregator.Execute(() =>
+			{
+				if (indexingBackgroundTask != null)
+					indexingBackgroundTask.Wait();
+			});
+			exceptionAggregator.Execute(() =>
+			{
+				if (reducingBackgroundTask != null)
+					reducingBackgroundTask.Wait();
+			});
+
+			exceptionAggregator.Execute(() =>
+		{
+			var disposable = backgroundTaskScheduler as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
+		});
+
+			if (TransactionalStorage != null)
+				exceptionAggregator.Execute(TransactionalStorage.Dispose);
+
+			if (IndexStorage != null)
+				exceptionAggregator.Execute(IndexStorage.Dispose);
+
+			if (Configuration != null)
+				exceptionAggregator.Execute(Configuration.Dispose);
+
+			exceptionAggregator.Execute(disableAllTriggers.Dispose);
+
+			if (workContext != null)
+				exceptionAggregator.Execute(workContext.Dispose);
+
+			exceptionAggregator.ThrowIfNeeded();
+
+			Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+		}
+
+		/// <summary>
+		///     Get the total index storage size taken by the indexes on the disk.
+		///     This explicitly does NOT include in memory indexes.
+		/// </summary>
+		/// <remarks>
+		///     This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetIndexStorageSizeOnDisk()
+		{
+			if (Configuration.RunInMemory)
+				return 0;
+
+			string[] indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
+			long totalIndexSize = indexes.Sum(file =>
+				{
+					try
 					{
-                exceptionAggregator.Execute(initializer.Dispose);
+						return new FileInfo(file).Length;
+					}
+					catch (UnauthorizedAccessException)
+					{
+						return 0;
+					}
+					catch (FileNotFoundException)
+					{
+						return 0;
+					}
+				});
+
+			return totalIndexSize;
+		}
+
+		/// <summary>
+		///     Get the total size taken by the database on the disk.
+		///     This explicitly does NOT include in memory indexes or in memory database.
+		///     It does include any reserved space on the file system, which may significantly increase
+		///     the database size.
+		/// </summary>
+		/// <remarks>
+		///     This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetTotalSizeOnDisk()
+		{
+			if (Configuration.RunInMemory)
+				return 0;
+
+			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk().AllocatedSizeInBytes;
+		}
+
+		/// <summary>
+		///     Get the total size taken by the database on the disk.
+		///     This explicitly does NOT include in memory database.
+		///     It does include any reserved space on the file system, which may significantly increase
+		///     the database size.
+		/// </summary>
+		/// <remarks>
+		///     This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public DatabaseSizeInformation GetTransactionalStorageSizeOnDisk()
+		{
+			return Configuration.RunInMemory ? DatabaseSizeInformation.Empty : TransactionalStorage.GetDatabaseSize();
+		}
+
+		public bool HasTransaction(string txId)
+		{
+			return inFlightTransactionalState.HasTransaction(txId);
+		}
+
+		public void Rollback(string txId)
+		{
+			inFlightTransactionalState.Rollback(txId);
+		}
+
+		public void RunIdleOperations()
+		{
+			bool tryEnter = Monitor.TryEnter(idleLocker);
+			try
+			{
+				if (tryEnter == false)
+					return;
+
+				TransportState.OnIdle();
+				IndexStorage.RunIdleOperations();
+				Tasks.ClearCompletedPendingTasks();
+				lastCollectionEtags.Flush();
+			}
+			finally
+			{
+				if (tryEnter)
+				{
+					Monitor.Exit(idleLocker);
 				}
-
-            exceptionAggregator.Execute(() =>
-        {
-                if (ExtensionsState == null)
-                return;
-
-                foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-                    exceptionAggregator.Execute(value.Dispose);
-            });
-
-            exceptionAggregator.Execute(() =>
-        {
-                if (toDispose == null)
-                    return;
-
-                foreach (IDisposable shouldDispose in toDispose)
-                    exceptionAggregator.Execute(shouldDispose.Dispose);
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                if (Tasks != null)
-                    Tasks.Dispose(exceptionAggregator);
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                if (indexingBackgroundTask != null)
-                    indexingBackgroundTask.Wait();
-            });
-            exceptionAggregator.Execute(() =>
-            {
-                if (reducingBackgroundTask != null)
-                    reducingBackgroundTask.Wait();
-            });
-
-            exceptionAggregator.Execute(() =>
-        {
-                var disposable = backgroundTaskScheduler as IDisposable;
-                if (disposable != null)
-                    disposable.Dispose();
-            });
-
-            if (TransactionalStorage != null)
-                exceptionAggregator.Execute(TransactionalStorage.Dispose);
-
-            if (IndexStorage != null)
-                exceptionAggregator.Execute(IndexStorage.Dispose);
-
-            if (Configuration != null)
-                exceptionAggregator.Execute(Configuration.Dispose);
-
-            exceptionAggregator.Execute(disableAllTriggers.Dispose);
-
-            if (workContext != null)
-                exceptionAggregator.Execute(workContext.Dispose);
-
-            exceptionAggregator.ThrowIfNeeded();
-
-            Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
-        }
-
-        /// <summary>
-        ///     Get the total index storage size taken by the indexes on the disk.
-        ///     This explicitly does NOT include in memory indexes.
-        /// </summary>
-        /// <remarks>
-        ///     This is a potentially a very expensive call, avoid making it if possible.
-        /// </remarks>
-        public long GetIndexStorageSizeOnDisk()
-        {
-            if (Configuration.RunInMemory)
-                return 0;
-
-            string[] indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
-            long totalIndexSize = indexes.Sum(file =>
-                {
-                    try
-                    {
-                    return new FileInfo(file).Length;
-                    }
-                catch (UnauthorizedAccessException)
-                    {
-                    return 0;
-                    }
-                catch (FileNotFoundException)
-        {
-                    return 0;
-        }
-            });
-
-            return totalIndexSize;
-        }
-
-        /// <summary>
-        ///     Get the total size taken by the database on the disk.
-        ///     This explicitly does NOT include in memory indexes or in memory database.
-        ///     It does include any reserved space on the file system, which may significantly increase
-        ///     the database size.
-        /// </summary>
-        /// <remarks>
-        ///     This is a potentially a very expensive call, avoid making it if possible.
-        /// </remarks>
-        public long GetTotalSizeOnDisk()
-        {
-            if (Configuration.RunInMemory)
-                return 0;
-
-            return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk().AllocatedSizeInBytes;
-															}
-
-        /// <summary>
-        ///     Get the total size taken by the database on the disk.
-        ///     This explicitly does NOT include in memory database.
-        ///     It does include any reserved space on the file system, which may significantly increase
-        ///     the database size.
-        /// </summary>
-        /// <remarks>
-        ///     This is a potentially a very expensive call, avoid making it if possible.
-        /// </remarks>
-        public DatabaseSizeInformation GetTransactionalStorageSizeOnDisk()
-        {
-            return Configuration.RunInMemory ? DatabaseSizeInformation.Empty : TransactionalStorage.GetDatabaseSize();
-        }
-
-        public bool HasTransaction(string txId)
-            {
-            return inFlightTransactionalState.HasTransaction(txId);
-            }
-
-        public void Rollback(string txId)
-        {
-            inFlightTransactionalState.Rollback(txId);
-            }
-
-        public void RunIdleOperations()
-        {
-            bool tryEnter = Monitor.TryEnter(idleLocker);
-            try
-            {
-                if (tryEnter == false)
-                    return;
-
-                TransportState.OnIdle();
-                IndexStorage.RunIdleOperations();
-                Tasks.ClearCompletedPendingTasks();
-                lastCollectionEtags.Flush();
-            }
-            finally
-            {
-                if (tryEnter)
-        {
-                    Monitor.Exit(idleLocker);
-        }
-        }
-                        }
-
-        public void SpinBackgroundWorkers()
-        {
-            if (backgroundWorkersSpun)
-                throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-
-            backgroundWorkersSpun = true;
-
-            workContext.StartWork();
-            indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-
-            ReducingExecuter = new ReducingExecuter(workContext);
-
-            reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-        }
-
-        public void SpinIndexingWorkers()
-        {
-            if (backgroundWorkersSpun)
-                throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-
-            backgroundWorkersSpun = true;
-
-            workContext.StartIndexing();
-            indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-
-            ReducingExecuter = new ReducingExecuter(workContext);
-
-            reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			}
 		}
 
-        public void StopBackgroundWorkers()
+		public void SpinBackgroundWorkers()
 		{
-            workContext.StopWork();
-            if (indexingBackgroundTask != null)
-                indexingBackgroundTask.Wait();
+			if (backgroundWorkersSpun)
+				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 
-            if (reducingBackgroundTask != null)
-                reducingBackgroundTask.Wait();
+			backgroundWorkersSpun = true;
 
-            backgroundWorkersSpun = false;
+			workContext.StartWork();
+			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+
+			ReducingExecuter = new ReducingExecuter(workContext);
+
+			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-        public void StopIndexingWorkers()
+		public void SpinIndexingWorkers()
 		{
-            workContext.StopIndexing();
-            try
-            {
-                indexingBackgroundTask.Wait();
-					}
-            catch (Exception e)
+			if (backgroundWorkersSpun)
+				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
+
+			backgroundWorkersSpun = true;
+
+			workContext.StartIndexing();
+			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+
+			ReducingExecuter = new ReducingExecuter(workContext);
+
+			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+		}
+
+		public void StopBackgroundWorkers()
+		{
+			workContext.StopWork();
+			if (indexingBackgroundTask != null)
+				indexingBackgroundTask.Wait();
+
+			if (reducingBackgroundTask != null)
+				reducingBackgroundTask.Wait();
+
+			backgroundWorkersSpun = false;
+		}
+
+		public void StopIndexingWorkers()
+		{
+			workContext.StopIndexing();
+			try
+			{
+				indexingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				Log.WarnException("Error while trying to stop background indexing", e);
+			}
+
+			try
+			{
+				reducingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				Log.WarnException("Error while trying to stop background reducing", e);
+			}
+
+			backgroundWorkersSpun = false;
+		}
+
+		protected void RaiseIndexingWiringComplete()
+		{
+			Action indexingWiringComplete = OnIndexingWiringComplete;
+			OnIndexingWiringComplete = null; // we can only init once, release all actions
+			if (indexingWiringComplete != null)
+				indexingWiringComplete();
+		}
+
+		private static int GetBuildVersion()
+		{
+			string location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
+
+			FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
+			if (fileVersionInfo.FilePrivatePart != 0)
+				return fileVersionInfo.FilePrivatePart;
+
+			return fileVersionInfo.FileBuildPart;
+		}
+
+		private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
+		{
+			int retries = 128;
+			Random rand = null;
+			while (true)
+			{
+				token.ThrowIfCancellationRequested();
+
+				try
+				{
+					BatchResult[] results = null;
+					TransactionalStorage.Batch(_ => results = ProcessBatch(commands, token));
+					return results;
+				}
+				catch (ConcurrencyException)
+				{
+					if (retries-- >= 0)
 					{
-                Log.WarnException("Error while trying to stop background indexing", e);
+						if (rand == null)
+							rand = new Random();
+
+						Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
+						continue;
 					}
 
-							try
-							{
-                reducingBackgroundTask.Wait();
-									}
-            catch (Exception e)
-							{
-                Log.WarnException("Error while trying to stop background reducing", e);
-								}
+					throw;
+				}
+			}
+		}
 
-            backgroundWorkersSpun = false;
-        }
+		private void CompleteWorkContextSetup()
+		{
+			workContext.RaiseIndexChangeNotification = Notifications.RaiseNotifications;
+			workContext.IndexStorage = IndexStorage;
+			workContext.TransactionalStorage = TransactionalStorage;
+			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+		}
 
-        protected void RaiseIndexingWiringComplete()
-        {
-            Action indexingWiringComplete = OnIndexingWiringComplete;
-            OnIndexingWiringComplete = null; // we can only init once, release all actions
-            if (indexingWiringComplete != null)
-                indexingWiringComplete();
-                }
+		private static decimal ConvertBytesToMBs(long bytes)
+		{
+			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
+		}
 
-        private static int GetBuildVersion()
-                    {
-            string location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
 
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
-            if (fileVersionInfo.FilePrivatePart != 0)
-                return fileVersionInfo.FilePrivatePart;
+		private void ExecuteStartupTasks()
+		{
+			using (LogContext.WithDatabase(Name))
+			{
+				foreach (var task in StartupTasks)
+				{
+					var disposable = task.Value as IDisposable;
+					if (disposable != null)
+					{
+						toDispose.Add(disposable);
+					}
 
-            return fileVersionInfo.FileBuildPart;
-            }
+					task.Value.Execute(this);
+				}
+			}
+		}
 
-        private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
-        {
-            int retries = 128;
-		    Random rand = null;
-            while (true)
-            {
+		private void InitializeIndexCodecTriggers()
+		{
+			IndexCodecs.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private void InitializeTriggersExceptIndexCodecs()
+		{
+			DocumentCodecs // .Init(disableAllTriggers) // Document codecs should always be activated (RavenDB-576)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			PutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			IndexQueryTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			AttachmentPutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			AttachmentDeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			AttachmentReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			IndexUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private static bool IsScriptedPatchCommandDataWithoutEtagProperty(ICommandData commandData)
+		{
+			var scriptedPatchCommandData = commandData as ScriptedPatchCommandData;
+
+			const string ScriptEtagKey = "'@etag':";
+			const string EtagKey = "etag";
+
+			return scriptedPatchCommandData != null && scriptedPatchCommandData.Patch.Script.Replace(" ", string.Empty).Contains(ScriptEtagKey) == false && scriptedPatchCommandData.Patch.Values.ContainsKey(EtagKey) == false;
+		}
+
+		private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
+		{
+			var results = new BatchResult[commands.Count];
+			for (int index = 0; index < commands.Count; index++)
+			{
 				token.ThrowIfCancellationRequested();
 
-                try
-                {
-                    BatchResult[] results = null;
-                    TransactionalStorage.Batch(_ => results = ProcessBatch(commands, token));
-                    return results;
-                }
-                catch (ConcurrencyException)
-                {
-                    if (retries-- >= 0)
-                    {
-                        if (rand == null)
-                            rand = new Random();
+				ICommandData command = commands[index];
+				results[index] = command.ExecuteBatch(this);
+			}
 
-                        Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
-                        continue;
-                    }
+			return results;
+		}
 
-                    throw;
-                }
-            }
-        }
+		private void SecondStageInitialization()
+		{
+			DocumentCodecs
+				.OfType<IRequiresDocumentDatabaseInitialization>()
+				.Concat(PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Apply(initialization => initialization.SecondStageInit());
+		}
 
-        private void CompleteWorkContextSetup()
-        {
-            workContext.RaiseIndexChangeNotification = Notifications.RaiseNotifications;
-            workContext.IndexStorage = IndexStorage;
-            workContext.TransactionalStorage = TransactionalStorage;
-            workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-            }
+		private class DocumentDatabaseInitializer
+		{
+			private readonly DocumentDatabase database;
 
-        private static decimal ConvertBytesToMBs(long bytes)
-        {
-            return Math.Round(bytes / 1024.0m / 1024.0m, 2);
-            }
+			private readonly InMemoryRavenConfiguration configuration;
 
+			private ValidateLicense validateLicense;
 
-        private void ExecuteStartupTasks()
-        {
-            using (LogContext.WithDatabase(Name))
-            {
-                foreach (var task in StartupTasks)
-                {
-                    var disposable = task.Value as IDisposable;
-                    if (disposable != null)
-            {
-                        toDispose.Add(disposable);
-            }
+			public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
+			{
+				this.database = database;
+				this.configuration = configuration;
+			}
 
-                    task.Value.Execute(this);
-        }
-                }
-            }
+			public void ValidateLicense()
+			{
+				if (configuration.IsTenantDatabase)
+					return;
 
-        private void InitializeIndexCodecTriggers()
-        {
-            IndexCodecs.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-        }
+				validateLicense = new ValidateLicense();
+				validateLicense.Execute(configuration);
+			}
 
-        private void InitializeTriggersExceptIndexCodecs()
-        {
-            DocumentCodecs // .Init(disableAllTriggers) // Document codecs should always be activated (RavenDB-576)
-                .OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			public void Dispose()
+			{
+				if (validateLicense != null)
+					validateLicense.Dispose();
+			}
 
-            PutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			public void SubscribeToDomainUnloadOrProcessExit()
+			{
+				AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+				AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+			}
 
-            DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-            ReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-            IndexQueryTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-            AttachmentPutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-            AttachmentDeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-            AttachmentReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-            IndexUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-                }
-
-        private static bool IsScriptedPatchCommandDataWithoutEtagProperty(ICommandData commandData)
-        {
-            var scriptedPatchCommandData = commandData as ScriptedPatchCommandData;
-
-            const string ScriptEtagKey = "'@etag':";
-            const string EtagKey = "etag";
-
-            return scriptedPatchCommandData != null && scriptedPatchCommandData.Patch.Script.Replace(" ", string.Empty).Contains(ScriptEtagKey) == false && scriptedPatchCommandData.Patch.Values.ContainsKey(EtagKey) == false;
-            }
-
-        private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
-        {
-            var results = new BatchResult[commands.Count];
-            for (int index = 0; index < commands.Count; index++)
-            {
-				token.ThrowIfCancellationRequested();
-
-                ICommandData command = commands[index];
-                results[index] = command.ExecuteBatch(this);
-        }
-
-            return results;
-        }
-
-        private void SecondStageInitialization()
-        {
-            DocumentCodecs
-                .OfType<IRequiresDocumentDatabaseInitialization>()
-                .Concat(PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-                .Apply(initialization => initialization.SecondStageInit());
-        }
-
-        private class DocumentDatabaseInitializer
-        {
-            private readonly DocumentDatabase database;
-
-            private readonly InMemoryRavenConfiguration configuration;
-
-            private ValidateLicense validateLicense;
-
-            public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
-            {
-                this.database = database;
-                this.configuration = configuration;
-                }
-
-            public void ValidateLicense()
-                {
-                if (configuration.IsTenantDatabase)
-                    return;
-
-                validateLicense = new ValidateLicense();
-                validateLicense.Execute(configuration);
-                }
-
-            public void Dispose()
-            {
-                if (validateLicense != null)
-                    validateLicense.Dispose();
-            }
-
-            public void SubscribeToDomainUnloadOrProcessExit()
-        {
-                AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
-                AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
-                                }
-
-            public void UnsubscribeToDomainUnloadOrProcessExit()
-                                {
-                AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
-                AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
-                                }
+			public void UnsubscribeToDomainUnloadOrProcessExit()
+			{
+				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
+				AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
+			}
 
 			public void InitializeEncryption()
-                        {
+			{
 				string fipsAsString;
 				bool fips;
 				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
-                            {
+				{
 					if (!fips && configuration.UseFips)
 						throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
-                            }
+				}
 
 				Encryptor.Initialize(configuration.UseFips);
 				Cryptography.FIPSCompliant = configuration.UseFips;
-                    }
+			}
 
-            private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
-                {
-                Dispose();
-        }
+			private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
+			{
+				Dispose();
+			}
 
-            public void ExecuteAlterConfiguration()
-        {
-                foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
-        {
-                    alterConfiguration.AlterConfiguration(configuration);
-        }
-            }
-
-            public void SatisfyImportsOnce()
-        {
-                configuration.Container.SatisfyImportsOnce(database);
-        }
-
-            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
-        {
-                string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
-                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
-        }
-
-            public void InitializeIndexStorage()
-        {
-                database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
-                database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
-                    }
+			public void ExecuteAlterConfiguration()
+			{
+				foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+				{
+					alterConfiguration.AlterConfiguration(configuration);
 				}
+			}
+
+			public void SatisfyImportsOnce()
+			{
+				configuration.Container.SatisfyImportsOnce(database);
+			}
+
+			public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
+			{
+				string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+				database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
+				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
+			}
+
+			public void InitializeIndexStorage()
+			{
+				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
+				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
+			}
 		}
-        }
+	}
+}
