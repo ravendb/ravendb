@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Tenancy
         public readonly ConcurrentDictionary<string, DateTime> LastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         public event Action<string> CleanupOccured;
 
-		public readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
+	    protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 		
         public void Unprotect(DatabaseDocument databaseDocument)
         {
