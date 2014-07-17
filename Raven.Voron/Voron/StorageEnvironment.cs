@@ -79,12 +79,13 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
-                _journal = new WriteAheadJournal(this);
-
-                if (isNew)
+				_journal = new WriteAheadJournal(this);
+				
+				if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
+
 
                 State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
                 State.Root.Name = Constants.RootTreeName;
@@ -136,10 +137,6 @@ namespace Voron
                 tx.Commit();
 
 			}
-
-			_journal.Shipper.UpdatePreviousTransaction(_headerAccessor.Get(fileHeader => fileHeader->ShippedTransactionId));
-			_journal.Shipper.UpdatePreviousTransactionCrc(_headerAccessor.Get(fileHeader => fileHeader->ShippedTransactionCrc));
-		
 		}
 
         private void CreateNewDatabase()
@@ -158,7 +155,6 @@ namespace Voron
 
 				//since this transaction is never shipped, this is the first previous transaction
 				//when applying shipped logs
-				_journal.Shipper.UpdatePreviousTransaction(tx.Id);
 			}
         }
 
@@ -399,6 +395,11 @@ namespace Voron
                 throw;
             }
         }
+
+	    public long NextWriteTransactionId
+	    {
+		    get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
+	    }
 
         private void TransactionAfterCommit(Transaction tx)
         {

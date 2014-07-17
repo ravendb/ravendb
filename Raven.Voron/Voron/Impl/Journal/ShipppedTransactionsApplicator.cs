@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Voron.Impl.Paging;
 using Voron.Util;
 
@@ -9,29 +10,35 @@ namespace Voron.Impl.Journal
     public unsafe class ShipppedTransactionsApplicator : IDisposable
     {
         private readonly StorageEnvironment _env;
-        private uint _previousTransactionCrc;
-        private long _previousTransaction;
-
-		public ShipppedTransactionsApplicator(StorageEnvironment env, long previousTransaction, uint previousTransactionCrc)
-        {
-	        _env = env;
-	        _previousTransaction = previousTransaction;
+		private uint _previousTransactionCrc;
+		private long _previousTransactionId;
+		public ShipppedTransactionsApplicator(StorageEnvironment env, uint previousTransactionCrc, long previousTransactionId)
+		{
+			_env = env;
 			_previousTransactionCrc = previousTransactionCrc;
-
-        }
+			_previousTransactionId = previousTransactionId;
+		}
 
 	    public event Action<long, uint> TransactionApplied;
-
-	    public long PreviousTransaction
+		
+	    public long PreviousTransactionId
 	    {
-		    get { return _previousTransaction; }
+		    get { return _previousTransactionId; }
 	    }
+
+		//this value is read in a flushing thread
 	    public uint PreviousTransactionCrc
 	    {
-		    get { return _previousTransactionCrc; }
+		    get { return Thread.VolatileRead(ref _previousTransactionCrc); }
 	    }
 
-	    public void ApplyShippedLog(byte[] txPagesRaw, uint previousTransactionCrc)
+	    public void SetPreviousTransaction(long transactionId, uint previousTransactionCrc)
+	    {
+		    _previousTransactionId = transactionId;
+		    _previousTransactionCrc = previousTransactionCrc;
+	    }
+
+	    public void ApplyShippedLog(byte[] txPagesRaw)
 	    {
 			fixed (byte* pages = txPagesRaw)
 		    {
@@ -43,15 +50,15 @@ namespace Voron.Impl.Journal
 				    var compressedPages = (transactionHeader->CompressedSize/AbstractPager.PageSize) + (transactionHeader->CompressedSize%AbstractPager.PageSize == 0 ? 0 : 1);
 				    var crc = Crc.Value(dataPages, 0, compressedPages*AbstractPager.PageSize);
 
+				    var transactionId = transactionHeader->TransactionId;
 				    if (transactionHeader->Crc != crc)
-					    throw new InvalidDataException("Invalid CRC signature for shipped transaction " + transactionHeader->TransactionId);
+					    throw new InvalidDataException("Invalid CRC signature for shipped transaction " + transactionId);
 
-				    if (transactionHeader->TransactionId - 1 != PreviousTransaction)
-					    throw new InvalidDataException("Invalid id for shipped transaction got " + transactionHeader->TransactionId + " but expected " + (PreviousTransaction + 1) + ", is there a break in the chain?");
+					if (transactionId - 1 != PreviousTransactionId)
+						throw new InvalidDataException("Invalid id for shipped transaction got " + transactionId + " but expected " + (PreviousTransactionId + 1) + ", is there a break in the chain?");
 
-			
-				    if (PreviousTransactionCrc != previousTransactionCrc)
-					    throw new InvalidDataException("Invalid CRC signature for previous shipped transaction " + transactionHeader->TransactionId + ", is there a break in the chain?");
+					if (transactionHeader->PreviousTransactionCrc != PreviousTransactionCrc)
+					    throw new InvalidDataException("Invalid CRC signature for previous shipped transaction " + transactionId + ", is there a break in the chain?");
 
 				    var totalPages = transactionHeader->PageCount + transactionHeader->OverflowPageCount;
 				    
@@ -69,16 +76,17 @@ namespace Voron.Impl.Journal
 					    }
 
 						tx.WriteDirect(transactionHeader, decompressBuffer);
-				    }
+					
+						_previousTransactionCrc = crc;
+						_previousTransactionId = transactionHeader->TransactionId;
+					}
 				    finally 
 				    {
 						_env.ScratchBufferPool.Free(decompressBuffer.PositionInScratchBuffer, -1);
 				    }
 				    tx.Commit();
 
-					OnTransactionApplied(transactionHeader->TransactionId, crc);
-					_previousTransactionCrc = crc;
-					_previousTransaction = transactionHeader->TransactionId;
+					OnTransactionApplied(transactionId, crc);
 			    }
 
 		    }
@@ -94,15 +102,5 @@ namespace Voron.Impl.Journal
 	    public void Dispose()
         {
         }
-
-	    internal void UpdatePreviousTransaction(long transactionId)
-	    {
-			_previousTransaction = transactionId;
-	    }
-
-	    internal void UpdatePreviousTransactionCrc(uint crc)
-	    {
-			_previousTransactionCrc = crc;
-	    }
     }
 }

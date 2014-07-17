@@ -45,7 +45,7 @@ namespace Voron.Tests.Journal
 					Assert.Equal(tx.Header.Crc, crc);
 
 					if (previousCrc != 0)
-						Assert.Equal(previousCrc, tx.PreviousTransactionCrc);
+						Assert.Equal(previousCrc, tx.Header.PreviousTransactionCrc);
 					previousCrc = tx.Header.Crc;
 				}
 			}
@@ -79,7 +79,7 @@ namespace Voron.Tests.Journal
 			{
 				TransactionToShip tx;
 				transactionsToShip.TryDequeue(out tx);
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -92,7 +92,7 @@ namespace Voron.Tests.Journal
 				}
 
 				transactionsToShip.TryDequeue(out tx);
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -142,10 +142,10 @@ namespace Voron.Tests.Journal
 			{
 				TransactionToShip tx;
 				transactionsToShip.TryDequeue(out tx);
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				transactionsToShip.TryDequeue(out tx);
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -195,7 +195,7 @@ namespace Voron.Tests.Journal
 			{
 				TransactionToShip tx;
 				transactionsToShip.TryDequeue(out tx);
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -213,7 +213,7 @@ namespace Voron.Tests.Journal
 				TransactionToShip tx;
 
 				transactionsToShip.TryDequeue(out tx);
-				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+				shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -254,7 +254,7 @@ namespace Voron.Tests.Journal
 			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				foreach (var tx in transactionsToShip)
-					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
@@ -282,7 +282,7 @@ namespace Voron.Tests.Journal
 			using (var shippingDestinationEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
-					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
 				{
 					var fooReadResult = snapshot.Read("TestTree", "foo");
@@ -329,7 +329,7 @@ namespace Voron.Tests.Journal
 			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
 			{
 				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
-					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				shippingDestinationEnv.FlushLogToDataFile();
 
@@ -366,7 +366,7 @@ namespace Voron.Tests.Journal
 			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
 			{
 				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
-					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				shippingDestinationEnv.FlushLogToDataFile();
 
@@ -402,7 +402,7 @@ namespace Voron.Tests.Journal
 			using (var shippingDestinationEnv = new StorageEnvironment(storageEnvironmentOptions))
 			{
 				foreach (var tx in transactionsToShip.OrderBy(x => x.Header.TransactionId))
-					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot, tx.PreviousTransactionCrc);
+					shippingDestinationEnv.Journal.Shipper.ApplyShippedLog(tx.PagesSnapshot);
 
 				using (var snapshot = shippingDestinationEnv.CreateSnapshot())
 				{
