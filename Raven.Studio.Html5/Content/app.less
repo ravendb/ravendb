@@ -257,13 +257,6 @@ html, body {
     overflow: hidden;
 }
 
-.dropdown-menu {
-    .selected {
-        color: #555;
-        background-color: #e7e7e7;
-    }
-}
-
 .vertical-bottom-container {
     width: 10% !important;
     padding: 0 40% 0 40% !important;
@@ -310,19 +303,17 @@ html, body {
             cursor: pointer;
             border-radius: 2px;
             box-shadow: 0 0 5px 2px silver;
-            min-width: 140px;
-            min-height: 60px;
+            min-width: 160px;
+            min-height: 70px;
             display: inline-block;
             padding: 8px;
             margin: 0 10px 14px 0;
+            position: relative;
 
             @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
-            @disabledColor: lighten(silver, 5%);
-
-            .database-name {
-                float: left;
-            }
+            @enabledColor: #3A822D;
+            @disabledColor: #d9534f;
 
             .checkbox{
                 display: none;
@@ -341,33 +332,43 @@ html, body {
                 float: left;
                 line-height: 215%;
 
+                .database-name {
+                    float: left;
+                }
+
                 .disabled{
                     pointer-events: none;
-                    cursor: default;
                 }
 
-                .text-muted.stats{
-                    color: #3A822D;
+                .stats{
+                    color: @enabledColor;
                 }
 
-                .text-muted.disabled{
-                    color: #d9534f;
+                .stats-disabled{
+                    color: @disabledColor;
                 }
             }
 
             .btn-group {
                 float: right;
-                margin-left: 5px;
-                margin-top: 8px;
+                margin-left: 39.3px;
+                margin-top: 45.3px;
 
-                a:hover {
-                    .fa-trash-o {
-                        color: white;
+                .dropdown-menu{
+                    .fa-trash-o{
+                        color: lighten(@disabledColor, 20%);
+                    }
+
+                    .delete-database:hover .fa-trash-o{
+                        color: @disabledColor;
                     }
                 }
             }
 
             .btn-default {
+                padding: 4px;
+                padding-left: 10px;
+                padding-right: 7px;
                 border-color: white;
             }
 
@@ -376,36 +377,19 @@ html, body {
                 box-shadow: 0 0 5px 0 @hoverColor;
             }
 
-            .margin {
-                clear: both;
-                display: block;
-                margin: 22px 0;
-            }
-
-            &.disabled {
-                -webkit-box-shadow: 0 0 6px 0 @disabledColor;
-                box-shadow: 0 0 6px 0 @disabledColor;
-            }
-
-            &:hover {                
-                -webkit-box-shadow: -5px 0 0 0 @hoverColor, 0 0 5px 2px silver;
-                box-shadow: -5px 0 0 0 @hoverColor, 0 0 5px 2px silver;
-            }
-
             .fa-cogs {
                 color: black;
             }
 
+            &:hover {                
+                background-color: white;
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }
+
             &.selected {
-                box-shadow: -5px 0 0 0 @brand-primary, 0 0 5px 2px silver;
-                //background-image: linear-gradient(#5f6060, #474949 50%, #3d3f3f);
-                /*a, .text-muted {
-                    color: white;
-                }
-                a.btn {
-                    color: black;
-                    text-align: left;
-                }*/
+                -webkit-box-shadow: 0 0 17px 0 @selectColor;
+                box-shadow: 0 0 17px 0 @selectColor;
             }
 
             &.system-database {
@@ -443,6 +427,21 @@ html, body {
 .resource-link-disabled {
     pointer-events: none;
     cursor: default;
+}
+
+.dropdown-menu {
+    min-width: 0;
+
+    .selected {
+        color: #555;
+        background-color: #e7e7e7;
+    }
+
+    a.btn {
+        padding-left: 10px;
+        text-align: left;
+        color: black;
+    }
 }
 
 .document-collections {
@@ -782,6 +781,19 @@ html, body {
             -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+    }
+
+    .documents-select{
+        text-align: center;
+        background-color: #ffffcc;
+        margin-top: 5px;
+        border: 1px solid;
+        border-radius: 25px;
+
+        .select-link{
+            text-decoration: underline;
+            cursor: pointer;
         }
     }
 }
