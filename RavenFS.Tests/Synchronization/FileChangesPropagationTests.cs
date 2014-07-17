@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Specialized;
+﻿using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Json.Linq;
+using RavenFS.Tests.Synchronization.IO;
+using System;
 using System.IO;
 using System.Linq;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
-using RavenFS.Tests.Synchronization.IO;
 using Xunit;
-using Raven.Json.Linq;
-using Raven.Abstractions.FileSystem;
-using System.Threading;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -71,9 +72,13 @@ namespace RavenFS.Tests.Synchronization
 			var content = new MemoryStream(buffer);
 			var changedContent = new RandomlyModifiedStream(content, 0.02);
 
-			var server1 = NewAsyncClient(0);
-			var server2 = NewAsyncClient(1);
-            var server3 = NewAsyncClient(2);
+            var store1 = NewStore(0);
+            var store2 = NewStore(1);
+            var store3 = NewStore(2);
+
+            var server1 = store1.AsyncFilesCommands;
+            var server2 = store2.AsyncFilesCommands;
+            var server3 = store3.AsyncFilesCommands;         
 
 			content.Position = 0;
             await server1.UploadAsync("test.bin", content, new RavenJObject { { "test", "value" } });
@@ -97,13 +102,31 @@ namespace RavenFS.Tests.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
+            var syncTaskServer2 = store2.Changes()
+                                        .ForSynchronization()
+                                        .Where(x => x.Action == SynchronizationAction.Finish)
+                                        .Timeout(TimeSpan.FromSeconds(20))
+                                        .Take(1)
+                                        .ToTask();
+
 			var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
 			Assert.Null(secondServer1Synchronization[0].Exception);
 			Assert.Equal(SynchronizationType.ContentUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
 
+            await syncTaskServer2;
+
+            var syncTaskServer3 = store3.Changes()
+                                        .ForSynchronization()
+                                        .Where(x => x.Action == SynchronizationAction.Finish)
+                                        .Timeout(TimeSpan.FromSeconds(20))
+                                        .Take(1)
+                                        .ToTask();
+
 			var secondServer2Synchronization = await server2.Synchronization.SynchronizeAsync();
 			Assert.Null(secondServer2Synchronization[0].Exception);
 			Assert.Equal(SynchronizationType.ContentUpdate, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
+
+            await syncTaskServer3;
 
 			// On all servers should have the same content of the file
 			string server1Md5;
