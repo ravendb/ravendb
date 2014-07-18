@@ -139,6 +139,7 @@ namespace RavenFS.Tests.ClientApi
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -186,6 +187,7 @@ namespace RavenFS.Tests.ClientApi
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
@@ -223,6 +225,7 @@ namespace RavenFS.Tests.ClientApi
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -258,6 +261,7 @@ namespace RavenFS.Tests.ClientApi
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -295,6 +299,7 @@ namespace RavenFS.Tests.ClientApi
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, takeLocalConflictListener.DetectedCount);
                 Assert.Equal(1, takeNewestConflictListener.DetectedCount);
