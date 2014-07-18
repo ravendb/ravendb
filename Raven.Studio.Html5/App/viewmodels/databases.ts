@@ -256,6 +256,7 @@ class databases extends viewModelBase {
 
     private onDatabaseDeleted(databaseName: string) {
         var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
+
         if (!!databaseInArray) {
             this.databases.remove(databaseInArray);
 
@@ -276,17 +277,13 @@ class databases extends viewModelBase {
                     .done((toggledDatabaseNames: string[]) => {
                         var activeDatabase: database = this.activeDatabase();
 
-                        toggledDatabaseNames.forEach(databaseName => {
-                            var db = this.databases.first((foundDb: database) => foundDb.name == databaseName);
-                            if (!!db) {
-                                db.disabled(action);
-                                db.isChecked(false);
-
-                                if (!!activeDatabase && db.name == activeDatabase.name) {
-                                    this.selectDatabase(db);
-                                }
-                            }
-                        });
+                        if (databases.length == 1) {
+                            this.onDatabaseDisabledToggle(databases[0].name, action, activeDatabase);
+                        } else {
+                            toggledDatabaseNames.forEach(databaseName => {
+                                this.onDatabaseDisabledToggle(databaseName, action, activeDatabase);
+                            });
+                        }
                     });
 
                 app.showDialog(disableDatabaseToggleViewModel);
@@ -297,6 +294,19 @@ class databases extends viewModelBase {
     toggleCheckedDatabases() {
         var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
         this.toggleSelectedDatabases(checkedDatabases);
+    }
+
+    private onDatabaseDisabledToggle(databaseName: string, action: boolean, activeDatabase: database) {
+        var db = this.databases.first((foundDb: database) => foundDb.name == databaseName);
+
+        if (!!db) {
+            db.disabled(action);
+            db.isChecked(false);
+
+            if (!!activeDatabase && db.name == activeDatabase.name) {
+                this.selectDatabase(db);
+            }
+        }
     }
 
     private filterDatabases(filter: string) {
