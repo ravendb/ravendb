@@ -133,7 +133,10 @@ namespace Raven.Studio.Models
                                     select new { 
 	                                    Id = result[""@metadata""][""@id""], 
 	                                    ConflictDetectedAt = result[""@metadata""][""Last-Modified""].ToString(), 
-	                                    Versions = result.Conflicts.Select(versionId => { var version = Database.Load(versionId); return new { Id = versionId, SourceId = version[""@metadata""][""Raven-Replication-Source""]}; })
+	                                    Versions = result.Conflicts.Select(versionId => { 
+											var version = Database.Load(versionId); 
+											return new { Id = versionId, SourceId = version[""@metadata""][""Raven-Replication-Source""]}; 
+										})
                                     }"
             };
 
