@@ -1,13 +1,4 @@
-﻿<style>
-.licenseInactive {
-    color: hsl(0, 0%, 80%) !important;
-    background-color: hsl(208, 25%, 53%) !important;
-    box-shadow: none !important;
-    border: 1px solid rgb(53, 126, 189) !important;
-}
-
-</style>
-<div class="messageBox" tabindex="-1">
+﻿<div class="messageBox" tabindex="-1">
     <form data-bind="submit: nextOrCreate">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
@@ -53,31 +44,31 @@
                       <label>Bundles:</label>
                     </div>
                     <div class="btn-group-vertical" data-toggle="buttons">
-                        <label class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isCompressionBundleActive() }">
-                            <input type="checkbox" data-bind="enable: isCompressionBundleActive"> Compression
+                        <label class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression') }">
+                            <input type="checkbox"> Compression
                         </label>
-                        <label id="encryptionCheckbox" class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isEncryptionBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption') }">
                             <input type="checkbox"> Encryption
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isExpirationBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration') }">
                             <input type="checkbox"> Expiration
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isQuotasBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas') }">
                             <input type="checkbox"> Quotas
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isReplicationBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication') }">
                             <input type="checkbox"> Replication
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle, css: { licenseInactive: !isSqlReplicationBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle">
                             <input type="checkbox"> Sql Replication
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isVersioningBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning') }">
                             <input type="checkbox"> Versioning
                         </label>
-                        <label class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isPeriodicExportBundleActive() }">
+                        <label class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup') }">
                             <input type="checkbox"> Periodic Export
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle, css: { licenseInactive: !isScriptedIndexBundleActive() }">
+                        <label class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">
                             <input type="checkbox"> Scripted Index
                         </label>
                     </div>

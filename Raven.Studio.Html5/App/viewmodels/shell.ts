@@ -71,7 +71,7 @@ class shell extends viewModelBase {
     queuedAlert: alertArgs;
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    licenseStatus = ko.observable<licenseStatusDto>();
+    static licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
@@ -99,6 +99,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs); });
         ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
+        ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
         this.currentConnectedResource = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase();
@@ -247,6 +248,12 @@ class shell extends viewModelBase {
             NProgress.done();
             this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
             $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
+        }
+    }
+
+    private reloadDataAfterReconnection(rs: resource) {
+        if (rs instanceof database && rs.name === "<system>") {
+            this.fetchLicenseStatus();
         }
     }
 
@@ -631,7 +638,7 @@ class shell extends viewModelBase {
     fetchLicenseStatus() {
         new getLicenseStatusCommand()
             .execute()
-            .done((result: licenseStatusDto) => this.licenseStatus(result));
+            .done((result: licenseStatusDto) => shell.licenseStatus(result));
     }
 
     fetchGoToDocSearchResults(query: string) {
@@ -666,7 +673,7 @@ class shell extends viewModelBase {
 
     showLicenseStatusDialog() {
         require(["viewmodels/licensingStatus"], licensingStatus => {
-            var dialog = new licensingStatus(this.licenseStatus());
+            var dialog = new licensingStatus(shell.licenseStatus());
             app.showDialog(dialog);
         });
     }

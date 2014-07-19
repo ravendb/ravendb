@@ -21,7 +21,11 @@ class filesystems extends viewModelBase {
 
         this.fileSystems = shell.fileSystems;
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterFilesystems(s));
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.selectFileSystem(fs, false));
+        
+        var currentFileSystem = this.activeFilesystem();
+        if (!!currentFileSystem) {
+            this.selectFileSystem(currentFileSystem, false);
+        }
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.

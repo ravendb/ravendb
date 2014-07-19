@@ -26,6 +26,7 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
+    private postboxSubscriptions: Array<KnockoutSubscription> = [];
     private static isConfirmedUsingSystemDatabase: boolean;
     dirtyFlag = new ko.DirtyFlag([]);
 
@@ -57,17 +58,6 @@ class viewModelBase {
         return true;
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [];
-    }
-
-    cleanupNotifications() {
-        for (var i = 0; i < this.notifications.length; i++) {
-            this.notifications[i].off();
-        }
-        this.notifications = [];
-    }
-
     /*
      * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
      */
@@ -80,6 +70,7 @@ class viewModelBase {
 
         oauthContext.enterApiKeyTask.done(() => this.notifications = this.createNotifications());
 
+        this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
 
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
@@ -110,6 +101,7 @@ class viewModelBase {
      */
     detached() {
         this.cleanupNotifications();
+        this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
     }
 
@@ -122,6 +114,24 @@ class viewModelBase {
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [];
+    }
+
+    cleanupNotifications() {
+        this.notifications.forEach((notification: changeSubscription) => notification.off());
+        this.notifications = [];
+    }
+
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [];
+    }
+
+    cleanupPostboxSubscriptions() {
+        this.postboxSubscriptions.forEach((subscription: KnockoutSubscription) => subscription.dispose());
+        this.postboxSubscriptions = [];
     }
 
     /*

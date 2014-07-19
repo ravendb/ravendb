@@ -93,9 +93,7 @@ class databases extends viewModelBase {
 
     selectDatabase(db: database, activateDatabase: boolean = true) {
         if (this.optionsClicked() == false) {
-            this.databases().forEach((d: database) => {
-                d.isSelected(d.name === db.name);
-            });
+            this.databases().forEach((d: database) => d.isSelected(d.name === db.name));
             if (activateDatabase) {
                 db.activate();
             }
@@ -110,7 +108,7 @@ class databases extends viewModelBase {
         // Since the database page is the common landing page, we want it to load quickly.
         // Since the createDatabase page isn't required up front, we pull it in on demand.
         require(["viewmodels/createDatabase"], createDatabase => {
-            var createDatabaseViewModel = new createDatabase(this.databases);
+            var createDatabaseViewModel = new createDatabase(this.databases, shell.licenseStatus);
             createDatabaseViewModel
                 .creationTask
                 .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string) => {

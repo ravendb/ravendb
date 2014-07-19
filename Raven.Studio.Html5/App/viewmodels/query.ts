@@ -77,16 +77,6 @@ class query extends viewModelBase {
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
 
-    editItemSubscription = ko.postbox.subscribe("EditItem", (itemNumber: number) => {
-        //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
-        var queriess = this.recentQueries();
-        var recentq = this.recentQueries()[0];
-        var sorts = recentq.Sorts
-            .join(',');
-        //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
-        router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
-    });
-
     static containerSelector = "#queryContainer";
 
     constructor() {
@@ -161,9 +151,20 @@ class query extends viewModelBase {
         this.focusOnQuery();
     }
 
-    detached() {
-        this.editItemSubscription.dispose();
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("EditItem", (itemNumber: number) => {
+                //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
+                var queriess = this.recentQueries();
+                var recentq = this.recentQueries()[0];
+                var sorts = recentq.Sorts
+                    .join(',');
+                //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
+                router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
+            })
+        ];
     }
+
     onIndexChanged(newIndexName: string) {
         var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
         this.contextName(command.docName);

@@ -7726,6 +7726,14 @@ footer ul {
   max-width: 800px;
   width: 600px;
 }
+.licenseInactive {
+  pointer-events: none;
+  cursor: default;
+  color: #cccccc !important;
+  background-color: #6989a5 !important;
+  box-shadow: none !important;
+  border: 1px solid #357ebd !important;
+}
 .license-error {
   color: #d2322d;
 }

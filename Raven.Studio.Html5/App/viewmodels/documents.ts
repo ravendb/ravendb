@@ -100,8 +100,6 @@ class documents extends viewModelBase {
             }
             return null;
         });
-
-        ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db));
     }
 
     activate(args) {
@@ -137,6 +135,12 @@ class documents extends viewModelBase {
             shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
             shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
             shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+        ];
+    }
+
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db))
         ];
     }
 
