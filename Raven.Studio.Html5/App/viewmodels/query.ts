@@ -440,7 +440,10 @@ class query extends viewModelBase {
             var preppedDoc = new document(recentQueriesDoc);
             new saveDocumentCommand(getStoredQueriesCommand.storedQueryDocId, preppedDoc, this.activeDatabase(), false)
                 .execute()
-                .done((result: { Key: string; ETag: string; }) => recentQueriesDoc["@metadata"]["@etag"] = result.ETag);
+                .done((saveResult: bulkDocumentDto[]) => {
+                    var savedDocumentDto: bulkDocumentDto = saveResult[0];
+                    recentQueriesDoc["@metadata"]["@etag"] = savedDocumentDto.Etag;
+                });
         }
     }
 
