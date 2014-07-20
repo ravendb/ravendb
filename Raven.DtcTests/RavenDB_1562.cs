@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Net;
+using Raven.Abstractions.Connection;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Issues
@@ -140,9 +142,17 @@ namespace Raven.Tests.Issues
 
         private void SetupDB(IDocumentStore store, string dbName, bool addReplicationTarget, string targetDbName)
         {
-            DeleteDatabase(store, dbName, true);
+	        try
+	        {
+		        store.DatabaseCommands.GlobalAdmin.DeleteDatabase(dbName, true);
+	        }
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode != HttpStatusCode.NotFound)
+					throw;
+			}
 
-            var databaseDocument = new DatabaseDocument
+	        var databaseDocument = new DatabaseDocument
             {
                 Id = dbName,
                 Settings =
@@ -190,24 +200,6 @@ namespace Raven.Tests.Issues
             );
 
         }
-
-        public static void DeleteDatabase(IDocumentStore store, string name, bool hardDelete = false)
-        {
-            if (string.IsNullOrEmpty(name))
-                throw new ArgumentNullException("name");
-
-            var databaseCommands = store.DatabaseCommands;
-            var relativeUrl = "/admin/databases/" + name;
-
-            if (hardDelete)
-                relativeUrl += "?hard-delete=true";
-
-            var serverClient = databaseCommands.ForSystemDatabase() as ServerClient;
-
-			var httpJsonRequest = serverClient.CreateRequest(relativeUrl, "DELETE");
-            httpJsonRequest.ExecuteRequest();
-        }
-
     }
 
     public class Doc
