@@ -168,6 +168,7 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             public string TableName { get; set; }
             public CommandData[] Commands { get; set; } 
+
             
             public class CommandData
             {

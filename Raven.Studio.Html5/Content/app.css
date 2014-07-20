@@ -136,35 +136,40 @@ body {
   overflow-y: auto;
 }
 .replicationSimulation {
-  width: 60vw;
-  max-height: 60vh!important;
+  width: 90vw;
+  max-height: 90vh!important;
   overflow-x: hidden!important;
   overflow-y: hidden!important;
-}
-@media (max-width: 767px) {
-  .replicationSimulation {
-    width: 80vw;
-  }
 }
 .replicationSimulation label {
   text-align: left;
   font-size: large;
 }
 .replicationSimulation .replicationSimulationData {
-  max-height: 35vh!important;
-  height: 35vh!important;
+  max-height: 70vh!important;
+  height: 70vh!important;
   overflow-x: hidden;
   overflow-y: hidden;
 }
 .replicationSimulation .replicationSimulationData .form-group {
-  max-height: 25vh!important;
-  height: 35vh!important;
+  max-height: 55vh!important;
+  height: 55vh!important;
   overflow-x: hidden;
   overflow-y: auto;
 }
 .replicationSimulation .replicationSimulationData .additional-action {
   margin-left: 50%;
   padding: 0;
+}
+.replicationSimulation .replicationSimulationData .sqlQuery {
+  padding-bottom: 1%;
+}
+.replicationSimulation .replicationSimulationData .parametrizedQuery {
+  cursor: pointer;
+}
+.replicationSimulation .replicationSimulationData .sqlQuery:hover {
+  opacity: 0.8;
+  text-decoration: underline;
 }
 .replicationSimulation .replicationSimulationData .simulationResultContainer .simulationResult {
   font-weight: bold;

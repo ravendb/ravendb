@@ -7,10 +7,10 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMet
 import dialog = require("plugins/dialog");
 import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
+import sqlReplicationSimulatedCommand = require ("models/sqlReplicationSimulatedCommand");
 
 class sqlReplicationSimulationDialog extends dialogViewModelBase {
-
-    simulationResults = ko.observable<string[]>([]);
+    simulationResults = ko.observableArray<sqlReplicationSimulatedCommand>([]);
     rolledBackTransactionPassed = ko.observable<boolean>(false);
     documentAutocompletes = ko.observableArray<string>();
     documentId = ko.observable<string>();
@@ -28,14 +28,19 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
         });
     }
 
+
+    toggleCommandParamView(command: sqlReplicationSimulatedCommand) {
+        command.showParamsValues.toggle();
+    }
+
     getResults(performRolledbackTransaction: boolean) {
-        this.rolledbackTransactionPerformed(performRolledbackTransaction);
         this.lastSearchedDocumentID(this.documentId());
         new simulateSqlReplicationCommand(this.db, this.simulatedSqlReplication, this.documentId(), performRolledbackTransaction)
             .execute()
             .done((result: sqlReplicationSimulationResultDto) => {
                 if (!!result.Results) {
-                    this.simulationResults(result.Results.map(x=> x.Commands.map(y=> y.CommandText)).reduce((x,y) =>x.concat(y)));
+//                    this.simulationResults(result.Results.map(x=> x.Commands.map(y=> y.CommandText)).reduce((x,y) =>x.concat(y)));
+                    this.simulationResults(result.Results.map(x=> x.Commands).reduce((x, y) => x.concat(y)).map(x => { return new sqlReplicationSimulatedCommand(!performRolledbackTransaction, x); }));
                     this.rolledBackTransactionPassed(!result.LastAlert);
                 }
 
@@ -44,6 +49,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
                 } else {
                     this.lastAlert("");
                 }
+                this.rolledbackTransactionPerformed(performRolledbackTransaction);
 
             })
             .fail(() => {

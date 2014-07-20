@@ -46,7 +46,7 @@
                     Test Transaction Status:
                 </label>
                 <label class="col-sm-8" data-bind="text:rolledBackTransactionPassed()==true?'Passed':'Failed', css:{'text-success':rolledBackTransactionPassed() === true, 'text-danger':rolledBackTransactionPassed() === false}"></label>
-                <label class="col-sm-12  control-label">
+                <label class="col-sm-12  control-label" data-bind="visible:rolledBackTransactionPassed()==false">
                     Test Transaction Error:
                 </label>
                 <span class="col-sm-offset-2 col-sm-10" data-bind="visible:rolledBackTransactionPassed() == false, text:lastAlert"></span>
@@ -54,8 +54,11 @@
                 <!-- ko if: simulationResults().length> 0 -->
                 <label class="col-sm-12  control-label" data-bind="text:rolledbackTransactionPerformed() == true?'Test SQL Commands:':'Simulated SQL Commands:'">
                 </label>
-                <div class="col-sm-12 simulationResultContainer" data-bind="foreach:simulationResults">
-                    <span class="col-sm-offset-2 col-sm-10"  data-bind="text:$data"></span>
+
+                <div class="col-sm-12 simulationResultContainer list-group" data-bind="foreach:simulationResults">
+                    <a class="col-sm-offset-1 col-sm-10 sqlQuery" data-bind="click:function(){$data.showParamsValues.toggle();}, css:{'parametrizedQuery':($root.rolledbackTransactionPerformed() == true && (commandText().indexOf('INSERT') === 0 || $root.simulatedSqlReplication.parameterizeDeletesDisabled() === false))}">
+                        <span data-bind="text:commandText"></span>
+                    </a>
                 </div>
                 <!-- /ko -->
                 <div class="col-sm-12" data-bind="visible: simulationResults().length== 0">
@@ -67,7 +70,7 @@
         </div>
     </div>
     <div class="modal-footer">
-        <span class="pull-left">* This is debug data, real queries will be parametrised</span>
+        <span class="pull-left" data-bind="text:rolledbackTransactionPerformed() == true?'* Press command to toggle parameters view':'* This is debug data, real queries will be parametrised. Try pressing the test transaction button'"></span>
         <button type="button" class="btn btn-primary" data-bind="click: $root.cancel">OK</button>
     </div>
 </div>

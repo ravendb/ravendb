@@ -167,6 +167,7 @@
     <TypeScriptCompile Include="App\models\counter\counterServerValue.ts" />
     <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
     <TypeScriptCompile Include="App\models\sqlReplicationConnections.ts" />
+    <TypeScriptCompile Include="App\models\sqlReplicationSimulatedCommand.ts" />
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\models\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />

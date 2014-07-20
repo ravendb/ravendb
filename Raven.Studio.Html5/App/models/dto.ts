@@ -466,7 +466,7 @@ interface sqlReplicationDto extends documentDto {
 
 interface commandData {
     CommandText: string;
-    Params:{Name:string;value:any}[]
+    Params:{Key:string;Value:any}[]
 }
 
 interface tableQuerySummary {
