@@ -29,7 +29,6 @@
         <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, disabled: disabled }">
                 <div class="checkbox" data-bind="click: function(){ checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
-                    <!--<input data-bind="checked: isChecked, click: function(){ $root.optionsClicked(true); return true; }" type="checkbox" name="checkbox" />-->
                     <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
                 </div>
 

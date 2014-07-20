@@ -103,7 +103,7 @@ class indexes extends viewModelBase {
     }
 
     putIndexIntoGroups(i: index) {
-        if (i.forEntityName.length === 0) {
+        if (!i.forEntityName || i.forEntityName.length === 0) {
             this.putIndexIntoGroupNamed(i, "Other");
         } else {
             i.forEntityName.forEach(e => this.putIndexIntoGroupNamed(i, e));

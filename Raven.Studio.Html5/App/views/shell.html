@@ -209,11 +209,11 @@
                                             <b class="caret"></b>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            <li>
-                                                <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.databases()), visible: !appUrls.isAreaActive('databases')()">Databases</a>
+                                            <li><!-- click: function () { navigateToResourceGroup.bind($root, appUrls.databases()); return true; }-->
+                                                <a href="#databases" data-bind="click: navigateToResourceGroup.bind($root, appUrls.databases()), visible: !appUrls.isAreaActive('databases')()">Databases</a>
                                             </li>
                                             <li>
-                                                <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.filesystems()), visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
+                                                <a href="#filesystems" data-bind="click: navigateToResourceGroup.bind($root, appUrls.filesystems()), visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
                                             </li>
                                             <!--<li>
                                                 <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.couterStorages()), visible: !appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
@@ -275,7 +275,7 @@
 
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
-                <li data-bind="with: licenseStatus"><a class="navbar-link" href="#" data-bind="text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a></li>
+                <li data-bind="with: localLicenseStatus"><a class="navbar-link" href="#" data-bind="text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a></li>
                 <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
                 <!-- /ko -->
