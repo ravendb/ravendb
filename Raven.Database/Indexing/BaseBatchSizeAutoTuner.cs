@@ -1,9 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Runtime.Remoting.Contexts;
-using Lucene.Net.Util;
-using Microsoft.VisualBasic.CompilerServices;
-using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -23,18 +19,18 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<Guid, long> _currentlyUsedBatchSizesInBytes;
 		private readonly long memoryLimitForIndexingInBytes;
 
-	    private int maximumSizeAllowedToFetchFromStorageInMb;
+	    private readonly int maximumSizeAllowedToFetchFromStorageInMb;
 
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
-	        FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.FetchingDocumentsFromDiskTimeoutInSeconds);
-			maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.MaximumSizeAllowedToFetchFromStorageInMb;
+	        FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
+			maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb;
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
-			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
+			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMb * 1024 * 1024;
 		}
 
 	    public void HandleLowMemory()
@@ -126,8 +122,8 @@ namespace Raven.Database.Indexing
                 // if we just loaded > 256 MB to index, that is big enough for right now
 				// remember, this value refer to just the data on disk, not including
 				// the memory to do the actual indexing
-				double sizeInMB = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
-				return (long)sizeInMB * 1024 * 1024;
+				double sizeInMb = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
+				return (long)sizeInMb * 1024 * 1024;
 			}
 		}
 

@@ -303,6 +303,7 @@
     <TypeScriptCompile Include="App\commands\queryIndexDebugReduceCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugAfterReduceCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugDocsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getReplicationTopology.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -502,7 +503,12 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
-    <Content Include="Content\bootstrap.css" />
+    <Content Include="Content\bootstrap.css">
+      <DependentUpon>bootstrap.less</DependentUpon>
+    </Content>
+    <Content Include="Content\bootstrap.min.css">
+      <DependentUpon>bootstrap.css</DependentUpon>
+    </Content>
     <Content Include="Content\durandal.css" />
     <Content Include="Content\font-awesome.css" />
     <Content Include="Content\images\icon.png" />
@@ -758,6 +764,9 @@
       <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="readme-optimized-build.md" />
+    <Content Include="Content\bootstrap.less" />
+    <Content Include="Content\variables.less" />
+    <Content Include="Content\functions.less" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />

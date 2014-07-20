@@ -1,4 +1,4 @@
-﻿<div class="messageBox replicationSimulation" tabindex="-1">
+﻿<div class="messageBox" tabindex="-1">
     <div class="modal-header">
         <button type="button" class="close" data-bind="click: $root.cancel" aria-hidden="true">&times;</button>
         <h4 class="modal-title" data-bind="text:'SQL Replication Simulation For: ' + simulatedSqlReplication.name()"></h4>
@@ -46,10 +46,10 @@
                     Test Transaction Status:
                 </label>
                 <label class="col-sm-8" data-bind="text:rolledBackTransactionPassed()==true?'Passed':'Failed', css:{'text-success':rolledBackTransactionPassed() === true, 'text-danger':rolledBackTransactionPassed() === false}"></label>
-                <label class="col-sm-12  control-label" data-bind="visible:rolledBackTransactionPassed()==false">
+                <label class="col-sm-12  control-label" data-bind="visible:rolledBackTransactionPassed()==false|| !!lastAlert()">
                     Test Transaction Error:
                 </label>
-                <span class="col-sm-offset-2 col-sm-10" data-bind="visible:rolledBackTransactionPassed() == false, text:lastAlert"></span>
+                <span class="col-sm-offset-2 col-sm-10" data-bind="visible:rolledBackTransactionPassed() == false || !!lastAlert(), text:lastAlert"></span>
                 <!-- /ko -->
                 <!-- ko if: simulationResults().length> 0 -->
                 <label class="col-sm-12  control-label" data-bind="text:rolledbackTransactionPerformed() == true?'Test SQL Commands:':'Simulated SQL Commands:'">

@@ -231,10 +231,10 @@ class editDocument extends viewModelBase {
         super.activate(navigationArgs);
 
         this.lodaedDocumentName(this.userSpecifiedId());
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
 
         this.isSaveEnabled = ko.computed(()=> {
-            return (viewModelBase.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
+            return (this.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
         }, this);
 
         // Find the database and collection we're supposed to load.
@@ -276,7 +276,12 @@ class editDocument extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.docEditor = ko.utils.domData.get($("#docEditor")[0], "aceEditor");
+
+        var editorElement = $("#docEditor");
+        if (editorElement.length > 0) {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
         this.focusOnEditor();
     }
 
@@ -339,7 +344,7 @@ class editDocument extends viewModelBase {
                 this.isEditingMetadata(true);
             }
             this.docEditor.focus();
-            this.reportError(message);
+            this.reportError(message, null, false);
         }
         
         if (message != "") {
@@ -377,7 +382,7 @@ class editDocument extends viewModelBase {
         var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
+            this.dirtyFlag().reset(); //Resync Changes
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
 
@@ -452,7 +457,7 @@ class editDocument extends viewModelBase {
         loadDocTask.done((document: document)=> {
             this.document(document);
             this.lodaedDocumentName(this.userSpecifiedId());
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
+            this.dirtyFlag().reset(); //Resync Changes
 
             this.loadRelatedDocumentsList(document);
             this.appendRecentDocument(id);
@@ -486,7 +491,7 @@ class editDocument extends viewModelBase {
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
             viewModel.deletionTask.done(() => {
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.dirtyFlag().reset(); //Resync Changes
 
                 var list = this.docsList();
                 if (!!list) {
@@ -565,7 +570,7 @@ class editDocument extends viewModelBase {
 	                    else {
 	                        this.document(doc);
 	                        this.lodaedDocumentName("");
-	                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+                            this.dirtyFlag().reset(); //Resync Changes
 	                    }
 
 	                    if (!!newTotalResultCount) {

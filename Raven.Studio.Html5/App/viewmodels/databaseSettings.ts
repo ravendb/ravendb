@@ -70,19 +70,17 @@ class databaseSettings extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
-        this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
-        });
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
 
-        var dbDocEditor = $("#dbDocEditor");
-        if (dbDocEditor.length > 0)
+        var editorElement = $("#dbDocEditor");
+        if (editorElement.length > 0)
         {
-            this.docEditor = ko.utils.domData.get(dbDocEditor[0], "aceEditor");
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
     }
 
@@ -107,7 +105,7 @@ class databaseSettings extends viewModelBase {
                     this.docEditor.setReadOnly(true);
                     this.isEditingEnabled(false);
                     this.activateDoc();
-                    viewModelBase.dirtyFlag().reset(); //Resync Changes
+                    this.dirtyFlag().reset(); //Resync Changes
                 });
         });
     }
@@ -151,7 +149,7 @@ class databaseSettings extends viewModelBase {
                         this.docEditor.setReadOnly(true);
                         this.isEditingEnabled(false);
                         this.formatDocument();
-                        viewModelBase.dirtyFlag().reset(); //Resync Changes
+                        this.dirtyFlag().reset(); //Resync Changes
                     });
                 }
                 catch (e) {

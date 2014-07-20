@@ -57,8 +57,8 @@ class editTransformer extends viewModelBase {
             this.editedTransformer(transformer.empty());
         }
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
-        this.isSaveEnabled = ko.computed(() => !!this.editedTransformer().name() && viewModelBase.dirtyFlag().isDirty());
+        this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+        this.isSaveEnabled = ko.computed(() => !!this.editedTransformer().name() && this.dirtyFlag().isDirty());
     }
 
     attached() {
@@ -101,7 +101,7 @@ class editTransformer extends viewModelBase {
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
             saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => {
                 this.updateUrl(this.editedTransformer().name());
-                viewModelBase.dirtyFlag().reset(); // Resync Changes
+                this.dirtyFlag().reset(); // Resync Changes
             });
             dialog.show(saveTransformerWithNewNameViewModel);
         } else {
@@ -112,7 +112,7 @@ class editTransformer extends viewModelBase {
                         this.isEditingExistingTransformer(true);
                         this.updateUrl(this.editedTransformer().name());
                     }
-                    viewModelBase.dirtyFlag().reset(); // Resync Changes
+                    this.dirtyFlag().reset(); // Resync Changes
                 });
         }
     }

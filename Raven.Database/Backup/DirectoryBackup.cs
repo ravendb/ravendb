@@ -141,7 +141,7 @@ namespace Raven.Database.Backup
 				if (success == false)
 				{
 					// 'The system cannot find the file specified' is explicitly ignored here
-					if (Marshal.GetLastWin32Error() != 0x80004005)
+					if (Marshal.GetLastWin32Error() != 2)
 						throw new Win32Exception();
 					sourceFilesSnapshot[index] = null;
 					continue;

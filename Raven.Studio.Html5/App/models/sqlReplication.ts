@@ -11,8 +11,8 @@ class sqlReplication extends document {
     public CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
     
     availableConnectionStringTypes = [
+        this.PREDEFINED_CONNECTION_STRING_NAME,
         this.CONNECTION_STRING ,
-        this.PREDEFINED_CONNECTION_STRING_NAME ,
         this.CONNECTION_STRING_NAME,
         this.CONNECTION_STRING_SETTING_NAME 
     ];
@@ -103,18 +103,20 @@ class sqlReplication extends document {
     }
 
     private setupConnectionString(dto: sqlReplicationDto) {
+        
         if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.ConnectionStringName);
-        } else if (dto.PredefinedConnectionStringSettingName) {
-            this.connectionStringType(this.PREDEFINED_CONNECTION_STRING_NAME);
-            this.connectionStringValue(dto.PredefinedConnectionStringSettingName);
         } else if (dto.ConnectionStringSettingName) {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
-        } else { //(dto.ConnectionString)
+        } else if (dto.ConnectionString){
             this.connectionStringType(this.CONNECTION_STRING);
             this.connectionStringValue(dto.ConnectionString);
+        }
+        else {
+            this.connectionStringType(this.PREDEFINED_CONNECTION_STRING_NAME);
+            this.connectionStringValue(dto.PredefinedConnectionStringSettingName);
         }
     }
 

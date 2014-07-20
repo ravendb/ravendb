@@ -23,12 +23,16 @@ class databases extends viewModelBase {
 
     constructor() {
         super();
-
+        
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.selectDatabase(db, false));
+
+        var currentDatabse = this.activeDatabase();
+        if (!!currentDatabse) {
+            this.selectDatabase(currentDatabse, false);
+        }
 
         this.isAnyDatabaseSelected = ko.computed(() => {
             for (var i = 0; i < this.databases().length; i++) {
@@ -48,7 +52,7 @@ class databases extends viewModelBase {
                 if (db.isChecked()) {
                     if (disabledStatus == null) {
                         disabledStatus = db.disabled();
-                    } else if (disabledStatus != db.disabled()){
+                    } else if (disabledStatus != db.disabled()) {
                         return null;
                     }
                 }
@@ -88,8 +92,10 @@ class databases extends viewModelBase {
     }
 
     selectDatabase(db: database, activateDatabase: boolean = true) {
-        if (this.optionsClicked() == false){
-            this.databases().forEach((d: database)=> d.isSelected(d.name === db.name));
+        if (this.optionsClicked() == false) {
+            this.databases().forEach((d: database) => {
+                d.isSelected(d.name === db.name);
+            });
             if (activateDatabase) {
                 db.activate();
             }
@@ -173,7 +179,7 @@ class databases extends viewModelBase {
                         }
 
                         this.createDefaultSettings(newDatabase, bundles).always(() => {
-                            if (bundles.contains("Quotas") || bundles.contains("Versioning")) {
+                            if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                                 encryptionConfirmationDialogPromise.always(() => {
                                     var settingsDialog = new databaseSettingsDialog(bundles);
                                     app.showDialog(settingsDialog);
@@ -229,9 +235,13 @@ class databases extends viewModelBase {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(databases);
 
                 confirmDeleteViewModel.deleteTask.done((deletedDatabaseNames: string[]) => {
-                    deletedDatabaseNames.forEach(databaseName => {
-                        this.onDatabaseDeleted(databaseName);
-                    });
+                    if (databases.length == 1) {
+                        this.onDatabaseDeleted(databases[0].name);
+                    } else {
+                        deletedDatabaseNames.forEach(databaseName => {
+                            this.onDatabaseDeleted(databaseName);
+                        });
+                    }
                 });
 
                 app.showDialog(confirmDeleteViewModel);
@@ -246,6 +256,7 @@ class databases extends viewModelBase {
 
     private onDatabaseDeleted(databaseName: string) {
         var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
+
         if (!!databaseInArray) {
             this.databases.remove(databaseInArray);
 
@@ -266,18 +277,14 @@ class databases extends viewModelBase {
                     .done((toggledDatabaseNames: string[]) => {
                         var activeDatabase: database = this.activeDatabase();
 
-                        toggledDatabaseNames.forEach(databaseName => {
-                            var db = this.databases.first((foundDb: database) => foundDb.name == databaseName);
-                            if (!!db) {
-                                db.disabled(action);
-                                db.isChecked(false);
-
-                                if (!!activeDatabase && db.name == activeDatabase.name) {
-                                    this.selectDatabase(db);
-                                }
-                            }
-                        });
-                });
+                        if (databases.length == 1) {
+                            this.onDatabaseDisabledToggle(databases[0].name, action, activeDatabase);
+                        } else {
+                            toggledDatabaseNames.forEach(databaseName => {
+                                this.onDatabaseDisabledToggle(databaseName, action, activeDatabase);
+                            });
+                        }
+                    });
 
                 app.showDialog(disableDatabaseToggleViewModel);
             });
@@ -287,6 +294,19 @@ class databases extends viewModelBase {
     toggleCheckedDatabases() {
         var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
         this.toggleSelectedDatabases(checkedDatabases);
+    }
+
+    private onDatabaseDisabledToggle(databaseName: string, action: boolean, activeDatabase: database) {
+        var db = this.databases.first((foundDb: database) => foundDb.name == databaseName);
+
+        if (!!db) {
+            db.disabled(action);
+            db.isChecked(false);
+
+            if (!!activeDatabase && db.name == activeDatabase.name) {
+                this.selectDatabase(db);
+            }
+        }
     }
 
     private filterDatabases(filter: string) {

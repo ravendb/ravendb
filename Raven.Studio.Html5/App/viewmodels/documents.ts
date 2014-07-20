@@ -21,7 +21,6 @@ import getOperationStatusCommand = require('commands/getOperationStatusCommand')
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import changesApi = require("common/changesApi");
 
 class documents extends viewModelBase {
 

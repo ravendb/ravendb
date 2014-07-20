@@ -5,6 +5,7 @@ import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
+import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 
 class createDatabase extends dialogViewModelBase {
 
@@ -26,12 +27,35 @@ class createDatabase extends dialogViewModelBase {
     isPeriodicExportBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
+    licenseStatus = ko.observable<licenseStatusDto>(null);
+    
+    isCompressionBundleActive: KnockoutComputed<boolean>;
+    isEncryptionBundleActive: KnockoutComputed<boolean>;
+    isExpirationBundleActive: KnockoutComputed<boolean>;
+    isQuotasBundleActive: KnockoutComputed<boolean>;
+    isReplicationBundleActive: KnockoutComputed<boolean>;
+    isSqlReplicationBundleActive: KnockoutComputed<boolean>;
+    isVersioningBundleActive: KnockoutComputed<boolean>;
+    isPeriodicExportBundleActive: KnockoutComputed<boolean>;
+    isScriptedIndexBundleActive: KnockoutComputed<boolean>;
+
+
     private databases = ko.observableArray<database>();
     private maxNameLength = 200;
 
     constructor(databases) {
         super();
         this.databases = databases;
+        this.isCompressionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false || this.licenseStatus().Attributes.compression === "true");
+        this.isEncryptionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.encryption === "true");
+        this.isExpirationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.documentExpiration === "true");
+        this.isQuotasBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.quotas === "true");
+        this.isReplicationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.replication === "true");
+        this.isVersioningBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.versioning === "true");
+        this.isPeriodicExportBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.periodicBackup === "true");
+
+        this.isScriptedIndexBundleActive = ko.computed<boolean>(() => true);
+        this.isSqlReplicationBundleActive = ko.computed<boolean>(() => true);
     }
 
     attached() {
@@ -55,6 +79,7 @@ class createDatabase extends dialogViewModelBase {
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
 
+        this.fetchLicenseStatus();
     }
 
     deactivate() {
@@ -141,39 +166,57 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleCompressionBundle() {
-        this.isCompressionBundleEnabled.toggle();
+        if (this.isCompressionBundleActive()) {
+            this.isCompressionBundleEnabled.toggle();
+        }
     }
 
     toggleEncryptionBundle() {
-        this.isEncryptionBundleEnabled.toggle();
+        if (this.isEncryptionBundleActive()) {
+            this.isEncryptionBundleEnabled.toggle();
+        }
     }
 
     toggleExpirationBundle() {
-        this.isExpirationBundleEnabled.toggle();
+        if (this.isExpirationBundleActive()) {
+            this.isExpirationBundleEnabled.toggle();
+        }
     }
 
     toggleQuotasBundle() {
-        this.isQuotasBundleEnabled.toggle();
+        if (this.isQuotasBundleActive()) {
+            this.isQuotasBundleEnabled.toggle();
+        }
     }
 
     toggleReplicationBundle() {
-        this.isReplicationBundleEnabled.toggle();
+        if (this.isReplicationBundleActive()) {
+            this.isReplicationBundleEnabled.toggle();
+        }
     }
 
     toggleSqlReplicationBundle() {
-        this.isSqlReplicationBundleEnabled.toggle();
+        if (this.isSqlReplicationBundleActive()) {
+            this.isSqlReplicationBundleEnabled.toggle();
+        }
     }
 
     toggleVersioningBundle() {
-        this.isVersioningBundleEnabled.toggle();
+        if (this.isVersioningBundleActive()) {
+            this.isVersioningBundleEnabled.toggle();
+        }
     }
 
     togglePeriodicExportBundle() {
-        this.isPeriodicExportBundleEnabled.toggle();
+        if (this.isPeriodicExportBundleActive()) {
+            this.isPeriodicExportBundleEnabled.toggle();
+        }
     }
 
     toggleScriptedIndexBundle() {
-        this.isScriptedIndexBundleEnabled.toggle();
+        if (this.isScriptedIndexBundleActive()) {
+            this.isScriptedIndexBundleEnabled.toggle();
+        }
     }
 
     private getActiveBundles(): string[] {
@@ -214,6 +257,26 @@ class createDatabase extends dialogViewModelBase {
             activeBundles.push("ScriptedIndexResults");
         }
         return activeBundles;
+    }
+
+    fetchLicenseStatus() {
+        new getLicenseStatusCommand()
+            .execute()
+            .done((result: licenseStatusDto) => {
+                if (result.Attributes.periodicBackup !== "true") {
+                    this.isPeriodicExportBundleEnabled(false);
+                }
+                this.licenseStatus(result);
+            });
+    }
+
+    canUseBundle(name: string): boolean {
+        if (this.licenseStatus() === null) {
+            return true;
+        }
+        else {
+            var value = this.licenseStatus().Attributes[name];
+        }
     }
 }
 

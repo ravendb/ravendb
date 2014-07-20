@@ -30,7 +30,7 @@ namespace Voron.Impl
 
 		public static ushort SizeOfUInt = sizeof(uint);
 
-		public const int CurrentVersion = 3;
+		public const int CurrentVersion = 4;
 
 		public const string RootTreeName = "Root";
 		public const string FreeSpaceTreeName = "Free Space";

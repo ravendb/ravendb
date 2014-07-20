@@ -48,6 +48,7 @@ class shell extends viewModelBase {
     private router = router;
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
+    systemDatabase: database;
     isDatabaseDisabled: KnockoutComputed<boolean>;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
@@ -321,10 +322,10 @@ class shell extends viewModelBase {
     }
 
     private databasesLoaded(databases) {
-        var systemDatabase = new database("<system>");
-        systemDatabase.isSystem = true;
-        systemDatabase.isVisible(false);
-        shell.databases(databases.concat([systemDatabase]));
+        this.systemDatabase = new database("<system>");
+        this.systemDatabase.isSystem = true;
+        this.systemDatabase.isVisible(false);
+        shell.databases(databases.concat([this.systemDatabase]));
     }
 
     private fileSystemsLoaded(filesystems) {
@@ -367,6 +368,7 @@ class shell extends viewModelBase {
                 var locationHash = window.location.hash;
 
                 if (locationHash.indexOf("#filesystems") == 0) {
+
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
                 else if (locationHash.indexOf("#counterstorages") == 0) {
@@ -377,13 +379,13 @@ class shell extends viewModelBase {
             });
     }
 
-    private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
+    private activateResource(resource: resource, observableResourceArray: KnockoutObservableArray<any>) {
         var arrayLength = observableResourceArray().length;
 
         if (arrayLength > 0) {
             var newResource;
 
-            if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
+            if (resource != null && (newResource = observableResourceArray.first(db => db.name == resource.name)) != null) {
                 newResource.activate();
             } else {
                 observableResourceArray.first().activate();
@@ -440,7 +442,7 @@ class shell extends viewModelBase {
     }
 
     showAlert(alert: alertArgs) {
-        if (alert.type === alertType.danger || alert.type === alertType.warning) {
+        if (alert.displayInRecentErrors && (alert.type === alertType.danger || alert.type === alertType.warning)) {
             this.recordedErrors.unshift(alert);
         }
 

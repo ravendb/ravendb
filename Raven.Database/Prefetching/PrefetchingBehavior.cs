@@ -122,7 +122,7 @@ namespace Raven.Database.Prefetching
 				prefetchingQueueSizeInBytes = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
 			 } while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
 						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
-						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024)));
+						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForIndexingInMb * 1024 * 1024)));
 			
 			return result;
 		}
@@ -209,7 +209,7 @@ namespace Raven.Database.Prefetching
 			{
 			    //limit how much data we load from disk --> better adhere to memory limits
 			    var totalSizeAllowedToLoadInBytes =
-			        (context.Configuration.MemoryLimitForIndexingInMB*1024*1024) -
+			        (context.Configuration.MemoryLimitForIndexingInMb*1024*1024) -
 			        (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
 
                 // at any rate, we will load a min of 512Kb docs

@@ -5,7 +5,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 class licensingStatus extends dialogViewModelBase {
 
     bundles = ["SQL Replication", "Scripted Index"];
-    bundleMap = { compression: "Compression", encryption: "Encryption:", documentExpiration: "Expiration", quotas: "Quotas", replication: "Replication", versioning: "Versioning", periodicExport: "Periodic Export"};
+    bundleMap = { compression: "Compression", encryption: "Encryption:", documentExpiration: "Expiration", quotas: "Quotas", replication: "Replication", versioning: "Versioning", periodicBackup: "Periodic Export"};
     bundleString = "";
 
     constructor(private licenseStatus: licenseStatusDto) {
@@ -13,7 +13,7 @@ class licensingStatus extends dialogViewModelBase {
         for (var key in licenseStatus.Attributes) {
             var name = this.bundleMap[key];
             var isBundle = (name !== undefined);
-            if (licenseStatus.Attributes.hasOwnProperty(key) && isBundle) {
+            if (licenseStatus.Attributes.hasOwnProperty(key) && licenseStatus.Attributes[key] === "true" && isBundle) {
                 this.bundles.push(name);
             }
         }

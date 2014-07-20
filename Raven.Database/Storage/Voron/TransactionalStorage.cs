@@ -60,7 +60,7 @@ namespace Raven.Storage.Voron
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
-            bufferPool = new BufferPool(configuration.VoronMaxBufferPoolSize * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
+            bufferPool = new BufferPool(configuration.Storage.Voron.MaxBufferPoolSize * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
 		}
 
 		public void Dispose()
@@ -245,7 +245,7 @@ namespace Raven.Storage.Voron
 		private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			var options = StorageEnvironmentOptions.CreateMemoryOnly();
-			options.InitialFileSize = configuration.VoronInitialFileSize;
+			options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
 
 			return options;
 		}
@@ -265,7 +265,7 @@ namespace Raven.Storage.Voron
 	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
-		    options.InitialFileSize = configuration.VoronInitialFileSize;
+		    options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
 
             return options;
         }

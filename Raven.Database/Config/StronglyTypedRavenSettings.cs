@@ -18,9 +18,16 @@ namespace Raven.Database.Config
 
 		public ReplicationConfiguration Replication { get; private set; }
 
+		public VoronConfiguration Voron { get; private set; }
+
+		public PrefetcherConfiguration Prefetcher { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
+			Voron = new VoronConfiguration();
+			Prefetcher = new PrefetcherConfiguration();
+
 			this.settings = settings;
 		}
 
@@ -167,11 +174,11 @@ namespace Raven.Database.Config
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
 
-			FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
+			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
+			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
-			MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
-            VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
-			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
+            Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 		}
@@ -319,11 +326,19 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
 
-		public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+		public class VoronConfiguration
+		{
+			public IntegerSetting MaxBufferPoolSize { get; set; }
 
-		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
-        public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
-		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
+			public NullableIntegerSetting InitialFileSize { get; set; }
+		}
+
+		public class PrefetcherConfiguration
+		{
+			public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+			public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+		}
 
 		public class ReplicationConfiguration
 		{

@@ -74,6 +74,11 @@ Raven.Studio.Html5/Content/app.min.css
 Raven.Studio.Html5/Content/app.less.map
 Raven.Studio.Html5/Content/app.css.map
 Raven.Studio.Html5/optimized-build/
+
+#include our custom PVC build packages, used in the optimized build of Raven Studio.
+!Raven.Studio.Html5/pvc-packages/bin/
+!Raven.Studio.Html5/pvc-packages/bin/*
+
 /Raven.Web/Assemblies
 /test.log
 Tools/Raven.Filesystem.CreateSample/packages/
