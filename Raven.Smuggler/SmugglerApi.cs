@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using NDesk.Options;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Data;
@@ -109,6 +110,9 @@ namespace Raven.Smuggler
 						BatchSize = options.BatchSize,
 						OverwriteExisting = true
                     }, store.Changes(), options.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
+						BatchSize = currentBatchSize,
+						CheckForUpdates = true
+					});
 
 					operation.Report += text => ShowProgress(text);
 
@@ -140,6 +144,12 @@ namespace Raven.Smuggler
                 return;
 
 
+		private int storedDocumentCountInBatch;
+		protected override async Task PutDocument(RavenJObject document)
+		{
+			if (document == null)
+				return;
+
 				var metadata = document.Value<RavenJObject>("@metadata");
 				var id = metadata.Value<string>("@id");
 		    if(String.IsNullOrWhiteSpace(id))
@@ -148,7 +158,21 @@ namespace Raven.Smuggler
 				document.Remove("@metadata");
 
 		    operation.Store(document, metadata, id, size);
-			}
+			storedDocumentCountInBatch++;
+			if (storedDocumentCountInBatch >= currentLimit && currentLimit > 0)
+			{
+				storedDocumentCountInBatch = 0;
+				await operation.DisposeAsync();
+
+				operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					BatchSize = currentBatchSize,
+					CheckForUpdates = true
+				});
+
+				operation.Report += text => ShowProgress(text);
+		}
+		}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)
 		{
@@ -390,7 +414,7 @@ namespace Raven.Smuggler
 
 		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
+			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
 		private Task FlushBatch()
@@ -476,8 +500,7 @@ namespace Raven.Smuggler
                     {
                         throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
 	}
-}
-                throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
+}                throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
             }
             finally
             {

@@ -23,9 +23,10 @@ namespace Raven.Database.Server.Security
 
 		private class OneTimeToken
 		{
+			readonly Stopwatch age = Stopwatch.StartNew();
+
 			private IPrincipal user;
 			public string ResourceName { get; set; }
-			public DateTime GeneratedAt { get; set; }
 			public IPrincipal User
 			{
 				get
@@ -45,6 +46,10 @@ namespace Raven.Database.Server.Security
 					};
 				}
 			}
+			public TimeSpan Age
+			{
+				get { return age.Elapsed; }
+		}
 		}
 
 		public class OneTimetokenPrincipal : IPrincipal, IIdentity
@@ -89,10 +94,10 @@ namespace Raven.Database.Server.Security
 			    oneTimeToken = controller.GetQueryStringValue("singleUseAuthToken");
 			}
 
-            if (string.IsNullOrEmpty(oneTimeToken) == false)
-            {
+			if (string.IsNullOrEmpty(oneTimeToken) == false)
+			{
                 return TryAuthorizeSingleUseAuthToken(controller, oneTimeToken, out msg);
-            }
+			}
 
 			var authHeader = controller.GetHeader("Authorization");
 			var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
@@ -106,52 +111,52 @@ namespace Raven.Database.Server.Security
 		}
 
 	    public bool TryAuthorizeSingleUseAuthToken(string token, string tenantName, out object msg, out HttpStatusCode statusCode, out IPrincipal user)
-        {
+		{
             user = null;
-            OneTimeToken value;
-            if (singleUseAuthTokens.TryRemove(token, out value) == false)
-            {
+			OneTimeToken value;
+			if (singleUseAuthTokens.TryRemove(token, out value) == false)
+			{
                 msg = new
-                {
-                    Error = "Unknown single use token, maybe it was already used?"
+				{
+					Error = "Unknown single use token, maybe it was already used?"
                 };
                 statusCode = HttpStatusCode.Forbidden;
-                return false;
-            }
+				return false;
+			}
 
             if (string.Equals(value.ResourceName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
                 (value.ResourceName == Constants.SystemDatabase && tenantName == null) == false)
-            {
+			{
                 msg = new
-                {
-                    Error = "This single use token cannot be used for this database"
+				{
+					Error = "This single use token cannot be used for this database"
                 };
                 statusCode = HttpStatusCode.Forbidden;
-                return false;
-            }
-            if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
-            {
+				return false;
+			}
+			if (value.Age.TotalMinutes > 2.5) // if the value is over 2.5 minutes old, reject it
+			{
                 msg = new
-                {
-                    Error = "This single use token has expired"
+				{
+					Error = "This single use token has expired after " + value.Age.TotalSeconds + " seconds"
                 };
                 statusCode = HttpStatusCode.Forbidden;
-                return false;
-            }
+				return false;
+			}
 
-            if (value.User != null)
-            {
-                CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
-            }
+			if (value.User != null)
+			{
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
+			}
 	        msg = null;
 	        statusCode = HttpStatusCode.OK;
 
             CurrentOperationContext.User.Value = user = value.User;
-            return true;
-        }
+			return true;
+		}
 
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
-        {
+		{
             object result;
             HttpStatusCode statusCode;
             IPrincipal user;
@@ -204,7 +209,6 @@ namespace Raven.Database.Server.Security
 			var token = new OneTimeToken
 			{
 				ResourceName = resourceName,
-				GeneratedAt = SystemTime.UtcNow,
 				User = user
 			};
 			var tokenString = Guid.NewGuid().ToString();
@@ -213,7 +217,7 @@ namespace Raven.Database.Server.Security
 
 			if (singleUseAuthTokens.Count > 25)
 			{
-				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => (x.Value.GeneratedAt - SystemTime.UtcNow).TotalMinutes > 5))
+				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => x.Value.Age.TotalMinutes > 3))
 				{
 					OneTimeToken value;
 					singleUseAuthTokens.TryRemove(oneTimeToken.Key, out value);

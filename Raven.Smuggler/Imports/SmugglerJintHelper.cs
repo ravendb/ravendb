@@ -16,9 +16,9 @@ namespace Raven.Smuggler.Imports
 {
 	public class SmugglerJintHelper
 	{
-		private static Engine jint;
+        private Engine jint;
 
-		public static void Initialize(SmugglerOptions options)
+		public void Initialize(SmugglerOptions options)
 		{
 		    if (options == null || string.IsNullOrEmpty(options.TransformScript))
 		        return;
@@ -35,7 +35,7 @@ namespace Raven.Smuggler.Imports
 					}};", options.TransformScript));
 		}
 
-		public static RavenJObject Transform(string transformScript, RavenJObject input)
+		public RavenJObject Transform(string transformScript, RavenJObject input)
 		{
 			if (jint == null)
 				throw new InvalidOperationException("Jint must be initialized.");
@@ -53,6 +53,6 @@ namespace Raven.Smuggler.Imports
 
         private class OperationScope : JintOperationScope
         {
-        }
-	}
-}
+            }
+                }
+            }
