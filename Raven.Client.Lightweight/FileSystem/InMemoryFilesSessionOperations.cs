@@ -144,9 +144,9 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);   
         }
 
-        public void RegisterUpload(FileHeader file, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.Path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
+            var operation = new UploadFileOperation(this, file.Name, stream.Length, x => { stream.CopyTo(x); }, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -162,9 +162,9 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);           
         }
 
-        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.Path, size, write, metadata, etag);
+            var operation = new UploadFileOperation(this, file.Name, size, write, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -205,7 +205,11 @@ namespace Raven.Client.FileSystem
 
         public void AddToCache(string filename, FileHeader fileHeader)
         {
-            entitiesByKey.Add(filename, fileHeader);
+            if (!entitiesByKey.ContainsKey(filename))
+                entitiesByKey.Add(filename, fileHeader);
+            else
+                entitiesByKey[filename] = fileHeader;
+
             if (this.IsDeleted(filename))
                 knownMissingIds.Remove(filename);
         }
@@ -285,15 +289,10 @@ namespace Raven.Client.FileSystem
             var resultingOperations = new List<IFilesOperation>();
             foreach (var op in deleteOperations)
             {
-
                 changes.Operations.Add(op);
                 changes.Entities.Add(op.Filename);
 
-                //object entity = null;
-                //if (entitiesByKey.TryGetValue(op.Filename, out entity))
-                //{
-                //    entitiesByKey.Remove(op.Filename);
-                //}
+                deletedEntities.Add(op.Filename);
             }
         }
 
@@ -302,7 +301,7 @@ namespace Raven.Client.FileSystem
             foreach( var key in entitiesByKey.Keys)
             {
                 var fileHeader = entitiesByKey[key] as FileHeader;
-                if (EntityChanged(fileHeader))
+                if (EntityChanged(fileHeader) && !changes.Operations.Any(o => { return o.Filename == fileHeader.Name && o.GetType() == typeof(UploadFileOperation); }))
                 {
                     changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
                     changes.Entities.Add(fileHeader.Name);
@@ -330,11 +329,13 @@ namespace Raven.Client.FileSystem
                 {
                     if ( !entitiesByKey.ContainsKey(result.Name) )
                     {
+                        existingFileHeader.Name = result.Name;
                         entitiesByKey.Add(result.Name, existingFileHeader);
                         entitiesByKey.Remove(savedEntity);
                     }
                 }
 
+                AddToCache(existingFileHeader.Name, existingFileHeader);
 			}
         }
 
@@ -350,12 +351,21 @@ namespace Raven.Client.FileSystem
                 throw new NotSupportedException( string.Format("There is a conflict over file: {0}. Update or remove operations are not supported", fileName));
         }
 
-        protected bool EntityChanged(FileHeader fileHeader)
+        public bool EntityChanged(FileHeader fileHeader)
         {
             if (fileHeader == null)
                 return true;
 
             return RavenJToken.DeepEquals(fileHeader.Metadata, fileHeader.OriginalMetadata, null) == false;
+        }
+
+        public bool EntityChanged(string filename)
+        {
+            if (filename == null || !entitiesByKey.ContainsKey(filename))
+                return false;
+
+            var fileHeader = entitiesByKey[filename] as FileHeader;
+            return EntityChanged(fileHeader);
         }
 
         public void IncrementRequestCount()

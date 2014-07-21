@@ -317,6 +317,110 @@ namespace RavenFS.Tests.ClientApi
                 Assert.NotNull(files);
             }
         }
+
+        [Fact]
+        public async void MetadataUpdateWithRenames()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                // Modify metadata and then rename
+                var file = await session.LoadFileAsync("test1.file");
+                file.Metadata["Test"] = new RavenJValue("Value");
+                session.RegisterRename("test1.file", "test2.file");
+
+                await session.SaveChangesAsync();
+
+                file = await session.LoadFileAsync("test2.file");
+                
+                Assert.Null(await session.LoadFileAsync("test1.file"));
+                Assert.NotNull(file);
+                Assert.True(file.Metadata.ContainsKey("Test"));
+
+                // Rename and then modify metadata
+                session.RegisterRename("test2.file", "test3.file");
+                file.Metadata["Test2"] = new RavenJValue("Value");
+
+                await session.SaveChangesAsync();
+
+                file = await session.LoadFileAsync("test3.file");
+                
+                Assert.Null(await session.LoadFileAsync("test2.file"));
+                Assert.NotNull(file);
+                Assert.True(file.Metadata.ContainsKey("Test"));
+                Assert.True(file.Metadata.ContainsKey("Test2"));
+            }
+        }
+
+        [Fact]
+        public async void MetadataUpdateWithContentUpdate()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                // content update after a metadata change
+                var file = await session.LoadFileAsync("test1.file");
+                file.Metadata["Test"] = new RavenJValue("Value");
+                session.RegisterUpload("test1.file", CreateUniformFileStream(180));
+
+                await session.SaveChangesAsync();
+
+                Assert.True(file.Metadata.ContainsKey("Test"));
+                Assert.Equal(180, file.TotalSize);
+
+                // content update using file header
+                file.Metadata["Test2"] = new RavenJValue("Value");
+                session.RegisterUpload(file, CreateUniformFileStream(120));
+
+                await session.SaveChangesAsync();
+
+                Assert.True(file.Metadata.ContainsKey("Test"));
+                Assert.True(file.Metadata.ContainsKey("Test2"));
+                Assert.Equal(120, file.TotalSize);
+            }
+        }
+
+        [Fact]
+        public async void MetadataUpdateWithDeletes()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                // deleting file after a metadata change
+                var file = await session.LoadFileAsync("test1.file");
+                file.Metadata["Test"] = new RavenJValue("Value");
+                session.RegisterFileDeletion("test1.file");
+
+                await session.SaveChangesAsync();
+                
+                Assert.Null(await session.LoadFileAsync("test1.file"));
+
+                // deleting file after a metadata change
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                file = await session.LoadFileAsync("test1.file");
+                session.RegisterFileDeletion("test1.file");
+                file.Metadata["Test"] = new RavenJValue("Value");
+
+                await session.SaveChangesAsync();
+
+                file = await session.LoadFileAsync("test1.file");
+                Assert.Null(file);
+            }
+        }
   
     }
 }

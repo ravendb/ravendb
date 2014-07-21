@@ -33,11 +33,11 @@ namespace Raven.Client.FileSystem.Impl
             await commands.RenameAsync(Filename, Destination)
                           .ConfigureAwait(false);
 
-            var metadata = await commands.GetMetadataForAsync(Filename);
+            var metadata = await commands.GetMetadataForAsync(Destination);
             if (metadata == null)
                 return null;
 
-            return new FileHeader(Filename, metadata);
+            return new FileHeader(Destination, metadata);
         }
     }
 }
