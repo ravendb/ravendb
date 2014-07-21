@@ -8,7 +8,7 @@ class saveDocumentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<{ Key: string; ETag: string }> {
+    execute(): JQueryPromise<bulkDocumentDto[]> {
 
         if (this.reportSaveProgress) {
             this.reportInfo("Saving " + this.id + "...");
@@ -16,27 +16,39 @@ class saveDocumentCommand extends commandBase {
 
         var customHeaders = {
             'Raven-Client-Version': commandBase.ravenClientVersion,
-            'If-None-Match': this.document.__metadata.etag
         };
 
-        var metadata = this.document.__metadata.toDto();
+        var metadataDto: documentMetadataDto = this.document.__metadata.toDto();
 
-        for (var key in metadata) {
-            if (key.indexOf('@')!==0)
-            customHeaders[key] = metadata[key];
+        for (var key in metadataDto) {
+            if (key.indexOf('@') !== 0) {
+                customHeaders[key] = metadataDto[key];
+            }
         }
         
         var jQueryOptions: JQueryAjaxSettings = {
             headers: <any>customHeaders
         };
-        var args = JSON.stringify(this.document.toDto());
-        var url = "/docs/" + this.id;
-        var saveTask = this.put(url, args, this.db, jQueryOptions);
+
+        var documentDto: documentDto = this.document.toDto(false);
+
+        var commands: Array<bulkDocumentDto> = [];
+        commands.push({
+            Method: "PUT",
+            Key: this.id,
+            Document: documentDto,
+            Metadata: metadataDto
+        });
+
+        var args = ko.toJSON(commands);
+        var url = "/bulk_docs";
+        var saveTask = this.post(url, args, this.db, jQueryOptions);
 
         if (this.reportSaveProgress) {
             saveTask.done(() => this.reportSuccess("Saved " + this.id));
             saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.id, response.responseText, response.statusText));
         }
+
         return saveTask;
     }
 }

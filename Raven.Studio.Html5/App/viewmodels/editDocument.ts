@@ -379,12 +379,14 @@ class editDocument extends viewModelBase {
         }
 
         var newDoc = new document(updatedDto);
-        var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
+        var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
-        saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+        saveTask.done((saveResult: bulkDocumentDto[]) => {
+            var savedDocumentDto: bulkDocumentDto = saveResult[0];
+            this.loadDocument(savedDocumentDto.Key);
+            this.updateUrl(savedDocumentDto.Key);
+
             this.dirtyFlag().reset(); //Resync Changes
-            this.loadDocument(idAndEtag.Key);
-            this.updateUrl(idAndEtag.Key);
 
             // add the new document to the paged list
             var list: pagedList = this.docsList();

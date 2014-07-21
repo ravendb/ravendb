@@ -55,9 +55,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
 
         var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Connections", newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
-        saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            this.dirtyFlag().reset(); 
-        });
+        saveTask.done(() => this.dirtyFlag().reset());
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {

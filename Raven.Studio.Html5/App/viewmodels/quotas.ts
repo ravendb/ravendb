@@ -67,9 +67,10 @@ class quotas extends viewModelBase {
             document["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs();
             document["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs();
             var saveTask = new saveDatabaseSettingsCommand(db, document).execute();
-            saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-                this.settingsDocument().__metadata['@etag'] = idAndEtag.ETag;
-                this.dirtyFlag().reset();
+            saveTask.done((saveResult: bulkDocumentDto[]) => {
+                var savedDocumentDto: bulkDocumentDto = saveResult[0];
+                this.settingsDocument().__metadata['@etag'] = savedDocumentDto.Etag;
+                this.dirtyFlag().reset(); //Resync Changes
             });
         }
     }
