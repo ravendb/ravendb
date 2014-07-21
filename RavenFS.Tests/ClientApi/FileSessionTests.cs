@@ -421,6 +421,49 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Null(file);
             }
         }
-  
+
+        [Fact]
+        public async void WorkingWithMultipleFiles()
+        {
+            var store = (FilesStore)filesStore;
+
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                for ( int i = 0; i < 10; i++ )
+                {
+                    session.RegisterUpload(string.Format("test{0}.file", i), CreateUniformFileStream(128));
+                }
+
+                await session.SaveChangesAsync();
+
+                for (int i = 0; i < 10; i++)
+                {
+                    if (i % 2 == 0)
+                    {
+                        var file = await session.LoadFileAsync(string.Format("test{0}.file", i));
+                        file.Metadata["Test"] = new RavenJValue("Value");
+                    }
+                    else
+                    {
+                        session.RegisterFileDeletion(string.Format("test{0}.file", i));
+                    }
+                }
+
+                await session.SaveChangesAsync();
+
+                for (int i = 0; i < 10; i++)
+                {
+                    if (i % 2 == 0)
+                    {
+                        var file = await session.LoadFileAsync(string.Format("test{0}.file", i));
+                        Assert.True(file.Metadata.ContainsKey("Test"));
+                    }
+                    else
+                    {
+                        Assert.Null(await session.LoadFileAsync(string.Format("test{0}.file", i)));
+                    }
+                }
+            }
+        }
     }
 }

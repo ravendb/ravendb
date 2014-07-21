@@ -32,7 +32,7 @@ namespace Raven.Client.FileSystem.Impl
             var commands = session.Commands;
 
             if (sessionOperations.IsDeleted(Filename))
-                return FileHeader;
+                return null;
 
             bool update = true;
             foreach ( var listener in sessionOperations.Listeners.MetadataChangeListeners )

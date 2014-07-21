@@ -273,7 +273,7 @@ namespace Raven.Client.FileSystem
             operations.RemoveAll( x => typeof(DeleteFileOperation) == x.GetType());
 
             PrepareForDeletion(deleteOperations, changes);
-            PrepareForUpdate(changes);
+            PrepareForUpdate(changes, operations);
 
             foreach (var op in operations)
             {
@@ -290,24 +290,25 @@ namespace Raven.Client.FileSystem
             foreach (var op in deleteOperations)
             {
                 changes.Operations.Add(op);
-                changes.Entities.Add(op.Filename);
 
                 deletedEntities.Add(op.Filename);
             }
         }
 
-        private void PrepareForUpdate(SaveChangesData changes)
+        private void PrepareForUpdate(SaveChangesData changes, IEnumerable<IFilesOperation> operations)
         {
             foreach( var key in entitiesByKey.Keys)
             {
                 var fileHeader = entitiesByKey[key] as FileHeader;
-                if (EntityChanged(fileHeader) && !changes.Operations.Any(o => { return o.Filename == fileHeader.Name && o.GetType() == typeof(UploadFileOperation); }))
+                if (EntityChanged(fileHeader) && !operations.Any(o => { return o.Filename == fileHeader.Name && o.GetType() == typeof(UploadFileOperation); }))
                 {
                     changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
                     changes.Entities.Add(fileHeader.Name);
                 }
             }
         }
+
+
 
         private void ProcessResults(IList<FileHeader> results, SaveChangesData data)
         {
@@ -361,7 +362,7 @@ namespace Raven.Client.FileSystem
 
         public bool EntityChanged(string filename)
         {
-            if (filename == null || !entitiesByKey.ContainsKey(filename))
+            if (filename == null || !entitiesByKey.ContainsKey(filename) || IsDeleted(filename))
                 return false;
 
             var fileHeader = entitiesByKey[filename] as FileHeader;
