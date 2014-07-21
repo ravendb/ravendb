@@ -52,10 +52,8 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var creationDate = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains("Creation-Date"))
-                {
-                    creationDate = this.Metadata["Creation-Date"].Value<DateTimeOffset>();
-                }
+                if (this.Metadata.Keys.Contains(Constants.CreationDate))
+                    creationDate = this.Metadata[Constants.CreationDate].Value<DateTimeOffset>();
                 return creationDate;
             }
         }

@@ -13,18 +13,13 @@ namespace RavenFS.Tests
 {
     public class Notifications : RavenFsTestBase
     {
-        private readonly IFilesStore store;
-        private readonly IAsyncFilesCommands client;
-
-	    public Notifications()
-	    {
-            store = NewStore();
-            client = store.AsyncFilesCommands;
-	    }
 
 		[Fact]
         public async Task NotificationReceivedWhenFileAdded()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             var notificationTask = store.Changes().ForFolder("/")
                                         .Timeout(TimeSpan.FromSeconds(2))
                                         .Take(1).ToTask();
@@ -40,6 +35,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationReceivedWhenFileDeleted()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             await client.UploadAsync("abc.txt", new MemoryStream());
 
             var notificationTask = store.Changes().ForFolder("/")
@@ -57,6 +55,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationReceivedWhenFileUpdated()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             await client.UploadAsync("abc.txt", new MemoryStream());
 
             var notificationTask = store.Changes().ForFolder("/")
@@ -74,6 +75,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsReceivedWhenFileRenamed()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             await client.UploadAsync("abc.txt", new MemoryStream());
 
             var notificationTask = store.Changes().ForFolder("/")
@@ -93,6 +97,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsAreOnlyReceivedForFilesInGivenFolder()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             var notificationTask = store.Changes().ForFolder("/Folder")
                                                 .Buffer(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
@@ -107,6 +114,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsUpdated()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             var changesApi = store.Changes();
             await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
 
@@ -125,6 +135,9 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             var changesApi = store.Changes();
             await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
 
@@ -139,11 +152,5 @@ namespace RavenFS.Tests
             Assert.Equal("Test", configChange.Name);
             Assert.Equal(ConfigurationChangeAction.Delete, configChange.Action);
         }
-
-		public override void Dispose()
-		{
-            store.Dispose();
-			base.Dispose();
-		}
     }
 }
