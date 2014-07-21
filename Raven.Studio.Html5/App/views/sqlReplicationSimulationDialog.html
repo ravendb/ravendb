@@ -1,4 +1,4 @@
-﻿<div class="messageBox" tabindex="-1">
+﻿<div class="messageBox replicationSimulation" tabindex="-1">
     <div class="modal-header">
         <button type="button" class="close" data-bind="click: $root.cancel" aria-hidden="true">&times;</button>
         <h4 class="modal-title" data-bind="text:'SQL Replication Simulation For: ' + simulatedSqlReplication.name()"></h4>
@@ -25,23 +25,28 @@
                     </div>
 
                     <div class="btn-group">
-                        <button type="button" class="btn btn-info" data-bind="click:getResults(false)">Simulate!</button>
+                        <button type="button" class="btn btn-info" data-bind="click:$root.getResults.bind($root,false)">Simulate!</button>
                         <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li data-bind="click:getResults(true)">
+                            <li data-bind="click:$root.getResults.bind($root,true)">
                                 <a>Test Transaction!</a>
                             </li>
                         </ul>
                     </div>
+                    
+                    <div class="progress progress-striped" data-bind="visible:waitingToAnswer" style="padding:0; ">
+                        <div class="progress-bar progress-bar-info active" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float:left;">
+                        </div>
+                    </div>
                 </div>
             </nav>
-            
+
 
 
             <div class="col-sm-12 form-group">
-                <!-- ko if: simulationResults().length> 0 && rolledbackTransactionPerformed -->
+                <!-- ko if: rolledbackTransactionPerformed -->
                 <label class="col-sm-4  control-label">
                     Test Transaction Status:
                 </label>
