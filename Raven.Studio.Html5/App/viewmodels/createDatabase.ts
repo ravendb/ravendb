@@ -17,6 +17,7 @@ class createDatabase extends dialogViewModelBase {
     databaseLogs = ko.observable('');
     databaseIndexes = ko.observable('');
     databaseNameFocus = ko.observable(true);
+
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
     isExpirationBundleEnabled = ko.observable(false);
@@ -27,35 +28,18 @@ class createDatabase extends dialogViewModelBase {
     isPeriodicExportBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
-    licenseStatus = ko.observable<licenseStatusDto>(null);
-    
-    isCompressionBundleActive: KnockoutComputed<boolean>;
-    isEncryptionBundleActive: KnockoutComputed<boolean>;
-    isExpirationBundleActive: KnockoutComputed<boolean>;
-    isQuotasBundleActive: KnockoutComputed<boolean>;
-    isReplicationBundleActive: KnockoutComputed<boolean>;
-    isSqlReplicationBundleActive: KnockoutComputed<boolean>;
-    isVersioningBundleActive: KnockoutComputed<boolean>;
-    isPeriodicExportBundleActive: KnockoutComputed<boolean>;
-    isScriptedIndexBundleActive: KnockoutComputed<boolean>;
-
-
     private databases = ko.observableArray<database>();
+    private licenseStatus = ko.observable<licenseStatusDto>(null);
     private maxNameLength = 200;
 
-    constructor(databases) {
+    constructor(databases: KnockoutObservableArray<database>, licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
-        this.databases = databases;
-        this.isCompressionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false || this.licenseStatus().Attributes.compression === "true");
-        this.isEncryptionBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.encryption === "true");
-        this.isExpirationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.documentExpiration === "true");
-        this.isQuotasBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.quotas === "true");
-        this.isReplicationBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.replication === "true");
-        this.isVersioningBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.versioning === "true");
-        this.isPeriodicExportBundleActive = ko.computed<boolean>(() => this.licenseStatus() === null || this.licenseStatus().IsCommercial == false|| this.licenseStatus().Attributes.periodicBackup === "true");
 
-        this.isScriptedIndexBundleActive = ko.computed<boolean>(() => true);
-        this.isSqlReplicationBundleActive = ko.computed<boolean>(() => true);
+        this.databases = databases;
+        this.licenseStatus = licenseStatus;
+        if (this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
+            this.isPeriodicExportBundleEnabled(false);
+        }
     }
 
     attached() {
@@ -68,18 +52,15 @@ class createDatabase extends dialogViewModelBase {
             if (this.isDatabaseNameExists(newDatabaseName, this.databases()) === true) {
                 errorMessage = "Database Name Already Exists!";
             }
-            else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
+            else if ((errorMessage = this.checkName(newDatabaseName)) != '') { }
             inputElement.setCustomValidity(errorMessage);
         });
     
         inputElement.setCustomValidity("An empty database name is forbidden for use!");
-        
 
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
-
-        this.fetchLicenseStatus();
     }
 
     deactivate() {
@@ -89,8 +70,21 @@ class createDatabase extends dialogViewModelBase {
             this.creationTask.reject();
         }
     }
-     cancel() {
+
+    cancel() {
         dialog.close(this);
+    }
+
+    isBundleActive(name: string): boolean {
+        var licenseStatus: licenseStatusDto = this.licenseStatus();
+
+        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+            return true;
+        }
+        else {
+            var value = licenseStatus.Attributes[name];
+            return value === "true";
+        }
     }
 
     nextOrCreate() {
@@ -113,7 +107,7 @@ class createDatabase extends dialogViewModelBase {
         return false;
     }
 
-    private CheckName(name: string): string {
+    private checkName(name: string): string {
         var rg1 = /^[^\\/\*:\?"<>\|]+$/; // forbidden characters \ / * : ? " < > |
         var rg2 = /^\./; // cannot start with dot (.)
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
@@ -166,57 +160,53 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleCompressionBundle() {
-        if (this.isCompressionBundleActive()) {
+        if (this.isBundleActive('compression')) {
             this.isCompressionBundleEnabled.toggle();
         }
     }
 
     toggleEncryptionBundle() {
-        if (this.isEncryptionBundleActive()) {
+        if (this.isBundleActive('encryption')) {
             this.isEncryptionBundleEnabled.toggle();
         }
     }
 
     toggleExpirationBundle() {
-        if (this.isExpirationBundleActive()) {
+        if (this.isBundleActive('documentExpiration')) {
             this.isExpirationBundleEnabled.toggle();
         }
     }
 
     toggleQuotasBundle() {
-        if (this.isQuotasBundleActive()) {
+        if (this.isBundleActive('quotas')) {
             this.isQuotasBundleEnabled.toggle();
         }
     }
 
     toggleReplicationBundle() {
-        if (this.isReplicationBundleActive()) {
+        if (this.isBundleActive('replication')) {
             this.isReplicationBundleEnabled.toggle();
         }
     }
 
     toggleSqlReplicationBundle() {
-        if (this.isSqlReplicationBundleActive()) {
-            this.isSqlReplicationBundleEnabled.toggle();
-        }
+        this.isSqlReplicationBundleEnabled.toggle();
     }
 
     toggleVersioningBundle() {
-        if (this.isVersioningBundleActive()) {
+        if (this.isBundleActive('versioning')) {
             this.isVersioningBundleEnabled.toggle();
         }
     }
 
     togglePeriodicExportBundle() {
-        if (this.isPeriodicExportBundleActive()) {
+        if (this.isBundleActive('periodicBackup')) {
             this.isPeriodicExportBundleEnabled.toggle();
         }
     }
 
     toggleScriptedIndexBundle() {
-        if (this.isScriptedIndexBundleActive()) {
-            this.isScriptedIndexBundleEnabled.toggle();
-        }
+        this.isScriptedIndexBundleEnabled.toggle();
     }
 
     private getActiveBundles(): string[] {
@@ -256,27 +246,8 @@ class createDatabase extends dialogViewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
+
         return activeBundles;
-    }
-
-    fetchLicenseStatus() {
-        new getLicenseStatusCommand()
-            .execute()
-            .done((result: licenseStatusDto) => {
-                if (result.Attributes.periodicBackup !== "true") {
-                    this.isPeriodicExportBundleEnabled(false);
-                }
-                this.licenseStatus(result);
-            });
-    }
-
-    canUseBundle(name: string): boolean {
-        if (this.licenseStatus() === null) {
-            return true;
-        }
-        else {
-            var value = this.licenseStatus().Attributes[name];
-        }
     }
 }
 
