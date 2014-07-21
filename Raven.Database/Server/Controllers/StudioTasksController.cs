@@ -113,7 +113,6 @@ namespace Raven.Database.Server.Controllers
 			            ToStream = outputStream
 			        }, smugglerOptions).ConfigureAwait(false);
 			    }
-                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
 			    finally
 			    {
 			        outputStream.Close();
@@ -124,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("dd MM yyyy HH-mm", CultureInfo.InvariantCulture))
+                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture))
             };
 			
 			return new CompletedTask<HttpResponseMessage>(result);
