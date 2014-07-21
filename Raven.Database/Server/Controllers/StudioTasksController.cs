@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -157,8 +158,9 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("studio-tasks/simulate-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
-        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
+        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, bool performRolledBackTransaction)
         {
+
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (task == null)
 				return GetMessageWithObjectAsTask(new
@@ -167,9 +169,17 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.NotFound);
             try
             {
-                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplicationName);
+                Alert alert = null;
+                var sqlReplication =
+                    JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
 
-                return GetMessageWithObjectAsTask(results.ToList());
+                // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
+                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
+
+                return GetMessageWithObjectAsTask(new {
+                    Results = results,
+                    LastAlert = alert
+                });
             }
             catch (Exception ex)
             {

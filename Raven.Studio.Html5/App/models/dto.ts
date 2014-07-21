@@ -464,6 +464,21 @@ interface sqlReplicationDto extends documentDto {
     PerformTableQuatation?:boolean;
 }
 
+interface commandData {
+    CommandText: string;
+    Params:{Key:string;Value:any}[]
+}
+
+interface tableQuerySummary {
+    TableName: string;
+    Commands: commandData[];
+}
+
+interface sqlReplicationSimulationResultDto {
+    Results: tableQuerySummary[];
+    LastAlert: alertDto;
+}
+
 interface sqlReplicationConnectionsDto extends documentDto {
     PredefinedConnections: predefinedSqlConnectionDto[];
 }

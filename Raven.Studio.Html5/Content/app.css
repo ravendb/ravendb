@@ -6735,8 +6735,6 @@ body {
 .sqlReplication-Stats {
   width: 60vw;
   max-height: 60vh !important;
-  overflow-x: hidden !important;
-  overflow-y: hidden !important;
 }
 @media (max-width: 767px) {
   .sqlReplication-Stats {
@@ -6750,6 +6748,51 @@ body {
   max-height: 35vh !important;
   overflow-x: hidden;
   overflow-y: auto;
+}
+.replicationSimulation {
+  max-height: 90vh!important;
+  overflow-x: hidden!important;
+  overflow-y: hidden!important;
+}
+.replicationSimulation label {
+  text-align: left;
+  font-size: large;
+}
+.replicationSimulation .replicationSimulationData {
+  width: 90vw!important;
+  max-height: 70vh!important;
+  height: 70vh!important;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+.replicationSimulation .replicationSimulationData .form-group {
+  max-height: 55vh!important;
+  height: 55vh!important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.replicationSimulation .replicationSimulationData .additional-action {
+  margin-left: 50%;
+  padding: 0;
+}
+.replicationSimulation .replicationSimulationData .sqlQuery {
+  padding-bottom: 1%;
+}
+.replicationSimulation .replicationSimulationData .parametrizedQuery {
+  cursor: pointer;
+}
+.replicationSimulation .replicationSimulationData .sqlQuery:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+.replicationSimulation .replicationSimulationData .simulationResultContainer .simulationResult {
+  font-weight: bold;
+  font-size: medium;
+  margin-bottom: 2.5%;
+}
+.replicationSimulation .replicationSimulationData nav .btn-toolbar {
+  padding-top: 0.5%;
+  padding-bottom: 0.5%;
 }
 .query-stats {
   width: 600px;

@@ -8,19 +8,19 @@ html, body {
 }
 
 .not-implemented-yet {
-    position: relative;
+  position: relative;
 }
 
 .not-implemented-yet:after {
-    content: " ";
-    z-index: 10;
-    display: block;
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    top: 0;
-    left: 0;
-    right: 0;
+  content: " ";
+  z-index: 10;
+  display: block;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0; 
+  right: 0;
 }
 
 .alert-text {
@@ -28,7 +28,7 @@ html, body {
     white-space: nowrap !important;
     -ms-text-overflow: ellipsis !important;
     -o-text-overflow: ellipsis !important;
-    text-overflow: ellipsis !important;
+    text-overflow: ellipsis !important;    
 }
 
 .table-no-borders td {
@@ -82,7 +82,7 @@ html, body {
     .replications-container {
         margin-top: 10px;
 
-        .replication {
+        .replication {            
             border-radius: 10px;
             -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
@@ -151,17 +151,17 @@ html, body {
     .edit-sql-replication-actions {
         padding-top: 0.5%;
     }
-}
-
+        }
+        
 .sqlReplication-Stats {
     width: 60vw;
 
-    @media(max-width: 767px) {
+     @media(max-width: 767px) {
         width: 80vw;
-    }
-
+         }
+    
     max-height: 60vh !important;
-
+    
 
     .modal-header {
         max-height: 20%;
@@ -172,14 +172,76 @@ html, body {
         overflow-x: hidden;
         overflow-y: auto;
     }
-
-    overflow-x: hidden !important;
-    overflow-y: hidden !important;
 }
 
+.replicationSimulation{            
+    max-height:90vh!important;
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+        
+    label {
+        text-align: left;
+        font-size:large;
+    }    
+
+
+    .replicationSimulationData
+    {
+        width:90vw!important;    
+        max-height:70vh!important;
+        height:70vh!important;
+        overflow-x:hidden;
+        overflow-y:hidden;
+
+        .form-group{
+            max-height:55vh!important;
+            height:55vh!important;
+            overflow-x:hidden;
+            overflow-y:auto;
+        }
+        .additional-action{
+            margin-left:50%;
+            padding:0;
+        }
+
+        .sqlQuery{
+            padding-bottom:1%;
+        }
+        
+        .parametrizedQuery{
+            cursor: pointer;
+        }
+
+        .sqlQuery:hover{            
+            opacity: 0.8;        
+            text-decoration:underline;
+        }        
+
+        .simulationResultContainer{                             
+           .simulationResult
+            {
+                font-weight:bold;
+                font-size:medium;
+                margin-bottom:2.5%;
+            }    
+        }
+
+         nav{
+                .btn-toolbar{
+                    padding-top: 0.5%;
+                    padding-bottom: 0.5%;
+                }
+            }
+
+     }
+}
+    
+
+
+
 .query-stats {
-    width: 600px;
-    margin: -250px 0 0 -450px;
+    width: 600px; 
+	margin: -250px 0 0 -450px; 
 
     ul {
         li {
@@ -188,12 +250,12 @@ html, body {
             strong {
                 padding: 0 10px 0 10px;
                 display: inline-block;
-            }
+            }                
 
             span {
                 padding: 0 10px 0 10px;
                 display: inline-block;
-            }
+            }                
 
             border-bottom: 0 !important;
             border-top: 0 !important;
@@ -243,7 +305,7 @@ html, body {
 .fullScreen .fullScreen-editor {
     height: auto !important;
     width: auto !important;
-    border: 0;
+	border: 0;
     margin: 0;
     position: fixed !important;
     top: 0;
@@ -259,17 +321,17 @@ html, body {
 
 .vertical-bottom-container {
     width: 10% !important;
-    padding: 0 40% 0 40% !important;
+    padding: 0 40% 0 40% !important;    
 }
 
 .vertical-navbar-menu-item {
     float: none !important;
-    display: block;
+        display: block;
     padding: 0 0 0 0;
 
     a {
         padding: 0 0 0 0;
-    }
+        }
 }
 
 .panel span {
@@ -294,7 +356,7 @@ html, body {
 
     .databases-container {
         margin-top: 10px;
-
+        
         .database:hover .checkbox{
             display : block;
         }
@@ -309,7 +371,7 @@ html, body {
             padding: 8px;
             margin: 0 10px 14px 0;
             position: relative;
-
+            
             @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
             @enabledColor: #3A822D;
@@ -357,7 +419,7 @@ html, body {
                 .dropdown-menu{
                     .fa-trash-o{
                         color: lighten(@disabledColor, 20%);
-                    }
+            }
 
                     .delete-database:hover .fa-trash-o{
                         color: @disabledColor;
@@ -381,7 +443,7 @@ html, body {
                 color: black;
             }
 
-            &:hover {                
+            &:hover {
                 background-color: white;
                 -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
@@ -390,7 +452,7 @@ html, body {
             &.selected {
                 -webkit-box-shadow: 0 0 17px 0 @selectColor;
                 box-shadow: 0 0 17px 0 @selectColor;
-            }
+                }
 
             &.system-database {
                 @systemDbColor: rgba(192, 192, 192, 0.21);
@@ -445,15 +507,15 @@ html, body {
 }
 
 .document-collections {
-
+        
     li {
-        outline: none;
-    }
+        outline: none;                             
+    }      
 
     .collection-color-strip {
         margin-right: 5px;
     }
-
+   
     .collection-text {
         overflow: hidden;
         white-space: nowrap;
@@ -470,8 +532,8 @@ html, body {
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
         max-width: 90%;
-    }
-
+    }             
+    
     li:not(:first-child) {
         // All collections except the first one ("All Documents") are indented.
         padding-left: 15px;
@@ -487,7 +549,7 @@ html, body {
     left: auto;
 
     li > a {
-        text-align: left;
+        text-align: left;      
     }
 
     li > a.active {
@@ -500,7 +562,7 @@ html, body {
 
 .indexes-container {
     margin-top: 10px;
-
+        
     .index-group {
         .panel-heading {
             padding-top: 0;
@@ -537,7 +599,7 @@ html, body {
 
 
 .settings-container {
-    margin-top: 10px;
+    margin-top: 10px;    
 
     .api-key-card, .win-auth-card {
         display: inline-block;
@@ -598,7 +660,7 @@ html, body {
             height: 100px;
         }
     }
-}
+        }
 
 .collection-style-0 {
     background-color: rgb(0, 199, 0);
@@ -749,20 +811,20 @@ html, body {
 
     .bar {
         background-color: black;
-        position: fixed;
-        z-index: 100;
+    position: fixed;
+    z-index: 100;
         top: 58px;
-        left: 0;
+    left: 0;
         opacity: .7;
-        width: 100%;
+    width: 100%;
         height: 5px;
         box-shadow: 0 0 13px 2px silver;
     }
 
-    .spinner-icon {
+    .spinner-icon {     
         opacity: 0;
-        border-top-color: rgba(2,255,27,1);
-        border-left-color: rgba(2,255,27,1);
+      border-top-color: rgba(2,255,27,1);
+      border-left-color: rgba(2,255,27,1);
     }
 
     .peg {
@@ -817,7 +879,7 @@ html, body {
     height: 20px;
     width: 4px;
     display: inline-block;
-    vertical-align: middle;
+    vertical-align: middle;    
 }
 
 #editIndex {
@@ -834,7 +896,7 @@ html, body {
 }
 
 .popover {
-    max-width: 30%;
+            max-width: 30%;     
 }
 
 #queryContainer {
@@ -903,7 +965,7 @@ html, body {
     .ko-grid-column-container {
         white-space: nowrap;
         overflow: hidden;
-                
+
         .ko-grid-column-header {
             display: inline-block;
             font-weight: bold;
@@ -923,13 +985,13 @@ html, body {
             .ko-grid-column-handle {
                 display: none;
                 width: 4px;
-                height: 20px;
-                float: right;
-                cursor: col-resize;
-                position: relative;
-                z-index: 1;
-                background-color: hsl(0, 0%, 80%);
-                box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
+              height: 20px;
+              float: right;
+              cursor: col-resize;
+              position: relative;
+              z-index: 1;
+              background-color: hsl(0, 0%, 80%);
+              box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
             }
         }
     }
@@ -998,7 +1060,7 @@ html, body {
         -o-text-overflow: ellipsis !important;
         text-overflow: ellipsis !important;
         max-width: 50% !important;
-    }
+    }   
 
     h3 {
         margin-bottom: 0;
@@ -1125,10 +1187,10 @@ html, body {
 
         .navbar-nav {
             padding-left: 10px;
-        }
+    }
     }
     
-    /* When the screen width < 1150, shrink down the padding between the nav bar items. */
+    /* When the screen width < 1150, shrink down the padding between the nav bar items. */ 
     @media (max-width: 1150px) {
         .nav {
             li {
@@ -1149,7 +1211,7 @@ html, body {
 
             #goToDocInput {
                 width: 8em;
-            }
+            } 
         }
     }
     /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
@@ -1237,7 +1299,7 @@ html, body {
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer, #requestTracingContainer {
-    @media(max-device-height:1024px) {
+	@media(max-device-height:1024px) {
         button {
             max-height: 50% !important;
         }
@@ -1356,7 +1418,7 @@ footer {
         background: -ms-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* IE10+ */
         background: linear-gradient(135deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* W3C */
         filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#000000',GradientType=1 ); /* IE6-8 fallback on horizontal gradient */
-    }
+}
 }
 
 #scriptedIndex {
@@ -1370,7 +1432,7 @@ footer {
 }
 
 #status-debug > ul.nav {
-    margin-bottom: 15px;
+	margin-bottom: 15px;
 }
 
 .popover-lg {
@@ -1393,7 +1455,7 @@ footer {
 
 :invalid {
     box-shadow: none; /* FF */
-    outline: 0; /* IE 10 */
+    outline: 0;       /* IE 10 */
 }
 
 // Start of icons
@@ -1559,7 +1621,7 @@ footer {
     }
 
     .input-group {
-        max-width: 300px;
+      max-width: 300px;
     }
 }
 
@@ -1601,19 +1663,19 @@ footer {
 
 .metricsContainer {
 
-    .nv-point {
-        stroke-linecap: round;
-        stroke-width: 5px;
-    }
+	.nv-point {
+		stroke-linecap: round;
+		stroke-width: 5px;
+	}
 
-    svg {
-        overflow: hidden;
-    }
+	svg {
+	  overflow: hidden;
+	}
 
-    div {
-        border: 0;
-        margin: 0;
-    }
+	div {
+	  border: 0;
+	  margin: 0;
+	}
 }
 
 
