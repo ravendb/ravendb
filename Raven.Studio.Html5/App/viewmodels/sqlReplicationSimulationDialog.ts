@@ -18,6 +18,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
     isAutoCompleteVisible: KnockoutComputed<boolean>;
     rolledbackTransactionPerformed = ko.observable<boolean>(false);
     lastAlert = ko.observable<string>("");
+    waitingToAnswer = ko.observable<boolean>(false);
     
     constructor(private db: database, private simulatedSqlReplication: sqlReplication) {
         super();
@@ -35,14 +36,17 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
     getResults(performRolledbackTransaction: boolean) {
         this.lastSearchedDocumentID(this.documentId());
+        this.waitingToAnswer(true);
         new simulateSqlReplicationCommand(this.db, this.simulatedSqlReplication, this.documentId(), performRolledbackTransaction)
             .execute()
             .done((result: sqlReplicationSimulationResultDto) => {
                 if (!!result.Results) {
-//                    this.simulationResults(result.Results.map(x=> x.Commands.map(y=> y.CommandText)).reduce((x,y) =>x.concat(y)));
                     this.simulationResults(result.Results.map(x=> x.Commands).reduce((x, y) => x.concat(y)).map(x => { return new sqlReplicationSimulatedCommand(!performRolledbackTransaction, x); }));
-                    this.rolledBackTransactionPassed(!result.LastAlert);
+                } else {
+                    this.simulationResults([]);
                 }
+
+                this.rolledBackTransactionPassed(!result.LastAlert);
 
                 if (!!result.LastAlert) {
                     this.lastAlert(result.LastAlert.Exception);
@@ -55,7 +59,8 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
             .fail(() => {
                 this.simulationResults([]);
                 this.rolledBackTransactionPassed(false);
-        });
+            })
+            .always(() => this.waitingToAnswer(false));
     }
 
     // overrid dialogViewModelBase shortcuts behavior

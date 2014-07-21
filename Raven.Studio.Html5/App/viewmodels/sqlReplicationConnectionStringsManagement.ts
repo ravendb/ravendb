@@ -8,14 +8,15 @@ import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import appUrl = require('common/appUrl');
 import editSqlReplication = require("viewmodels/editSqlReplication");
-import testSqlConnectionCommand = require("commands/testSqlConnectionCommand");
 import app = require("durandal/app");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
+    
     htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
-    isSaveEnabled :KnockoutComputed<boolean>;
+    isSaveEnabled: KnockoutComputed<boolean>;
+    
     constructor() {
         super();
     }
@@ -33,6 +34,11 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
             .fail(() => {
                 this.connections(sqlReplicationConnections.empty());
             });
+    }
+
+
+    getActiveDatabase() {
+        return this.getActiveDatabase();
     }
 
     canActivate() {
@@ -127,19 +133,6 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
             }
         }
     }
-
-    testConnection(data: predefinedSqlConnection) {
-        new testSqlConnectionCommand(this.activeDatabase(), data.factoryName(), data.connectionString())
-            .execute()
-            .done(() => {
-                app.showMessage("Connection " + data.name() + " is valid", "SQL Connection test");
-            })
-            .fail((request, status, error) => {
-                var errorText = !!request.responseJSON ? !!request.responseJSON.Exception ? request.responseJSON.Exception.Message : error : error;
-                app.showMessage("Connection " + data.name() + " is not valid, error: " + errorText, "SQL Connection test");
-            });
-    }
-
 }
 
 export =sqlReplicationConnectionStringsManagement;
