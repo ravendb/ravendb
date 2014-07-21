@@ -536,32 +536,32 @@ namespace Raven.Client.Shard
 			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
-		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(params string[] ids)
-		{
-			return Lazily.Load(id, typeof(TTransformer), onEval);
-		}
-
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<TResult> onEval)
 		{
-			var cmds = GetCommandsToOperateOn(new ShardRequestData
-			{
-				Keys = ids,
-				EntityType = transformerType
-			});
-			var transformer = new TTransformer().TransformerName;
-			var op = new LoadTransformerOperation(this, transformer, ids);
+			var lazy = Lazily.Load(new[] { id }, transformerType, onEval);
+			return new Lazy<TResult>(() => lazy.Value[0]);
+		}
 
-			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer, op, false);
-
-			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<TResult> onEval)
 		{
-			throw new NotImplementedException();
+			return Lazily.Load(ids, typeof(TTransformer), onEval);
 		}
 
 		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<TResult> onEval)
 		{
-			throw new NotImplementedException();
+			var idsArray = ids.ToArray();
+			var cmds = GetCommandsToOperateOn(new ShardRequestData
+			{
+				Keys = idsArray,
+				EntityType = transformerType
+			});
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+			var op = new LoadTransformerOperation(this, transformer, idsArray);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, op, false);
+
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		}
 
 		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)

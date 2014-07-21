@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System.Linq;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Issues

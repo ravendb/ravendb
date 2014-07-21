@@ -47,7 +47,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
         protected abstract Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo);
-		protected abstract void PutDocument(RavenJObject document, SmugglerOptions options, int size);
+		protected abstract Task PutDocument(RavenJObject document, SmugglerOptions options, int size);
 		protected abstract Task PutTransformer(string transformerName, RavenJToken transformer);
 
 	    protected abstract Task DeleteDocument(string key);

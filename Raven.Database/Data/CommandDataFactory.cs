@@ -60,7 +60,6 @@ namespace Raven.Database.Data
 						Key = key,
 						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						Etag = GetEtagFromCommand(jsonCommand),
-						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						TransactionInformation = transactionInformation,
 						Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),
 						PatchIfMissing = jsonCommand["PatchIfMissing"] == null ? null : ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("PatchIfMissing")),
