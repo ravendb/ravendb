@@ -140,6 +140,7 @@ class documents extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
+            ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
             ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db))
         ];
     }
