@@ -948,3 +948,13 @@ interface replicationTopologyLinkDto extends stringLinkDto {
     toRightPayload?: replicationTopologyConnectionDto;
     toLeftPayload?: replicationTopologyConnectionDto;
 }
+
+interface runningTaskDto {
+    Id: number;
+    TaskStatus: string;
+    Exception: string;
+    ExceptionText: string;
+    Payload: string;
+    TaskType: string;
+    StartTime: string;
+}

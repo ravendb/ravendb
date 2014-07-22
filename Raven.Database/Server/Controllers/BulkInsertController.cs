@@ -10,7 +10,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server.Security;
@@ -76,17 +79,12 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId);
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
                 }
                 catch (OperationCanceledException)
                 {
                     // happens on timeout
-                    currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-                    {
-                        OperationId = operationId,
-                        Message = "Operation cancelled, likely because of a batch timeout",
-                        Type = DocumentChangeTypes.BulkInsertError
-                    });
+                    currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
                     status.Completed = true;
                     status.IsTimedOut = true;
                     throw;
@@ -96,7 +94,12 @@ namespace Raven.Database.Server.Controllers
             });
 
             long id;
-            Database.Tasks.AddTask(task, status, out id);
+            Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+                                                 {
+                                                     StartTime = SystemTime.UtcNow,
+                                                     TaskType = TaskActions.PendingTaskType.BulkInsert,
+                                                     Payload = operationId.ToString()
+                                                 }, out id, tre);
 
             task.Wait(Database.WorkContext.CancellationToken);
             if (status.IsTimedOut)
