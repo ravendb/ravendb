@@ -104,7 +104,6 @@
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStoredQueriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />

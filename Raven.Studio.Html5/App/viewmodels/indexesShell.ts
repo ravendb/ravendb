@@ -15,6 +15,18 @@ class indexesShell extends viewModelBase {
             ])
             .buildNavigationModel();
     }
+
+    static getRecentQueries(localStorageObjectName: string): storedQueryDto[] {
+        var recentQueriesFromLocalStorage: storedQueryDto[] = localStorage.getObject(localStorageObjectName);
+        var isArray = recentQueriesFromLocalStorage instanceof Array;
+
+        if (recentQueriesFromLocalStorage == null || isArray == false) {
+            localStorage.setObject(localStorageObjectName, []);
+            recentQueriesFromLocalStorage = [];
+        }
+
+        return recentQueriesFromLocalStorage;
+    }
 }
 
 export = indexesShell;

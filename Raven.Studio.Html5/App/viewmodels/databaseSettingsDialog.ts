@@ -70,8 +70,8 @@ class databaseSettingsDialog extends dialogViewModelBase {
     }
 
     detached() {
+        super.detached();
         this.dialogTask.resolve();
-
     }
 
     canDeactivate(): any {

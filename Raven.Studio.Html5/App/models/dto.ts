@@ -392,8 +392,9 @@ interface storedQueryDto {
     Hash: number;
 }
 
-interface storedQueryContainerDto extends documentDto {
-    Queries: storedQueryDto[];
+interface indexDataDto {
+    name: string;
+    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {
