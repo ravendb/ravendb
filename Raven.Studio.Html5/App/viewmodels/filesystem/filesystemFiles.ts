@@ -96,14 +96,15 @@ class filesystemFiles extends viewModelBase {
         if (!this.folderNotificationSubscriptions[newFolder]) {
             this.folderNotificationSubscriptions[newFolder] = shell.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
+                    var callbackFolder = new folder(newFolder);
+                    if (!callbackFolder)
+                        return;
                     switch (e.Action) {
 
                         case fileChangeAction.Add: {
-                            var callbackFolder = new folder(newFolder);
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            if (!callbackFolder || !eventFolder
-                                            || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
+                            if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
                                 return;
                             }
 
@@ -128,7 +129,6 @@ class filesystemFiles extends viewModelBase {
                             break;
                         }
                         case fileChangeAction.Delete: {
-                            var callbackFolder = new folder(newFolder);
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
                             //check if the file is new at the folder level to remove it from the table
