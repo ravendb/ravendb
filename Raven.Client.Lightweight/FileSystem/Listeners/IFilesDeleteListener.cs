@@ -19,7 +19,7 @@ namespace Raven.Client.FileSystem.Listeners
         /// <summary>
         /// Invoked after the delete operation was effective on the server.
         /// </summary>
-        /// <param name="instance">The file to delete</param>
-        void AfterDelete(FileHeader instance);
+        /// <param name="filename">The filename of the deleted file</param>
+        void AfterDelete(string filename);
     }
 }
