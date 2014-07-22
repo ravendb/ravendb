@@ -28,7 +28,6 @@ namespace Raven.Client.FileSystem
         Task<FileHeader> LoadFileAsync(string path);
         Task<FileHeader[]> LoadFileAsync(IEnumerable<string> path);
 
-
         Task<Stream> DownloadAsync(string path, Reference<RavenJObject> metadata = null);
         Task<Stream> DownloadAsync(FileHeader path, Reference<RavenJObject> metadata = null);
 

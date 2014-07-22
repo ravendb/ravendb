@@ -48,8 +48,11 @@ namespace Raven.Client.FileSystem.Impl
 
             if (sessionOperations.EntityChanged(Filename))
             {
-                var fileHeaderInCache = await session.LoadFileAsync(Filename);
-                Metadata = fileHeaderInCache.Metadata;
+                if (!sessionOperations.IsDeleted(Filename))
+                {
+                    var fileHeaderInCache = await session.LoadFileAsync(Filename);
+                    Metadata = fileHeaderInCache.Metadata;
+                }
             }
 
             await commands.UploadAsync(Filename, pipe, Metadata, Size, null)

@@ -31,10 +31,13 @@ namespace Raven.Client.FileSystem.Impl
             var commands = session.Commands;
 
             bool delete = true;
-            var fileHeader = await session.LoadFileAsync(Filename);
+            
+            FileHeader fileHeader = null;
+            if (!sessionOperations.TryGetFromCache(Filename, out fileHeader))
+                fileHeader = await session.LoadFileAsync(Filename);
+
             foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
             {
-
                 if (!deleteListener.BeforeDelete(fileHeader))
                     delete = false;
             }
