@@ -37,6 +37,7 @@ class appUrl {
         metricsPrefetches: ko.computed(() => appUrl.forMetricsPrefetches(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
+        runningTasks: ko.computed(() => appUrl.forRunningTasks(appUrl.currentDatabase())),
         alerts: ko.computed(() => appUrl.forAlerts(appUrl.currentDatabase())),
         indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
@@ -257,6 +258,10 @@ class appUrl {
 
     static forLogs(db: database): string {
         return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forRunningTasks(db: database): string {
+        return "#databases/status/runningTasks?" + appUrl.getEncodedDbPart(db);
     }
 
     static forAlerts(db: database): string {

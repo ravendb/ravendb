@@ -94,6 +94,7 @@ namespace Raven.Database.Impl
 					if (timeout != null)
 						timeout.Delay();
 					var batchCount = 0;
+                    token.ThrowIfCancellationRequested();
 					database.TransactionalStorage.Batch(actions =>
 					{
 						while (batchCount < batchSize && enumerator.MoveNext())

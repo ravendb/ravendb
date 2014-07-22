@@ -1,6 +1,12 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
+
+using Raven.Abstractions;
+using Raven.Database.Actions;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -25,5 +31,31 @@ namespace Raven.Database.Server.Controllers
 			var status = Database.Tasks.GetTaskState(id);
 			return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
 		}
+
+        [HttpGet]
+        [Route("operation/kill")]
+        [Route("databases/{databaseName}/operation/kill")]
+        public HttpResponseMessage OperationKill()
+        {
+            var idStr = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStr, out id) == false)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Query string variable id must be a valid int64"
+                }, HttpStatusCode.BadRequest);
+            }
+            var status = Database.Tasks.KillTask(id);
+            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+        }
+
+        [HttpGet]
+        [Route("operations")]
+        [Route("databases/{databaseName}/operations")]
+        public HttpResponseMessage CurrentOperations()
+        {
+            return GetMessageWithObject(Database.Tasks.GetAll());
+        }
 	}
 }

@@ -16,7 +16,7 @@ class simulateSqlReplicationCommand extends  commandBase{
             sqlReplication: JSON.stringify(this.simulatedSqlReplication.toDto())
         };
 
-        return this.query<sqlReplicationSimulationResultDto>("/studio-tasks/simulate-sql-replication",args,this.db);
+        return this.query<sqlReplicationSimulationResultDto>("/studio-tasks/simulate-sql-replication",args,this.db,null,60000);
     }
 }
 

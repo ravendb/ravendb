@@ -8,6 +8,7 @@ class sqlReplicationConnections extends document {
 
     predefinedConnections = ko.observableArray<predefinedConnection>();
 
+
     constructor(dto: sqlReplicationConnectionsDto) {
         super(dto);
         this.predefinedConnections(dto.PredefinedConnections.map(x => new predefinedConnection(x)));
@@ -27,6 +28,8 @@ class sqlReplicationConnections extends document {
             PredefinedConnections: this.predefinedConnections().map(x=>x.toDto()) 
         };
     }
+
+    
 
 }
 

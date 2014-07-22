@@ -20,6 +20,7 @@ interface computedAppUrls {
     metricsPrefetches: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;
+    runningTasks: KnockoutComputed<string>;
     alerts: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
     replicationStats: KnockoutComputed<string>;
