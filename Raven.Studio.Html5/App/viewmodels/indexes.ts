@@ -229,8 +229,10 @@ class indexes extends viewModelBase {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask
-                .done((aa) => {
-                    this.removeIndexesFromAllGroups(indexes);
+                .done((closedWithoutDeletion: boolean) => {
+                    if (closedWithoutDeletion == false) {
+                        this.removeIndexesFromAllGroups(indexes);
+                    }
                 })
                 .fail(() => {
                     this.removeIndexesFromAllGroups(indexes);
