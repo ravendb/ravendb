@@ -23,6 +23,7 @@
                 <a class="btn btn-default" data-bind="click: refreshDocument, visible: lodaedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
                 <button type="button" class="btn btn-default" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
                 <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+                <button class="btn btn-default" data-bind="click:function(){isNewLineFriendlyMode.toggle();}, css:{'isActive':isNewLineFriendlyMode()===true}">\n</button>
             </div>
 
             <div class="btn-group" data-bind="with: docsList">

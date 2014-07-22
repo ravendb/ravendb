@@ -673,9 +673,11 @@
     <Content Include="Scripts\ace\mode\javascript_test.js" />
     <Content Include="Scripts\ace\mode\javascript_worker.js" />
     <Content Include="Scripts\ace\mode\javascript_worker_test.js" />
+    <Content Include="Scripts\ace\mode\json_newline_friendly.js" />
     <Content Include="Scripts\ace\mode\json.js" />
     <Content Include="Scripts\ace\mode\jsoniq.js" />
     <Content Include="Scripts\ace\mode\json\json_parse.js" />
+    <Content Include="Scripts\ace\mode\json_newline_friendly_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\json_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\json_worker.js" />
     <Content Include="Scripts\ace\mode\json_worker_test.js" />

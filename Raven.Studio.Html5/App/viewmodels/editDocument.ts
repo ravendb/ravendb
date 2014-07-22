@@ -57,7 +57,7 @@ class editDocument extends viewModelBase {
     isInDocMode = ko.observable(true);
     queryIndex = ko.observable<String>();
     docTitle: KnockoutComputed<string>;
-
+    isNewLineFriendlyMode = ko.observable(false);
     isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     
@@ -225,6 +225,9 @@ class editDocument extends viewModelBase {
         else{
             return $.Deferred().resolve({ can: true });
         }
+
+
+        
     }
 
     activate(navigationArgs) {
@@ -272,6 +275,18 @@ class editDocument extends viewModelBase {
     // Called when the view is attached to the DOM.
     attached() {
         this.setupKeyboardShortcuts();
+
+        this.isNewLineFriendlyMode.subscribe(val => {
+            if (val) {
+                this.documentText(this.unescapeNewlinesInTextFields(this.documentText()));
+                this.metadataText(this.unescapeNewlinesInTextFields(this.metadataText()));
+                this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
+            } else {
+                this.documentText(this.escapeNewlinesInTextFields(this.documentText()));
+                this.metadataText(this.escapeNewlinesInTextFields(this.metadataText()));
+                this.docEditor.getSession().setMode('ace/mode/csharp');
+            }
+        });
     }
 
     compositionComplete() {
@@ -321,6 +336,67 @@ class editDocument extends viewModelBase {
         ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
     }
 
+    escapeNewlinesInTextFields(str: string) :any {
+        var AceDocumentClass = require("ace/document").Document;
+        var AceEditSessionClass = require("ace/edit_session").EditSession;
+        var AceJSONMode = require("ace/mode/json").Mode;
+        var documentTextAceDocument = new AceDocumentClass(str);
+        var jsonMode = new AceJSONMode();
+        var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
+        var previousLine = 0;
+
+        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
+        var curToken = iterator.getCurrentToken();
+        var text = "";
+        while (curToken) {
+            if (curToken.type === "string" || curToken.type == "constant.language.escape") {
+                if (previousLine < iterator.$row) {
+                    text += "\\r\\n";
+                }
+                text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
+            } else {
+                text += curToken.value;
+            }
+
+            previousLine = iterator.$row;
+            curToken = iterator.stepForward();
+        }
+
+        return text;
+    }
+
+
+    unescapeNewlinesInTextFields(str: string): any {
+        var AceDocumentClass = require("ace/document").Document;
+        var AceEditSessionClass = require("ace/edit_session").EditSession;
+        var AceJSONMode = require("ace/mode/json").Mode;
+        var documentTextAceDocument = new AceDocumentClass(str);
+        var jsonMode = new AceJSONMode();
+        var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
+        var previousLine = 0;
+
+        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
+        var curToken = iterator.getCurrentToken();
+        var text = "";
+        while (curToken) {
+            if (curToken.type === "string" || curToken.type == "constant.language.escape") {
+                if (previousLine < iterator.$row) {
+                    text += "\r\n";
+                }
+                text += curToken.value.replace(/(\\n|\\r\\n)/g, '\r\n');
+            } else {
+                text += curToken.value;
+            }
+
+            previousLine = iterator.$row;
+            curToken = iterator.stepForward();
+        }
+
+        return text;
+    }
+
     saveDocument() {
         this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
@@ -331,8 +407,16 @@ class editDocument extends viewModelBase {
 
         var message = "";
         try {
-            var updatedDto = JSON.parse(this.documentText());
-            var meta = JSON.parse(this.metadataText());
+        
+
+
+
+        /*var updatedDto = JSON.parse(this.documentText());
+            var meta = JSON.parse(this.metadataText());*/
+        var updatedDto = JSON.parse(this.escapeNewlinesInTextFields(this.documentText()));
+        var meta = JSON.parse(this.escapeNewlinesInTextFields(this.metadataText()));
+
+            
         }
         catch (e) {
             if (updatedDto == undefined) {
@@ -415,9 +499,13 @@ class editDocument extends viewModelBase {
     }
 
     stringify(obj: any) {
+        
         var prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing);
+        return JSON.stringify(obj, null, prettifySpacing).replace(/(\\n|\\r\\n)/g, '\r\n');
+        
     }
+    
+
 
     activateMeta() {
         this.isEditingMetadata(true);

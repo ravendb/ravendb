@@ -7465,6 +7465,9 @@ body {
   z-index: 2000;
   width: 400px;
 }
+#editDocumentContainer a .isActive {
+  color: green;
+}
 #editDocumentContainer:focus {
   outline: 0;
 }
