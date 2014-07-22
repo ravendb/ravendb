@@ -34,7 +34,7 @@ class quotas extends viewModelBase {
 
         this.initializeDirtyFlag();
 
-        this.isSaveEnabled = ko.computed(() => viewModelBase.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
     }
 
     private fetchQuotas(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
@@ -50,7 +50,7 @@ class quotas extends viewModelBase {
     }
 
     initializeDirtyFlag() {
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([
+        this.dirtyFlag = new ko.DirtyFlag([
             this.maximumSize,
             this.warningLimitThreshold,
             this.maxNumberOfDocs,
@@ -67,9 +67,10 @@ class quotas extends viewModelBase {
             document["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs();
             document["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs();
             var saveTask = new saveDatabaseSettingsCommand(db, document).execute();
-            saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-                this.settingsDocument().__metadata['@etag'] = idAndEtag.ETag;
-                viewModelBase.dirtyFlag().reset();
+            saveTask.done((saveResult: bulkDocumentDto[]) => {
+                var savedDocumentDto: bulkDocumentDto = saveResult[0];
+                this.settingsDocument().__metadata['@etag'] = savedDocumentDto.Etag;
+                this.dirtyFlag().reset(); //Resync Changes
             });
         }
     }

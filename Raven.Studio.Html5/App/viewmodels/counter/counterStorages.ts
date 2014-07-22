@@ -18,7 +18,11 @@ class counterStorages extends viewModelBase {
 
         this.counterStorages = shell.counterStorages;
         this.searchCounterStorageByText.extend({ throttle: 200 }).subscribe(s => this.filterCounterStorages(s));
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.selectCounterStorage(cs, false));
+
+        var currentCounterStorage = this.activeCounterStorage();
+        if (!!currentCounterStorage) {
+            this.selectCounterStorage(currentCounterStorage, false);
+        }
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.

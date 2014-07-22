@@ -37,6 +37,7 @@ class appUrl {
         metricsPrefetches: ko.computed(() => appUrl.forMetricsPrefetches(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
+        runningTasks: ko.computed(() => appUrl.forRunningTasks(appUrl.currentDatabase())),
         alerts: ko.computed(() => appUrl.forAlerts(appUrl.currentDatabase())),
         indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
@@ -49,6 +50,7 @@ class appUrl {
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
+        sqlReplicationsConnections: ko.computed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
         customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
 
@@ -250,12 +252,16 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
         return path;
     }
 
     static forLogs(db: database): string {
         return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forRunningTasks(db: database): string {
+        return "#databases/status/runningTasks?" + appUrl.getEncodedDbPart(db);
     }
 
     static forAlerts(db: database): string {
@@ -284,12 +290,12 @@ class appUrl {
 
     static forApiKeys(): string {
         // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/apiKeys";
+        return "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
     }
 
     static forWindowsAuth(): string {
         // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/windowsAuth";
+        return "#databases/settings/windowsAuth?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
     }
 
     static forDatabaseSettings(db: database): string {
@@ -319,6 +325,10 @@ class appUrl {
     static forEditSqlReplication(sqlReplicationName: string, db: database):string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/settings/editSqlReplication/" + encodeURIComponent(sqlReplicationName) + "?" + databasePart;
+    }
+
+    static forSqlReplicationConnections(db: database): string {
+        return "#databases/settings/sqlReplicationConnectionStringsManagement?" + appUrl.getEncodedDbPart(db);
     }
 
     static forScriptedIndexes(db: database): string {

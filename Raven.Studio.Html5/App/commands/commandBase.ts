@@ -29,7 +29,7 @@ class commandBase {
         this.reportProgress(alertType.info, title, details);
     }
 
-    reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = false) {
+    reportError(title: string, details?: string, httpStatusText?: string) {
         this.reportProgress(alertType.danger, title, details, httpStatusText);
         if (console && console.log && typeof console.log === "function") {
             console.log("Error during command execution", title, details, httpStatusText);
@@ -60,8 +60,8 @@ class commandBase {
         return "?" + propNameAndValues.join("&");
     }
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", resource);
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert:number = 9000): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource,null, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -133,7 +133,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "PATCH", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
         // ContentType:
         //
@@ -162,7 +162,7 @@ class commandBase {
             }
         }
         if (commandBase.loadingCounter == 0) {
-            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000);
+            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert);
         }
 
         if (oauthContext.apiKey()) {
@@ -302,9 +302,9 @@ class commandBase {
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
 	}
 
-    private static showSpin() {
+    private static showSpin(timeToAlert:number) {
         ko.postbox.publish("LoadProgress", alertType.warning);
-        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, 7000);
+        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
     }
 
     private static showServerNotRespondingAlert() {

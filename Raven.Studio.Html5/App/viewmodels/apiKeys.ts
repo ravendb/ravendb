@@ -6,42 +6,48 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import database = require("models/database");
 import saveApiKeysCommand = require("commands/saveApiKeysCommand");
 import databaseAccess = require("models/databaseAccess");
+import shell = require('viewmodels/shell');
 
 class apiKeys extends viewModelBase {
 
-    apiKeys = ko.observableArray<apiKey>();
+    apiKeys = ko.observableArray<apiKey>().extend({ required: true });
     allDatabases = ko.observableArray<string>();
-    areAllApiKeysValid: KnockoutComputed<boolean>;
     searchText = ko.observable<string>();
     hasFetchedApiKeys = ko.observable(false);
+    isSaveEnabled: KnockoutComputed<boolean>;
 
     constructor() {
         super();
 
-        this.areAllApiKeysValid = ko.computed(() => this.apiKeys().every(k => k.isValid()));
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
+
+        var databaseNames = shell.databases().filter(db => db.name != "<system>").map(db => db.name);
+        this.allDatabases(databaseNames);
     }
 
-    activate(args: any) {
+    canActivate(args) {
+        super.canActivate(args);
+
+        var deffered = $.Deferred();
+        this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
+
+        return deffered;
+    }
+
+    activate(args) {
         super.activate(args);
 
-        this.fetchApiKeys();
-        this.fetchDatabases();
+        this.dirtyFlag = new ko.DirtyFlag([this.apiKeys]);
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
-    fetchApiKeys() {
-        new getApiKeysCommand()
+    private fetchApiKeys(): JQueryPromise<any> {
+        return new getApiKeysCommand()
             .execute()
             .done(results => {
                 this.apiKeys(results);
                 this.hasFetchedApiKeys(true);
             });
-    }
-
-    fetchDatabases() {
-        new getDatabasesCommand()
-            .execute()
-            .done((results: database[]) => this.allDatabases(results.map(d => d.name)));
     }
 
     createNewApiKey() {
@@ -56,7 +62,10 @@ class apiKeys extends viewModelBase {
         this.apiKeys().forEach(k => k.setIdFromName());
         new saveApiKeysCommand(this.apiKeys(), this.activeDatabase())
             .execute()
-            .done((result: bulkDocumentDto[]) => this.updateKeys(result));
+            .done((result: bulkDocumentDto[]) => {
+                this.updateKeys(result);
+                this.dirtyFlag().reset();
+        });
     }
 
     updateKeys(serverKeys: bulkDocumentDto[]) {

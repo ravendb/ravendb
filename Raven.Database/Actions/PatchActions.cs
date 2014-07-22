@@ -192,7 +192,7 @@ namespace Raven.Database.Actions
 				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 					jsonDoc =>
 					{
-						scope = new DefaultScriptedJsonPatcherOperationScope(Database);
+						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database);
 						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
 						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
 					},
@@ -201,10 +201,12 @@ namespace Raven.Database.Actions
 						if (patchDefault == null)
 							return null;
 
+						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database);
+
 						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
 						var jsonDoc = new RavenJObject();
 						jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
-						return scriptedJsonPatcher.Apply(scope, new RavenJObject(), patchDefault, 0, docId);
+						return scriptedJsonPatcher.Apply(scope, jsonDoc, patchDefault, 0, docId);
 					},
 					() =>
 					{

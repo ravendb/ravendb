@@ -35,8 +35,8 @@ class versioning extends viewModelBase {
 
         this.toRemove = [];
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.versionings]);
-        this.isSaveEnabled = ko.computed<boolean>(() => viewModelBase.dirtyFlag().isDirty());
+        this.dirtyFlag = new ko.DirtyFlag([this.versionings]);
+        this.isSaveEnabled = ko.computed<boolean>(() => this.dirtyFlag().isDirty());
     }
 
     private fetchVersioningEntries(db): JQueryPromise<any>{
@@ -75,7 +75,7 @@ class versioning extends viewModelBase {
 
     versioningsLoaded(data: versioningEntry[]) {
         this.versionings(data);
-        viewModelBase.dirtyFlag().reset();
+        this.dirtyFlag().reset();
     }
 
     versioningsSaved(saveResult: bulkDocumentDto[]) {
@@ -88,7 +88,7 @@ class versioning extends viewModelBase {
             v.fromDatabase(true);
         });
 
-        viewModelBase.dirtyFlag().reset();
+        this.dirtyFlag().reset();
         this.toRemove = [];
     }
 }

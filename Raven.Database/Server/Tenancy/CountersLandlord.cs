@@ -14,6 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Counters;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -47,7 +48,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down counters {0} because the tenant counter document has been updated or removed", dbName);
-                Cleanup(dbName, skipIfActive: false);
+				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
 
@@ -113,7 +114,8 @@ namespace Raven.Database.Server.Tenancy
 
 			counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var cs = new CounterStorage(systemDatabase.ServerUrl,tenantId, config);
+				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+				var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
 				AssertLicenseParameters();
 
 				// if we have a very long init process, make sure that we reset the last idle time for this db.

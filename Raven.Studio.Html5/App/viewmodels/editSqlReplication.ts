@@ -22,6 +22,9 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMet
 import documentMetadata = require("models/documentMetadata");
 import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
 import sqlReplicationSimulationDialog = require("viewmodels/sqlReplicationSimulationDialog");
+import sqlReplicationConnections = require("models/sqlReplicationConnections");
+import predefinedSqlConnection = require("models/predefinedSqlConnection");
+
 
 
 class editSqlReplication extends viewModelBase {
@@ -46,6 +49,7 @@ class editSqlReplication extends viewModelBase {
     sqlReplicationName: KnockoutComputed<string>;
     isEditingNewReplication = ko.observable(false);
     isBasicView = ko.observable(true);
+    availableConnectionStrings = ko.observableArray<string>();
     
     
     appUrls: computedAppUrls;
@@ -75,29 +79,43 @@ class editSqlReplication extends viewModelBase {
         });
     }
 
-    canActivate(replicationToEditName: string) {
-        if (replicationToEditName) {
-            var canActivateResult = $.Deferred();
-            this.loadSqlReplication(replicationToEditName)
-                .done(() => canActivateResult.resolve({ can: true }))
-                .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(replicationToEditName) + " replication", null));
-                    canActivateResult.resolve({ redirect: appUrl.forSqlReplications(this.activeDatabase()) });
-                });
+    loadSqlReplicationConnections() :JQueryPromise<any> {
+        return new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+            .execute()
+            .done((x: document) => {
+                var dto: any = x.toDto(true);
+                var connections = new sqlReplicationConnections(dto);
 
-            return canActivateResult;
-        } else {
-            this.isEditingNewReplication(true);
-            this.editedReplication(this.createSqlReplication());
-            return $.Deferred().resolve({ can: true });
-        }
+                if (connections.predefinedConnections().length > 0) {
+                    connections.predefinedConnections().forEach(x => this.availableConnectionStrings.push(x.name()));
+                }
+            });
+    }
+
+    canActivate(replicationToEditName: string) {
+        var canActivateResult = $.Deferred();
+        this.loadSqlReplicationConnections().always(() => {
+            if (replicationToEditName) {
+                this.loadSqlReplication(replicationToEditName)
+                    .done(() => canActivateResult.resolve({ can: true }))
+                    .fail(() => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(replicationToEditName) + " replication", null));
+                        canActivateResult.resolve({ redirect: appUrl.forSqlReplications(this.activeDatabase()) });
+                    });
+            } else {
+                this.isEditingNewReplication(true);
+                this.editedReplication(this.createSqlReplication());
+                this.fetchCollections(this.activeDatabase()).always(() =>canActivateResult.resolve({ can: true }));
+            }
+        });
+        return canActivateResult;
     }
 
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -145,7 +163,7 @@ class editSqlReplication extends viewModelBase {
             var sqlReplicationDto: any = document.toDto(true);
             this.editedReplication(new sqlReplication(sqlReplicationDto));
             this.initialReplicationId = this.editedReplication().name();
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
+            this.dirtyFlag().reset(); //Resync Changes
         });
         loadDocTask.always(() => this.isBusy(false));
         this.isBusy(true);
@@ -168,9 +186,9 @@ class editSqlReplication extends viewModelBase {
     refreshSqlReplication() {
         if (this.isEditingNewReplication() === false) {
             var docId = this.initialReplicationId;
-
             this.loadSqlReplication(docId);
         } else {
+
             this.editedReplication(this.createSqlReplication());
         }
     }
@@ -185,7 +203,8 @@ class editSqlReplication extends viewModelBase {
     
     createSqlReplication(): sqlReplication {
         var newSqlReplication: sqlReplication = sqlReplication.empty();
-        newSqlReplication.collections = this.collections;
+        newSqlReplication.collections(this.collections());
+        this.collections.subscribe(value => newSqlReplication.collections(value));
         this.subscribeToSqlReplicationName(newSqlReplication);
         return newSqlReplication;
     }
@@ -222,14 +241,14 @@ class editSqlReplication extends viewModelBase {
     }
 
     private initializeAceValidity(element: Element) {
-        var editor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
-        if (editor)
-        {
-        var editorValue = editor.getSession().getValue();
-        if (editorValue === "") {
-            var textarea: any = $(element).find('textarea')[0];
-            textarea.setCustomValidity("Please fill out this field.");
-        }
+        var editorElement = $("#aceEditor");
+        if (editorElement.length > 0) {
+            var editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+            var editorValue = editor.getSession().getValue();
+            if (editorValue === "") {
+                var textarea: any = $(element).find('textarea')[0];
+                textarea.setCustomValidity("Please fill out this field.");
+            }
         }
     }
 
@@ -247,12 +266,14 @@ class editSqlReplication extends viewModelBase {
         
         var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Configuration/" + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
-        saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
-            this.loadSqlReplication(idAndEtag.Key);
-            this.updateUrl(idAndEtag.Key);
+        saveTask.done((saveResult: bulkDocumentDto[]) => {
+            var savedDocumentDto: bulkDocumentDto = saveResult[0];
+            this.loadSqlReplication(savedDocumentDto.Key);
+            this.updateUrl(savedDocumentDto.Key);
+
+            this.dirtyFlag().reset(); //Resync Changes
+
             this.isEditingNewReplication(false);
-            this.updateUrl(currentDocumentId);
             this.initialReplicationId = currentDocumentId;
         });
     }
@@ -275,7 +296,7 @@ class editSqlReplication extends viewModelBase {
         if (newDoc) {
             var viewModel = new deleteDocuments([newDoc]);
             viewModel.deletionTask.done(() => {
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.dirtyFlag().reset(); //Resync Changes
                 router.navigate(appUrl.forCurrentDatabase().sqlReplications());
             });
             app.showDialog(viewModel, editSqlReplication.editSqlReplicationSelector);
@@ -283,21 +304,31 @@ class editSqlReplication extends viewModelBase {
         } 
     }
     resetSqlReplication() {
-        var replicationId = this.initialReplicationId;
-        new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-            .done(() => {
-                ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
-            })
-        .fail((foo) => {
-            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+
+        app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
+            .then((dialogResult:string) =>{
+            if (dialogResult === "Reset") {
+                var replicationId = this.initialReplicationId;
+                new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+                    .done(() => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
+                    })
+                    .fail((foo) => {
+                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
+                    });
+            }
         });
+        
     }
 
     simulateSqlReplication() {
-        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication().name());
+        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication());
         app.showDialog(viewModel);
     }
 
+    getSqlReplicationConnectionStringsUrl(sqlReplicationName: string) {
+        return appUrl.forSqlReplicationConnections(this.activeDatabase());
+    }
 
 }
 

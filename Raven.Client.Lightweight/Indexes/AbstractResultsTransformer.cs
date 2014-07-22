@@ -55,6 +55,46 @@ namespace Raven.Client.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
+		protected IEnumerable<object> TransfromWith<T>(string transformer, IEnumerable<T> items)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<TResult> TransfromWith<T, TResult>(string transformer, IEnumerable<T> items)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<object> TransfromWith<T>(string transformer, T item)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<TResult> TransfromWith<T, TResult>(string transformer, T item)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<object> TransfromWith<T>(IEnumerable<string> transformers, IEnumerable<T> items)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<TResult> TransfromWith<T, TResult>(IEnumerable<string> transformers, IEnumerable<T> items)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<object> TransfromWith<T>(IEnumerable<string> transformers, T item)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		protected IEnumerable<TResult> TransfromWith<T, TResult>(IEnumerable<string> transformers, T item)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		} 
+
 		/// <summary>
 		/// Gets or sets the document store.
 		/// </summary>

@@ -6,16 +6,21 @@ import document = require("models/document");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import dialog = require("plugins/dialog");
 import collection = require("models/collection");
+import sqlReplication = require("models/sqlReplication");
+import sqlReplicationSimulatedCommand = require ("models/sqlReplicationSimulatedCommand");
 
 class sqlReplicationSimulationDialog extends dialogViewModelBase {
-
-    simulationResults = ko.observableArray<string>();
+    simulationResults = ko.observableArray<sqlReplicationSimulatedCommand>([]);
+    rolledBackTransactionPassed = ko.observable<boolean>(false);
     documentAutocompletes = ko.observableArray<string>();
     documentId = ko.observable<string>();
     lastSearchedDocumentID = ko.observable<string>("");
-    isAutoCompleteVisible : KnockoutComputed<boolean>;
+    isAutoCompleteVisible: KnockoutComputed<boolean>;
+    rolledbackTransactionPerformed = ko.observable<boolean>(false);
+    lastAlert = ko.observable<string>("");
+    waitingToAnswer = ko.observable<boolean>(false);
     
-    constructor(private db: database, private sqlReplicationName: string) {
+    constructor(private db: database, private simulatedSqlReplication: sqlReplication) {
         super();
         this.documentId.throttle(250).subscribe(search => this.fetchDocumentIdAutocompletes(search));
         this.isAutoCompleteVisible = ko.computed(() => {
@@ -24,12 +29,38 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
         });
     }
 
-    getResults() {
+
+    toggleCommandParamView(command: sqlReplicationSimulatedCommand) {
+        command.showParamsValues.toggle();
+    }
+
+    getResults(performRolledbackTransaction: boolean) {
         this.lastSearchedDocumentID(this.documentId());
-        new simulateSqlReplicationCommand(this.db, this.sqlReplicationName, this.documentId())
+        this.waitingToAnswer(true);
+        new simulateSqlReplicationCommand(this.db, this.simulatedSqlReplication, this.documentId(), performRolledbackTransaction)
             .execute()
-            .done((results: string[]) => this.simulationResults(results))
-            .fail(() => this.simulationResults.removeAll());
+            .done((result: sqlReplicationSimulationResultDto) => {
+                if (!!result.Results) {
+                    this.simulationResults(result.Results.map(x=> x.Commands).reduce((x, y) => x.concat(y)).map(x => { return new sqlReplicationSimulatedCommand(!performRolledbackTransaction, x); }));
+                } else {
+                    this.simulationResults([]);
+                }
+
+                this.rolledBackTransactionPassed(!result.LastAlert);
+
+                if (!!result.LastAlert) {
+                    this.lastAlert(result.LastAlert.Exception);
+                } else {
+                    this.lastAlert("");
+                }
+                this.rolledbackTransactionPerformed(performRolledbackTransaction);
+
+            })
+            .fail(() => {
+                this.simulationResults([]);
+                this.rolledBackTransactionPassed(false);
+            })
+            .always(() => this.waitingToAnswer(false));
     }
 
     // overrid dialogViewModelBase shortcuts behavior
@@ -63,7 +94,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
     documentIdSubmitted(submittedDocumentId) {
         this.documentId(submittedDocumentId);
         $('#docIdInput').focus();
-        this.getResults();
+        this.getResults(false);
     }
 
     getDocCssClass(doc: documentMetadataDto) {

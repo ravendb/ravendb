@@ -26,8 +26,9 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
-    static dirtyFlag = new ko.DirtyFlag([]);
+    private postboxSubscriptions: Array<KnockoutSubscription> = [];
     private static isConfirmedUsingSystemDatabase: boolean;
+    dirtyFlag = new ko.DirtyFlag([]);
 
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
@@ -37,31 +38,24 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var database = appUrl.getDatabase();
+        var db = this.activeDatabase();
 
         // we only want to prompt warning to system db if we are in the databases section
-        if (!!database && database.isSystem) {
+        if (!!db && db.isSystem) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
                 return true;
             }
 
             return this.promptNavSystemDb();
         }
+        else if (!!db && db.disabled()) {
+            this.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
+            return $.Deferred().resolve({ redirect: appUrl.forDatabases() });
+        }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
         
         return true;
-    }
-
-    createNotifications(): Array<changeSubscription> {
-        return [];
-    }
-
-    cleanupNotifications() {
-        for (var i = 0; i < this.notifications.length; i++) {
-            this.notifications[i].off();
-        }
-        this.notifications = [];
     }
 
     /*
@@ -76,11 +70,10 @@ class viewModelBase {
 
         oauthContext.enterApiKeyTask.done(() => this.notifications = this.createNotifications());
 
+        this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
 
-        if (!!args) {
-            window.addEventListener("beforeunload", this.beforeUnloadListener, false);
-        }
+        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
 
         ko.postbox.publish("SetRawJSONUrl", "");
     }
@@ -89,14 +82,14 @@ class viewModelBase {
      * Called by Durandal when the view model is loaded and after the view is inserted into the DOM.
      */
     compositionComplete() {
-        viewModelBase.dirtyFlag().reset(); //Resync Changes
+        this.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
      * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
      */
     canDeactivate(isClose): any {
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
             return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?', undefined, true);
         }
@@ -108,6 +101,7 @@ class viewModelBase {
      */
     detached() {
         this.cleanupNotifications();
+        this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
     }
 
@@ -120,6 +114,24 @@ class viewModelBase {
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [];
+    }
+
+    cleanupNotifications() {
+        this.notifications.forEach((notification: changeSubscription) => notification.off());
+        this.notifications = [];
+    }
+
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [];
+    }
+
+    cleanupPostboxSubscriptions() {
+        this.postboxSubscriptions.forEach((subscription: KnockoutSubscription) => subscription.dispose());
+        this.postboxSubscriptions = [];
     }
 
     /*
@@ -183,12 +195,12 @@ class viewModelBase {
         clearInterval(viewModelBase.modelPollingHandle);
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
         var messageView = app.showMessage(confirmationMessage, title, options);
 
         messageView.done((answer) => {
-            if (answer == options[0]) {
+            if (answer == options[1]) {
                 viewTask.resolve({ can: true });
             } else if (!forceRejectWithResolve) {
                 viewTask.reject();
@@ -203,7 +215,7 @@ class viewModelBase {
     canContinueIfNotDirty(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No']) {
         var deferred = $.Deferred();
 
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
             var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage, options);
             confirmationMessageViewModel.done(() => deferred.resolve());
@@ -234,7 +246,7 @@ class viewModelBase {
     }
 
     private beforeUnloadListener: EventListener = (e: any): any => {
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
             var message = "You have unsaved data.";
             e = e || window.event;
@@ -249,12 +261,12 @@ class viewModelBase {
         }
     }
 
-    reportError(title: string) {
-        this.reportProgress(alertType.error, title);
+    reportError(title: string, details?: string, displayInRecentErrors: boolean = true) {
+        this.reportProgress(alertType.danger, title, details, displayInRecentErrors);
     }
 
-    private reportProgress(type: alertType, title: string) {
-        ko.postbox.publish("Alert", new alertArgs(type, title));
+    private reportProgress(type: alertType, title: string, details?: string, displayInRecentErrors: boolean = true) {
+        ko.postbox.publish("Alert", new alertArgs(type, title, details, null, displayInRecentErrors));
     }
 }
 

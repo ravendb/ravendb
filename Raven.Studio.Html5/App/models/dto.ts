@@ -127,7 +127,7 @@ interface licenseStatusDto {
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
-        periodicExport: string;
+        periodicBackup: string;
         encryption: string;
         compression: string;
         quotas: string;
@@ -457,10 +457,36 @@ interface sqlReplicationDto extends documentDto {
     FactoryName: string;
     ConnectionString: string;
     ConnectionStringName: string;
+    PredefinedConnectionStringSettingName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     PerformTableQuatation?:boolean;
+}
+
+interface commandData {
+    CommandText: string;
+    Params:{Key:string;Value:any}[]
+}
+
+interface tableQuerySummary {
+    TableName: string;
+    Commands: commandData[];
+}
+
+interface sqlReplicationSimulationResultDto {
+    Results: tableQuerySummary[];
+    LastAlert: alertDto;
+}
+
+interface sqlReplicationConnectionsDto extends documentDto {
+    PredefinedConnections: predefinedSqlConnectionDto[];
+}
+
+interface predefinedSqlConnectionDto {
+    Name:string;
+    FactoryName: string;
+    ConnectionString: string;
 }
 
 interface facetDto {
@@ -891,4 +917,44 @@ interface operationStatusDto {
 interface documentStateDto {
     Document: string;
     Deleted: boolean;
+}
+
+interface replicationTopologyDto {
+    Servers: string[];
+    Connections: replicationTopologyConnectionDto[];
+}
+
+interface replicationTopologyConnectionDto {
+    Destination: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    LastAttachmentEtag: string;
+    LastDocumentEtag: string;
+    ReplicationBehavior: string;
+    SendServerId: string;
+    Source: string;
+    SourceToDestinationState: string;
+    StoredServerId: string;
+}
+
+interface stringLinkDto {
+    source: string;
+    target: string;
+}
+
+interface replicationTopologyLinkDto extends stringLinkDto {
+    left: boolean;
+    right: boolean;
+    toRightPayload?: replicationTopologyConnectionDto;
+    toLeftPayload?: replicationTopologyConnectionDto;
+}
+
+interface runningTaskDto {
+    Id: number;
+    TaskStatus: string;
+    Exception: string;
+    ExceptionText: string;
+    Payload: string;
+    TaskType: string;
+    StartTime: string;
 }

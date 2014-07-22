@@ -5,6 +5,7 @@ import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
+import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 
 class createDatabase extends dialogViewModelBase {
 
@@ -16,6 +17,7 @@ class createDatabase extends dialogViewModelBase {
     databaseLogs = ko.observable('');
     databaseIndexes = ko.observable('');
     databaseNameFocus = ko.observable(true);
+
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
     isExpirationBundleEnabled = ko.observable(false);
@@ -27,11 +29,17 @@ class createDatabase extends dialogViewModelBase {
     isScriptedIndexBundleEnabled = ko.observable(false);
 
     private databases = ko.observableArray<database>();
+    private licenseStatus = ko.observable<licenseStatusDto>(null);
     private maxNameLength = 200;
 
-    constructor(databases) {
+    constructor(databases: KnockoutObservableArray<database>, licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
+
         this.databases = databases;
+        this.licenseStatus = licenseStatus;
+        if (this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
+            this.isPeriodicExportBundleEnabled(false);
+        }
     }
 
     attached() {
@@ -44,17 +52,15 @@ class createDatabase extends dialogViewModelBase {
             if (this.isDatabaseNameExists(newDatabaseName, this.databases()) === true) {
                 errorMessage = "Database Name Already Exists!";
             }
-            else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
+            else if ((errorMessage = this.checkName(newDatabaseName)) != '') { }
             inputElement.setCustomValidity(errorMessage);
         });
     
         inputElement.setCustomValidity("An empty database name is forbidden for use!");
-        
 
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
         this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
-
     }
 
     deactivate() {
@@ -64,8 +70,21 @@ class createDatabase extends dialogViewModelBase {
             this.creationTask.reject();
         }
     }
-     cancel() {
+
+    cancel() {
         dialog.close(this);
+    }
+
+    isBundleActive(name: string): boolean {
+        var licenseStatus: licenseStatusDto = this.licenseStatus();
+
+        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+            return true;
+        }
+        else {
+            var value = licenseStatus.Attributes[name];
+            return value === "true";
+        }
     }
 
     nextOrCreate() {
@@ -88,7 +107,7 @@ class createDatabase extends dialogViewModelBase {
         return false;
     }
 
-    private CheckName(name: string): string {
+    private checkName(name: string): string {
         var rg1 = /^[^\\/\*:\?"<>\|]+$/; // forbidden characters \ / * : ? " < > |
         var rg2 = /^\./; // cannot start with dot (.)
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
@@ -141,23 +160,33 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleCompressionBundle() {
-        this.isCompressionBundleEnabled.toggle();
+        if (this.isBundleActive('compression')) {
+            this.isCompressionBundleEnabled.toggle();
+        }
     }
 
     toggleEncryptionBundle() {
-        this.isEncryptionBundleEnabled.toggle();
+        if (this.isBundleActive('encryption')) {
+            this.isEncryptionBundleEnabled.toggle();
+        }
     }
 
     toggleExpirationBundle() {
-        this.isExpirationBundleEnabled.toggle();
+        if (this.isBundleActive('documentExpiration')) {
+            this.isExpirationBundleEnabled.toggle();
+        }
     }
 
     toggleQuotasBundle() {
-        this.isQuotasBundleEnabled.toggle();
+        if (this.isBundleActive('quotas')) {
+            this.isQuotasBundleEnabled.toggle();
+        }
     }
 
     toggleReplicationBundle() {
-        this.isReplicationBundleEnabled.toggle();
+        if (this.isBundleActive('replication')) {
+            this.isReplicationBundleEnabled.toggle();
+        }
     }
 
     toggleSqlReplicationBundle() {
@@ -165,11 +194,15 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
-        this.isVersioningBundleEnabled.toggle();
+        if (this.isBundleActive('versioning')) {
+            this.isVersioningBundleEnabled.toggle();
+        }
     }
 
     togglePeriodicExportBundle() {
-        this.isPeriodicExportBundleEnabled.toggle();
+        if (this.isBundleActive('periodicBackup')) {
+            this.isPeriodicExportBundleEnabled.toggle();
+        }
     }
 
     toggleScriptedIndexBundle() {
@@ -213,6 +246,7 @@ class createDatabase extends dialogViewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
+
         return activeBundles;
     }
 }

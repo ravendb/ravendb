@@ -7,7 +7,10 @@ using System;
 using System.IO;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using SpellChecker.Net.Search.Spell;
@@ -71,7 +74,12 @@ namespace Raven.Database.Queries
 
 				long _;
 				var task = Task.Factory.StartNew(() => suggestionQueryIndexExtension.Init(indexReader));
-				database.Tasks.AddTask(task, new object(), out _);
+				database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+				                                           {
+                                                               Payload = indexName,
+                                                               TaskType = TaskActions.PendingTaskType.SuggestionQuery,
+                                                               StartTime = SystemTime.UtcNow
+				                                           }, out _);
 
 				// wait for a bit for the suggestions to complete, but not too much (avoid IIS resets)
 				task.Wait(15000, database.WorkContext.CancellationToken);

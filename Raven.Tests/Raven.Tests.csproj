@@ -89,13 +89,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="Jint, Version=2.1.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Jint">
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
-    </Reference>
-    <Reference Include="Jint.Raven, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -212,6 +207,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="Bugs\AccessingHostPropertyOnUri.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
@@ -245,15 +241,17 @@
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\CompilingIndexesCreatesCacheDirectory.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
+    <Compile Include="Bugs\DTC\NSB\DbShutDownMidTransaction.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
+    <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
+    <Compile Include="Bugs\PatchingWithDefault.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
-    <Compile Include="Issues\RavenDB2408.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
@@ -592,7 +590,6 @@
     <Compile Include="Linq\SelectDictionaryItem.cs" />
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="Linq\WhereStringEquals.cs" />
-    <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
@@ -607,6 +604,7 @@
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\NestingTransformers.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
@@ -979,17 +977,12 @@
     </None>
     <EmbeddedResource Include="Patching\failingdump11.ravendump" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Bugs\DTC\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />

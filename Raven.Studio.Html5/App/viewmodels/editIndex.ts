@@ -15,7 +15,10 @@ import alertArgs = require("common/alertArgs");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
-
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
+import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
+import scriptedIndexModel = require("models/scriptedIndex");
+import autoCompleterSupport = require("common/autoCompleterSupport");
 
 class editIndex extends viewModelBase { 
 
@@ -36,6 +39,12 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
+
+    // Scripted Index Part
+    isScriptedIndexBundleActive = ko.observable<boolean>(false);
+    scriptedIndex = ko.observable<scriptedIndexModel>(null);
+    indexScript = ko.observable<string>("");
+    deleteScript = ko.observable<string>("");
     
     constructor() {
         super();
@@ -51,6 +60,26 @@ class editIndex extends viewModelBase {
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
         this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
+        
+        this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
+            if (active) {
+                this.fetchOrCreateScriptedIndex();
+            }
+        });
+
+        this.indexName.subscribe(name => {
+            if (this.scriptedIndex() !== null) {
+                this.scriptedIndex().indexName(name);
+            }
+        });
+
+        this.scriptedIndex.subscribe(scriptedIndex => {
+            this.indexScript = scriptedIndex.indexScript;
+            this.deleteScript = scriptedIndex.deleteScript;
+            this.initializeDirtyFlag();
+            this.editedIndex().name.valueHasMutated();
+        });
+
     }
     
     canActivate(indexToEditName: string) {
@@ -86,12 +115,16 @@ class editIndex extends viewModelBase {
         this.initializeDirtyFlag();
 
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
+
+        this.checkIfScriptedIndexBundleIsActive();
+
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
+        this.addScriptsLabelPopover();
     }
 
     private initializeDirtyFlag() {
@@ -121,9 +154,13 @@ class editIndex extends viewModelBase {
             checkedFieldsArray.push(sf.maxY);
         });
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
 
-        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && viewModelBase.dirtyFlag().isDirty());
+        checkedFieldsArray.push(this.indexScript);
+        checkedFieldsArray.push(this.deleteScript);
+
+        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
+
+        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.dirtyFlag().isDirty());
     }
 
     private editExistingIndex(unescapedIndexName: string) {
@@ -204,20 +241,24 @@ class editIndex extends viewModelBase {
         if (this.editedIndex().name()) {
             var index = this.editedIndex().toDto();
 
-            require(["commands/saveIndexDefinitionCommand"], saveIndexDefinitionCommand => {
-                var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
-                saveCommand
-                    .execute()
-                    .done(() => {
-                        this.initializeDirtyFlag();
-                        this.editedIndex().name.valueHasMutated();
+            require(["commands/saveIndexDefinitionCommand", "commands/saveScriptedIndexesCommand"], (saveIndexDefinitionCommand, saveScriptedIndexesCommand) => {
+                var commands = [];
 
-                        if (!this.isEditingExistingIndex()) {
-                            this.isEditingExistingIndex(true);
-                            this.editExistingIndex(index.Name);
-                        }
-                        this.updateUrl(index.Name);
-                    });
+                commands.push(new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase()).execute());
+                if (this.scriptedIndex() !== null) {
+                    commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
+                }
+
+                jQuery.when(commands).then(() => {
+                    this.initializeDirtyFlag();
+                    this.editedIndex().name.valueHasMutated();
+
+                    if (!this.isEditingExistingIndex()) {
+                        this.isEditingExistingIndex(true);
+                        this.editExistingIndex(index.Name);
+                    }
+                    this.updateUrl(index.Name);
+                });
             }); 
         }
     }
@@ -247,7 +288,7 @@ class editIndex extends viewModelBase {
                 var deleteViewModel = new deleteIndexesConfirm([indexName], db);
                 deleteViewModel.deleteTask.done(() => {
                     //prevent asking for unsaved changes
-                    viewModelBase.dirtyFlag().reset(); // Resync Changes
+                    this.dirtyFlag().reset(); // Resync Changes
                     router.navigate(appUrl.forIndexes(db));
                 });
 
@@ -363,6 +404,60 @@ class editIndex extends viewModelBase {
                     });
                 });
         });
+    }
+
+    checkIfScriptedIndexBundleIsActive() {
+        new getDatabaseSettingsCommand(this.activeDatabase())
+            .execute()
+            .done(document => {
+                var documentSettings = document.Settings["Raven/ActiveBundles"];
+                this.isScriptedIndexBundleActive(documentSettings.indexOf("ScriptedIndex") !== -1);
+            });
+    }
+
+    fetchOrCreateScriptedIndex() {
+        var self = this;
+        new getScriptedIndexesCommand(this.activeDatabase(), this.indexName())
+            .execute()
+            .done((scriptedIndexes: scriptedIndexModel[]) => {
+                if (scriptedIndexes.length > 0) {
+                    self.scriptedIndex(scriptedIndexes[0]);
+                } else {
+                    self.scriptedIndex(scriptedIndexModel.emptyForIndex(self.indexName()));
+                }
+
+                this.initializeDirtyFlag();
+            });
+    }
+
+    private addScriptsLabelPopover() {
+        var indexScriptpopOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span>(company == null) <span class="code-keyword">return</span>;<br/>company.Orders = { Count: <span class="code-keyword">this</span>.Count, Total: <span class="code-keyword">this</span>.Total };<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
+            selector: '.index-script-label',
+        };
+        $('#indexScriptPopover').popover(indexScriptpopOverSettings);
+        var deleteScriptPopOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
+            selector: '.delete-script-label',
+        };
+        $('#deleteScriptPopover').popover(deleteScriptPopOverSettings);
+    }
+
+    private scriptedIndexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+      var completions = [ 
+        { name: "LoadDocument", args: "id" },
+        { name: "PutDocument", args: "id, doc" },
+        { name: "DeleteDocument", args: "id" }
+      ];
+        var result = completions
+            .filter(entry => autoCompleterSupport.wordMatches(prefix, entry.name))
+            .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
+
+        callback(null, result);
     }
 }
 

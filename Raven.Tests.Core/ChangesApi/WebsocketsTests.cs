@@ -15,7 +15,7 @@ namespace Raven.Tests.Core.ChangesApi
         {
             using (var store = GetDocumentStore())
             {
-                using (var clientWebSocket = new ClientWebSocket())
+                using (var clientWebSocket = TryCreateClientWebSocket())
                 {
                     string url = store.Url.Replace("http:", "ws:");
                     url = url + "/changes/websocket?id=" + Guid.NewGuid();
@@ -30,5 +30,17 @@ namespace Raven.Tests.Core.ChangesApi
                 }
             }
         }
+
+	    private static ClientWebSocket TryCreateClientWebSocket()
+	    {
+		    try
+		    {
+			    return new ClientWebSocket();
+		    }
+		    catch (PlatformNotSupportedException)
+		    {
+			    throw new SkipException("Cannot run this test on this platform");
+		    }
+	    }
     }
 }

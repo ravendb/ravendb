@@ -50,7 +50,7 @@ class indexes extends viewModelBase {
 
         $.when(this.fetchIndexes(), this.fetchRecentQueries())
             .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ redirect: appUrl.forDatabases() }));
+            .fail(() => deferred.resolve({ can: false }));
 
         return deferred;
     }
@@ -103,7 +103,7 @@ class indexes extends viewModelBase {
     }
 
     putIndexIntoGroups(i: index) {
-        if (i.forEntityName.length === 0) {
+        if (!i.forEntityName || i.forEntityName.length === 0) {
             this.putIndexIntoGroupNamed(i, "Other");
         } else {
             i.forEntityName.forEach(e => this.putIndexIntoGroupNamed(i, e));

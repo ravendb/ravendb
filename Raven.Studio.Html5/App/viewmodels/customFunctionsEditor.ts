@@ -23,24 +23,29 @@ class customFunctionsEditor extends viewModelBase {
         this.documentText = ko.observable<string>("");
         this.fetchCustomFunctions();
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText]);
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText]);
         this.isSaveEnabled = ko.computed<boolean>(() => {
-            return viewModelBase.dirtyFlag().isDirty();
-            });
+            return this.dirtyFlag().isDirty();
+        });
     }
 
     attached() {
         $("#customFunctionsExample").popover({
             html: true,
             trigger: 'hover',
-            container: '.navbar',
+            container: '.popover-container-flag',
             content: 'Examples:<pre>exports.greet = <span class="code-keyword">function</span>(name) {<br/>    <span class="code-keyword">return</span> <span class="code-string">"Hello " + name + "!"</span>;<br/>}</pre>',
         });
     }
 
     compositionComplete() {
         super.compositionComplete();
-        this.docEditor = ko.utils.domData.get($(".custom-functions-form .editor")[0], "aceEditor");
+
+        var editorElement = $(".custom-functions-form .editor");
+        if (editorElement.length > 0) {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
         this.fetchCustomFunctions();
     }
 
@@ -48,8 +53,8 @@ class customFunctionsEditor extends viewModelBase {
         var fetchTask = new getCustomFunctionsCommand(this.activeDatabase()).execute();
         fetchTask.done((cf: customFunctions) => {
             this.documentText(cf.functions);
-            viewModelBase.dirtyFlag().reset();
-            });
+            this.dirtyFlag().reset();
+        });
     }
 
     saveChanges() {
@@ -66,7 +71,7 @@ class customFunctionsEditor extends viewModelBase {
                 Functions: this.documentText()
             });
             var saveTask = new saveCustomFunctionsCommand(this.activeDatabase(), cf).execute();
-            saveTask.done(() => viewModelBase.dirtyFlag().reset());
+            saveTask.done(() => this.dirtyFlag().reset());
         }
         else {
             ko.postbox.publish("Alert", new alertArgs(alertType.warning, "Errors n the functions file", "Please correct the errors in the file to save it."));

@@ -9,6 +9,6 @@
         <p class="message" data-bind="text: message"></p>
     </div>
     <div class="modal-footer" data-bind="foreach: options">
-        <button class="btn" data-bind="click: function () { $parent.selectOption($data); }, text: $data, css: { 'btn-primary': $index() == 0, autofocus: $index() == 0 }"></button>
+        <button class="btn" data-bind="click: function () { $parent.selectOption($data); }, text: $data, css: { 'btn-primary': $index() === ($parent.options.length -1), autofocus: $index() === ($parent.options.length -1) }"></button>
     </div>
 </div>

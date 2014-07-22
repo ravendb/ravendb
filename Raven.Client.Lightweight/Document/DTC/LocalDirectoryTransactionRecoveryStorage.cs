@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Transactions;
 using System.Collections.Generic;
 using System.IO;
 
@@ -43,6 +44,11 @@ namespace Raven.Client.Document.DTC
 		{
 			return File.Open(Path.Combine(path, name), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 		}
+
+	    public byte[] GetRecoveryInformation(PreparingEnlistment preparingEnlistment)
+	    {
+	        return preparingEnlistment.RecoveryInformation();
+	    }
 
 		public void Dispose()
 		{

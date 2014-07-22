@@ -144,16 +144,16 @@ namespace Raven.Storage.Esent.StorageActions
 
 			aggregator.Execute(() =>
 			{
-				if (Equals(dbid, JET_DBID.Nil) == false && session != null)
-					Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
+			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
+				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 			});
 
 			aggregator.Execute(() =>
 			{
-				if (sessionAndTransactionDisposer != null)
-					sessionAndTransactionDisposer();
+		    if (sessionAndTransactionDisposer != null)
+		        sessionAndTransactionDisposer();
 			});
-		    
+
 			aggregator.ThrowIfNeeded();
 		}
 
@@ -179,13 +179,19 @@ namespace Raven.Storage.Esent.StorageActions
 			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
 			if (sizeInBytes <= 0) // there has been an error
 			{
-				if (maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
+				if (maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+				{
+					logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 					PulseTransaction();
+				}
 				return;
 			}
 			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
-			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
+			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+			{
+				logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 				PulseTransaction();
+		}
 		}
 
 		public bool UsingLazyCommit { get; set; }
@@ -252,7 +258,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var identityValue = Api.RetrieveColumnAsInt32(session, Identity, tableColumnsCache.IdentityColumns["val"]);
 
 				results.Add(new KeyValuePair<string, long>(identityName, identityValue.Value));
-			}
+}
 			while (Api.TryMoveNext(session, Identity) && results.Count < take);
 
 			return results;

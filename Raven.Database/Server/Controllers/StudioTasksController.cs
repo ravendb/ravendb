@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -112,7 +113,6 @@ namespace Raven.Database.Server.Controllers
 			            ToStream = outputStream
 			        }, smugglerOptions).ConfigureAwait(false);
 			    }
-                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
 			    finally
 			    {
 			        outputStream.Close();
@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("dd MM yyyy HH-mm", CultureInfo.InvariantCulture))
+                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture))
             };
 			
 			return new CompletedTask<HttpResponseMessage>(result);
@@ -157,8 +157,9 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("studio-tasks/simulate-sql-replication")]
         [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
-        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, string sqlReplicationName)
+        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, bool performRolledBackTransaction)
         {
+
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (task == null)
 				return GetMessageWithObjectAsTask(new
@@ -167,9 +168,17 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.NotFound);
             try
             {
-                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplicationName);
+                Alert alert = null;
+                var sqlReplication =
+                    JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
 
-                return GetMessageWithObjectAsTask(results.ToList());
+                // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
+                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
+
+                return GetMessageWithObjectAsTask(new {
+                    Results = results,
+                    LastAlert = alert
+                });
             }
             catch (Exception ex)
             {
@@ -178,6 +187,26 @@ namespace Raven.Database.Server.Controllers
                         Error = "Executeion failed",
                         Exception = ex
                     }, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/test-sql-replication-connection")]
+        [Route("databases/{databaseName}/studio-tasks/test-sql-replication-connection")]
+        public Task<HttpResponseMessage> TestSqlReplicationConnection(string factoryName, string connectionString)
+        {
+            try
+            {
+                RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
+                return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                return GetMessageWithObjectAsTask(new
+                {
+                    Error = "Connection failed",
+                    Exception = ex
+                }, HttpStatusCode.BadRequest);
             }
         }
 

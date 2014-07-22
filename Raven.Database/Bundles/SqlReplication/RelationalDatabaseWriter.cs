@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
@@ -41,6 +43,15 @@ namespace Raven.Database.Bundles.SqlReplication
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		bool hadErrors;
+
+        public static void TestConnection(string factoryName, string connectionString)
+        {
+            var providerFactory = DbProviderFactories.GetFactory(factoryName);
+            var connection = providerFactory.CreateConnection();
+            connection.ConnectionString = connectionString;
+            connection.Open();
+            connection.Close();
+        }
 
 		public RelationalDatabaseWriter( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
 		{
@@ -153,13 +164,74 @@ namespace Raven.Database.Bundles.SqlReplication
 			return hadErrors == false;
 		}
 
+        public class TableQuerySummary
+        {
+            public string TableName { get; set; }
+            public CommandData[] Commands { get; set; } 
+
+            
+            public class CommandData
+            {
+                public string CommandText { get; set; }
+                public KeyValuePair<string,object>[]  Params { get; set; }
+            }
+
+            public static TableQuerySummary GenerateSummaryFromCommands(string tableName, IEnumerable<DbCommand> commands)
+            {
+                var tableQuerySummary = new TableQuerySummary();
+                tableQuerySummary.TableName = tableName;
+                tableQuerySummary.Commands  =
+                    commands
+                        .Select(x => new CommandData()
+                        {
+                            CommandText = x.CommandText,
+                            Params = x.Parameters.Cast<DbParameter>().Select(y=> new KeyValuePair<string,object>(y.ParameterName,y.Value)).ToArray()
+                        }).ToArray();
+                
+                return tableQuerySummary;
+            }
+        }
+
+        public IEnumerable<TableQuerySummary> RolledBackExecute(ConversionScriptResult scriptResult)
+        {
+            var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList();
+
+            // first, delete all the rows that might already exist there
+            foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
+            {
+                var commands = DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
+                    identifiers,true);
+                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
+
+            }
+
+            foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
+            {
+                List<ItemToReplicate> dataForTable;
+                if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
+                    continue;
+
+                var commands = InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, true);
+
+                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
+            }
+
+            Rollback();
+        }
+
 		public bool Commit()
 		{
 			tx.Commit();
 			return true;
 		}
 
-		private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable)
+        public bool Rollback()
+        {
+            tx.Rollback();
+            return true;
+        }
+
+        private IEnumerable<DbCommand> InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, bool exportCommands = false)
 		{
 			foreach (var itemToReplicate in dataForTable)
 			{
@@ -211,6 +283,11 @@ namespace Raven.Database.Bundles.SqlReplication
                     }
 
 					cmd.CommandText = sb.ToString();
+
+				    if (exportCommands)
+				    {
+				        yield return cmd;
+				    }
 					try
 					{
                         cmd.ExecuteNonQuery(); ;
@@ -229,7 +306,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 
 
-	    public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
+	    public IEnumerable<DbCommand> DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, bool exportCommands=false)
 		{
 			const int maxParams = 1000;
 			using (var cmd = connection.CreateCommand())
@@ -270,6 +347,11 @@ namespace Raven.Database.Bundles.SqlReplication
                         sb.Append(" OPTION(RECOMPILE)");
 				    }
 					cmd.CommandText = sb.ToString();
+
+				    if (exportCommands)
+				    {
+				        yield return cmd;
+				    }
 
 					try
 					{

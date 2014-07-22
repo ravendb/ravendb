@@ -34,7 +34,6 @@ import transformerType = require("models/transformer");
 import transformerQueryType = require("models/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand");
 
-
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
@@ -77,16 +76,6 @@ class query extends viewModelBase {
 
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
-
-    editItemSubscription = ko.postbox.subscribe("EditItem", (itemNumber: number) => {
-        //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
-        var queriess = this.recentQueries();
-        var recentq = this.recentQueries()[0];
-        var sorts = recentq.Sorts
-            .join(',');
-        //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
-        router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
-    });
 
     static containerSelector = "#queryContainer";
 
@@ -162,9 +151,20 @@ class query extends viewModelBase {
         this.focusOnQuery();
     }
 
-    detached() {
-        this.editItemSubscription.dispose();
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("EditItem", (itemNumber: number) => {
+                //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
+                var queriess = this.recentQueries();
+                var recentq = this.recentQueries()[0];
+                var sorts = recentq.Sorts
+                    .join(',');
+                //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
+                router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
+            })
+        ];
     }
+
     onIndexChanged(newIndexName: string) {
         var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
         this.contextName(command.docName);
@@ -441,7 +441,10 @@ class query extends viewModelBase {
             var preppedDoc = new document(recentQueriesDoc);
             new saveDocumentCommand(getStoredQueriesCommand.storedQueryDocId, preppedDoc, this.activeDatabase(), false)
                 .execute()
-                .done((result: { Key: string; ETag: string; }) => recentQueriesDoc["@metadata"]["@etag"] = result.ETag);
+                .done((saveResult: bulkDocumentDto[]) => {
+                    var savedDocumentDto: bulkDocumentDto = saveResult[0];
+                    recentQueriesDoc["@metadata"]["@etag"] = savedDocumentDto.Etag;
+                });
         }
     }
 

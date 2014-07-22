@@ -130,7 +130,7 @@ namespace Raven.Server
 		private void AcceptPreShutdown()
 		{
 			if (Environment.OSVersion.Version.Major == 5)
-				return; // XP & 2003 does nto support this.
+				return; // XP & 2003 does not support this.
 
 			// http://www.sivachandran.in/2012/03/handling-pre-shutdown-notification-in-c.html
 			FieldInfo acceptedCommandsFieldInfo = typeof (ServiceBase).GetField("acceptedCommands", BindingFlags.Instance | BindingFlags.NonPublic);

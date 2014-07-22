@@ -21,7 +21,6 @@ import getOperationStatusCommand = require('commands/getOperationStatusCommand')
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import changesApi = require("common/changesApi");
 
 class documents extends viewModelBase {
 
@@ -101,8 +100,6 @@ class documents extends viewModelBase {
             }
             return null;
         });
-
-        ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db));
     }
 
     activate(args) {
@@ -141,12 +138,20 @@ class documents extends viewModelBase {
         ];
     }
 
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db))
+        ];
+    }
+
     private refreshCollections(): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
 
         this.fetchCollections(db).done(results => {
             this.updateCollections(results, db);
+            //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
+
             deferred.resolve();
         });
 
@@ -271,22 +276,26 @@ class documents extends viewModelBase {
         }
     }
 
+    private refreshCollectionsData() {
+        var selectedCollection: collection = this.selectedCollection();
+
+        this.collections().forEach((collection: collection) => {
+            if (collection.name == selectedCollection.name) {
+                var docsGrid = this.getDocumentsGrid();
+                if (!!docsGrid) {
+                    docsGrid.refreshCollectionData();
+                }
+            } else {
+                var pagedList = collection.getDocuments();
+                pagedList.invalidateCache();
+            }
+        });
+    }
+
     private reloadDocumentsData(db: database) {
         if (db.name == this.activeDatabase().name) {
             this.refreshCollections().done(() => {
-                var selectedCollection: collection = this.selectedCollection();
-
-                this.collections().forEach((collection: collection) => {
-                    if (collection.name == selectedCollection.name) {
-                        var docsGrid = this.getDocumentsGrid();
-                        if (!!docsGrid) {
-                            docsGrid.refreshCollectionData();
-                        }
-                    } else {
-                        var pagedList = collection.getDocuments();
-                        pagedList.invalidateCache();
-                    }
-                });
+                this.refreshCollectionsData();
             });
         }
     }
