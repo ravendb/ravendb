@@ -91,6 +91,7 @@ namespace Owin
             }
 
             var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+	        accept = null;
             if (accept == null)
             {
                 // Not a websocket request
