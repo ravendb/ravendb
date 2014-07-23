@@ -54,7 +54,7 @@ class changesApi {
         else {
             //The browser doesn't support nor websocket nor eventsource
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
-            //Anyway, at this point an warning message was already shown. 
+            //Anyway, at this point a warning message was already shown. 
             this.connectToChangesApiTask.reject();
         }
     }
