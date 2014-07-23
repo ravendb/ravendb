@@ -284,7 +284,8 @@ class editDocument extends viewModelBase {
             } else {
                 this.documentText(this.escapeNewlinesInTextFields(this.documentText()));
                 this.metadataText(this.escapeNewlinesInTextFields(this.metadataText()));
-                this.docEditor.getSession().setMode('ace/mode/csharp');
+                this.docEditor.getSession().setMode('ace/mode/json');
+                this.formatDocument();
             }
         });
     }
@@ -339,7 +340,7 @@ class editDocument extends viewModelBase {
     escapeNewlinesInTextFields(str: string) :any {
         var AceDocumentClass = require("ace/document").Document;
         var AceEditSessionClass = require("ace/edit_session").EditSession;
-        var AceJSONMode = require("ace/mode/json").Mode;
+        var AceJSONMode = require("ace/mode/json_newline_friendly").Mode;
         var documentTextAceDocument = new AceDocumentClass(str);
         var jsonMode = new AceJSONMode();
         var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
@@ -407,9 +408,6 @@ class editDocument extends viewModelBase {
 
         var message = "";
         try {
-        
-
-
 
         /*var updatedDto = JSON.parse(this.documentText());
             var meta = JSON.parse(this.metadataText());*/
@@ -501,7 +499,7 @@ class editDocument extends viewModelBase {
     stringify(obj: any) {
         
         var prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing).replace(/(\\n|\\r\\n)/g, '\r\n');
+        return JSON.stringify(obj, null, prettifySpacing);
         
     }
     
