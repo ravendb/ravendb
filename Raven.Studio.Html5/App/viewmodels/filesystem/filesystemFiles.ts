@@ -19,7 +19,7 @@ import uploadQueueHelper = require("common/uploadQueueHelper");
 
 class filesystemFiles extends viewModelBase {
 
-   
+    appUrls: computedAppUrls;
     fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
@@ -55,6 +55,8 @@ class filesystemFiles extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 

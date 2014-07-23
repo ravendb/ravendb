@@ -2,12 +2,12 @@
     <li>
         <h3>
             <a href="#filesystems">
-                Files
+                File Systems
             </a>
         </h3>
     </li>
     <li class="active" data-bind="with: activeFilesystem">
-        <span data-bind="text: name"></span>
+        <a data-bind="text: name, attr: { href: $parent.appUrls.filesystemFiles }"></a>
     </li>
     <li class="active">
         <span>Synchronization</span>

@@ -21,6 +21,8 @@ import changesApi = require("common/changesApi");
 
 class status extends viewModelBase {
 
+    appUrls: computedAppUrls;
+
     activity = ko.observableArray<synchronizationDetail>();
     outgoingActivity = ko.computed(() => {
         return ko.utils.arrayFilter(this.activity(), (item) => { return item.Direction === synchronizationDirection.Outgoing; });
@@ -38,7 +40,7 @@ class status extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-
+        this.appUrls = appUrl.forCurrentFilesystem();
 
         new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
             .done(x => this.activity(x));
