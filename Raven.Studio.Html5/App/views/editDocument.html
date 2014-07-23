@@ -39,7 +39,7 @@
             <div class="col-md-7">
                 <div class="row" data-bind="with: metadata">
                     <div class="col-md-12">
-                        <input type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="value: $root.userSpecifiedId, valueUpdate: 'afterkeyup', attr: { disabled: $root.isBusy }" />
+                        <input id="documentName" type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="value: $root.userSpecifiedId, valueUpdate: 'afterkeyup', attr: { disabled: $root.isBusy }" />
                     </div>
                 </div>
                 <br />
@@ -71,7 +71,7 @@
                         <span class="col-md-7" data-bind="text: lastModified, attr: {title:lastModified}"></span>
                     </div>
                     <div class="row">
-                        <label class="col-md-5">Size in Kb</label>
+                        <label class="col-md-5">Size in KB</label>
                         <span class="col-md-7" data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span>
                         
                     </div>

@@ -46,6 +46,7 @@ class editDocument extends viewModelBase {
     queryResultList = ko.observable<pagedList>();
     currentQueriedItemIndex:number;
     docEditor: AceAjax.Editor;
+    documentNameElement: JQuery;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
     relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
@@ -282,6 +283,8 @@ class editDocument extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
+        this.documentNameElement = $("#documentName");
+        
         this.focusOnEditor();
     }
 
@@ -323,31 +326,35 @@ class editDocument extends viewModelBase {
 
     saveDocument() {
         this.isInDocMode(true);
-        var currentDocumentId = this.userSpecifiedId();
+        var currentDocumentId: string = this.userSpecifiedId();
         if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
             //the name of the document was changed and we have to save it as a new one
             this.isCreatingNewDocument(true);
         }
 
         var message = "";
-        try {
-            var updatedDto = JSON.parse(this.documentText());
-            var meta = JSON.parse(this.metadataText());
-        }
-        catch (e) {
-            if (updatedDto == undefined) {
-                message = "The data isn't a legal JSON expression!";
-                this.isEditingMetadata(false);
+
+        if (currentDocumentId.indexOf("\\") != -1) {
+            message = "Document name cannot contain '\\'";
+            this.documentNameElement.focus();
+        } else {
+            try {
+                var updatedDto = JSON.parse(this.documentText());
+                var meta = JSON.parse(this.metadataText());
+            } catch (e) {
+                if (updatedDto == undefined) {
+                    message = "The data isn't a legal JSON expression!";
+                    this.isEditingMetadata(false);
+                } else if (meta == undefined) {
+                    message = "The metadata isn't a legal JSON expression!";
+                    this.isEditingMetadata(true);
+                }
+                this.focusOnEditor();
             }
-            else if (meta == undefined) {
-                message = "The metadata isn't a legal JSON expression!";
-                this.isEditingMetadata(true);
-            }
-            this.docEditor.focus();
-            this.reportError(message, null, false);
         }
-        
+
         if (message != "") {
+            this.reportError(message, null, false);
             return;
         }
 
