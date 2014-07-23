@@ -1,36 +1,39 @@
-﻿<div class="filesystems-page">
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#filesystems">
+                Files
+            </a>
+        </h3>
+    </li>
 
-    <ul class="breadcrumb">
-        <li>
-            <h3>
-                <a href="#filesystems">
-                    Filesystems
-                </a>
-            </h3>
-        </li>
-        <li data-bind="with: activeFilesystem">
-            <a data-bind="text: name"></a>
-        </li>
-        <li>
-            <a>Files</a>
-        </li>
-    </ul>
+    <li class="active" data-bind="with: activeFilesystem">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.filesystemFiles }"></a>
+    </li>
+    <li class="active">
+        <span>All</span>
+    </li>
+</ul>
+
+<div class="filesystems-page"> 
 
     <div class="row">
         <div class="col-md-2">
             <div class="btn-toolbar" role="toolbar">
+
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary use-bootstrap-tooltip" accesskey="n" data-bind="click: createFolder" title="Create folder">
                         <span>New Folder</span>
                     </button>
                 </div>
-                <div class="btn-group">
 
+                <div class="btn-group">
                     <span class="btn btn-primary use-bootstrap-tooltip btn-file" title="Upload files">
                         <i class="fa fa-upload"></i>
                         <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: uploadFiles, fileUpload: { files: uploadFiles, directory: selectedFolder, uploads: uploadQueue, before: expandUploadQueuePanel, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
                     </span>
                 </div>
+
             </div>
             <span><br/></span>
             <div id="filesTree" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" />

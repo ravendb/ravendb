@@ -3,6 +3,22 @@
         <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
     </div>-->
 
+<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#filesystems">
+                Files
+            </a>
+        </h3>
+    </li>
+    <li class="active" data-bind="with: activeFilesystem">
+        <span data-bind="text: name"></span>
+    </li>
+    <li class="active">
+        <span>Settings</span>
+    </li>
+</ul>
+
 <div class="filesystems-page">
 
     <div class="panel panel-default">
@@ -12,7 +28,7 @@
                     <div class="input-group col-lg-12">
                         <input type="text" class="form-control" data-bind="value: searchText" placeholder="E.g. __fileName:MyFile* AND __directory:/subfolder" />
                         <span class="input-group-addon" style="width: 30px">
-                            <a href="#" data-bind="click: clear" ><i class="fa fa-times"></i></a>
+                            <a href="#" data-bind="click: clear"><i class="fa fa-times"></i></a>
                         </span>
                         <span class="input-group-addon" style="width: 30px">
                             <a href="#" data-bind="click: search"><i class="fa fa-search"></i></a>
@@ -33,8 +49,12 @@
                 </div>
             </div>
         </div>
+
+
         <div class="panel-body">
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
         </div>
+
     </div>
+
 </div>

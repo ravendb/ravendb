@@ -1,16 +1,16 @@
 ﻿<ul class="breadcrumb">
     <li>
         <h3>
-            <a href="#databases">
-                Databases
+            <a href="#filesystems">
+                Files
             </a>
         </h3>
     </li>
-    <li data-bind="with: activeFilesystem">
-        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    <li class="active" data-bind="with: activeFilesystem">
+        <span data-bind="text: name"></span>
     </li>
     <li class="active">
-        <span data-bind="text: currentRouteTitle"></span>
+        <span>Synchronization</span>
     </li>
 </ul>
 

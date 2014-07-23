@@ -1,21 +1,20 @@
-﻿<div class="filesystems-page">
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#filesystems">
+                Files
+            </a>
+        </h3>
+    </li>
+    <li class="active" data-bind="with: activeFilesystem">
+        <span data-bind="text: name"></span>
+    </li>
+    <li class="active">
+        <span>Settings</span>
+    </li>
+</ul>
 
-    <ul class="breadcrumb">
-        <li>
-            <h3>
-                <a href="#filesystems">
-                    Files
-                </a>
-            </h3>
-        </li>
-        <li data-bind="with: activeFilesystem">
-            <a data-bind="text: name"></a>
-        </li>
-        <li>
-            <a>Status</a>
-        </li>
-    </ul>
-
+<div class="filesystems-page">
      <button class="btn btn-primary" data-bind="click: synchronizeNow" title="Sync Now (Alt+S)" accesskey="S"><i class="fa fa-refresh"></i> Sync Now</button>
     
     <br />
