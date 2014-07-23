@@ -7,21 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using System.Threading;using Raven.Abstractions.Data;using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
-using Raven.Database;
-using Raven.Database.Extensions;using Raven.Server;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using Xunit;
+using Raven.Server;
+using Raven.Database;
+using Raven.Database.Server;
 
 namespace Raven.Tests.Core
 {
