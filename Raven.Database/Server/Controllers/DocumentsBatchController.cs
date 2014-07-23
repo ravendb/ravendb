@@ -7,9 +7,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -25,7 +28,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/bulk_docs")]
 		public async Task<HttpResponseMessage> BulkPost()
 		{
-            using (var cts = new CancellationTokenSource())
+		    var cts = new CancellationTokenSource();
             using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var jsonCommandArray = await ReadJsonArrayAsync();
@@ -64,7 +67,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public HttpResponseMessage BulkDelete(string id)
 		{
-            using (var cts = new CancellationTokenSource())
+		    var cts = new CancellationTokenSource();
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
 	            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
@@ -75,8 +78,8 @@ namespace Raven.Database.Server.Controllers
 					throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
 
 
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
-                return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id);
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+                return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, cts);
             }
 		}
 
@@ -85,13 +88,13 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public async Task<HttpResponseMessage> BulkPatch(string id)
 		{
-            using (var cts = new CancellationTokenSource())
+		    var cts = new CancellationTokenSource();
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 var patchRequestJson = await ReadJsonArrayAsync();
                 var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-                return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id);
+                return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id, cts);
             }
 		}
 
@@ -100,17 +103,17 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public async Task<HttpResponseMessage> BulkEval(string id)
 		{
-            using (var cts = new CancellationTokenSource())
+		    var cts = new CancellationTokenSource();
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
                 var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-                return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale), id);
+                return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale), id, cts);
             }
 		}
 
-		private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, bool, RavenJArray> batchOperation, string index)
+		private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, bool, RavenJArray> batchOperation, string index, CancellationTokenSource cts)
 		{
 			if (string.IsNullOrEmpty(index))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -124,15 +127,28 @@ namespace Raven.Database.Server.Controllers
 
 			var task = Task.Factory.StartNew(() =>
 			{
-				var array = batchOperation(index, indexQuery, allowStale);
-				status.State = array;
-				status.Completed = true;
+			    try
+			    {
 
-				//TODO: log
+			        var array = batchOperation(index, indexQuery, allowStale);
+			        status.State = array;
+			        status.Completed = true;
+			    }
+			    finally
+			    {
+			        cts.Dispose();
+			    }
+
+			    //TODO: log
 				//context.Log(log => log.Debug("\tBatch Operation worked on {0:#,#;;0} documents in {1}, task #: {2}", array.Length, sp.Elapsed, id));
 			});
 
-			Database.Tasks.AddTask(task, status, out id);
+			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+			                                     {
+			                                         StartTime = SystemTime.UtcNow,
+                                                     TaskType = TaskActions.PendingTaskType.IndexBulkOperation,
+                                                     Payload = index
+                                                 }, out id, cts);
 
 			return GetMessageWithObject(new { OperationId = id });
 		}

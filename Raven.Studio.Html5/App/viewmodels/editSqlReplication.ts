@@ -203,7 +203,8 @@ class editSqlReplication extends viewModelBase {
     
     createSqlReplication(): sqlReplication {
         var newSqlReplication: sqlReplication = sqlReplication.empty();
-        newSqlReplication.collections = this.collections;
+        newSqlReplication.collections(this.collections());
+        this.collections.subscribe(value => newSqlReplication.collections(value));
         this.subscribeToSqlReplicationName(newSqlReplication);
         return newSqlReplication;
     }

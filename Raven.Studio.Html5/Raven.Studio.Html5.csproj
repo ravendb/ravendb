@@ -104,7 +104,6 @@
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStoredQueriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />
@@ -304,6 +303,9 @@
     <TypeScriptCompile Include="App\commands\queryIndexDebugAfterReduceCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationTopology.ts" />
+    <TypeScriptCompile Include="App\commands\getRunningTasksCommand.ts" />
+    <TypeScriptCompile Include="App\commands\killRunningTaskCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -352,10 +354,12 @@
     <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\runningTasks.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\disableDatabaseToggleConfirm.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />

@@ -29,7 +29,7 @@ import nv = require('nvd3');
 
 class visualizer extends viewModelBase {
 
-    indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
+    indexes = ko.observableArray<indexDataDto>();
     indexName = ko.observable("Index Name");
 
     onlineMode = ko.observable(true);
@@ -195,6 +195,8 @@ class visualizer extends viewModelBase {
     }
 
     detached() {
+        super.detached();
+
         $("#visualizerContainer").off('DynamicHeightSet');
         nv.tooltip.cleanup();
     }

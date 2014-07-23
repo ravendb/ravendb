@@ -20,6 +20,8 @@ class statistics extends viewModelBase {
     }
 
     detached() {
+        super.detached();
+
         if (this.statsSubscription != null) {
             this.statsSubscription.dispose();
         }

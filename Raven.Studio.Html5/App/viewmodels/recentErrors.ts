@@ -30,6 +30,7 @@ class recentErrors extends dialogViewModelBase {
     }
 
     detached() {
+        super.detached();
         this.unregisterResizing();
     }
 

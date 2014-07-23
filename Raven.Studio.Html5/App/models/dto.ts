@@ -392,8 +392,9 @@ interface storedQueryDto {
     Hash: number;
 }
 
-interface storedQueryContainerDto extends documentDto {
-    Queries: storedQueryDto[];
+interface indexDataDto {
+    name: string;
+    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {
@@ -674,7 +675,9 @@ interface statusDebugQueriesGroupDto {
 
 interface statusDebugQueriesQueryDto {
     StartTime: string;
-    QueryInfo: KnockoutObservable<any>;
+    QueryInfo: string;
+    QueryId: number;
+    Duration: string;
 }
 
 interface taskMetadataDto {
@@ -947,4 +950,14 @@ interface replicationTopologyLinkDto extends stringLinkDto {
     right: boolean;
     toRightPayload?: replicationTopologyConnectionDto;
     toLeftPayload?: replicationTopologyConnectionDto;
+}
+
+interface runningTaskDto {
+    Id: number;
+    TaskStatus: string;
+    Exception: string;
+    ExceptionText: string;
+    Payload: string;
+    TaskType: string;
+    StartTime: string;
 }

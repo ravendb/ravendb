@@ -4,6 +4,7 @@ class extensions {
         extensions.installFunctionExtensions();
         extensions.installObservableExtensions();
         extensions.installStringExtension();
+        extensions.installStorageExtension();
         extensions.installBindingHandlers();
     }
 
@@ -252,13 +253,24 @@ class extensions {
         }
     }
 
+    private static installStorageExtension() {
+        Storage.prototype.getObject = function (key) {
+            var value = this.getItem(key);
+            return value && JSON.parse(value);
+        }
+
+        Storage.prototype.setObject = function (key, value) {
+            this.setItem(key, ko.toJSON(value));
+        }
+    }
+
     private static installFunctionExtensions() {
         // Function.memoize
         var functionPrototype: any = Function.prototype;
         functionPrototype.memoize = function (thisVal) {
-            var self = this
+            var self = this;
             var cache = {};
-            return function (arg) {
+            return (arg) => {
                 if (arg in cache) {
                     return cache[arg];
                 } else {
@@ -286,6 +298,8 @@ class extensions {
             update: ko.bindingHandlers.value.update
         };
     }
+
+
 }
 
 export = extensions;
