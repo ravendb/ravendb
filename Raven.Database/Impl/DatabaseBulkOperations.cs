@@ -21,14 +21,14 @@ namespace Raven.Database.Impl
 	{
 		private readonly DocumentDatabase database;
 		private readonly TransactionInformation transactionInformation;
-		private readonly CancellationToken token;
+		private readonly CancellationTokenSource tokenSource;
 		private readonly CancellationTimeout timeout;
 
-		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationToken token, CancellationTimeout timeout)
+		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationTokenSource tokenSource, CancellationTimeout timeout)
 		{
 			this.database = database;
 			this.transactionInformation = transactionInformation;
-			this.token = token;
+			this.tokenSource = tokenSource;
 			this.timeout = timeout;
 		}
 
@@ -78,13 +78,15 @@ namespace Raven.Database.Impl
 			};
 
 			bool stale;
-			var queryResults = database.Queries.QueryDocumentIds(index, bulkIndexQuery, token, out stale);
+            var queryResults = database.Queries.QueryDocumentIds(index, bulkIndexQuery, tokenSource, out stale);
 
 			if (stale && allowStale == false)
 			{
 				throw new InvalidOperationException(
 						"Bulk operation cancelled because the index is stale and allowStale is false");
 			}
+
+		    var token = tokenSource.Token;
 
 			const int batchSize = 1024;
 			using (var enumerator = queryResults.GetEnumerator())

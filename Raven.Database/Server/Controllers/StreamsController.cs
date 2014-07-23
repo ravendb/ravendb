@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 
 				try
 				{
-					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
+					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
 					queryOp.Init();
 					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
 						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
