@@ -228,11 +228,13 @@ namespace Raven.Database.Actions
 
             public void Execute(Action<RavenJObject> onResult)
             {
+                var token = cancellationTokenSource.Token;
+
                 using (new CurrentTransformationScope(database, docRetriever))
                 {
                     foreach (var result in results)
                     {
-                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        token.ThrowIfCancellationRequested();
                         onResult(result);
                     }
                     if (transformerErrors.Count > 0)
