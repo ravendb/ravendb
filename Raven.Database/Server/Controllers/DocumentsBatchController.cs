@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 					throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
 
 
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, cts);
             }
 		}
@@ -91,7 +91,7 @@ namespace Raven.Database.Server.Controllers
 		    var cts = new CancellationTokenSource();
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 var patchRequestJson = await ReadJsonArrayAsync();
                 var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
                 return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id, cts);
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Controllers
 		    var cts = new CancellationTokenSource();
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
                 var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
                 return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale), id, cts);

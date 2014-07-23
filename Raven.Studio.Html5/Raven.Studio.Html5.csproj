@@ -305,6 +305,7 @@
     <TypeScriptCompile Include="App\commands\getReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\getRunningTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\killRunningTaskCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />

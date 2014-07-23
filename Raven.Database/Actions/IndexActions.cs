@@ -343,7 +343,7 @@ namespace Raven.Database.Actions
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query
-                }, actions, linked.Token)
+                }, actions, linked)
                 {
                     ShouldSkipDuplicateChecking = true
                 })

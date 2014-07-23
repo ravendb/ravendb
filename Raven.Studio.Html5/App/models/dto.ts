@@ -675,7 +675,9 @@ interface statusDebugQueriesGroupDto {
 
 interface statusDebugQueriesQueryDto {
     StartTime: string;
-    QueryInfo: KnockoutObservable<any>;
+    QueryInfo: string;
+    QueryId: number;
+    Duration: string;
 }
 
 interface taskMetadataDto {
