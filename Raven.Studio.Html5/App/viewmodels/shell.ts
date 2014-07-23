@@ -220,6 +220,20 @@ class shell extends viewModelBase {
             if (val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
+
+        var self = this;
+        sys.error = function (e) {
+            //log the error
+            console.debug(e);
+            //redirect to a 404 view if you couldn't load module
+            if (e.indexOf("Failed to load routed module") > -1) {
+                //router.navigateBack();
+                NProgress.done();
+                router.navigate(appUrl.forDatabases());
+                //location.href = '#databases';
+            }
+            //throw e;
+        };
     }
 
     setupApiKey() {
