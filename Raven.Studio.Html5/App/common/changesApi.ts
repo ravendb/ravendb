@@ -25,7 +25,7 @@ class changesApi {
     private normalClosureCode = 1000;
     private normalClosureMessage = "CLOSE_NORMAL";
     static messageWasShownOnce: boolean = false;
-    static successfullyConnectedOnce: boolean = false;
+    private successfullyConnectedOnce: boolean = false;
     private sentMessages = [];
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
@@ -97,7 +97,7 @@ class changesApi {
         this.webSocket.onopen = () => {
             console.log("Connected to WebSocket changes API (rs = " + this.rs.name + ")");
             this.reconnect();
-            changesApi.successfullyConnectedOnce = true;
+            this.successfullyConnectedOnce = true;
             connectionOpened = true;
             this.connectToChangesApiTask.resolve();
         }
@@ -121,14 +121,14 @@ class changesApi {
         this.eventSource.onopen = () => {
             console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
             this.reconnect();
-            changesApi.successfullyConnectedOnce = true;
+            this.successfullyConnectedOnce = true;
             connectionOpened = true;
             this.connectToChangesApiTask.resolve();
         }
     }
 
     private reconnect() {
-        if (changesApi.successfullyConnectedOnce) {
+        if (this.successfullyConnectedOnce) {
             //send changes connection args after reconnecting
             this.sentMessages.forEach(args => this.send(args.command, args.value, false));
             
