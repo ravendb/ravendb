@@ -156,7 +156,7 @@ class changesApi {
             this.connect(this.connectEventSource);
             warningMessage = "Your server doesn't support the WebSocket protocol!";
             details = "EventSource API is going to be used instead. However, multi tab usage isn't supported. " +
-                "WebSockets protocol are only supported on servers running on Windows Server 2012 and equivalent.";
+                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent.";
         } else {
             this.connectToChangesApiTask.reject();
             warningMessage = "Changes API is Disabled!";
