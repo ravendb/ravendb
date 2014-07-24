@@ -19,20 +19,26 @@
 
     <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'conflictsCollapse' }">
         <div class="panel-body">
+
+            <div class="alert alert-warning" data-bind="visible: conflicts().length === 0">
+                You've got no conflicts.
+            </div>
+
             <table class="table-no-borders">
                 <tbody data-bind="foreach: conflicts">
                     <tr>
                         <td style="padding:0px">
-                            <h5 class="pull-left">                              
-                                    <a >
-                                        <input type="checkbox" data-bind="attr: { value: fileName }, checked: $root.selectedConflicts" />
-                                        <span data-bind="text: fileName"></span>
-                                    </a>
+                            <h5 class="pull-left">
+                                <a>
+                                    <input type="checkbox" data-bind="attr: { value: fileName }, checked: $root.selectedConflicts" />
+                                    <span data-bind="text: fileName"></span>
+                                </a>
                             </h5>
                         </td>
                     </tr>
                 </tbody>
             </table>
+
         </div>
     </div>
 </div>

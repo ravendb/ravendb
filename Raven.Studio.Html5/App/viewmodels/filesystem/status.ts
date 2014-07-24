@@ -23,6 +23,7 @@ class status extends viewModelBase {
 
     pendingActivity = ko.observableArray<synchronizationDetail>();
     activeActivity = ko.observableArray<synchronizationDetail>();
+    appUrls: computedAppUrls;
 
     outgoingActivity = ko.computed(() => {
         var pendingOutgoing = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
@@ -49,6 +50,8 @@ class status extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
 
         new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
             .done((x: synchronizationDetail[]) => {
