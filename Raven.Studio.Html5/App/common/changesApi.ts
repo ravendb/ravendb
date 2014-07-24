@@ -25,6 +25,7 @@ class changesApi {
     private normalClosureCode = 1000;
     private normalClosureMessage = "CLOSE_NORMAL";
     static messageWasShownOnce: boolean = false;
+    private successfullyConnectedOnce: boolean = false;
     private sentMessages = [];
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
@@ -52,8 +53,8 @@ class changesApi {
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
-            setTimeout(() => this.showWarning("Nor WebSocket nor EventSource are supported by your Browser! " +
-                "Changes API is disabled. Please use a modern browser!"), 700);
+            //or we are in IE10 or IE11 and the server doesn't support WebSockets.
+            //Anyway, at this point a warning message was already shown. 
             this.connectToChangesApiTask.reject();
         }
     }
@@ -66,22 +67,22 @@ class changesApi {
                 var token = tokenObject.Token;
                 var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss;
 
-                action.call(this, connectionString, needToReconnect);
+                action.call(this, connectionString);
             })
             .fail(() => {
                 // Connection has closed so try to reconnect every 3 seconds.
-                setTimeout(() => this.connect(action, needToReconnect), 3 * 1000);
+                setTimeout(() => this.connect(action), 3 * 1000);
             });
     }
 
-    private connectWebSocket(connectionString: string, needToReconnect: boolean) {
-        var host = window.location.host;
+    private connectWebSocket(connectionString: string) {
+        var connectionOpened: boolean = false;
 
-        this.webSocket = new WebSocket('ws://' + host + this.resourcePath + '/changes/websocket?' + connectionString);
+        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
-            if (needToReconnect == false) {
+            if (connectionOpened == false) {
                 this.serverNotSupportingWebsocketsErrorHandler();
             } else {
                 this.onError(e);
@@ -90,47 +91,44 @@ class changesApi {
         this.webSocket.onclose = (e: CloseEvent) => {
             if (this.isCleanClose == false && changesApi.isServerSupportingWebSockets) {
                 // Connection has closed uncleanly, so try to reconnect.
-                this.connect(this.connectWebSocket, needToReconnect);
+                this.connect(this.connectWebSocket);
             }
         }
         this.webSocket.onopen = () => {
             console.log("Connected to WebSocket changes API (rs = " + this.rs.name + ")");
-            this.reconnect(needToReconnect);
-            needToReconnect = true;
+            this.reconnect();
+            this.successfullyConnectedOnce = true;
+            connectionOpened = true;
             this.connectToChangesApiTask.resolve();
         }
     }
 
-    private connectEventSource(connectionString: string, needToReconnect: boolean) {
+    private connectEventSource(connectionString: string) {
+        var connectionOpened: boolean = false;
+
         this.eventSource = new EventSource(this.resourcePath + '/changes/events?' + connectionString);
 
         this.eventSource.onmessage = (e) => this.onMessage(e);
         this.eventSource.onerror = (e) => {
-            if (needToReconnect == false) {
+            if (connectionOpened == false) {
                 this.connectToChangesApiTask.reject();
             } else {
                 this.onError(e);
                 this.eventSource.close();
-                this.connect(this.connectEventSource, needToReconnect);
+                this.connect(this.connectEventSource);
             }
         };
         this.eventSource.onopen = () => {
             console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
-            this.reconnect(needToReconnect);
-            needToReconnect = true;
+            this.reconnect();
+            this.successfullyConnectedOnce = true;
+            connectionOpened = true;
             this.connectToChangesApiTask.resolve();
         }
     }
 
-    private showWarning(message: string) {
-        if (changesApi.messageWasShownOnce == false) {
-            this.commandBase.reportWarning(message);
-            changesApi.messageWasShownOnce = true;
-        }
-    }
-
-    private reconnect(needToReconnect: boolean) {
-        if (needToReconnect) {
+    private reconnect() {
+        if (this.successfullyConnectedOnce) {
             //send changes connection args after reconnecting
             this.sentMessages.forEach(args => this.send(args.command, args.value, false));
             
@@ -145,23 +143,34 @@ class changesApi {
 
     private onError(e: Event) {
         if (changesApi.messageWasShownOnce == false) {
-            this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
+            this.commandBase.reportError('Changes stream was disconnected.', "Retrying connection shortly.");
             changesApi.messageWasShownOnce = true;
         }
     }
 
     private serverNotSupportingWebsocketsErrorHandler() {
-        changesApi.isServerSupportingWebSockets = false;
+        var warningMessage;
+        var details;
 
         if ("EventSource" in window) {
-            this.showWarning("Your server doesn't support the WebSocket protocol. EventSource API is going to be used instead. " +
-                "However, multi tab usage isn't supported.");
-            changesApi.messageWasShownOnce = false;
             this.connect(this.connectEventSource);
+            warningMessage = "Your server doesn't support the WebSocket protocol!";
+            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported. " +
+                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent.";
         } else {
-            this.showWarning("Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API. " +
-                "Changes API is Disabled. In order to use it, please use a browser that supports the EventSource API.");
             this.connectToChangesApiTask.reject();
+            warningMessage = "Changes API is Disabled!";
+            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API. " +
+                "In order to use it, please use a browser that supports the EventSource API.";
+        }
+
+        this.showWarning(warningMessage, details);
+    }
+
+    private showWarning(message: string, details: string) {
+        if (changesApi.isServerSupportingWebSockets) {
+            changesApi.isServerSupportingWebSockets = false;
+            this.commandBase.reportWarning(message, details);
         }
     }
 
