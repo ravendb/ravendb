@@ -232,7 +232,7 @@ class query extends viewModelBase {
     focusOnQuery() {
         var editorElement = $("#queryEditor").length == 1 ? $("#queryEditor")[0] : null;
         if (editorElement) {
-            var docEditor = ko.utils.domData.get($("#queryEditor")[0], "aceEditor");
+            var docEditor = ko.utils.domData.get(editorElement, "aceEditor");
             if (docEditor) {
                 docEditor.focus();
             }
