@@ -32,9 +32,9 @@ namespace Raven.Database.Actions
         {
         }
 
-        public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, CancellationToken token, out bool stale)
+        public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, CancellationTokenSource tokenSource, out bool stale)
         {
-            var queryStat = AddToCurrentlyRunningQueryList(index, query);
+            var queryStat = AddToCurrentlyRunningQueryList(index, query, tokenSource);
             try
             {
                 bool isStale = false;
@@ -60,7 +60,7 @@ namespace Raven.Database.Actions
                         {
                             throw new IndexDisabledException(indexFailureInformation);
                         }
-                        loadedIds = new HashSet<string>(from queryResult in Database.IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, false, Constants.DocumentIdFieldName), Database.IndexQueryTriggers, token)
+                        loadedIds = new HashSet<string>(from queryResult in Database.IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, false, Constants.DocumentIdFieldName), Database.IndexQueryTriggers, tokenSource.Token)
                                                         select queryResult.Key);
                     });
                 stale = isStale;
@@ -78,12 +78,10 @@ namespace Raven.Database.Actions
             QueryResultWithIncludes result = null;
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken, WorkContext.CancellationToken))
             {
-                var cancellationToken = cts.Token;
-
                 TransactionalStorage.Batch(
                     accessor =>
                     {
-                        using (var op = new DatabaseQueryOperation(Database, index, query, accessor, cancellationToken)
+                        using (var op = new DatabaseQueryOperation(Database, index, query, accessor, cts)
                         {
                             ShouldSkipDuplicateChecking = query.SkipDuplicateChecking
                         })
@@ -127,14 +125,14 @@ namespace Raven.Database.Actions
 
 	        private readonly Dictionary<QueryTimings, double> executionTimes = new Dictionary<QueryTimings, double>();
 
-            public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions, CancellationToken cancellationToken)
+            public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions, CancellationTokenSource cancellationTokenSource)
             {
                 this.database = database;
                 this.indexName = indexName != null ? indexName.Trim() : null;
                 this.query = query;
                 this.actions = actions;
-                this.cancellationToken = cancellationToken;
-                queryStat = database.Queries.AddToCurrentlyRunningQueryList(indexName, query);
+                cancellationToken = cancellationTokenSource.Token;
+                queryStat = database.Queries.AddToCurrentlyRunningQueryList(indexName, query, cancellationTokenSource);
 
 	            if (query.ShowTimings == false)
 		            return;
@@ -291,14 +289,16 @@ namespace Raven.Database.Actions
             ConcurrentSet<ExecutingQueryInfo> set;
             if (WorkContext.CurrentlyRunningQueries.TryGetValue(index, out set) == false)
                 return;
+
             set.TryRemove(queryStat);
         }
 
-        private ExecutingQueryInfo AddToCurrentlyRunningQueryList(string index, IndexQuery query)
+        private ExecutingQueryInfo AddToCurrentlyRunningQueryList(string index, IndexQuery query, CancellationTokenSource externalTokenSource)
         {
             var set = WorkContext.CurrentlyRunningQueries.GetOrAdd(index, x => new ConcurrentSet<ExecutingQueryInfo>());
             var queryStartTime = DateTime.UtcNow;
-            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query);
+            var queryId = WorkContext.GetNextQueryId();
+            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, externalTokenSource);
             set.Add(executingQueryInfo);
             return executingQueryInfo;
         }

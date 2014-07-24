@@ -13,8 +13,17 @@
                     <div class="form-horizontal" role="form" data-bind="foreach: queries">
                         <div class="form-group">
                             <label class="col-md-2 control-label">Start time</label>
-                            <div class="col-md-10">
+                            <div class="col-md-6">
                                 <p class="form-control-static" data-bind="text: startTime"></p>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <button class="btn btn-danger" data-bind="click: $root.killQuery.bind($root, queryId)"><i class="fa fa-bolt"></i> Kill this query</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Duration</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: duration"></p>
                             </div>
                         </div>
                         <div class="form-group">

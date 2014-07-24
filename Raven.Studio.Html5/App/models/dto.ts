@@ -392,8 +392,9 @@ interface storedQueryDto {
     Hash: number;
 }
 
-interface storedQueryContainerDto extends documentDto {
-    Queries: storedQueryDto[];
+interface indexDataDto {
+    name: string;
+    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {
@@ -674,7 +675,9 @@ interface statusDebugQueriesGroupDto {
 
 interface statusDebugQueriesQueryDto {
     StartTime: string;
-    QueryInfo: KnockoutObservable<any>;
+    QueryInfo: string;
+    QueryId: number;
+    Duration: string;
 }
 
 interface taskMetadataDto {

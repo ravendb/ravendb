@@ -53,4 +53,10 @@ interface String {
     count: (input) => number;
     fixedCharCodeAt: (input, position) => number;
     getSizeInBytesAsUTF8: () => number;
+}
+
+// Storage extensions
+interface Storage {
+    getObject: (string) => any;
+    setObject: (key: string, value: any) => void;
 } 

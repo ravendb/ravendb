@@ -91,6 +91,7 @@
     <TypeScriptCompile Include="App\commands\deleteDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\updateServerPrefixHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\executeBulkDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
@@ -103,7 +104,6 @@
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStoredQueriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />
@@ -303,6 +303,8 @@
     <TypeScriptCompile Include="App\commands\getReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\getRunningTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\killRunningTaskCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -674,9 +676,11 @@
     <Content Include="Scripts\ace\mode\javascript_test.js" />
     <Content Include="Scripts\ace\mode\javascript_worker.js" />
     <Content Include="Scripts\ace\mode\javascript_worker_test.js" />
+    <Content Include="Scripts\ace\mode\json_newline_friendly.js" />
     <Content Include="Scripts\ace\mode\json.js" />
     <Content Include="Scripts\ace\mode\jsoniq.js" />
     <Content Include="Scripts\ace\mode\json\json_parse.js" />
+    <Content Include="Scripts\ace\mode\json_newline_friendly_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\json_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\json_worker.js" />
     <Content Include="Scripts\ace\mode\json_worker_test.js" />
