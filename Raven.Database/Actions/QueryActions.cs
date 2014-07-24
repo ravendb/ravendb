@@ -292,14 +292,6 @@ namespace Raven.Database.Actions
             if (WorkContext.CurrentlyRunningQueries.TryGetValue(index, out set) == false)
                 return;
 
-            try
-            {
-                queryStat.TokenSource.Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-
             set.TryRemove(queryStat);
         }
 

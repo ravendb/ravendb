@@ -122,25 +122,13 @@ namespace Raven.Database.Server.Controllers
 			var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
 
 			var status = new BulkOperationStatus();
-			var sp = Stopwatch.StartNew();
-			long id = 0;
+			long id;
 
 			var task = Task.Factory.StartNew(() =>
 			{
-			    try
-			    {
-
-			        var array = batchOperation(index, indexQuery, allowStale);
-			        status.State = array;
-			        status.Completed = true;
-			    }
-			    finally
-			    {
-			        cts.Dispose();
-			    }
-
-			    //TODO: log
-				//context.Log(log => log.Debug("\tBatch Operation worked on {0:#,#;;0} documents in {1}, task #: {2}", array.Length, sp.Elapsed, id));
+				var array = batchOperation(index, indexQuery, allowStale);
+				status.State = array;
+				status.Completed = true;
 			});
 
 			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
