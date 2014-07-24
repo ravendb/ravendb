@@ -92,6 +92,7 @@
     <TypeScriptCompile Include="App\commands\deleteDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\updateServerPrefixHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\executeBulkDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
@@ -306,6 +307,7 @@
     <TypeScriptCompile Include="App\commands\getRunningTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\killRunningTaskCommand.ts" />
     <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
