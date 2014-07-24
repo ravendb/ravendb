@@ -72,9 +72,6 @@ var JsonHighlightRules = function() {
                 token : "paren.rparen",
                 regex : "[\\])}]"
             }, {
-                token : "comma",
-                regex : "[,]"
-            },{
                 token : "text",
                 regex : "\\s+"
             }
@@ -90,11 +87,8 @@ var JsonHighlightRules = function() {
                 token : "string",
                 regex : '"',
                 next  : "start"
-            }, {
-                token : "string",
-                regex : "",
-                next  : "start"
             }
+            
         ]
     };
     
