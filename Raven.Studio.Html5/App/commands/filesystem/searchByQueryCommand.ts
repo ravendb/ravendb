@@ -15,7 +15,7 @@ class searchByQueryCommand  extends commandBase {
 
         var doneTask = $.Deferred();
 
-        filesTask.done((results: searchResults) => doneTask.resolve(new pagedResultSet(results.Files.map(d => new file(d)), results.FileCount)));
+        filesTask.done((results: searchResults) => doneTask.resolve(new pagedResultSet(results.Files.map(d => new file(d, false)), results.FileCount)));
         filesTask.fail(xhr => doneTask.reject(xhr));
 
         return doneTask;
