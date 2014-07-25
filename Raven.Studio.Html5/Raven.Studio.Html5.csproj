@@ -355,10 +355,12 @@
     <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
     <TypeScriptCompile Include="App\viewmodels\runningTasks.ts" />
+    <TypeScriptCompile Include="App\viewmodels\infoPackage.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\infoPackage.html" />
     <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\disableDatabaseToggleConfirm.html" />
     <Content Include="App\views\visualizerImport.html" />
