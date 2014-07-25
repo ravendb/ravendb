@@ -19,7 +19,7 @@ import uploadQueueHelper = require("common/uploadQueueHelper");
 
 class filesystemFiles extends viewModelBase {
 
-   
+    appUrls: computedAppUrls;
     fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
@@ -55,6 +55,8 @@ class filesystemFiles extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
@@ -96,14 +98,15 @@ class filesystemFiles extends viewModelBase {
         if (!this.folderNotificationSubscriptions[newFolder]) {
             this.folderNotificationSubscriptions[newFolder] = shell.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
+                    var callbackFolder = new folder(newFolder);
+                    if (!callbackFolder)
+                        return;
                     switch (e.Action) {
 
                         case fileChangeAction.Add: {
-                            var callbackFolder = new folder(newFolder);
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            if (!callbackFolder || !eventFolder
-                                            || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
+                            if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
                                 return;
                             }
 
@@ -128,7 +131,6 @@ class filesystemFiles extends viewModelBase {
                             break;
                         }
                         case fileChangeAction.Delete: {
-                            var callbackFolder = new folder(newFolder);
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
                             //check if the file is new at the folder level to remove it from the table

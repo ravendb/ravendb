@@ -31,7 +31,8 @@ namespace Raven.Database.Config
 	public class InMemoryRavenConfiguration
 	{
 	    public const string VoronTypeName = "voron";
-	    private const string EsentTypeName = "esent";
+	    public const string EsentTypeName = "esent";
+
 		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
@@ -1107,6 +1108,9 @@ namespace Raven.Database.Config
 			Port = defaultConfiguration.Port;
 			OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+
+            DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
+            DefaultStorageTypeName = defaultConfiguration.DefaultStorageTypeName;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()

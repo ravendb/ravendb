@@ -84,9 +84,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 FileName = fileName,
                 Type = type
             };
+
             if (activeForDestination.TryAdd(fileName, syncDetails))
             {
-                Log.Debug("File '{0}' with ETag {1} was added to an incomign active synchronization queue for a destination {2}",
+                Log.Debug("File '{0}' with ETag {1} was added to an incoming active synchronization queue for a destination {2}",
                           fileName,
                           sourceFileETag, sourceServerInfo.FileSystemUrl);
             }
@@ -393,7 +394,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                         SourceFileSystemUrl = FileSystemUrl,
                         Type = work.SynchronizationType,
                         Action = SynchronizationAction.Enqueue,
-                        SynchronizationDirection = SynchronizationDirection.Outgoing
+                        Direction = SynchronizationDirection.Outgoing
                     });
                 }
 			}
@@ -427,7 +428,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                             SourceFileSystemUrl = FileSystemUrl,
                             Type = work.SynchronizationType,
                             Action = SynchronizationAction.Enqueue,
-                            SynchronizationDirection = SynchronizationDirection.Outgoing
+                            Direction = SynchronizationDirection.Outgoing
                         });
                     }
 				}
@@ -468,7 +469,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                         SourceFileSystemUrl = FileSystemUrl,
                         Type = work.SynchronizationType,
                         Action = SynchronizationAction.Enqueue,
-                        SynchronizationDirection = SynchronizationDirection.Outgoing
+                        Direction = SynchronizationDirection.Outgoing
                     });
                 }
 
@@ -490,7 +491,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				SourceFileSystemUrl = FileSystemUrl,
 				Type = work.SynchronizationType,
 				Action = SynchronizationAction.Start,
-				SynchronizationDirection = SynchronizationDirection.Outgoing
+				Direction = SynchronizationDirection.Outgoing
 			});
 
 			SynchronizationReport report;
@@ -528,12 +529,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				if (work.IsCancelled || report.Exception is TaskCanceledException)
 				{
 					synchronizationCancelled = true;
-                    Log.DebugException(string.Format("{0} to {1} was cancelled", work, destinationUrl), report.Exception);
+                    Log.DebugException(string.Format("{0} to {1} was canceled", work, destinationUrl), report.Exception);
 				}
 				else
 				{
-                    Log.WarnException(string.Format("{0} to {1} has finished with the exception", work, destinationUrl),
-									  report.Exception);
+                    Log.WarnException(string.Format("{0} to {1} has finished with the exception", work, destinationUrl), report.Exception);
 				}
 			}
 
@@ -550,7 +550,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				SourceFileSystemUrl = FileSystemUrl,
 				Type = work.SynchronizationType,
 				Action = SynchronizationAction.Finish,
-				SynchronizationDirection = SynchronizationDirection.Outgoing
+				Direction = SynchronizationDirection.Outgoing
 			});
 
 			return report;
@@ -661,6 +661,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             {
                 return null;
             }
+
+            // TODO Check if the call to GetFile is needed.
             FileAndPagesInformation fileAndPages = null;
             {
                 try

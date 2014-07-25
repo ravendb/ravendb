@@ -1,23 +1,22 @@
-﻿<div id="configurationContainer" tabindex="-1">
+﻿
+<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#filesystems">
+                File Systems
+            </a>
+        </h3>
+    </li>
+    <li class="active" data-bind="with: activeFilesystem">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.filesystemFiles }"></a>
+    </li>
+    <li class="active">
+        <span>Configuration</span>
+    </li>
+</ul>
+
+<div id="configurationContainer" tabindex="-1">
     <div class="filesystems-page">
-        <ul class="breadcrumb">
-            <li>
-                <h3>
-                    <a href="#filesystems">
-                        Files
-                    </a>
-                </h3>
-            </li>
-            <li data-bind="with: activeFilesystem">
-                <a data-bind="text: name"></a>
-            </li>
-            <li>
-                <a>Configuration</a>
-            </li>
-            <!--<li class="active">
-                    <span data-bind="text: currentBreadcrumbTitle"></span>
-            </li>-->
-        </ul>
         <div class="row">
             <div class="col-md-3">
                 <ul class="nav nav-pills nav-stacked keys-collection" data-bind="foreach: keys">

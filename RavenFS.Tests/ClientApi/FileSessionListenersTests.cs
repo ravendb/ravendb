@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 using Xunit;
 using Raven.Client.FileSystem.Extensions;
 using System.Threading;
+using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem.Notifications;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -127,12 +131,15 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
+                var notificationTask = WaitForConflictNotifications(2, 5);
+
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
 
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
-                Thread.Sleep(250);
+                await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -167,6 +174,8 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(128, file.TotalSize);
                 Assert.Equal(130, file2.TotalSize);
 
+                var notificationTask = WaitForConflictNotifications(2, 5);
+
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
 
@@ -176,6 +185,10 @@ namespace RavenFS.Tests.ClientApi
 
                 //We need to sync again after conflict resolution because strategy was to resolve with remote
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                await notificationTask;
+                Thread.Sleep(200);
+
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
                 file = await sessionDestination1.LoadFileAsync("test1.file");
@@ -205,11 +218,14 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
+                var notificationTask = WaitForConflictNotifications(2, 5);
+
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
-                Thread.Sleep(250);
+                await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -238,17 +254,110 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
+                var notificationTask = WaitForConflictNotifications(2, 5);
+
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
-                Thread.Sleep(250);
+                await notificationTask;
+                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
                 Assert.Equal(1, noOpListener.DetectedCount);
                 Assert.Equal(1, noOpListener.ResolvedCount);
+            }
+        }
+
+        [Fact]
+        public async void MultipleConflictListeners_ConflictNotResolved()
+        {
+            var store = (FilesStore)filesStore;
+            var takeLocalConflictListener = new TakeLocalConflictListener();
+            var takeNewestConflictListener = new TakeNewestConflictsListener();
+            var noOpListener = new NoOpConflictListener();
+            anotherStore.Listeners.RegisterListener(takeLocalConflictListener);
+            anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(takeNewestConflictListener);
+
+            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination2 = anotherStore.OpenAsyncSession())
+            {
+
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                await sessionDestination2.SaveChangesAsync();
+
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination1.SaveChangesAsync();
+
+                var notificationTask = WaitForConflictNotifications(1, 5);
+
+                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+
+                await notificationTask;
+                Thread.Sleep(200);
+
+                Assert.Equal(1, takeLocalConflictListener.DetectedCount);
+                Assert.Equal(1, takeNewestConflictListener.DetectedCount);
+                Assert.Equal(1, noOpListener.DetectedCount);
+                Assert.Equal(0, takeLocalConflictListener.ResolvedCount + takeNewestConflictListener.ResolvedCount + noOpListener.ResolvedCount);
+
+                // try to change content of file in destination2
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(140));
+
+                // Assert an exception is thrown because the conflict is still there
+                var aggregateException = Assert.Throws<AggregateException>(() => sessionDestination2.SaveChangesAsync().Wait());
+                Assert.IsType<NotSupportedException>(aggregateException.InnerException);
+
+                // try to change content of file in destination2
+                sessionDestination2.RegisterRename("test1.file", "test2.file");
+
+                // Assert an exception is thrown because the conflict is still there
+                aggregateException = Assert.Throws<AggregateException>(() => sessionDestination2.SaveChangesAsync().Wait());
+                Assert.IsType<NotSupportedException>(aggregateException.InnerException);
+            }
+        }
+
+        [Fact]
+        public async void MetadataUpdateListeners()
+        {
+            var store = (FilesStore)filesStore;
+            var metadataListener = new DoNotUpdateEtagListener();
+            var alwaysUpdateListener = new NoOpUpdateMetadataListener();
+
+            store.Listeners.RegisterListener(metadataListener);
+            using (var sessionDestination = store.OpenAsyncSession())
+            {
+                sessionDestination.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await sessionDestination.SaveChangesAsync();
+
+                var file = await sessionDestination.LoadFileAsync("test1.file");
+                var oldEtag = file.Metadata.Value<string>("ETag");
+                var newEtag = Guid.NewGuid();
+                file.Metadata["ETag"] = new RavenJValue(newEtag);
+
+                await sessionDestination.SaveChangesAsync();
+                file = await sessionDestination.LoadFileAsync("test1.file");
+
+                Assert.Equal(oldEtag, file.Metadata.Value<string>("ETag"));
+                Assert.Equal(1, metadataListener.BeforeCount);
+                Assert.Equal(0, metadataListener.AfterCount);
+
+                store.Listeners.RegisterListener(alwaysUpdateListener);
+
+                file.Metadata["ETag"] = new RavenJValue(newEtag);
+
+                await sessionDestination.SaveChangesAsync();
+                file = await sessionDestination.LoadFileAsync("test1.file");
+
+                Assert.Equal(oldEtag, file.Metadata.Value<string>("ETag"));
+                Assert.Equal(3, alwaysUpdateListener.BeforeCount + metadataListener.BeforeCount);
+                Assert.Equal(0, alwaysUpdateListener.AfterCount + metadataListener.AfterCount);
+
             }
         }
 
@@ -264,7 +373,7 @@ namespace RavenFS.Tests.ClientApi
                 return true;
             }
 
-            public void AfterDelete(FileHeader instance)
+            public void AfterDelete(string fileName)
             {
                 AfterCount++;
             }
@@ -281,7 +390,7 @@ namespace RavenFS.Tests.ClientApi
                 return !instance.Metadata.Value<bool>("Read-Only");
             }
 
-            public void AfterDelete(FileHeader instance)
+            public void AfterDelete(string instance)
             {
                 AfterCount++;
             }
@@ -340,5 +449,50 @@ namespace RavenFS.Tests.ClientApi
                 ResolvedCount++;
             }
         }
+
+        private class DoNotUpdateEtagListener : IMetadataChangeListener
+        {
+            public int BeforeCount { get; protected set; }
+            public int AfterCount { get; protected set; }
+
+            public bool BeforeChange(FileHeader instance, RavenJObject metadata, RavenJObject original)
+            {
+                BeforeCount++;
+                return metadata.Value<string>("ETag") == original.Value<string>("ETag");
+            }
+
+            public void AfterChange(FileHeader instance, RavenJObject metadata)
+            {
+                AfterCount++;
+            }
+        }
+
+        private class NoOpUpdateMetadataListener : IMetadataChangeListener
+        {
+            public int BeforeCount { get; protected set; }
+            public int AfterCount { get; protected set; }
+
+            public bool BeforeChange(FileHeader instance, RavenJObject metadata, RavenJObject original)
+            {
+                BeforeCount++;
+                return true;
+            }
+
+            public void AfterChange(FileHeader instance, RavenJObject metadata)
+            {
+                AfterCount++;
+            }
+        }
+
+        private Task<ConflictNotification> WaitForConflictNotifications(int notificationsNumber, int time)
+        {
+            return anotherStore.Changes()
+                            .ForConflicts()
+                            .OfType<ConflictNotification>()
+                            .Timeout(TimeSpan.FromSeconds(time))
+                            .Take(notificationsNumber)
+                            .ToTask();
+        }
+
     }
 }
