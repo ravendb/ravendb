@@ -136,6 +136,7 @@ class aceEditorBindingHandler {
         var aceEditor: any = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
+        aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
         aceEditor.getSession().setMode(lang);
@@ -179,9 +180,11 @@ class aceEditorBindingHandler {
             handles: "s, se",
             grid: [10000000000000000, 1],
             resize: function (event, ui) {
+                alert("b");
                 aceEditor.resize();
             }
         });
+
         aceEditor.resize(); //for ace elements smaller than 'minHeight'
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
         $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');

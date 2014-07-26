@@ -1,6 +1,27 @@
 ﻿<div>
    
     <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
+        
+        <div class="panel panel-default">
+            <div class="panel-heading">
+               <div class="pull-left panel-title">Server Prefix for HiLo Configuration</div>
+                <div class="pull-right">
+                    <button data-bind="click: saveServerPrefixForHiLo" type="submit" class="btn btn-primary" title="Save changes"><i class="fa fa-save"></i></button>
+                </div>
+                <div class="clearfix"></div>
+
+            </div>
+
+            <div class="panel-body">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Prefix</label>
+                    <div class="col-sm-4">
+                        <input name="prefix" class="form-control" type="text" data-bind="value: prefixForHilo" >
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="panel panel-default">
             <div class="panel-heading">
                 <div class="pull-left panel-title">Replication Configuration</div>
@@ -17,10 +38,10 @@
                 </div>
                 <div class="pull-right">
                    
-                        <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
-                        <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled()||isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                    <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled()||isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
 
-                    </div>
+                </div>
                 <div class="clearfix"></div>
             </div>
 
