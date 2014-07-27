@@ -366,7 +366,12 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
-								return false;
+                            { 
+                                destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
+
+                                if (destinationsReplicationInformationForSource == null)
+                                return false;
+                            }
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 						}
@@ -538,7 +543,7 @@ namespace Raven.Bundles.Replication.Tasks
 			RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
 			return true;
 		}
-
+	    
 		private void SetLastReplicatedEtagForServer(ReplicationStrategy destination, Etag lastDocEtag = null, Etag lastAttachmentEtag = null)
 		{
 			try
