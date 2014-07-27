@@ -386,6 +386,23 @@ class editDocument extends viewModelBase {
         return text;
     }
 
+    toggleNewlineMode() {
+        if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 150) {
+            
+            app.showMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
+                .then((dialogResult: string) => {
+                    if (dialogResult === "Continue") {
+                        this.isNewLineFriendlyMode.toggle();
+                    }
+                });
+            
+        }
+        else
+        {
+            this.isNewLineFriendlyMode.toggle();
+        }
+    }
+
     unescapeNewlinesInTextFields(str: string): any {
         var AceDocumentClass = require("ace/document").Document;
         var AceEditSessionClass = require("ace/edit_session").EditSession;
@@ -434,7 +451,8 @@ class editDocument extends viewModelBase {
                         } else {
                             return "\r\n";
                         }
-                    });
+                        });
+
                     str = newTextPrefix + newStringTokenValue + newTextSuffix ;
                     curToken = iterator.stepBackward();
                 }

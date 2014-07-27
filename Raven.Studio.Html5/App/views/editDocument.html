@@ -22,7 +22,7 @@
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                 <a class="btn btn-default" data-bind="click: refreshDocument, visible: lodaedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
                 <button type="button" class="btn btn-default" data-bind="enable:isNewLineFriendlyMode()===false || $root.isEditingMetadata()===true ,click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
-                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" accesskey="N" data-bind="enable:$root.isEditingMetadata() === false,click:function(){isNewLineFriendlyMode.toggle();}, css:{'isActive':isNewLineFriendlyMode()===true}"><span class="text-lowercase">\n</span></button>
+                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" accesskey="N" data-bind="enable:$root.isEditingMetadata() === false,click:function(){toggleNewlineMode();}, css:{'isActive':isNewLineFriendlyMode()===true}"><span class="text-lowercase">\n</span></button>
                 <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
                 
             </div>
