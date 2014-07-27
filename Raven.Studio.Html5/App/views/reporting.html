@@ -90,7 +90,7 @@
                             <li data-bind="click: setAggregationToAverage"><a href="#">Average</a></li>
                         </ul>
                     </div>
-                    <button type="button" class="close" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true" title="Remove this value">&times;</button>
+                    <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true" title="Remove this value"></button>
                 </li>
             </ul>
         </div>
@@ -116,7 +116,7 @@
                         <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
                     </div>
                     <div class="col-md-1">
-                        <button type="button" class="close pull-left" aria-hidden="true" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">&times;</button>
+                        <button type="button" class="close pull-left" aria-hidden="true" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)"></button>
                     </div>
                 </div>
             </div>

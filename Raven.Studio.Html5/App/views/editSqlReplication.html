@@ -91,7 +91,7 @@
                                             <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
                                         </div>
                                     </td>
-                                    <td><button type="button" style="display: inline-block;" class="close" data-bind="if: $parent.sqlReplicationTables().length > 1,click: $parent.removeTable.bind($parent)" title="Remove this table"><span class="glyphicon glyphicon-remove remove-icon"></span></button></td>
+                                    <td><button type="button" style="display: inline-block;" class="close glyphicon glyphicon-remove remove-icon" data-bind="if: $parent.sqlReplicationTables().length > 1,click: $parent.removeTable.bind($parent)" title="Remove this table"></button></td>
                                 </tr>
                             </tbody>
                         </table>
