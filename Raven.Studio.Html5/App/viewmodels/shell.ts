@@ -212,13 +212,6 @@ class shell extends viewModelBase {
             return false;
         }, this, "#goToDocInput");
 
-        $("body").tooltip({
-            delay: { show: 1000, hide: 100 },
-            container: 'body',
-            selector: '.use-bootstrap-tooltip',
-            trigger: 'hover'
-        });
-
         router.activeInstruction.subscribe(val => {
             if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);

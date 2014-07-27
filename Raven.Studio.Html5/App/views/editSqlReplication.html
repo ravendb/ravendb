@@ -52,13 +52,13 @@
                 <div class="form-group">
                     <label class="col-sm-4 control-label" title="SQL Replication name (alt+i)">Name</label>
                     <div class="col-sm-8">
-                        <input tabindex="3" required type="text" class="form-control" name="name" data-bind="value: name, valueUpdate: 'keyup', attr: { placeholder: 'New SQL Replication'}" />
+                        <input tabindex="3" required type="text" class="form-control" name="name" data-bind="value: name, valueUpdate: 'afterkeydown', attr: { placeholder: 'New SQL Replication'}" />
                     </div>
                 </div>    
                 <div class="form-group">
                     <label class="col-sm-4 control-label">Source Document Collection</label>
                     <div class="col-sm-8">
-                        <input tabindex="2" required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup', attr: { 'id': 'sourceDocumentCollection'}" />
+                        <input tabindex="2" required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'afterkeydown', attr: { 'id': 'sourceDocumentCollection'}" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection', foreach: searchResults">
                             <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
@@ -83,12 +83,12 @@
                                 <tr>
                                     <td>
                                         <div>
-                                            <input required type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'keyup'" />
+                                            <input required type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'afterkeydown'" />
                                         </div>
                                     </td>
                                     <td>
                                         <div>
-                                            <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
+                                            <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'afterkeydown'" />
                                         </div>
                                     </td>
                                     <td><button type="button" style="display: inline-block;" class="close glyphicon glyphicon-remove remove-icon" data-bind="if: $parent.sqlReplicationTables().length > 1,click: $parent.removeTable.bind($parent)" title="Remove this table"></button></td>
@@ -116,8 +116,8 @@
                 <div class="form-group">
                     <label class="col-sm-4 control-label" data-bind="text: connectionStringSourceFieldName"></label>
                     <div class="col-sm-8">
-                        <textarea tabindex="6" rows="4" required type="text" class="form-control" data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringValue, valueUpdate: 'keyup'" />
-                        <select tabindex="7" required type="text" class="form-control" data-bind="options:$root.availableConnectionStrings, attr:{required:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?connectionStringValue:null, valueUpdate: 'keyup'" />
+                        <textarea tabindex="6" rows="4" required type="text" class="form-control" data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringValue, valueUpdate: 'afterkeydown'" />
+                        <select tabindex="7" required type="text" class="form-control" data-bind="options:$root.availableConnectionStrings, attr:{required:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?connectionStringValue:null, valueUpdate: 'afterkeydown'" />
                     </div>
                 </div>
                 <div class="form-group" data-bind="visible:$root.isBasicView() == false">

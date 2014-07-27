@@ -7790,6 +7790,10 @@ footer ul {
   outline: 0;
   /* IE 10 */
 }
+.versioning-inner-margin {
+  margin-left: 25px;
+  margin-right: 25px;
+}
 .remove-icon {
   color: #d2322d;
   border-color: #802925;

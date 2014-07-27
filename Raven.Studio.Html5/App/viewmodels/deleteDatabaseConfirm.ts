@@ -9,7 +9,6 @@ class deleteDatabaseConfirm extends dialogViewModelBase {
     private isKeepingFiles = ko.observable(true);
     private databasesToDelete = ko.observableArray<database>();
     public deleteTask = $.Deferred();
-    //dbToDelete = ko.observable<database>();
 
     constructor(databases: Array<database>) {
         super();

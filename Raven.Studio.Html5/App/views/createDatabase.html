@@ -9,7 +9,7 @@
                 <div class="col-md-7">
                     <div class="form-group">
                         <label for="databaseName">Name</label>
-                        <input required type="text" class="form-control" id="databaseName" placeholder="Database Name" data-bind="value: databaseName, valueUpdate: 'keyup', hasfocus: databaseNameFocus" autocomplete="off">
+                        <input required type="text" class="form-control" id="databaseName" placeholder="Database Name" data-bind="value: databaseName, valueUpdate: 'afterkeydown', hasfocus: databaseNameFocus" autocomplete="off">
                     </div>
                     <div class="panel-group" id="accordion">
                         <div class="panel panel-default">
@@ -24,15 +24,15 @@
                                 <div class="panel-body">
                                     <div class="form-group">
                                         <label for="databasePath">Path</label>
-                                        <input data-bind="value: databasePath, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
+                                        <input data-bind="value: databasePath, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseLogs">Logs</label>
-                                        <input data-bind="value: databaseLogs, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
+                                        <input data-bind="value: databaseLogs, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseIndexes">Indexes</label>
-                                        <input data-bind="value: databaseIndexes, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
+                                        <input data-bind="value: databaseIndexes, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
@@ -44,15 +44,15 @@
                         <label>Bundles:</label>
                     </div>
                     <div class="btn-group-vertical" data-toggle="buttons-checkbox">
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression'), 'btn-success': isCompressionBundleEnabled }">Compression</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption'), 'btn-success': isEncryptionBundleEnabled }">Encryption</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration'), 'btn-success': isExpirationBundleEnabled }">Expiration</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas'), 'btn-success': isQuotasBundleEnabled }">Quotas</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication'), 'btn-success': isReplicationBundleEnabled }">Replication</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle, css: { 'btn-success': isSqlReplicationBundleEnabled }">Sql Replication</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning'), 'btn-success': isVersioningBundleEnabled }">Versioning</button>
-                        <button type="button" class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup'), 'btn-success': isPeriodicExportBundleEnabled }">Periodic Export</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle, css: { 'btn-success': isScriptedIndexBundleEnabled }">Scripted Index</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression') }">Compression</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption') }">Encryption</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration') }">Expiration</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas') }">Quotas</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication') }">Replication</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle">Sql Replication</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning') }">Versioning</button>
+                        <button type="button" class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup') }">Periodic Export</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">Scripted Index</button>
                     </div>
                 </div>
             </div>
