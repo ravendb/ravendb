@@ -43,34 +43,16 @@
                     <div>
                         <label>Bundles:</label>
                     </div>
-                    <div class="btn-group-vertical" data-toggle="buttons">
-                        <label class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression') }">
-                            <input type="checkbox"> Compression
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption') }">
-                            <input type="checkbox"> Encryption
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration') }">
-                            <input type="checkbox"> Expiration
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas') }">
-                            <input type="checkbox"> Quotas
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication') }">
-                            <input type="checkbox"> Replication
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle">
-                            <input type="checkbox"> Sql Replication
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning') }">
-                            <input type="checkbox"> Versioning
-                        </label>
-                        <label class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup') }">
-                            <input type="checkbox"> Periodic Export
-                        </label>
-                        <label class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">
-                            <input type="checkbox"> Scripted Index
-                        </label>
+                    <div class="btn-group-vertical" data-toggle="buttons-checkbox">
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression'), 'btn-success': isCompressionBundleEnabled }">Compression</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption'), 'btn-success': isEncryptionBundleEnabled }">Encryption</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration'), 'btn-success': isExpirationBundleEnabled }">Expiration</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas'), 'btn-success': isQuotasBundleEnabled }">Quotas</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication'), 'btn-success': isReplicationBundleEnabled }">Replication</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle, css: { 'btn-success': isSqlReplicationBundleEnabled }">Sql Replication</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning'), 'btn-success': isVersioningBundleEnabled }">Versioning</button>
+                        <button type="button" class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup'), 'btn-success': isPeriodicExportBundleEnabled }">Periodic Export</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle, css: { 'btn-success': isScriptedIndexBundleEnabled }">Scripted Index</button>
                     </div>
                 </div>
             </div>

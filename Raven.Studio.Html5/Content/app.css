@@ -7798,9 +7798,9 @@ footer ul {
 .remove-icon:hover {
   color: #ac2925;
 }
-/*.fa-plus {
-    color: #58cc46;
-}*/
+.fa-plus {
+  color: #58cc46;
+}
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
 }
