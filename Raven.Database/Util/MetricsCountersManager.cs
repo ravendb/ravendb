@@ -13,6 +13,7 @@ using metrics;
 using metrics.Core;
 
 using System.Linq;
+using Raven.Database.Bundles.SqlReplication;
 
 namespace Raven.Database.Util
 {
@@ -45,6 +46,14 @@ namespace Raven.Database.Util
 
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
 
+        public ConcurrentDictionary<string, MeterMetric> SqlReplicationBatchSizeMeter { get; private set; }
+
+        public ConcurrentDictionary<string, MeterMetric> SqlReplicationDurationMeter { get; private set; }
+        
+        public ConcurrentDictionary<string, HistogramMetric> SqlReplicationBatchSizeHistogram { get; private set; }
+
+        public ConcurrentDictionary<string, HistogramMetric> SqlReplicationDurationHistogram { get; private set; }
+
         public MetricsCountersManager()
         {
             StaleIndexMaps = dbMetrics.Histogram("metrics", "stale index maps");
@@ -64,6 +73,11 @@ namespace Raven.Database.Util
             ReplicationDurationMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
+
+            SqlReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
+            SqlReplicationDurationMeter = new ConcurrentDictionary<string, MeterMetric>();
+            SqlReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
+            SqlReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
         }
 
         public void AddGauge<T>(Type type, string name, Func<T> function)
@@ -109,6 +123,31 @@ namespace Raven.Database.Util
         public HistogramMetric GetReplicationDurationHistogram(ReplicationStrategy destination)
         {
             return ReplicationDurationHistogram.GetOrAdd(destination.ConnectionStringOptions.Url,
+                s => dbMetrics.Histogram("metrics", "Replication duration Histogram for " + s));
+        }
+
+
+        public MeterMetric GetSqlReplicationBatchSizeMetric(SqlReplicationConfig sqlReplicationConfig)
+        {
+            return ReplicationBatchSizeMeter.GetOrAdd(sqlReplicationConfig.Name,
+                s => dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes));
+        }
+
+        public MeterMetric GetSqlReplicationDurationMetric(SqlReplicationConfig sqlReplicationConfig)
+        {
+            return ReplicationDurationMeter.GetOrAdd(sqlReplicationConfig.Name,
+                s => dbMetrics.Meter("metrics", "duration for " + s, "Replication duration Counter", TimeUnit.Minutes));
+        }
+
+        public HistogramMetric GetSqlReplicationBatchSizeHistogram(SqlReplicationConfig sqlReplicationConfig)
+        {
+            return ReplicationBatchSizeHistogram.GetOrAdd(sqlReplicationConfig.Name,
+                s => dbMetrics.Histogram("metrics", "Replication docs/min Histogram for " + s));
+        }
+
+        public HistogramMetric GetSqlReplicationDurationHistogram(SqlReplicationConfig sqlReplicationConfig)
+        {
+            return ReplicationDurationHistogram.GetOrAdd(sqlReplicationConfig.Name,
                 s => dbMetrics.Histogram("metrics", "Replication duration Histogram for " + s));
         }
     }

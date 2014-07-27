@@ -224,6 +224,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						try
 						{
+                            Stopwatch spRepTime = new Stopwatch();
+						    spRepTime.Start();
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
 
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
@@ -258,6 +260,14 @@ namespace Raven.Database.Bundles.SqlReplication
 								}
 								successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
 							}
+
+                            spRepTime.Stop();
+						    var metricsCounters = Database.WorkContext.MetricsCounters;
+                            metricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(docsToReplicate.Count);
+                            metricsCounters.GetSqlReplicationDurationMetric(replicationConfig).Mark(spRepTime.ElapsedMilliseconds);
+                            metricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(docsToReplicate.Count);
+                            metricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(spRepTime.ElapsedMilliseconds);
+
 						}
 						catch (Exception e)
 						{

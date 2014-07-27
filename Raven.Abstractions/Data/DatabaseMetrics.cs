@@ -29,6 +29,14 @@ namespace Raven.Abstractions.Data
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
 
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
+
+        public Dictionary<string, MeterData> SqlReplicationBatchSizeMeter { get; set; }
+
+        public Dictionary<string, MeterData> SqlReplicationDurationMeter { get; set; }
+
+        public Dictionary<string, HistogramData> SqlReplicationBatchSizeHistogram { get; set; }
+
+        public Dictionary<string, HistogramData> SqlReplicationDurationHistogram { get; set; }
     }
 
     public class HistogramData
