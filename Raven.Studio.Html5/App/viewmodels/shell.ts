@@ -670,6 +670,7 @@ class shell extends viewModelBase {
             return 'Databases';
         }
     }
+
     getCurrentActiveFeatureHref() {
         if (this.appUrls.isAreaActive('filesystems')() === true) {
             return this.appUrls.filesystems();

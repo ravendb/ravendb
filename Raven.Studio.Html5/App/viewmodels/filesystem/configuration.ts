@@ -20,6 +20,8 @@ class configuration extends viewModelBase {
     static configSelector = "#settingsContainer";
     private router = router;
 
+    appUrls: computedAppUrls;
+
     keys = ko.observableArray<configurationKey>();
     text: KnockoutComputed<string>;
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
@@ -57,6 +59,8 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
 
         if (!this.subscription) {
             this.subscription = shell.currentResourceChangesApi()

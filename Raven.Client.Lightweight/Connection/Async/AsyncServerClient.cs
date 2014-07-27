@@ -593,6 +593,10 @@ namespace Raven.Client.Connection.Async
 			{
 				await request.WriteAsync(document).ConfigureAwait(false);
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				if (result == null)
+				{
+					throw new InvalidOperationException("Got null response from the server after doing a put on " + key +", something is very wrong. Probably a garbled response.");
+				}
 				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
 			}
 			catch (ErrorResponseException e)

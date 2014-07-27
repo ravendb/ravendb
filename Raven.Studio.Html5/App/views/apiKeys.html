@@ -12,29 +12,31 @@
         </div>
     </div>
     <br />
-    <div class="alert alert-info" data-bind="visible: hasFetchedApiKeys() && apiKeys().length === 0">
+    <div class="alert alert-info" data-bind="visible: apiKeys().length === 0">
         <span>You don't have any API keys.</span>
-        <a href="#" class="alert-link" data-bind="click: createNewApiKey">Create one now</a>
+        <a href="#" class="alert alert-link" data-bind="click: createNewApiKey">Create one now</a>
     </div>
     <div data-bind="foreach: apiKeys">
-        <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid(), 'panel-warning': !enabled() && isValid(), 'panel-danger': !isValid() }">
+        <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid($index), 'panel-warning': !enabled() && isValid($index), 'panel-danger': !isValid($index) }">
             <div class="panel-heading">
                 <h3 class="panel-title">
                     <span data-bind="text: name() ? name() : '[new api key]'"></span>
-                    <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">×</button>
+                    <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">
+                        <span class="glyphicon glyphicon-remove remove-icon"></span>
+                    </button>
                 </h3>
             </div>
             <div class="panel-body">
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Name</label>
                     <div class="col-sm-7">
-                        <input type="text" class="form-control" required placeholder="MyApiKey" data-bind="value: name, valueUpdate: 'afterkeydown'" />
+                        <input type="text" class="form-control" required placeholder="MyApiKey" data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" />
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Secret</label>
                     <div class="col-sm-7">
-                        <input type="text" class="form-control" required readonly data-bind="value: secret" onmouseup="this.select(); return false;" />
+                        <input type="text" class="form-control" readonly data-bind="value: secret" onmouseup="this.select(); return false;" />
                         <a href="javascript:void(0)" data-bind="click: generateSecret">Generate</a>
                     </div>
                 </div>
@@ -111,7 +113,7 @@
                                     </td>
                                     <td>
                                         <button type="button" class="close" style="display:inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
-                                            <span class="glyphicon glyphicon-remove remove"></span>
+                                            <span class="glyphicon glyphicon-remove remove-icon"></span>
                                         </button>
                                     </td>
                                 </tr>

@@ -195,6 +195,8 @@ class treeBindingHandler {
 
     static isNodeExpanded(tree: string, key: string): boolean {
         var dynaTree = $(tree).dynatree("getTree");
+        if (!dynaTree)
+            return false;
         var node = dynaTree.getNodeByKey(key);
 
         return node && node.isExpanded();

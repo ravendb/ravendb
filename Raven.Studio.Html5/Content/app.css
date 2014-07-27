@@ -7792,11 +7792,11 @@ footer ul {
 }
 .remove-icon {
   color: #d2322d;
-  border-color: #ac2925;
+  border-color: #802925;
   cursor: pointer;
 }
 .remove-icon:hover {
-  color: #d2322d;
+  color: #ac2925;
 }
 /*.fa-plus {
     color: #58cc46;

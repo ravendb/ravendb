@@ -82,6 +82,7 @@ class appUrl {
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
         counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),

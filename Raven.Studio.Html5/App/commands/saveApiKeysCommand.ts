@@ -3,8 +3,10 @@ import apiKey = require("models/apiKey");
 import database = require("models/database");
 
 class saveApiKeysCommand extends executeBulkDocsCommand {
-    constructor(apiKeys: apiKey[], db: database) {
-        super(apiKeys.map(k => k.toBulkDoc("PUT")), db);
+    constructor(apiKeys: apiKey[], deletedApiKeys: apiKey[], db: database) {
+        var x = apiKeys.map(k => k.toBulkDoc("PUT"));
+        var y = deletedApiKeys.map(k => k.toBulkDoc("DELETE"));
+        super(apiKeys.map(k => k.toBulkDoc("PUT")).concat(deletedApiKeys.map(k => k.toBulkDoc("DELETE"))), db);
     }
 
     execute(): JQueryPromise<bulkDocumentDto[]> {

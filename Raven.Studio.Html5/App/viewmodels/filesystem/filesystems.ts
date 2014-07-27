@@ -12,6 +12,7 @@ import createFilesystemCommand = require("commands/filesystem/createFilesystemCo
 
 class filesystems extends viewModelBase {
 
+    appUrls: computedAppUrls;
     fileSystems = ko.observableArray<filesystem>();    
     searchText = ko.observable("");
     selectedFilesystem = ko.observable<filesystem>();
@@ -35,6 +36,12 @@ class filesystems extends viewModelBase {
 
     attached() {
         this.fileSystemsLoaded();
+    }
+
+    activate(args) {
+        super.activate(args);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
     }
 
     private fileSystemsLoaded() {
@@ -101,24 +108,6 @@ class filesystems extends viewModelBase {
 
         return fileSystemInArray;
     }
-
-    //deleteSelectedFilesystem() {
-    //    var fs = this.selectedFilesystem();
-    //    if (fs) {
-    //        require(["viewmodels/deleteFilesystemConfirm"], deleteFilesystemConfirm => {
-    //            var confirmDeleteVm: deleteFilesystemConfirm = new deleteFilesystemConfirm(fs, appUrl.getSystemDatabase());
-    //            confirmDeleteVm.deleteTask.done(() => this.onFilesystemDeleted(fs));
-    //            app.showDialog(confirmDeleteVm);
-    //        });
-    //    }
-    //}
-
-    //onFilesystemDeleted(fs: filesystem) {
-    //    this.filesystems.remove(fs);
-    //    if (this.selectedFilesystem() === fs) {
-    //        this.selectedFilesystem(this.filesystems().first());
-    //    }
-    //}
 }
 
 export = filesystems; 

@@ -15,7 +15,8 @@ class apiKey extends document {
     public metadata: documentMetadata;
     databases = ko.observableArray<databaseAccess>();
     visible = ko.observable(true);
-    
+    nameCustomValidity = ko.observable<string>('');
+
     constructor(dto: apiKeyDto) {
         super(dto);
 
@@ -35,7 +36,7 @@ class apiKey extends document {
         });
 
         this.connectionString = ko.computed(() => {
-            if (!this.fullApiKey()) {
+            if (!this.name() || !this.secret()) {
                 return "Requires name and secret";
             }
 
@@ -43,7 +44,7 @@ class apiKey extends document {
         });
 
         this.directLink = ko.computed(() => {
-            if (!this.fullApiKey()) {
+            if (!this.name() || !this.secret()) {
                 return "Requires name and secret";
             }
             return appUrl.forServer() + "/studio/index.html?api-key=" + this.fullApiKey();
@@ -111,9 +112,10 @@ class apiKey extends document {
         }
     }
 
-    isValid(): boolean {
+    isValid(index): boolean {
+        var isApiKeyNameValid = this.name().indexOf("\\") == -1;
         var requiredValues = [this.name(), this.secret()];
-        return requiredValues.every(v => v != null && v.length > 0);
+        return requiredValues.every(v => v != null && v.length > 0) && isApiKeyNameValid;
     }
 
     private static randomString(length: number, chars: string) {

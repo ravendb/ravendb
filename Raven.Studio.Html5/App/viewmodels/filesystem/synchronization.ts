@@ -7,6 +7,7 @@ class synchronization extends viewModelBase {
 
     router: DurandalRootRouter;
     static statusRouter: DurandalRouter; //TODO: is it better way of exposing this router to child router?
+
     currentRouteTitle: KnockoutComputed<string>;
     appUrls: computedAppUrls;
 

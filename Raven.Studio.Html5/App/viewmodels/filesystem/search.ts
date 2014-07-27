@@ -16,6 +16,8 @@ class search extends viewModelBase {
 
     private router = router;
 
+    appUrls: computedAppUrls;
+
     searchUrl = appUrl.forCurrentDatabase().filesystemSearch;
     searchText = ko.observable("");
     allFilesPagedItems = ko.observable<pagedList>();
@@ -35,6 +37,9 @@ class search extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
+
         this.activeFilesystem.subscribe((fs: filesystem) => {
             this.searchFiles("");
             this.searchText("");
