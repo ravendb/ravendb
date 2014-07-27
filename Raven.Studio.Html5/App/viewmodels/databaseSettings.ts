@@ -9,6 +9,7 @@ import document = require("models/document");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import messagePublisher = require("common/messagePublisher");
 
 class databaseSettings extends viewModelBase {
    
@@ -163,7 +164,7 @@ class databaseSettings extends viewModelBase {
                         this.isEditingMetadata(true);
                     }
                     this.docEditor.focus();
-                    this.reportError(message);
+                    messagePublisher.reportError(message);
                 }
 
             });

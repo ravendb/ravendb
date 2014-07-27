@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import alertType = require("common/alertType");
 import database = require("models/database");
 
 class deleteCollectionCommand extends commandBase {

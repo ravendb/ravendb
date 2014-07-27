@@ -10,8 +10,7 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
@@ -90,10 +89,9 @@ class editIndex extends viewModelBase {
             this.fetchIndexData(indexToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(indexToEditName) + " index", null));
+                    messagePublisher.reportError("Could not find " + decodeURIComponent(indexToEditName) + " index");
                     canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) });
                 });
-
             return canActivateResult;
         } else {
             return $.Deferred().resolve({ can: true });

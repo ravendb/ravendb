@@ -19,8 +19,7 @@ import resolveMergeCommand = require("commands/resolveMergeCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
 import pagedResultSet = require("common/pagedResultSet");
@@ -180,7 +179,7 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    messagePublisher.reportError("Could not find " + args.id + " document");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             return canActivateResult;
@@ -215,7 +214,7 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
+                    messagePublisher.reportError("Could not find query result");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             this.currentQueriedItemIndex = item;
@@ -347,7 +346,7 @@ class editDocument extends viewModelBase {
     }
 
     failedToLoadDoc(docId, errorResponse) {
-        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
+        messagePublisher.reportError("Could not find " + docId + " document");
     }
 
     escapeNewlinesInTextFields(str: string): any {
@@ -468,7 +467,7 @@ class editDocument extends viewModelBase {
         }
 
         if (message != "") {
-            this.reportError(message, null, false);
+            messagePublisher.reportError(message, undefined, undefined, false);
             return;
         }
 
@@ -655,7 +654,7 @@ class editDocument extends viewModelBase {
             var formatted = this.stringify(tempDoc);
             observableToUpdate(formatted);
         } catch (e) {
-            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not format json", e));
+            messagePublisher.reportError("Could not format json", undefined, undefined, false);
         }
     }
 

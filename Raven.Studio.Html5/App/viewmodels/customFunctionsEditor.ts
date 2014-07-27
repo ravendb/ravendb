@@ -5,8 +5,7 @@ import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand")
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
 import execJs = require("common/execJs");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 
 class customFunctionsEditor extends viewModelBase {
 
@@ -60,11 +59,12 @@ class customFunctionsEditor extends viewModelBase {
     saveChanges() {
         var annotations = this.docEditor.getSession().getAnnotations();
         var hasErrors = false;
-        annotations.forEach((annotation) => {
-            if (annotation.type === "error") {
+        for (var i = 0; i < annotations.length; i++) {
+            if (annotations[i].type === "error") {
                 hasErrors = true;
+                break;
             }
-        });
+        }
 
         if (!hasErrors) {
             var cf = new customFunctions({
@@ -74,7 +74,7 @@ class customFunctionsEditor extends viewModelBase {
             saveTask.done(() => this.dirtyFlag().reset());
         }
         else {
-            ko.postbox.publish("Alert", new alertArgs(alertType.warning, "Errors n the functions file", "Please correct the errors in the file to save it."));
+            messagePublisher.reportError("Errors in the functions file", "Please correct the errors in the file in order to save it.");
         }
     }
 

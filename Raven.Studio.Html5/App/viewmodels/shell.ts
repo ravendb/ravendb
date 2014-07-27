@@ -27,6 +27,7 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
+import messagePublisher = require("common/messagePublisher");
 
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
@@ -189,6 +190,8 @@ class shell extends viewModelBase {
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
 
+        appUrl.mapUnknownRoutes(router);
+
         window.addEventListener("beforeunload", () => {
             this.cleanupNotifications();
             this.globalChangesApi.dispose();
@@ -217,9 +220,14 @@ class shell extends viewModelBase {
         });
 
         router.activeInstruction.subscribe(val => {
-            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
+            if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
+
+        sys.error = (e) => {
+            console.error(e);
+            messagePublisher.reportError("Failed to load routed module!", e);
+        };
     }
 
     setupApiKey() {
