@@ -33,7 +33,7 @@ class tasks extends viewModelBase {
             { route: 'databases/tasks/backupDatabase', moduleId: 'viewmodels/backupDatabase', title: 'Backup Database', nav: true, hash: backupDatabaseUrl },
             { route: 'databases/tasks/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: restoreDatabaseUrl },
             { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/toggleIndexing', title: 'Toggle Indexing', nav: true, hash: toggleIndexingUrl },
-            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/createSampledata', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
+            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/createSampleData', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
             { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
             ])
             .buildNavigationModel();
