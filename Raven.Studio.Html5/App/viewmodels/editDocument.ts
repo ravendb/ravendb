@@ -361,11 +361,20 @@ class editDocument extends viewModelBase {
         var curToken = iterator.getCurrentToken();
         var text = "";
         while (curToken) {
+            if (iterator.$row - previousLine > 1) {
+                var rowsGap = iterator.$row - previousLine;
+                for (var i = 0; i < rowsGap -1; i++) {
+                    text += "\\r\\n";
+                }
+            }
             if (curToken.type === "string" || curToken.type == "constant.language.escape") {
                 if (previousLine < iterator.$row) {
                     text += "\\r\\n";
                 }
-                text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
+
+                var newTokenValue = curToken.value.replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n').replace(/(\n|\r\n)/g, '\\r\\n');
+                text += newTokenValue;
+                //text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
             } else {
                 text += curToken.value;
             }
@@ -387,7 +396,6 @@ class editDocument extends viewModelBase {
         var TokenIterator = require("ace/token_iterator").TokenIterator;
         var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
         var curToken = iterator.getCurrentToken();
-        
         // first, calculate newline indexes
         var rowsIndexes = str.split("").map(function (x, index) {return { char: x, index: index } }).filter(function (x) {return x.char == "\n" }).map(function (x) {return x.index });
 
@@ -417,7 +425,16 @@ class editDocument extends viewModelBase {
                     var stringTokenEndIndexInSourceText = (lastTextSectionPosEnd.row > 0 ?rowsIndexes[lastTextSectionPosEnd.row-1]:0) + lastTextSectionPosEnd.column;
                     var newTextPrefix = str.substring(0, stringTokenStartIndexInSourceText);
                     var newTextSuffix = str.substring(stringTokenEndIndexInSourceText, str.length);
-                    var newStringTokenValue = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText).replace(/(\\n|\\r\\n)/g, '\r\n');
+                    var newStringTokenValue = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText)
+                        .replace(/(\\\\n|\\\\r\\\\n|\\n|\\r\\n)/g, (x) => {
+                        if (x == "\\\\n" || x == "\\\\r\\\\n") {
+                            return "\\r\\n";
+                        } else if (x=="\\n" || x== "\\r\\n") {
+                            return "\r\n";
+                        } else {
+                            return "\r\n";
+                        }
+                    });
                     str = newTextPrefix + newStringTokenValue + newTextSuffix ;
                     curToken = iterator.stepBackward();
                 }
