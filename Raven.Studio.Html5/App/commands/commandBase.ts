@@ -1,7 +1,7 @@
 /// <reference path="../models/dto.ts" />
 
-import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
@@ -23,25 +23,6 @@ class commandBase {
 
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
-    }
-
-    reportInfo(title: string, details?: string) {
-        this.reportProgress(alertType.info, title, details);
-    }
-
-    reportError(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.danger, title, details, httpStatusText);
-        if (console && console.log && typeof console.log === "function") {
-            console.log("Error during command execution", title, details, httpStatusText);
-        }
-    }
-
-    reportSuccess(title: string, details?: string) {
-        this.reportProgress(alertType.success, title, details);
-    }
-
-    reportWarning(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.warning, title, details, httpStatusText);
     }
 
     urlEncodeArgs(args: any): string {
@@ -315,8 +296,20 @@ class commandBase {
         ko.postbox.publish("LoadProgress", null);
     }
 
-    private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details, httpStatusText));
+    reportInfo(title: string, details?: string) {
+        messagePublisher.reportInfo(title, details);
+    }
+
+    reportError(title: string, details?: string, httpStatusText?: string) {
+        messagePublisher.reportError(title, details, httpStatusText);
+    }
+
+    reportSuccess(title: string, details?: string) {
+        messagePublisher.reportSuccess(title, details);
+    }
+
+    reportWarning(title: string, details?: string, httpStatusText?: string) {
+        messagePublisher.reportWarning(title, details, httpStatusText);
     }
 }
 

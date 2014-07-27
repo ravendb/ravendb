@@ -9,10 +9,8 @@ import app = require("durandal/app");
 import document = require("models/document");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import router = require("plugins/router");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
-
 
 class sqlReplications extends viewModelBase {
 
@@ -72,12 +70,8 @@ class sqlReplications extends viewModelBase {
 
     resetSqlReplication(replicationId: string) {
         new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-            .done(() => {
-                ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
-            })
-            .fail((foo) => {
-                ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
-            });
+            .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"))
+            .fail(() => messagePublisher.reportError("SQL replication " + replicationId + " failed to reset!"));
     }
 
     itemNumber = (index) => {

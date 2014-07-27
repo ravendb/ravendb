@@ -11,8 +11,7 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -38,7 +37,7 @@ class editTransformer extends viewModelBase {
             this.editExistingTransformer(transformerToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                    messagePublisher.reportError("Could not find " + transformerToEditName + " transformer");
                     canActivateResult.resolve({ redirect: appUrl.forTransformers(this.activeDatabase()) });
                 });
 
