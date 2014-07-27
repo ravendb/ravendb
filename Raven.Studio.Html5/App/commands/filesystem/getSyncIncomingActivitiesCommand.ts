@@ -1,6 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import synchronizationDetails = require("models/filesystem/synchronizationDetails");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
 
 class getSyncIncomingActivitiesCommand extends commandBase {
@@ -16,7 +15,7 @@ class getSyncIncomingActivitiesCommand extends commandBase {
         var pageSize = 50;
 
         this.getIncomingActivity(start, pageSize)
-            .done(x => doneTask.resolve(x.Items.map(x => new synchronizationDetail(x, "Pending"))))
+            .done(x => doneTask.resolve(x.Items.map(x => new synchronizationDetail(x, "Pending", x.Type))))
             .fail((xhr) => {
                 this.reportError("Failed to get synchronization incoming activities.");
                 doneTask.reject(xhr);
@@ -27,7 +26,8 @@ class getSyncIncomingActivitiesCommand extends commandBase {
 
     getIncomingActivity(skip: number, take: number): JQueryPromise<filesystemListPageDto<filesystemSynchronizationDetailsDto>> {
         var incomingUrl = "/synchronization/incoming";
-        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(incomingUrl, { start: skip, pageSize: take }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
+        var resultsSelector = (x: filesystemListPageDto<filesystemSynchronizationDetailsDto>) => { x.Items.map((item: filesystemSynchronizationDetailsDto) => item.Direction = synchronizationDirection.Incoming); return x; };
+        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(incomingUrl, { start: skip, pageSize: take }, this.fs, resultsSelector);
     }
 }
 

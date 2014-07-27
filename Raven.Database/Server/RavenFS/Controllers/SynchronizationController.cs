@@ -97,7 +97,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
-                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders); // InnerHeaders.FilterHeadersToObject();
+                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 				var localMetadata = GetLocalMetadata(fileName);
 
@@ -112,23 +112,23 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 }
 
                 Historian.UpdateLastModified(sourceMetadata);
-
-                var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWritting(Storage, Search, StorageOperationsTask,
-                                                                                             tempFileName, sourceMetadata);
+                
+                var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(Storage, Search, StorageOperationsTask, tempFileName, sourceMetadata);
 
                 var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
 
-                Log.Debug("Starting to process multipart content of a file '{0}'", fileName);
+                Log.Debug("Starting to process/read multipart content of a file '{0}'", fileName);
 
                 await Request.Content.ReadAsMultipartAsync(provider);
 
-                Log.Debug("Multipart content of a file '{0}' was processed", fileName);
+                Log.Debug("Multipart content of a file '{0}' was processed/read", fileName);
 
                 report.BytesCopied = provider.BytesCopied;
                 report.BytesTransfered = provider.BytesTransfered;
                 report.NeedListLength = provider.NumberOfFileParts;
 
                 synchronizingFile.PreventUploadComplete = false;
+                synchronizingFile.Flush();
                 synchronizingFile.Dispose();
                 sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
@@ -141,26 +141,27 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                     Search.Delete(tempFileName);
                     Search.Index(fileName, sourceMetadata);
-                });
+                });                
 
                 if (isNewFile)
                 {
-                    Log.Debug("Temporary downloading file '{0}' was renamed to '{1}'. Indexes was updated.", tempFileName, fileName);
+                    Log.Debug("Temporary downloading file '{0}' was renamed to '{1}'. Indexes were updated.", tempFileName, fileName);
                 }
                 else
                 {
-                    Log.Debug("Old file '{0}' was deleted. Indexes was updated.", fileName);
+                    Log.Debug("Old file '{0}' was deleted. Indexes were updated.", fileName);
                 }
 
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictNotification 
-                    { 
+                    Publisher.Publish(new ConflictNotification
+                    {
                         FileName = fileName,
                         Status = ConflictStatus.Resolved
                     });
-                }
+                }    
+        
 			}
 			catch (Exception ex)
 			{
@@ -317,15 +318,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				report.Exception = ex;
 
 				Log.WarnException(
-					string.Format("Error was occured during metadata synchronization of file '{0}' from {1}", fileName,
+					string.Format("Error was occurred during metadata synchronization of file '{0}' from {1}", fileName,
 								  sourceServerInfo), ex);
 			}
 			finally
 			{
-				FinishSynchronization(fileName, report, sourceServerInfo, sourceFileETag);
-
-                PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
+				FinishSynchronization(fileName, report, sourceServerInfo, sourceFileETag);                
 			}
+
+            PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
 
 			if (report.Exception == null)
 			{
@@ -408,10 +409,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 			finally
 			{
-				FinishSynchronization(fileName, report, sourceServerInfo, sourceFileETag);
-
-                PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
+				FinishSynchronization(fileName, report, sourceServerInfo, sourceFileETag);               
 			}
+
+            PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
 
 			if (report.Exception == null)
 			{
@@ -479,10 +480,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 			finally
 			{
-				FinishSynchronization(fileName, report, sourceServerInfo, sourceFileETag);
-
-                PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
+				FinishSynchronization(fileName, report, sourceServerInfo, sourceFileETag);               
 			}
+
+            PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
 
 			if (report.Exception == null)
 				Log.Debug("File '{0}' was renamed to '{1}' during synchronization from {2}", fileName, rename, sourceServerInfo);
@@ -738,7 +739,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				SourceServerId = sourceServer.Id,
 				Type = type,
 				Action = action,
-				SynchronizationDirection = SynchronizationDirection.Incoming
+				Direction = SynchronizationDirection.Incoming
 			});
 		}
 

@@ -1,6 +1,4 @@
 import appUrl = require("common/appUrl");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
@@ -14,6 +12,7 @@ import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
 import ace = require("ace/ace");
 import oauthContext = require("common/oauthContext");
+import messagePublisher = require("common/messagePublisher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -49,8 +48,8 @@ class viewModelBase {
             return this.promptNavSystemDb();
         }
         else if (!!db && db.disabled()) {
-            this.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
-            return $.Deferred().resolve({ redirect: appUrl.forDatabases() });
+            messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
+            return { redirect: appUrl.forDatabases() };
         }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
@@ -259,14 +258,6 @@ class viewModelBase {
             // For Safari
             return message;
         }
-    }
-
-    reportError(title: string, details?: string, displayInRecentErrors: boolean = true) {
-        this.reportProgress(alertType.danger, title, details, displayInRecentErrors);
-    }
-
-    private reportProgress(type: alertType, title: string, details?: string, displayInRecentErrors: boolean = true) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details, null, displayInRecentErrors));
     }
 }
 

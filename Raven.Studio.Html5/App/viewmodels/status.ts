@@ -32,6 +32,7 @@ class status extends viewModelBase {
 
         status.statusRouter = this.router;
 
+        appUrl.mapUnknownRoutes(this.router);
 
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?

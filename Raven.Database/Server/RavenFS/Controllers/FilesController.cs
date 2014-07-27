@@ -73,6 +73,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
             WriteHeaders(fileAndPages.Metadata, etag, result);
 
+            log.Debug("File '{0}' with etag {1} is being retrieved.", name, etag);
+
             return result.WithNoCache();
 		}
 
@@ -298,7 +300,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
-                headers["Creation-Date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+                headers[Constants.CreationDate] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);

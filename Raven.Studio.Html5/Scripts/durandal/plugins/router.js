@@ -433,6 +433,7 @@ define(['durandal/system', 'durandal/app', 'durandal/activator', 'durandal/event
 
                     ensureActivation(activeItem, instance, instruction);
                 }).fail(function(err) {
+                    cancelNavigation(null, instruction);
                     system.error('Failed to load routed module (' + instruction.config.moduleId + '). Details: ' + err.message, err);
                 });
             }
