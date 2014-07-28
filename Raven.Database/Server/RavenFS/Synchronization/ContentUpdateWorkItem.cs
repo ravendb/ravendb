@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -179,7 +180,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			return new DataInfo
 			{
-                CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>(Constants.LastModified)).ToUniversalTime(),
+                LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified).ToUniversalTime(),
 				Length = fileAndPages.TotalSize ?? 0,
 				Name = fileAndPages.Name
 			};
