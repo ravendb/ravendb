@@ -228,6 +228,10 @@
       <Project>{3C2CD044-CF12-48D1-9C43-64A9058C165E}</Project>
       <Name>Voron.Tests</Name>
     </ProjectReference>
+    <ProjectReference Include="..\RavenFS.Tests\RavenFS.Tests.csproj">
+      <Project>{01ca67f3-1e46-455c-8713-86fccf2efbc7}</Project>
+      <Name>RavenFS.Tests</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Transactions" />
