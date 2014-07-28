@@ -108,5 +108,11 @@ namespace Raven.Client
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue);
+
+		/// <summary>
+		/// Refreshes the specified entity from Raven server.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		Task RefreshAsync<T>(T entity);
 	}
 }
