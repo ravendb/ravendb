@@ -48,11 +48,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                 var stats = new RdcStats
                 {
-                    CurrentVersion = (int)rdcVersion.CurrentVersion,
-                    MinimumCompatibleAppVersion = (int)rdcVersion.MinimumCompatibleAppVersion
+                    CurrentVersion = rdcVersion.CurrentVersion,
+                    MinimumCompatibleAppVersion = rdcVersion.MinimumCompatibleAppVersion
                 };
 
-                return this.GetMessageWithObject(stats, HttpStatusCode.OK)
+                return GetMessageWithObject(stats)
                            .WithNoCache();
 			}
 		}
@@ -82,14 +82,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                 new DataInfo
 					                                            {
 						                                            Name = filename,
-                                                                    CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>(Constants.LastModified))
+                                                                    LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified)
 								                                                       .ToUniversalTime()
 					                                            });
 				signatureManifest.FileLength = fileLength ?? 0;
 
 				Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", filename, signatureManifest.Signatures.Count);
 
-                return this.GetMessageWithObject(signatureManifest, HttpStatusCode.OK)
+                return GetMessageWithObject(signatureManifest)
                            .WithNoCache();
 			}
 		}
