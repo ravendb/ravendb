@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -169,6 +170,31 @@ namespace Raven.Tests.Document
 				session.Advanced.Refresh(company);
                 Assert.NotEqual(old, session.Advanced.GetEtagFor(company));
                 Assert.NotEqual(Etag.Empty, session.Advanced.GetEtagFor(company));
+				Assert.Equal("Hibernating Rhinos", company.Name);
+			}
+		}
+
+		[Fact]
+		public async Task CanRefreshEntityFromDatabaseAsync()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenAsyncSession())
+			{
+				await session.StoreAsync(company);
+				await session.SaveChangesAsync();
+
+				using (var session2 = documentStore.OpenSession())
+				{
+					var company2 = session2.Load<Company>(company.Id);
+					company2.Name = "Hibernating Rhinos";
+					session2.Store(company2);
+					session2.SaveChanges();
+				}
+
+				var old = session.Advanced.GetEtagFor(company);
+				await session.Advanced.RefreshAsync(company);
+				Assert.NotEqual(old, session.Advanced.GetEtagFor(company));
+				Assert.NotEqual(Etag.Empty, session.Advanced.GetEtagFor(company));
 				Assert.Equal("Hibernating Rhinos", company.Name);
 			}
 		}
