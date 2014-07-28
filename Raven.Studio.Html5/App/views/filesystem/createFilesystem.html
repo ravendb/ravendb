@@ -9,7 +9,7 @@
         <div class="modal-body">
             <div class="form-group">
                 <label for="databaseName">Name</label>
-                <input required type="text" class="form-control" id="filesystemName" placeholder="File System Name" data-bind="value: filesystemName, valueUpdate: 'afterkeydown', hasfocus: filesystemNameFocus">
+                <input data-bind="value: fileSystemName, valueUpdate: 'afterkeydown', hasfocus: fileSystemNameFocus, customValidity: nameCustomValidity" type="text" class="form-control" id="filesystemName" autocomplete="off" placeholder="File System Name">
             </div>
             <div class="panel-group" id="accordion">
                 <div class="panel panel-default">
@@ -24,11 +24,11 @@
                         <div class="panel-body">
                             <div class="form-group">
                                 <label for="filesystemPath">Path</label>
-                                <input type="text" class="form-control" id="filesystemPath" placeholder="~/Filesystems/Northwind">
+                                <input data-bind="value: fileSystemPath, customValidity: pathCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Filesystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
                             </div>
                             <div class="form-group">
                                 <label for="filesystemLogs">Logs</label>
-                                <input type="text" class="form-control" id="filesystemLogs">
+                                <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Filesystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
                             </div>
                         </div>
                     </div>

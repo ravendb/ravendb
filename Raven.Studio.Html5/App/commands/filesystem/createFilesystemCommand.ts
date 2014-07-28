@@ -5,31 +5,31 @@ class createFilesystemCommand extends commandBase {
     /**
     * @param filesystemName The file system name we are creating.
     */
-    constructor(private filesystemName: string, private filesystemPath: string) {
+    constructor(private fileSystemName: string, private fileSystemPath: string) {
         super();
 
-        if (!filesystemName) {
+        if (!fileSystemName) {
             this.reportError("File System must have a name!");
             throw new Error("File System must have a name!");
         }
 
-        if (this.filesystemPath == null) {
-            this.filesystemPath = "~\\Filesystems\\" + this.filesystemName;
+        if (this.fileSystemPath == null) {
+            this.fileSystemPath = "~\\Filesystems\\" + this.fileSystemPath;
         }
     }
 
     execute(): JQueryPromise<any> {
 
-        this.reportInfo("Creating File System '" + this.filesystemName + "'");
+        this.reportInfo("Creating File System '" + this.fileSystemName + "'");
 
         var filesystemDoc = {
-            "Settings": { "Raven/FileSystem/DataDir" : this.filesystemPath },
+            "Settings": { "Raven/FileSystem/DataDir": this.fileSystemPath },
             "Disabled": false
         };
 
-        var url = "/fs/admin/" + this.filesystemName;
+        var url = "/fs/admin/" + this.fileSystemName;
         var createTask = this.put(url, JSON.stringify(filesystemDoc), null, { dataType: undefined });
-        createTask.done(() => this.reportSuccess(this.filesystemName + " created"));
+        createTask.done(() => this.reportSuccess(this.fileSystemName + " created"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to create file system", response.responseText, response.statusText));
 
         return createTask;

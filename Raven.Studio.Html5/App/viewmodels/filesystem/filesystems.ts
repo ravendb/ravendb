@@ -84,12 +84,12 @@ class filesystems extends viewModelBase {
             var createFilesystemViewModel: createFilesystem = new createFilesystem(this.fileSystems);
             createFilesystemViewModel
                 .creationTask
-                .done((filesystemName: string, filesystemPath: string) => this.showCreationAdvancedStepsIfNecessary(filesystemName, filesystemPath));
+                .done((fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) => this.showCreationAdvancedStepsIfNecessary(fileSystemName, fileSystemPath, fileSystemLogsPath));
             app.showDialog(createFilesystemViewModel);
         });
     }
 
-    showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string) {
+    showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) {
         new createFilesystemCommand(fileSystemName, fileSystemPath).execute()
             .done(() => {
                 var newFileSystem = this.addNewFileSystem(fileSystemName);

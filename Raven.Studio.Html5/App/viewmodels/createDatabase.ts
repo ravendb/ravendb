@@ -11,12 +11,18 @@ class createDatabase extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
+    private emptyNameMessage = "Please fill out the database name field!";
 
     databaseName = ko.observable('');
+    nameCustomValidity = ko.observable<string>(this.emptyNameMessage);
     databasePath = ko.observable('');
-    databaseLogs = ko.observable('');
-    databaseIndexes = ko.observable('');
+    pathCustomValidity = ko.observable<string>('');
+    databaseLogsPath = ko.observable('');
+    logsCustomValidity = ko.observable<string>('');
+    databaseIndexesPath = ko.observable('');
+    indexesCustomValidity = ko.observable<string>('');
     databaseNameFocus = ko.observable(true);
+    private maxNameLength = 200;
 
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
@@ -28,14 +34,9 @@ class createDatabase extends dialogViewModelBase {
     isPeriodicExportBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
-    private databases = ko.observableArray<database>();
-    private licenseStatus = ko.observable<licenseStatusDto>(null);
-    private maxNameLength = 200;
-
-    constructor(databases: KnockoutObservableArray<database>, licenseStatus: KnockoutObservable<licenseStatusDto>) {
+    constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
 
-        this.databases = databases;
         this.licenseStatus = licenseStatus;
         if (this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
             this.isPeriodicExportBundleEnabled(false);
@@ -44,24 +45,22 @@ class createDatabase extends dialogViewModelBase {
 
     attached() {
         super.attached();
-        this.databaseNameFocus(true);
-        
-        var inputElement: any = $("#databaseName")[0];
+
         this.databaseName.subscribe((newDatabaseName) => {
             var errorMessage: string = '';
             if (this.isDatabaseNameExists(newDatabaseName, this.databases()) === true) {
-                errorMessage = "Database Name Already Exists!";
+                errorMessage = "Database name already exists!";
             }
             else if ((errorMessage = this.checkName(newDatabaseName)) != '') { }
-            inputElement.setCustomValidity(errorMessage);
+
+            this.nameCustomValidity(errorMessage);
         });
     
-        inputElement.setCustomValidity("An empty database name is forbidden for use!");
-        this.databaseNameFocus(true);
+        this.subscribeToPath(this.databasePath, this.pathCustomValidity, "Path");
+        this.subscribeToPath(this.databaseLogsPath, this.logsCustomValidity, "Logs");
+        this.subscribeToPath(this.databaseIndexesPath, this.indexesCustomValidity, "Indexes");
 
-        this.subscribeToPath("#databasePath", this.databasePath, "Path");
-        this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
-        this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
+        this.databaseNameFocus(true);
     }
 
     deactivate() {
@@ -95,13 +94,13 @@ class createDatabase extends dialogViewModelBase {
 
         this.creationTaskStarted = true;
         dialog.close(this);
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
-        
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath());
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
+        databaseName = databaseName.toLowerCase();
         for (var i = 0; i < databases.length; i++) {
-            if (databaseName == databases[i].name) {
+            if (databaseName == databases[i].name.toLowerCase()) {
                 return true;
             }
         }
@@ -115,10 +114,10 @@ class createDatabase extends dialogViewModelBase {
 
         var message = '';
         if (!$.trim(name)) {
-            message = "An empty database name is forbidden for use!";
+            message = this.emptyNameMessage;
         }
         else if (name.length > this.maxNameLength) {
-            message = "The database length can't exceed " + this.maxNameLength + " characters!";
+            message = "The database name length can't exceed " + this.maxNameLength + " characters!";
         }
         else if (!rg1.test(name)) {
             message = "The database name can't contain any of the following characters: \ / * : ?" + ' " ' + "< > |";
@@ -135,11 +134,10 @@ class createDatabase extends dialogViewModelBase {
         return message;
     }
 
-    private subscribeToPath(tag, element, pathName) {
-        var inputElement: any = $(tag)[0];
+    private subscribeToPath(element, validityObservable: KnockoutObservable<string>, pathName) {
         element.subscribe((path) => {
             var errorMessage: string = this.isPathLegal(path, pathName);
-            inputElement.setCustomValidity(errorMessage);
+            validityObservable(errorMessage);
         });
     }
 
