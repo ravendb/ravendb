@@ -124,7 +124,7 @@ namespace Raven.Tests.MailingList
 				var results = session.Query<VacancyCampaignsIndex.ReduceResult, VacancyCampaignsIndex>()
 					.Customize(x => x.WaitForNonStaleResults())
 					.Where(x => x.Active)
-					.AsProjection<VacancyCampaignsIndex.ReduceResult>()
+					.ProjectFromIndexFieldsInto<VacancyCampaignsIndex.ReduceResult>()
 					.ToList();
 				Assert.Equal(2, results.Count());
 			}

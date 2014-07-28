@@ -9,12 +9,9 @@ class metrics extends viewModelBase {
 
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
-    appUrls: computedAppUrls;
 
     constructor() {
         super();
-        
-        this.appUrls = appUrl.forCurrentDatabase();
 
         this.router = status.statusRouter.createChildRouter()
             .map([
@@ -25,6 +22,7 @@ class metrics extends viewModelBase {
             ])
             .buildNavigationModel();
        
+        appUrl.mapUnknownRoutes(this.router);
 
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?

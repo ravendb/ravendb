@@ -25,6 +25,8 @@ class synchronization extends viewModelBase {
 
         synchronization.statusRouter = this.router;
 
+        appUrl.mapUnknownRoutes(this.router);
+
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?
             var activeRoute = this.router.navigationModel().first(r => r.isActive());

@@ -102,15 +102,7 @@ namespace Raven.Database.Extensions
 					}
 					catch (UnauthorizedAccessException)
 					{
-						var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
-						var stringBuilder = new StringBuilder();
-						stringBuilder.Append("The following processing are locking ").Append(path).AppendLine();
-						foreach (var processesUsingFile in processesUsingFiles)
-						{
-							stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
-								AppendLine();
-						}
-						throw new IOException(stringBuilder.ToString());
+						throw new IOException(WhoIsLocking.ThisFile(path));
 					}
 					catch(IOException)
 					{

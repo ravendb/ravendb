@@ -7,8 +7,7 @@ import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand
 import router = require("plugins/router"); 
 import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 
 class copyIndexDialog extends dialogViewModelBase {
     
@@ -58,11 +57,7 @@ class copyIndexDialog extends dialogViewModelBase {
                 var testIndex = new indexDefinition(indexDto);
             } catch(e) {
                 indexDto = null;
-                var title = "Index paste failed, invalid json string";
-                ko.postbox.publish("Alert", new alertArgs(alertType.danger, title, e));
-                if (console && console.log && typeof console.log === "function") {
-                    console.log("Error during command execution", title, e);
-                }
+                messagePublisher.reportError("Index paste failed, invalid json string", e);
             }
 
             if (indexDto) {
@@ -78,20 +73,10 @@ class copyIndexDialog extends dialogViewModelBase {
                                     this.close();
                                 });
                         } else {
-                            var title = "Cannot paste Index, Error occured";
-                            ko.postbox.publish("Alert", new alertArgs(alertType.danger, title, error));
-                        if (console && console.log && typeof console.log === "function") {
-                            console.log("Cannot paste Index, Error occured", title, error);
-                        }
+                            messagePublisher.reportError("Cannot paste index, error occured!", error);
                         }
                     })
-                    .done(() => {
-                        var title = "Cannot paste, Index with that name already exist";
-                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, title));
-                        if (console && console.log && typeof console.log === "function") {
-                            console.log("Cannot paste Index, Index with that name already exist", title);
-                        }
-                    });
+                    .done(() => messagePublisher.reportError("Cannot paste index, error occured!", "Index with that name already exists!"));
             } 
         } else {
             this.close();    

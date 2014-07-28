@@ -113,7 +113,7 @@ namespace Raven.Tests.Bugs
 				{
 					var results = session.Query<SpellByName.Result, SpellByName>()
 						.Customize(customization => customization.WaitForNonStaleResults())
-						.AsProjection<SpellViewModel>()
+						.ProjectFromIndexFieldsInto<SpellViewModel>()
 						.ToList();
 
 					Assert.Equal(results[0].Cost, 100);

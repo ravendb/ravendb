@@ -103,13 +103,18 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 
 		public DateTime? GetLastUpdate()
 		{
-			SignatureLevels firstOrDefault = null;
-			_storage.Batch(accessor => { firstOrDefault = accessor.GetSignatures(_fileName).FirstOrDefault(); });
+			DateTime? result = null;
+			_storage.Batch(accessor =>
+			{
+				var signatures = accessor.GetSignatures(_fileName).ToList();
 
-			if (firstOrDefault == null)
-				return null;
+				if(signatures.Count == 0)
+					return;
 
-			return firstOrDefault.CreatedAt;
+				result = signatures.Min(x => x.CreatedAt);
+			});
+
+			return result;
 		}
 
 		public void Dispose()
