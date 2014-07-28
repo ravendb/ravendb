@@ -164,5 +164,70 @@ namespace Voron.Tests.Bugs
 				}
 			}
 		}
+
+		[Fact]
+		public void RavenDB_2543()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "rebalancing-issue");
+
+				var aKey = new string('a', 1000);
+				var bKey = new string('b', 1000);
+				var cKey = new string('c', 1000);
+				var dKey = new string('d', 1020);
+				var eKey = new string('e', 1020);
+				var fKey = new string('f', 1020);
+				var gKey = new string('g', 1000);
+				var hKey = new string('h', 1000);
+				var iKey = new string('i', 1000);
+				var jKey = new string('j', 1000);
+				var kKey = new string('k', 1000);
+				var lKey = new string('l', 1000);
+				var mKey = new string('m', 820);
+				var nKey = new string('n', 102);
+
+				tree.Add(aKey, new MemoryStream(new byte[100]));
+				tree.Add(bKey, new MemoryStream(new byte[100]));
+				tree.Add(cKey, new MemoryStream(new byte[100]));
+				tree.Add(dKey, new MemoryStream(new byte[100]));
+				tree.Add(eKey, new MemoryStream(new byte[100]));
+				tree.Add(fKey, new MemoryStream(new byte[100]));
+				tree.Add(gKey, new MemoryStream(new byte[100]));
+				tree.Add(hKey, new MemoryStream(new byte[100]));
+				tree.Add(iKey, new MemoryStream(new byte[100]));
+				tree.Add(jKey, new MemoryStream(new byte[100]));
+				tree.Add(kKey, new MemoryStream(new byte[100]));
+				tree.Add(lKey, new MemoryStream(new byte[100]));
+				tree.Add(mKey, new MemoryStream(new byte[100]));
+				tree.Add(nKey, new MemoryStream(new byte[1000]));
+
+				RenderAndShow(tx, 1, "rebalancing-issue");
+
+				tree.Delete(nKey);
+
+				tx.Commit();
+
+				//using (var iterator = tree.Iterate())
+				//{
+				//	Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+				//	Assert.Equal(bKey, iterator.CurrentKey);
+				//	Assert.True(iterator.MoveNext());
+
+				//	Assert.Equal(cKey, iterator.CurrentKey);
+				//	Assert.True(iterator.MoveNext());
+
+				//	Assert.Equal(dKey, iterator.CurrentKey);
+				//	Assert.True(iterator.MoveNext());
+
+				//	Assert.Equal(eKey, iterator.CurrentKey);
+				//	Assert.True(iterator.MoveNext());
+
+				//	Assert.Equal(fKey, iterator.CurrentKey);
+				//	Assert.False(iterator.MoveNext());
+				//}
+			}
+		}
 	}
 }
