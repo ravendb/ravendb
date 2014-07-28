@@ -110,9 +110,9 @@ namespace Raven.Client.Document.Async
             return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
         }
 
-	   
 
-	    /// <summary>
+
+		/// <summary>
         /// Loads the specified id and a function to call when it is evaluated
         /// </summary>
         public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval)
@@ -514,17 +514,17 @@ namespace Raven.Client.Document.Async
         /// <returns></returns>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
-            var index = new TIndexCreator();
+			var index = new TIndexCreator();
 
             return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
-        }
+		}
 
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
         [Obsolete("Use AsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
-        {
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
+		{
             return AsyncDocumentQuery<T>(index, isMapReduce);
         }
 
@@ -536,12 +536,12 @@ namespace Raven.Client.Document.Async
 			return new AsyncDocumentQuery<T>(this,null,AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
+		/// <summary>
+		/// Dynamically query RavenDB using Lucene syntax
+		/// </summary>
         [Obsolete("Use AsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
-        {
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+		{
             return AsyncDocumentQuery<T>();
         }
 
@@ -549,7 +549,7 @@ namespace Raven.Client.Document.Async
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
-		{
+			{
             var indexName = CreateDynamicIndexName<T>();
 			
 			return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
@@ -666,7 +666,7 @@ namespace Raven.Client.Document.Async
 		    {
 		        includedDocumentsByKey.Remove(id);
 		        return TrackEntity<T>(value);
-		    }
+			}
 		    if (IsDeleted(id))
 		        return default(T);
 
@@ -787,28 +787,28 @@ namespace Raven.Client.Document.Async
 			}
 
             var getResponse = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, transformerParameters).ConfigureAwait(false));
-			var items = new List<T>();
-			foreach (var result in getResponse.Results)
-			{
-				if (result == null)
-				{
-					items.Add(default(T));
-					continue;
-				}
-				var transformedResults = result.Value<RavenJArray>("$values").ToArray()
-					  .Select(JsonExtensions.ToJObject)
-					  .Select(x =>
-					  {
+		    var items = new List<T>();
+		    foreach (var result in getResponse.Results)
+		    {
+                if (result == null)
+                {
+                    items.Add(default(T));
+                    continue;
+                }
+		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
+		              .Select(JsonExtensions.ToJObject)
+		              .Select(x =>
+		              {
 						  HandleInternalMetadata(x);
 						  return ConvertToEntity(typeof(T),null, x, new RavenJObject());
-					  })
-					  .Cast<T>();
+		              })
+		              .Cast<T>();
 
 
-				items.AddRange(transformedResults);
+                items.AddRange(transformedResults);
 
-			}
-
+		    }
+				
 			if (items.Count > ids.Length)
 			{
 				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
@@ -830,7 +830,7 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation(lazyOp, onEval);
 	    }
 
-	    /// <summary>
+		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -969,5 +969,37 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
+
+		public async Task RefreshAsync<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a transient instance");
+			IncrementRequestCount();
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key);
+			if (jsonDocument == null)
+				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+
+			value.Metadata = jsonDocument.Metadata;
+			value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
+			value.ETag = jsonDocument.Etag;
+			value.OriginalValue = jsonDocument.DataAsJson;
+			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+			var type = entity.GetType();
+			foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+			{
+				var prop = property;
+				if (prop.DeclaringType != type && prop.DeclaringType != null)
+				{
+					prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+					if (prop == null)
+						prop = property; // shouldn't happen ever...
+				}
+				if (!prop.CanWrite || !prop.CanRead || prop.GetIndexParameters().Length != 0)
+					continue;
+				prop.SetValue(entity, prop.GetValue(newEntity, null), null);
+			}
+		}
+
 	}
 }
