@@ -27,12 +27,12 @@ namespace Raven.Abstractions.Smuggler
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
-			BatchSize = 1024;
+            BatchSize = 16 * 1024;
 		    ChunkSize = int.MaxValue;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
 			ShouldExcludeExpired = false;
-			Limit = 64*1024;
+			Limit = int.MaxValue;
 	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;

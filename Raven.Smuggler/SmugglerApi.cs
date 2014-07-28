@@ -102,7 +102,6 @@ namespace Raven.Smuggler
 			jintHelper.Initialize(options);
 
 			currentBatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
-			currentLimit = options != null ? options.Limit : SmugglerOptions.Limit;
 
 			using (store = CreateStore(importOptions.To))
 			{
@@ -155,7 +154,7 @@ namespace Raven.Smuggler
 
 			operation.Store(document, metadata, id, size);
 			storedDocumentCountInBatch++;
-			if (storedDocumentCountInBatch >= currentLimit && currentLimit > 0)
+			if (storedDocumentCountInBatch >= currentBatchSize && currentBatchSize > 0)
 			{
 				storedDocumentCountInBatch = 0;
 				await operation.DisposeAsync();
@@ -242,22 +241,22 @@ namespace Raven.Smuggler
 
 			s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
 
-			return s;
+		    return s;
 		}
 
 		protected override JsonDocument GetDocument(string key)
-		{
+	    {
 			return store.DatabaseCommands.Get(key);
-		}
+	        }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
-		{
+	        {
 			if (IsDocsStreamingSupported)
 			{
 				ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
 				return await Commands.StreamDocsAsync(lastEtag, pageSize: take);
 			}
-
+			
 			int retries = RetriesCount;
 			while (true)
 			{
@@ -291,64 +290,64 @@ namespace Raven.Smuggler
 			var totalCount = 0;
 			while (true)
 			{
-				try
-				{
-					if (SmugglerOptions.Limit - totalCount <= 0)
-					{
-						ShowProgress("Done with reading attachments, total: {0}", totalCount);
-						return lastEtag;
-					}
+			    try
+			    {
+			        if (SmugglerOptions.Limit - totalCount <= 0)
+			        {
+			            ShowProgress("Done with reading attachments, total: {0}", totalCount);
+			            return lastEtag;
+			        }
 
-					var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
-					RavenJArray attachmentInfo = null;
+			        var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
+			        RavenJArray attachmentInfo = null;
 					var request = CreateRequest(src, "/static/?pageSize=" + maxRecords + "&etag=" + lastEtag);
-					request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
+			        request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
-					if (attachmentInfo.Length == 0)
-					{
-						var databaseStatistics = await GetStats();
-						var lastEtagComparable = new ComparableByteArray(lastEtag);
-						if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
-						{
-							lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-							ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
-							continue;
-						}
-						ShowProgress("Done with reading attachments, total: {0}", totalCount);
-						return lastEtag;
-					}
+			        if (attachmentInfo.Length == 0)
+			        {
+			            var databaseStatistics = await GetStats();
+			            var lastEtagComparable = new ComparableByteArray(lastEtag);
+			            if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+			            {
+			                lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+			                ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+			                continue;
+			            }
+			            ShowProgress("Done with reading attachments, total: {0}", totalCount);
+			            return lastEtag;
+			        }
 
-					ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length,
-								 totalCount);
-					foreach (var item in attachmentInfo)
-					{
-						ShowProgress("Downloading attachment: {0}", item.Value<string>("Key"));
+			        ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length,
+			                     totalCount);
+			        foreach (var item in attachmentInfo)
+			        {
+			            ShowProgress("Downloading attachment: {0}", item.Value<string>("Key"));
 
-						byte[] attachmentData = null;
+			            byte[] attachmentData = null;
 						var requestData = CreateRequest(src, "/static/" + item.Value<string>("Key"));
-						requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
+			            requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
 
-						new RavenJObject
+			            new RavenJObject
 			            {
 			                {"Data", attachmentData},
 			                {"Metadata", item.Value<RavenJObject>("Metadata")},
 			                {"Key", item.Value<string>("Key")}
 			            }
-							.WriteTo(jsonWriter);
-						totalCount++;
-						lastEtag = Etag.Parse(item.Value<string>("Etag"));
-					}
-
-				}
-				catch (Exception e)
-				{
-					ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-					ShowProgress("Done with reading attachments, total: {0}", totalCount, lastEtag);
-					throw new SmugglerExportException(e.Message, e)
-					{
-						LastEtag = lastEtag,
-					};
-				}
+			                .WriteTo(jsonWriter);
+			            totalCount++;
+                        lastEtag = Etag.Parse(item.Value<string>("Etag"));
+			        }
+			        
+			    }
+			    catch (Exception e)
+			    {
+                    ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    ShowProgress("Done with reading attachments, total: {0}", totalCount, lastEtag);
+                    throw new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
+			    }
 			}
 		}
 
@@ -423,8 +422,8 @@ namespace Raven.Smuggler
 		{
 			try
 			{
-				Console.WriteLine(format, args);
-			}
+			Console.WriteLine(format, args);
+		}
 			catch (FormatException e)
 			{
 				throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
@@ -475,7 +474,7 @@ namespace Raven.Smuggler
 								   : s.DatabaseCommands;
 
 				commands.GetStatistics(); // check if database exist
-			}
+		}
 			catch (Exception e)
 			{
 				shouldDispose = true;
@@ -495,10 +494,9 @@ namespace Raven.Smuggler
 					if (webException != null)
 					{
 						throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
-					}
+	}
 				} throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
-			}
-			finally
+}			finally
 			{
 				if (shouldDispose)
 					s.Dispose();
