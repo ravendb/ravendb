@@ -24,10 +24,6 @@ class filesystemUploadFile extends viewModelBase {
         super.activate(navigationArgs);
 
         this.selectedDirectory(navigationArgs["folderName"]);
-        //if (this.selectedFolder) {
-        //    this.selectedFolder.subscribe((newFolder: string) => this.addDirectoryToFiles());
-        //}
-        //this.files.subscribe((files: File[]) => this.addDirectoryToFiles());
 
         var storageKeyForFs = uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name;
         if (window.localStorage.getItem(storageKeyForFs)) {

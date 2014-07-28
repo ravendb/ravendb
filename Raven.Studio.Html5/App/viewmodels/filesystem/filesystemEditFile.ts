@@ -95,10 +95,6 @@ class filesystemEditFile extends viewModelBase {
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.fileMetadataText());
         var currentDocumentId = this.fileName();
-        //if (this.lodaedDocumentName && this.lodaedDocumentName != currentDocumentId) {
-        //    this.isCreatingNewDocument(true);
-        //}
-
 
         this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
 
@@ -108,7 +104,6 @@ class filesystemEditFile extends viewModelBase {
             this.dirtyFlag().reset(); // Resync Changes
 
             this.loadFile(this.fileName());
-            //this.updateUrl(idAndEtag.Key);
         });
     }
 

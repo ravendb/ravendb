@@ -243,7 +243,8 @@ class filesystemFiles extends viewModelBase {
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
-            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + selectedItem.getId();
+            var selectedFolder = this.selectedFolder();
+            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + selectedItem.getId();
             window.location.assign(url);
         }
     }
