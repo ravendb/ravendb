@@ -413,6 +413,7 @@ namespace Raven.Client.Connection.Async
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
 
+		Task<RavenJObject> GetDatabaseConfigurationAsync();
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
