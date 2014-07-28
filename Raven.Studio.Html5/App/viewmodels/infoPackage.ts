@@ -2,6 +2,7 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require('d3/d3');
+import nv = require('nvd3');
 
 enum parserState {
   pid,
@@ -23,8 +24,13 @@ class stackInfo {
         return this.stack.length * stackInfo.lineHeight + 2 * stackInfo.boxPadding;
     }
 
-    shortStack = () => {
-        return this.stack.map(v => stackInfo.shortName(v));
+    stackWithShortcuts = () => {
+        return this.stack.map(v => {
+            return {
+                short: stackInfo.shortName(v),
+                full: v
+            }
+        });
     }
 
     static shortName(v: string) {
@@ -396,6 +402,7 @@ class infoPackage extends viewModelBase {
     static boxVerticalPadding = 60;
 
     svg: D3.Selection = null;
+    svgDefs: D3.Selection = null;
     graph: any = null;
 
     attached() {
@@ -404,6 +411,8 @@ class infoPackage extends viewModelBase {
 
         var self = this;
         this.diagonal = d3.svg.diagonal().projection(d => [self.xScale(d.x), self.yScale(d.y)]);
+
+        this.svgDefs = d3.select("#parallelStacks").append("defs");
 
         this.svg = d3.select("#parallelStacks")
             .append("g")
@@ -508,6 +517,10 @@ class infoPackage extends viewModelBase {
         return output;
     }
 
+    getTooltip(data) {
+        return data.full; 
+    }
+
     private updateGraph(roots: stackInfo[]) {
         var self = this; 
 
@@ -579,13 +592,26 @@ class infoPackage extends viewModelBase {
 
         var rect = enteringNodes.append('rect')
             .attr('class', 'box')
-            .attr('x', -140)
+            .attr('x', -infoPackage.maxBoxWidth / 2)
             .attr('y', d => -1 * d.boxHeight() - stackInfo.headerSize)
             .attr('width', infoPackage.maxBoxWidth)
             .attr('height', d => d.boxHeight() + stackInfo.headerSize)
             .attr("fill", "red")
-            .attr("rx", 5);
+            .attr("rx", 5)
+            .on('mouseout', () => nv.tooltip.cleanup());
 
+        var clipPaths = this.svgDefs.selectAll('.stackClip').data(this.nodes);
+        clipPaths
+            .enter()
+            .append("clipPath")
+            .attr('class', 'stackClip')
+            .attr('id', (d, i) => 'stack-clip-path-' + i)
+            .append('rect')
+            .attr('x', -infoPackage.maxBoxWidth / 2)
+            .attr('width', infoPackage.maxBoxWidth - 5) // we substract little padding
+            .attr('y', d => -1 * d.boxHeight() - stackInfo.headerSize)
+            .attr('height', d => d.boxHeight() + stackInfo.headerSize);
+                
         enteringNodes
             .append("text")
             .attr('text-anchor', 'middle')
@@ -599,21 +625,28 @@ class infoPackage extends viewModelBase {
             .attr('x2', infoPackage.maxBoxWidth / 2)
             .attr('y1', d => -1 * d.boxHeight() + 4)
             .attr('y2', d => -1 * d.boxHeight() + 4);
-
-        
             
-        enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, i: number) {
+        enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, index: number) {
             var g = this;
             var offsetTop = d.boxHeight() - stackInfo.boxPadding - stackInfo.lineHeight;
-            var stack = d3.select(g).selectAll('.trace').data(d.shortStack().reverse());
+            var textGroup = d3.select(g)
+                .append("g")
+                .attr('class', 'traces')
+                .style('clip-path', d => 'url(#stack-clip-path-' + index + ')');
+            var stack = textGroup.selectAll('.trace').data(d.stackWithShortcuts().reverse());
             var reversedOriginalStack = d.stack.reverse();
             stack
                 .enter()
                 .append('text')
                 .attr('x', -140 + stackInfo.boxPadding)
                 .attr('y', (d, i) => -offsetTop + stackInfo.lineHeight * i)
-                .text(d => d)
-                .classed('notUserCode', (s, i) => !stackInfo.isUserCode(reversedOriginalStack[i]));
+                .text(d => d.short)
+                .classed('notUserCode', (s, i) => !stackInfo.isUserCode(reversedOriginalStack[i]))
+                .on('mouseover', function(d) {
+                    nv.tooltip.cleanup();
+                    var offset = $(this).offset(); 
+                    nv.tooltip.show([offset.left, offset.top], self.getTooltip(d), 'n', 25);
+                });
         });
 
         var enteringLinks = (<any>this.link)
