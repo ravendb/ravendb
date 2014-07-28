@@ -147,7 +147,6 @@ class configuration extends viewModelBase {
 
     selectKey(key: configurationKey) {
         key.activate();
-        router.navigate(appUrl.forFilesystemConfigurationWithKey(this.activeFilesystem(), key.key));
     }
 
     enableEditor(enable: boolean) {
@@ -186,7 +185,7 @@ class configuration extends viewModelBase {
     }
 
     refreshConfig() {
-        this.selectKey(this.currentKey());
+        this.selectedKeyChanged(this.currentKey());
     }
 
     deleteConfiguration() {
