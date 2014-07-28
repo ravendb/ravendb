@@ -24,10 +24,6 @@ class filesystemUploadFile extends viewModelBase {
         super.activate(navigationArgs);
 
         this.selectedDirectory(navigationArgs["folderName"]);
-        //if (this.selectedFolder) {
-        //    this.selectedFolder.subscribe((newFolder: string) => this.addDirectoryToFiles());
-        //}
-        //this.files.subscribe((files: File[]) => this.addDirectoryToFiles());
 
         var storageKeyForFs = uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name;
         if (window.localStorage.getItem(storageKeyForFs)) {
@@ -36,19 +32,6 @@ class filesystemUploadFile extends viewModelBase {
                     window.localStorage.getItem(storageKeyForFs), this.activeFilesystem()));
         }
     }
-
-    //addDirectoryToFiles() {
-    //    if (this.selectedFolder() && this.files()) {
-    //        if (this.files() instanceof Array) {
-    //            for (var i = 0; i < this.files().length; i++) {
-    //                this.files()[i].name = this.selectedFolder + "\\" + this.files()[i].name
-    //            }
-    //        }
-    //        else {
-    //            this.files()[i].name = this.selectedFolder + "\\" + this.files()[i].name
-    //        }
-    //    }
-    //}
 
     clearUploadQueue() {
         window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);

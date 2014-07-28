@@ -104,7 +104,7 @@ namespace RavenFS.Tests.Synchronization
 
 
         [MtaFact]
-        public void Signatures_are_returned_in_order()
+        public void Signatures_can_be_generated_on_the_same_repository()
         {
             const int size = 1024 * 1024 * 5;
             var randomStream = new RandomStream(size);
@@ -116,13 +116,13 @@ namespace RavenFS.Tests.Synchronization
             using (var rested = new SigGenerator())
             {
                 var signatures = signatureRepository.GetByFileName();
-                Assert.Equal(1, signatures.Count());
+                Assert.Equal(0, signatures.Count());
 
                 stream.Position = 0;
                 var result = rested.GenerateSignatures(stream, "test", signatureRepository);
 
                 signatures = signatureRepository.GetByFileName();
-                Assert.Equal(1, signatures.Count());
+                Assert.Equal(2, signatures.Count());
 
                 stream.Position = 0;
                 result = rested.GenerateSignatures(stream, "test", signatureRepository);
