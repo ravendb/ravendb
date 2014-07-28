@@ -3,32 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
-
 namespace Raven.Tests.Issues
 {
 	using Raven.Abstractions.Smuggler;
 	using Raven.Json.Linq;
-    using Raven.Smuggler.Imports;
+	using Smuggler.Imports;
 	using Xunit;
 
-	public class RavenDB_1733 : NoDisposalNeeded
+	public class RavenDB_1733
 	{
 		private const string emptyTransform = @"function(doc) {
                         return doc;
                     }";
 
-		private readonly SmugglerJintHelper jintHelper;
-
-		public RavenDB_1733()
-		{
-			jintHelper = new SmugglerJintHelper();
-		}
-
 		[Fact]
 		public void SmugglerTransformShouldRecognizeNumericPropertiesEvenThoughTheyHaveTheSameNames()
 		{
-			jintHelper.Initialize(new SmugglerOptions
+			var helper = new SmugglerJintHelper();
+			helper.Initialize(new SmugglerOptions
 			{
 				TransformScript = emptyTransform
 			});
@@ -39,7 +31,7 @@ namespace Raven.Tests.Issues
 				{"Min", 1}
 			};
 
-			var transformedObject = jintHelper.Transform(emptyTransform, testObject);
+			var transformedObject = helper.Transform(emptyTransform, testObject);
 
 			Assert.Equal(testObject["Min"].Type, transformedObject["Min"].Type);
 			Assert.Equal(((RavenJObject)((RavenJArray)testObject["Range"])[0])["Min"].Type, ((RavenJObject)((RavenJArray)transformedObject["Range"])[0])["Min"].Type);

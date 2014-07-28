@@ -279,7 +279,7 @@ namespace Raven.Client.Shard
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null).ToList();
 
 			if (!idsToLoad.Any())
 				return results;
@@ -337,7 +337,7 @@ namespace Raven.Client.Shard
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
 
 			if (!idsToLoad.Any())
 				return results;
