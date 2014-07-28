@@ -11,6 +11,7 @@ using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -53,7 +54,7 @@ namespace Raven.Client.Connection
 
 		public static string AdminStats(this string url)
 		{
-			return url + "/admin/stats";
+			return MultiDatabase.GetRootDatabaseUrl(url) +"/admin/stats";
 		}
 
 		public static string ReplicationInfo(this string url)
@@ -73,7 +74,7 @@ namespace Raven.Client.Connection
 
 		public static string Databases(this string url, int pageSize, int start)
 		{
-			var databases = url + "/databases?pageSize=" + pageSize;
+			var databases = MultiDatabase.GetRootDatabaseUrl(url) +"/databases?pageSize=" + pageSize;
 			return start > 0 ? databases + "&start=" + start : databases;
 		}
 
