@@ -81,6 +81,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 			{
 				item.Value.Close();
 			}
+
+            _createdFiles.Clear();
 		}
 	}
 }
