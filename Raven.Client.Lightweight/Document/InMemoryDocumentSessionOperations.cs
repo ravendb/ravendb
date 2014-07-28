@@ -36,22 +36,22 @@ namespace Raven.Client.Document
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 
-        private static int counter;
+		private static int counter;
 
 		private readonly int hash = Interlocked.Increment(ref counter);
 
 		protected bool GenerateDocumentKeysOnStore = true;
-        /// <summary>
-        /// The session id 
-        /// </summary>
-        public Guid Id { get; private set; }
+		/// <summary>
+		/// The session id 
+		/// </summary>
+		public Guid Id { get; private set; }
 
-        /// <summary>
-        /// The database name for this session
-        /// </summary>
-        public string DatabaseName { get; internal set; }
+		/// <summary>
+		/// The database name for this session
+		/// </summary>
+		public string DatabaseName { get; internal set; }
 
-        protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		/// <summary>
 		/// The entities waiting to be deleted
@@ -108,20 +108,20 @@ namespace Raven.Client.Document
             get { return theListeners; }
         }
 
-        ///<summary>
-        /// The document store associated with this session
-        ///</summary>
-        public IDocumentStore DocumentStore
-        {
-            get { return documentStore; }
-        }
+		///<summary>
+		/// The document store associated with this session
+		///</summary>
+		public IDocumentStore DocumentStore
+		{
+			get { return documentStore; }
+		}
 
 
-        /// <summary>
-        /// Gets the number of requests for this session
-        /// </summary>
-        /// <value></value>
-        public int NumberOfRequests { get; private set; }
+		/// <summary>
+		/// Gets the number of requests for this session
+		/// </summary>
+		/// <value></value>
+		public int NumberOfRequests { get; private set; }
 
 		/// <summary>
 		/// Gets the number of entities held in memory to manage Unit of Work
@@ -162,28 +162,28 @@ namespace Raven.Client.Document
 		/// <value></value>
 		public TimeSpan NonAuthoritativeInformationTimeout { get; set; }
 
-        /// <summary>
-        /// Gets the store identifier for this session.
-        /// The store identifier is the identifier for the particular RavenDB instance.
-        /// </summary>
-        /// <value>The store identifier.</value>
-        public string StoreIdentifier
-        {
+		/// <summary>
+		/// Gets the store identifier for this session.
+		/// The store identifier is the identifier for the particular RavenDB instance.
+		/// </summary>
+		/// <value>The store identifier.</value>
+		public string StoreIdentifier
+		{
             get { return documentStore.Identifier + ";" + DatabaseName; }
-        }
+		}
 
-        /// <summary>
-        /// Gets the conventions used by this session
-        /// </summary>
-        /// <value>The conventions.</value>
-        /// <remarks>
-        /// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
-        /// via the <see cref="IDocumentStore"/> instance, not on a single session.
-        /// </remarks>
-        public DocumentConvention Conventions
-        {
-            get { return documentStore.Conventions; }
-        }
+		/// <summary>
+		/// Gets the conventions used by this session
+		/// </summary>
+		/// <value>The conventions.</value>
+		/// <remarks>
+		/// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
+		/// via the <see cref="IDocumentStore"/> instance, not on a single session.
+		/// </remarks>
+		public DocumentConvention Conventions
+		{
+			get { return documentStore.Conventions; }
+		}
 
 		/// <summary>
 		/// The transaction resource manager identifier
@@ -535,8 +535,8 @@ more responsive application.
 			{
                 throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + entityType,
                                                     ex);
-            }
-        }
+			}
+		}
 
         private void RegisterMissingProperties(object o, string key, JToken value)
         {
@@ -955,7 +955,7 @@ more responsive application.
 		}
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
-        {
+		{
             
 
                 foreach (var pair in entitiesAndMetadata)
@@ -1117,7 +1117,7 @@ more responsive application.
                 {
                     changes[documentMetadata.Key] = changedData.ToArray();
                     return false;
-                }
+		}
                 else
                 {
                     return true;
@@ -1127,7 +1127,7 @@ more responsive application.
             {
                 return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, null) == false ||
                     RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, null) == false;
- 
+
             }
 		}
 
@@ -1401,7 +1401,7 @@ more responsive application.
             return items;
         }
 
-        internal object ProjectionToInstance(RavenJObject y, Type type)
+		internal object ProjectionToInstance(RavenJObject y, Type type)
         {
             HandleInternalMetadata(y);
             foreach (var conversionListener in theListeners.ExtendedConversionListeners)
@@ -1423,14 +1423,14 @@ more responsive application.
         public void TrackIncludedDocument(JsonDocument include)
         {
             includedDocumentsByKey[include.Key] = include;
-        }
+	}
         public string CreateDynamicIndexName<T>()
         {
             var indexName = "dynamic";
             if (typeof(T).IsEntityType())
             {
                 indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
+}
             return indexName;
         }
 

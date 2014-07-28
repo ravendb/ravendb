@@ -3,15 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
@@ -24,10 +18,20 @@ using Raven.Json.Linq;
 using Raven.Smuggler.Client;
 using Raven.Smuggler.Imports;
 
+using System;
+using System.IO;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+
 namespace Raven.Smuggler
 {
 	public class SmugglerApi : SmugglerApiBase
 	{
+		private int currentBatchSize, currentLimit;
+
+		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
+
 		const int RetriesCount = 5;
 
 		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
@@ -60,45 +64,46 @@ namespace Raven.Smuggler
 		}
 
 
-	    protected override void PurgeTombstones(ExportDataResult result)
+		protected override void PurgeTombstones(ExportDataResult result)
 		{
-	        throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
+			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}
 
-	    protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
-	                                            LastEtagsInfo maxEtagsToFetch)
+		protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
+												LastEtagsInfo maxEtagsToFetch)
 		{
-	        throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
-	    }
+			throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
+		}
 
-	    public override LastEtagsInfo FetchCurrentMaxEtags()
-	    {
-	        return new LastEtagsInfo
-	        {
-	            LastAttachmentsDeleteEtag = null,
-	            LastDocDeleteEtag = null,
-	            LastAttachmentsEtag = null,
-	            LastDocsEtag = null
-	        };
-	    }
-
-	    protected override Task DeleteDocument(string documentId)
+		public override LastEtagsInfo FetchCurrentMaxEtags()
+		{
+			return new LastEtagsInfo
 			{
-	        return Commands.DeleteDocumentAsync(documentId);
-        }
+				LastAttachmentsDeleteEtag = null,
+				LastDocDeleteEtag = null,
+				LastAttachmentsEtag = null,
+				LastDocsEtag = null
+			};
+		}
 
-        protected override Task DeleteAttachment(string key)
-        {
-            return Commands.DeleteAttachmentAsync(key, null);
-	    }
-
-	    public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
+		protected override Task DeleteDocument(string documentId)
 		{
-            SetSmugglerOptions(options);
+			return Commands.DeleteDocumentAsync(documentId);
+		}
 
-			SmugglerJintHelper.Initialize(options);
+		protected override Task DeleteAttachment(string key)
+		{
+			return Commands.DeleteAttachmentAsync(key, null);
+		}
 
-            using (store = CreateStore(importOptions.To))
+		public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
+		{
+			SetSmugglerOptions(options);
+			jintHelper.Initialize(options);
+
+			currentBatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
+
+			using (store = CreateStore(importOptions.To))
 			{
 				Task disposeTask;
 
@@ -106,13 +111,13 @@ namespace Raven.Smuggler
 				{
 					operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 					{
-						BatchSize = options.BatchSize,
+						BatchSize = currentBatchSize,
 						OverwriteExisting = true
-                    }, store.Changes(), options.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
+					}, store.Changes(), options.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
 
 					operation.Report += text => ShowProgress(text);
 
-                    await base.ImportData(importOptions, options, stream);
+					await base.ImportData(importOptions, options, stream);
 				}
 				finally
 				{
@@ -134,21 +139,35 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override void PutDocument(RavenJObject document, SmugglerOptions options, int size)
+		private int storedDocumentCountInBatch;
+		protected override async Task PutDocument(RavenJObject document, SmugglerOptions options, int size)
 		{
-		    if (document == null) 
-                return;
+			if (document == null)
+				return;
 
+			var metadata = document.Value<RavenJObject>("@metadata");
+			var id = metadata.Value<string>("@id");
+			if (String.IsNullOrWhiteSpace(id))
+				throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
 
-				var metadata = document.Value<RavenJObject>("@metadata");
-				var id = metadata.Value<string>("@id");
-		    if(String.IsNullOrWhiteSpace(id))
-		        throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
+			document.Remove("@metadata");
 
-				document.Remove("@metadata");
+			operation.Store(document, metadata, id, size);
+			storedDocumentCountInBatch++;
+			if (storedDocumentCountInBatch >= currentBatchSize && currentBatchSize > 0)
+			{
+				storedDocumentCountInBatch = 0;
+				await operation.DisposeAsync();
 
-		    operation.Store(document, metadata, id, size);
+				operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					BatchSize = currentBatchSize,
+					OverwriteExisting = true
+				});
+
+				operation.Report += text => ShowProgress(text);
 			}
+		}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)
 		{
@@ -172,7 +191,7 @@ namespace Raven.Smuggler
 			return new CompletedTask<string>(version["ProductVersion"].ToString());
 		}
 
-        protected HttpRavenRequest CreateRequest(RavenConnectionStringOptions connectionStringOptions, string url, string method = "GET")
+		protected HttpRavenRequest CreateRequest(RavenConnectionStringOptions connectionStringOptions, string url, string method = "GET")
 		{
 			var builder = new StringBuilder();
 			if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) == false)
@@ -199,35 +218,35 @@ namespace Raven.Smuggler
 			return httpRavenRequest;
 		}
 
-        protected DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
+		protected DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
 		{
-	        var credentials = connectionStringOptions.Credentials as NetworkCredential;
-	        if (credentials != null && //precaution
-				(String.IsNullOrWhiteSpace(credentials.UserName) || 
+			var credentials = connectionStringOptions.Credentials as NetworkCredential;
+			if (credentials != null && //precaution
+				(String.IsNullOrWhiteSpace(credentials.UserName) ||
 				 String.IsNullOrWhiteSpace(credentials.Password)))
-	        {
-		        credentials = CredentialCache.DefaultNetworkCredentials;
-	        }
-		
+			{
+				credentials = CredentialCache.DefaultNetworkCredentials;
+			}
+
 			var s = new DocumentStore
 			{
-                Url = connectionStringOptions.Url,
-                ApiKey = connectionStringOptions.ApiKey,
+				Url = connectionStringOptions.Url,
+				ApiKey = connectionStringOptions.ApiKey,
 				Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials
 			};
 
 			s.Initialize();
 
-            ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
+			ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
 
-            s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
+			s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
 
 		    return s;
 		}
 
-        protected override JsonDocument GetDocument(string key)
+		protected override JsonDocument GetDocument(string key)
 	    {
-            return store.DatabaseCommands.Get(key);
+			return store.DatabaseCommands.Get(key);
 	        }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
@@ -261,12 +280,12 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override async Task<Etag> ExportAttachments(RavenConnectionStringOptions src,JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+		protected override async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
-            if (maxEtag != null)
-            {
-                throw new ArgumentException("We don't support maxEtag in SmugglerApi", maxEtag);
-            }
+			if (maxEtag != null)
+			{
+				throw new ArgumentException("We don't support maxEtag in SmugglerApi", maxEtag);
+			}
 
 			var totalCount = 0;
 			while (true)
@@ -281,7 +300,7 @@ namespace Raven.Smuggler
 
 			        var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
 			        RavenJArray attachmentInfo = null;
-			        var request = CreateRequest(src, "/static/?pageSize=" + maxRecords + "&etag=" + lastEtag);
+					var request = CreateRequest(src, "/static/?pageSize=" + maxRecords + "&etag=" + lastEtag);
 			        request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 			        if (attachmentInfo.Length == 0)
@@ -305,7 +324,7 @@ namespace Raven.Smuggler
 			            ShowProgress("Downloading attachment: {0}", item.Value<string>("Key"));
 
 			            byte[] attachmentData = null;
-			            var requestData = CreateRequest(src, "/static/" + item.Value<string>("Key"));
+						var requestData = CreateRequest(src, "/static/" + item.Value<string>("Key"));
 			            requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
 
 			            new RavenJObject
@@ -343,7 +362,7 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJArray>(transformers);
 		}
 
-		protected override Task PutAttachment(RavenConnectionStringOptions dst ,AttachmentExportInfo attachmentExportInfo)
+		protected override Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)
 			{
@@ -390,7 +409,7 @@ namespace Raven.Smuggler
 
 		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
+			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
 		private Task FlushBatch()
@@ -398,7 +417,7 @@ namespace Raven.Smuggler
 			return new CompletedTask();
 		}
 
-        // [StringFormatMethod("format")]
+		// [StringFormatMethod("format")]
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			try
@@ -414,7 +433,7 @@ namespace Raven.Smuggler
 		public bool LastRequestErrored { get; set; }
 
 #pragma warning disable 1998
-        protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
 #pragma warning restore 1998
 		{
 			if (EnsuredDatabaseExists || string.IsNullOrWhiteSpace(to.DefaultDatabase))
@@ -444,46 +463,44 @@ namespace Raven.Smuggler
 			request.ExecuteRequest();
 		}
 
-        private void ValidateThatServerIsUpAndDatabaseExists(RavenConnectionStringOptions server, DocumentStore s)
-        {
-            var shouldDispose = false;
+		private void ValidateThatServerIsUpAndDatabaseExists(RavenConnectionStringOptions server, DocumentStore s)
+		{
+			var shouldDispose = false;
 
-            try
-            {
-                var commands = !string.IsNullOrEmpty(server.DefaultDatabase)
-                                   ? s.DatabaseCommands.ForDatabase(server.DefaultDatabase)
-                                   : s.DatabaseCommands;
+			try
+			{
+				var commands = !string.IsNullOrEmpty(server.DefaultDatabase)
+								   ? s.DatabaseCommands.ForDatabase(server.DefaultDatabase)
+								   : s.DatabaseCommands;
 
-                commands.GetStatistics(); // check if database exist
+				commands.GetStatistics(); // check if database exist
 		}
-            catch (Exception e)
-            {
-                shouldDispose = true;
+			catch (Exception e)
+			{
+				shouldDispose = true;
 
-                var responseException = e as ErrorResponseException;
-                if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a database named"))
-                    throw new SmugglerException(
-                        string.Format(
-                            "Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
-                            server.DefaultDatabase,
-                            s.Url), e);
+				var responseException = e as ErrorResponseException;
+				if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a database named"))
+					throw new SmugglerException(
+						string.Format(
+							"Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
+							server.DefaultDatabase,
+							s.Url), e);
 
 
-                if (e.InnerException != null)
-                {
-                    var webException = e.InnerException as WebException;
-                    if (webException != null)
-                    {
-                        throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
+				if (e.InnerException != null)
+				{
+					var webException = e.InnerException as WebException;
+					if (webException != null)
+					{
+						throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
 	}
-}
-                throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
-            }
-            finally
-            {
-                if (shouldDispose)
-                    s.Dispose();
-            }
-        }
+				} throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
+}			finally
+			{
+				if (shouldDispose)
+					s.Dispose();
+			}
+		}
 	}
 }
