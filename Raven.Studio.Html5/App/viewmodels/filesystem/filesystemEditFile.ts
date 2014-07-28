@@ -164,7 +164,6 @@ class filesystemEditFile extends viewModelBase {
 
             var metaString = this.stringify(metaDto);
             this.fileMetadataText(metaString);
-            //this.userSpecifiedId(meta.id);
         }
     }
 

@@ -33,19 +33,6 @@ class filesystemUploadFile extends viewModelBase {
         }
     }
 
-    //addDirectoryToFiles() {
-    //    if (this.selectedFolder() && this.files()) {
-    //        if (this.files() instanceof Array) {
-    //            for (var i = 0; i < this.files().length; i++) {
-    //                this.files()[i].name = this.selectedFolder + "\\" + this.files()[i].name
-    //            }
-    //        }
-    //        else {
-    //            this.files()[i].name = this.selectedFolder + "\\" + this.files()[i].name
-    //        }
-    //    }
-    //}
-
     clearUploadQueue() {
         window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);
         this.uploadQueue.removeAll();

@@ -66,8 +66,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				throw new HttpResponseException(HttpStatusCode.NotFound);
 			}
 
-			var readingStream = StorageStream.Reading(Storage, name);
-            var result = StreamResult(name, readingStream);
+            var readingStream = StorageStream.Reading(Storage, name);
+
+            var filename = Path.GetFileName(name);
+            var result = StreamResult(filename, readingStream);
 
             var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
             fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
