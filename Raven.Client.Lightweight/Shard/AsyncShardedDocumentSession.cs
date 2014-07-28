@@ -621,18 +621,7 @@ namespace Raven.Client.Shard
 				if (jsonDocument == null)
 					return false;
 
-				value.Metadata = jsonDocument.Metadata;
-				value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
-				value.ETag = jsonDocument.Etag;
-				value.OriginalValue = jsonDocument.DataAsJson;
-				var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-				foreach (
-					var property in
-						entity.GetType().GetProperties().Where(
-							property => property.CanWrite && property.CanRead && property.GetIndexParameters().Length == 0))
-				{
-					property.SetValue(entity, property.GetValue(newEntity, null), null);
-				}
+				RefreshInternal(entity, jsonDocument, value);
 				return true;
 			});
 
