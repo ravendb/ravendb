@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
@@ -161,6 +162,30 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 		}
 
+		[Fact]
+		public async Task Can_get_all_revisions_async()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+				Assert.Equal(1, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
+			}
+			using (var session = documentStore.OpenSession())
+			{
+				var company3 = session.Load<Company>(company.Id);
+				company3.Name = "Hibernating Rhinos";
+				session.SaveChanges();
+				Assert.Equal(2, session.Advanced.GetMetadataFor(company3).Value<int>("Raven-Document-Revision"));
+			}
+			using (var session = documentStore.OpenAsyncSession())
+			{
+				var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id, 0, 25);
+				Assert.Equal("Company Name", companiesRevisions[0].Name);
+				Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+			}
+		}
 
 		[Fact]
 		public void Will_create_revision_if_explicitly_requested()
