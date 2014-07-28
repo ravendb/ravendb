@@ -19,6 +19,9 @@
     <div class="filesystems-page">
         <div class="row">
             <div class="col-md-3">
+                <div class="alert alert-warning" data-bind="visible: keys().length === 0">
+                    You've got no configuration keys.
+                </div>
                 <ul class="nav nav-pills nav-stacked keys-collection" data-bind="foreach: keys">
                     <li data-bind="event: { mousedown: $parent.selectKey.bind($parent) }, css: { active: $data === $parent.selectedKey() }">
                         <a href="#" data-bind="text: key, click: $parent.selectKey.bind($parent)"></a>

@@ -25,8 +25,7 @@ class searchDialogViewModel extends dialogViewModelBase {
         if (this.inputs == null)
             return false;
 
-        var submit: boolean = true;
-
+        var submit = this.enabled();
 
         if (submit) {
             super.enterKeyPressed();
