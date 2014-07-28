@@ -295,7 +295,7 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Project using a different type
+		/// Project into a different type.
 		/// </summary>
 		public static IQueryable<TResult> As<TResult>(this IQueryable queryable)
 		{
@@ -321,15 +321,10 @@ namespace Raven.Client
 			return (IRavenQueryable<T>)queryable;
 		}
 
-		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
-		{
-			return queryable.AsProjection<TResult>();
-		}
-
 		/// <summary>
-		/// Project using a different type
+		/// Project from index fields (must be stored) into different type.
 		/// </summary>
-		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
+		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
 		{
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);

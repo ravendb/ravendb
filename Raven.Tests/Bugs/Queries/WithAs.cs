@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var array = session.Query<User>()
 						.Customize(x=>x.WaitForNonStaleResults())
-						.AsProjection<AgeAndEmail>()
+						.ProjectFromIndexFieldsInto<AgeAndEmail>()
 						.ToArray();
 
 					Assert.Equal(1, array.Length);

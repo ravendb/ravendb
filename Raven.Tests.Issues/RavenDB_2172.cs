@@ -78,7 +78,7 @@ namespace Raven.Tests.Issues
 				{
 					var projection = session.Query<User>()
 							.Customize(x => x.WaitForNonStaleResults())
-							.AsProjection<UserProjection>()
+							.ProjectFromIndexFieldsInto<UserProjection>()
 							.ToList();
 
 					Assert.Equal(2, projection.Count);

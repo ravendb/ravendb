@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs
 				var results = session
 					.Query<Person, DriversIndex>()
 					.Customize(c => c.WaitForNonStaleResults())
-					.AsProjection<Driver>()
+					.ProjectFromIndexFieldsInto<Driver>()
 					.ToList();
 
 				Assert.Equal(4, results.Count);
