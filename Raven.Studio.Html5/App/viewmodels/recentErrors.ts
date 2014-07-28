@@ -1,6 +1,7 @@
 ﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import alertArgs = require("common/alertArgs");
+import alertType = require("common/alertType");
 
 class recentErrors extends dialogViewModelBase {
 
@@ -14,7 +15,7 @@ class recentErrors extends dialogViewModelBase {
     
     constructor(private errors: KnockoutObservableArray<alertArgs>) {
         super();
-
+        var x = alertType.danger;
         this.left = ko.computed<number>(() => -this.width() * 0.5);
         this.top = ko.computed<number>(() => -this.height() * 0.5);
         this.bodyHeight = ko.computed<number>(() => this.height() - 150);
@@ -30,6 +31,7 @@ class recentErrors extends dialogViewModelBase {
     }
 
     detached() {
+        super.detached();
         this.unregisterResizing();
     }
 
@@ -48,6 +50,14 @@ class recentErrors extends dialogViewModelBase {
         }
 
         return alert.details;
+    }
+
+    getDangerAlertType() {
+        return alertType.danger;
+    }
+
+    getWarningAlertType() {
+        return alertType.warning;
     }
 
     registerResizing() {

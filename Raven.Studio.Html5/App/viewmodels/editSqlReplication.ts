@@ -3,8 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 import app = require("durandal/app");
 import database = require("models/database");
 import collection = require("models/collection");
@@ -50,7 +49,6 @@ class editSqlReplication extends viewModelBase {
     isEditingNewReplication = ko.observable(false);
     isBasicView = ko.observable(true);
     availableConnectionStrings = ko.observableArray<string>();
-    
     
     appUrls: computedAppUrls;
 
@@ -99,7 +97,7 @@ class editSqlReplication extends viewModelBase {
                 this.loadSqlReplication(replicationToEditName)
                     .done(() => canActivateResult.resolve({ can: true }))
                     .fail(() => {
-                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(replicationToEditName) + " replication", null));
+                        messagePublisher.reportError("Could not find " + decodeURIComponent(replicationToEditName) + " replication");
                         canActivateResult.resolve({ redirect: appUrl.forSqlReplications(this.activeDatabase()) });
                     });
             } else {
@@ -203,7 +201,8 @@ class editSqlReplication extends viewModelBase {
     
     createSqlReplication(): sqlReplication {
         var newSqlReplication: sqlReplication = sqlReplication.empty();
-        newSqlReplication.collections = this.collections;
+        newSqlReplication.collections(this.collections());
+        this.collections.subscribe(value => newSqlReplication.collections(value));
         this.subscribeToSqlReplicationName(newSqlReplication);
         return newSqlReplication;
     }
@@ -309,12 +308,8 @@ class editSqlReplication extends viewModelBase {
             if (dialogResult === "Reset") {
                 var replicationId = this.initialReplicationId;
                 new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-                    .done(() => {
-                        ko.postbox.publish("Alert", new alertArgs(alertType.success, "Replication " + replicationId + " was reset successfully", null));
-                    })
-                    .fail((foo) => {
-                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Replication " + replicationId + " was failed to reset", null));
-                    });
+                    .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"))
+                    .fail(() => messagePublisher.reportError("SQL replication " + replicationId + " failed to reset!"));
             }
         });
         

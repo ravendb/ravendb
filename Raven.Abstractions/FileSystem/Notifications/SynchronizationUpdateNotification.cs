@@ -10,7 +10,7 @@ namespace Raven.Abstractions.FileSystem.Notifications
 		public string SourceFileSystemUrl { get; set; }
 		public SynchronizationType Type { get; set; }
 		public SynchronizationAction Action { get; set; }
-		public SynchronizationDirection SynchronizationDirection { get; set; }
+		public SynchronizationDirection Direction { get; set; }
 	}
 
 	public enum SynchronizationAction

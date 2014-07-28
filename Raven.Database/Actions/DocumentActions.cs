@@ -239,7 +239,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
+        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token)
         {
             var documents = 0;
             TransactionalStorage.Batch(accessor =>
@@ -249,9 +249,10 @@ namespace Raven.Database.Actions
                     OperationId = operationId,
                     Type = DocumentChangeTypes.BulkInsertStarted
                 });
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
                 foreach (var docs in docBatches)
                 {
-                    WorkContext.CancellationToken.ThrowIfCancellationRequested();
+                    cts.Token.ThrowIfCancellationRequested();
 
                     using (Database.DocumentLock.Lock())
                     {

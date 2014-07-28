@@ -27,6 +27,7 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
+import messagePublisher = require("common/messagePublisher");
 
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
@@ -80,7 +81,7 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
 
-    static globalChangesApi: changesApi;
+    private globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
     private changeSubscriptionArray: changeSubscription[];
 
@@ -89,7 +90,7 @@ class shell extends viewModelBase {
 
 		extensions.install();
         oauthContext.enterApiKeyTask = this.setupApiKey();
-        oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
+        oauthContext.enterApiKeyTask.done(() => this.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
@@ -189,9 +190,11 @@ class shell extends viewModelBase {
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
 
+        appUrl.mapUnknownRoutes(router);
+
         window.addEventListener("beforeunload", () => {
             this.cleanupNotifications();
-            shell.globalChangesApi.dispose();
+            this.globalChangesApi.dispose();
             this.disconnectFromResourceChangesApi();
         });
     }
@@ -217,9 +220,14 @@ class shell extends viewModelBase {
         });
 
         router.activeInstruction.subscribe(val => {
-            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
+            if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
+
+        sys.error = (e) => {
+            console.error(e);
+            messagePublisher.reportError("Failed to load routed module!", e);
+        };
     }
 
     setupApiKey() {
@@ -318,9 +326,9 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase)),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem)),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage))
+            this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase)),
+            this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem)),
+            this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage))
         ];
     }
 
@@ -662,6 +670,7 @@ class shell extends viewModelBase {
             return 'Databases';
         }
     }
+
     getCurrentActiveFeatureHref() {
         if (this.appUrls.isAreaActive('filesystems')() === true) {
             return this.appUrls.filesystems();

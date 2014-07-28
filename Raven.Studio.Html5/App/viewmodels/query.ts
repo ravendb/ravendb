@@ -12,11 +12,11 @@ import pagedResultSet = require("common/pagedResultSet");
 import queryIndexCommand = require("commands/queryIndexCommand");
 import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import indexesShell = require("viewmodels/indexesShell");
 import querySort = require("models/querySort");
 import collection = require("models/collection");
 import getTransformersCommand = require("commands/getTransformersCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
-import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
 import customColumnParams = require("models/customColumnParams");
@@ -37,7 +37,8 @@ import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
-    indexes = ko.observableArray<{ name: string; hasReduce: boolean }>();
+    indexes = ko.observableArray<indexDataDto>();
+    indexesExceptCurrent: KnockoutComputed<indexDataDto[]>;
     editIndexUrl: KnockoutComputed<string>;
     visualizerUrl: KnockoutComputed<string>;
     termsUrl: KnockoutComputed<string>;
@@ -55,21 +56,20 @@ class query extends viewModelBase {
     isDefaultOperatorOr = ko.observable(true);
     showFields = ko.observable(false);
     indexEntries = ko.observable(false);
+    localStorageObjectName: string;
     recentQueries = ko.observableArray<storedQueryDto>();
-    recentQueriesDoc = ko.observable<storedQueryContainerDto>();
     rawJsonUrl = ko.observable<string>();
     exportUrl = ko.observable<string>();
     collections = ko.observableArray<collection>([]);
     collectionNames = ko.observableArray<string>();
+    collectionNamesExceptCurrent: KnockoutComputed<string[]>;
     selectedIndexLabel: KnockoutComputed<string>;
     appUrls: computedAppUrls;
-    isIndexMapReduce = ko.computed(() => {
-        var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-        return !!currentIndex && currentIndex.hasReduce == true;
-    });
+    isIndexMapReduce: KnockoutComputed<boolean>;
 
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
+    dynamicPrefix = "dynamic/";
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
@@ -92,12 +92,33 @@ class query extends viewModelBase {
         this.selectedIndexEditUrl = ko.computed(() => {
             if (this.queryStats()) {
                 var index = this.queryStats().IndexName;
-                if (index && index.indexOf("dynamic/") !== 0) {
+                if (!!index && index.indexOf(this.dynamicPrefix) !== 0) {
                     return appUrl.forEditIndex(index, this.activeDatabase());
                 }
             }
 
             return "";
+        });
+
+        this.indexesExceptCurrent = ko.computed(() => {
+            var allIndexes = this.indexes();
+            var selectedIndex = this.selectedIndex();
+
+            if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) == -1) {
+                return allIndexes.filter((indexDto: indexDataDto) => indexDto.name != selectedIndex);
+            }
+            return allIndexes;
+        });
+
+        this.collectionNamesExceptCurrent = ko.computed(() => {
+            var allCollectionNames = this.collectionNames();
+            var selectedIndex = this.selectedIndex();
+
+            if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) == 0) {
+                return allCollectionNames.filter((collectionName: string) => this.dynamicPrefix + collectionName != selectedIndex);
+            }
+            return allCollectionNames;
+
         });
 
         this.showSuggestions = ko.computed<boolean>(() => {
@@ -108,10 +129,15 @@ class query extends viewModelBase {
             if (this.queryStats()) {
                 var recievedIndex = this.queryStats().IndexName;
                 var selectedIndex = this.selectedIndex();
-                return selectedIndex.indexOf("dynamic/") === 0 && this.indexes()[0].name !== recievedIndex;
+                return selectedIndex.indexOf(this.dynamicPrefix) === 0 && this.indexes()[0].name !== recievedIndex;
             } else {
                 return false;
             }
+        });
+
+        this.isIndexMapReduce = ko.computed(() => {
+            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            return !!currentIndex && currentIndex.hasReduce == true;
         });
 
         aceEditorBindingHandler.install();
@@ -127,11 +153,12 @@ class query extends viewModelBase {
 
         this.fetchAllTransformers();
         this.fetchCustomFunctions();
-        $.when(
-            this.fetchAllCollections(),
-            this.fetchAllIndexes(),
-            this.fetchRecentQueries()
-            ).done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+
+        this.localStorageObjectName = 'ravenDB-recentQueries.' + this.activeDatabase().name;
+        this.fetchRecentQueries();
+
+        $.when(this.fetchAllCollections(), this.fetchAllIndexes())
+            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
 
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
     }
@@ -140,6 +167,7 @@ class query extends viewModelBase {
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
+
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
@@ -149,6 +177,11 @@ class query extends viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
         this.focusOnQuery();
+
+        var self = this;
+        $(window).bind('storage', () => {
+            self.fetchRecentQueries();
+        });
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -185,7 +218,7 @@ class query extends viewModelBase {
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             this.setSelectedIndex(this.indexes.first().name);
-        } else if (this.indexes.first(i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
+        } else if (this.indexes.first(i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
@@ -199,7 +232,7 @@ class query extends viewModelBase {
     focusOnQuery() {
         var editorElement = $("#queryEditor").length == 1 ? $("#queryEditor")[0] : null;
         if (editorElement) {
-            var docEditor = ko.utils.domData.get($("#queryEditor")[0], "aceEditor");
+            var docEditor = ko.utils.domData.get(editorElement, "aceEditor");
             if (docEditor) {
                 docEditor.focus();
             }
@@ -230,26 +263,11 @@ class query extends viewModelBase {
             });
     }
 
-    fetchRecentQueries(): JQueryPromise<any> {
-        var result = $.Deferred();
-        var storedQueriesCommand = new getStoredQueriesCommand(this.activeDatabase());
-        storedQueriesCommand.execute()
-            .fail(_ => {
-                var newStoredQueryContainer: storedQueryContainerDto = {
-                    '@metadata': {},
-                    Queries: []
-                };
-                this.recentQueriesDoc(newStoredQueryContainer);
-                this.recentQueries(newStoredQueryContainer.Queries);
-            })
-            .done((doc: document) => {
-                var dto = <storedQueryContainerDto>doc.toDto(true);
-                this.recentQueriesDoc(dto);
-                this.recentQueries(dto.Queries);
-            })
-            .always(() => result.resolve());
-
-        return result;
+    fetchRecentQueries() {
+        var recentQueriesFromLocalStorage: storedQueryDto[] = indexesShell.getRecentQueries(this.localStorageObjectName);
+        if (recentQueriesFromLocalStorage.length > 0) {
+            this.recentQueries(recentQueriesFromLocalStorage);
+        }
     }
 
     fetchAllTransformers() {
@@ -368,7 +386,7 @@ class query extends viewModelBase {
 
                 if (!!currentColumnName && !!this.indexFields.first(x=> x === currentColumnName)) {
 
-                    if (this.selectedIndex().indexOf("dynamic/") !== 0) {
+                    if (this.selectedIndex().indexOf(this.dynamicPrefix) !== 0) {
                         new getIndexTermsCommand(this.selectedIndex(), currentColumnName, this.activeDatabase())
                             .execute()
                             .done(terms => {
@@ -435,28 +453,19 @@ class query extends viewModelBase {
             this.recentQueries.remove(this.recentQueries()[15]);
         }
 
-        var recentQueriesDoc = this.recentQueriesDoc();
-        if (recentQueriesDoc) {
-            recentQueriesDoc.Queries = this.recentQueries();
-            var preppedDoc = new document(recentQueriesDoc);
-            new saveDocumentCommand(getStoredQueriesCommand.storedQueryDocId, preppedDoc, this.activeDatabase(), false)
-                .execute()
-                .done((saveResult: bulkDocumentDto[]) => {
-                    var savedDocumentDto: bulkDocumentDto = saveResult[0];
-                    recentQueriesDoc["@metadata"]["@etag"] = savedDocumentDto.Etag;
-                });
-        }
+        //save the recent queries to local storage
+        localStorage.setObject(this.localStorageObjectName, this.recentQueries());
     }
 
-    getRecentQuerySortsText(recentQueryIndex: number) {
-        var sorts = this.recentQueries()[recentQueryIndex].Sorts;
-        if (sorts.length === 0) {
-            return "";
+    getRecentQuerySortText(sorts: string[]) {
+        if (sorts.length > 0) {
+            return sorts
+                .map(s => querySort.fromQuerySortString(s))
+                .map(s => s.toHumanizedString())
+                .reduce((first, second) => first + ", " + second);
         }
-        return sorts
-            .map(s => querySort.fromQuerySortString(s))
-            .map(s => s.toHumanizedString())
-            .reduce((first, second) => first + ", " + second);
+
+        return "";
     }
 
     setSelectedIndex(indexName: string) {
@@ -476,7 +485,7 @@ class query extends viewModelBase {
         if (!isAllDocumentsDynamicQuery) {
 
             //if index is dynamic, get columns using index definition, else get it using first index result
-            if (indexName.indexOf('dynamic/') === 0) {
+            if (indexName.indexOf(this.dynamicPrefix) === 0) {
                 var collectionName = indexName.substring(8);
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
@@ -524,11 +533,13 @@ class query extends viewModelBase {
     }
 
     selectTransformer(dto: transformerDto) {
-        if (dto !== null) {
+        if (!!dto) {
             var t = new transformerType();
             t.initFromLoad(dto);
             this.transformer(t);
             this.runQuery();
+        } else {
+            this.transformer(null);
         }
     }
 
@@ -608,24 +619,21 @@ class query extends viewModelBase {
         }
     }
 
-    getStoredQueryTransformerName(query: storedQueryDto): string {
+    private getStoredQueryTransformerName(query: storedQueryDto): string {
         if (query.TransformerQuery) {
             return query.TransformerQuery.transformerName;
         }
         return "";
     }
 
-    getStoredQueryTransformerParameters(query: storedQueryDto): string {
-        if (query.TransformerQuery) {
-            var params = "";
-            if (query.TransformerQuery.queryParams) {
-                return "(" + query
-                    .TransformerQuery
-                    .queryParams
-                    .map((param: transformerParamDto) => param.name + "=" + param.value)
-                    .join(", ") + ")";
-            }
+    getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
+        if (queryParams.length > 0) {
+            return "(" + 
+                queryParams
+                .map((param: transformerParamDto) => param.name + "=" + param.value)
+                .join(", ") + ")";
         }
+
         return "";
     }
 

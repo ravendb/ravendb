@@ -71,6 +71,8 @@ namespace Raven.Database.Indexing
         //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
         public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
 
+	    private int nextQueryId = 0;
+
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }
 
@@ -100,7 +102,7 @@ namespace Raven.Database.Indexing
 
         private void InstallGauges()
         {
-            this.MetricsCounters.AddGauge(this.GetType(), "RunningQueriesCount", () => this.CurrentlyRunningQueries.Count);
+            MetricsCounters.AddGauge(GetType(), "RunningQueriesCount", () => CurrentlyRunningQueries.Count);
         }
 
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
@@ -323,5 +325,10 @@ namespace Raven.Database.Indexing
 		{
 			recentlyDeleted.Add(key);
 		}
+
+        public int GetNextQueryId()
+        {
+            return Interlocked.Increment(ref nextQueryId);
+        }
 	}
 }

@@ -3,15 +3,29 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
 namespace Raven.Database.Extensions
 {
-	public class WhoIsLocking
+	public static class WhoIsLocking
 	{
 		private const int RmRebootReasonNone = 0;
 		private const int CCH_RM_MAX_APP_NAME = 255;
 		private const int CCH_RM_MAX_SVC_NAME = 63;
+
+		public static string ThisFile(string path)
+		{
+			var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
+			var stringBuilder = new StringBuilder();
+			stringBuilder.Append("The following processing are locking ").Append(path).AppendLine();
+			foreach (var processesUsingFile in processesUsingFiles)
+			{
+				stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
+					AppendLine();
+			}
+			return stringBuilder.ToString();
+		}
 
 		public static IList<Process> GetProcessesUsingFile(string filePath)
 		{

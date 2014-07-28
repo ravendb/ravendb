@@ -11,16 +11,16 @@ import getConfigurationCommand = require("commands/filesystem/getConfigurationCo
 import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import configurationKey = require("models/filesystem/configurationKey");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import createConfigurationKey = require("viewmodels/filesystem/createConfigurationKey");
 import deleteConfigurationKeys = require("viewmodels/filesystem/deleteConfigurationKeys");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 import Pair = require("common/pair");
 
 class configuration extends viewModelBase {
 
     static configSelector = "#settingsContainer";
     private router = router;
+
+    appUrls: computedAppUrls;
 
     keys = ko.observableArray<configurationKey>();
     text: KnockoutComputed<string>;
@@ -59,6 +59,8 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        this.appUrls = appUrl.forCurrentFilesystem();
 
         if (!this.subscription) {
             this.subscription = shell.currentResourceChangesApi()
@@ -217,18 +219,14 @@ class configuration extends viewModelBase {
     }
 
     newConfigurationKey() {
-        require(["viewmodels/filesystem/createConfigurationKey"], createFilesystem => {
-            var createConfigurationKeyViewModel: createConfigurationKey = new createConfigurationKey(this.keys());
+        require(["viewmodels/filesystem/createConfigurationKey"], createConfigurationKey => {
+            var createConfigurationKeyViewModel = new createConfigurationKey(this.keys());
             createConfigurationKeyViewModel
                 .creationTask
                 .done((key: string) => {
                     new saveConfigurationCommand(this.activeFilesystem(), new configurationKey(this.activeFilesystem(), key), JSON.parse("{}")).execute()
-                        .done(() => {
-                            this.addKey(key);
-                        })
-                        .fail((qXHR, textStatus, errorThrown) => {
-                            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not create Configuration Key.", errorThrown));
-                        });
+                        .done(() => this.addKey(key))
+                        .fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not create Configuration Key!", errorThrown));
                 });
             app.showDialog(createConfigurationKeyViewModel);
         });

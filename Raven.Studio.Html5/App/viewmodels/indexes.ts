@@ -5,7 +5,6 @@ import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
 import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
-import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
@@ -13,6 +12,7 @@ import router = require("plugins/router");
 import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
+import indexesShell = require("viewmodels/indexesShell");
 
 class indexes extends viewModelBase {
 
@@ -20,6 +20,7 @@ class indexes extends viewModelBase {
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
+    localStorageObjectName: string;
     recentQueries = ko.observableArray<storedQueryDto>();
     indexMutex = true;
     appUrls: computedAppUrls;
@@ -48,7 +49,10 @@ class indexes extends viewModelBase {
 
         var deferred = $.Deferred();
 
-        $.when(this.fetchIndexes(), this.fetchRecentQueries())
+        this.localStorageObjectName = 'ravenDB-recentQueries.' + this.activeDatabase().name;
+        this.fetchRecentQueries();
+
+        $.when(this.fetchIndexes())
             .done(() => deferred.resolve({ can: true }))
             .fail(() => deferred.resolve({ can: false }));
 
@@ -66,6 +70,11 @@ class indexes extends viewModelBase {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
+
+        var self = this;
+        $(window).bind('storage', () => {
+            self.fetchRecentQueries();
+        });
     }
 
     private fetchIndexes() {
@@ -75,25 +84,36 @@ class indexes extends viewModelBase {
     }
 
     private fetchRecentQueries() {
-        new getStoredQueriesCommand(this.activeDatabase())
-            .execute()
-            .done((doc: storedQueryContainerDto) => {
-            this.recentQueries(doc.Queries)
-        });
+        var recentQueriesFromLocalStorage: storedQueryDto[] = indexesShell.getRecentQueries(this.localStorageObjectName);
+        if (recentQueriesFromLocalStorage.length > 0) {
+            this.recentQueries(recentQueriesFromLocalStorage);
+        }
     }
 
     getRecentQueryUrl(query: storedQueryDto) {
         return appUrl.forQuery(this.activeDatabase(), query.Hash);
     }
 
-    getRecentQuerySortText(query: storedQueryDto) {
-        if (query.Sorts.length === 0) {
-            return "";
+    getRecentQuerySortText(sorts: string[]) {
+        if (sorts.length > 0) {
+            return sorts
+                .map(s => querySort.fromQuerySortString(s))
+                .map(s => s.toHumanizedString())
+                .reduce((first, second) => first + ", " + second);
         }
-        return query.Sorts
-            .map(s => querySort.fromQuerySortString(s))
-            .map(s => s.toHumanizedString())
-            .reduce((first, second) => first + ", " + second);
+
+        return "";
+    }
+
+    getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
+        if (queryParams.length > 0) {
+            return "(" +
+                queryParams
+                    .map((param: transformerParamDto) => param.name + "=" + param.value)
+                    .join(", ") + ")";
+        }
+
+        return "";
     }
 
     processDbStats(stats: databaseStatisticsDto) {
@@ -209,8 +229,10 @@ class indexes extends viewModelBase {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask
-                .done((aa) => {
-                    this.removeIndexesFromAllGroups(indexes);
+                .done((closedWithoutDeletion: boolean) => {
+                    if (closedWithoutDeletion == false) {
+                        this.removeIndexesFromAllGroups(indexes);
+                    }
                 })
                 .fail(() => {
                     this.removeIndexesFromAllGroups(indexes);

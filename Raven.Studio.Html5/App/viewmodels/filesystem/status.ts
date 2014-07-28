@@ -21,12 +21,25 @@ import changesApi = require("common/changesApi");
 
 class status extends viewModelBase {
 
-    activity = ko.observableArray<synchronizationDetail>();
+    pendingActivity = ko.observableArray<synchronizationDetail>();
+    activeActivity = ko.observableArray<synchronizationDetail>();
+    appUrls: computedAppUrls;
+
     outgoingActivity = ko.computed(() => {
-        return ko.utils.arrayFilter(this.activity(), (item) => { return item.Direction === synchronizationDirection.Outgoing; });
+        var pendingOutgoing = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
+        var activeOutgoing = ko.utils.arrayFilter(this.activeActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
+        var allActivity = new Array<synchronizationDetail>();
+        allActivity.pushAll(activeOutgoing);
+        allActivity.pushAll(pendingOutgoing);
+        return allActivity.slice(0, 50);
     });
     incomingActivity = ko.computed(() => {
-        return ko.utils.arrayFilter(this.activity(), (item) => { return item.Direction === synchronizationDirection.Incoming; });
+        var pendingIncoming = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Incoming; });
+        var activeIncoming = ko.utils.arrayFilter(this.activeActivity(), (item) => { return item.Direction() === synchronizationDirection.Incoming; });
+        var allActivity = new Array <synchronizationDetail>();
+        allActivity.pushAll(activeIncoming);
+        allActivity.pushAll(pendingIncoming);
+        return allActivity.slice(0, 50);
     });
 
     isOutgoingActivityVisible = ko.computed(() => true);
@@ -38,13 +51,21 @@ class status extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-
+        this.appUrls = appUrl.forCurrentFilesystem();
 
         new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-            .done(x => this.activity(x));
+            .done((x: synchronizationDetail[]) => {
+                for (var i = 0; i < x.length; i++) {
+                    this.addOrUpdateActivity(x[i]);
+                }
+            });
 
         new getSyncIncomingActivitiesCommand(this.activeFilesystem()).execute()
-            .done(x => this.activity(x));
+            .done( (x : synchronizationDetail[]) => {
+                for (var i = 0; i < x.length; i++) {
+                    this.addOrUpdateActivity(x[i]);
+                }
+            });
 
         if (this.outgoingActivity().length == 0) {
             $("#outgoingActivityCollapse").collapse();
@@ -59,11 +80,16 @@ class status extends viewModelBase {
         // treat notifications events
         this.isFsSyncUpToDate = false;
 
+        var activity = new synchronizationDetail(e, this.getActionDescription(e.Action));
+        
         if (e.Action != synchronizationAction.Finish) {
-            this.addOrUpdateActivity(e);
+            this.addOrUpdateActivity(activity);
         }
         else {
-            setTimeout(() => this.activity.remove(item => { return item.fileName === e.FileName; }), 3000);
+            setTimeout(() => {
+                this.activeActivity.remove(item => item.fileName() == e.FileName && item.Type() == e.Type);
+                this.pendingActivity.remove(item => item.fileName() == e.FileName && item.Type() == e.Type);
+            }, 3000);
         }
     }
 
@@ -82,34 +108,35 @@ class status extends viewModelBase {
         $(".synchronization-group-content").collapse('show');
     }
 
-    private addOrUpdateActivity(e: synchronizationUpdateNotification) {
-
-        if (!this.activityContains(e)) {
-            this.activity.push(new synchronizationDetail({
-                FileName: e.FileName,
-                DestinationUrl: e.DestinationFileSystemUrl,
-                FileETag: "",
-                Type: e.Type,
-                Direction: e.SynchronizationDirection
-            }, this.getActionDescription(e.Action)));
+    private addOrUpdateActivity(e: synchronizationDetail) {
+        var matchingActivity = this.getMatchingActivity(e);
+        if (!matchingActivity) {
+            if (e.Status() === "Active") {
+                this.activeActivity.push(e);
+            }
+            else {
+                this.pendingActivity.push(e);
+            }
+        }
+        else if (matchingActivity.Status() === "Pending" && e.Status() === "Active") {
+            this.pendingActivity.remove(matchingActivity);
+            this.activeActivity.push(e);
         }
         else {
-            console.log(e.FileName + " has been modified");
-            this.activity.remove((item) => { return item.fileName === e.FileName; });
-            this.activity.push(new synchronizationDetail({
-                FileName: e.FileName,
-                DestinationUrl: e.DestinationFileSystemUrl,
-                FileETag: "",
-                Type: e.Type,
-                Direction: e.SynchronizationDirection
-            }, this.getActionDescription(e.Action)));
+            matchingActivity.Status(e.Status());
         }
     }
 
-    private activityContains(e: synchronizationUpdateNotification) {
-        var match = ko.utils.arrayFirst(this.activity(), (item) =>  {
-            return item.fileName === e.FileName;
+    private getMatchingActivity(e: synchronizationDetail) : synchronizationDetail {
+        var match = ko.utils.arrayFirst(this.pendingActivity(), (item) =>  {
+            return item.fileName() === e.fileName() && item.Type() === e.Type();
         });
+
+        if (!match) {
+            match = ko.utils.arrayFirst(this.activeActivity(), (item) => {
+                return item.fileName() === e.fileName() && item.Type() === e.Type();
+            });
+        }
 
         return match;
     }

@@ -36,7 +36,8 @@ class sqlReplication extends document {
     connectionStringSourceFieldName: KnockoutComputed<string>;
 
     collections = ko.observableArray<string>();
-    searchResults = ko.observableArray<string>();
+    searchResults: KnockoutComputed<string[]>;
+    
 
     showReplicationConfiguration = ko.observable<boolean>(false);
 
@@ -68,13 +69,17 @@ class sqlReplication extends document {
             }
         });
 
-        this.ravenEntityName.subscribe((newRavenEntityName) => {
-            this.searchResults(this.collections().filter((name) => {
-                return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
-            }));
-
+        this.searchResults = ko.computed(() => {
+            var newRavenEntityName = this.ravenEntityName();
+            if (newRavenEntityName === "" || !newRavenEntityName) {
+                return this.collections();
+            } else {
+                return this.collections().filter((name) => {
+                    return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
+                });
+            }
         });
-
+        
         this.script.subscribe((newValue) => {
             var message = "";
             var currentEditor = aceEditorBindingHandler.currentEditor;

@@ -2,7 +2,7 @@
 
 import app = require("durandal/app");
 import sys = require("durandal/system");
-import router = require("plugins/router"); 
+import router = require("plugins/router");
 import ace = require("ace/ace");
 
 import document = require("models/document");
@@ -19,8 +19,7 @@ import resolveMergeCommand = require("commands/resolveMergeCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
 import pagedResultSet = require("common/pagedResultSet");
@@ -44,11 +43,12 @@ class editDocument extends viewModelBase {
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
     queryResultList = ko.observable<pagedList>();
-    currentQueriedItemIndex:number;
+    currentQueriedItemIndex: number;
     docEditor: AceAjax.Editor;
+    documentNameElement: JQuery;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
-    relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
+    relatedDocumentHrefs = ko.observableArray<{ id: string; href: string }>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
     lodaedDocumentName = ko.observable('');
@@ -57,10 +57,10 @@ class editDocument extends viewModelBase {
     isInDocMode = ko.observable(true);
     queryIndex = ko.observable<String>();
     docTitle: KnockoutComputed<string>;
-
+    isNewLineFriendlyMode = ko.observable(false);
     isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
-    
+
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
@@ -88,19 +88,19 @@ class editDocument extends viewModelBase {
         this.documentSize = ko.computed(() => {
             try {
                 var size: Number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
-                return genUtils.formatAsCommaSeperatedString(size,2);    
+                return genUtils.formatAsCommaSeperatedString(size, 2);
             } catch (e) {
                 return "cannot compute";
-            } 
-            
+            }
+
         });
 
         this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
         this.editedDocId = ko.computed(() => this.metadata() ? this.metadata().id : '');
-        this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
+        this.editedDocId.subscribe((docId: string) => ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
 
         // When we programmatically change the document text or meta text, push it into the editor.
-        this.isEditingMetadata.subscribe(()=> {
+        this.isEditingMetadata.subscribe(() => {
             if (this.docEditor) {
                 var text = this.isEditingMetadata() ? this.metadataText() : this.documentText();
                 this.docEditor.getSession().setValue(text);
@@ -172,33 +172,33 @@ class editDocument extends viewModelBase {
         super.canActivate(args);
         var canActivateResult = $.Deferred();
         if (args && args.id) {
-            
+
             this.databaseForEditedDoc = appUrl.getDatabase();
             this.loadDocument(args.id)
                 .done(() => {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    messagePublisher.reportError("Could not find " + args.id + " document");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             return canActivateResult;
         } else if (args && args.item && args.list) {
             return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
         }
-        else if (args && args.index ) {
+        else if (args && args.index) {
             this.isInDocMode(false);
             var indexName: string = args.index;
             var queryText: string = args.query;
             var sorts: querySort[];
-            
+
             if (args.sorts) {
                 sorts = args.sorts.split(',').map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
-                
-        } else {
+
+            } else {
                 sorts = [];
             }
-                
+
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, queryText, sorts);
                 return command
@@ -206,7 +206,7 @@ class editDocument extends viewModelBase {
             };
             var list = new pagedList(resultsFetcher);
             var item = !!args.item && !isNaN(args.item) ? args.item : 0;
-            
+
             list.getNthItem(item)
                 .done((doc: document) => {
                     this.document(doc);
@@ -214,7 +214,7 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
+                    messagePublisher.reportError("Could not find query result");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             this.currentQueriedItemIndex = item;
@@ -222,9 +222,12 @@ class editDocument extends viewModelBase {
             this.queryIndex(indexName);
             return canActivateResult;
         }
-        else{
+        else {
             return $.Deferred().resolve({ can: true });
         }
+
+
+
     }
 
     activate(navigationArgs) {
@@ -233,7 +236,7 @@ class editDocument extends viewModelBase {
         this.lodaedDocumentName(this.userSpecifiedId());
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
 
-        this.isSaveEnabled = ko.computed(()=> {
+        this.isSaveEnabled = ko.computed(() => {
             return (this.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
         }, this);
 
@@ -264,14 +267,37 @@ class editDocument extends viewModelBase {
         } else if (navigationArgs && navigationArgs.index) {
             //todo: implement SetRawJSONUrl for document from query
         }
-        else{
+        else {
             this.editNewDocument();
         }
     }
 
+    updateNewlineLayoutInDocument(unescapeNewline) {
+        var dirtyFlagValue = this.dirtyFlag().isDirty();
+        if (unescapeNewline) {
+            this.documentText(this.unescapeNewlinesInTextFields(this.documentText()));
+            this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
+        } else {
+            this.documentText(this.escapeNewlinesInTextFields(this.documentText()));
+            this.docEditor.getSession().setMode('ace/mode/json');
+            this.formatDocument();
+        }
+
+        if (dirtyFlagValue == false) {
+            this.dirtyFlag().reset();
+        }
+    }
+
+
     // Called when the view is attached to the DOM.
     attached() {
         this.setupKeyboardShortcuts();
+
+        this.isNewLineFriendlyMode.subscribe(val => {
+            this.updateNewlineLayoutInDocument(val);
+
+
+        });
     }
 
     compositionComplete() {
@@ -282,10 +308,12 @@ class editDocument extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
+        this.documentNameElement = $("#documentName");
+
         this.focusOnEditor();
     }
 
-    setupKeyboardShortcuts() {        
+    setupKeyboardShortcuts() {
         this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
@@ -318,7 +346,90 @@ class editDocument extends viewModelBase {
     }
 
     failedToLoadDoc(docId, errorResponse) {
-        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
+        messagePublisher.reportError("Could not find " + docId + " document");
+    }
+
+    escapeNewlinesInTextFields(str: string): any {
+        var AceDocumentClass = require("ace/document").Document;
+        var AceEditSessionClass = require("ace/edit_session").EditSession;
+        var AceJSONMode = require("ace/mode/json_newline_friendly").Mode;
+        var documentTextAceDocument = new AceDocumentClass(str);
+        var jsonMode = new AceJSONMode();
+        var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
+        var previousLine = 0;
+
+        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
+        var curToken = iterator.getCurrentToken();
+        var text = "";
+        while (curToken) {
+            if (curToken.type === "string" || curToken.type == "constant.language.escape") {
+                if (previousLine < iterator.$row) {
+                    text += "\\r\\n";
+                }
+                text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
+            } else {
+                text += curToken.value;
+            }
+
+            previousLine = iterator.$row;
+            curToken = iterator.stepForward();
+        }
+
+        return text;
+    }
+
+    unescapeNewlinesInTextFields(str: string): any {
+        var AceDocumentClass = require("ace/document").Document;
+        var AceEditSessionClass = require("ace/edit_session").EditSession;
+        var AceJSONMode = require("ace/mode/json").Mode;
+        var documentTextAceDocument = new AceDocumentClass(str);
+        var jsonMode = new AceJSONMode();
+        var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
+        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
+        var curToken = iterator.getCurrentToken();
+
+        // first, calculate newline indexes
+        var rowsIndexes = str.split("").map(function (x, index) {return { char: x, index: index } }).filter(function (x) {return x.char == "\n" }).map(function (x) {return x.index });
+
+
+
+        // start iteration from the end of the document
+        while (curToken) {
+            curToken = iterator.stepForward();
+        }
+        curToken = iterator.stepBackward();
+
+        var lastTextSectionPosEnd = null;
+
+        while (curToken) {
+            if (curToken.type === "string" || curToken.type == "constant.language.escape") {
+                if (lastTextSectionPosEnd == null) {
+                    curToken = iterator.stepForward();
+                    lastTextSectionPosEnd = { row: iterator.getCurrentTokenRow(), column: iterator.getCurrentTokenColumn() + 1 };
+                    curToken = iterator.stepBackward();
+                }
+            }
+            else {
+                if (lastTextSectionPosEnd != null) {
+                    curToken = iterator.stepForward();
+                    var lastTextSectionPosStart = { row: iterator.getCurrentTokenRow(), column: iterator.getCurrentTokenColumn() + 1 };
+                    var stringTokenStartIndexInSourceText = (lastTextSectionPosStart.row > 0 ? rowsIndexes[lastTextSectionPosStart.row - 1] : 0) + lastTextSectionPosStart.column;
+                    var stringTokenEndIndexInSourceText = (lastTextSectionPosEnd.row > 0 ? rowsIndexes[lastTextSectionPosEnd.row - 1] : 0) + lastTextSectionPosEnd.column;
+                    var newTextPrefix = str.substring(0, stringTokenStartIndexInSourceText);
+                    var newTextSuffix = str.substring(stringTokenEndIndexInSourceText, str.length);
+                    var newStringTokenValue = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText).replace(/(\\n|\\r\\n)/g, '\r\n');
+                    str = newTextPrefix + newStringTokenValue + newTextSuffix;
+                    curToken = iterator.stepBackward();
+                }
+                lastTextSectionPosEnd = null;
+            }
+
+            curToken = iterator.stepBackward();
+        }
+
+        return str;
     }
 
     saveDocument() {
@@ -330,24 +441,33 @@ class editDocument extends viewModelBase {
         }
 
         var message = "";
-        try {
-            var updatedDto = JSON.parse(this.documentText());
-            var meta = JSON.parse(this.metadataText());
-        }
-        catch (e) {
-            if (updatedDto == undefined) {
-                message = "The data isn't a legal JSON expression!";
-                this.isEditingMetadata(false);
+
+        if (currentDocumentId.indexOf("\\") != -1) {
+            message = "Document name cannot contain '\\'";
+            this.documentNameElement.focus();
+        } else {
+            try {
+                var updatedDto;
+                if (this.isNewLineFriendlyMode() === true) {
+                    updatedDto = JSON.parse(this.escapeNewlinesInTextFields(this.documentText()));
+                } else {
+                    updatedDto = JSON.parse(this.documentText());
+                }
+                var meta = JSON.parse(this.metadataText());
+            } catch (e) {
+                if (updatedDto == undefined) {
+                    message = "The data isn't a legal JSON expression!";
+                    this.isEditingMetadata(false);
+                } else if (meta == undefined) {
+                    message = "The metadata isn't a legal JSON expression!";
+                    this.isEditingMetadata(true);
+                }
+                this.focusOnEditor();
             }
-            else if (meta == undefined) {
-                message = "The metadata isn't a legal JSON expression!";
-                this.isEditingMetadata(true);
-            }
-            this.docEditor.focus();
-            this.reportError(message, null, false);
         }
-        
+
         if (message != "") {
+            messagePublisher.reportError(message, undefined, undefined, false);
             return;
         }
 
@@ -361,7 +481,7 @@ class editDocument extends viewModelBase {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
             this.metaPropsToRestoreOnSave.forEach(p => {
-                if (p.name !== "Origin"){
+                if (p.name !== "Origin") {
                     meta[p.name] = p.value;
                 }
             });
@@ -383,7 +503,9 @@ class editDocument extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
-            this.loadDocument(savedDocumentDto.Key);
+            this.loadDocument(savedDocumentDto.Key).always(() => {
+                this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
+            });
             this.updateUrl(savedDocumentDto.Key);
 
             this.dirtyFlag().reset(); //Resync Changes
@@ -396,7 +518,7 @@ class editDocument extends viewModelBase {
 
                     list.totalResultCount(newTotalResultCount);
                     list.currentItemIndex(newTotalResultCount - 1);
-                    
+
                 } else {
                     list.currentItemIndex(list.totalResultCount() - 1);
                 }
@@ -415,16 +537,26 @@ class editDocument extends viewModelBase {
     }
 
     stringify(obj: any) {
+
         var prettifySpacing = 4;
         return JSON.stringify(obj, null, prettifySpacing);
+
     }
+
+
 
     activateMeta() {
         this.isEditingMetadata(true);
+        this.docEditor.getSession().setMode('ace/mode/json');
     }
 
     activateDoc() {
         this.isEditingMetadata(false);
+
+        if (this.isNewLineFriendlyMode() == true) {
+            this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
+        }
+
     }
 
     findRelatedDocumentsCandidates(doc: documentBase): string[] {
@@ -440,15 +572,15 @@ class editDocument extends viewModelBase {
         for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             var curField = documentNodesFlattenedList[documentNodesCursor];
             if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
-                
-                if (!results.first(x=>x === curField.toString())){
+
+                if (!results.first(x=> x === curField.toString())) {
                     results.push(curField.toString());
                 }
             }
             else if (typeof curField == "object" && !!curField) {
-                    for (var curInnerField in curField) {
-                        documentNodesFlattenedList.push(curField[curInnerField]);
-                    }
+                for (var curInnerField in curField) {
+                    documentNodesFlattenedList.push(curField[curInnerField]);
+                }
             }
         }
         return results;
@@ -456,7 +588,7 @@ class editDocument extends viewModelBase {
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
-        loadDocTask.done((document: document)=> {
+        loadDocTask.done((document: document) => {
             this.document(document);
             this.lodaedDocumentName(this.userSpecifiedId());
             this.dirtyFlag().reset(); //Resync Changes
@@ -472,20 +604,20 @@ class editDocument extends viewModelBase {
 
     refreshDocument() {
         if (this.isInDocMode()) {
-        if (!this.isCreatingNewDocument()) {
-            var docId = this.editedDocId();
-            this.document(null);
-            this.documentText(null);
-            this.metadataText(null);
-            this.userSpecifiedId('');
-            this.loadDocument(docId);
-        } else {
-            this.editNewDocument();
-        }
+            if (!this.isCreatingNewDocument()) {
+                var docId = this.editedDocId();
+                this.document(null);
+                this.documentText(null);
+                this.metadataText(null);
+                this.userSpecifiedId('');
+                this.loadDocument(docId);
+            } else {
+                this.editNewDocument();
+            }
         } else {
             this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
             this.lodaedDocumentName("");
-    }
+        }
     }
 
     deleteDocument() {
@@ -511,15 +643,19 @@ class editDocument extends viewModelBase {
                 }
             });
             app.showDialog(viewModel, editDocument.editDocSelector);
-        } 
+        }
     }
 
     formatDocument() {
-        var docEditorText = this.docEditor.getSession().getValue();
-        var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
-        var tempDoc = JSON.parse(docEditorText);
-        var formatted = this.stringify(tempDoc);
-        observableToUpdate(formatted);
+        try {
+            var docEditorText = this.docEditor.getSession().getValue();
+            var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
+            var tempDoc = JSON.parse(docEditorText);
+            var formatted = this.stringify(tempDoc);
+            observableToUpdate(formatted);
+        } catch (e) {
+            messagePublisher.reportError("Could not format json", undefined, undefined, false);
+        }
     }
 
     nextDocumentOrFirst() {
@@ -560,27 +696,27 @@ class editDocument extends viewModelBase {
     pageToItem(index: number, newTotalResultCount?: number) {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
         canContinue.done(() => {
-	        var list = this.docsList();
-	        if (list) {
-	            list.getNthItem(index)
-	                .done((doc: document) => {
-	                    if (this.isInDocMode() === true) {
-		                    this.loadDocument(doc.getId());
-		                    list.currentItemIndex(index);
-		                    this.updateUrl(doc.getId());
-	                    }
-	                    else {
-	                        this.document(doc);
-	                        this.lodaedDocumentName("");
+            var list = this.docsList();
+            if (list) {
+                list.getNthItem(index)
+                    .done((doc: document) => {
+                        if (this.isInDocMode() === true) {
+                            this.loadDocument(doc.getId());
+                            list.currentItemIndex(index);
+                            this.updateUrl(doc.getId());
+                        }
+                        else {
+                            this.document(doc);
+                            this.lodaedDocumentName("");
                             this.dirtyFlag().reset(); //Resync Changes
-	                    }
+                        }
 
-	                    if (!!newTotalResultCount) {
-	                        list.totalResultCount(newTotalResultCount);
-	                    }
-	                });
-	        }
-		});
+                        if (!!newTotalResultCount) {
+                            list.totalResultCount(newTotalResultCount);
+                        }
+                    });
+            }
+        });
     }
 
     navigateToCollection(collectionName: string) {
@@ -605,8 +741,8 @@ class editDocument extends viewModelBase {
         if (recentDocumentsForCurDb) {
             var value = recentDocumentsForCurDb
                 .recentDocuments()
-                .filter((x:string) => {
-                  return x !== this.userSpecifiedId();
+                .filter((x: string) => {
+                    return x !== this.userSpecifiedId();
                 })
                 .slice(0, 5)
                 .map((docId: string) => {
@@ -635,7 +771,7 @@ class editDocument extends viewModelBase {
                 "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
                 "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
                 "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
-                "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL","Size-In-Kb"];
+                "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL", "Size-In-Kb"];
 
             for (var property in metaDto) {
                 if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {

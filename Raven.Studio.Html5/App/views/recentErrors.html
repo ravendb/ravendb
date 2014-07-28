@@ -3,9 +3,9 @@
         <button type="button" class="close" data-bind="click: close" aria-hidden="true">&times;</button>
         <h4 class="modal-title">Recent Errors</h4>
     </div>
-    <div class="modal-body" data-bind="style: {height: bodyHeight()+'px'}">
+    <div class="modal-body" data-bind="style: { height: bodyHeight() + 'px' }">
         <div class="panel-group error-details-accordion" data-bind="foreach: errors">
-            <div class="panel panel-danger">
+            <div class="panel" data-bind="css: { 'panel-danger': $data.type == $root.getDangerAlertType(), 'panel-warning': $data.type == $root.getWarningAlertType() }">
                 <div class="panel-heading">
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#errorDetailsCollapse' + $index() }">

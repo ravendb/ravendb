@@ -1,12 +1,10 @@
 import durandalRouter = require("plugins/router");
-import viewModelBase = require("viewmodels/viewModelBase");
+import appUrl = require("common/appUrl");
 
-class indexesShell extends viewModelBase {
+class indexesShell {
     router: DurandalRootRouter;
 
     constructor() {
-        super();
-
         this.router = durandalRouter.createChildRouter()
             .map([
                 { route: 'databases/indexes', moduleId: 'viewmodels/indexes', title: 'Indexes', nav: true },
@@ -14,6 +12,20 @@ class indexesShell extends viewModelBase {
                 { route: 'databases/indexes/terms/(:indexName)', moduleId: 'viewmodels/indexTerms', title: 'Terms', nav: true }
             ])
             .buildNavigationModel();
+
+        appUrl.mapUnknownRoutes(this.router);
+    }
+
+    static getRecentQueries(localStorageObjectName: string): storedQueryDto[] {
+        var recentQueriesFromLocalStorage: storedQueryDto[] = localStorage.getObject(localStorageObjectName);
+        var isArray = recentQueriesFromLocalStorage instanceof Array;
+
+        if (recentQueriesFromLocalStorage == null || isArray == false) {
+            localStorage.setObject(localStorageObjectName, []);
+            recentQueriesFromLocalStorage = [];
+        }
+
+        return recentQueriesFromLocalStorage;
     }
 }
 

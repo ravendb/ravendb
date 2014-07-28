@@ -426,5 +426,32 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			return tasks.Select(task => task.GetType().FullName).Where(t => !TasksToFilterOut.Contains(t)).ToList();
 		}
+
+        [HttpGet]
+        [Route("admin/killQuery")]
+        [Route("databases/{databaseName}/admin/killQuery")]
+        public HttpResponseMessage KillQuery()
+        {
+            var idStr = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStr, out id) == false)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Query string variable id must be a valid int64"
+                }, HttpStatusCode.BadRequest);
+            }
+
+            var query = Database.WorkContext.CurrentlyRunningQueries
+                .SelectMany(index => index.Value)
+                .FirstOrDefault(q => q.QueryId == id);
+
+            if (query != null)
+            {
+                query.TokenSource.Cancel();
+            }
+
+            return query == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetEmptyMessage(HttpStatusCode.NoContent);
+        }
 	}
 }

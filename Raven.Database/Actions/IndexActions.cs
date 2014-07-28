@@ -343,7 +343,7 @@ namespace Raven.Database.Actions
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query
-                }, actions, linked.Token)
+                }, actions, linked)
                 {
                     ShouldSkipDuplicateChecking = true
                 })
@@ -442,7 +442,7 @@ namespace Raven.Database.Actions
             return findIndexCreationOptions;
         }
 
-        internal Task StartDeletingIndexDataAsync(int id)
+        internal Task StartDeletingIndexDataAsync(int id, string indexName)
         {
             //remove the header information in a sync process
             TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
@@ -463,7 +463,12 @@ namespace Raven.Database.Actions
             });
 
             long taskId;
-            Database.Tasks.AddTask(deleteIndexTask, null, out taskId);
+            Database.Tasks.AddTask(deleteIndexTask, null, new TaskActions.PendingTaskDescription
+                                                          {
+                                                              StartTime = SystemTime.UtcNow,
+                                                              TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
+                                                              Payload = indexName
+                                                          }, out taskId);
 
             deleteIndexTask.ContinueWith(_ => Database.Tasks.RemoveTask(taskId));
 
@@ -515,7 +520,8 @@ namespace Raven.Database.Actions
                 TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
                 {
                     TimeOfOriginalDeletion = SystemTime.UtcNow,
-                    instance.IndexId
+                    instance.IndexId,
+                    IndexName = instance.Name
                 })), UuidType.Tasks));
 
                 // Delete the main record synchronously
@@ -525,7 +531,7 @@ namespace Raven.Database.Actions
 	            WorkContext.ClearErrorsFor(name);
 
                 // And delete the data in the background
-                StartDeletingIndexDataAsync(instance.IndexId);
+                StartDeletingIndexDataAsync(instance.IndexId, name);
 
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification

@@ -19,7 +19,7 @@
         <div class="btn-group">
             <a class="btn btn-primary" data-bind="attr: { href: newIndexUrl }" title="Add a new index (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>
             <a class="btn btn-default" data-bind="attr: { href: queryUrl }" title="New query (Alt+Q)" accesskey="Q"><i class="fa fa-search"></i> Query</a>
-            <div class="btn-group">
+            <div class="btn-group" data-bind="visible: recentQueries().length > 0">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     Recent Queries <span class="caret"></span>
                 </button>
@@ -31,25 +31,29 @@
                                 <span class="text-muted">|</span>
                                 <span data-bind="text: QueryText"></span>
                             </span>
-                            <span data-bind="visible: Sorts.length">
-                                <span class="text-muted">| sort by</span>
-                                <span data-bind="text: $root.getRecentQuerySortText($data)"></span>
+                            <span data-bind="visible: Sorts.length > 0, with: Sorts">
+                                <span class="text-muted">|</span>
+                                <span data-bind="text: 'sort by ' + $root.getRecentQuerySortText($data)"></span>
                             </span>
-                            <span data-bind="with: TransformerQuery ">
-                                <span class="text-muted">| transform by</span>
-                                <span data-bind="text: TransformerName"></span>
+                            <span data-bind="with: TransformerQuery">
+                                <span class="text-muted">|</span>
+                                <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
+                            </span>
+                            <span data-bind="visible: UseAndOperator == false">
+                                <span class="text-muted">|</span>
+                                <span>OR operator</span>
+                            </span>
+                            <span data-bind="visible: UseAndOperator">
+                                <span class="text-muted">|</span>
+                                <span>AND operator</span>
                             </span>
                             <span data-bind="visible: ShowFields">
                                 <span class="text-muted">|</span>
                                 <span>show fields</span>
                             </span>
-                            <span data-bind="visible: ShowFields">
+                            <span data-bind="visible: IndexEntries">
                                 <span class="text-muted">|</span>
                                 <span>index entries</span>
-                            </span>
-                            <span data-bind="visible: ShowFields">
-                                <span class="text-muted">|</span>
-                                <span>AND operator</span>
                             </span>
                         </a>
                     </li>

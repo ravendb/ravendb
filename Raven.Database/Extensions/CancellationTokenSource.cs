@@ -36,7 +36,7 @@ namespace Raven.Database.Extensions
             if (dueTime < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException("dueTime");
 
-            isTimerDisposed = true;
+            isTimerDisposed = false;
             this.source = source;
             this.dueTime = (long)dueTime.TotalMilliseconds;
             timer = new Timer(self =>
@@ -61,7 +61,8 @@ namespace Raven.Database.Extensions
 
         public void Dispose()
         {
-            timer.Dispose();
+	       isTimerDisposed = true;
+           timer.Dispose();
         }
     }
 }

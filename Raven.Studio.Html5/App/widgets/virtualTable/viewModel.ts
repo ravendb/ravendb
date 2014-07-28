@@ -75,7 +75,7 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
-            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", 'EditItem'],
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),

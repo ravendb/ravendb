@@ -1,7 +1,7 @@
 /// <reference path="../models/dto.ts" />
 
-import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
@@ -25,25 +25,6 @@ class commandBase {
         throw new Error("Execute must be overridden.");
     }
 
-    reportInfo(title: string, details?: string) {
-        this.reportProgress(alertType.info, title, details);
-    }
-
-    reportError(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.danger, title, details, httpStatusText);
-        if (console && console.log && typeof console.log === "function") {
-            console.log("Error during command execution", title, details, httpStatusText);
-        }
-    }
-
-    reportSuccess(title: string, details?: string) {
-        this.reportProgress(alertType.success, title, details);
-    }
-
-    reportWarning(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.warning, title, details, httpStatusText);
-    }
-
     urlEncodeArgs(args: any): string {
         var propNameAndValues = [];
         for (var prop in args) {
@@ -60,8 +41,8 @@ class commandBase {
         return "?" + propNameAndValues.join("&");
     }
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", resource);
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert:number = 9000): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource,null, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -133,7 +114,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "PATCH", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
         // ContentType:
         //
@@ -162,7 +143,7 @@ class commandBase {
             }
         }
         if (commandBase.loadingCounter == 0) {
-            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000);
+            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert);
         }
 
         if (oauthContext.apiKey()) {
@@ -302,9 +283,9 @@ class commandBase {
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
 	}
 
-    private static showSpin() {
+    private static showSpin(timeToAlert:number) {
         ko.postbox.publish("LoadProgress", alertType.warning);
-        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, 7000);
+        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
     }
 
     private static showServerNotRespondingAlert() {
@@ -315,8 +296,20 @@ class commandBase {
         ko.postbox.publish("LoadProgress", null);
     }
 
-    private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details, httpStatusText));
+    reportInfo(title: string, details?: string) {
+        messagePublisher.reportInfo(title, details);
+    }
+
+    reportError(title: string, details?: string, httpStatusText?: string) {
+        messagePublisher.reportError(title, details, httpStatusText);
+    }
+
+    reportSuccess(title: string, details?: string) {
+        messagePublisher.reportSuccess(title, details);
+    }
+
+    reportWarning(title: string, details?: string, httpStatusText?: string) {
+        messagePublisher.reportWarning(title, details, httpStatusText);
     }
 }
 

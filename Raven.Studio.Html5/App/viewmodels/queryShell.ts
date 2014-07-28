@@ -1,4 +1,5 @@
 import durandalRouter = require("plugins/router");
+import appUrl = require("common/appUrl");
 
 class queryShell {
     router: DurandalRouter;
@@ -10,6 +11,8 @@ class queryShell {
                 { route: 'databases/query/reporting(/:indexName)', moduleId: 'viewmodels/reporting', title: 'Reporting', nav: true }
             ])
             .buildNavigationModel();
+
+        appUrl.mapUnknownRoutes(this.router);
     }
 }
 
