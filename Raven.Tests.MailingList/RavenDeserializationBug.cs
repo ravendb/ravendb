@@ -45,7 +45,7 @@ namespace Raven.Tests.MailingList
                         .Query<TypeWithUriProperty, IndexChildren>()
                         .Customize(q => q.WaitForNonStaleResults())
 						.OrderBy(x=>x.Name)
-                        .AsProjection<TypeWithUriProperty>()
+						.ProjectFromIndexFieldsInto<TypeWithUriProperty>()
                         .ToList();
 //The previous block will blow up in Raven 2, but not in the previous version. If the TypeWithUriProperty.Address is changed
 //to be a string rather than a URI, the test will pass in both versions of RavenDB.
