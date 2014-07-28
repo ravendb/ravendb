@@ -148,6 +148,7 @@ interface synchronizationConflictNotification {
     FileName: string;
     SourceServerUrl: string;
     Status: conflictStatus;
+    RemoteFileHeader: any;
 }
 
 enum conflictStatus {

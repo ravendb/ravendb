@@ -41,21 +41,19 @@ class synchronizationConflicts extends viewModelBase {
 
     private processFsConflicts(e: synchronizationConflictNotification) {
         // treat notifications events
-        if (e.FileSystemName === this.activeFilesystem().name) {
-            switch (e.Status) {
-                case conflictStatus.Detected:
-                    {
-                        this.addConflict(e);
-                        break;
-                    }
-                case conflictStatus.Resolved:
-                    {
-                        this.removeResolvedConflict(e);
-                        break;
-                    }
-                default:
-                    console.error("unknown notification action");
-            }
+        switch (e.Status) {
+            case conflictStatus.Detected:
+                {
+                    this.addConflict(e);
+                    break;
+                }
+            case conflictStatus.Resolved:
+                {
+                    this.removeResolvedConflict(e);
+                    break;
+                }
+            default:
+                console.error("unknown notification action");
         }
     }
 
@@ -72,6 +70,7 @@ class synchronizationConflicts extends viewModelBase {
             this.conflicts.remove(match);
             this.selectedConflicts.remove(match.fileName);
         }
+        this.isSelectAllValue(false);
     }
 
     private conflictsContains(e: synchronizationConflictNotification) : conflictItem {
