@@ -75,7 +75,7 @@ namespace Raven.Tests.Track
 			{
 				var q = session.Query<Summary>("TestObjs/Summary")
 					.Customize(x => x.WaitForNonStaleResultsAsOfNow())
-					.AsProjection<Summary>()
+					.ProjectFromIndexFieldsInto<Summary>()
 					.ToList();
 
 				AssertResult(q);
@@ -89,7 +89,7 @@ namespace Raven.Tests.Track
 			{
 				var q = session.Query<Summary>("TestObjs/Summary")
 					.Customize(x => x.WaitForNonStaleResultsAsOfNow())
-					.AsProjection<Summary>()
+					.ProjectFromIndexFieldsInto<Summary>()
 					.ToListAsync();
 
 				q.ContinueWith(task =>

@@ -3,8 +3,6 @@ import database = require("models/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
 
 class settings extends viewModelBase {
 
@@ -71,6 +69,8 @@ class settings extends viewModelBase {
             .buildNavigationModel();
 
         this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
+
+        appUrl.mapUnknownRoutes(this.router);
 
         this.activeSubViewTitle = ko.computed(() => {
             // Is there a better way to get the active route?

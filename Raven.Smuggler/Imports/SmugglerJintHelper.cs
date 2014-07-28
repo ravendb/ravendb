@@ -16,12 +16,12 @@ namespace Raven.Smuggler.Imports
 {
 	public class SmugglerJintHelper
 	{
-		private static Engine jint;
+		private Engine jint;
 
-		public static void Initialize(SmugglerOptions options)
+		public void Initialize(SmugglerOptions options)
 		{
-		    if (options == null || string.IsNullOrEmpty(options.TransformScript))
-		        return;
+			if (options == null || string.IsNullOrEmpty(options.TransformScript))
+				return;
 
 			jint = new Engine(cfg =>
 			{
@@ -29,30 +29,30 @@ namespace Raven.Smuggler.Imports
 				cfg.MaxStatements(options.MaxStepsForTransformScript);
 			});
 
-		    jint.Execute(string.Format(@"
+			jint.Execute(string.Format(@"
 					function Transform(docInner){{
 						return ({0}).apply(this, [docInner]);
 					}};", options.TransformScript));
 		}
 
-		public static RavenJObject Transform(string transformScript, RavenJObject input)
+		public RavenJObject Transform(string transformScript, RavenJObject input)
 		{
 			if (jint == null)
 				throw new InvalidOperationException("Jint must be initialized.");
 
 			jint.ResetStatementsCount();
 
-            using (var scope = new OperationScope())
-		    {
-		        var jsObject = scope.ToJsObject(jint, input);
+			using (var scope = new OperationScope())
+			{
+				var jsObject = scope.ToJsObject(jint, input);
 				var jsObjectTransformed = jint.Invoke("Transform", jsObject);
 
-		        return jsObjectTransformed != JsValue.Null ? scope.ConvertReturnValue(jsObjectTransformed) : null;
-		    }
+				return jsObjectTransformed != JsValue.Null ? scope.ConvertReturnValue(jsObjectTransformed) : null;
+			}
 		}
 
-        private class OperationScope : JintOperationScope
-        {
-        }
+		private class OperationScope : JintOperationScope
+		{
+		}
 	}
 }

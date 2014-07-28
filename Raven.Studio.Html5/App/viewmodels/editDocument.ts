@@ -19,8 +19,7 @@ import resolveMergeCommand = require("commands/resolveMergeCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
 import pagedResultSet = require("common/pagedResultSet");
@@ -46,6 +45,7 @@ class editDocument extends viewModelBase {
     queryResultList = ko.observable<pagedList>();
     currentQueriedItemIndex:number;
     docEditor: AceAjax.Editor;
+    documentNameElement: JQuery;
     databaseForEditedDoc: database;
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
     relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
@@ -179,7 +179,7 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    messagePublisher.reportError("Could not find " + args.id + " document");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             return canActivateResult;
@@ -214,7 +214,7 @@ class editDocument extends viewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find query result", null));
+                    messagePublisher.reportError("Could not find query result");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
                 });
             this.currentQueriedItemIndex = item;
@@ -308,6 +308,8 @@ class editDocument extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
+        this.documentNameElement = $("#documentName");
+
         this.focusOnEditor();
     }
 
@@ -344,7 +346,7 @@ class editDocument extends viewModelBase {
     }
 
     failedToLoadDoc(docId, errorResponse) {
-        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
+        messagePublisher.reportError("Could not find " + docId + " document");
     }
 
     escapeNewlinesInTextFields(str: string) :any {
@@ -361,11 +363,20 @@ class editDocument extends viewModelBase {
         var curToken = iterator.getCurrentToken();
         var text = "";
         while (curToken) {
+            if (iterator.$row - previousLine > 1) {
+                var rowsGap = iterator.$row - previousLine;
+                for (var i = 0; i < rowsGap -1; i++) {
+                    text += "\\r\\n";
+                }
+            }
             if (curToken.type === "string" || curToken.type == "constant.language.escape") {
                 if (previousLine < iterator.$row) {
                     text += "\\r\\n";
                 }
-                text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
+
+                var newTokenValue = curToken.value.replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n').replace(/(\n|\r\n)/g, '\\r\\n');
+                text += newTokenValue;
+                //text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
             } else {
                 text += curToken.value;
             }
@@ -375,6 +386,23 @@ class editDocument extends viewModelBase {
         }
 
         return text;
+    }
+
+    toggleNewlineMode() {
+        if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 150) {
+            
+            app.showMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
+                .then((dialogResult: string) => {
+                    if (dialogResult === "Continue") {
+                        this.isNewLineFriendlyMode.toggle();
+                    }
+                });
+            
+        }
+        else
+        {
+            this.isNewLineFriendlyMode.toggle();
+        }
     }
 
     unescapeNewlinesInTextFields(str: string): any {
@@ -387,7 +415,6 @@ class editDocument extends viewModelBase {
         var TokenIterator = require("ace/token_iterator").TokenIterator;
         var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
         var curToken = iterator.getCurrentToken();
-        
         // first, calculate newline indexes
         var rowsIndexes = str.split("").map(function (x, index) {return { char: x, index: index } }).filter(function (x) {return x.char == "\n" }).map(function (x) {return x.index });
 
@@ -417,7 +444,17 @@ class editDocument extends viewModelBase {
                     var stringTokenEndIndexInSourceText = (lastTextSectionPosEnd.row > 0 ?rowsIndexes[lastTextSectionPosEnd.row-1]:0) + lastTextSectionPosEnd.column;
                     var newTextPrefix = str.substring(0, stringTokenStartIndexInSourceText);
                     var newTextSuffix = str.substring(stringTokenEndIndexInSourceText, str.length);
-                    var newStringTokenValue = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText).replace(/(\\n|\\r\\n)/g, '\r\n');
+                    var newStringTokenValue = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText)
+                        .replace(/(\\\\n|\\\\r\\\\n|\\n|\\r\\n)/g, (x) => {
+                        if (x == "\\\\n" || x == "\\\\r\\\\n") {
+                            return "\\r\\n";
+                        } else if (x=="\\n" || x== "\\r\\n") {
+                            return "\r\n";
+                        } else {
+                            return "\r\n";
+                        }
+                        });
+
                     str = newTextPrefix + newStringTokenValue + newTextSuffix ;
                     curToken = iterator.stepBackward();
                 }
@@ -439,33 +476,33 @@ class editDocument extends viewModelBase {
         }
 
         var message = "";
-        try {
 
+        if (currentDocumentId.indexOf("\\") != -1) {
+            message = "Document name cannot contain '\\'";
+            this.documentNameElement.focus();
+        } else {
+        try {
             var updatedDto;
-        if (this.isNewLineFriendlyMode() === true)
-        {
+                if (this.isNewLineFriendlyMode() === true) {
             updatedDto = JSON.parse(this.escapeNewlinesInTextFields(this.documentText()));
         } else {
             updatedDto = JSON.parse(this.documentText());
         }
         var meta = JSON.parse(this.metadataText());
-        
-            
-        }
-        catch (e) {
+            } catch (e) {
             if (updatedDto == undefined) {
                 message = "The data isn't a legal JSON expression!";
                 this.isEditingMetadata(false);
-            }
-            else if (meta == undefined) {
+                } else if (meta == undefined) {
                 message = "The metadata isn't a legal JSON expression!";
                 this.isEditingMetadata(true);
             }
-            this.docEditor.focus();
-            this.reportError(message, null, false);
+                this.focusOnEditor();
+        }
         }
         
         if (message != "") {
+            messagePublisher.reportError(message, undefined, undefined, false);
             return;
         }
 
@@ -501,8 +538,7 @@ class editDocument extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
-            this.loadDocument(savedDocumentDto.Key).always(()=>
-            {
+            this.loadDocument(savedDocumentDto.Key).always(() => {
                 this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
             });
             this.updateUrl(savedDocumentDto.Key);
@@ -653,7 +689,7 @@ class editDocument extends viewModelBase {
             var formatted = this.stringify(tempDoc);
             observableToUpdate(formatted);
         } catch (e) {
-            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not format json", e));
+            messagePublisher.reportError("Could not format json", undefined, undefined, false);
         }
     }
 

@@ -23,6 +23,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 {
 	public class ReplicationController : BundlesApiController
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		public override string BundleName
 		{
 			get { return "replication"; }
@@ -353,10 +355,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				var metadata = document == null ? new RavenJObject() : document.Metadata;
 
 				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);
-				//TODO: log
-				//log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
-				//				  sourceReplicationInformation.LastDocumentEtag,
-				//				  sourceReplicationInformation.LastAttachmentEtag);
+				log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
+								  sourceReplicationInformation.LastDocumentEtag,
+								  sourceReplicationInformation.LastAttachmentEtag);
 
 				Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
 			}

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -42,7 +43,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 				{
 					var lastUpdate = _signatureRepository.GetLastUpdate();
 
-					if (lastUpdate == null || lastUpdate < dataInfo.CreatedAt)
+					if (lastUpdate == null || lastUpdate < dataInfo.LastModified)
 					{
 						signatureBuidInProgress.GetOrAdd(dataInfo.Name, new ReaderWriterLockSlim())
 											   .EnterWriteLock();

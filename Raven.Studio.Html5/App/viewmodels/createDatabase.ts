@@ -57,6 +57,7 @@ class createDatabase extends dialogViewModelBase {
         });
     
         inputElement.setCustomValidity("An empty database name is forbidden for use!");
+        this.databaseNameFocus(true);
 
         this.subscribeToPath("#databasePath", this.databasePath, "Path");
         this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");

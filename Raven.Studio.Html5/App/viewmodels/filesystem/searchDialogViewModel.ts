@@ -26,12 +26,20 @@ class searchDialogViewModel extends dialogViewModelBase {
             return false;
 
         var submit: boolean = true;
-        for (var i = 0; i < this.inputs.length; i++) {
-            submit = this.inputs[i]() != null && this.inputs[i]().trim() != "";
-        }
+
 
         if (submit) {
             super.enterKeyPressed();
+        }
+
+        return submit;
+    }
+
+    enabled(): boolean {
+        var submit: boolean = true;
+
+        for (var i = 0; i < this.inputs.length; i++) {
+            submit = this.inputs[i]() != null && this.inputs[i]().trim() != "";
         }
 
         return submit;
