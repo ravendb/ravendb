@@ -48,8 +48,12 @@ class filesystemEditFile extends viewModelBase {
     // Called when the view is attached to the DOM.
     attached() {
         this.initializeFileEditor();
-        //this.setupKeyboardShortcuts();
+        this.setupKeyboardShortcuts();
         this.focusOnEditor();
+    }
+
+    setupKeyboardShortcuts() {
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteFile(), filesystemEditFile.editFileSelector);
     }
 
     initializeFileEditor() {

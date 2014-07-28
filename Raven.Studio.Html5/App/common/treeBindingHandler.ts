@@ -59,7 +59,7 @@ class treeBindingHandler {
 
     static loadNodeChildren(tree: string, node: DynaTreeNode, options : any) {
         var dir;
-        if (node.data && node.data.key != "/") {
+        if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
         }
         var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 100, dir);
@@ -89,7 +89,7 @@ class treeBindingHandler {
                 for (var k = 0; k < node.getChildren().length; k++) {
                     var nodeK = node.getChildren()[k];
                     if (!newSet[nodeK.data.key] && differenceSet[nodeK.data.key] && differenceSet[nodeK.data.key].data.addClass != treeBindingHandler.transientNodeStyle) {
-                        nodesToRemove.push(nodeK.data.key);
+                        nodesToRemove.push(k);
                     }
                     else {
                         newSet[nodeK.data.key] = null;
@@ -98,7 +98,7 @@ class treeBindingHandler {
 
                 //remove deleted nodes
                 for (var m = 0; m < nodesToRemove.length; m++) {
-                    node.getChildren()[m].remove();
+                    node.getChildren()[nodesToRemove[m]].remove();
                 }
             }
 

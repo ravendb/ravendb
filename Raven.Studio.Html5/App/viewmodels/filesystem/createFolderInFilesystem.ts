@@ -44,12 +44,12 @@ class createFolderInFilesystem extends dialogViewModelBase {
 
         if (this.isClientSideInputOK(folderName)) {
             this.creationTaskStarted = true;
-            this.creationTask.resolve(folderName);
+            this.creationTask.resolve(folderName.toLowerCase());
             dialog.close(this);
         }
     }
 
-    private isClientSideInputOK(folderName): boolean {
+    private isClientSideInputOK(folderName: string): boolean {
         var errorMessage;
 
         if (folderName == null) {
@@ -68,7 +68,7 @@ class createFolderInFilesystem extends dialogViewModelBase {
 
     private folderExists(folderName: string, folders: string[]): boolean {
         for (var i = 0; i < folders.length; i++) {
-            if (folderName == folders[i]) {
+            if (folderName.toLowerCase() == folders[i]) {
                 return true;
             }
         }

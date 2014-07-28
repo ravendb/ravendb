@@ -237,6 +237,8 @@ class filesystemFiles extends viewModelBase {
         if (grid) {
             grid.deleteSelectedItems();
         }
+
+        this.isSelectAll(false);
     }
 
     downloadSelectedFiles() {

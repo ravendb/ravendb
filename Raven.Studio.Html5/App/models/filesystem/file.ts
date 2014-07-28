@@ -40,7 +40,7 @@ class file implements documentBase {
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return ["id", "Size", "LastModified"];
+        return ["Size", "LastModified"];
     }
 
 }
