@@ -149,7 +149,7 @@ class shell extends viewModelBase {
         });
     }
 
-        // Override canActivate: we can always load this page, regardless of any system db prompt.
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
     }

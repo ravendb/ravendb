@@ -19,7 +19,6 @@ class databases extends viewModelBase {
     systemDb: database;
     docsForSystemUrl: string;
     optionsClicked = ko.observable<boolean>(false);
-    clickedDatabase = ko.observable<database>(null);
 
     constructor() {
         super();
@@ -309,17 +308,17 @@ class databases extends viewModelBase {
 
     private filterDatabases(filter: string) {
         var filterLower = filter.toLowerCase();
-        this.databases().forEach(d=> {
-            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
-            d.isVisible(isMatch);
+        this.databases().forEach((db: database) => {
+            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name != '<system>';
+            db.isVisible(isMatch);
         });
 
-        var selectedDatabase = this.selectedDatabase();
-        if (selectedDatabase && !selectedDatabase.isVisible()) {
-            selectedDatabase.isSelected(false);
-            this.selectedDatabase(null);
-        }
+        this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
+
+    a = ko.computed(() => {
+        return this.databases().filter((db: database) => db.isChecked());
+    });
 }
 
 export = databases;

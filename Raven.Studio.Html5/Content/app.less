@@ -348,20 +348,19 @@ html, body {
     width: 98%;
 }
 
-#databasePage {
-
+#resources-page {
     .btn-toolbar {
         margin-bottom: 20px;
     }
 
-    .databases-container {
+    .resources-container {
         margin-top: 10px;
         
-        .database:hover .checkbox{
+        .resource:hover .checkbox{
             display : block;
         }
 
-        .database {
+        .resource {
             cursor: pointer;
             border-radius: 2px;
             box-shadow: 0 0 5px 2px silver;
@@ -394,7 +393,7 @@ html, body {
                 float: left;
                 line-height: 215%;
 
-                .database-name {
+                .resource-name {
                     float: left;
                 }
 
@@ -417,11 +416,11 @@ html, body {
                 margin-top: 45.3px;
 
                 .dropdown-menu{
-                    .fa-trash-o{
+                    .fa-trash-o {
                         color: lighten(@disabledColor, 20%);
-            }
+                    }
 
-                    .delete-database:hover .fa-trash-o{
+                    .delete-database:hover .fa-trash-o {
                         color: @disabledColor;
                     }
                 }

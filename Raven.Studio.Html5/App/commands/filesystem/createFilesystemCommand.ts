@@ -13,8 +13,8 @@ class createFilesystemCommand extends commandBase {
             throw new Error("File System must have a name!");
         }
 
-        if (this.fileSystemPath == null) {
-            this.fileSystemPath = "~\\Filesystems\\" + this.fileSystemPath;
+        if (!$.trim(this.fileSystemPath)) {
+            this.fileSystemPath = "~\\Filesystems\\" + this.fileSystemName;
         }
     }
 
