@@ -179,7 +179,7 @@ namespace Raven.Database.Commercial
 				{
 					Status = "AGPL - Open Source",
 					Error = false,
-					Message = "No license file was found at " + licenseText +
+					Message = "No license file was found." +
 					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
 				};
 				return false;

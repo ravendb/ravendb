@@ -161,33 +161,23 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleCompressionBundle() {
-        if (this.isBundleActive('compression')) {
-            this.isCompressionBundleEnabled.toggle();
-        }
+        this.isCompressionBundleEnabled.toggle();
     }
 
     toggleEncryptionBundle() {
-        if (this.isBundleActive('encryption')) {
-            this.isEncryptionBundleEnabled.toggle();
-        }
+        this.isEncryptionBundleEnabled.toggle();
     }
 
     toggleExpirationBundle() {
-        if (this.isBundleActive('documentExpiration')) {
-            this.isExpirationBundleEnabled.toggle();
-        }
+        this.isExpirationBundleEnabled.toggle();
     }
 
     toggleQuotasBundle() {
-        if (this.isBundleActive('quotas')) {
-            this.isQuotasBundleEnabled.toggle();
-        }
+        this.isQuotasBundleEnabled.toggle();
     }
 
     toggleReplicationBundle() {
-        if (this.isBundleActive('replication')) {
-            this.isReplicationBundleEnabled.toggle();
-        }
+        this.isReplicationBundleEnabled.toggle();
     }
 
     toggleSqlReplicationBundle() {
@@ -195,15 +185,11 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
-        if (this.isBundleActive('versioning')) {
-            this.isVersioningBundleEnabled.toggle();
-        }
+        this.isVersioningBundleEnabled.toggle();
     }
 
     togglePeriodicExportBundle() {
-        if (this.isBundleActive('periodicBackup')) {
-            this.isPeriodicExportBundleEnabled.toggle();
-        }
+        this.isPeriodicExportBundleEnabled.toggle();
     }
 
     toggleScriptedIndexBundle() {
