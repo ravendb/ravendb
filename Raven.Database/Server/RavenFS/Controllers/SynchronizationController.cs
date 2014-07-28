@@ -100,7 +100,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 				var localMetadata = GetLocalMetadata(fileName);
-
                 if (localMetadata != null)
                 {
                     AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);

@@ -45,11 +45,14 @@ namespace Raven.Database.Config
 
 		public StorageConfiguration Storage { get; private set; }
 
+        public FileSystemConfiguration FileSystem { get; private set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
 			Storage = new StorageConfiguration();
+            FileSystem = new FileSystemConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -265,6 +268,8 @@ namespace Raven.Database.Config
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
+
+            FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 
 			PostInit();
 		}
@@ -745,9 +750,15 @@ namespace Raven.Database.Config
 
 		#endregion
 
-		#region Misc settings
+        #region File System Settings
 
-		/// <summary>
+        public TimeSpan MaxSynchronizationInterval { get; set; } 
+
+        #endregion
+
+        #region Misc settings
+
+        /// <summary>
 		/// The directory to search for RavenDB's WebUI. 
 		/// This is usually only useful if you are debugging RavenDB's WebUI. 
 		/// Default: ~/Raven/WebUI 
@@ -1111,6 +1122,8 @@ namespace Raven.Database.Config
 
             DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
             DefaultStorageTypeName = defaultConfiguration.DefaultStorageTypeName;
+
+            FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
@@ -1163,5 +1176,10 @@ namespace Raven.Database.Config
 			/// </summary>
 			public int FetchingFromDiskTimeoutInSeconds { get; set; }
 		}
+
+        public class FileSystemConfiguration
+        {
+            public TimeSpan MaximumSynchronizationInterval { get; set; }
+        }
 	}
 }

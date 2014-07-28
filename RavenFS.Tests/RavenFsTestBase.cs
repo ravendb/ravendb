@@ -35,6 +35,13 @@ namespace RavenFS.Tests
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
         public static readonly int[] Ports = { 19067, 19068, 19069 };
 
+        public TimeSpan SynchronizationInterval { get; protected set; }
+
+        protected RavenFsTestBase()
+        {
+            this.SynchronizationInterval = TimeSpan.FromMinutes(10);
+        }
+
         protected RavenDbServer CreateRavenDbServer(int port,
                                                     string dataDirectory = null,
                                                     bool runInMemory = true,
@@ -57,8 +64,10 @@ namespace RavenFS.Tests
 #endif
 				DefaultStorageTypeName = storageType,
                 DefaultFileSystemStorageTypeName = storageType,
-				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
 			};
+
+            ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
 
             if (enableAuthentication)
             {
