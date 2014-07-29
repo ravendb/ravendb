@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
 					var a = session.Query<TestIndex.QueryResult, TestIndex>()
 					               .Customize(c => c.WaitForNonStaleResults())
 					               .Where(r => r.Query.StartsWith("foo"))
-								   .AsProjection<TestIndex.ActualResult>()
+								   .ProjectFromIndexFieldsInto<TestIndex.ActualResult>()
 					               .ToList();
 					Assert.NotEmpty(a);
 				}

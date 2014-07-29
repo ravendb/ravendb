@@ -73,7 +73,7 @@ namespace Raven.Tests.Bugs
 				{
 					var bankTotal = session.Query<BankTotal, DecimalAggregation_Map>()
 						.Customize(x=>x.WaitForNonStaleResults())
-						.AsProjection<BankTotal>()
+						.ProjectFromIndexFieldsInto<BankTotal>()
 						.Single();
 
 					Assert.Equal(321.412m, bankTotal.Total);

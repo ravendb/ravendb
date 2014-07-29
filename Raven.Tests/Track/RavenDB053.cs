@@ -99,7 +99,7 @@ namespace Raven.Tests.Track
 						.Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(100)))
 						.OrderBy(x=>x.TransportId)
 						.OrderBy(x=>x.ChildId)
-						.AsProjection<JoinedChildTransport>()
+						.ProjectFromIndexFieldsInto<JoinedChildTransport>()
 						.ToList();
 
 					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);

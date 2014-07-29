@@ -5,7 +5,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 	public class DataInfo
 	{
 		public string Name { get; set; }
-		public DateTime CreatedAt { get; set; }
+		public DateTime LastModified { get; set; }
 		public long Length { get; set; }
 	}
 }
