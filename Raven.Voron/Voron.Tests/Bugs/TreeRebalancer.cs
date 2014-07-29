@@ -166,7 +166,7 @@ namespace Voron.Tests.Bugs
 		}
 
 		[Fact]
-		public void RavenDB_2543()
+		public void RavenDB_2543_CouldNotEnsureThatWeHaveEnoughSpace_When_MovingLeafNode()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -204,29 +204,55 @@ namespace Voron.Tests.Bugs
 
 				RenderAndShow(tx, 1, "rebalancing-issue");
 
-				tree.Delete(nKey);
+				tree.Delete(nKey);  // this line throws "The page is full and cannot add an entry, this is probably a bug"
+
+				RenderAndShow(tx, 1, "rebalancing-issue");
 
 				tx.Commit();
 
-				//using (var iterator = tree.Iterate())
-				//{
-				//	Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+				using (var iterator = tree.Iterate())
+				{
+					Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
-				//	Assert.Equal(bKey, iterator.CurrentKey);
-				//	Assert.True(iterator.MoveNext());
+					Assert.Equal(aKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
 
-				//	Assert.Equal(cKey, iterator.CurrentKey);
-				//	Assert.True(iterator.MoveNext());
+					Assert.Equal(bKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
 
-				//	Assert.Equal(dKey, iterator.CurrentKey);
-				//	Assert.True(iterator.MoveNext());
+					Assert.Equal(cKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
 
-				//	Assert.Equal(eKey, iterator.CurrentKey);
-				//	Assert.True(iterator.MoveNext());
+					Assert.Equal(dKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
 
-				//	Assert.Equal(fKey, iterator.CurrentKey);
-				//	Assert.False(iterator.MoveNext());
-				//}
+					Assert.Equal(eKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(fKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(gKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(hKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(iKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(jKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(kKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(lKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(mKey, iterator.CurrentKey);
+					Assert.False(iterator.MoveNext());
+				}
 			}
 		}
 	}
