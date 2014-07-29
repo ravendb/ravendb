@@ -172,7 +172,8 @@ namespace Raven.Tests.Common
 			string db = null,
 			string username = null,
 			string password = null,
-			string domain = null)
+			string domain = null,
+			ReplicationClientConfiguration clientConfiguration = null)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
 
@@ -203,7 +204,9 @@ namespace Raven.Tests.Common
 	            Console.WriteLine("writing rep dests for " + db + " " + source.Url);
                 session.Store(new ReplicationDocument
                 {
-                    Destinations = { replicationDestination }
+                    Destinations = { replicationDestination },
+					ClientConfiguration = clientConfiguration
+
                 }, "Raven/Replication/Destinations");
 	            session.SaveChanges();
             }

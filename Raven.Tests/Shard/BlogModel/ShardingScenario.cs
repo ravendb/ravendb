@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;

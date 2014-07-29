@@ -3,6 +3,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -80,7 +81,17 @@ namespace Raven.Client.FileSystem.Connection
             }
         }
 
-        protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
+	    public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
+	    {
+			var serverClient = (IAsyncFilesCommandsImpl)client;
+
+			string urlForFilename = serverClient.UrlFor();
+			var serverHash = ServerHash.GetServerHash(urlForFilename);
+
+			ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
+	    }
+
+	    protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
             var destinations = document.DataAsJson.Value<RavenJArray>("Destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
