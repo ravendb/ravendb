@@ -198,7 +198,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchLastModifiedBetweenClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />

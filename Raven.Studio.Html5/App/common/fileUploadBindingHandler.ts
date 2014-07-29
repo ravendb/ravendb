@@ -4,6 +4,7 @@ import system = require("durandal/system");
 import uploadItem = require("models/uploadItem");
 import uploadFileToFilesystemCommand = require("commands/filesystem/uploadFileToFilesystemCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import uploadQueueHelper = require("common/uploadQueueHelper");
 
 // Usage: <input type="file" data-bind="fileUpload: { files: files, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
 // files: KnockoutObservable<File[]>
@@ -31,7 +32,7 @@ class fileUploadBindingHandler {
             files: KnockoutObservable<FileList>;
             directory: KnockoutObservable<string>;
             uploads: KnockoutObservableArray<uploadItem>;
-            before?: () => void; 
+            before?: () => void;
             success: (i: uploadItem) => void;
             fail: (i: uploadItem) => void;
         } = <any>ko.utils.unwrapObservable(valueAccessor());
@@ -50,15 +51,16 @@ class fileUploadBindingHandler {
                     var file = files[i];
                     var guid = system.guid();
                     var directory = options.directory() ? options.directory() : ""
-                    var item = new uploadItem(guid, directory+"/"+file.name, "Queued", context.activeFilesystem());
+                    var item = new uploadItem(guid, directory + "/" + file.name, uploadQueueHelper.queuedStatus, context.activeFilesystem());
                     options.uploads.push(item);
-
+                    
                     new uploadFileToFilesystemCommand(file, directory, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)
                         .execute()
                         .done((x: uploadItem) => options.success(x))
                         .fail((x: uploadItem) => options.fail(x));
 
-                    item.status("Uploading...");
+                    item.status(uploadQueueHelper.uploadingStatus);
+                    options.uploads(uploadQueueHelper.sortUploadQueue(options.uploads()));
                     options.uploads.notifySubscribers(options.uploads());
                 }
             }

@@ -49,7 +49,7 @@ class treeBindingHandler {
             },
             onActivate: function (node) {
                 treeBindingHandler.onActivateAndSelect(node, valueAccessor());
-            }
+            },
         });
 
         var firstNode = (<DynaTreeNode>$(element).dynatree("getRoot", [])).getChildren()[0];
@@ -62,7 +62,7 @@ class treeBindingHandler {
         if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
         }
-        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 100, dir);
+        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 1024, dir);
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
 
@@ -168,14 +168,39 @@ class treeBindingHandler {
     }
 
     static updateNodeHierarchyStyle(tree: string, key: string, styleClass?: string) {
-        var dynaTree = $(tree).dynatree("getTree");
+        var theTree = $(tree).dynatree("getTree");
         var slashPosition = key.length;
         while (slashPosition > 0) {
             key = key.substring(0, slashPosition);
-            var temporaryNode = dynaTree.getNodeByKey(key);
-            if (temporaryNode.data.addClass != styleClass) {
+            var temporaryNode = theTree.getNodeByKey(key);
+            if (temporaryNode && temporaryNode.data.addClass != styleClass) {
                 temporaryNode.data.addClass = styleClass
                 temporaryNode.reloadChildren();
+            }
+            slashPosition = key.lastIndexOf("/");
+        }
+    }
+
+    static setNodeLoadStatus(tree: string, key: string, status: number) {
+        // Set node load status
+        // -1 = error
+        // 0 = load OK
+        // 1 = loading
+        var object = $(tree);
+        if (!object || object.length <= 0)
+            return;
+
+        var theTree = object.dynatree("getTree");
+        if (!theTree) {
+            return;
+        }
+
+        var slashPosition = key.length;
+        while (slashPosition > 0) {
+            key = key.substring(0, slashPosition);
+            var temporaryNode = theTree.getNodeByKey(key);
+            if (temporaryNode) {
+                temporaryNode.setLazyNodeStatus(status);
             }
 
             slashPosition = key.lastIndexOf("/");
