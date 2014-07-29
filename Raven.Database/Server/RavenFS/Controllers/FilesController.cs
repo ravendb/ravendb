@@ -394,8 +394,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		private void StartSynchronizeDestinationsInBackground()
 		{
-			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None,
-								  TaskCreationOptions.None, TaskScheduler.Default);
+			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
 
 		private class ReadFileToDatabase : IDisposable

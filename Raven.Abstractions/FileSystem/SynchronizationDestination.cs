@@ -25,7 +25,7 @@ namespace Raven.Abstractions.FileSystem
 
         public string FileSystem { get; set; }
 
-        public string FileSystemUrl
+        public string Url
         {
             get { return string.Format("{0}/fs/{1}", ServerUrl, FileSystem); }
         }
@@ -37,6 +37,13 @@ namespace Raven.Abstractions.FileSystem
         public string Domain { get; set; }
 
         public string ApiKey { get; set; }
+
+        public bool Enabled { get; set; }
+
+        public SynchronizationDestination ()
+        {
+            this.Enabled = true;
+        }
 
         protected bool Equals(SynchronizationDestination other)
         {
