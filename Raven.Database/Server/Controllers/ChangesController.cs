@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Controllers
@@ -113,7 +114,29 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchBulkInsert(name);
 			}
-			else
+            else if (Match(cmd,"watch-db-log"))
+            {
+                connectionState.WatchDBLog(Database.Name);
+            }
+            else if (Match(cmd, "unwatch-db-log"))
+            {
+                connectionState.UnwatchDBLog(Database.Name);
+            }
+            else if (Match(cmd, "watch-admin-log"))
+            {
+                if (User.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode))
+                {
+                    connectionState.WatchAdminLog();
+                }
+            }
+            else if (Match(cmd, "unwatch-admin-log"))
+            {
+                if (User.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode))
+                {
+                    connectionState.UnwatchAdminLog();
+                }
+            }
+            else
 			{
 				return GetMessageWithObject(new
 				{

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -15,8 +16,11 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Counters.Controllers;
 using Raven.Database.Impl;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.RavenFS.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 
@@ -357,16 +361,67 @@ namespace Raven.Database.Server.WebApi
 				return;
 
 			var curReq = Interlocked.Increment(ref reqNum);
-			Logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-							   curReq,
-							   logHttpRequestStatsParams.HttpMethod,
-							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-							   logHttpRequestStatsParams.ResponseStatusCode,
-							   logHttpRequestStatsParams.RequestUri,
-							   databaseName);
+            var message = string.Format(CultureInfo.InvariantCulture, "Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
+		        curReq,
+		        logHttpRequestStatsParams.HttpMethod,
+		        logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+		        logHttpRequestStatsParams.ResponseStatusCode,
+		        logHttpRequestStatsParams.RequestUri,
+		        databaseName);
+            Logger.Debug(message);
+            NotifyLogChangesApi(controller, new LogNotification()
+            {
+                RequestId = curReq,
+                HttpMethod = logHttpRequestStatsParams.HttpMethod,
+                EllapsedMiliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
+                RequestUri = logHttpRequestStatsParams.RequestUri,
+                TenantName = databaseName
+            });
 		    if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
+		    {
 		        Logger.Debug(logHttpRequestStatsParams.CustomInfo);
+                NotifyLogChangesApi(controller, new LogNotification()
+                {
+                   CustomInfo = logHttpRequestStatsParams.CustomInfo,
+                    TenantName = databaseName
+                });
+		    }
 		}
+        
+	    private void NotifyLogChangesApi(RavenBaseApiController controller,  LogNotification logNotification)
+	    {
+	        TransportState transportState = null;
+	        if (controller is RavenDbApiController)
+	        {
+	            var typedController = controller as RavenDbApiController;
+	            var database = typedController.Database;
+	            transportState = database.TransportState;
+                logNotification.TenantType = LogTenantType.Database;
+	        }
+
+            if (controller is RavenFsApiController)
+            {
+                var typedController = controller as RavenFsApiController;
+                var database = typedController.FileSystem;
+                transportState = database.TransportState;
+                logNotification.TenantType = LogTenantType.Filesystem;
+            }
+
+            if (controller is RavenCountersApiController)
+            {
+                var typedController = controller as RavenCountersApiController;
+                var counterStorage = typedController.CounterStorage;
+                transportState = counterStorage.TransportState;
+                logNotification.TenantType = LogTenantType.CounterStorage;
+            }
+
+	        if (transportState != null)
+	        {
+                transportState.Send(logNotification);
+	        }
+            
+	    }
 
 
 		private void IdleOperations(object state)
