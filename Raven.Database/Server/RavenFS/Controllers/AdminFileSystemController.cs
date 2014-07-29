@@ -21,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
     public class AdminFileSystemController : BaseAdminController
     {
         [HttpPut]
-        [Route("admin/filesystems/{*id}")]
+        [Route("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> FileSystemPut(string id, bool update = false)
         {
 			
@@ -53,7 +53,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         }
 
 		[HttpDelete]
-		[Route("admin/filesystems/{*id}")]
+		[Route("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemDelete(string id)
 		{
 			bool result;
@@ -69,7 +69,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpDelete]
-		[Route("admin/filesystems/filesystem-batch-delete")]
+		[Route("admin/fs/filesystem-batch-delete")]
 		public HttpResponseMessage FileSystemBatchDelete()
 		{
 			string[] fileSystemsToDelete = GetQueryStringValues("fileSystemsIds");
@@ -96,7 +96,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/filesystems/{*id}")]
+		[Route("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggeleFileSystemDisabled(id, isSettingDisabled);
@@ -109,7 +109,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/filesystems/filesystem-batch-toggle-disable")]
+		[Route("admin/fs/filesystem-batch-toggle-disable")]
 		public HttpResponseMessage FileSystemBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");

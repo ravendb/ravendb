@@ -36,7 +36,7 @@ import getClientBuildVersionCommand = require("commands/getClientBuildVersionCom
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
+import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
@@ -262,7 +262,7 @@ class shell extends viewModelBase {
             new getDatabasesCommand()
                 .execute()
                 .done((results: database[]) => this.updateResourceObservableArray(shell.databases, results, this.activeDatabase));
-            new getFilesystemsCommand()
+            new getFileSystemsCommand()
                 .execute()
                 .done((results: filesystem[]) => this.updateResourceObservableArray(shell.fileSystems, results, this.activeFilesystem));
             new getCounterStoragesCommand()
@@ -394,8 +394,8 @@ class shell extends viewModelBase {
         shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private fileSystemsLoaded(filesystems: filesystem[]) {
-        shell.fileSystems(filesystems);
+    private fileSystemsLoaded(fileSystems: filesystem[]) {
+        shell.fileSystems(fileSystems);
     }
 
     private counterStoragesLoaded(results: counterStorage[]) {
@@ -420,10 +420,9 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-        var fileSystemsLoadedTask: JQueryPromise<any> = new getFilesystemsCommand()
+        var fileSystemsLoadedTask: JQueryPromise<any> = new getFileSystemsCommand()
             .execute()
             .done((results: filesystem[]) => this.fileSystemsLoaded(results));
-
 
         var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
             .execute()

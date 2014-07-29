@@ -1389,7 +1389,7 @@ namespace Raven.Client.FileSystem
 
             public async Task<string[]> GetNamesAsync()
             {
-                var requestUriString = string.Format("{0}/fs/names", client.ServerUrl);
+                var requestUriString = string.Format("{0}/fs", client.ServerUrl);
 
                 var request =
                     client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -1427,7 +1427,7 @@ namespace Raven.Client.FileSystem
 
             public async Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
-				var requestUriString = string.Format("{0}/admin/filesystems/{1}", client.ServerUrl,
+				var requestUriString = string.Format("{0}/admin/fs/{1}", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystem);
 
                 var request = client.RequestFactory.CreateHttpJsonRequest(
@@ -1453,7 +1453,7 @@ namespace Raven.Client.FileSystem
 
             public async Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
-				var requestUriString = string.Format("{0}/admin/filesystems/{1}?update=true", client.ServerUrl,
+				var requestUriString = string.Format("{0}/admin/fs/{1}?update=true", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystem);
 
                 var request = client.RequestFactory.CreateHttpJsonRequest(
@@ -1472,7 +1472,7 @@ namespace Raven.Client.FileSystem
 
 			public async Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false)
 			{
-				var requestUriString = string.Format("{0}/admin/filesystems/{1}?hard-delete={2}", client.ServerUrl, fileSystemName ?? client.FileSystem, hardDelete);
+				var requestUriString = string.Format("{0}/admin/fs/{1}?hard-delete={2}", client.ServerUrl, fileSystemName ?? client.FileSystem, hardDelete);
 
 				var request = client.RequestFactory.CreateHttpJsonRequest(
 										new CreateHttpJsonRequestParams(this, requestUriString,

@@ -1,16 +1,17 @@
 ﻿import commandBase = require("commands/commandBase");
 
-class toggleDatabaseDisabledCommand extends commandBase {
+class disableResourceToggleCommand extends commandBase {
     private disableOneDatabasePath = "/admin/databases/";
     private disableMultipleDatabasesPath = "/admin/databases/database-batch-toggle-disable";
-    private disableOneFileSystemPath = "/admin/filesystems/";
-    private disableMultipleFileSystemsPath = "/admin/filesystems/filesystem-batch-toggle-disable";
+    private disableOneFileSystemPath = "/admin/fs/";
+    private disableMultipleFileSystemsPath = "/admin/fs/filesystem-batch-toggle-disable";
 
     /**
-    * @param db - The array of database names to toggle
-    * @param isSettingDisabled - The array of database names to toggle
+    * @param names - The array of resource names to toggle
+    * @param isSettingDisabled - Status of disabled to set
+    * @param resourceType - The resource type
     */
-    constructor(private names: Array<string>, private isSettingDisabled: boolean, private disableOneResourcePath: string, private disableMultipleResourcesPath: string) {
+    constructor(private names: Array<string>, private isSettingDisabled: boolean, private resourceType: string) {
         super();
     }
 
@@ -35,7 +36,8 @@ class toggleDatabaseDisabledCommand extends commandBase {
             isSettingDisabled: this.isSettingDisabled
         };
 
-        var url = this.disableOneResourcePath + name + this.urlEncodeArgs(args);
+        var disableOneResourcePath = (this.resourceType == "database") ? this.disableOneDatabasePath : this.disableOneFileSystemPath;
+        var url = disableOneResourcePath + name + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
         toggleTask.done(() => this.reportSuccess("Succefully " + action + "d " + name));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + name, response.responseText, response.statusText));
@@ -44,20 +46,22 @@ class toggleDatabaseDisabledCommand extends commandBase {
     }
 
     private disableMultipleResources(action: string): JQueryPromise<any> {
-        this.reportInfo("Trying to " + action + " " + this.names.length + " databases...");
+        var resources = (this.resourceType == "database") ? "databases" : "file systems";
+        this.reportInfo("Trying to " + action + " " + this.names.length + " " + resources + "...");
 
         var args = {
             ids: this.names,
             isSettingDisabled: this.isSettingDisabled
         };
 
-        var url = this.disableMultipleResourcesPath + this.urlEncodeArgs(args);
+        var disableMultipleResourcesPath = (this.resourceType == "database") ? this.disableMultipleDatabasesPath : this.disableMultipleFileSystemsPath;
+        var url = disableMultipleResourcesPath + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null);
-        toggleTask.done((toggledDatabaseNames: string[]) => this.reportSuccess("Succefully " + action + "d " + toggledDatabaseNames.length + " databases!"));
+        toggleTask.done((toggledResourceNames: string[]) => this.reportSuccess("Succefully " + action + "d " + toggledResourceNames.length + " " + resources + "!"));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " databases", response.responseText, response.statusText));
 
         return toggleTask;
     }
 }
 
-export = toggleDatabaseDisabledCommand;  
+export = disableResourceToggleCommand;  

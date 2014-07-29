@@ -3,7 +3,6 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
-import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 
@@ -185,23 +184,23 @@ class filesystems extends viewModelBase {
         if (fileSystems.length > 0) {
             var action = !fileSystems[0].disabled();
 
-            require(["viewmodels/disableDatabaseToggleConfirm"], disableDatabaseToggleConfirm => {
-                var disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(fileSystems);
+            require(["viewmodels/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
+                var disableResourceToggleViewModel = new disableResourceToggleConfirm(fileSystems);
 
-                disableDatabaseToggleViewModel.disableToggleTask
-                    .done((toggledDatabaseNames: string[]) => {
+                disableResourceToggleViewModel.disableToggleTask
+                    .done((toggledFileSystemsNames: string[]) => {
                         var activeFileSystem: filesystem = this.activeFilesystem();
 
                         if (fileSystems.length == 1) {
                             this.onFileSystemDisabledToggle(fileSystems[0].name, action, activeFileSystem);
                         } else {
-                            toggledDatabaseNames.forEach(fileSystemName => {
+                            toggledFileSystemsNames.forEach(fileSystemName => {
                                 this.onFileSystemDisabledToggle(fileSystemName, action, activeFileSystem);
                             });
                         }
                     });
 
-                app.showDialog(disableDatabaseToggleViewModel);
+                app.showDialog(disableResourceToggleViewModel);
             });
         }
     }

@@ -270,17 +270,17 @@ class databases extends viewModelBase {
         if (databases.length > 0) {
             var action = !databases[0].disabled();
 
-            require(["viewmodels/disableDatabaseToggleConfirm"], disableDatabaseToggleConfirm => {
+            require(["viewmodels/disableResourceToggleConfirm"], disableDatabaseToggleConfirm => {
                 var disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(databases);
 
                 disableDatabaseToggleViewModel.disableToggleTask
-                    .done((toggledDatabaseNames: string[]) => {
+                    .done((toggledDatabasesNames: string[]) => {
                         var activeDatabase: database = this.activeDatabase();
 
                         if (databases.length == 1) {
                             this.onDatabaseDisabledToggle(databases[0].name, action, activeDatabase);
                         } else {
-                            toggledDatabaseNames.forEach(databaseName => {
+                            toggledDatabasesNames.forEach(databaseName => {
                                 this.onDatabaseDisabledToggle(databaseName, action, activeDatabase);
                             });
                         }
