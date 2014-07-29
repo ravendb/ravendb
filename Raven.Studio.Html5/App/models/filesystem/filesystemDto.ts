@@ -111,6 +111,7 @@ interface synchronizationDestinationDto {
     Domain: string;
     ApiKey: string;
     FileSystem: string;
+    Enabled: boolean;
 }
 
 interface folderNodeDto {
