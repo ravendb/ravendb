@@ -20,9 +20,12 @@ namespace RavenFS.Tests
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
-            var notificationTask = store.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                         .Timeout(TimeSpan.FromSeconds(2))
                                         .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
@@ -40,9 +43,12 @@ namespace RavenFS.Tests
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = store.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                                .Timeout(TimeSpan.FromSeconds(2))
                                                .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
 
             await client.DeleteAsync("abc.txt");
 
@@ -60,9 +66,12 @@ namespace RavenFS.Tests
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = store.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                                 .Timeout(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject { { "MyMetadata", "MyValue" } });
 
@@ -80,14 +89,18 @@ namespace RavenFS.Tests
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = store.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                                 .Buffer(TimeSpan.FromSeconds(5))
                                                 .Take(1).ToTask();
 
-            await client.RenameAsync("abc.txt", "newName.txt");
+			changes.WaitForAllPendingSubscriptions();
+
+			await client.RenameAsync("abc.txt", "newName.txt");
 
             var fileChanges = await notificationTask;
 
+			Console.WriteLine("Notification count: " + fileChanges.Count);
             Assert.Equal("/abc.txt", fileChanges[0].File);
             Assert.Equal(FileChangeAction.Renaming, fileChanges[0].Action);
             Assert.Equal("/newName.txt", fileChanges[1].File);
@@ -100,11 +113,14 @@ namespace RavenFS.Tests
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
-            var notificationTask = store.Changes().ForFolder("/Folder")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/Folder")
                                                 .Buffer(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
 
-            client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream()).Wait();
+			changes.WaitForAllPendingSubscriptions();
+
+			await client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream());
 
             var notifications = await notificationTask;
 

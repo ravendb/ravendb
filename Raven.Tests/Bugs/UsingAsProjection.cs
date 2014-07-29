@@ -53,7 +53,7 @@ namespace Raven.Tests.Bugs
 					{
 						var user = session.Query<Account, UsersIndexTask>()
 							.Customize(x=>x.WaitForNonStaleResults())
-							.AsProjection<User>()
+							.ProjectFromIndexFieldsInto<User>()
 							.Where(x => x.Email == "a")
 							.FirstOrDefault();
 						Assert.Equal("1", user.Password);

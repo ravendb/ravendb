@@ -110,6 +110,7 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="GermanUmlauts.cs" />
     <Compile Include="IndexResestWithReplication.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
@@ -133,6 +134,7 @@
     <Compile Include="RavenDB1519.cs" />
     <Compile Include="RavenDb1962.cs" />
     <Compile Include="RavenDB2408.cs" />
+    <Compile Include="RavenDB2537.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryMapReduceAnalyzedTests.cs" />

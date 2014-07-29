@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession()) {
 					Assert.Equal(1, s.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).Count());
-					Assert.Equal("00001", s.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).AsProjection<Result>().First().SortVersion);
+					Assert.Equal("00001", s.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ProjectFromIndexFieldsInto<Result>().First().SortVersion);
 				}
 			}
 		}

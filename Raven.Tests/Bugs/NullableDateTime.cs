@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs
                     session
                         .Query<Doc, UnsetDocs>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .AsProjection<DocSummary>()
+						.ProjectFromIndexFieldsInto<DocSummary>()
                         .ToArray();
                 }
             }
@@ -135,7 +135,7 @@ namespace Raven.Tests.Bugs
                         session
                             .Query<Doc, UnsetDocs>()
                             .Customize(x => x.WaitForNonStaleResults())
-                            .AsProjection<DocSummary>()
+							.ProjectFromIndexFieldsInto<DocSummary>()
                             .ToArray();
                     }
                 }
