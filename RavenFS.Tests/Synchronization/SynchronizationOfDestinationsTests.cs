@@ -184,7 +184,7 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 			await sourceClient.Synchronization.SynchronizeAsync();
 
-		    var fullDstUrl = destinationClient.ToSynchronizationDestination().FileSystemUrl;
+		    var fullDstUrl = destinationClient.ToSynchronizationDestination().Url;
 
             var synchronizationDetails = sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", fullDstUrl)).Result;
 

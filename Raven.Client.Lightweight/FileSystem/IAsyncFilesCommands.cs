@@ -115,6 +115,7 @@ namespace Raven.Client.FileSystem
     {
         IAsyncFilesCommands Commands { get; }
 
+        Task<SynchronizationDestination[]> GetDestinationsAsync();
         Task SetDestinationsAsync(params SynchronizationDestination[] destinations);
 
         Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
