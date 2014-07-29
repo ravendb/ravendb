@@ -6959,8 +6959,8 @@ body {
   box-shadow: 0 0 5px 0 #106a8c;
 }
 #resources-page .resources-container .resource.selected {
-  -webkit-box-shadow: 0 0 17px 0 #158cba;
-  box-shadow: 0 0 17px 0 #158cba;
+  -webkit-box-shadow: 0 0 20px 0 #158cba;
+  box-shadow: 0 0 20px 0 #158cba;
 }
 #resources-page .resources-container .resource.system-database {
   background-color: rgba(192, 192, 192, 0.21);

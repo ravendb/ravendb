@@ -149,7 +149,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/database-batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
 		{
-			string[] databasesToToggle = GetQueryStringValues("databaseIds");
+			string[] databasesToToggle = GetQueryStringValues("ids");
 			if (databasesToToggle == null)
 			{
 				return GetMessageWithString("No databases to toggle!", HttpStatusCode.BadRequest);

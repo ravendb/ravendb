@@ -3,40 +3,43 @@ import toggleDatabaseDisabledCommand = require("commands/toggleDatabaseDisabledC
 //import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
+import resource = require("models/resource");
 
 class disableDatabaseToggleConfirm extends dialogViewModelBase {
 
-    private databasesToDisable = ko.observableArray<database>();
+    private resourcesToDisable = ko.observableArray<resource>();
     private disableToggleStarted = false;
     public disableToggleTask = $.Deferred(); // Gives consumers a way to know when the async operation completes.
+    private disableOneDatabasePath = "/admin/databases/";
+    private disableMultipleDatabasesPath = "/admin/databases/database-batch-toggle-disable";
 
     desiredAction = ko.observable<string>();
     isSettingDisabled: boolean;
     deletionText: KnockoutComputed<string>;
     confirmDeletionText: KnockoutComputed<string>;
 
-    constructor(databases: Array<database>, elementToFocusOnDismissal?: string) {
+    constructor(resources: Array<resource>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
-        if (databases.length === 0) {
+        if (resources.length === 0) {
             throw new Error("Must have at least one database to disable.");
         }
 
-        this.databasesToDisable(databases);
-        this.isSettingDisabled = !databases[0].disabled();
+        this.resourcesToDisable(resources);
+        this.isSettingDisabled = !resources[0].disabled();
         this.deletionText = ko.computed(() => this.isSettingDisabled ? "You're disabling" : "You're enabling");
         this.confirmDeletionText = ko.computed(() => this.isSettingDisabled ? "Yep, disable" : "Yep, enable");
     }
 
     toggleDisableDatabases() {
-        var databaseNames = this.databasesToDisable().map((db: database) => db.name);
-        var toggleDisableDatabaseCommand = new toggleDatabaseDisabledCommand(databaseNames, this.isSettingDisabled);
+        var resourceNames = this.resourcesToDisable().map((db: database) => db.name);
+        var toggleDisableDatabaseCommand = new toggleDatabaseDisabledCommand(resourceNames, this.isSettingDisabled, this.disableOneDatabasePath, this.disableMultipleDatabasesPath);
 
         var toggleDisableDatabaseCommandTask = toggleDisableDatabaseCommand.execute();
 
         toggleDisableDatabaseCommandTask.done((results) => {
-            if (this.databasesToDisable().length == 1) {
-                results = [ this.databasesToDisable()[0].name ];
+            if (this.resourcesToDisable().length == 1) {
+                results = [ this.resourcesToDisable()[0].name ];
             }
             this.disableToggleTask.resolve(results);
         });

@@ -200,11 +200,11 @@ class databases extends viewModelBase {
     }
 
     private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
-        var promise;
-        require(["viewmodels/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
-            promise = new createDefaultSettingsCommand(db, bundles).execute();
+        var deferred = $.Deferred();
+        require(["commands/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
+            deferred = new createDefaultSettingsCommand(db, bundles).execute();
         });
-        return promise;
+        return deferred;
     }
 
     private isEmptyStringOrWhitespace(str: string) {
@@ -318,10 +318,6 @@ class databases extends viewModelBase {
 
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
-
-    a = ko.computed(() => {
-        return this.databases().filter((db: database) => db.isChecked());
-    });
 }
 
 export = databases;
