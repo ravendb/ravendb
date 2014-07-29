@@ -3,11 +3,8 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import createDefaultSettingsCommand = require("commands/createDefaultSettingsCommand");
-import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
-import databaseSettingsDialog = require("viewmodels/databaseSettingsDialog");
 
 class databases extends viewModelBase {
 
@@ -178,8 +175,10 @@ class databases extends viewModelBase {
                         this.createDefaultSettings(newDatabase, bundles).always(() => {
                             if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                                 encryptionConfirmationDialogPromise.always(() => {
-                                    var settingsDialog = new databaseSettingsDialog(bundles);
-                                    app.showDialog(settingsDialog);
+                                    require(["viewmodels/databaseSettingsDialog"], databaseSettingsDialog => {
+                                        var settingsDialog = new databaseSettingsDialog(bundles);
+                                        app.showDialog(settingsDialog);
+                                    });
                                 });
                             }
                         });
@@ -201,7 +200,11 @@ class databases extends viewModelBase {
     }
 
     private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
-        return new createDefaultSettingsCommand(db, bundles).execute();
+        var promise;
+        require(["viewmodels/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
+            promise = new createDefaultSettingsCommand(db, bundles).execute();
+        });
+        return promise;
     }
 
     private isEmptyStringOrWhitespace(str: string) {

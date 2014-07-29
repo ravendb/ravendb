@@ -129,7 +129,10 @@ class createDatabase extends dialogViewModelBase {
             message = "The name '" + name + "' is forbidden for use!";
         }
         else if (name[name.length-1]==".") {
-            message = "The database name can't end with a dot !";
+            message = "The database name can't end with a dot!";
+        }
+        else if (name.toLocaleLowerCase() == "system") {
+            message = "This name is reserved for the actual system database!";
         }
         return message;
     }

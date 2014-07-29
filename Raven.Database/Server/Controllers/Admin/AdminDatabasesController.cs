@@ -47,17 +47,22 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
-			MessageWithStatusCode databaseNameFormat = CheckDatabaseNameFormat(id);
+			if (IsSystemDatabase(id))
+			{
+				return GetMessageWithString("System database document cannot be changed!", HttpStatusCode.Forbidden);
+			}
+
+			MessageWithStatusCode databaseNameFormat = CheckNameFormat(id, Database.Configuration.DataDirectory);
 			if (databaseNameFormat.Message != null)
 			{
 				return GetMessageWithString(databaseNameFormat.Message, databaseNameFormat.ErrorCode);
 			}
 
 			Etag etag = GetEtag();
-			string error = CheckDatbaseName(id, etag);
+			string error = CheckExistingDatbaseName(id, etag);
 			if (error != null)
 			{
-				return GetMessageWithString(string.Format(error, id), HttpStatusCode.BadRequest);
+				return GetMessageWithString(error, HttpStatusCode.BadRequest);
 			}
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
@@ -69,6 +74,8 @@ namespace Raven.Database.Server.Controllers.Admin
 					return GetMessageWithString(string.Format("Failed to create '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
 				}
 			}
+
+			//TODO: check if paths in document are legal
 
 			DatabasesLandlord.Protect(dbDoc);
 			var json = RavenJObject.FromObject(dbDoc);
@@ -110,26 +117,26 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			bool result;
 			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
-			var successfullyDeletedDatabase = new List<string>();
+			var successfullyDeletedDatabases = new List<string>();
 
 			databasesToDelete.ForEach(databaseId =>
 			{
 				var message = DeleteDatabase(databaseId, isHardDeleteNeeded);
 				if (message.ErrorCode == HttpStatusCode.OK)
 				{
-					successfullyDeletedDatabase.Add(databaseId);
+					successfullyDeletedDatabases.Add(databaseId);
 				}
 
 			});
 
-			return GetMessageWithObject(successfullyDeletedDatabase.ToArray());
+			return GetMessageWithObject(successfullyDeletedDatabases.ToArray());
 		}
 
 		[HttpPost]
 		[Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
 		{
-			var message = ToggeleDatabase(id, isSettingDisabled);
+			var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -148,19 +155,19 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString("No databases to toggle!", HttpStatusCode.BadRequest);
 			}
 
-			var successfullyToggledDatabase = new List<string>();
+			var successfullyToggledDatabases = new List<string>();
 
 			databasesToToggle.ForEach(databaseId =>
 			{
-				var message = ToggeleDatabase(databaseId, isSettingDisabled);
+				var message = ToggeleDatabaseDisabled(databaseId, isSettingDisabled);
 				if (message.ErrorCode == HttpStatusCode.OK)
 				{
-					successfullyToggledDatabase.Add(databaseId);
+					successfullyToggledDatabases.Add(databaseId);
 				}
 
 			});
 
-			return GetMessageWithObject(successfullyToggledDatabase.ToArray());
+			return GetMessageWithObject(successfullyToggledDatabases.ToArray());
 		}
 
 		private MessageWithStatusCode DeleteDatabase(string databaseId, bool isHardDeleteNeeded)
@@ -189,7 +196,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return new MessageWithStatusCode();
 		}
 
-		private MessageWithStatusCode ToggeleDatabase(string databaseId, bool isSettingDisabled)
+		private MessageWithStatusCode ToggeleDatabaseDisabled(string databaseId, bool isSettingDisabled)
 		{
 			if (IsSystemDatabase(databaseId))
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document cannot be disabled" };
@@ -215,49 +222,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return new MessageWithStatusCode();
 		}
 
-		private class MessageWithStatusCode
-		{
-			public string Message;
-			public HttpStatusCode ErrorCode = HttpStatusCode.OK;
-		}
-
-		private MessageWithStatusCode CheckDatabaseNameFormat(string databaseName)
-		{
-			string errorMessage = null;
-			var errorCode = HttpStatusCode.BadRequest;
-
-			if (databaseName == null)
-			{
-				errorMessage = "An empty name is forbidden for use!";
-			}
-			else if (databaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-			{
-				errorMessage = string.Format("The name '{0}' contains charaters that are forbidden for use!", databaseName);
-			}
-			else if (Array.IndexOf(Constants.WindowsReservedFileNames, databaseName.ToLower()) >= 0)
-			{
-				errorMessage = string.Format("The name '{0}' is forbidden for use!", databaseName);
-			}
-			else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (databaseName.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + databaseName.Length > Constants.LinuxMaxPath))
-			{
-				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
-				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
-				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
-			}
-			else if (Path.Combine(Database.Configuration.DataDirectory, databaseName).Length > Constants.WindowsMaxPath)
-			{
-				int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
-				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
-			}
-			else if (IsSystemDatabase(databaseName))
-			{
-				errorMessage = "System Database document cannot be changed";
-				errorCode = HttpStatusCode.Forbidden;
-			}
-			return new MessageWithStatusCode { Message = errorMessage, ErrorCode = errorCode };
-		}
-
-		private string CheckDatbaseName(string id, Etag etag)
+		private string CheckExistingDatbaseName(string id, Etag etag)
 		{
 			string errorMessage = null;
 			var docKey = "Raven/Databases/" + id;
@@ -266,11 +231,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (isExistingDatabase && etag == null)
 			{
-				errorMessage = "Database with the name '{0}' already exists";
+				errorMessage = string.Format("Database with the name '{0}' already exists", id);
 			}
 			else if (!isExistingDatabase && etag != null)
 			{
-				errorMessage = "Database with the name '{0}' doesn't exist";
+				errorMessage = string.Format("Database with the name '{0}' doesn't exist", id);
 			}
 
 			return errorMessage;

@@ -69,14 +69,14 @@
                     </a>
                     <ul class="dropdown-menu" role="menu">
                         <li role="presentation">
-                            <a data-bind="click: function () { $root.toggleSelectedDatabases([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
+                            <a data-bind="click: function () { $root.toggleSelectedFileSystems([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
                                 <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
                                 <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
                             </a>
                         </li>
                         <li class="divider"></li>
-                        <li role="presentation" class="delete-database">
-                            <a title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabases([$data]); return true; }">
+                        <li role="presentation" class="delete-resource">
+                            <a title="Delete selected database" data-bind="click: function () { $root.deleteSelectedFileSystems([$data]); return true; }">
                                 <i class="fa fa-fw fa-trash-o"></i>
                                 <span>Delete</span>
                             </a>

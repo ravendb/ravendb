@@ -6,9 +6,6 @@ import filesystem = require("models/filesystem/filesystem");
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import createFilesystem = require("viewmodels/filesystem/createFilesystem");
-import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
-
 
 class filesystems extends viewModelBase {
 
@@ -116,20 +113,22 @@ class filesystems extends viewModelBase {
     }
 
     newFileSystem() {
-        require(["viewmodels/filesystem/createFilesystem"], createFilesystem => {
-            var createFilesystemViewModel: createFilesystem = new createFilesystem(this.fileSystems);
-            createFilesystemViewModel
+        require(["viewmodels/filesystem/createFilesystem"], createFileSystem => {
+            var createFileSystemViewModel = new createFileSystem(this.fileSystems);
+            createFileSystemViewModel
                 .creationTask
                 .done((fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) => this.showCreationAdvancedStepsIfNecessary(fileSystemName, fileSystemPath, fileSystemLogsPath));
-            app.showDialog(createFilesystemViewModel);
+            app.showDialog(createFileSystemViewModel);
         });
     }
 
     showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) {
-        new createFilesystemCommand(fileSystemName, fileSystemPath).execute()
-            .done(() => {
-                var newFileSystem = this.addNewFileSystem(fileSystemName);
-                this.selectFileSystem(newFileSystem);
+        require(["commands/filesystem/createFilesystemCommand"], createFileSystemCommand => {
+            new createFileSystemCommand(fileSystemName, fileSystemPath).execute()
+                .done(() => {
+                    var newFileSystem = this.addNewFileSystem(fileSystemName);
+                    this.selectFileSystem(newFileSystem);
+                });
         });
     }
 
@@ -145,7 +144,7 @@ class filesystems extends viewModelBase {
         return fileSystemInArray;
     }
 
-    deleteSelectedDatabases(fileSystems: Array<filesystem>) {
+    deleteSelectedFileSystems(fileSystems: Array<filesystem>) {
         if (fileSystems.length > 0) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(fileSystems);
@@ -167,7 +166,7 @@ class filesystems extends viewModelBase {
 
     deleteCheckedFileSystems() {
         var checkedFileSystems: filesystem[] = this.fileSystems().filter((fs: filesystem) => fs.isChecked());
-        this.deleteSelectedDatabases(checkedFileSystems);
+        this.deleteSelectedFileSystems(checkedFileSystems);
     }
 
     private onFileSystemDeleted(fileSystemName: string) {

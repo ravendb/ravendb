@@ -6937,7 +6937,7 @@ body {
 #resources-page .resources-container .resource .btn-group .dropdown-menu .fa-trash-o {
   color: #eba5a3;
 }
-#resources-page .resources-container .resource .btn-group .dropdown-menu .delete-database:hover .fa-trash-o {
+#resources-page .resources-container .resource .btn-group .dropdown-menu .delete-resource:hover .fa-trash-o {
   color: #d9534f;
 }
 #resources-page .resources-container .resource .btn-default {
