@@ -40,6 +40,11 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/prefetch-status")]
 		public HttpResponseMessage PrefetchingQueueStatus()
 		{
+			return GetMessageWithObject(GetPrefetchingQueueStatusForDebug());
+		}
+
+		private object GetPrefetchingQueueStatusForDebug()
+		{
 			var prefetcherDocs = Database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
 			var compareToCollection = new Dictionary<Etag, int>();
 
@@ -48,19 +53,19 @@ namespace Raven.Database.Server.Controllers
 
 			if (compareToCollection.Any(x => x.Value < 0))
 			{
-				return GetMessageWithObject(new
+				return new
 				{
 					HasCorrectlyOrderedEtags = true,
 					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-				});
+				};
 			}
-			
-			return GetMessageWithObject(new
+
+			return new
 			{
 				HasCorrectlyOrderedEtags = false,
 				IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
 				EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-			});
+			};
 		}
 
         [HttpGet]
@@ -108,6 +113,11 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
+			return GetMessageWithObject(GetConfigForDebug());
+		}
+
+		private RavenJObject GetConfigForDebug()
+		{
 			var cfg = RavenJObject.FromObject(Database.Configuration);
 			cfg["OAuthTokenKey"] = "<not shown>";
 			var changesAllowed = Database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
@@ -115,7 +125,7 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
 				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
 
-			return GetMessageWithObject(cfg);
+			return cfg;
 		}
 
 		[HttpGet]
@@ -326,6 +336,11 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/tasks")]
 		public HttpResponseMessage Tasks()
 		{
+			return GetMessageWithObject(GetTasksForDebug());
+		}
+
+		private IList<TaskMetadata> GetTasksForDebug()
+		{
 			IList<TaskMetadata> tasks = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
@@ -340,8 +355,7 @@ namespace Raven.Database.Server.Controllers
 				if (indexInstance != null)
 					taskMetadata.IndexName = indexInstance.PublicName;
 			}
-
-			return GetMessageWithObject(tasks);
+			return tasks;
 		}
 
 		[HttpGet]
@@ -408,12 +422,17 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/currently-indexing")]
 		public HttpResponseMessage CurrentlyIndexing()
 		{
+			return GetMessageWithObject(GetCurrentlyIndexingForDebug());
+		}
+
+		private object GetCurrentlyIndexingForDebug()
+		{
 			var indexingWork = Database.IndexingExecuter.GetCurrentlyProcessingIndexes();
 			var reduceWork = Database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
 			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
 
-			return GetMessageWithObject(new
+			return new
 			{
 				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
 				Indexes = uniqueIndexesBeingProcessed.Select(x => new
@@ -428,7 +447,7 @@ namespace Raven.Database.Server.Controllers
 						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
 					})
 				})
-			});
+			};
 		}
 
 		[HttpGet]
@@ -436,7 +455,12 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()
 		{
-			return GetMessageWithObject(RequestManager.GetRecentRequests(DatabaseName).Select(x => new
+			return GetMessageWithObject(GetRequestTrackingForDebug());
+		}
+
+		private object GetRequestTrackingForDebug()
+		{
+			return RequestManager.GetRecentRequests(DatabaseName).Select(x => new
 			{
 				Uri = x.RequestUri,
 				Method = x.HttpMethod,
@@ -444,7 +468,7 @@ namespace Raven.Database.Server.Controllers
 				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k)}),
 				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
 				AdditionalInfo = x.CustomInfo ?? string.Empty
-			}));
+			});
 		}
 
 		[HttpGet]
@@ -527,61 +551,118 @@ namespace Raven.Database.Server.Controllers
 					streamWriter.Flush();
 				}
 
+				var config = package.CreateEntry("config.txt", compressionLevel);
 
-				var stacktrace = package.CreateEntry("stacktraces.txt", compressionLevel);
-
-				using (var stacktraceStream = stacktrace.Open())
+				using (var configStream = config.Open())
+				using (var streamWriter = new StreamWriter(configStream))
 				{
-					string stackDumpDir = null;
+					jsonSerializer.Serialize(streamWriter, GetConfigForDebug());
+					streamWriter.Flush();
+				}
 
-					try
+				var currentlyIndexing = package.CreateEntry("currently-indexing.txt", compressionLevel);
+
+				using (var currentlyIndexingStream = currentlyIndexing.Open())
+				using (var streamWriter = new StreamWriter(currentlyIndexingStream))
+				{
+					jsonSerializer.Serialize(streamWriter, GetCurrentlyIndexingForDebug());
+					streamWriter.Flush();
+				}
+
+				var queries = package.CreateEntry("queries.txt", compressionLevel);
+
+				using (var queriesStream = queries.Open())
+				using (var streamWriter = new StreamWriter(queriesStream))
+				{
+					jsonSerializer.Serialize(streamWriter, Database.WorkContext.CurrentlyRunningQueries);
+					streamWriter.Flush();
+				}
+
+				var prefetchStatus = package.CreateEntry("prefetch-status.txt", compressionLevel);
+
+				using (var prefetchStatusStream = prefetchStatus.Open())
+				using (var streamWriter = new StreamWriter(prefetchStatusStream))
+				{
+					jsonSerializer.Serialize(streamWriter, GetPrefetchingQueueStatusForDebug());
+					streamWriter.Flush();
+				}
+
+				var requestTracking = package.CreateEntry("request-tracking.txt", compressionLevel);
+
+				using (var requestTrackingStream = requestTracking.Open())
+				using (var streamWriter = new StreamWriter(requestTrackingStream))
+				{
+					jsonSerializer.Serialize(streamWriter, GetRequestTrackingForDebug());
+					streamWriter.Flush();
+				}
+
+				var tasks = package.CreateEntry("tasks.txt", compressionLevel);
+
+				using (var tasksStream = tasks.Open())
+				using (var streamWriter = new StreamWriter(tasksStream))
+				{
+					jsonSerializer.Serialize(streamWriter, GetTasksForDebug());
+					streamWriter.Flush();
+				}
+
+				var stacktraceRequsted = GetQueryStringValue("stacktrace");
+
+				if (stacktraceRequsted != null)
+				{
+					var stacktrace = package.CreateEntry("stacktraces.txt", compressionLevel);
+
+					using (var stacktraceStream = stacktrace.Open())
 					{
-						if(Debugger.IsAttached)
-							throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
+						string ravenDebugDir = null;
 
-						stackDumpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-						var stackDumpExe = Path.Combine(stackDumpDir, "stackdump.exe");
-						var stackDumpOutput = Path.Combine(stackDumpDir, "stacktraces.txt");
-
-						Directory.CreateDirectory(stackDumpDir);
-
-						if (Environment.Is64BitProcess)
-							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
-						else
-							ExtractResource("Raven.Database.Util.StackDump.x86.StackDump.exe", stackDumpExe);
-
-						var process = new Process
+						try
 						{
-							StartInfo = new ProcessStartInfo
+							if (Debugger.IsAttached)
+								throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
+
+							ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+							var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+							var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
+
+							Directory.CreateDirectory(ravenDebugDir);
+
+							if (Environment.Is64BitProcess)
+								ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+							else
+								ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+
+							var process = new Process
 							{
-								Verb = "runas",
-								Arguments = string.Format("/c {0} {1} > {2}", stackDumpExe, Process.GetCurrentProcess().Id, stackDumpOutput),
-								FileName = "cmd.exe",
-								WindowStyle = ProcessWindowStyle.Hidden,
+								StartInfo = new ProcessStartInfo
+								{
+									Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput),
+									FileName = ravenDebugExe,
+									WindowStyle = ProcessWindowStyle.Hidden,
+								}
+							};
+
+							process.Start();
+
+							process.WaitForExit();
+
+							using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
+							{
+								stackDumpOutputStream.CopyTo(stacktraceStream);
 							}
-						};
-
-						process.Start();
-
-						process.WaitForExit();
-
-						using (var stackDumpOutputStream = File.Open(stackDumpOutput, FileMode.Open))
-						{
-							stackDumpOutputStream.CopyTo(stacktraceStream);
 						}
-					}
-					catch (Exception ex)
-					{
-						var streamWriter = new StreamWriter(stacktraceStream);
-						streamWriter.WriteLine("Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex);
-					}
-					finally
-					{
-						if (stackDumpDir != null && Directory.Exists(stackDumpDir))
-							IOExtensions.DeleteDirectory(stackDumpDir);
-					}
+						catch (Exception ex)
+						{
+							var streamWriter = new StreamWriter(stacktraceStream);
+							streamWriter.WriteLine("Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex);
+						}
+						finally
+						{
+							if (ravenDebugDir != null && Directory.Exists(ravenDebugDir))
+								IOExtensions.DeleteDirectory(ravenDebugDir);
+						}
 
-					stacktraceStream.Flush();
+						stacktraceStream.Flush();
+					}
 				}
 
 				file.Flush();
