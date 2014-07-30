@@ -13,7 +13,6 @@ import getDestinationsCommand = require("commands/filesystem/getDestinationsComm
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
 
-
 class synchronizationDestinations extends viewModelBase {
 
     isSaveEnabled: KnockoutComputed<boolean>;
@@ -21,6 +20,8 @@ class synchronizationDestinations extends viewModelBase {
     replicationsSetup = ko.observable<synchronizationReplicationSetup>(new synchronizationReplicationSetup({ Destinations: [], Source: null }));
 
     canActivate(args: any): JQueryPromise<any> {
+        super.canActivate(args);
+
         var deferred = $.Deferred();
         var fs = this.activeFilesystem();
         if (fs) {

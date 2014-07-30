@@ -31,10 +31,6 @@ class search extends viewModelBase {
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.searchFiles(s));
     }
 
-    canActivate(args: any) {
-        return true;
-    }
-
     activate(args) {
         super.activate(args);
 

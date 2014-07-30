@@ -34,7 +34,6 @@ class filesystemFiles extends viewModelBase {
 
     private activeFilesystemSubscription: any;
 
-
     static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
     static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle"
@@ -47,10 +46,6 @@ class filesystemFiles extends viewModelBase {
         this.uploadQueue.subscribe(x => uploadQueueHelper.updateLocalStorage(x, this.activeFilesystem()));
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
-    }
-
-    canActivate(args: any) {
-        return true;
     }
 
     activate(args) {
@@ -180,10 +175,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     fileSystemChanged(fs: filesystem) {
-        if (fs) {
-            var filesystemFilesUrl = appUrl.forFilesystemFiles(fs);
-            this.navigate(filesystemFilesUrl);
-
+        if (!!fs) {
             this.loadFiles();
         }
     }

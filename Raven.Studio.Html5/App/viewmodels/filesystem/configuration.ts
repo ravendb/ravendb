@@ -51,10 +51,6 @@ class configuration extends viewModelBase {
         });
     }
 
-/*    canActivate(args: any) {
-        return true;
-    }*/
-
     activate(navigationArgs) {
         super.activate(navigationArgs);
 
@@ -66,9 +62,9 @@ class configuration extends viewModelBase {
     }
 
     attached() {
-        this.activeFilesystem.subscribe(x => {
+/*        this.activeFilesystem.subscribe(x => {
             this.loadKeys(x);
-        });
+        });*/
 
         (<any>$('.keys-collection')).contextmenu({
             target: '#keys-context-menu'
