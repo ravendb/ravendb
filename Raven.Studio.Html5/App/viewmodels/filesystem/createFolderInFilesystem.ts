@@ -2,8 +2,7 @@
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
-import commandBase = require("commands/commandBase");
-
+import messagePublisher = require("common/messagePublisher");
 import filesystem = require("models/filesystem/filesystem");
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
@@ -15,7 +14,6 @@ class createFolderInFilesystem extends dialogViewModelBase {
     public folderName = ko.observable('');
 
     private folders : string[];
-    private newCommandBase = new commandBase();
 
     constructor(folders) {
         super();
@@ -60,7 +58,7 @@ class createFolderInFilesystem extends dialogViewModelBase {
         }
 
         if (errorMessage != null) {
-            this.newCommandBase.reportError(errorMessage);
+            messagePublisher.reportError(errorMessage);
             return false;
         }
         return true;

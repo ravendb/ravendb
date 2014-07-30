@@ -13,13 +13,12 @@ import changeSubscription = require('models/changeSubscription');
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import Pair = require("common/pair");
-import messagePublisher = require("common/messagePublisher");
 
 class configuration extends viewModelBase {
 
     static configSelector = "#settingsContainer";
     private router = router;
-
+    
     appUrls: computedAppUrls;
 
     keys = ko.observableArray<configurationKey>();
@@ -62,9 +61,9 @@ class configuration extends viewModelBase {
     }
 
     attached() {
-/*        this.activeFilesystem.subscribe(x => {
+        this.activeFilesystem.subscribe(x => {
             this.loadKeys(x);
-        });*/
+        });
 
         (<any>$('.keys-collection')).contextmenu({
             target: '#keys-context-menu'

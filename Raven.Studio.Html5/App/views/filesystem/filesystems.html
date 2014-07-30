@@ -37,14 +37,6 @@
                     <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
                 </div>
 
-
-<!--                <div class="filesystems-container" data-bind="foreach: fileSystems">
-                    <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFileSystem($data); return true; }, css: { selected: isSelected, disabled: disabled }">
-                        <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
-                        <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCountText"></span>
-                    </div>
-                </div>-->
-
                 <div class="details">
                     <h4>
                         <!-- ko ifnot: $data.disabled -->
@@ -85,33 +77,5 @@
                 </div>
             </div>
         </div>
-
-
-
-
-        <!--        <div style="position: relative">
-            <div class="btn-toolbar">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: newFileSystem" accesskey="n" title="Create a new file system. (Alt+N)"><i class="fa fa-plus"></i> New File System</button>
-                </div>
-                <form class="form-inline col-md-3 col-sm-3">
-                    <div class="input-group">
-                        <input type="text" accesskey="s" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a filesystem (Alt+S)">
-                        <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                    </div>
-                </form>
-                $1$<div class="btn-group">
-                        <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedFilesystem, visible: selectedDatabase() != null" title="Delete selected filesystem"><i class="fa fa-trash-o"></i></button>
-                    </div>#1#
-            </div>
-            <br />
-
-            <div class="filesystems-container" data-bind="foreach: fileSystems">
-                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFileSystem($data); return true; }, css: { selected: isSelected }">
-                    <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
-                    <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCountText"></span>
-                </div>
-            </div>
-        </div>-->
     </div>
 </section>
