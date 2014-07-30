@@ -213,7 +213,7 @@ class configuration extends viewModelBase {
     }
 
     removeKey(key: string) {
-        var foundKey = this.keys().filter((x: configurationKey) => { return (x.key == key) });
+        var foundKey = this.keys().filter((configKey: configurationKey) => configKey.key == key );
 
         if (foundKey.length > 0) {
             var currentIndex = this.keys.indexOf(this.currentKey());
