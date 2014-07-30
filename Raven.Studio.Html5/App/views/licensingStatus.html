@@ -1,10 +1,32 @@
-﻿<div class="messageBox" tabindex="-1">
+﻿<div class="messageBox licensing-Status" tabindex="-1">
     <div class="modal-header">
         <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: cancel" aria-hidden="true"></button>
         <h4 class="modal-title">Licensing Status</h4>
     </div>
     <div class="modal-body">
         <label data-bind="text: licenseStatus.Message, css: { 'license-error': licenseStatus.Error }"></label>
+        <!-- ko with: licenseStatus.Details -->
+        <div class="panel-group" id="detailsAccordion">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" data-parent="#detailsAccordion" href="#collapseDetails">
+                        <h3 class="panel-title">
+                            Details
+                        </h3>
+                    </a>
+                </div>
+                <div id="collapseDetails" class="panel-collapse collapse">
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <div class="col-lg-12">
+                                <p class="form-control-static" data-bind="text: $data"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /ko -->
         <!-- ko if: licenseStatus.IsCommercial -->
         <div data-bind="text: 'Version: ' + licenseStatus.Attributes.version"></div>
         <div data-bind="text: 'Bundles: ' + bundleString + '.'"></div>

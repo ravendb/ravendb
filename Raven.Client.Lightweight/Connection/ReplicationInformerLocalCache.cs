@@ -20,6 +20,26 @@ namespace Raven.Client.Connection
 #endif
 		}
 
+		public static void ClearReplicationInformationFromLocalCache(string serverHash)
+		{
+			try
+			{
+				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
+				{
+					var path = "RavenDB Replication Information For - " + serverHash;
+
+					if (machineStoreForApplication.GetFileNames(path).Length == 0)
+						return;
+
+					machineStoreForApplication.DeleteFile(path);
+				}
+			}
+			catch (Exception e)
+			{
+				log.ErrorException("Could not clear the persisted replication information", e);
+			}
+		}
+
 		public static JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
 		{
 			try

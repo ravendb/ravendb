@@ -31,7 +31,11 @@ namespace RavenFS.Tests.Synchronization
 
 		public static void TurnOffSynchronization(IAsyncFilesCommands source)
 		{
-			source.Configuration.DeleteKeyAsync(SynchronizationConstants.RavenSynchronizationDestinations).Wait();
+            var destinations = source.Synchronization.GetDestinationsAsync().Result;
+            foreach ( var destination in destinations )
+                destination.Enabled = false;
+
+            source.Synchronization.SetDestinationsAsync(destinations).Wait();          
 		}
 
 		public static Exception ExecuteAndGetInnerException(Func<Task> action)

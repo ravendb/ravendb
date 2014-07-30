@@ -19,11 +19,6 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.UploadAsync("test1.bin", source1Content);
 
             var destination = destinationClient.ToSynchronizationDestination();
-            //var destination = new SynchronizationDestination()
-            //{
-            //    FileSystem = destinationClient.FileSystem,
-            //    ServerUrl = destinationClient.ServerUrl
-            //};
 
 		    await sourceClient.Synchronization.SetDestinationsAsync(destination);
 

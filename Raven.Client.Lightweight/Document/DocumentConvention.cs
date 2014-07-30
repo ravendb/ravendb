@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;

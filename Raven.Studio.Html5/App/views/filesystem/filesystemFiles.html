@@ -15,7 +15,7 @@
     </li>
 </ul>
 
-<div class="filesystems-page"> 
+<div id="fileSystemFilesPage"> 
 
     <div class="row">
         <div class="col-md-2">
@@ -57,6 +57,9 @@
                     </button>
                 </div>
                 <span></span>
+            </div>
+            <div class="files-select" data-bind="visible: selectedFilesIndices().length > 0">
+                You have selected <strong data-bind="text: $root.selectedFilesIndices().length"></strong> files.
             </div>
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, dynamicHeightTargetSelector: '#uploadQueueContainer', gridSelector: '#filesGrid', contextMenuOptions: ['Delete'] }"></div>
         </div>

@@ -50,7 +50,6 @@
     <TypeScriptCompile Include="App\commands\filesystem\getFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterGroupsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCountersCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
@@ -200,7 +199,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchLastModifiedBetweenClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />

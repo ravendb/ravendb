@@ -8,11 +8,11 @@
         <div class="modal-body">
             <div class="form-group">
                 <label data-bind="text: label"></label>
-                <input type="text" class="form-control" data-bind="value: inputs[0]"/>
+                <input type="text" id="firstInput" class="form-control" data-bind="value: inputs[0]"/>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Apply</button>
+            <button type="submit" data-bind="enable: enabled()" class="btn btn-primary">Apply</button>
             <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
         </div>
     </form>

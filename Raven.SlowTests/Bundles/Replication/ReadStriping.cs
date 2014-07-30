@@ -1,3 +1,4 @@
+using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Common;

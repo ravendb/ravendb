@@ -178,8 +178,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
-            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+            { route: 'filesystems/edit', title: 'Edit File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
             { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
             { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
             { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
@@ -502,7 +501,7 @@ class shell extends viewModelBase {
         } else {
             NProgress.done();
             NProgress.configure({ showSpinner: false });
-            this.showAlert(new alertArgs(alertType.danger, "Database load time is too long", "The database server might not be responding."));
+            this.showAlert(new alertArgs(alertType.danger, "Load time is too long", "The server might not be responding."));
         }
     }
 

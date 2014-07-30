@@ -960,6 +960,28 @@ namespace Raven.Client.FileSystem
                 return StartAsync(fileName, destination.ToSynchronizationDestination());
             }
 
+            public Task<SynchronizationDestination[]> GetDestinationsAsync()
+            {
+                return client.ExecuteWithReplication("GET", async operation =>
+                {
+                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
+                    var request = client.RequestFactory.CreateHttpJsonRequest(
+                                            new CreateHttpJsonRequestParams(this, requestUriString, "GET", operation.Credentials, convention))
+                                        .AddOperationHeaders(client.OperationsHeaders);                    
+
+                    try
+                    {
+                        var response = (RavenJObject) await request.ReadResponseJsonAsync();
+                        var rawDestinations = (RavenJArray) response["Destinations"];
+                        return rawDestinations.JsonDeserialization<SynchronizationDestination>();
+                    }
+                    catch (Exception e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
+            }
+
             public Task SetDestinationsAsync(params SynchronizationDestination[] destinations)
             {
                 return client.ExecuteWithReplication("PUT", async operation =>

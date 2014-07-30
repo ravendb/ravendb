@@ -418,7 +418,7 @@ namespace Raven.Client.Indexes
 		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 		    if (asyncServerClient == null)
 		        return;
-		    var doc = await asyncServerClient.GetAsync("Raven/Replication/Destinations");
+		    var doc = await asyncServerClient.GetAsync(Constants.RavenReplicationDestinations);
 		    if (doc == null)
 		        return;
 		    var replicationDocument =
@@ -459,7 +459,7 @@ namespace Raven.Client.Indexes
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
-			var doc = serverClient.Get("Raven/Replication/Destinations");
+			var doc = serverClient.Get(Constants.RavenReplicationDestinations);
 			if (doc == null)
 				return;
 			var replicationDocument =

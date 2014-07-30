@@ -55,7 +55,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>();
 
-			Log.Debug("Starting to synchronize a file '{0}' to {1}", fileName, destination.FileSystemUrl);
+			Log.Debug("Starting to synchronize a file '{0}' to {1}", fileName, destination.Url);
 
 			var result = await SynchronizationTask.SynchronizeFileToAsync(fileName, destination);
 
@@ -100,7 +100,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 				var localMetadata = GetLocalMetadata(fileName);
-
                 if (localMetadata != null)
                 {
                     AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);

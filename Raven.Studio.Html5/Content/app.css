@@ -7782,7 +7782,15 @@ footer ul {
   box-shadow: none !important;
   border: 1px solid #357ebd !important;
 }
-.license-error {
+.licensing-Status {
+  max-height: 60vh!important;
+}
+.licensing-Status .form-group {
+  max-height: 30vh!important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.licensing-Status .license-error {
   color: #d2322d;
 }
 :invalid {
@@ -7806,6 +7814,13 @@ footer ul {
 }
 .fa-plus {
   color: #58cc46;
+}
+#fileSystemFilesPage .files-select {
+  text-align: center;
+  background-color: #ffffcc;
+  margin-top: 5px;
+  border: 1px solid;
+  border-radius: 25px;
 }
 #editFileContainer:focus {
   outline: 0;
