@@ -441,31 +441,11 @@ namespace Raven.Client.Document
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
             var jsonDocument = DatabaseCommands.Get(value.Key);
-            if (jsonDocument == null)
-                throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
-
-            value.Metadata = jsonDocument.Metadata;
-            value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
-            value.ETag = jsonDocument.Etag;
-            value.OriginalValue = jsonDocument.DataAsJson;
-            var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-            var type = entity.GetType();
-            foreach (var property in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                var prop = property;
-                if (prop.DeclaringType != type && prop.DeclaringType != null)
-                {
-                    prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (prop == null)
-                        prop = property; // shouldn't happen ever...
-                }
-                if (!prop.CanWrite() || !prop.CanRead() || prop.GetIndexParameters().Length != 0)
-                    continue;
-                prop.SetValue(entity, prop.GetValue(newEntity));
-            }
+            RefreshInternal(entity, jsonDocument, value);
         }
 
-        /// <summary>
+
+	    /// <summary>
         /// Get the json document by key from the store
         /// </summary>
         protected override JsonDocument GetJsonDocument(string documentKey)

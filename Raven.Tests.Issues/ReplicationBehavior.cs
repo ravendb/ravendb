@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;

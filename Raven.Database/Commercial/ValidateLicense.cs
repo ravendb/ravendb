@@ -73,54 +73,63 @@ namespace Raven.Database.Commercial
 			
 			if (TryLoadLicense(licenseText) == false) 
 				return;
+            
+            string errorMessage = string.Empty;
+            try
+            {
 
-			try
-			{
-				licenseValidator.AssertValidLicense(() =>
-				{
-					string value;
+		        try
+		        {
+		            licenseValidator.AssertValidLicense(() =>
+		            {
+		                string value;
 
-					AssertForV2(licenseValidator.LicenseAttributes);
-					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
-					    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
-					{
-						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
-					}
-					string allowExternalBundles;
-					if(licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) && 
-						bool.Parse(allowExternalBundles) == false)
-					{
-						var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
-						foreach (var catalog in directoryCatalogs)
-						{
-							config.Catalog.Catalogs.Remove(catalog);
-						}
-					}
-				});
+		                errorMessage = AssertLicenseAttributes(licenseValidator.LicenseAttributes, licenseValidator.LicenseType);
+		                if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
+		                    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
+		                {
+		                    licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
+		                }
+		                string allowExternalBundles;
+		                if (licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) &&
+		                    bool.Parse(allowExternalBundles) == false)
+		                {
+		                    var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
+		                    foreach (var catalog in directoryCatalogs)
+		                    {
+		                        config.Catalog.Catalogs.Remove(catalog);
+		                    }
+		                }
+		            });
+		        }
+		        catch (LicenseExpiredException ex)
+		        {
+		            errorMessage = ex.Message;
+		        }
 
-				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
-				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
-				{
-					attributes[licenseAttribute.Key] = licenseAttribute.Value;
-				}
+		        var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
+		        foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+		        {
+		            attributes[licenseAttribute.Key] = licenseAttribute.Value;
+		        }
 
-				var message = "Valid license at " + licensePath;
-				var status = "Commercial - " + licenseValidator.LicenseType;
+		        var message = "Valid license at " + licensePath;
+		        var status = "Commercial - " + licenseValidator.LicenseType;
 
-				if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
-				{
-					message = string.Format("Expired ({0}) OEM license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
-					status += " (Expired)";
-				}
+		        if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
+		        {
+		            message = string.Format("Expired ({0}) OEM license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
+		            status += " (Expired)";
+		        }
 
-				CurrentLicense = new LicensingStatus
-				{
-					Status = status,
-					Error = false,
-					Message = message,
-					Attributes = attributes
-				};
-			}
+		        CurrentLicense = new LicensingStatus
+		        {
+		            Status = status,
+		            Error = !String.IsNullOrEmpty(errorMessage),
+		            Message = String.IsNullOrEmpty(errorMessage) ? message : errorMessage,
+		            Attributes = attributes
+		        };
+		    }
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not validate license at " + licensePath + ", " + licenseText, e);
@@ -147,7 +156,8 @@ namespace Raven.Database.Commercial
 				{
 					Status = "AGPL - Open Source",
 					Error = true,
-					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e,
+                    Details = "License Path: " + licensePath + Environment.NewLine + ", License Text: " + licenseText + Environment.NewLine + ", Exception: " + e,
+					Message = "Could not validate license: " + e.Message,
 					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 				};
 			}
@@ -187,50 +197,21 @@ namespace Raven.Database.Commercial
 			return true;
 		}
 
-		private void AssertForV2(IDictionary<string, string> licenseAttributes)
+		private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
 		{
-			string version;
+			string version,expiration;
+		    var errorMessage = string.Empty;
+            
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-			{
-				if (licenseValidator.LicenseType != LicenseType.Subscription)
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+                throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
 
-				// Add backward compatibility for the subscription licenses of v1
-				licenseAttributes["version"]= "2.5";
-				licenseAttributes["implicit20StandardLicenseBy10Subscription"]= "true";
-				licenseAttributes["allowWindowsClustering"]= "false";
-				licenseAttributes["numberOfDatabases"]= "unlimited";
-				licenseAttributes["periodicBackup"]= "true";
-				licenseAttributes["encryption"]= "false";
-				licenseAttributes["compression"]= "false";
-				licenseAttributes["quotas"]= "false";
-				licenseAttributes["authorization"]= "true";
-				licenseAttributes["documentExpiration"]= "true";
-				licenseAttributes["replication"]= "true";
-				licenseAttributes["versioning"]= "true";
-				licenseAttributes["maxSizeInMb"]= "unlimited";
-
-				string oem;
-				if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out oem) &&
-				    "true".Equals(oem ,StringComparison.OrdinalIgnoreCase))
-				{
-					licenseAttributes["OEM"]= "true";
-					licenseAttributes["maxRamUtilization"]= "6442450944";
-					licenseAttributes["maxParallelism"]= "3";
-
-				}
-				else
-				{
-					licenseAttributes["OEM"]= "false";
-					licenseAttributes["maxRamUtilization"]= "12884901888";
-					licenseAttributes["maxParallelism"]= "6";
-				}                     
-			}
-			else
-			{
-				if (version != "1.2" && version != "2.0" && version != "2.5")
-					throw new LicenseExpiredException("This is not a license for RavenDB 2.x");
-			}
+            if (version != "3.0")
+            {
+                if (licenseType != LicenseType.Subscription || (version != "2.0" && version != "2.5"))
+                {
+                    throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
+                }
+            }
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))
@@ -257,14 +238,16 @@ namespace Raven.Database.Commercial
 				if(bool.Parse(claster) == false)
 				{
 					if (clasterInspector.IsRavenRunningAsClusterGenericService())
-						throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
+                        throw new LicenseExpiredException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 				}
 			}
 			else
 			{
 				if (clasterInspector.IsRavenRunningAsClusterGenericService())
-					throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
+                    throw new LicenseExpiredException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 			}
+
+		    return errorMessage;
 		}
 
 		[Import(AllowDefault = true)]

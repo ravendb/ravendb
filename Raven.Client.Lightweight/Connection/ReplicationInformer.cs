@@ -22,8 +22,6 @@ namespace Raven.Client.Connection
 {
 	public class ReplicationInformer : ReplicationInformerBase<ServerClient>, IDocumentStoreReplicationInformer
 	{
-        private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
-
         public ReplicationInformer(Convention conventions, HttpJsonRequestFactory jsonRequestFactory)
             : base(conventions, jsonRequestFactory)
         {
@@ -86,6 +84,12 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public override void ClearReplicationInformationLocalCache(ServerClient client)
+		{
+			var serverHash = ServerHash.GetServerHash(client.Url);
+			ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
+		}
+
 		protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
             var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
@@ -115,11 +119,14 @@ namespace Raven.Client.Connection
                     continue;
                 failureCounts[replicationDestination.Url] = new FailureCounter();
             }
+
+			if (replicationDocument.ClientConfiguration != null)
+				conventions.UpdateFrom(replicationDocument.ClientConfiguration);
         }
 
 	    protected override string GetServerCheckUrl(string baseUrl)
 	    {
-	        return baseUrl.Doc(RavenReplicationDestinations) + "?check-server-reachable";
+	        return baseUrl.Doc(Constants.RavenReplicationDestinations) + "?check-server-reachable";
 	    }
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
@@ -143,7 +150,7 @@ namespace Raven.Client.Connection
 
 				try
 				{
-					document = getDocument(RavenReplicationDestinations);
+					document = getDocument(Constants.RavenReplicationDestinations);
 					failureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)

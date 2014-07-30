@@ -402,15 +402,16 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type)
         {
-            if (type == null) throw new ArgumentNullException("type");
+            if (type == null) 
+				throw new ArgumentNullException("type");
 
-            var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
+	        var typeName = Conventions.FindClrTypeName(type);
             return ForDocumentsOfType(typeName);
         }
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
         {
-            var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(TEntity));
+			var typeName = Conventions.FindClrTypeName(typeof(TEntity));
             return ForDocumentsOfType(typeName);
         }
 

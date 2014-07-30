@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using System.Linq.Expressions;
@@ -151,5 +152,14 @@ namespace Raven.Client
         /// Saves Enums as integers and instruct the Linq provider to query enums as integer values.
         /// </summary>
         public bool SaveEnumsAsIntegers { get; set; }
+
+		internal void UpdateFrom(ReplicationClientConfiguration configuration)
+		{
+			if (configuration == null)
+				return;
+
+			if (configuration.FailoverBehavior.HasValue)
+				FailoverBehavior = configuration.FailoverBehavior.Value;
+		}
 	}
 }

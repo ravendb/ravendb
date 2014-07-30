@@ -19,6 +19,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;

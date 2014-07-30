@@ -10,6 +10,7 @@ using System.Net;
 using Lucene.Net.Util;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;

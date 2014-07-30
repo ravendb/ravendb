@@ -601,6 +601,36 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
+		public async Task RefreshAsync<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a transient instance");
+			IncrementRequestCount();
+
+			var shardRequestData = new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { value.Key }
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+
+			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
+			{
+				var jsonDocument = await dbCmd.GetAsync(value.Key);
+				if (jsonDocument == null)
+					return false;
+
+				RefreshInternal(entity, jsonDocument, value);
+				return true;
+			});
+
+			if (results.All(x => x == false))
+			{
+				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+			}
+		}
+
 		#endregion
 
 		/// <summary>

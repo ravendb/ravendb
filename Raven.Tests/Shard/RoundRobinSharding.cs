@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
