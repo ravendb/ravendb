@@ -22,11 +22,14 @@ namespace Raven.Database.Config
 
 		public PrefetcherConfiguration Prefetcher { get; private set; }
 
+        public FileSystemConfiguration FileSystem { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
 			Voron = new VoronConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
+            FileSystem = new FileSystemConfiguration();
 
 			this.settings = settings;
 		}
@@ -181,6 +184,8 @@ namespace Raven.Database.Config
 			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
+
+            FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
 		}
 
 		private string GetDefaultWebDir()
@@ -344,5 +349,10 @@ namespace Raven.Database.Config
 		{
 			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 		}
+
+        public class FileSystemConfiguration
+        {
+            public TimeSpanSetting MaximumSynchronizationInterval { get; set; }
+        }
 	}
 }

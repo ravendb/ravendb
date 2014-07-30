@@ -64,17 +64,25 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public async Task File_content_change_should_be_propagated()
-		{
-			var buffer = new byte[1024*1024*2]; // 2 MB
-			new Random().NextBytes(buffer);
+		public async Task File_content_change_should_be_propagated()        
+        {
+            this.SynchronizationInterval = TimeSpan.FromSeconds(10);
 
-			var content = new MemoryStream(buffer);
-			var changedContent = new RandomlyModifiedStream(content, 0.02);
+            var generator = new Random(1234);
 
-            var store1 = NewStore(0);
-            var store2 = NewStore(1);
-            var store3 = NewStore(2);
+            var buffer = new byte[1024*1024*2]; // 2 MB     
+            generator.NextBytes(buffer);
+            buffer[0] = 0;
+            var content = new MemoryStream(buffer);
+
+            var smallerBuffer = new byte[1024 * 1024];
+            generator.NextBytes(smallerBuffer);
+            smallerBuffer[0] = 1;
+            var changedContent = new MemoryStream(smallerBuffer);
+
+            var store1 = NewStore(0, fiddler: true);
+            var store2 = NewStore(1, fiddler: true);
+            var store3 = NewStore(2, fiddler: true);
 
             var server1 = store1.AsyncFilesCommands;
             var server2 = store2.AsyncFilesCommands;
@@ -100,32 +108,28 @@ namespace RavenFS.Tests.Synchronization
 			content.Position = 0;
             await server1.UploadAsync("test.bin", changedContent);
 
-			SyncTestUtils.TurnOnSynchronization(server1, server2);
-
             var syncTaskServer2 = store2.Changes()
-                                        .ForSynchronization()
-                                        .Where(x => x.Action == SynchronizationAction.Finish)
-                                        .Timeout(TimeSpan.FromSeconds(20))
-                                        .Take(1)
-                                        .ToTask();
-
-			var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
-			Assert.Null(secondServer1Synchronization[0].Exception);
-			Assert.Equal(SynchronizationType.ContentUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
-
-            await syncTaskServer2;
+                            .ForSynchronization()
+                            .Where(x => x.Action == SynchronizationAction.Finish)
+                            .Timeout(TimeSpan.FromSeconds(50))
+                            .Take(1)
+                            .ToTask();
 
             var syncTaskServer3 = store3.Changes()
-                                        .ForSynchronization()
-                                        .Where(x => x.Action == SynchronizationAction.Finish)
-                                        .Timeout(TimeSpan.FromSeconds(20))
-                                        .Take(1)
-                                        .ToTask();
+                            .ForSynchronization()
+                            .Where(x => x.Action == SynchronizationAction.Finish)
+                            .Timeout(TimeSpan.FromSeconds(50))
+                            .Take(1)
+                            .ToTask();
 
-			var secondServer2Synchronization = await server2.Synchronization.SynchronizeAsync();
-			Assert.Null(secondServer2Synchronization[0].Exception);
-			Assert.Equal(SynchronizationType.ContentUpdate, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
+			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
+
+            var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
+            Assert.Null(secondServer1Synchronization[0].Exception);
+            Assert.Equal(SynchronizationType.ContentUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
+
+            await syncTaskServer2;
             await syncTaskServer3;
 
 			// On all servers should have the same content of the file

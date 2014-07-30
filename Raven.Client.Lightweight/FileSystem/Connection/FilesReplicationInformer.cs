@@ -104,7 +104,7 @@ namespace Raven.Client.FileSystem.Connection
                                       : new NetworkCredential(x.Username, x.Password, x.Domain);
                 }
 
-                return new OperationMetadata(x.FileSystemUrl, new OperationCredentials(x.ApiKey, credentials));
+                return new OperationMetadata(x.Url, new OperationCredentials(x.ApiKey, credentials));
             })
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)

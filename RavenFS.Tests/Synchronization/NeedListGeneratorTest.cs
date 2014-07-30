@@ -122,5 +122,43 @@ namespace RavenFS.Tests.Synchronization
 		{
 			return new VolatileSignatureRepository(fileName);
 		}
+
+        [MtaFact]
+        public void Synchronize_file_with_different_sizes_and_completely_different_content()
+        {
+            var seedBuffer = new byte[1024 * 1024 * 2]; // 2 MB     
+            new Random().NextBytes(seedBuffer);
+            var seedContent = new MemoryStream(seedBuffer);
+
+            var smallerBuffer = new byte[1024 * 1024];
+            new Random().NextBytes(smallerBuffer);
+            var changedContent = new MemoryStream(smallerBuffer);
+
+            using (var seedSignatureRepository = CreateSignatureRepositoryFor("seed"))
+            using (var sourceSignatureRepository = CreateSignatureRepositoryFor("source"))
+            {
+                IList<SignatureInfo> seedSignatureInfos;
+                using (var generator = new SigGenerator())
+                {
+                    seedContent.Seek(0, SeekOrigin.Begin);
+                    seedSignatureInfos = generator.GenerateSignatures(seedContent, "seed", seedSignatureRepository);
+                }
+                IList<SignatureInfo> sourceSignatureInfos;
+                using (var generator = new SigGenerator())
+                {
+                    changedContent.Seek(0, SeekOrigin.Begin);
+                    sourceSignatureInfos = generator.GenerateSignatures(changedContent, "source", sourceSignatureRepository);
+                }
+
+                var sourceSize = changedContent.Length;
+
+                using (var tested = new NeedListGenerator(seedSignatureRepository, sourceSignatureRepository))
+                {
+                    var result = tested.CreateNeedsList(seedSignatureInfos.Last(), sourceSignatureInfos.Last());
+                    Assert.NotNull(result);
+                    Assert.Equal(0, sourceSize - result.Sum(x => Convert.ToInt32(x.BlockLength)));
+                }
+            }
+        }
 	}
 }

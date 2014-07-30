@@ -7850,6 +7850,17 @@ footer ul {
 .filesystem-page .filesystems-container .filesystem.default-filesystem.selected .text-muted {
   color: #3071a9;
 }
+.filesystem-page .files-select {
+  text-align: center;
+  background-color: #ffffcc;
+  margin-top: 5px;
+  border: 1px solid;
+  border-radius: 25px;
+}
+.filesystem-page .files-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
+}
 .filesystem-page .systemButton {
   color: grey;
   margin-top: 50px;

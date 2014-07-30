@@ -144,9 +144,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 					Marshal.FreeCoTaskMem(inputBuffer.Data);
 
 				foreach (var item in outputPointers)
-				{
 					Marshal.FreeCoTaskMem(item);
-				}
+
+                foreach (var item in rdcBufferPointers)
+                    Marshal.FreeCoTaskMem(item.Data);
 			}
 			result.Reverse();
 			signatureRepository.Flush(result);

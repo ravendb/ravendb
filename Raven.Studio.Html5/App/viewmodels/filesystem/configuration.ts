@@ -24,8 +24,8 @@ class configuration extends viewModelBase {
 
     keys = ko.observableArray<configurationKey>();
     text: KnockoutComputed<string>;
-    selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
     selectedKeyValue = ko.observable<Pair<string, string>>();
+    selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
     currentKey = ko.observable<configurationKey>();
     configurationEditor: AceAjax.Editor;
     configurationKeyText = ko.observable<string>();
@@ -33,6 +33,7 @@ class configuration extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedConfiguration = ko.observable('');
     subscription: any;
+    enabled: boolean = true;
 
     constructor() {
         super();
@@ -99,20 +100,17 @@ class configuration extends viewModelBase {
             target: '#keys-context-menu'
         });
 
-        this.loadKeys(this.activeFilesystem());
         this.initializeDocEditor();
+        this.loadKeys(this.activeFilesystem());
         this.configurationEditor.focus();
         this.setupKeyboardShortcuts();
     }
 
+    selectKeyValue(selection: Pair<string, string>) {
+        this.selectedKeyValue(selection);
+    }
+
     setupKeyboardShortcuts() {
-        //this.createKeyboardShortcut("alt+shift+d", () => this.currentKey(), editDocument.editDocSelector);
-        //this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
-        //this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
-        //this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
-        //this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
-        //this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
-        //this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteConfiguration(), configuration.configSelector);
     }
 
@@ -131,20 +129,35 @@ class configuration extends viewModelBase {
         }
     }
 
-    loadKeys(fs: filesystem){
-        new getConfigurationCommand(fs)
-            .execute()
-            .done( (x: configurationKey[]) => {
-                this.keys(x);
-                if (x.length > 0) {
-                    this.selectKey(x[0]);
-                }
-            });
+    loadKeys(fs: filesystem) {
+        if (this.enabled) {
+            new getConfigurationCommand(fs)
+                .execute()
+                .done( (x: configurationKey[]) => {
+                    this.keys(x);
+                    if (x.length > 0) {
+                        this.selectKey(x[0]);
+                    }
+                    else {
+                        this.enableEditor(false);
+                    }
+                });
+        }
     }
 
     selectKey(key: configurationKey) {
         key.activate();
-        router.navigate(appUrl.forFilesystemConfigurationWithKey(this.activeFilesystem(), key.key));
+    }
+
+    enableEditor(enable: boolean) {
+        this.configurationEditor.setReadOnly(!enable);
+        this.configurationEditor.getSession().setUseWorker(enable);
+        if (!enable) {
+            this.configurationKeyText("");
+            this.dirtyFlag().reset();
+        }
+
+        this.enabled = enable;
     }
 
     selectedKeyChanged(selected: configurationKey) {
@@ -162,10 +175,6 @@ class configuration extends viewModelBase {
         }
     }
 
-    selectKeyValue(selection: Pair<string, string>) {
-        this.selectedKeyValue(selection);
-    }
-
     save() {
         var jsonConfigDoc = JSON.parse(this.configurationKeyText());
         var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
@@ -176,7 +185,7 @@ class configuration extends viewModelBase {
     }
 
     refreshConfig() {
-        this.selectKey(this.currentKey());
+        this.selectedKeyChanged(this.currentKey());
     }
 
     deleteConfiguration() {
@@ -206,6 +215,9 @@ class configuration extends viewModelBase {
             if (this.keys()[newIndex] && currentIndex == foundIndex) {
                 this.selectKey(this.keys()[newIndex]);
             }
+            else {
+                this.enableEditor(false);
+            }
         }
     }
 
@@ -214,6 +226,9 @@ class configuration extends viewModelBase {
         if (foundKey.length <= 0) {
             var newKey = new configurationKey(this.activeFilesystem(), key);
             this.keys.push(newKey);
+            if (this.keys().length > 0 && !this.enabled) {
+                this.enableEditor(true);
+            }
             this.selectKey(newKey);
         }
     }
