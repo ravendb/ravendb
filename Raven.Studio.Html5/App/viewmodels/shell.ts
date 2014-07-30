@@ -50,14 +50,14 @@ class shell extends viewModelBase {
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     systemDatabase: database;
-    isDatabaseDisabled: KnockoutComputed<boolean>;
+    isActiveDatabaseDisabled: KnockoutComputed<boolean>;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
 
     static fileSystems = ko.observableArray<filesystem>();
     listedFileSystems: KnockoutComputed<filesystem[]>;
-    isFileSystemDisabled: KnockoutComputed<boolean>;
+    isActiveFileSystemDisabled: KnockoutComputed<boolean>;
     canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
 
     static counterStorages = ko.observableArray<counterStorage>();
@@ -109,12 +109,12 @@ class shell extends viewModelBase {
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
 
-        this.isDatabaseDisabled = ko.computed(() => {
+        this.isActiveDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
             return !!activeDb ? activeDb.disabled() : false;
         });
 
-        this.isFileSystemDisabled = ko.computed(() => {
+        this.isActiveFileSystemDisabled = ko.computed(() => {
             var activeFs = this.activeFilesystem();
             return !!activeFs ? activeFs.disabled() : false;
         });

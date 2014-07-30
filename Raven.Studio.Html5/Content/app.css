@@ -6973,7 +6973,7 @@ body {
 #resources-page .resources-container .resource.system-database.selected .text-muted {
   color: #106a8c;
 }
-.menu-item-disabled.a {
+.menu-item-disabled a {
   pointer-events: none;
   cursor: default;
   text-decoration: line-through;

@@ -11,12 +11,12 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
-                <div data-bind="visible: appUrls.isAreaActive('databases')">
+                <div data-bind="visible: appUrls.isAreaActive('databases'), css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
-                            <a data-bind="attr: { href: appUrls.documents }, css: { 'menu-item-disabled': isDatabaseDisabled }">Documents</a>
+                            <a data-bind="attr: { href: appUrls.documents }">Documents</a>
                         </li>
-                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents'), 'menu-item-disabled': isDatabaseDisabled }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
@@ -34,9 +34,9 @@
                         </li>
 
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
-                            <a data-bind="attr: { href: appUrls.indexes }, css: { 'menu-item-disabled': isDatabaseDisabled }">Indexes</a>
+                            <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
                         </li>
-                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes'), 'menu-item-disabled': isDatabaseDisabled }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
@@ -50,9 +50,9 @@
                             </ul>
                         </li>
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
-                            <a data-bind="attr: { href: appUrls.query(null) }, css: { 'menu-item-disabled': isDatabaseDisabled }">Query</a>
+                            <a data-bind="attr: { href: appUrls.query(null) }">Query</a>
                         </li>
-                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query'), 'menu-item-disabled': isDatabaseDisabled }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
@@ -67,20 +67,20 @@
                         </li>
 
                         <li data-bind="css: { active: appUrls.isActive('Tasks') }">
-                            <a data-bind="attr: { href: appUrls.tasks }, css: { 'menu-item-disabled': isDatabaseDisabled }">Tasks</a>
+                            <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
                         </li>
 
                         <li data-bind="css: { active: appUrls.isActive('Settings') }">
-                            <a data-bind="attr: { href: appUrls.settings }, css: { 'menu-item-disabled': isDatabaseDisabled }">Settings</a>
+                            <a data-bind="attr: { href: appUrls.settings }">Settings</a>
                         </li>
 
                         <li data-bind="css: { active: appUrls.isActive('Status') }">
-                            <a data-bind="attr: { href: appUrls.status }, css: { 'menu-item-disabled': isDatabaseDisabled }">Status</a>
+                            <a data-bind="attr: { href: appUrls.status }">Status</a>
                         </li>
                     </ul>
                     <ul class="nav navbar-nav">
                         <li class="dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#" data-bind="css: { 'menu-item-disabled': isDatabaseDisabled }">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 <i class="fa fa-plus"></i> New <b class="caret"></b>
                             </a>
                             <ul class="dropdown-menu">
@@ -102,7 +102,7 @@
                     </ul>
                     <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
                         <input id="goToDocInput" title="Search for a document (Alt+G)" accesskey="G"
-                               type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown', disable: isDatabaseDisabled" autocomplete="off" />
+                               type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown', disable: isActiveDatabaseDisabled" autocomplete="off" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
                             <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
@@ -114,8 +114,8 @@
                     </form>
                 </div>
 
-                <div id="filesystemsNavbar" data-bind="visible: canShowFileSystemNavbar">
-                    <ul class=" nav navbar-nav">
+                <div data-bind="visible: canShowFileSystemNavbar, css: { 'menu-item-disabled': isActiveFileSystemDisabled }">
+                    <ul class="nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Files') }">
                             <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
                         </li>
@@ -250,7 +250,7 @@
 <footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')() && !isDatabaseDisabled()">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')() && !isActiveDatabaseDisabled()">
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
@@ -264,7 +264,7 @@
                 <!-- /ko -->
             </ul>
 
-            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')">
+            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')() && !isActiveFileSystemDisabled()">
                 <li><a data-bind="text:'Status'" class="navbar-link" href="#/filesystems/status"></a></li>
                 <!-- ko with: statistics -->
                 <li><a href="#filesystems" data-bind="text: FileCount + ' files'"></a></li>

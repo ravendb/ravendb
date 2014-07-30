@@ -52,9 +52,7 @@ class synchronizationDestinations extends viewModelBase {
             if (fs) {
                 new getFileSystemStatsCommand(fs)
                     .execute()
-                    .done(result=> {
-                        this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                    });
+                    .done(result => this.prepareAndSaveReplicationSetup(result.DatabaseId));
             }
         }
     }

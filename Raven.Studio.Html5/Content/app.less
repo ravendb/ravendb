@@ -470,10 +470,12 @@ html, body {
     }
 }
 
-.menu-item-disabled.a {
-    pointer-events: none;
-    cursor: default;
-    text-decoration: line-through;
+.menu-item-disabled {
+    a{
+        pointer-events: none;
+        cursor: default;
+        text-decoration: line-through;
+    }
 }
 
 .resource-link {
@@ -1099,13 +1101,10 @@ html, body {
 }
 
 #editDocumentContainer {
-
-    
-        .isActive{
-           background-color:#73c773!important;
-           border-color:#61b261!important;
-        }
-    
+    .isActive{
+        background-color:#73c773!important;
+        border-color:#61b261!important;
+    }
     
     &:focus {
         outline: 0;
@@ -1138,7 +1137,6 @@ html, body {
     .query-metadata {
         padding-top: 20px;
     }
-
 
     .documents-links-container {
         -webkit-column-count: 2; /* Chrome, Safari, Opera */
@@ -1488,7 +1486,6 @@ footer {
 // End of icons
 
 // Start of Filesystems
-// TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name
 #editFileContainer {
     &:focus {
         outline: 0;
