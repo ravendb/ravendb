@@ -1,12 +1,14 @@
 ﻿<div>
-    <div data-bind="foreach:allLogsNotifications">
-        <div data-bind="text:'RequestID:' +  !!RequestId?RequestId:''"></div>
+    <div id="logNotificationsContainer" data-bind="foreach:allLogsNotifications">
+        
+        <div data-bind="text: !CustomInfo?$root.formatLogRecord($data):CustomInfo"></div>
+        <!--<div data-bind="text:'RequestID:' +  !!RequestId?RequestId:''"></div>
         <div data-bind="text:'HttpMethod:' +  !!HttpMethod?HttpMethod:''"></div>
         <div data-bind="text:'EllapsedMiliseconds:' +  !!EllapsedMiliseconds?EllapsedMiliseconds:''"></div>
         <div data-bind="text:'ResponseStatusCode:' +  !!ResponseStatusCode?ResponseStatusCode:''"></div>
         <div data-bind="text:'RequestUri:' +  !!RequestUri?RequestUri:''"></div>
         <div data-bind="text:'TenantName:' +  !!RequestUri?TenantName:''"></div>
         <div data-bind="text:'CustomInfo:' +  !!RequestUri?CustomInfo:''"></div>
-        <div data-bind="text:'TenantType:' +  !!RequestUri?TenantType:''"></div>
+        <div data-bind="text:'TenantType:' +  !!RequestUri?TenantType:''"></div>-->
     </div>
 </div>
