@@ -16,8 +16,18 @@ namespace Raven.Database.Config
 	{
 		private readonly NameValueCollection settings;
 
+		public ReplicationConfiguration Replication { get; private set; }
+
+		public VoronConfiguration Voron { get; private set; }
+
+		public PrefetcherConfiguration Prefetcher { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
+			Replication = new ReplicationConfiguration();
+			Voron = new VoronConfiguration();
+			Prefetcher = new PrefetcherConfiguration();
+
 			this.settings = settings;
 		}
 
@@ -36,7 +46,7 @@ namespace Raven.Database.Config
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
 				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
 
-			EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
+		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
 		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -163,11 +173,15 @@ namespace Raven.Database.Config
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
-            VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
-			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
-		}
 
-		public IntegerSetting MemoryLimitForIndexing { get;private set; }
+			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
+			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
+
+            Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
+
+			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
+		}
 
 		private string GetDefaultWebDir()
 		{
@@ -188,6 +202,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting MemoryLimitForIndexing { get; private set; }
 
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
 
@@ -309,7 +325,24 @@ namespace Raven.Database.Config
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
-        public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
-		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
+
+		public class VoronConfiguration
+		{
+			public IntegerSetting MaxBufferPoolSize { get; set; }
+
+			public NullableIntegerSetting InitialFileSize { get; set; }
+		}
+
+		public class PrefetcherConfiguration
+		{
+			public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+			public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+		}
+
+		public class ReplicationConfiguration
+		{
+			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
+		}
 	}
 }

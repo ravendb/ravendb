@@ -20,12 +20,13 @@ using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public class SynchronizationController : RavenFsApiController
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		private static readonly ConcurrentDictionary<Guid, ReaderWriterLockSlim> SynchronizationFinishLocks =
 			new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
@@ -72,7 +73,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
             var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
 
             var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -238,7 +239,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					FileName = fileName,
 					SourceServerUrl = sourceServer.FileSystemUrl,
-                    Status = ConflictStatus.Detected
+                    Status = ConflictStatus.Detected,
+                    RemoteFileHeader = new FileHeader(fileName, localMetadata)
 				});
 
 				Log.Debug(
@@ -264,7 +266,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
 
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -339,7 +341,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public HttpResponseMessage Delete(string fileSystemName, string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
@@ -424,7 +426,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Rename(string fileSystemName, string fileName, string rename)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
             var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
@@ -458,7 +460,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     Publisher.Publish(new ConflictNotification 
                     { 
                         FileName = fileName,
-                        Status = ConflictStatus.Detected
+                        Status = ConflictStatus.Resolved
                     });
 				}
 
@@ -611,10 +613,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				StrategyAsGetCurrent(fileName);
 			}
-			else
+            else if (strategy == ConflictResolutionStrategy.RemoteVersion)
 			{
 				StrategyAsGetRemote(fileName);
 			}
+            else
+            {
+                throw new NotSupportedException("NoOperation conflict resolution strategy, is not supported.");
+            }
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -645,8 +651,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Version = remoteVersion
 			};
 
-            var remoteConflictHistory = RavenJArray.Load(new JsonTextReader(new StreamReader(contentStream)))
-                                                   .JsonDeserialization<HistoryItem>().ToList();
+            var remoteMetadata = RavenJObject.Load(new JsonTextReader(new StreamReader(contentStream)));
+
+            var remoteConflictHistory = Historian.DeserializeHistory(remoteMetadata);
 			remoteConflictHistory.Add(remote);
 
 			var conflict = new ConflictItem
@@ -663,7 +670,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				FileName = filename,
 				SourceServerUrl = remoteServerUrl,
-                Status = ConflictStatus.Detected
+                Status = ConflictStatus.Detected,
+                RemoteFileHeader = new FileHeader(filename, remoteMetadata)
 			});
 
 			Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);

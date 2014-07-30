@@ -127,7 +127,7 @@ interface licenseStatusDto {
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
-        periodicExport: string;
+        periodicBackup: string;
         encryption: string;
         compression: string;
         quotas: string;
@@ -392,8 +392,9 @@ interface storedQueryDto {
     Hash: number;
 }
 
-interface storedQueryContainerDto extends documentDto {
-    Queries: storedQueryDto[];
+interface indexDataDto {
+    name: string;
+    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {
@@ -457,8 +458,36 @@ interface sqlReplicationDto extends documentDto {
     FactoryName: string;
     ConnectionString: string;
     ConnectionStringName: string;
+    PredefinedConnectionStringSettingName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+    ForceSqlServerQueryRecompile?: boolean;
+    PerformTableQuatation?:boolean;
+}
+
+interface commandData {
+    CommandText: string;
+    Params:{Key:string;Value:any}[]
+}
+
+interface tableQuerySummary {
+    TableName: string;
+    Commands: commandData[];
+}
+
+interface sqlReplicationSimulationResultDto {
+    Results: tableQuerySummary[];
+    LastAlert: alertDto;
+}
+
+interface sqlReplicationConnectionsDto extends documentDto {
+    PredefinedConnections: predefinedSqlConnectionDto[];
+}
+
+interface predefinedSqlConnectionDto {
+    Name:string;
+    FactoryName: string;
+    ConnectionString: string;
 }
 
 interface facetDto {
@@ -646,7 +675,9 @@ interface statusDebugQueriesGroupDto {
 
 interface statusDebugQueriesQueryDto {
     StartTime: string;
-    QueryInfo: KnockoutObservable<any>;
+    QueryInfo: string;
+    QueryId: number;
+    Duration: string;
 }
 
 interface taskMetadataDto {
@@ -821,12 +852,12 @@ interface indexSuggestion extends queryFieldInfo {
 }
 
 interface mappedResultInfo {
-    ReduceKey: string;
-    Timestamp: string;
-    Etag: string;
-    Data: any;
-    Bucket: number;
-    Source: string;
+    ReduceKey?: string;
+    Timestamp?: string;
+    Etag?: string;
+    Data?: any;
+    Bucket?: number;
+    Source?: string;
 }
 
 
@@ -843,9 +874,90 @@ interface visualizerDataObjectNodeDto {
     children?: visualizerDataObjectNodeDto[];
     name?: string;
     level?: number;
+    origin?: visualizerDataObjectNodeDto;
     x?: number;
     y?: number;
     depth?: number;
     parent?: visualizerDataObjectNodeDto;
     payload?: mappedResultInfo;
+    connections?: visualizerDataObjectNodeDto[];
+    cachedId?: string;
+}
+
+interface queryIndexDebugMapArgsDto {
+    key?: string;
+    sourceId?: string;
+    startsWith?: string;
+}
+
+interface graphLinkDto {
+    source: visualizerDataObjectNodeDto;
+    target: visualizerDataObjectNodeDto;
+    cachedId?: string;
+}
+
+interface mergeResult {
+  Document: string;
+  Metadata: string;
+}
+
+interface visualizerExportDto {
+    indexName: string;
+    docKeys: string[];
+    reduceKeys: string[];
+    tree: visualizerDataObjectNodeDto;
+}
+
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface operationStatusDto {
+    Completed: boolean;
+    State: documentStateDto[];
+}
+
+interface documentStateDto {
+    Document: string;
+    Deleted: boolean;
+}
+
+interface replicationTopologyDto {
+    Servers: string[];
+    Connections: replicationTopologyConnectionDto[];
+}
+
+interface replicationTopologyConnectionDto {
+    Destination: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    LastAttachmentEtag: string;
+    LastDocumentEtag: string;
+    ReplicationBehavior: string;
+    SendServerId: string;
+    Source: string;
+    SourceToDestinationState: string;
+    StoredServerId: string;
+}
+
+interface stringLinkDto {
+    source: string;
+    target: string;
+}
+
+interface replicationTopologyLinkDto extends stringLinkDto {
+    left: boolean;
+    right: boolean;
+    toRightPayload?: replicationTopologyConnectionDto;
+    toLeftPayload?: replicationTopologyConnectionDto;
+}
+
+interface runningTaskDto {
+    Id: number;
+    TaskStatus: string;
+    Exception: string;
+    ExceptionText: string;
+    Payload: string;
+    TaskType: string;
+    StartTime: string;
 }

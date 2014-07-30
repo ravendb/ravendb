@@ -16,13 +16,14 @@ namespace Raven.Tests.MailingList
 			using(var store= NewDocumentStore())
 			{
 				new Activity_WithCategory().Execute(store);
+				new Activity_WithCategoryTransformer().Execute(store);
 				BuildData(store);
 
 				WaitForIndexing(store);
 
 				using(var s = store.OpenSession())
 				{
-					var activityVms = s.Query<ActivityVM, Activity_WithCategory>().ToArray();
+					var activityVms = s.Query<ActivityVM, Activity_WithCategory>().TransformWith<Activity_WithCategoryTransformer, ActivityVM>().ToArray();
 					foreach (var activityVm in activityVms)
 					{
 						Assert.NotNull(activityVm.CatId);
@@ -90,9 +91,15 @@ namespace Raven.Tests.MailingList
 			{
 				Map = activities => from a in activities
 									select new { CatID = a.Category.Id };
+			}
+		}
 
-				TransformResults = (db, activities) => from a2 in activities
-													   let c = db.Load<Category>(a2.Category.Id)
+		public class Activity_WithCategoryTransformer : AbstractTransformerCreationTask<Activity>
+		{
+			public Activity_WithCategoryTransformer()
+			{
+				TransformResults = activities => from a2 in activities
+													   let c = LoadDocument<Category>(a2.Category.Id)
 													   select new
 													   {
 														   a2.Id,

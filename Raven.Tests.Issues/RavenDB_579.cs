@@ -12,7 +12,7 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_579 : RavenTest
 	{
-		private readonly RavenDbServer[] servers;
+		private new readonly RavenDbServer[] servers;
 		private readonly ShardedDocumentStore documentStore;
 
 		private readonly IList<string> shardNames = new List<string>

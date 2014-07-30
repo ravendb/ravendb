@@ -48,9 +48,8 @@ class shell extends viewModelBase {
     private router = router;
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
+    systemDatabase: database;
     isDatabaseDisabled: KnockoutComputed<boolean>;
-    currentConnectedDatabase: database;
-    systemDb: database;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
@@ -58,22 +57,20 @@ class shell extends viewModelBase {
     static fileSystems = ko.observableArray<filesystem>();
     listedFileSystems: KnockoutComputed<filesystem[]>;
     isFileSystemDisabled: KnockoutComputed<boolean>;
-    currentConnectedFileSystem: filesystem;
-    fileSystemsLoadedTask: JQueryPromise<any>;
     canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
 
     static counterStorages = ko.observableArray<counterStorage>();
     listedCounterStorages: KnockoutComputed<counterStorage[]>;
     isCounterStorageDisabled: KnockoutComputed<boolean>;
-    currentConnectedCounterStorage: counterStorage;
-    counterStoragesLoadedTask: JQueryPromise<any>;
     canShowCountersNavbar = ko.computed(() => shell.counterStorages().length > 0 && this.appUrls.isAreaActive('counterstorages')());
 
+    currentConnectedResource: resource;
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    licenseStatus = ko.observable<licenseStatusDto>();
+    static licenseStatus = ko.observable<licenseStatusDto>();
+    localLicenseStatus: KnockoutObservable<licenseStatusDto> = shell.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
@@ -93,6 +90,7 @@ class shell extends viewModelBase {
 		extensions.install();
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
+
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
@@ -101,11 +99,9 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs); });
         ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
+        ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
-        this.systemDb = appUrl.getSystemDatabase();
-        this.currentConnectedDatabase = this.systemDb;
-        this.currentConnectedFileSystem = new filesystem(null);
-        this.currentConnectedCounterStorage = new counterStorage(null);
+        this.currentConnectedResource = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase();
 
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -255,62 +251,129 @@ class shell extends viewModelBase {
         }
     }
 
+    private reloadDataAfterReconnection(rs: resource) {
+        if (rs.name === "<system>") {
+            this.fetchStudioConfig();
+            this.fetchServerBuildVersion();
+            this.fetchClientBuildVersion();
+            this.fetchLicenseStatus();
+
+            new getDatabasesCommand()
+                .execute()
+                .done((results: database[]) => this.updateResourceObservableArray(shell.databases, results, this.activeDatabase));
+            new getFilesystemsCommand()
+                .execute()
+                .done((results: filesystem[]) => this.updateResourceObservableArray(shell.fileSystems, results, this.activeFilesystem));
+            new getCounterStoragesCommand()
+                .execute()
+                .done((results: counterStorage[]) => this.updateResourceObservableArray(shell.counterStorages, results, this.activeCounterStorage));
+        }
+    }
+
+    private updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>,
+        recievedResourceArray: Array<any>, activeResourceObservable: any) {
+
+        var deletedResources = [];
+
+        resourceObservableArray().forEach((rs: resource) => {
+            var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name == rs.name || rs.name == "<system>");
+            if (existingResource == null) {
+                deletedResources.push(rs);
+            }
+        });
+
+        resourceObservableArray.removeAll(deletedResources);
+
+        recievedResourceArray.forEach((recievedResource: resource) => {
+            var foundResource: resource = resourceObservableArray().first((rs: resource) => rs.name == recievedResource.name);
+            if (foundResource == null) {
+                resourceObservableArray.push(recievedResource);
+            } else {
+                foundResource.disabled(recievedResource.disabled());
+            }
+        });
+
+        if (deletedResources.length > 0) {
+            this.selectNewActiveResourceIfNeeded(deletedResources[0], resourceObservableArray, activeResourceObservable);
+        }
+    }
+
+    private selectNewActiveResourceIfNeeded(resourceToDelete: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
+        var isSameInstanceAsCurrent = resourceToDelete instanceof database && this.currentConnectedResource instanceof database ||
+            resourceToDelete instanceof filesystem && this.currentConnectedResource instanceof filesystem ||
+            resourceToDelete instanceof counterStorage && this.currentConnectedResource instanceof counterStorage;
+
+        if (isSameInstanceAsCurrent && resourceObservableArray.contains(activeResourceObservable()) == false) {
+            if (resourceObservableArray().length > 0) {
+                this.selectResource(resourceObservableArray().first());
+            } else if (resourceObservableArray().length == 0) {
+                //if we are in file systems or counter storages page
+                this.disconnectFromResourceChangesApi();
+                var url = (activeResourceObservable() instanceof filesystem) ? "#filesystems" : "#counterstorages";
+                activeResourceObservable(null);
+                this.navigate(url);
+            }
+        }
+    }
+
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase(), "#databases")),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem(), "#filesystems")),
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage(), "#counterstorages"))
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage))
         ];
     }
 
     private changesApiFiredForResource(e: documentChangeNotificationDto,
-            observableResourceArray: KnockoutObservableArray<any>,
-            activeResource: any, typeHash: string) {
+        resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
+
         if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
             var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
             
             if (e.Type === documentChangeType.Delete) {
-                var resourceToDelete = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+                var resourceToDelete = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
                 if (!!resourceToDelete) {
-                    observableResourceArray.remove(resourceToDelete);
+                    resourceObservableArray.remove(resourceToDelete);
 
-                    if (observableResourceArray().length != 0 && !observableResourceArray.contains(activeResource)) {
-                        this.selectResource(observableResourceArray().first());
-                    }
+                    this.selectNewActiveResourceIfNeeded(resourceToDelete, resourceObservableArray, activeResourceObservable);
                 }
             } else { // e.Type === documentChangeType.Put
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
-                    var existingResource = observableResourceArray.first((rs: resource) => rs.name == receivedResourceName);
+                    var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
 
                     if (existingResource == null) { // new database
-                        var newResource = this.createNewResource(typeHash, receivedResourceName, dto);
-                        observableResourceArray.unshift(newResource);
+                        existingResource = this.createNewResource(activeResourceObservable(), receivedResourceName, dto);
+                        resourceObservableArray.unshift(existingResource);
                     } else {
                         if (existingResource.disabled() != dto.Disabled) { //disable status change
                             existingResource.disabled(dto.Disabled);
+                            if (dto.Disabled == false && this.currentConnectedResource.name == receivedResourceName) {
+                                existingResource.activate();
+                            }
                         }
-                        if (typeHash == "#databases") { //for databases, bundle change
-                            existingResource.activeBundles(dto.Settings["Raven/ActiveBundles"].split(";"));
-                        }
+                    }
+
+                    if (activeResourceObservable() instanceof database) { //for databases, bundle change
+                        var bundles = !!dto.Settings["Raven/ActiveBundles"] ? dto.Settings["Raven/ActiveBundles"].split(";") : [];
+                        existingResource.activeBundles(bundles);
                     }
                 });
             }
         }
     }
 
-    private createNewResource(typeHash: string, resourceName: string, dto: databaseDocumentDto) {
-        var newResource;
+    private createNewResource(activeResource: any, resourceName: string, dto: databaseDocumentDto) {
+        var newResource = null;
 
-        switch (typeHash) {
-            case ("#databases"):
-                newResource = new database(resourceName, dto.Disabled, dto.Settings["Raven/ActiveBundles"].split(";"));
-                break;
-            case ("#filesystems"):
-                newResource = new filesystem(resourceName, dto.Disabled);
-                break;
-            default: // case ("#counterstorages")
-                newResource = new counterStorage(resourceName, dto.Disabled);
+        if (activeResource instanceof database) {
+            newResource = new database(resourceName, dto.Disabled);
+        }
+        else if (activeResource instanceof filesystem) {
+            newResource = new filesystem(resourceName, dto.Disabled);
+        }
+        else if (activeResource instanceof counterStorage) {
+            newResource = new counterStorage(resourceName, dto.Disabled);
         }
 
         return newResource;
@@ -323,14 +386,14 @@ class shell extends viewModelBase {
         this.navigate(updatedUrl);
     }
 
-    private databasesLoaded(databases) {
-        var systemDatabase = new database("<system>");
-        systemDatabase.isSystem = true;
-        systemDatabase.isVisible(false);
-        shell.databases(databases.concat([systemDatabase]));
+    private databasesLoaded(databases: database[]) {
+        this.systemDatabase = new database("<system>");
+        this.systemDatabase.isSystem = true;
+        this.systemDatabase.isVisible(false);
+        shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private fileSystemsLoaded(filesystems) {
+    private fileSystemsLoaded(filesystems: filesystem[]) {
         shell.fileSystems(filesystems);
     }
 
@@ -347,7 +410,7 @@ class shell extends viewModelBase {
         this.databasesLoadedTask = new getDatabasesCommand()
             .execute()
             .fail(result => this.handleRavenConnectionFailure(result))
-            .done(results => {
+            .done((results: database[]) => {
                 this.databasesLoaded(results);
                 this.fetchStudioConfig();
                 this.fetchServerBuildVersion();
@@ -356,20 +419,21 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-        this.fileSystemsLoadedTask = new getFilesystemsCommand()
+        var fileSystemsLoadedTask: JQueryPromise<any> = new getFilesystemsCommand()
             .execute()
             .done((results: filesystem[]) => this.fileSystemsLoaded(results));
 
 
-        this.counterStoragesLoadedTask = new getCounterStoragesCommand()
+        var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
             .execute()
             .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
 
-        $.when(this.databasesLoadedTask, this.fileSystemsLoadedTask, this.counterStoragesLoadedTask)
+        $.when(this.databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
             .done(() => {
                 var locationHash = window.location.hash;
 
                 if (locationHash.indexOf("#filesystems") == 0) {
+
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
                 else if (locationHash.indexOf("#counterstorages") == 0) {
@@ -380,16 +444,16 @@ class shell extends viewModelBase {
             });
     }
 
-    private activateResource(urlResource, observableResourceArray: KnockoutObservableArray<any>) {
-        var arrayLength = observableResourceArray().length;
+    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>) {
+        var arrayLength = resourceObservableArray().length;
 
         if (arrayLength > 0) {
             var newResource;
 
-            if (urlResource != null && (newResource = observableResourceArray.first(x => x.name == urlResource.name)) != null) {
+            if (resource != null && (newResource = resourceObservableArray.first(rs => rs.name == resource.name)) != null) {
                 newResource.activate();
             } else {
-                observableResourceArray.first().activate();
+                resourceObservableArray.first().activate();
             }
         }
     }
@@ -410,7 +474,7 @@ class shell extends viewModelBase {
     }
 
     fetchStudioConfig() {
-        new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase())
+        new getDocumentWithMetadataCommand("Raven/StudioConfig", this.systemDatabase)
             .execute()
             .done((doc: document) => {
                 appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
@@ -443,7 +507,7 @@ class shell extends viewModelBase {
     }
 
     showAlert(alert: alertArgs) {
-        if (alert.type === alertType.danger || alert.type === alertType.warning) {
+        if (alert.displayInRecentErrors && (alert.type === alertType.danger || alert.type === alertType.warning)) {
             this.recordedErrors.unshift(alert);
         }
 
@@ -454,8 +518,11 @@ class shell extends viewModelBase {
         } else {
             this.currentAlert(alert);
             var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-            if (alert.type === alertType.danger || alert.type === alertType.warning) {
-                fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
+            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
+                fadeTime = 100000000;
+            }
+            else if (alert.type === alertType.danger || alert.type === alertType.warning) {
+                fadeTime = 4000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
             }
             setTimeout(() => {
                 this.closeAlertAndShowNext(alert);
@@ -502,41 +569,53 @@ class shell extends viewModelBase {
     }
 
     private updateDbChangesApi(db: database) {
-        if (!db.disabled() && (this.currentConnectedDatabase.name != db.name || !this.appUrls.isAreaActive('databases')()) ||
-                db.name == "<system>" && this.currentConnectedDatabase.name == db.name) {
+        if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && db.disabled()) {
+            // disconnect from the current database changes api and set the current connected database
             this.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = db;
+        }
 
+        if (!db.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('databases')()) ||
+                db.name == "<system>" && this.currentConnectedResource.name == db.name) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(db, 5000));
             this.changeSubscriptionArray = [
                 shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
             ];
-
-            this.currentConnectedDatabase = db;
         }
     }
 
     private updateFsChangesApi(fs: filesystem) {
-        if (!fs.disabled() && (this.currentConnectedFileSystem.name != fs.name || !this.appUrls.isAreaActive('filesystems')())) {
+        if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && fs.disabled()) {
+            // disconnect from the current filesystem changes api and set the current connected filesystem
             this.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = fs;
+        }
 
+        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
-
-            shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs));
-
-            this.currentConnectedFileSystem = fs;
+            this.changeSubscriptionArray = [
+                shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs))
+            ];
         }
     }
 
     private updateCsChangesApi(cs: counterStorage) {
-        //TODO: enable changes api for counter storages, server side
-        if (!cs.disabled() && (this.currentConnectedCounterStorage.name != cs.name || !this.appUrls.isAreaActive('counterstorages')())) {
+        if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
+            // disconnect from the current filesystem changes api and set the current connected filesystem
             this.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = cs;
+        }
 
+        if (!cs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('counterstorages')())) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(cs, 5000));
-
-            this.currentConnectedCounterStorage = cs;
+            this.changeSubscriptionArray = [
+                //TODO: enable changes api for counter storages, server side
+            ];
         }
     }
 
@@ -617,7 +696,7 @@ class shell extends viewModelBase {
     fetchLicenseStatus() {
         new getLicenseStatusCommand()
             .execute()
-            .done((result: licenseStatusDto) => this.licenseStatus(result));
+            .done((result: licenseStatusDto) => shell.licenseStatus(result));
     }
 
     fetchGoToDocSearchResults(query: string) {
@@ -652,7 +731,7 @@ class shell extends viewModelBase {
 
     showLicenseStatusDialog() {
         require(["viewmodels/licensingStatus"], licensingStatus => {
-            var dialog = new licensingStatus(this.licenseStatus());
+            var dialog = new licensingStatus(shell.licenseStatus());
             app.showDialog(dialog);
         });
     }

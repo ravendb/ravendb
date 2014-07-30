@@ -162,7 +162,7 @@ namespace Raven.Database.Actions
 
                             if (storedTransformer != null)
                             {
-                                using (new CurrentTransformationScope(documentRetriever))
+                                using (new CurrentTransformationScope(Database, documentRetriever))
                                 {
                                     var transformed =
                                         storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
@@ -239,7 +239,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
+        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token)
         {
             var documents = 0;
             TransactionalStorage.Batch(accessor =>
@@ -249,9 +249,10 @@ namespace Raven.Database.Actions
                     OperationId = operationId,
                     Type = DocumentChangeTypes.BulkInsertStarted
                 });
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
                 foreach (var docs in docBatches)
                 {
-                    WorkContext.CancellationToken.ThrowIfCancellationRequested();
+                    cts.Token.ThrowIfCancellationRequested();
 
                     using (Database.DocumentLock.Lock())
                     {
@@ -465,7 +466,7 @@ namespace Raven.Database.Actions
             actions =>
             {
                 docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
-                using (new CurrentTransformationScope(docRetriever))
+                using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
                     if (document == null)

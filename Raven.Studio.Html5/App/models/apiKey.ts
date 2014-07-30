@@ -6,6 +6,7 @@ import document = require("models/document");
 class apiKey extends document {
 
     public name = ko.observable<string>();
+    savedName: string;
     secret = ko.observable<string>();
     fullApiKey: KnockoutComputed<string>;
     connectionString: KnockoutComputed<string>;
@@ -14,11 +15,12 @@ class apiKey extends document {
     public metadata: documentMetadata;
     databases = ko.observableArray<databaseAccess>();
     visible = ko.observable(true);
-
+    
     constructor(dto: apiKeyDto) {
         super(dto);
 
         this.name(dto.Name);
+        this.savedName = dto.Name;
         this.secret(dto.Secret);
         this.enabled(dto.Enabled);
         this.databases(dto.Databases.map(d => new databaseAccess(d)));
@@ -102,6 +104,11 @@ class apiKey extends document {
 
     setIdFromName() {
         this.__metadata.id = "Raven/ApiKeys/" + this.name();
+
+        if (this.savedName !== this.name()) {
+            this.__metadata.etag = null;
+            this.savedName = this.name();
+        }
     }
 
     isValid(): boolean {

@@ -123,21 +123,23 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage Docrefs(string id)
 		{
-			var totalCount = -1;
+			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
+
+			var totalCountReferencing = -1;
 			List<string> results = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				totalCount = accessor.Indexing.GetCountOfDocumentsReferencing(id);
-				results =
-					accessor.Indexing.GetDocumentsReferencing(id)
-							.Skip(GetStart())
-							.Take(GetPageSize(Database.Configuration.MaxPageSize))
-							.ToList();
+				totalCountReferencing = accessor.Indexing.GetCountOfDocumentsReferencing(id);
+				var documentsReferencing = 
+					op == "from" 
+					? accessor.Indexing.GetDocumentsReferencesFrom(id) 
+					: accessor.Indexing.GetDocumentsReferencing(id);
+				results = documentsReferencing.Skip(GetStart()).Take(GetPageSize(Database.Configuration.MaxPageSize)).ToList();
 			});
 
 			return GetMessageWithObject(new
 			{
-				TotalCount = totalCount,
+				TotalCountReferencing = totalCountReferencing,
 				Results = results
 			});
 		}

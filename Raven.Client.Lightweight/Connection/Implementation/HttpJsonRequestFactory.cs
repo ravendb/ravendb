@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-#if !NETFX_CORE
 using System;
 using System.Collections.Specialized;
 using System.Net;
@@ -95,7 +94,7 @@ namespace Raven.Client.Connection
 				cachedRequest.ForceServerCheck = false;
 			}
 
-			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
+            setHeader("If-None-Match", cachedRequest.Headers[Constants.MetadataEtagField]);
 			return new CachedRequestOp { SkipServerCheck = skipServerCheck, CachedRequest = cachedRequest };
 		}
 
@@ -260,7 +259,7 @@ namespace Raven.Client.Connection
 
 		internal void CacheResponse(string url, RavenJToken data, NameValueCollection headers)
 		{
-			if (string.IsNullOrEmpty(headers["ETag"])) 
+            if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField])) 
 				return;
 
 			RavenJToken clone;
@@ -341,4 +340,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

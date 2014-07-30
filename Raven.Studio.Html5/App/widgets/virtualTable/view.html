@@ -40,7 +40,7 @@
                     <a href="#" data-bind="attr: { href: $parent.editUrl }"><span data-bind="text: $parent.cellMap[binding].data"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(binding) === 'externalIdTemplate' -->
-                    <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
+                    <span class="collection-color-strip" data-bind="css: $parent.calculateExternalIdCellColor($parent.cellMap[binding].data())"></span>
                     <a href="#" data-bind="attr: { href: $parents[1].getDocumentHref($parent.cellMap[binding].data()) }"><span data-bind="    text: $parent.cellMap[binding].data"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(binding) === 'customTemplate' -->
@@ -54,10 +54,10 @@
 
 <div id="gridContextMenu">
     <ul class="dropdown-menu" role="menu" data-bind="visible: settings.contextMenuOptions.length > 0 ">
-        <li data-bind="visible: settings.contextMenuOptions.contains('EditItem')"><a tabindex="-1" href="#" data-bind="click: editItem, text: 'Edit Item'"></a></li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems')"><a tabindex="-1" href="#" data-bind="disable:isIndexMapReduce, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></a></li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('CopyIDs')"><a tabindex="-1" href="#" data-bind="disable:isIndexMapReduce, click: copySelectedDocIds, text: settings.selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('EditItem') && settings.selectedIndices().length == 1"><a tabindex="-1" href="#" data-bind="click: editItem, text: 'Edit Item'"></a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems')"><a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('CopyIDs')"><a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocIds, text: settings.selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></a></li>
         <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems')" class="divider"></li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('Delete')"><a tabindex="-1" href="#" data-bind="disable:isIndexMapReduce, click: deleteSelectedItems">Delete</a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('Delete')"><a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: deleteSelectedItems">Delete</a></li>
     </ul>
 </div>

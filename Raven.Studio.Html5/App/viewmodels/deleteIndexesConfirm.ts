@@ -25,7 +25,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
 
         $.when.apply($, deleteTasks)
             .done(() => {
-                myDeleteTask.resolve();
+                myDeleteTask.resolve({ closedWithoutDeletion: false });
             })
             .fail(()=> {
                 myDeleteTask.reject();
@@ -34,7 +34,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     }
 
     cancel() {
-        this.deleteTask.reject();
+        this.deleteTask.resolve({ closedWithoutDeletion: true });
         dialog.close(this);
     }
 }

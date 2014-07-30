@@ -84,7 +84,7 @@ namespace Raven.Database.Server.Security
 			}
 
 			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
-            if (string.IsNullOrEmpty(oneTimeToken) == false)
+            if (string.IsNullOrEmpty(oneTimeToken))
 			{
 			    oneTimeToken = controller.GetQueryStringValue("singleUseAuthToken");
 			}

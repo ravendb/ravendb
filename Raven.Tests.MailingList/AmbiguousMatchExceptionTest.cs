@@ -46,14 +46,21 @@ namespace Raven.Tests.MailingList
 												  owner.Name,
 												  ThingName = owner.Thing.Name
 											  });
-				TransformResults = (database, docs) => docs
-														.Select(owner => new
-														{
-															Id = owner.Name,
-															Name = owner.Name,
-															ThingName = owner.Thing.Name,
-															SpecificProperty = owner.Thing.SpecificProperty
-														});
+			}
+		}
+
+		public class SpecificThingOwners_AndTheirThingsTransformer : AbstractTransformerCreationTask<SpecificThingOwner>
+		{
+			public SpecificThingOwners_AndTheirThingsTransformer()
+			{
+				TransformResults = docs => docs
+					.Select(owner => new
+					{
+						Id = owner.Name,
+						Name = owner.Name,
+						ThingName = owner.Thing.Name,
+						SpecificProperty = owner.Thing.SpecificProperty
+					});
 			}
 		}
 
@@ -62,6 +69,7 @@ namespace Raven.Tests.MailingList
 		public void CanGenerateIndex()
 		{
 			new SpecificThingOwners_AndTheirThings().CreateIndexDefinition();
+			new SpecificThingOwners_AndTheirThingsTransformer().CreateTransformerDefinition();
 		}
 	}
 }

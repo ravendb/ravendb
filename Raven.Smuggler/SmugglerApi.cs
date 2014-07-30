@@ -30,12 +30,12 @@ namespace Raven.Smuggler
 	{
 		const int RetriesCount = 5;
 
-		protected async override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
+		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
 		{
 			RavenJArray indexes = null;
 			var request = CreateRequest(src, "/indexes?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
-			return indexes;
+			return new CompletedTask<RavenJArray>(indexes);
 		}
 
 		private static string StripQuotesIfNeeded(RavenJToken value)
@@ -61,13 +61,13 @@ namespace Raven.Smuggler
 
 
 	    protected override void PurgeTombstones(ExportDataResult result)
-	    {
+		{
 	        throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
-	    }
+		}
 
 	    protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
 	                                            LastEtagsInfo maxEtagsToFetch)
-	    {
+		{
 	        throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
 	    }
 
@@ -83,7 +83,7 @@ namespace Raven.Smuggler
 	    }
 
 	    protected override Task DeleteDocument(string documentId)
-	    {
+			{
 	        return Commands.DeleteDocumentAsync(documentId);
         }
 
@@ -116,7 +116,7 @@ namespace Raven.Smuggler
 				}
 				finally
 				{
-					 disposeTask = operation.DisposeAsync();
+					disposeTask = operation.DisposeAsync();
 				}
 
 				if (disposeTask != null)
@@ -140,15 +140,15 @@ namespace Raven.Smuggler
                 return;
 
 
-		    var metadata = document.Value<RavenJObject>("@metadata");
-		    var id = metadata.Value<string>("@id");
+				var metadata = document.Value<RavenJObject>("@metadata");
+				var id = metadata.Value<string>("@id");
 		    if(String.IsNullOrWhiteSpace(id))
 		        throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
 
-		    document.Remove("@metadata");
+				document.Remove("@metadata");
 
 		    operation.Store(document, metadata, id, size);
-		}
+			}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)
 		{
@@ -164,12 +164,12 @@ namespace Raven.Smuggler
 			await FlushBatch();
 		}
 
-		protected async override Task<string> GetVersion(RavenConnectionStringOptions server)
+		protected override Task<string> GetVersion(RavenConnectionStringOptions server)
 		{
 			var request = CreateRequest(server, "/build/version");
 			var version = request.ExecuteRequest<RavenJObject>();
 
-			return version["ProductVersion"].ToString();
+			return new CompletedTask<string>(version["ProductVersion"].ToString());
 		}
 
         protected HttpRavenRequest CreateRequest(RavenConnectionStringOptions connectionStringOptions, string url, string method = "GET")
@@ -200,36 +200,44 @@ namespace Raven.Smuggler
 		}
 
         protected DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
-        {
-            var s = new DocumentStore
-            {
+		{
+	        var credentials = connectionStringOptions.Credentials as NetworkCredential;
+	        if (credentials != null && //precaution
+				(String.IsNullOrWhiteSpace(credentials.UserName) || 
+				 String.IsNullOrWhiteSpace(credentials.Password)))
+	        {
+		        credentials = CredentialCache.DefaultNetworkCredentials;
+	        }
+		
+			var s = new DocumentStore
+			{
                 Url = connectionStringOptions.Url,
                 ApiKey = connectionStringOptions.ApiKey,
-                Credentials = connectionStringOptions.Credentials
-            };
+				Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials
+			};
 
-            s.Initialize();
+			s.Initialize();
 
             ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
 
             s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
 
-            return s;
-        }
+		    return s;
+		}
 
         protected override JsonDocument GetDocument(string key)
-        {
+	    {
             return store.DatabaseCommands.Get(key);
-        }
+	        }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
-		{
+	        {
 			if (IsDocsStreamingSupported)
 			{
 				ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
 				return await Commands.StreamDocsAsync(lastEtag, pageSize: take);
 			}
-
+			
 			int retries = RetriesCount;
 			while (true)
 			{
@@ -310,7 +318,7 @@ namespace Raven.Smuggler
 			            totalCount++;
                         lastEtag = Etag.Parse(item.Value<string>("Etag"));
 			        }
-
+			        
 			    }
 			    catch (Exception e)
 			    {
@@ -324,15 +332,15 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected async override Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
+		protected override Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
 		{
 			if (IsTransformersSupported == false)
-				return new RavenJArray();
+				return new CompletedTask<RavenJArray>(new RavenJArray());
 
 			RavenJArray transformers = null;
 			var request = CreateRequest(src, "/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + start);
 			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));
-			return transformers;
+			return new CompletedTask<RavenJArray>(transformers);
 		}
 
 		protected override Task PutAttachment(RavenConnectionStringOptions dst ,AttachmentExportInfo attachmentExportInfo)
@@ -380,9 +388,9 @@ namespace Raven.Smuggler
 			return Commands.GetStatisticsAsync();
 		}
 
-		protected async override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return SmugglerJintHelper.Transform(transformScript, document);
+			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
 		}
 
 		private Task FlushBatch()
@@ -393,12 +401,21 @@ namespace Raven.Smuggler
         // [StringFormatMethod("format")]
 		protected override void ShowProgress(string format, params object[] args)
 		{
+			try
+			{
 			Console.WriteLine(format, args);
+		}
+			catch (FormatException e)
+			{
+				throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
+			}
 		}
 
 		public bool LastRequestErrored { get; set; }
 
+#pragma warning disable 1998
         protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+#pragma warning restore 1998
 		{
 			if (EnsuredDatabaseExists || string.IsNullOrWhiteSpace(to.DefaultDatabase))
 				return;
@@ -438,7 +455,7 @@ namespace Raven.Smuggler
                                    : s.DatabaseCommands;
 
                 commands.GetStatistics(); // check if database exist
-            }
+		}
             catch (Exception e)
             {
                 shouldDispose = true;
@@ -458,9 +475,8 @@ namespace Raven.Smuggler
                     if (webException != null)
                     {
                         throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
-                    }
-                }
-
+	}
+}
                 throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
             }
             finally

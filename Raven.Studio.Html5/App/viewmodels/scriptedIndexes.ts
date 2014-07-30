@@ -49,10 +49,8 @@ class scriptedIndexes extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
-        this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
-        });
+        this.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
@@ -62,9 +60,11 @@ class scriptedIndexes extends viewModelBase {
         this.initializeCollapsedInvalidElements();
 
         $('pre').each((index, currentPreElement) => {
-            var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
-            var editorValue = editor.getSession().getValue();
-            this.initializeAceValidity(currentPreElement, editorValue);
+            if (currentPreElement) {
+                var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
+                var editorValue = editor.getSession().getValue();
+                this.initializeAceValidity(currentPreElement, editorValue);
+            }
         });
     }
 
@@ -103,7 +103,7 @@ class scriptedIndexes extends viewModelBase {
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 this.updateIndexes(result);
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.dirtyFlag().reset(); //Resync Changes
             });
     }
 

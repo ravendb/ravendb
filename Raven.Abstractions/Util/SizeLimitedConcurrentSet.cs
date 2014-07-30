@@ -1,11 +1,14 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Database.Util
 {
 	public class SizeLimitedConcurrentSet<T>
 	{
 		private readonly ConcurrentDictionary<T, object> dic;
+
 		private readonly ConcurrentQueue<T> queue = new ConcurrentQueue<T>();
 
 		private readonly int size;
@@ -22,17 +25,23 @@ namespace Raven.Database.Util
 			dic = new ConcurrentDictionary<T, object>(equalityComparer);
 		}
 
+		public int Count
+		{
+			get
+			{
+				return queue.Count;
+			}
+		}
+
 		public bool Add(T item)
 		{
-			if (dic.TryAdd(item, null) == false)
-				return false;
+			if (dic.TryAdd(item, null) == false) return false;
 			queue.Enqueue(item);
 
 			while (queue.Count > size)
 			{
 				T result;
-				if (queue.TryDequeue(out result) == false)
-					break;
+				if (queue.TryDequeue(out result) == false) break;
 				object value;
 				dic.TryRemove(result, out value);
 			}
@@ -54,6 +63,11 @@ namespace Raven.Database.Util
 		public T[] ToArray()
 		{
 			return queue.ToArray();
+		}
+
+		public TAccumolate Aggregate<TAccumolate>(TAccumolate seed, Func<TAccumolate, T, TAccumolate> aggregate)
+		{
+			return queue.Aggregate(seed, aggregate);
 		}
 	}
 }

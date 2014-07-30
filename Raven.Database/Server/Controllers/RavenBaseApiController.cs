@@ -246,6 +246,10 @@ namespace Raven.Database.Server.Controllers
 							if (header.Key.StartsWith("Raven-") == false)
 								msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
 						}
+                        else if (header.Value.Type == JTokenType.Boolean)
+                        {
+                            msg.Content.Headers.Add(header.Key, header.Value.ToString());
+                        }
 						else
 						{
 							var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None));
@@ -348,6 +352,21 @@ namespace Raven.Database.Server.Controllers
 			};
 			WriteETag(etag, resMsg);
 			return resMsg;
+		}
+
+		public virtual Task<HttpResponseMessage> GetMessageWithObjectAsTask(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+	    {
+			return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(item, code, etag));
+	    }
+
+		public Task<HttpResponseMessage> GetMessageWithStringAsTask(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+		{
+			return new CompletedTask<HttpResponseMessage>(GetMessageWithString(msg, code, etag));
+		}
+
+		public Task<HttpResponseMessage> GetEmptyMessageAsTask(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+		{
+			return new CompletedTask<HttpResponseMessage>(GetEmptyMessage(code, etag));
 		}
 
 		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)

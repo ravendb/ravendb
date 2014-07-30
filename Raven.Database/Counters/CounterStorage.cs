@@ -44,7 +44,7 @@ namespace Raven.Database.Counters
 
 		private readonly TransportState transportState;
 
-		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration)
+		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
             CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
             Name = storageName;
@@ -59,7 +59,7 @@ namespace Raven.Database.Counters
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
             metricsCounters = new CountersMetricsManager();
-			transportState = new TransportState();
+			transportState = recievedTransportState ?? new TransportState();
             Initialize();
 		}
 

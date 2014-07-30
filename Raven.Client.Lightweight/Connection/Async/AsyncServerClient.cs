@@ -16,14 +16,6 @@ using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
-#if NETFX_CORE
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-#else
-#endif
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -344,6 +336,10 @@ namespace Raven.Client.Connection.Async
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return result.Value<string>("Transformer");
 			}
+			catch (BadRequestException e)
+			{
+				throw new TransformCompilationException(e.Message);
+			}
 			catch (ErrorResponseException e)
 			{
 				if (e.StatusCode != HttpStatusCode.BadRequest)
@@ -579,7 +575,7 @@ namespace Raven.Client.Connection.Async
 				metadata = new RavenJObject();
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			if (etag != null)
-				metadata["ETag"] = new RavenJValue((string)etag);
+                metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
 
 			if (key != null)
 				key = Uri.EscapeDataString(key);
@@ -1458,7 +1454,6 @@ namespace Raven.Client.Connection.Async
 
 		private void AddTransactionInformation(RavenJObject metadata)
 		{
-#if !NETFX_CORE
 			if (convention.EnlistInDistributedTransactions == false)
 				return;
 
@@ -1468,7 +1463,6 @@ namespace Raven.Client.Connection.Async
 
 			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
 			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
-#endif
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -1520,7 +1514,7 @@ namespace Raven.Client.Connection.Async
 					metadata = new RavenJObject();
 
 				if (etag != null)
-					metadata["ETag"] = new RavenJValue((string)etag);
+                    metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
 
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), "PUT",
@@ -1638,7 +1632,7 @@ namespace Raven.Client.Connection.Async
 				var metadata = new RavenJObject();
 
 				if (etag != null)
-					metadata["ETag"] = new RavenJValue((string)etag);
+                    metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
 
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), "DELETE",
@@ -1718,20 +1712,6 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key));
 		}
 
-#if NETFX_CORE
-		//TODO: Mono implement 
-		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
-		{
-			throw new NotImplementedException();
-		}
-
-		 public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-                                                                        int pageSize = Int32.MaxValue)
-                {
-                        throw new NotImplementedException();
-                }
-
-#else
 		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
 			return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
@@ -2015,8 +1995,6 @@ namespace Raven.Client.Connection.Async
 			return url + "/docs/" + documentKey;
 		}
 
-#endif
-
 		/// <summary>
 		/// Get the low level bulk insert operation
 		/// </summary>
@@ -2120,7 +2098,7 @@ namespace Raven.Client.Connection.Async
 		{
 			if (etag != null)
 			{
-				metadata["ETag"] = etag.ToString();
+                metadata[Constants.MetadataEtagField] = etag.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "POST", metadata, operationMetadata.Credentials, convention))
@@ -2205,19 +2183,29 @@ namespace Raven.Client.Connection.Async
 			return httpJsonRequest.ReadResponseJsonAsync();
 		}
 
-		public Task PrepareTransactionAsync(string txId)
+		public Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
 		{
-			return ExecuteWithReplication("POST", operationMetadata => DirectPrepareTransaction(txId, operationMetadata));
+			return ExecuteWithReplication("POST", operationMetadata => DirectPrepareTransaction(txId, operationMetadata, resourceManagerId, recoveryInformation));
 		}
 
-		private Task DirectPrepareTransaction(string txId, OperationMetadata operationMetadata)
+		private async Task DirectPrepareTransaction(string txId, OperationMetadata operationMetadata, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
+			var opUrl = operationMetadata.Url + "/transaction/prepare?tx=" + txId;
+			if (resourceManagerId != null)
+				opUrl += "&resourceManagerId=" + resourceManagerId;
+
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST", operationMetadata.Credentials, convention)
+					new CreateHttpJsonRequestParams(this, opUrl, "POST", operationMetadata.Credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))
 							.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return httpJsonRequest.ReadResponseJsonAsync();
+			if (recoveryInformation != null)
+			{
+				var ms = new MemoryStream(recoveryInformation);
+				await httpJsonRequest.WriteAsync(ms);
+			}
+
+			await httpJsonRequest.ReadResponseJsonAsync();
 		}
 
 		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)

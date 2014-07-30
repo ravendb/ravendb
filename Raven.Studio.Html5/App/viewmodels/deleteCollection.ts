@@ -15,9 +15,10 @@ class deleteCollection extends dialogViewModelBase {
     }
 
     deleteCollection() {
-        var deleteCommand = new deleteCollectionCommand(this.collection.name, appUrl.getDatabase());
+        var collectionName = this.collection.isAllDocuments ? "*" : this.collection.name;
+        var deleteCommand = new deleteCollectionCommand(collectionName, appUrl.getDatabase());
         var deleteCommandTask = deleteCommand.execute();
-        deleteCommandTask.done(() => this.deletionTask.resolve(this.collection));
+        deleteCommandTask.done((result) => this.deletionTask.resolve(result));
         deleteCommandTask.fail(response => this.deletionTask.reject(response));
         this.deletionStarted = true;
         dialog.close(this);

@@ -13,6 +13,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Listeners;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -747,6 +748,16 @@ namespace Raven.Client.Document
 			return GenerateSpatialQueryData(fieldName, criteria);
 		}
 
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+		{
+			SetTransformerParameters(queryInputs);
+		}
+
+		public void SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
+		{
+			transformerParameters = parameters;
+		}
+
 		/// <summary>
 		/// Adds an ordering for a specific field to the query
 		/// </summary>
@@ -964,12 +975,11 @@ namespace Raven.Client.Document
 			shouldExplainScores = true;
 			return this;
 
-        }
+	}
 
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
 	    {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
 	        return this;
-		}
-	}
+}	}
 }

@@ -19,6 +19,7 @@ namespace Raven.Tests.MailingList
 			using (var documentStore = NewDocumentStore())
 			{
 				new CustomerOrderProjection().Execute(documentStore);
+				new CustomerOrderProjectionTeansformer().Execute(documentStore);
 
 				//Load Test Data
 				using (IDocumentSession session = documentStore.OpenSession())
@@ -28,7 +29,7 @@ namespace Raven.Tests.MailingList
 					session.Store(new CustomerOrder() { Id = Guid.NewGuid(), AccountId = accountId, Status = "Delay", OrderDetails = "a long rest" });
 
 					session.SaveChanges();
-					session.Query<CustomerOrder>().Customize(x => x.WaitForNonStaleResults()).Any();
+					session.Query<CustomerOrder>().Customize(x => x.WaitForNonStaleResults()).TransformWith<CustomerOrderProjectionTeansformer, AccountListItem>().Any();
 				}
 
 				using (IDocumentSession session = documentStore.OpenSession())
@@ -37,6 +38,7 @@ namespace Raven.Tests.MailingList
                         session.Advanced.DocumentQuery<AccountListItem>("CustomerOrderProjection")
 							.WhereEquals("AccountId", accountId)
 							.WaitForNonStaleResults()
+							.SetResultTransformer("CustomerOrderProjectionTeansformer")
 							.ToList();
 					Assert.True(3 == results.Count);
 				}
@@ -60,7 +62,7 @@ namespace Raven.Tests.MailingList
 			public string Status { get; set; }
 		}
 
-		public class CustomerOrderProjection : AbstractIndexCreationTask<CustomerOrder, AccountListItem>
+		public class CustomerOrderProjection : AbstractIndexCreationTask<CustomerOrder>
 		{
 			public CustomerOrderProjection()
 			{
@@ -71,16 +73,22 @@ namespace Raven.Tests.MailingList
 				                	o.AccountId,
 				                	o.Status
 				                };
+			}
+		}
 
-				TransformResults = (database, orders) =>
-				                   from o in orders
-				                   let item = database.Load<CustomerOrder>(o.Id.ToString())
-				                   select new
-				                   {
-				                   	Id = o.Id,
-				                   	AccountId = item.AccountId,
-				                   	Status = item.Status
-				                   };
+		public class CustomerOrderProjectionTeansformer : AbstractTransformerCreationTask<CustomerOrder>
+		{
+			public CustomerOrderProjectionTeansformer()
+			{
+				TransformResults = orders =>
+								   from o in orders
+								   let item = LoadDocument<CustomerOrder>(o.Id.ToString())
+								   select new
+								   {
+									   Id = o.Id,
+									   AccountId = item.AccountId,
+									   Status = item.Status
+								   };
 			}
 		}
 	}

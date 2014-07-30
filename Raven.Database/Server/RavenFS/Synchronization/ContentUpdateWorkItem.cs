@@ -12,6 +12,7 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -62,7 +63,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
 			if (conflict != null)
-				return await ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.FileSystemUrl, log);
+                return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
 
 			using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
 			using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
@@ -178,7 +179,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			return new DataInfo
 			{
-				CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>("Last-Modified")).ToUniversalTime(),
+                CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>(Constants.LastModified)).ToUniversalTime(),
 				Length = fileAndPages.TotalSize ?? 0,
 				Name = fileAndPages.Name
 			};

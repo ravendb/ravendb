@@ -4,13 +4,13 @@ import database = require("models/database");
 
 class getScriptedIndexesCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private indexName = "") {
         super();
     }
 
     execute(): JQueryPromise<Array<scriptedIndex>> {
         var args = {
-            startsWith: "Raven/ScriptedIndexResults/",
+            startsWith: "Raven/ScriptedIndexResults/" + this.indexName,
             exclude: null,
             start: 0,
             pageSize: 256

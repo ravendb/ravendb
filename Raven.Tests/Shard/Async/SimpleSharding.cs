@@ -20,7 +20,7 @@ namespace Raven.Tests.Shard.Async
 {
 	public class SimpleSharding : RavenTest
 	{
-		private readonly RavenDbServer[] servers;
+		private new readonly RavenDbServer[] servers;
 		private readonly ShardedDocumentStore documentStore;
 
 		public SimpleSharding()

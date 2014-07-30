@@ -7,10 +7,8 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
-using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Tenancy
@@ -19,9 +17,8 @@ namespace Raven.Database.Server.Tenancy
     {
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly DocumentDatabase systemDatabase;
-        private readonly TransportState _transportState;
 
-        private bool initialized;
+	    private bool initialized;
         public DatabasesLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
@@ -84,7 +81,6 @@ namespace Raven.Database.Server.Tenancy
             return null;
         }
 
-
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
@@ -111,7 +107,8 @@ namespace Raven.Database.Server.Tenancy
 
             database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-                var documentDatabase = new DocumentDatabase(config);
+				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+				var documentDatabase = new DocumentDatabase(config, transportState);
                 AssertLicenseParameters(config);
                 documentDatabase.SpinBackgroundWorkers();
 
@@ -175,7 +172,6 @@ namespace Raven.Database.Server.Tenancy
             return resource.WorkContext.LastWorkTime;
         }
 
-
         public void Init()
         {
             if (initialized)
@@ -190,7 +186,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down database {0} because the tenant database has been updated or removed", dbName);
-                Cleanup(dbName, skipIfActive: false);
+				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
     }

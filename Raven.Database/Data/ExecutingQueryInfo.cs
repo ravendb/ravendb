@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 
 using Raven.Abstractions.Data;
 
@@ -11,6 +12,10 @@ namespace Raven.Database.Data
 
         public IndexQuery QueryInfo { get; private set; }
 
+        public long QueryId { get; private set; }
+
+        public CancellationTokenSource TokenSource { get; private set; }
+
         public TimeSpan Duration
         {
             get
@@ -21,11 +26,13 @@ namespace Raven.Database.Data
 
         private readonly Stopwatch stopwatch;
 
-        public ExecutingQueryInfo(DateTime startTime, IndexQuery queryInfo)
+        public ExecutingQueryInfo(DateTime startTime, IndexQuery queryInfo, long queryId, CancellationTokenSource tokenSource)
         {
             StartTime = startTime;
             QueryInfo = queryInfo;
+            QueryId = queryId;
             stopwatch = Stopwatch.StartNew();
+            TokenSource = tokenSource;
         }
     }
 }

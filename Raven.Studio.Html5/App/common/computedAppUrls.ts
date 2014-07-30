@@ -20,6 +20,7 @@ interface computedAppUrls {
     metricsPrefetches: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;
+    runningTasks: KnockoutComputed<string>;
     alerts: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
     replicationStats: KnockoutComputed<string>;
@@ -31,6 +32,7 @@ interface computedAppUrls {
     replications: KnockoutComputed<string>;
     versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
+    sqlReplicationsConnections: KnockoutComputed<string>;
     editSqlReplication: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
     customFunctionsEditor: KnockoutComputed<string>;
@@ -48,6 +50,7 @@ interface computedAppUrls {
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
+    infoPackage: KnockoutComputed<string>;
 
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;

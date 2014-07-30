@@ -3,9 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Threading;
+
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-#if !NETFX_CORE
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,7 +20,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.WinRT.MissingFromWinRT;
+
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -710,8 +711,10 @@ namespace Raven.Client.Document
                 LogBatch(data);
 
                 var batchResults = DatabaseCommands.Batch(data.Commands);
-                UpdateBatchResults(batchResults, data);
-            }
+	            if (batchResults == null)
+		            throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
+				UpdateBatchResults(batchResults, data);
+			}
         }
 
         /// <summary>
@@ -783,10 +786,10 @@ namespace Raven.Client.Document
             ClearEnlistment();
         }
 
-        public void PrepareTransaction(string txId)
+        public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
         {
             IncrementRequestCount();
-            DatabaseCommands.PrepareTransaction(txId);
+            DatabaseCommands.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
             ClearEnlistment();
         }
 
@@ -908,7 +911,7 @@ namespace Raven.Client.Document
 
                 while (ExecuteLazyOperationsSingleStep(responseTimeDuration))
                 {
-                    ThreadSleep.Sleep(100);
+                    Thread.Sleep(100);
                 }
 
                 responseTimeDuration.ComputeServerTotal();
@@ -1014,5 +1017,3 @@ namespace Raven.Client.Document
         }
     }
 }
-
-#endif

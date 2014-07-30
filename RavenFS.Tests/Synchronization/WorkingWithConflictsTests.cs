@@ -18,6 +18,8 @@ using Xunit;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Database.Server.RavenFS.Infrastructure;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -29,7 +31,7 @@ namespace RavenFS.Tests.Synchronization
 			var client = NewAsyncClient(0);
 
 			client.UploadAsync("conflict.test", new MemoryStream(1)).Wait();
-			client.Synchronization.ApplyConflictAsync("conflict.test", 1, "blah", new List<HistoryItem>(),
+			client.Synchronization.ApplyConflictAsync("conflict.test", 1, "blah", new RavenJObject(),
 			                                          "http://localhost:12345").Wait();
 
 			var results = client.SearchAsync("Raven-Synchronization-Conflict:true").Result;
@@ -161,9 +163,11 @@ namespace RavenFS.Tests.Synchronization
 			var client = NewAsyncClient(1);
 			client.UploadAsync("test.bin", content).Wait();
 			var guid = Guid.NewGuid().ToString();
-			client.Synchronization.ApplyConflictAsync("test.bin", 8, guid,
-			                                          new List<HistoryItem> {new HistoryItem {ServerId = guid, Version = 3}},
-			                                          "http://localhost:12345").Wait();
+            var history = new List<HistoryItem> {new HistoryItem {ServerId = guid, Version = 3}};
+            var remoteMetadata = new RavenJObject();
+            remoteMetadata[SynchronizationConstants.RavenSynchronizationHistory] = Historian.SerializeHistory(history);
+
+            client.Synchronization.ApplyConflictAsync("test.bin", 8, guid, remoteMetadata, "http://localhost:12345").Wait();
 			var resultFileMetadata = client.GetMetadataForAsync("test.bin").Result;
 			var conflict = client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
 
@@ -183,7 +187,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var guid = Guid.NewGuid().ToString();
 			var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () =>
-					await client.Synchronization.ApplyConflictAsync("test.bin", 8, guid, new List<HistoryItem>(), "http://localhost:12345"));
+                    await client.Synchronization.ApplyConflictAsync("test.bin", 8, guid, new RavenJObject(), "http://localhost:12345"));
 
 			Assert.IsType<FileNotFoundException>(innerException.GetBaseException());
 		}
@@ -322,7 +326,7 @@ namespace RavenFS.Tests.Synchronization
 			webRequest.Method = "POST";
 
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
-			webRequest.Headers.Add("ETag", new Guid().ToString());
+            webRequest.Headers.Add(Constants.MetadataEtagField, new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 
 			var sb = new StringBuilder();
@@ -375,7 +379,7 @@ namespace RavenFS.Tests.Synchronization
             var serverId = await sourceClient.GetServerIdAsync();
             var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
-			Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>("ETag"), lastEtag.LastSourceFileEtag);
+            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag);
 		}
 
 		[Fact]

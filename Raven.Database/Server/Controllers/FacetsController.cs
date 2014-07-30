@@ -107,13 +107,13 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(results);
         }
 
-		private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
+		private Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
         {
             var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
             var results = Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize);
-            return GetMessageWithObject(results, HttpStatusCode.OK, indexEtag);
+            return GetMessageWithObjectAsTask(results, HttpStatusCode.OK, indexEtag);
         }
 
         private HttpResponseMessage TryGetFacetsFromString(string facetsJson, out List<Facet> facets)

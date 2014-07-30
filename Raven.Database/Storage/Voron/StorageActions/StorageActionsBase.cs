@@ -40,6 +40,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		    this.bufferPool = bufferPool;
 		}
 
+		protected string CreateKey(object value)
+		{
+			if (value == null)
+				throw new InvalidOperationException("Cannot create an empty key.");
+
+			return value.ToString().ToLowerInvariant();
+		}
+
 		protected string CreateKey(params object[] values)
 		{
 			if (values == null || values.Length == 0)

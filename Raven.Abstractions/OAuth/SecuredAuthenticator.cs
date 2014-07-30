@@ -27,10 +27,8 @@ namespace Raven.Abstractions.OAuth
             {
                 if (e.Client != null)
                     e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
-#if !NETFX_CORE
                 if (e.Request != null)
                     e.Request.Headers["Has-Api-Key"] = "true";
-#endif
             }
         }
 
@@ -77,14 +75,10 @@ namespace Raven.Abstractions.OAuth
 
                 return Tuple.Create(authRequest, data);
             }
-#if !NETFX_CORE
             authRequest.ContentLength = 0;
-#endif
             return Tuple.Create(authRequest, (string)null);
         }
 
-
-#if !NETFX_CORE
         // TODO: Delete this, and use the async one.
         public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
         {
@@ -150,7 +144,6 @@ namespace Raven.Abstractions.OAuth
                 }
             }
         }
-#endif
 
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string apiKey)
         {
@@ -171,11 +164,7 @@ namespace Raven.Abstractions.OAuth
             {
                 tries++;
 
-#if !NETFX_CORE
                 var handler = new WebRequestHandler();
-#else
-			    var handler = new HttpClientHandler();
-#endif
 
                 var httpClient = new HttpClient(handler);
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");

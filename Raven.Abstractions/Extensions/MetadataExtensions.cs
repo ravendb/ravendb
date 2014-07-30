@@ -53,7 +53,7 @@ namespace Raven.Abstractions.Extensions
 			"Content-Type",
 			"Expires",
 			// ignoring this header, we handle this internally
-			"Last-Modified",
+			Constants.LastModified,
 			// Ignoring this header, since it may
 			// very well change due to things like encoding,
 			// adding metadata, etc
@@ -87,7 +87,7 @@ namespace Raven.Abstractions.Extensions
 			"Accept-Ranges",
 			"Age",
 			"Allow",
-			"ETag",
+			Constants.MetadataEtagField,
 			"Location",
 			"Retry-After",
 			"Server",
@@ -112,10 +112,10 @@ namespace Raven.Abstractions.Extensions
 			"X-Forwarded-For",
 			"X-Original-URL",
 
-            // Azure specific
-            "X-LiveUpgrade",
-            "DISGUISED-HOST",
-            "X-SITE-DEPLOYMENT-ID",
+			// Azure specific
+			"X-LiveUpgrade",
+			"DISGUISED-HOST",
+			"X-SITE-DEPLOYMENT-ID",
 		};
 
 		private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>
@@ -124,12 +124,13 @@ namespace Raven.Abstractions.Extensions
 			                                                                       "X-NewRelic"
 		                                                                       };
 
-
-        /// <summary>
-        /// Filters the headers from unwanted headers
-        /// </summary>
-        /// <param name="self">The self.</param>
-        /// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <param name="self">HttpHeaders to filter</param>
+		/// <param name="headersToIgnore">Headers to ignore</param>
+		/// <param name="prefixesInHeadersToIgnore">Header prefixes to ignore</param>
+		/// <returns></returns>
         public static RavenJObject FilterHeadersToObject(this RavenJObject self, HashSet<string> headersToIgnore, HashSet<string> prefixesInHeadersToIgnore)
         {
             if (self == null)
@@ -213,12 +214,13 @@ namespace Raven.Abstractions.Extensions
 			return filterHeaders;
 		}
 
-
         /// <summary>
-        /// Filters the headers from unwanted headers
+		/// Filters the headers from unwanted headers
         /// </summary>
-        /// <param name="self">The self.</param>
-        /// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        /// <param name="self">HttpHeaders to filter</param>
+        /// <param name="headersToIgnore">Headers to ignore</param>
+        /// <param name="prefixesInHeadersToIgnore">Header prefixes to ignore</param>
+        /// <returns></returns>
         public static RavenJObject FilterHeadersToObject(this HttpHeaders self, HashSet<string> headersToIgnore, HashSet<string> prefixesInHeadersToIgnore)
         {
             var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
@@ -316,11 +318,7 @@ namespace Raven.Abstractions.Extensions
 			var lastWasDash = true;
 			var sb = new StringBuilder(header.Length);
 
-#if NETFX_CORE
-			foreach (var ch in header.ToCharArray())
-#else
 			foreach (var ch in header)
-#endif
 			{
 				sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
 

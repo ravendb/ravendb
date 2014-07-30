@@ -209,11 +209,11 @@
                                             <b class="caret"></b>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            <li>
-                                                <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.databases()), visible: !appUrls.isAreaActive('databases')()">Databases</a>
+                                            <li><!-- click: function () { navigateToResourceGroup.bind($root, appUrls.databases()); return true; }-->
+                                                <a href="#databases" data-bind="click: navigateToResourceGroup.bind($root, appUrls.databases()), visible: !appUrls.isAreaActive('databases')()">Databases</a>
                                             </li>
                                             <li>
-                                                <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.filesystems()), visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
+                                                <a href="#filesystems" data-bind="click: navigateToResourceGroup.bind($root, appUrls.filesystems()), visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
                                             </li>
                                             <!--<li>
                                                 <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.couterStorages()), visible: !appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
@@ -234,7 +234,7 @@
 
     <!--Alerts container-->
     <div class="studio-alerts" data-bind="with: currentAlert">
-        <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
+        <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 || type === 4 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
             <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
             <div class="alert-text">
                 <strong data-bind="text: title, attr:{title:title}"></strong>
@@ -275,7 +275,7 @@
 
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
-                <li data-bind="with: licenseStatus"><a class="navbar-link" href="#" data-bind="text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a></li>
+                <li data-bind="with: localLicenseStatus"><a class="navbar-link" href="#" data-bind="text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a></li>
                 <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
                 <!-- /ko -->

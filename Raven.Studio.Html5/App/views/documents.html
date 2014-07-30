@@ -17,49 +17,66 @@
             <div class="row">
                 <div class="btn-toolbar" role="toolbar">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" data-bind="click: toggleSelectAll" title="Select all or none">
-                            <img style="height: 18px;" data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                        <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasDocuments" title="Select all or none">
+                            <img data-bind="attr: { src: hasAllDocumentsSelected() ? 'content/images/checked.png' : hasAnyDocumentsSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" />
                         </button>
                     </div>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-primary "  accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">
+                        <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">
                             <i class="fa fa-plus"></i>
                         </button>
                     </div>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default " data-bind="click: selectColumns" title="Choose columns...">
+                        <button type="button" class="btn btn-default" data-bind="click: selectColumns, visible: hasDocuments" title="Choose columns...">
                             <i class="fa fa-table"></i>
                         </button>
-                        <a href="#" data-bind="attr: { href: currentExportUrl }, visible: exportCsvEnabled" class="btn btn-default" title="Export CSV">
+                    </div>
+                    <div class="btn-group">
+                        <a href="#" target="_blank" data-bind="attr: { href: currentExportUrl }, visible: isRegularCollection" class="btn btn-default" title="Export CSV">
                             <i class="fa fa-file-excel-o"></i>
                         </a>
                     </div>
-                    <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
-                        <button type="button" class="btn btn-default "  data-bind="click: editSelectedDoc" title="Edit selected document (F2)">
+                    <div class="btn-group" data-bind="visible: selectedDocumentIndices().length == 1">
+                        <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc" title="Edit selected document (F2)">
                             <i class="fa fa-pencil"></i>
                         </button>
-                        <button type="button" class="btn btn-default "  data-bind="click: deleteSelectedDocs" title="Delete selected documents (DEL)">
+                    </div>
+                    <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
+                        <button type="button" class="btn btn-default" data-bind="click: deleteSelectedDocs" title="Delete selected documents (DEL)">
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>
-                    <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
-                        <button type="button" class="btn btn-default "  data-bind="click: copySelectedDocs" title="Copy selected documents (Ctrl+C, D)">
+                    <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected() && canCopyAllSelected()">
+                        <button type="button" class="btn btn-default" data-bind="click: copySelectedDocs" title="Copy selected documents (Ctrl+C, D)">
                             <i class="fa fa-copy"></i>
                         </button>
-                        <button type="button" class="btn btn-default "  data-bind="click: copySelectedDocIds" title="Copy selected document IDs (Ctrl+C, I)">
+                        <button type="button" class="btn btn-default" data-bind="click: copySelectedDocIds" title="Copy selected document IDs (Ctrl+C, I)">
                             <i class="fa fa-clipboard"></i>
                         </button>
                     </div>
-                    <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon animated-loader" style="width: 30px; height: 30px;"></div>
+                    <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
                 </div>
             </div>
-            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator }"></div>
+            <div class="documents-select" data-bind="with: selectedCollection, visible: hasAnyDocumentsSelected() && !hasAllDocumentsSelected() && isAnyDocumentsAutoSelected()">
+                You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> documents.
+                <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
+                    Select all <strong data-bind="text: documentCount"></strong> documents in <span data-bind="text: name"></span>
+                </span>
+            </div>
+            <div class="documents-select" data-bind="with: selectedCollection, visible: hasAllDocumentsSelected() && isAllDocumentsAutoSelected()">
+                You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> documents in
+                <span data-bind="text: name"></span>.
+                <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
+                    Clear selection
+                </span>
+            </div>
+            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyDocumentsAutoSelected: isAnyDocumentsAutoSelected, isAllDocumentsAutoSelected: isAllDocumentsAutoSelected }"></div>
         </div>
     </div>
 </div>
 
 <div id="collections-context-menu">
-    <ul class="dropdown-menu" role="menu">
-        <li data-bind="click: $root.deleteCollection"><a tabindex="-1" href="#">Delete</a></li>
+    <ul class="dropdown-menu" role="menu" data-bind="with: rightClickedCollection, visible: isRightClickedCollectionRegular">
+        <li data-bind="click: $root.deleteCollection.bind($root, $data)"><a tabindex="-1" href="#">Delete <span data-bind="text: name"></span></a></li>
     </ul>
 </div>

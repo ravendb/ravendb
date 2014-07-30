@@ -29,9 +29,10 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase database;
 
-		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+		protected override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
 		{
 			EnsuredDatabaseExists = true;
+			return new CompletedTask();
 		}
 
         /// <summary>
@@ -177,7 +178,7 @@ namespace Raven.Database.Smuggler
 	        return database.Documents.Get(key, null);
 	    }
 
-	    protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
+	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
 		{
 			const int dummy = 0;
 			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, take), lastEtag, CancellationToken.None)
@@ -185,7 +186,7 @@ namespace Raven.Database.Smuggler
 				.Cast<RavenJObject>()
 				.GetEnumerator();
 
-			return new AsyncEnumeratorBridge<RavenJObject>(enumerator);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
 		}
 
 		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
@@ -263,7 +264,7 @@ namespace Raven.Database.Smuggler
 
 			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
 			bulkInsertBatch = new List<JsonDocument>();
-			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true}, batchToSave, Guid.NewGuid());
+			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true}, batchToSave, Guid.NewGuid(), CancellationToken.None);
 		}
 
 		protected override Task PutTransformer(string transformerName, RavenJToken transformer)

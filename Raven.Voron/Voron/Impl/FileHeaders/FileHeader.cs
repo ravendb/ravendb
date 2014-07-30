@@ -60,5 +60,11 @@ namespace Voron.Impl.FileHeaders
 		/// </summary>
 	    [FieldOffset(188)] 
 		public IncrementalBackupInfo IncrementalBackup;
-    }
+
+		/// <summary>
+		/// Crc of last shipped transaction
+		/// </summary>
+		[FieldOffset(212)]
+		public uint PreviousTransactionCrc;
+	}
 }

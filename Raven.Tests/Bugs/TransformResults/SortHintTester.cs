@@ -20,6 +20,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new Answers_ByAnswerEntity().Execute(store);
+				new Answers_ByAnswerEntityTransformer().Execute(store);
 
 				store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
 				CreateEntities(store);
@@ -37,8 +38,8 @@ namespace Raven.Tests.Bugs.TransformResults
 						   .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
 						   .OrderBy(x => x.Content)
 						   .Where(x => x.Content == (Content))
+						   .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						   .Skip(0).Take(1)
-						   .As<AnswerEntity>()
 						   .SingleOrDefault();
 
 					for (int i = 0; i < 100; i++)
@@ -47,8 +48,8 @@ namespace Raven.Tests.Bugs.TransformResults
 							.Statistics(out stats)
 							.Where(x => x.Content == (Content))
 							.OrderBy(x => x.Content)
+							.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 							.Skip(0).Take(1)
-						   .As<AnswerEntity>()
 						   .SingleOrDefault();
 
 						Assert.NotNull(answerInfo);

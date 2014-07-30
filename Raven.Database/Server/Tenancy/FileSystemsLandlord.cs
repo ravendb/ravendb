@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down filesystem {0} because the tenant fs document has been updated or removed", dbName);
-                Cleanup(dbName, skipIfActive: false);
+				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
 
@@ -85,12 +85,10 @@ namespace Raven.Database.Server.Tenancy
             return document;
         }
 
-
         public bool TryGetFileSystem(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
             return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
         }
-
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
@@ -118,7 +116,8 @@ namespace Raven.Database.Server.Tenancy
 
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-                var fs = new RavenFileSystem(config, tenantId);
+				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+				var fs = new RavenFileSystem(config, tenantId, transportState);
                 AssertLicenseParameters();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.

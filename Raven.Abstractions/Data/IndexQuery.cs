@@ -142,16 +142,10 @@ namespace Raven.Abstractions.Data
 		public QueryOperator DefaultOperator { get; set; }
 
 		/// <summary>
-		/// If set to true, RavenDB won't execute the transform results function
-		/// returning just the raw results instead
-		/// </summary>
-		public bool SkipTransformResults { get; set; }
-
-        /// <summary>
         /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
         /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
         /// called just once for each document in the result set
-        /// </summary>
+		/// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
 		/// <summary>
@@ -185,12 +179,12 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string ResultsTransformer { get; set; }
 
-        /// <summary>
+		/// <summary>
 		/// Whatever we should disable caching of query results
 		/// </summary>
 		public bool DisableCaching { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Allow to skip duplicate checking during queries
 		/// </summary>
 		public bool SkipDuplicateChecking { get; set; }
@@ -250,7 +244,7 @@ namespace Raven.Abstractions.Data
 
 			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
 				path.Append("&pageSize=").Append(PageSize);
-
+			
 
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                 path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
@@ -264,13 +258,6 @@ namespace Raven.Abstractions.Data
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-
-			
-			
-            if (SkipTransformResults)
-            {
-                path.Append("&skipTransformResults=true");
-            }
 
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
@@ -362,19 +349,18 @@ namespace Raven.Abstractions.Data
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) && 
-                   Cutoff.Equals(other.Cutoff) &&
+                   Cutoff.Equals(other.Cutoff) && 
 				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
 				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-				   Equals(CutoffEtag, other.CutoffEtag) && 
+                   Equals(CutoffEtag, other.CutoffEtag) && 
                    String.Equals(DefaultField, other.DefaultField) && 
                    DefaultOperator == other.DefaultOperator && 
-                   SkipTransformResults.Equals(other.SkipTransformResults) && 
                    Equals(SkippedResults, other.SkippedResults) && 
                    DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
                    Equals(HighlightedFields, other.HighlightedFields) && 
                    Equals(HighlighterPreTags, other.HighlighterPreTags) && 
                    Equals(HighlighterPostTags, other.HighlighterPostTags) && 
-                   String.Equals(ResultsTransformer, other.ResultsTransformer) &&
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
 				   ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching);
         }
@@ -403,7 +389,6 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;
-                hashCode = (hashCode * 397) ^ SkipTransformResults.GetHashCode();
                 hashCode = (hashCode * 397) ^ (SkippedResults != null ? SkippedResults.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
                 hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);

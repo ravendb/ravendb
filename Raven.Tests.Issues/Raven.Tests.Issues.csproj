@@ -23,6 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -94,9 +95,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Bundles\Raven.Bundles.UniqueConstraints\Util.cs">
-      <Link>Util.cs</Link>
-    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
@@ -134,6 +132,7 @@
     <Compile Include="RavenDB1508.cs" />
     <Compile Include="RavenDB1519.cs" />
     <Compile Include="RavenDb1962.cs" />
+    <Compile Include="RavenDB2408.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryMapReduceAnalyzedTests.cs" />
@@ -206,6 +205,8 @@
     <Compile Include="RavenDB_1489.cs" />
     <Compile Include="RavenDB_1493.cs" />
     <Compile Include="RavenDB_1497.cs" />
+    <Compile Include="RavenDB_2514.cs" />
+    <Compile Include="RavenDB_2516.cs" />
     <Compile Include="RavenDB_1517.cs" />
     <Compile Include="RavenDB_1520.cs" />
     <Compile Include="RavenDB_1533.cs" />
@@ -273,6 +274,10 @@
     <Compile Include="RavenDB_2435.cs" />
     <Compile Include="RavenDB_2440.cs" />
     <Compile Include="RavenDB_2458.cs" />
+    <Compile Include="RavenDB_2486.cs" />
+    <Compile Include="RavenDB_2495.cs" />
+    <Compile Include="RavenDB_2496.cs" />
+    <Compile Include="RavenDB_2502.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />
@@ -396,8 +401,8 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
@@ -411,4 +416,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

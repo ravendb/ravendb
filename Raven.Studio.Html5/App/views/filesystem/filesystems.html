@@ -34,7 +34,7 @@
             <div class="filesystems-container" data-bind="foreach: fileSystems">
                 <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFileSystem($data); return true; }, css: { selected: isSelected }">
                     <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
-                    <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>
+                    <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCountText"></span>
                 </div>
             </div>
         </div>

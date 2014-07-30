@@ -41,11 +41,7 @@ namespace Raven.Client.FileSystem
         private const int DefaultNumberOfCachedRequests = 2048;
         private static HttpJsonRequestFactory GetHttpJsonRequestFactory ()
         {
-#if !NETFX_CORE
               return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-#else
-			  return new HttpJsonRequestFactory();
-#endif
         }
 
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens = new ConcurrentDictionary<Guid, CancellationTokenSource>();
@@ -408,7 +404,7 @@ namespace Raven.Client.FileSystem
                 var response = await request.ReadResponseJsonAsync();
 
                 var metadata = request.ResponseHeaders.HeadersToObject();
-                metadata["etag"] = new RavenJValue(Guid.Parse(request.ResponseHeaders["ETag"].Trim('\"')));
+                metadata["etag"] = new RavenJValue(Guid.Parse(request.ResponseHeaders[Constants.MetadataEtagField].Trim('\"')));
                 return metadata;
             }
             catch (Exception e)
@@ -1047,7 +1043,7 @@ namespace Raven.Client.FileSystem
             }
 
             public async Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId,
-                                                   IEnumerable<HistoryItem> remoteHistory, string remoteServerUrl)
+                                                   RavenJObject remoteMetadata, string remoteServerUrl)
             {
                 var requestUriString =
                     String.Format("{0}/synchronization/applyConflict/{1}?remoteVersion={2}&remoteServerId={3}&remoteServerUrl={4}",
@@ -1060,7 +1056,7 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    await request.WriteWithObjectAsync(remoteHistory);
+                    await request.WriteAsync(remoteMetadata);
                 }
                 catch (Exception e)
                 {
@@ -1290,7 +1286,7 @@ namespace Raven.Client.FileSystem
                 request.AddHeaders(metadata);
                 request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
                 // REVIEW: (Oren) and also causes this.
-                request.AddHeader("ETag", "\"" + metadata.Value<string>("ETag") + "\"");
+                request.AddHeader(Constants.MetadataEtagField, "\"" + metadata.Value<string>(Constants.MetadataEtagField) + "\"");
 
                 try
                 {

@@ -138,9 +138,7 @@ namespace Raven.Client.Document
 				if (fieldInfo == null)
 					return;
 
-#if !NETFX_CORE
 				SetPropertyOrField(identityProperty.Type(), entity, val => fieldInfo.SetValue(entity, val), id);
-#endif
 			}
 		}
 

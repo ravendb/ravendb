@@ -72,9 +72,7 @@ namespace Raven.Client.Document.SessionOperations
 		}
 
 		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
-#if !NETFX_CORE
 			RegexOptions.Compiled|
-#endif
  RegexOptions.IgnorePatternWhitespace);
 
 		private void AssertNotQueryById()

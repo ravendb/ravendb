@@ -63,6 +63,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getSyncStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
+    <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
@@ -103,7 +104,6 @@
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStoredQueriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />
@@ -120,6 +120,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\testSqlConnectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\toggleDatabaseDisabledCommand.ts" />
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
@@ -159,10 +160,13 @@
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
     <TypeScriptCompile Include="App\models\luceneField.ts" />
+    <TypeScriptCompile Include="App\models\predefinedSqlConnection.ts" />
     <TypeScriptCompile Include="App\models\querySort.ts" />
     <TypeScriptCompile Include="App\models\resource.ts" />
     <TypeScriptCompile Include="App\models\counter\counterServerValue.ts" />
     <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
+    <TypeScriptCompile Include="App\models\sqlReplicationConnections.ts" />
+    <TypeScriptCompile Include="App\models\sqlReplicationSimulatedCommand.ts" />
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\models\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
@@ -179,6 +183,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\disableDatabaseToggleConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\editSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFolderInFilesystem.ts" />
@@ -242,6 +247,7 @@
     </TypeScriptCompile>
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationSimulationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
     <TypeScriptCompile Include="App\viewmodels\toggleIndexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
@@ -294,6 +300,12 @@
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugMapCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugReduceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexDebugAfterReduceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexDebugDocsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getReplicationTopology.ts" />
+    <TypeScriptCompile Include="App\commands\getRunningTasksCommand.ts" />
+    <TypeScriptCompile Include="App\commands\killRunningTaskCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -332,16 +344,30 @@
     <TypeScriptCompile Include="App\viewmodels\metricsPrefetches.ts" />
     <TypeScriptCompile Include="App\models\transformerQuery.ts" />
     <TypeScriptCompile Include="App\common\jsonUtil.ts" />
+    <TypeScriptCompile Include="App\common\chunkFetcher.ts" />
+    <TypeScriptCompile Include="App\commands\resolveMergeCommand.ts" />
+    <TypeScriptCompile Include="App\common\svgDownloader.ts" />
+    <TypeScriptCompile Include="App\common\jsonDownloader.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\runningTasks.ts" />
+    <TypeScriptCompile Include="App\viewmodels\infoPackage.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\infoPackage.html" />
+    <Content Include="App\views\runningTasks.html" />
+    <Content Include="App\views\disableDatabaseToggleConfirm.html" />
+    <Content Include="App\views\visualizerImport.html" />
+    <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
     <Content Include="App\views\sqlReplicationSimulationDialog.html" />
+    <Content Include="App\views\sqlReplicationConnectionStringsManagement.html" />
     <Content Include="App\views\visualizer.html" />
     <Content Include="App\views\metricsPrefetches.html" />
     <Content Include="App\views\metricsRequests.html" />
@@ -480,10 +506,15 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
+      <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
-    <Content Include="Content\bootstrap.css" />
+    <Content Include="Content\bootstrap.css">
+      <DependentUpon>bootstrap.less</DependentUpon>
+    </Content>
+    <Content Include="Content\bootstrap.min.css">
+      <DependentUpon>bootstrap.css</DependentUpon>
+    </Content>
     <Content Include="Content\durandal.css" />
     <Content Include="Content\font-awesome.css" />
     <Content Include="Content\images\icon.png" />
@@ -491,6 +522,7 @@
     <Content Include="Content\images\ios-startup-image-portrait.png" />
     <Content Include="Content\images\logo.png" />
     <Content Include="Content\images\raven.png" />
+    <Content Include="Content\images\some-checked.png" />
     <Content Include="Content\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="Content\images\ui-bg_flat_75_ffffff_40x100.png" />
     <Content Include="Content\images\ui-bg_glass_55_fbf9ee_1x400.png" />
@@ -617,6 +649,8 @@
     <Content Include="Scripts\ace\model\editor.js" />
     <Content Include="Scripts\ace\mode\behaviour.js" />
     <Content Include="Scripts\ace\mode\behaviour\cstyle.js" />
+    <Content Include="Scripts\ace\mode\csharp.js" />
+    <Content Include="Scripts\ace\mode\csharp_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\doc_comment_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\folding\asciidoc.js" />
     <Content Include="Scripts\ace\mode\folding\c9search.js" />
@@ -726,6 +760,7 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
@@ -735,6 +770,9 @@
       <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="readme-optimized-build.md" />
+    <Content Include="Content\bootstrap.less" />
+    <Content Include="Content\variables.less" />
+    <Content Include="Content\functions.less" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
@@ -775,6 +813,7 @@
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\d3\nvd3.d.ts" />
+    <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
@@ -869,7 +908,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>56397</DevelopmentServerPort>
+          <DevelopmentServerPort>59658</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
@@ -894,11 +933,12 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

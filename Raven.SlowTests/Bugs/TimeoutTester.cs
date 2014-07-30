@@ -21,6 +21,7 @@ namespace Raven.SlowTests.Bugs
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new Answers_ByAnswerEntity().Execute(store);
+				new Answers_ByAnswerEntityTransformer().Execute(store);
 				var answerId = "";
 
 				store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
@@ -36,8 +37,8 @@ namespace Raven.SlowTests.Bugs
 						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
 						.OrderBy(x => x.Content)
 						.Where(x => x.Content == (content))
+						.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 						.Skip(0).Take(1)
-						.As<AnswerEntity>()
 						.FirstOrDefault();
 
 					Assert.NotNull(answerInfo);
@@ -57,8 +58,8 @@ namespace Raven.SlowTests.Bugs
 								{
 									var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
 										.OrderBy(x => x.Content)
+										.TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
 										.Skip(0).Take(1)
-										.As<AnswerEntity>()
 										.FirstOrDefault();
 
 									Assert.NotNull(answerInfo);

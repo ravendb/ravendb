@@ -8,9 +8,6 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using Raven.Abstractions.Data;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 
 namespace Raven.Client.Connection
 {
@@ -18,16 +15,12 @@ namespace Raven.Client.Connection
     {
         public static Etag GetEtagHeader(this NameValueCollection headers)
         {
-            return EtagHeaderToEtag(headers["ETag"]);
+            return EtagHeaderToEtag(headers[Constants.MetadataEtagField]);
         }
 
         public static Etag GetEtagHeader(this HttpWebResponse response)
         {
-#if NETFX_CORE
-			return EtagHeaderToEtag(response.Headers["ETag"]);
-#else
-            return EtagHeaderToEtag(response.GetResponseHeader("ETag"));
-#endif
+            return EtagHeaderToEtag(response.GetResponseHeader(Constants.MetadataEtagField));
         }
 
         public static Etag GetEtagHeader(this HttpResponseMessage response)
@@ -37,12 +30,12 @@ namespace Raven.Client.Connection
 
         public static Etag GetEtagHeader(this GetResponse response)
         {
-            return EtagHeaderToEtag(response.Headers["ETag"]);
+            return EtagHeaderToEtag(response.Headers[Constants.MetadataEtagField]);
         }
 
         public static Etag GetEtagHeader(this HttpJsonRequest request)
         {
-            return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
+            return EtagHeaderToEtag(request.ResponseHeaders[Constants.MetadataEtagField]);
         }
 
         internal static Etag EtagHeaderToEtag(string responseHeader)

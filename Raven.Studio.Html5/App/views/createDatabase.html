@@ -41,31 +41,31 @@
                 </div>
                 <div class="col-md-5">
                     <div>
-                      <label>Bundles:</label>
+                        <label>Bundles:</label>
                     </div>
                     <div class="btn-group-vertical" data-toggle="buttons">
-                        <label class="btn btn-primary" data-bind="click: toggleCompressionBundle">
+                        <label class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression') }">
                             <input type="checkbox"> Compression
                         </label>
-                        <label id="encryptionCheckbox" class="btn btn-primary" data-bind="click: toggleEncryptionBundle">
+                        <label class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption') }">
                             <input type="checkbox"> Encryption
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleExpirationBundle">
+                        <label class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration') }">
                             <input type="checkbox"> Expiration
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleQuotasBundle">
+                        <label class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas') }">
                             <input type="checkbox"> Quotas
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleReplicationBundle">
+                        <label class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication') }">
                             <input type="checkbox"> Replication
                         </label>
                         <label class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle">
                             <input type="checkbox"> Sql Replication
                         </label>
-                        <label class="btn btn-primary" data-bind="click: toggleVersioningBundle">
+                        <label class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning') }">
                             <input type="checkbox"> Versioning
                         </label>
-                        <label class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle">
+                        <label class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup') }">
                             <input type="checkbox"> Periodic Export
                         </label>
                         <label class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">

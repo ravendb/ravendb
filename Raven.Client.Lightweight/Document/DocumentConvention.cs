@@ -30,9 +30,6 @@ using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
-#if NETFX_CORE
-using Raven.Client.WinRT.MissingFromWinRT;
-#endif
 
 namespace Raven.Client.Document
 {
@@ -52,10 +49,8 @@ namespace Raven.Client.Document
 
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
-#if !NETFX_CORE
 		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
 			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
-#endif
 
 		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
 			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
@@ -90,9 +85,7 @@ namespace Raven.Client.Document
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
 			{
-#if !NETFX_CORE
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-#endif
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
@@ -131,11 +124,7 @@ namespace Raven.Client.Document
 
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
 		{
-#if NETFX_CORE
-			var count = typeTagName.ToCharArray().Count(char.IsUpper);
-#else
 			var count = typeTagName.Count(char.IsUpper);
-#endif
 
 			if (count <= 1) // simple name, just lower case it
 				return typeTagName.ToLowerInvariant();
@@ -286,7 +275,6 @@ namespace Raven.Client.Document
 	      return this.GetTypeTagName(entity.GetType());
 	   }
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>
@@ -308,7 +296,6 @@ namespace Raven.Client.Document
 
 			return DocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
-#endif
 
 		public Task<string> GenerateDocumentKeyAsync(string dbName, IAsyncDatabaseCommands databaseCommands, object entity)
 		{
@@ -319,12 +306,10 @@ namespace Raven.Client.Document
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
 
-#if !NETFX_CORE
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
 				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
 			}
-#endif
 
 			return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
@@ -414,8 +399,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
-
-#if !NETFX_CORE
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
@@ -444,7 +427,6 @@ namespace Raven.Client.Document
 
 			return this;
 		}
-#endif
 
 		/// <summary>
 		/// Register an async id convention for a single type (and all of its derived types.
@@ -541,10 +523,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Func<object, string, string> FindIdValuePartForValueTypeConversion { get; set; }
 
-		/// <summary>
-		/// Saves Enums as integers and instruct the Linq provider to query enums as integer values.
-		/// </summary>
-		public bool SaveEnumsAsIntegers { get; set; }
 
 		/// <summary>
 		/// Translate the type tag name to the document key prefix
@@ -666,45 +644,6 @@ namespace Raven.Client.Document
 			return customRangeTypes.Contains(type);
 		}
 
-		public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
-
-		private readonly Dictionary<MemberInfo, CustomQueryTranslator> customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
-
-		public void RegisterCustomQueryTranslator<T>(Expression<Func<T, object>> member, CustomQueryTranslator translator)
-		{
-			var body = member.Body as UnaryExpression;
-			if (body == null)
-				throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
-
-			var info = GetMemberInfoFromExpression(body.Operand);
-
-			if (!customQueryTranslators.ContainsKey(info))
-				customQueryTranslators.Add(info, translator);
-		}
-
-		internal LinqPathProvider.Result TranslateCustomQueryExpression(LinqPathProvider provider, Expression expression)
-		{
-			var member = GetMemberInfoFromExpression(expression);
-
-			CustomQueryTranslator translator;
-			if (!customQueryTranslators.TryGetValue(member, out translator))
-				return null;
-
-			return translator.Invoke(provider, expression);
-		}
-
-		private static MemberInfo GetMemberInfoFromExpression(Expression expression)
-		{
-			var callExpression = expression as MethodCallExpression;
-			if (callExpression != null)
-				return callExpression.Method;
-
-			var memberExpression = expression as MemberExpression;
-			if (memberExpression != null)
-				return memberExpression.Member;
-
-			throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
-		}
 	}
 
 	public enum QueryValueConvertionType

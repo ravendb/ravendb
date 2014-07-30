@@ -8,9 +8,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Raven.Client.Document.Batches;
-#if !NETFX_CORE
 using System.Transactions;
-#endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -558,11 +556,7 @@ more responsive application.
 		/// <returns></returns>
 		static object GetDefaultValue(Type type)
 		{
-#if !NETFX_CORE
 			return type.IsValueType ? Activator.CreateInstance(type) : null;
-#else
-            return null;
-#endif
 		}
 
 		/// <summary>
@@ -870,12 +864,11 @@ more responsive application.
 		/// </summary>
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
-#if !NETFX_CORE
 			if (documentStore.HasJsonRequestFactory && Conventions.ShouldSaveChangesForceAggressiveCacheCheck &&  batchResults.Count != 0)
 			{
 				documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);
 			}
-#endif
+
 			for (var i = saveChangesData.DeferredCommandsCount; i < batchResults.Count; i++)
 			{
 				var batchResult = batchResults[i];
@@ -925,10 +918,9 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-#if !NETFX_CORE
 			if (documentStore.EnlistInDistributedTransactions)
 				TryEnlistInAmbientTransaction();
-#endif
+
             PrepareForEntitiesDeletion(result, null);
 			PrepareForEntitiesPuts(result);
 
@@ -1048,7 +1040,6 @@ more responsive application.
 			deletedEntities.Clear();
 		}
 
-#if !NETFX_CORE
 		protected virtual void TryEnlistInAmbientTransaction()
 		{
 
@@ -1079,8 +1070,6 @@ more responsive application.
 			}
 			hasEnlisted = true;
 		}
-#endif
-
 
 		/// <summary>
 		/// Mark the entity as read only, change tracking won't apply 

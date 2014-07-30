@@ -22,11 +22,7 @@ namespace Raven.Client.FileSystem
         /// Gets the shared operations headers.
         /// </summary>
         /// <value>The shared operations headers.</value>
-#if !NETFX_CORE
         NameValueCollection SharedOperationsHeaders { get; }
-#else
-		IDictionary<string,string> SharedOperationsHeaders { get; }
-#endif
 
         /// <summary>
         /// Get the <see cref="HttpJsonRequestFactory"/> for this store

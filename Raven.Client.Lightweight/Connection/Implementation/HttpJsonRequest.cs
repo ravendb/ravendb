@@ -1,5 +1,3 @@
-using Raven.Client.Extensions;
-#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -7,27 +5,18 @@ using Raven.Client.Extensions;
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Util;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -567,7 +556,7 @@ namespace Raven.Client.Connection
 
 				var headerName = prop.Key;
 				var value = prop.Value.Value<object>().ToString();
-				if (headerName == "ETag")
+                if (headerName == Constants.MetadataEtagField)
 				{
 					headerName = "If-None-Match";
 					if (!value.StartsWith("\""))
@@ -827,4 +816,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

@@ -20,23 +20,21 @@
                     <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <!-- ko foreach: indexes -->
+                    <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
-                    <li class="divider"></li>
-                    <!-- ko foreach: collectionNames -->
+                    <li class="divider" data-bind="visible: collectionNames.length"></li>
+                    <!-- ko foreach: collectionNamesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + $data)">
                         <a href="#">
-                            <span class="text-muted">dynamic/</span>
-                            <span data-bind="text: $data"></span>
+                            <span data-bind="text: 'dynamic/' + $data"></span>
                         </a>
                     </li>
                     <!-- /ko -->
                     <li class="divider"></li>
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic')">
                         <a href="#">
-                            <span class="text-muted">dynamic/</span>
-                            <span>All Documents</span>
+                            <span>dynamic/All Documents</span>
                         </a>
                     </li>
                 </ul>
@@ -84,36 +82,40 @@
             </a>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentQueries().length > 0">
                 Recent Queries <span class="caret"></span>
             </button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: recentQueries">
                 <li>
                     <a href="#" data-bind="click: $root.runRecentQuery.bind($root, $data)">
                         <span data-bind="text: IndexName === 'dynamic' ? 'All Documents' : IndexName"></span>
-                        <span data-bind="visible: $data.QueryText">
+                        <span data-bind="visible: QueryText">
                             <span class="text-muted">|</span>
                             <span data-bind="text: QueryText"></span>
                         </span>
-                        <span data-bind="visible: $data.Sorts && $data.Sorts.length">
-                            <span class="text-muted">| sort by</span>
-                            <span data-bind="text: $root.getRecentQuerySortsText($index())"></span>
+                        <span data-bind="visible: Sorts.length, with: Sorts">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: 'sort by ' + $root.getRecentQuerySortText($data)"></span>
                         </span>
-                        <span data-bind="visible: $data.TransformerQuery">
-                            <span class="text-muted">| transform by</span>
-                            <span data-bind="text: $root.getStoredQueryTransformerName($data) + $root.getStoredQueryTransformerParameters($data)"></span>
+                        <span data-bind="with: TransformerQuery">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
                         </span>
-                        <span data-bind="visible: $data.ShowFields">
+                        <span data-bind="visible: UseAndOperator == false">
+                            <span class="text-muted">|</span>
+                            <span>OR operator</span>
+                        </span>
+                        <span data-bind="visible: UseAndOperator">
+                            <span class="text-muted">|</span>
+                            <span>AND operator</span>
+                        </span>
+                        <span data-bind="visible: ShowFields">
                             <span class="text-muted">|</span>
                             <span>show fields</span>
                         </span>
-                        <span data-bind="visible: $data.ShowFields">
+                        <span data-bind="visible: IndexEntries">
                             <span class="text-muted">|</span>
                             <span>index entries</span>
-                        </span>
-                        <span data-bind="visible: $data.ShowFields">
-                            <span class="text-muted">|</span>
-                            <span>AND operator</span>
                         </span>
                     </a>
                 </li>

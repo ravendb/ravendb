@@ -1,4 +1,6 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 
@@ -29,11 +31,26 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("transaction/prepare")]
 		[Route("databases/{databaseName}/transaction/prepare")]
-		public HttpResponseMessage Prepare()
+		public async Task<HttpResponseMessage> Prepare()
 		{
 			var txId = GetQueryStringValue("tx");
 
-			Database.PrepareTransaction(txId);
+			var resourceManagerIdStr = GetQueryStringValue("resourceManagerId");
+
+			Guid resourceManagerId;
+			if (Guid.TryParse(resourceManagerIdStr, out resourceManagerId))
+			{
+				var recoveryInformation = await Request.Content.ReadAsByteArrayAsync();
+				if (recoveryInformation == null || recoveryInformation.Length == 0)
+					throw new InvalidOperationException("Recovery information is mandatory if resourceManagerId is specified");
+
+				Database.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
+			}
+			else
+			{
+				Database.PrepareTransaction(txId);
+			}
+
 			return GetMessageWithObject(new { Prepared = txId });
 		}
 

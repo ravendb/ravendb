@@ -1,4 +1,3 @@
-#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="RavenClientEnlistment.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -52,16 +51,26 @@ namespace Raven.Client.Document
 			{
 
 				onTxComplete();
-				ctx.CreateFile(TransactionRecoveryInformationFileName, stream =>
+			    byte[] recoveryInformation = ctx.GetRecoveryInformation(preparingEnlistment);
+			    ctx.CreateFile(TransactionRecoveryInformationFileName, stream =>
 				{
 					var writer = new BinaryWriter(stream);
 					writer.Write(session.ResourceManagerId.ToString());
 					writer.Write(transaction.LocalIdentifier);
 					writer.Write(session.DatabaseName ?? "");
-					writer.Write(preparingEnlistment.RecoveryInformation());
+				    writer.Write(recoveryInformation);
 				});
 
-				session.PrepareTransaction(transaction.LocalIdentifier); 
+			    if (recoveryInformation == null)
+			    {
+			        session.PrepareTransaction(transaction.LocalIdentifier);
+			    }
+			    else
+			    {
+                    session.PrepareTransaction(transaction.LocalIdentifier,
+                        session.ResourceManagerId,
+                        recoveryInformation);    
+			    }
 			}
 			catch (Exception e)
 			{
@@ -184,4 +193,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -314,7 +313,7 @@ namespace Raven.Abstractions.Smuggler
                     var maxRecords = options.Limit - totalCount;
                     if (maxRecords > 0 && reachedMaxEtag == false)
 			        {
-                        using (var documents = await GetDocuments(src, lastEtag, options.BatchSize))
+                        using (var documents = await GetDocuments(src, lastEtag, Math.Min(options.BatchSize,maxRecords)))
 			            {
 			                var watch = Stopwatch.StartNew();
 
@@ -322,7 +321,7 @@ namespace Raven.Abstractions.Smuggler
 			                {
 			                    hasDocs = true;
 			                    var document = documents.Current;
-                                
+
 			                    var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
 				                Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
@@ -882,4 +881,3 @@ namespace Raven.Abstractions.Smuggler
         public string FilePath { get; set; }
     }
 }
-#endif
