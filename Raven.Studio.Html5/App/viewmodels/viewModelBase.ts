@@ -37,23 +37,38 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var db = this.activeDatabase();
+        var resource = appUrl.getResource();
 
-        // we only want to prompt warning to system db if we are in the databases section
-        if (!!db && db.isSystem) {
-            if (viewModelBase.isConfirmedUsingSystemDatabase) {
-                return true;
+        if (resource instanceof database) {
+            var db = this.activeDatabase();
+
+            // we only want to prompt warning to system db if we are in the databases section
+            if (!!db && db.isSystem) {
+                if (viewModelBase.isConfirmedUsingSystemDatabase) {
+                    return true;
+                }
+
+                return this.promptNavSystemDb();
+            }
+            else if (!!db && db.disabled()) {
+                messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
+                return { redirect: appUrl.forDatabases() };
             }
 
-            return this.promptNavSystemDb();
+            viewModelBase.isConfirmedUsingSystemDatabase = false;
         }
-        else if (!!db && db.disabled()) {
-            messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
-            return { redirect: appUrl.forDatabases() };
+        else if (resource instanceof filesystem) {
+            var fs = this.activeFilesystem();
+
+            if (!!fs && fs.disabled()) {
+                messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system when it's disabled.");
+                return { redirect: appUrl.forFilesystems() };
+            }
+        }
+        else if (resource instanceof counterStorage) {
+            
         }
 
-        viewModelBase.isConfirmedUsingSystemDatabase = false;
-        
         return true;
     }
 
@@ -99,6 +114,9 @@ class viewModelBase {
      * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
      */
     detached() {
+        this.activeDatabase.unsubscribeFrom("ActivateDatabase");
+        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
+        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
@@ -108,9 +126,6 @@ class viewModelBase {
      * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
      */
     deactivate() {
-        this.activeDatabase.unsubscribeFrom("ActivateDatabase");
-        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
-        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
     }

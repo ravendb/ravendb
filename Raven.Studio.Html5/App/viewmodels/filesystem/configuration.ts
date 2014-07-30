@@ -3,17 +3,17 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import ace = require("ace/ace");
-import shell = require("viewmodels/shell");
 
-import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require("viewmodels/shell");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");
-import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
+import filesystem = require("models/filesystem/filesystem");
 import configurationKey = require("models/filesystem/configurationKey");
+import changeSubscription = require('models/changeSubscription');
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import deleteConfigurationKeys = require("viewmodels/filesystem/deleteConfigurationKeys");
 import messagePublisher = require("common/messagePublisher");
 import Pair = require("common/pair");
+import messagePublisher = require("common/messagePublisher");
 
 class configuration extends viewModelBase {
 
@@ -28,12 +28,11 @@ class configuration extends viewModelBase {
     selectedKeyValue = ko.observable<Pair<string, string>>();
     currentKey = ko.observable<configurationKey>();
     configurationEditor: AceAjax.Editor;
-    configurationKeyText = ko.observable<string>();
+    configurationKeyText = ko.observable<string>('').extend({ required: true });
     isBusy = ko.observable(false);
     isSaveEnabled: KnockoutComputed<boolean>;
-    loadedConfiguration = ko.observable('');
-    subscription: any;
-
+    editor: AceAjax.Editor;
+    
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -41,7 +40,6 @@ class configuration extends viewModelBase {
 
         // When we programmatically change a configuration doc, push it into the editor.
         //this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
-
         this.text = ko.computed({
             read: () => {
                 return this.configurationKeyText();
@@ -53,41 +51,18 @@ class configuration extends viewModelBase {
         });
     }
 
-    canActivate(args: any) {
+/*    canActivate(args: any) {
         return true;
-    }
+    }*/
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
 
         this.appUrls = appUrl.forCurrentFilesystem();
 
-        if (!this.subscription) {
-            this.subscription = shell.currentResourceChangesApi()
-                .watchFsConfig((e: filesystemConfigNotification) => {
-                    switch (e.Action) {
-                        case filesystemConfigurationChangeAction.Set:
-                            this.addKey(e.Name);
-                            break;
-                        case filesystemConfigurationChangeAction.Delete:
-                            this.removeKey(e.Name);
-                            break;
-                        default:
-                            console.error("Unknown notification action.");
-
-                    }
-                });
-        }
-
-        if (this.currentKey()) {
-            this.loadedConfiguration(this.currentKey().key);
-        }
-
         this.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
 
-        this.isSaveEnabled = ko.computed(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     attached() {
@@ -103,6 +78,44 @@ class configuration extends viewModelBase {
         this.initializeDocEditor();
         this.configurationEditor.focus();
         this.setupKeyboardShortcuts();
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        var editorElement = $("#configurationEditor");
+        if (editorElement.length > 0) {
+            this.editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+        this.focusOnEditor();
+    }
+
+    detached() {
+        super.detached();
+        this.selectedKey.unsubscribeFrom("ActivateConfigurationKey");
+    }
+
+    private focusOnEditor() {
+        if (!!this.editor) {
+            this.editor.focus();
+        }
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [ shell.currentResourceChangesApi().watchFsConfig((e: filesystemConfigNotification) => this.processFsConfigNotification(e)) ];
+    }
+
+    processFsConfigNotification(e: filesystemConfigNotification) {
+        switch (e.Action) {
+            case filesystemConfigurationChangeAction.Set:
+                this.addKey(e.Name);
+                break;
+            case filesystemConfigurationChangeAction.Delete:
+                this.removeKey(e.Name);
+                break;
+            default:
+                console.error("Unknown notification action.");
+        }
     }
 
     setupKeyboardShortcuts() {
@@ -152,13 +165,13 @@ class configuration extends viewModelBase {
             this.isBusy(true);
             selected.getValues().done(data => {
                 this.configurationKeyText(data);
-                this.loadedConfiguration(this.selectedKey().key);
             }).always(() => {
                 this.dirtyFlag().reset();
                 this.isBusy(false);
             });
 
             this.currentKey(selected);
+            this.focusOnEditor();
         }
     }
 
@@ -167,11 +180,24 @@ class configuration extends viewModelBase {
     }
 
     save() {
-        var jsonConfigDoc = JSON.parse(this.configurationKeyText());
-        var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
-        var saveTask = saveCommand.execute();
-        saveTask.done((result) => {
-            this.dirtyFlag().reset(); // Resync Changes
+        var message = "";
+        try {
+            var jsonConfigDoc = JSON.parse(this.configurationKeyText());
+        } catch (e) {
+            if (jsonConfigDoc == undefined) {
+                message = "The configuration key data isn't a legal JSON expression!";
+            }
+            this.focusOnEditor();
+        }
+        if (message != "") {
+            messagePublisher.reportError(message, undefined, undefined, false);
+            return;
+        }
+
+        require(["commands/filesystem/saveConfigurationCommand"], saveConfigurationCommand => {
+            var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
+            var saveTask = saveCommand.execute();
+            saveTask.done(() => this.dirtyFlag().reset());
         });
     }
 
@@ -180,8 +206,8 @@ class configuration extends viewModelBase {
     }
 
     deleteConfiguration() {
-        require(["viewmodels/filesystem/deleteConfigurationKeys"], deleteConfigurationKey => {
-            var deleteConfigurationKeyViewModel: deleteConfigurationKeys = new deleteConfigurationKeys(this.activeFilesystem(), [this.currentKey()]);
+        require(["viewmodels/filesystem/deleteConfigurationKeys"], deleteConfigurationKeys => {
+            var deleteConfigurationKeyViewModel = new deleteConfigurationKeys(this.activeFilesystem(), [this.currentKey()]);
             deleteConfigurationKeyViewModel
                 .deletionTask
                 .done(() => {
@@ -210,28 +236,33 @@ class configuration extends viewModelBase {
     }
 
     addKey(key: string) {
-        var foundKey = this.keys().filter((x: configurationKey) => { return (x.key == key) });
-        if (foundKey.length <= 0) {
+        var foundKey = this.keys.first((configKey: configurationKey) => configKey.key == key);
+
+        if (!foundKey) {
             var newKey = new configurationKey(this.activeFilesystem(), key);
             this.keys.push(newKey);
-            this.selectKey(newKey);
+            return newKey;
         }
+
+        return foundKey;
     }
 
     newConfigurationKey() {
-        require(["viewmodels/filesystem/createConfigurationKey"], createConfigurationKey => {
+        require(["viewmodels/filesystem/createConfigurationKey", "commands/filesystem/saveConfigurationCommand"], (createConfigurationKey, saveConfigurationCommand) => {
             var createConfigurationKeyViewModel = new createConfigurationKey(this.keys());
             createConfigurationKeyViewModel
                 .creationTask
                 .done((key: string) => {
                     new saveConfigurationCommand(this.activeFilesystem(), new configurationKey(this.activeFilesystem(), key), JSON.parse("{}")).execute()
-                        .done(() => this.addKey(key))
+                        .done(() => {
+                            var newKey = this.addKey(key);
+                            this.selectKey(newKey);
+                        })
                         .fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not create Configuration Key!", errorThrown));
                 });
             app.showDialog(createConfigurationKeyViewModel);
         });
     }
-
 } 
 
 export = configuration;

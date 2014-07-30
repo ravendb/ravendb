@@ -36,7 +36,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e))];
+        return [ shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) ];
     }
 
     private processFsConflicts(e: synchronizationConflictNotification) {

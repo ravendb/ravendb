@@ -4,20 +4,16 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
+import changesApi = require("common/changesApi");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import shell = require("viewmodels/shell");
-
+import viewModelBase = require("viewmodels/viewModelBase");
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
-
-import viewModelBase = require("viewmodels/viewModelBase");
-
+import changeSubscription = require('models/changeSubscription');
 import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
-
-import changeSubscription = require('models/changeSubscription');
-import changesApi = require("common/changesApi");
 
 class status extends viewModelBase {
 
@@ -73,7 +69,7 @@ class status extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e))];
+        return [ shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
     }
 
     private processFsSync(e: synchronizationUpdateNotification) {

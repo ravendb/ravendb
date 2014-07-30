@@ -188,15 +188,15 @@ class databases extends viewModelBase {
     }
 
     private addNewDatabase(databaseName: string): database {
-        var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
+        var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
-        if (!databaseInArray) {
+        if (!foundDatabase) {
             var newDatabase = new database(databaseName);
             this.databases.unshift(newDatabase);
             return newDatabase;
         }
 
-        return databaseInArray;
+        return foundDatabase;
     }
 
     private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {

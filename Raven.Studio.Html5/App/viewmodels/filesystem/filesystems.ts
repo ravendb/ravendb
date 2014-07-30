@@ -132,15 +132,15 @@ class filesystems extends viewModelBase {
     }
 
     private addNewFileSystem(fileSystemName: string): filesystem {
-        var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
+        var foundFileSystem = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
 
-        if (!fileSystemInArray) {
+        if (!foundFileSystem) {
             var newFileSystem = new filesystem(fileSystemName);
             this.fileSystems.unshift(newFileSystem);
             return newFileSystem;
         }
 
-        return fileSystemInArray;
+        return foundFileSystem;
     }
 
     deleteSelectedFileSystems(fileSystems: Array<filesystem>) {
