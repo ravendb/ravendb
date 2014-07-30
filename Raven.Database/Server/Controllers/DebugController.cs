@@ -506,12 +506,14 @@ namespace Raven.Database.Server.Controllers
 				{
 					Formatting = Formatting.Indented
 				};
+				jsonSerializer.Converters.Add(new EtagJsonConverter());
 
 				var stats = package.CreateEntry("stats.txt", compressionLevel);
 
 				using (var statsStream = stats.Open())
 				using (var streamWriter = new StreamWriter(statsStream))
 				{
+					
 					jsonSerializer.Serialize(streamWriter, Database.Statistics);
 					streamWriter.Flush();
 				}
@@ -555,9 +557,10 @@ namespace Raven.Database.Server.Controllers
 
 				using (var configStream = config.Open())
 				using (var streamWriter = new StreamWriter(configStream))
+				using (var jsonWriter = new JsonTextWriter(streamWriter))
 				{
-					jsonSerializer.Serialize(streamWriter, GetConfigForDebug());
-					streamWriter.Flush();
+					GetConfigForDebug().WriteTo(jsonWriter, new EtagJsonConverter());
+					jsonWriter.Flush();
 				}
 
 				var currentlyIndexing = package.CreateEntry("currently-indexing.txt", compressionLevel);
