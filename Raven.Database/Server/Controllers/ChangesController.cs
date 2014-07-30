@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Web.Http;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -124,16 +125,37 @@ namespace Raven.Database.Server.Controllers
             }
             else if (Match(cmd, "watch-admin-log"))
             {
-                if (User.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode))
+                var systemDatabase = DatabasesLandlord.SystemDatabase;
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                foreach (var transportState in DatabasesLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
                 {
-                    connectionState.WatchAdminLog();
+                    transportState.For(id, this).WatchAdminLog();
                 }
+                foreach (var transportState in FileSystemsLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).WatchAdminLog();
+                }
+                foreach (var transportState in CountersLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).WatchAdminLog();
+                }
+                
             }
             else if (Match(cmd, "unwatch-admin-log"))
             {
-                if (User.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode))
+                var systemDatabase = DatabasesLandlord.SystemDatabase;
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                foreach (var transportState in DatabasesLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
                 {
-                    connectionState.UnwatchAdminLog();
+                    transportState.For(id, this).UnwatchAdminLog();
+                }
+                foreach (var transportState in FileSystemsLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).UnwatchAdminLog();
+                }
+                foreach (var transportState in CountersLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).UnwatchAdminLog();
                 }
             }
             else

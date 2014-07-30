@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
-using System.Net.WebSockets;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +13,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Counters;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -69,6 +72,7 @@ namespace Raven.Database.Server.Connections
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
+        private bool isMultyTenantTransport = false;
 
         public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
         {
@@ -78,6 +82,7 @@ namespace Raven.Database.Server.Connections
             Id = context.Request.Query["id"];
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
+            bool.TryParse(context.Request.Query["isMultyTenantTransport"], out isMultyTenantTransport);
             CoolDownWithDataLossInMilisecods = waitTimeBetweenMessages;
         }
 
@@ -230,14 +235,15 @@ namespace Raven.Database.Server.Connections
             {
                 return false;
             }
-
+            
 			var singleUseToken = _context.Request.Query["singleUseAuthToken"];
+            IPrincipal user = null;    
 
             if (string.IsNullOrEmpty(singleUseToken) == false)
             {
                 object msg;
                 HttpStatusCode code;
-                IPrincipal user;
+                
 				var resourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : documentDatabase.Name;
 
 				if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, resourceName, out msg, out code, out user) == false)
@@ -257,6 +263,7 @@ namespace Raven.Database.Server.Connections
                     case AnonymousUserAccessMode.Get:
                         // this is effectively a GET request, so we'll allow it
                         // under this circumstances
+                        user = CurrentOperationContext.User.Value;
                         break;
                     case AnonymousUserAccessMode.None:
                         _context.Response.StatusCode = 403;
@@ -268,20 +275,49 @@ namespace Raven.Database.Server.Connections
                 }
             }
 
-            if (fileSystem != null)
+            if (isMultyTenantTransport)
             {
-                fileSystem.TransportState.Register(this);
+                var databaseLandlord = _options.DatabaseLandlord;
+                var filesystemsLandlord = _options.FileSystemLandlord;
+                var countersLandlord = _options.CountersLandlord;
+                var systemDatabase = _options.DatabaseLandlord.SystemDatabase;
+
+                foreach (var transportState in databaseLandlord.GetUserAllowedTransportStates(user, systemDatabase, databaseLandlord.SystemConfiguration.AnonymousUserAccessMode, _options.MixedModeRequestAuthorizer, _context.Request.Headers["Authorization"]))
+                {
+                    transportState.Register(this);
+                }
+                foreach (var transportState in filesystemsLandlord.GetUserAllowedTransportStates(user, systemDatabase, databaseLandlord.SystemConfiguration.AnonymousUserAccessMode, _options.MixedModeRequestAuthorizer, _context.Request.Headers["Authorization"]))
+                {
+                    transportState.Register(this);
+                }
+                foreach (var transportState in countersLandlord.GetUserAllowedTransportStates(user, systemDatabase, databaseLandlord.SystemConfiguration.AnonymousUserAccessMode, _options.MixedModeRequestAuthorizer, _context.Request.Headers["Authorization"]))
+                {
+                    transportState.Register(this);
+                }
             }
-			else if (counterStorage != null)
-			{
-				counterStorage.TransportState.Register(this);
-			}
-            else if (documentDatabase != null)
+            else
             {
-				documentDatabase.TransportState.Register(this);
+                if (fileSystem != null)
+                {
+                    fileSystem.TransportState.Register(this);
+
+                }
+			    else if (counterStorage != null)
+			    {
+				    counterStorage.TransportState.Register(this);
+			    }
+                else if (documentDatabase != null)
+                {
+				    documentDatabase.TransportState.Register(this);
+                }
             }
 
             return true;
+        }
+
+        private void RegisterToAllPermittedTransportStates(IPrincipal user)
+        {
+            
         }
 
         private async Task<DocumentDatabase> GetDatabase()

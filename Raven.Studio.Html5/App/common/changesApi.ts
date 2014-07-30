@@ -14,6 +14,7 @@ class changesApi {
 
     private eventsId: string;
     private coolDownWithDataLoss: number;
+    private isMultyTenantTransport:boolean;
     private resourcePath: string;
     private connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
@@ -41,9 +42,10 @@ class changesApi {
     
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
+    constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = this.makeId();
         this.coolDownWithDataLoss = coolDownWithDataLoss;
+        this.isMultyTenantTransport = isMultyTenantTransport;
         this.resourcePath = appUrl.forResourceQuery(this.rs);
         this.connectToChangesApiTask = $.Deferred();
 
@@ -67,7 +69,7 @@ class changesApi {
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss;
+                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss + '&isMultyTenantTransport=' + this.isMultyTenantTransport;
 
                 action.call(this, connectionString);
             })

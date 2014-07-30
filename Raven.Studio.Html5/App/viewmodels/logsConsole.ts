@@ -24,7 +24,7 @@ class logsConsole extends  viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        this.logChangesApi = new changesApi(this.activeDatabase(),0);
+        this.logChangesApi = new changesApi(this.activeDatabase(),0,true);
         return [
             this.logChangesApi.watchAdminLogs((e: logNotificationDto) => {
                 

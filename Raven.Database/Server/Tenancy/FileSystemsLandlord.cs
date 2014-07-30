@@ -22,6 +22,8 @@ namespace Raven.Database.Server.Tenancy
     {
 		private bool initialized;
         private readonly DocumentDatabase systemDatabase;
+        private const string FILESYSTEMS_PREFIX = "Raven/FileSystems/";
+        public override string ResourcePrefix { get { return FILESYSTEMS_PREFIX; } }
 
         public InMemoryRavenConfiguration SystemConfiguration
         {

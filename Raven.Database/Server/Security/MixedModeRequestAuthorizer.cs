@@ -196,6 +196,20 @@ namespace Raven.Database.Server.Security
 			return approved;
 		}
 
+        public List<string> GetApprovedResources(IPrincipal user, string authHeader, string[] databases)
+        {
+            List<string> approved;
+            if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+                approved = oAuthRequestAuthorizer.GetApprovedResources(user);
+            else
+                approved = windowsRequestAuthorizer.GetApprovedResources(user);
+
+            if (approved.Contains("*"))
+                return databases.ToList();
+
+            return approved;
+        }
+
 		public override void Dispose()
 		{
 			windowsRequestAuthorizer.Dispose();
