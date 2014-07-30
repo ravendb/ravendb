@@ -2,6 +2,8 @@
 import disableResourceToggleCommand = require("commands/disableResourceToggleCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import resource = require("models/resource");
+import database = require("models/database");
+import filesystem = require("models/filesystem/filesystem");
 
 class disableResourceToggleConfirm extends dialogViewModelBase {
 
@@ -14,6 +16,7 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
     deletionText: KnockoutComputed<string>;
     confirmDeletionText: KnockoutComputed<string>;
     resourceType: string;
+    resourcesTypeText: string;
 
     constructor(resources: Array<resource>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
@@ -22,8 +25,9 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
             throw new Error("Must have at least one resource to disable.");
         }
 
-        this.resourceType = resources[0].type;
         this.resourcesToDisable(resources);
+        this.resourceType = resources[0].type;
+        this.resourcesTypeText = this.resourceType == database.type ? 'databases' : this.resourceType == filesystem.type ? 'file systems' : 'counter storages';
         this.isSettingDisabled = !resources[0].disabled();
         this.deletionText = ko.computed(() => this.isSettingDisabled ? "You're disabling" : "You're enabling");
         this.confirmDeletionText = ko.computed(() => this.isSettingDisabled ? "Yep, disable" : "Yep, enable");
@@ -33,15 +37,15 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
         var resourceNames = this.resourcesToDisable().map((rs: resource) => rs.name);
         var disableToggleCommand = new disableResourceToggleCommand(resourceNames, this.isSettingDisabled, this.resourceType);
 
-        var disableResourceToggleCommandTask = disableToggleCommand.execute();
+        var disableToggleCommandTask = disableToggleCommand.execute();
 
-        disableResourceToggleCommandTask.done((results) => {
+        disableToggleCommandTask.done((results) => {
             if (this.resourcesToDisable().length == 1) {
                 results = [ this.resourcesToDisable()[0].name ];
             }
             this.disableToggleTask.resolve(results);
         });
-        disableResourceToggleCommandTask.fail(response => this.disableToggleTask.reject(response));
+        disableToggleCommandTask.fail(response => this.disableToggleTask.reject(response));
 
         this.disableToggleStarted = true;
         dialog.close(this);

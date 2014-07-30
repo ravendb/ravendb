@@ -11,9 +11,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Controllers
@@ -69,10 +68,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpDelete]
-		[Route("admin/fs/filesystem-batch-delete")]
+		[Route("admin/fs/batch-delete")]
 		public HttpResponseMessage FileSystemBatchDelete()
 		{
-			string[] fileSystemsToDelete = GetQueryStringValues("fileSystemsIds");
+			string[] fileSystemsToDelete = GetQueryStringValues("ids");
 			if (fileSystemsToDelete == null)
 			{
 				return GetMessageWithString("No file systems to delete!", HttpStatusCode.BadRequest);
@@ -109,7 +108,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/fs/filesystem-batch-toggle-disable")]
+		[Route("admin/fs/batch-toggle-disable")]
 		public HttpResponseMessage FileSystemBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
@@ -147,10 +146,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			if (isHardDeleteNeeded)
 			{
 				IOExtensions.DeleteDirectory(configuration.FileSystemDataDirectory);
-				if (configuration.IndexStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-				if (configuration.JournalsStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);
+				//TODO: find out which path should be deleted
+				/*if (configuration.IndexStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);*/
+				/*if (configuration.JournalsStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);*/
 			}
 
 			return new MessageWithStatusCode();

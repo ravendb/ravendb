@@ -37,7 +37,7 @@ import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
@@ -638,7 +638,7 @@ class shell extends viewModelBase {
 
     static fetchFsStats(fs: filesystem) {
         if (fs && !fs.disabled()) {
-            new getFilesystemStatsCommand(fs)
+            new getFileSystemStatsCommand(fs)
                 .execute()
                 .done(result=> fs.statistics(result));
         }

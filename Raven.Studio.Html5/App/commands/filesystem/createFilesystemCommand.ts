@@ -27,7 +27,7 @@ class createFilesystemCommand extends commandBase {
             "Disabled": false
         };
 
-        var url = "/admin/filesystems/" + this.fileSystemName;
+        var url = "/admin/fs/" + this.fileSystemName;
         var createTask = this.put(url, JSON.stringify(filesystemDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.fileSystemName + " created"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to create file system", response.responseText, response.statusText));

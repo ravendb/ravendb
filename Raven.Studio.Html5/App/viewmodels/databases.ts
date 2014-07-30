@@ -231,7 +231,7 @@ class databases extends viewModelBase {
 
     deleteSelectedDatabases(databases: Array<database>) {
         if (databases.length > 0) {
-            require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
+            require(["viewmodels/deleteResourceConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(databases);
 
                 confirmDeleteViewModel.deleteTask.done((deletedDatabaseNames: string[]) => {

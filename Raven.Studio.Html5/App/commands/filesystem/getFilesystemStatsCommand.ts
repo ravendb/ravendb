@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 
-class getFilesystemStatsCommand extends commandBase {
+class getFileSystemStatsCommand extends commandBase {
 
     constructor(private fs: filesystem) {
         super();
@@ -13,4 +13,4 @@ class getFilesystemStatsCommand extends commandBase {
     }
 }
 
-export = getFilesystemStatsCommand;
+export = getFileSystemStatsCommand;

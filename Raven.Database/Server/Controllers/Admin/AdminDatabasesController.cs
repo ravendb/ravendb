@@ -104,10 +104,10 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpDelete]
-		[Route("admin/databases/database-batch-delete")]
+		[Route("admin/databases/batch-delete")]
 		public HttpResponseMessage DatabasesBatchDelete()
 		{
-			string[] databasesToDelete = GetQueryStringValues("databaseIds");
+			string[] databasesToDelete = GetQueryStringValues("ids");
 			if (databasesToDelete == null)
 			{
 				return GetMessageWithString("No databases to delete!", HttpStatusCode.BadRequest);
@@ -144,7 +144,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/databases/database-batch-toggle-disable")]
+		[Route("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
