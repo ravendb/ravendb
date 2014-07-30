@@ -6894,6 +6894,7 @@ body {
 #resources-page .resources-container .resource {
   cursor: pointer;
   border-radius: 2px;
+  -webkit-box-shadow: 0 0 5px 2px silver;
   box-shadow: 0 0 5px 2px silver;
   min-width: 160px;
   min-height: 70px;
@@ -6972,7 +6973,7 @@ body {
 #resources-page .resources-container .resource.system-database.selected .text-muted {
   color: #106a8c;
 }
-.menu-item-disabled {
+.menu-item-disabled.a {
   pointer-events: none;
   cursor: default;
   text-decoration: line-through;
@@ -7805,54 +7806,6 @@ footer ul {
 }
 .fa-plus {
   color: #58cc46;
-}
-.filesystem-page .btn-toolbar {
-  margin-bottom: 20px;
-}
-.filesystem-page .filesystems-container {
-  margin-top: 10px;
-}
-.filesystem-page .filesystems-container .filesystem {
-  cursor: pointer;
-  border-radius: 10px;
-  -webkit-box-shadow: 0 0 5px 1px silver;
-  box-shadow: 0 0 5px 1px silver;
-  min-width: 140px;
-  min-height: 60px;
-  display: inline-block;
-  padding: 8px;
-  margin: 0 10px 14px 0;
-}
-.filesystem-page .filesystems-container .filesystem:hover {
-  background-color: white;
-  -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
-  box-shadow: 0 0 5px 0 #6aa3d5;
-}
-.filesystem-page .filesystems-container .filesystem.selected {
-  -webkit-box-shadow: 0 0 6px 0 #428bca;
-  box-shadow: 0 0 6px 0 #428bca;
-  background-color: #428bca;
-}
-.filesystem-page .filesystems-container .filesystem.selected a,
-.filesystem-page .filesystems-container .filesystem.selected .text-muted {
-  color: white;
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem {
-  background-color: rgba(192, 192, 192, 0.21);
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected {
-  background-color: rgba(14, 14, 14, 0.21);
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected a,
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected .text-muted {
-  color: #3071a9;
-}
-.filesystem-page .systemButton {
-  color: grey;
-  margin-top: 50px;
-  position: absolute;
-  top: -40px;
-  right: 25px;
 }
 #editFileContainer:focus {
   outline: 0;

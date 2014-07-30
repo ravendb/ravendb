@@ -363,6 +363,7 @@ html, body {
         .resource {
             cursor: pointer;
             border-radius: 2px;
+            -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
             min-width: 160px;
             min-height: 70px;
@@ -469,7 +470,7 @@ html, body {
     }
 }
 
-.menu-item-disabled {
+.menu-item-disabled.a {
     pointer-events: none;
     cursor: default;
     text-decoration: line-through;
@@ -1488,71 +1489,7 @@ footer {
 
 // Start of Filesystems
 // TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name
-.filesystem-page {
-
-    .btn-toolbar {
-        margin-bottom: 20px;
-    }
-
-    .filesystems-container {
-        margin-top: 10px;
-
-        .filesystem {
-            cursor: pointer;
-            border-radius: 10px;
-            -webkit-box-shadow: 0 0 5px 1px silver;
-            box-shadow: 0 0 5px 1px silver;
-            min-width: 140px;
-            min-height: 60px;
-            display: inline-block;
-            padding: 8px;
-            margin: 0 10px 14px 0;
-
-            @selectColor: rgb(66, 139, 202);
-            @hoverColor: lighten(@selectColor, 10%);
-
-            &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }
-
-            &.selected {
-                -webkit-box-shadow: 0 0 6px 0 @selectColor;
-                box-shadow: 0 0 6px 0 @selectColor;
-                background-color: @selectColor;
-
-                a, .text-muted {
-                    color: white;
-                }
-            }
-
-            &.default-filesystem {
-                @systemDbColor: rgba(192, 192, 192, 0.21);
-                background-color: @systemDbColor;
-
-                &.selected {
-                    background-color: darken(@systemDbColor, 70%);
-
-                    a, .text-muted {
-                        color: darken(@selectColor, 10%);
-                    }
-                }
-            }
-        }
-    }
-
-    .systemButton {
-        color: grey;
-        margin-top: 50px;
-        position: absolute;
-        top: -40px;
-        right: 25px;
-    }
-}
-
 #editFileContainer {
-
     &:focus {
         outline: 0;
     }
