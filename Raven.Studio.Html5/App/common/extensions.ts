@@ -305,9 +305,14 @@ class extensions {
             },
             update: ko.bindingHandlers.value.update
         };
+
+        ko.bindingHandlers['customValidity'] = {
+            update: (element, valueAccessor) => {
+                var errorMessage = ko.unwrap(valueAccessor()); //unwrap to get subscription
+                element.setCustomValidity(errorMessage);
+            }
+        };
     }
-
-
 }
 
 export = extensions;

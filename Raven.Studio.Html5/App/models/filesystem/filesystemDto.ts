@@ -10,7 +10,7 @@ interface filesystemSynchronizationDetailsDto {
     FileName: string;
     FileETag: string;
     DestinationUrl: string;
-    Type: filesystemSynchronizationType;
+    Type: string;
     Direction: synchronizationDirection;
 }
 
@@ -65,19 +65,6 @@ interface fileMetadataDto {
     'Raven-Synchronization-Source': string;
     'RavenFS-Size': string;
     'Origin': string;
-}
-
-interface filesystemSynchronizationReportDto {
-
-    FileName: string;
-    FileETag: string;
-    Type: filesystemSynchronizationType;
-
-    BytesTransfered: number;
-    BytesCopied: number;
-    NeedListLength: number;
-
-    Exception: any;
 }
 
 interface filesystemSearchResultsDto {
@@ -142,7 +129,7 @@ interface synchronizationUpdateNotification {
     SourceFileSystemUrl: string;
     Type: filesystemSynchronizationType;
     Action: synchronizationAction;
-    SynchronizationDirection: synchronizationDirection;
+    Direction: synchronizationDirection;
 }
 
 enum synchronizationAction {

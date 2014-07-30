@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList
 					var examples =
 						session.Query<ExampleProjection, ExampleIndexCreationTask>()
 						.Customize(x => x.WaitForNonStaleResults())
-						.AsProjection<ExampleProjection>().ToList();
+						.ProjectFromIndexFieldsInto<ExampleProjection>().ToList();
 
 					Assert.NotEmpty(examples);
 				}

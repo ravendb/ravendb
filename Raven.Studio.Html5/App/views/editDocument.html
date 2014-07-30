@@ -21,8 +21,10 @@
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                 <a class="btn btn-default" data-bind="click: refreshDocument, visible: lodaedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
-                <button type="button" class="btn btn-default" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
+                <button type="button" class="btn btn-default" data-bind="enable:isNewLineFriendlyMode()===false || $root.isEditingMetadata()===true ,click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
+                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" accesskey="N" data-bind="enable:$root.isEditingMetadata() === false,click:function(){toggleNewlineMode();}, css:{'isActive':isNewLineFriendlyMode()===true}"><span class="text-lowercase">\n</span></button>
                 <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+                
             </div>
 
             <div class="btn-group" data-bind="with: docsList">
@@ -39,7 +41,7 @@
             <div class="col-md-7">
                 <div class="row" data-bind="with: metadata">
                     <div class="col-md-12">
-                        <input type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="value: $root.userSpecifiedId, valueUpdate: 'afterkeyup', attr: { disabled: $root.isBusy }" />
+                        <input id="documentName" type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="value: $root.userSpecifiedId, valueUpdate: 'afterkeyup', attr: { disabled: $root.isBusy }" />
                     </div>
                 </div>
                 <br />
@@ -71,7 +73,7 @@
                         <span class="col-md-7" data-bind="text: lastModified, attr: {title:lastModified}"></span>
                     </div>
                     <div class="row">
-                        <label class="col-md-5">Size in Kb</label>
+                        <label class="col-md-5">Size in KB</label>
                         <span class="col-md-7" data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span>
                         
                     </div>

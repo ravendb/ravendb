@@ -117,7 +117,7 @@ namespace Raven.Tests.Bugs.MapRedue
                 IRavenQueryable<DocumentView> query =
                     session.Query<Document, VersionedDocuments>()
                         .Customize(aCustomization => aCustomization.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(10)))
-                        .AsProjection<DocumentView>();
+						.ProjectFromIndexFieldsInto<DocumentView>();
 
                 foreach (DocumentView document in query)
                 {

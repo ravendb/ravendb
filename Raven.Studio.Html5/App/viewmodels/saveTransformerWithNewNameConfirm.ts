@@ -4,8 +4,7 @@ import dialog = require("plugins/dialog");
 import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import transformer = require("models/transformer");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 
 class saveTransformerWithNewNameConfirm extends dialogViewModelBase {
 
@@ -29,7 +28,7 @@ class saveTransformerWithNewNameConfirm extends dialogViewModelBase {
 
     cancel() {
         this.saveTask.reject();
-        ko.postbox.publish("Alert", new alertArgs(alertType.info, "Transformer Not Saved"));
+        messagePublisher.reportInfo("Transformer Not Saved!");
         dialog.close(this);
     }
 }

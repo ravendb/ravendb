@@ -57,7 +57,7 @@ namespace Raven.SlowTests.Issues
 				    }
 				    catch (Exception ex)
 				    {
-                        var missingDocs = session.Query<EmailIndexDoc, EmailIndex>().AsProjection<EmailIndexDoc>()
+						var missingDocs = session.Query<EmailIndexDoc, EmailIndex>().ProjectFromIndexFieldsInto<EmailIndexDoc>()
                                                                                     .Where(e => !e.Body.StartsWith("MessageBody"))
                                                                                     .ToList();
                         Console.WriteLine(string.Join(", ", missingDocs.Select(doc => doc.Id).ToArray()));

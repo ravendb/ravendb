@@ -47,7 +47,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
         protected abstract Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo);
-		protected abstract void PutDocument(RavenJObject document, SmugglerOptions options, int size);
+		protected abstract Task PutDocument(RavenJObject document, SmugglerOptions options, int size);
 		protected abstract Task PutTransformer(string transformerName, RavenJToken transformer);
 
 	    protected abstract Task DeleteDocument(string key);
@@ -63,14 +63,14 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool EnsuredDatabaseExists;
-	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
+		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
 		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptions options)
 		{
 	        SetSmugglerOptions(options);
 
             var result = new ExportDataResult
-            {
+		{
 				FilePath = exportOptions.ToFile,
                 LastAttachmentsEtag = options.StartAttachmentsEtag,
                 LastDocsEtag = options.StartDocsEtag,
@@ -79,9 +79,9 @@ namespace Raven.Abstractions.Smuggler
             };
 
 			if (options.Incremental)
-			{
+		{
                 if (Directory.Exists(result.FilePath) == false)
-				{
+			{
                     if (File.Exists(result.FilePath))
                         result.FilePath = Path.GetDirectoryName(result.FilePath) ?? result.FilePath;
 					else
@@ -119,7 +119,7 @@ namespace Raven.Abstractions.Smuggler
 				await DetectServerSupportedFeatures(exportOptions.From);
 			}
 			catch (WebException e)
-			{				
+			{
 				ShowProgress("Failed to query server for supported features. Reason : " + e.Message);
 				SetLegacyMode(); //could not detect supported features, then run in legacy mode
 //				lastException = new SmugglerExportException
@@ -158,7 +158,7 @@ namespace Raven.Abstractions.Smuggler
 					    try
 					    {
                             result.LastDocsEtag = await ExportDocuments(exportOptions.From,options, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag);
-                        }
+					    }
 					    catch (SmugglerExportException e)
 					    {
 					        result.LastDocsEtag = e.LastEtag;
@@ -173,9 +173,9 @@ namespace Raven.Abstractions.Smuggler
 					if (options.OperateOnTypes.HasFlag(ItemType.Attachments) && lastException == null)
 					{
 					    try
-					{
+					    {
 						result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag);
-					}
+					    }
 					    catch (SmugglerExportException e)
 					    {
 					        result.LastAttachmentsEtag = e.LastEtag;
@@ -222,12 +222,12 @@ namespace Raven.Abstractions.Smuggler
 		}
 
 	    protected void SetSmugglerOptions(SmugglerOptions options)
-	    {
+		{
             if (options == null)
                 throw new ArgumentNullException("options");
 
 	        SmugglerOptions = options;
-	    }
+		}
 
         public static void ReadLastEtagsFromFile(ExportDataResult result)
 		{
@@ -309,7 +309,8 @@ namespace Raven.Abstractions.Smuggler
 			while (true)
 			{
 				bool hasDocs = false;
-                try {
+				try
+				{
                     var maxRecords = options.Limit - totalCount;
                     if (maxRecords > 0 && reachedMaxEtag == false)
 			        {
@@ -342,7 +343,7 @@ namespace Raven.Abstractions.Smuggler
 			                    document.WriteTo(jsonWriter);
 			                    totalCount++;
 
-			                    if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+								if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 			                    {
 			                        ShowProgress("Exported {0} documents", totalCount);
 			                        lastReport = SystemTime.UtcNow;
@@ -430,16 +431,16 @@ namespace Raven.Abstractions.Smuggler
 		public virtual async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options)
 		{
             if (options.Incremental == false)
-            {
+			{
 				Stream stream = importOptions.FromStream;
                 bool ownStream = false;
                 try
-                {
+				{
                     if (stream == null)
                     {
 						stream = File.OpenRead(importOptions.FromFile);
                         ownStream = true;
-                    }
+				}
 					await ImportData(importOptions, options, stream);
                 }
                 finally
@@ -504,7 +505,7 @@ namespace Raven.Abstractions.Smuggler
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
 			JsonTextReader jsonReader;
-            try
+			try
 			{
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 				var streamReader = new StreamReader(sizeStream);
@@ -539,33 +540,33 @@ namespace Raven.Abstractions.Smuggler
 
             exportSectionRegistar.Add("Indexes", () =>
             {
-                ShowProgress("Begin reading indexes");
+			ShowProgress("Begin reading indexes");
                 var indexCount = ImportIndexes(jsonReader, options).Result;
-                ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
+			ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
                 return indexCount;
             });
 
 		    exportSectionRegistar.Add("Docs", () =>
 		    {
-		        ShowProgress("Begin reading documents");
+			ShowProgress("Begin reading documents");
 		        var documentCount = ImportDocuments(jsonReader, options).Result;
-		        ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
+			ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
 		        return documentCount;
 		    });
 
 		    exportSectionRegistar.Add("Attachments", () =>
 		    {
-                ShowProgress("Begin reading attachments");
+			ShowProgress("Begin reading attachments");
 		        var attachmentCount = ImportAttachments(importOptions.To,jsonReader, options).Result;
-                ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
+			ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
 		        return attachmentCount;
 		    });
 
 		    exportSectionRegistar.Add("Transformers", () =>
 		    {
-		        ShowProgress("Begin reading transformers");
+			ShowProgress("Begin reading transformers");
 		        var transformersCount = ImportTransformers(jsonReader, options).Result;
-		        ShowProgress(string.Format("Done with reading transformers, total: {0}", transformersCount));
+			ShowProgress(string.Format("Done with reading transformers, total: {0}", transformersCount));
 		        return transformersCount;
 		    });
 
@@ -616,8 +617,8 @@ namespace Raven.Abstractions.Smuggler
 		}
 
         private async Task<int> ImportDeletedDocuments(JsonReader jsonReader, SmugglerOptions options)
-        {
-            var count = 0;
+		{
+			var count = 0;
 
             while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
             {
@@ -640,7 +641,7 @@ namespace Raven.Abstractions.Smuggler
                 count++;
             }
 
-            return count;
+				return count;
         }
 
         private async Task<int> ImportDeletedAttachments(JsonReader jsonReader, SmugglerOptions options)
@@ -668,7 +669,7 @@ namespace Raven.Abstractions.Smuggler
                 count++;
             }
 
-            return count;
+				return count;
 	    }
 
 	    private async Task<int> ImportTransformers(JsonTextReader jsonReader, SmugglerOptions options)
@@ -725,7 +726,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-       
+
 
 		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
@@ -869,7 +870,7 @@ namespace Raven.Abstractions.Smuggler
             LastAttachmentsEtag = Etag.Empty;
             LastDocDeleteEtag = Etag.Empty;
             LastAttachmentsDeleteEtag = Etag.Empty;
-        }
+}
         public Etag LastDocsEtag { get; set; }
         public Etag LastDocDeleteEtag { get; set; }
         public Etag LastAttachmentsEtag { get; set; }

@@ -5,6 +5,7 @@ import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 import collection = require("models/collection");
+import messagePublisher = require("common/messagePublisher");
 
 // Helper class with static methods for generating app URLs.
 class appUrl {
@@ -72,18 +73,19 @@ class appUrl {
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
-        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
+        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
 
         filesystems: ko.computed(() => appUrl.forFilesystems()),
-        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
+        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
-        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?counterstorage=" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
+        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
@@ -725,6 +727,26 @@ class appUrl {
     }
 
     public static warnWhenUsingSystemDatabase: boolean = true;
+
+    public static mapUnknownRoutes(router: DurandalRouter) {
+        router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
+            var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+            messagePublisher.reportError("Invalid route!", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+
+            var fragment = instruction.fragment;
+            var appUrls: computedAppUrls = appUrl.currentDbComputeds;
+            var newLoationHref;
+            if (fragment.indexOf("filesystems/") == 0) {
+                newLoationHref = appUrls.filesystemsManagement();
+            }
+            else if (fragment.indexOf("counterstorages/") == 0) {
+                newLoationHref = appUrls.counterStorageManagement();
+            } else {
+                newLoationHref = appUrls.databasesManagement();
+            }
+            location.href = newLoationHref;
+        });
+    }
 }
 
 export = appUrl;

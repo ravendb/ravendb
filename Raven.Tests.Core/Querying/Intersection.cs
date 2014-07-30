@@ -69,7 +69,7 @@ namespace Raven.Tests.Core.Querying
                     WaitForIndexing(store);
 
                     var tshirts = session.Query<TShirt, TShirtIndex>()
-                        .AsProjection<TShirtIndex.Result>()
+                        .ProjectFromIndexFieldsInto<TShirtIndex.Result>()
                         .Where(x => x.Manufacturer == "Raven")
                         .Intersect()
                         .Where(x => x.Color == "Blue" && x.Size == "Small")

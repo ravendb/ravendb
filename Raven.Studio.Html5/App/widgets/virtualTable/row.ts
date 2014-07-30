@@ -65,7 +65,10 @@ class row {
                 var binding = column.binding();
                 var context = {};
                 $.each(rowData, (name: string, value: any) => {
-                    context[name] = value;
+                    context[name] = JSON.stringify(value, null, 4);
+                    if (context[name].length > 250) {
+                        context[name] = context[name].substring(0, 250);
+                    }
                 });
 
                 for (var p in this.compiledCustomFunctions) {
@@ -83,6 +86,10 @@ class row {
                 // pass json object when not custom template!
                 if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
                     cellValue = JSON.stringify(cellValue, null, 4);
+                }
+
+                if (cellValue.length > 250) {
+                    cellValue = cellValue.substring(0, 250);
                 }
                 this.addOrUpdateCellMap(prop, cellValue);
             }

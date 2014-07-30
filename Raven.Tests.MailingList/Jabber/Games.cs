@@ -77,7 +77,7 @@ namespace Raven.Tests.MailingList.Jabber
 							.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 							.Where(x => x.PlayerName.StartsWith("p"))
 							.OrderBy(x => x.Id).ThenBy(x=>x.PlayerName)
-							.AsProjection<GameServers_ConnectedPlayers.IndexQuery>()
+							.ProjectFromIndexFieldsInto<GameServers_ConnectedPlayers.IndexQuery>()
 							.ToList();
 
 
