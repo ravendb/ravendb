@@ -308,7 +308,8 @@ namespace Raven.Client.FileSystem
             var deleteOperations = operations.OfType<DeleteFileOperation>().ToList();
             foreach (var op in deleteOperations)
             {
-                //if (!entitiesByKey.ContainsKey(op.Filename) || !UploadRegisteredForFile(op.Filename, operations))
+                //TODO: this should work in order to avoid deletes when a file will be overriden
+                //if (!entitiesByKey.ContainsKey(op.Filename) || !UploadRegisteredForFileAfterDelete(op.Filename, operations))
                 //{
                     changes.Operations.Add(op);
                     deletedEntities.Add(op.Filename);
@@ -321,7 +322,7 @@ namespace Raven.Client.FileSystem
             foreach( var key in entitiesByKey.Keys)
             {
                 var fileHeader = entitiesByKey[key] as FileHeader;
-                //TODO, this should be UploadRegisteredBeforeDelete
+
                 if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.Name, operations))
                 {
                     changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));

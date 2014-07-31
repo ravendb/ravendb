@@ -16,14 +16,14 @@ class getDestinationsCommand extends commandBase {
         this.shouldResolveNotFoundAsNull = shouldResolveNotFoundAsNull || false;
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<synchronizationReplicationsDto> {
         
         var url = "/config";
         var args = {
             name: "Raven/Synchronization/Destinations"
         };
 
-        return this.query<any>(url, args, this.fs);
+        return this.query<synchronizationReplicationsDto>(url, args, this.fs);
     }
 }
 
