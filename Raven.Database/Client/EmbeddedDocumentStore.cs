@@ -187,7 +187,15 @@ namespace Raven.Database.Client
             get { return server.DocumentStore.JsonRequestFactory; }
         }
 
-        /// <summary>
+		public bool HasJsonRequestFactory
+		{
+			get
+			{
+				return server.DocumentStore.HasJsonRequestFactory;
+			}
+		}
+
+	    /// <summary>
         ///     Gets or sets the identifier for this store.
         /// </summary>
         /// <value>The identifier.</value>
