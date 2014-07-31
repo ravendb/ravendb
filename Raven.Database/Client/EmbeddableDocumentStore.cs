@@ -131,6 +131,9 @@ namespace Raven.Client.Embedded
 
         public Guid ResourceManagerId { get; set; }
 
+		/// <summary>
+		/// Direct access to system database.
+		/// </summary>
         public DocumentDatabase SystemDatabase
         {
             get
@@ -142,6 +145,9 @@ namespace Raven.Client.Embedded
             }
         }
 
+		/// <summary>
+		/// Direct access to database configured in 'DefaultDatabase' property. If property value is 'null' then 'SystemDatabase' is returned. 
+		/// </summary>
 		public DocumentDatabase DocumentDatabase
 		{
 			get
