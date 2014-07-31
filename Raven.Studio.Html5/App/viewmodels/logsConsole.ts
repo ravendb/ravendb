@@ -3,11 +3,12 @@ import viewModelBase = require('viewmodels/viewModelBase');
 import shell = require("viewmodels/shell");
 import changesApi = require("common/changesApi");
 import appUrl = require("common/appUrl");
+import httpTraceClient = require("common/httpTraceClient");
 
 class logsConsole extends  viewModelBase {
     
     allLogsNotifications = ko.observableArray<logNotificationDto>([]);
-    logChangesApi:changesApi;
+    loghttpTraceClient: httpTraceClient;
     constructor() {
         super();
 
@@ -18,15 +19,15 @@ class logsConsole extends  viewModelBase {
 
     cleanupNotifications() {
         super.cleanupNotifications();
-        if (!!this.logChangesApi) {
-            this.logChangesApi.dispose();
+        if (!!this.loghttpTraceClient) {
+            this.loghttpTraceClient.dispose();
         }
     }
 
     createNotifications(): Array<changeSubscription> {
-        this.logChangesApi = new changesApi(this.activeDatabase(),0,true);
+        this.loghttpTraceClient = new httpTraceClient();
         return [
-            this.logChangesApi.watchAdminLogs((e: logNotificationDto) => {
+            this.loghttpTraceClient.watchAdminLogs((e: logNotificationDto) => {
                 
                 if (this.allLogsNotifications().length == 1000) {
                     this.allLogsNotifications.shift();

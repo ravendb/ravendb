@@ -72,9 +72,9 @@ namespace Raven.Database.Server.Connections
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
-        private bool isMultyTenantTransport = false;
+        private bool isResourceBound = true;
 
-        public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
+        public WebSocketsTransport(RavenDBOptions options, IOwinContext context, bool isResourceBound=true)
         {
             _options = options;
             _context = context;
@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Connections
             Id = context.Request.Query["id"];
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
-            bool.TryParse(context.Request.Query["isMultyTenantTransport"], out isMultyTenantTransport);
+            this.isResourceBound = isResourceBound;
             CoolDownWithDataLossInMilisecods = waitTimeBetweenMessages;
         }
 
@@ -237,14 +237,14 @@ namespace Raven.Database.Server.Connections
             }
             
 			var singleUseToken = _context.Request.Query["singleUseAuthToken"];
-            IPrincipal user = null;    
+            IPrincipal user = null;
+
+            var resourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : (documentDatabase != null) ? documentDatabase.Name : null;
 
             if (string.IsNullOrEmpty(singleUseToken) == false)
             {
                 object msg;
                 HttpStatusCode code;
-                
-				var resourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : documentDatabase.Name;
 
 				if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, resourceName, out msg, out code, out user) == false)
                 {
@@ -275,24 +275,28 @@ namespace Raven.Database.Server.Connections
                 }
             }
 
-            if (isMultyTenantTransport)
+            if (!isResourceBound)
             {
-                var databaseLandlord = _options.DatabaseLandlord;
-                var filesystemsLandlord = _options.FileSystemLandlord;
-                var countersLandlord = _options.CountersLandlord;
-                var systemDatabase = _options.DatabaseLandlord.SystemDatabase;
+                if (resourceName != null)
+                {
+                    _options.RequestManager.RegisterResourceHttpTraceTransport(this,resourceName);
+                }
+                else
+                {
+                     var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
 
-                foreach (var transportState in databaseLandlord.GetUserAllowedTransportStates(user, systemDatabase, databaseLandlord.SystemConfiguration.AnonymousUserAccessMode, _options.MixedModeRequestAuthorizer, _context.Request.Headers["Authorization"]))
-                {
-                    transportState.Register(this);
-                }
-                foreach (var transportState in filesystemsLandlord.GetUserAllowedTransportStates(user, systemDatabase, databaseLandlord.SystemConfiguration.AnonymousUserAccessMode, _options.MixedModeRequestAuthorizer, _context.Request.Headers["Authorization"]))
-                {
-                    transportState.Register(this);
-                }
-                foreach (var transportState in countersLandlord.GetUserAllowedTransportStates(user, systemDatabase, databaseLandlord.SystemConfiguration.AnonymousUserAccessMode, _options.MixedModeRequestAuthorizer, _context.Request.Headers["Authorization"]))
-                {
-                    transportState.Register(this);
+                    if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) || 
+                        _options.SystemDatabase.Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin )
+                    {
+                        _options.RequestManager.RegisterServerHttpTraceTransport(this);        
+                    }
+                    else
+                    {
+                        return false;
+                        _context.Response.StatusCode = 403;
+                        _context.Response.ReasonPhrase = "Forbidden";
+                        _context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
+                    }
                 }
             }
             else

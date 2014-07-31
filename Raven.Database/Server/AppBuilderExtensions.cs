@@ -83,13 +83,6 @@ namespace Owin
 
         private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
         {
-            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket") == false)
-            {
-                // Not a websocket request
-                await next();
-                return;
-            }
-
             var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
             if (accept == null)
             {
@@ -98,9 +91,24 @@ namespace Owin
                 return;
             }
 
-            var webSocketsTrasport = new WebSocketsTransport(options, context);
-            if (await webSocketsTrasport.TrySetupRequest())
-                accept(null, webSocketsTrasport.Run);
+            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket"))
+            {
+                var webSocketsTrasport = new WebSocketsTransport(options, context);
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+            else if (context.Request.Uri.LocalPath.EndsWith("http-trace/websocket"))
+            {
+                var webSocketsTrasport = new WebSocketsTransport(options, context,false);
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+            else
+            {
+                // Not a websocket request
+                await next();
+                return;
+            }
         }
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{

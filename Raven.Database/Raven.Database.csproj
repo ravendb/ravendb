@@ -225,6 +225,7 @@
     <Compile Include="Bundles\Replication\Impl\ReplicationTopologyDiscoverer.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
+    <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />

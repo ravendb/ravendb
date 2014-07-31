@@ -376,7 +376,7 @@ namespace Raven.Database.Server.WebApi
                 EllapsedMiliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
                 ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
                 RequestUri = logHttpRequestStatsParams.RequestUri,
-                TenantName = databaseName
+                TenantName = databaseName ?? "<system>"
             });
 		    if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
 		    {
@@ -384,7 +384,7 @@ namespace Raven.Database.Server.WebApi
                 NotifyLogChangesApi(controller, new LogNotification()
                 {
                    CustomInfo = logHttpRequestStatsParams.CustomInfo,
-                    TenantName = databaseName
+                   TenantName = databaseName ?? "<system>"
                 });
 		    }
 		}
@@ -415,13 +415,38 @@ namespace Raven.Database.Server.WebApi
                 transportState = counterStorage.TransportState;
                 logNotification.TenantType = LogTenantType.CounterStorage;
             }
-
-	        if (transportState != null)
+	        var notificationMessage = new {Type = "LogNotification", Value = logNotification};
+	        foreach (var eventsTransport in serverHttpTrace)
 	        {
-                transportState.Send(logNotification);
+                eventsTransport.SendAsync(notificationMessage);
+	        }
+
+	        List<IEventsTransport> resourceEventTransports;
+	        if (resourceHttpTraces.TryGetValue(logNotification.TenantName, out resourceEventTransports))
+	        {
+                foreach (var eventTransport in resourceEventTransports)
+	            {
+                    eventTransport.SendAsync(notificationMessage);
+	            }
 	        }
 	    }
-        
+
+	    private Dictionary<string, List<IEventsTransport>> resourceHttpTraces = new Dictionary<string, List<IEventsTransport>>();
+        private List<IEventsTransport> serverHttpTrace = new List<IEventsTransport>();
+
+	    public void RegisterServerHttpTraceTransport(IEventsTransport transport)
+	    {
+	        serverHttpTrace.Add(transport);
+	        transport.Disconnected += () => serverHttpTrace.Remove(transport);
+	    }
+
+        public void RegisterResourceHttpTraceTransport(IEventsTransport transport, string resourceName)
+        {
+            List<IEventsTransport> curResourceEventTransports = resourceHttpTraces.GetOrAdd(resourceName);
+            curResourceEventTransports.Add(transport);
+            transport.Disconnected += () => serverHttpTrace.Remove(transport);
+        }
+
 		private void IdleOperations(object state)
 		{
 			if ((SystemTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
