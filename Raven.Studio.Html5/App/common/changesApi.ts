@@ -60,8 +60,9 @@ class changesApi {
     }
 
     private connect(action: Function, needToReconnect: boolean = false) {
+        this.connectToChangesApiTask = $.Deferred();
         var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath).execute();
-
+       
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
