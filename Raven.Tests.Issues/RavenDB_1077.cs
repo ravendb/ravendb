@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				var database = documentStore.DocumentDatabase;
+				var database = documentStore.SystemDatabase;
 
 				var status = GetLicenseByReflection(database);
 
@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				var database = documentStore.DocumentDatabase;
+				var database = documentStore.SystemDatabase;
 
 				var status = GetLicenseByReflection(database);
 
@@ -69,7 +69,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore(enableAuthentication: true)) // / this will store info in database
 			{
-				var database = documentStore.DocumentDatabase;
+				var database = documentStore.SystemDatabase;
 				var status = GetLicenseByReflection(database);
 
 				// reset license info - mark it as invalid

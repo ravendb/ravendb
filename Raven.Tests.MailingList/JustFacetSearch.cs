@@ -172,7 +172,7 @@ namespace Raven.Tests.MailingList
 					generateData(session);
 					session.SaveChanges();
 				}
-				while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+				while (store.SystemDatabase.Statistics.StaleIndexes.Length > 0)
 				{
 					Thread.Sleep(100);
 				}

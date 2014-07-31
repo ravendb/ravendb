@@ -101,7 +101,7 @@ namespace Raven.Tests.Bugs
 						.Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
 						.FirstOrDefault();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.Equal(new DateTime(2010,1,28), result.PublicationDate);
 					Assert.Equal("Ayende Rahien", result.AuthorName);

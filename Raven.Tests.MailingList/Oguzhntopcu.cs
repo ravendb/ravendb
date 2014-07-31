@@ -206,7 +206,7 @@ namespace Raven.Tests.MailingList
 													   .TransformWith<SearchTransformer, Transformed>();
 
 				var data = query.FirstOrDefault();
-				Assert.Empty(DocumentStore.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(DocumentStore.SystemDatabase.Statistics.Errors);
 				Assert.NotNull(data);
 				Assert.NotNull(data.PostStatus);
 				//Assert.Contains(PostStatus.Edited, data.PostStatus);

@@ -25,7 +25,7 @@ namespace Raven.Tests.Triggers
 		public AttachmentPutTriggers()
 		{
 			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (AuditAttachmentPutTrigger), typeof(RefuseBigAttachmentPutTrigger))));
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

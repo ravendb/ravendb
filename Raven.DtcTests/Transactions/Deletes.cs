@@ -22,7 +22,7 @@ namespace Raven.Tests.Transactions
 		public Deletes()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

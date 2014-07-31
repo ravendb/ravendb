@@ -131,16 +131,27 @@ namespace Raven.Client.Embedded
 
         public Guid ResourceManagerId { get; set; }
 
-        public DocumentDatabase DocumentDatabase
+        public DocumentDatabase SystemDatabase
         {
             get
             {
                 var eds = Inner as EmbeddedDocumentStore;
                 if (eds != null)
-                    return eds.DocumentDatabase;
+                    return eds.SystemDatabase;
                 return null;
             }
         }
+
+		public DocumentDatabase DocumentDatabase
+		{
+			get
+			{
+				var eds = Inner as EmbeddedDocumentStore;
+				if (eds != null)
+					return eds.DocumentDatabase;
+				return null;
+			}
+		}
 
         public DocumentConvention Conventions
         {

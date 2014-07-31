@@ -76,7 +76,7 @@ namespace Raven.Tests.MailingList
 				                                });
 
 				WaitForIndexing(store);
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 
@@ -146,7 +146,7 @@ namespace Raven.Tests.MailingList
 
 				WaitForIndexing(store);
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 		

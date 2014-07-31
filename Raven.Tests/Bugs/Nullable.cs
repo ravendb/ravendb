@@ -71,7 +71,7 @@ namespace Raven.Tests.Bugs
 
 				WaitForIndexing(store);
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
                 using (var session = store.OpenSession())
                 {

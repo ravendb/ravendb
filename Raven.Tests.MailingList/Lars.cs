@@ -50,7 +50,7 @@ namespace Raven.Tests.MailingList
 			using (var s = NewDocumentStore())
 			{
 				new Index().Execute(s);
-				var indexDefinition = s.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
+				var indexDefinition = s.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
 				Assert.Contains("Enumerable.ToArray(g)", indexDefinition.Reduce);
 				Assert.Contains("Enumerable.Sum", indexDefinition.Reduce);
 			}

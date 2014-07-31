@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
 						.ToArray();
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 
