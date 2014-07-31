@@ -131,16 +131,33 @@ namespace Raven.Client.Embedded
 
         public Guid ResourceManagerId { get; set; }
 
-        public DocumentDatabase DocumentDatabase
+		/// <summary>
+		/// Direct access to system database.
+		/// </summary>
+        public DocumentDatabase SystemDatabase
         {
             get
             {
                 var eds = Inner as EmbeddedDocumentStore;
                 if (eds != null)
-                    return eds.DocumentDatabase;
+                    return eds.SystemDatabase;
                 return null;
             }
         }
+
+		/// <summary>
+		/// Direct access to database configured in 'DefaultDatabase' property. If property value is 'null' then 'SystemDatabase' is returned. 
+		/// </summary>
+		public DocumentDatabase DocumentDatabase
+		{
+			get
+			{
+				var eds = Inner as EmbeddedDocumentStore;
+				if (eds != null)
+					return eds.DocumentDatabase;
+				return null;
+			}
+		}
 
         public DocumentConvention Conventions
         {

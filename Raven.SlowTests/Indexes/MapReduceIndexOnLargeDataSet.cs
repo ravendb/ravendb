@@ -46,7 +46,7 @@ namespace Raven.Tests.Indexes
 						}
 						catch (Exception)
 						{
-							PrintServerErrors(store.DocumentDatabase.Statistics.Errors);
+							PrintServerErrors(store.SystemDatabase.Statistics.Errors);
 
 							var missed = ret.Where(item => item.Count != 200)
 							                .Select(item => "Name: " + item.Name + ". Count: " + item.Count)
@@ -60,7 +60,7 @@ namespace Raven.Tests.Indexes
 					}
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

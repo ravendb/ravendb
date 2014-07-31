@@ -465,8 +465,8 @@ PutDocument(docId, type);
                     s.SaveChanges();
                 }
 
-				var patcher = new ScriptedJsonPatcher(store.DocumentDatabase);
-				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.DocumentDatabase, new HashSet<string> { "dogs" }))
+				var patcher = new ScriptedJsonPatcher(store.SystemDatabase);
+				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.SystemDatabase, new HashSet<string> { "dogs" }))
 				{
 					patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
 					{
@@ -481,18 +481,18 @@ PutDocument(docId, type);
 	"
 					});
 
-					store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+					store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						foreach (var operation in scope.GetOperations())
 						{
 							switch (operation.Type)
 							{
 								case ScriptedJsonPatcher.OperationType.Put:
-									store.DocumentDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+									store.SystemDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
 												 operation.Document.Metadata, null);
 									break;
 								case ScriptedJsonPatcher.OperationType.Delete:
-									store.DocumentDatabase.Documents.Delete(operation.DocumentKey, null, null);
+									store.SystemDatabase.Documents.Delete(operation.DocumentKey, null, null);
 									break;
 								default:
 									throw new ArgumentOutOfRangeException("operation.Type");

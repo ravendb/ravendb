@@ -110,7 +110,7 @@ namespace Raven.Tests.Issues
 					.Customize(x => x.WaitForNonStaleResults())
 					.ToList();
 
-				Assert.Empty(Store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(Store.SystemDatabase.Statistics.Errors);
 
 				Assert.Equal(1, results.Count());
 				Assert.Equal(DateTime.UtcNow.Date, results.First().SubscriptionEndDate.Date);

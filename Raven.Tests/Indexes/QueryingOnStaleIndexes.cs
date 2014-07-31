@@ -25,7 +25,7 @@ namespace Raven.Tests.Indexes
 		public QueryingOnStaleIndexes()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 

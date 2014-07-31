@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs.Indexing
                     session.Advanced.DocumentQuery<dynamic>("test").WaitForNonStaleResults().ToArray();
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

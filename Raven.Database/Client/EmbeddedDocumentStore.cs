@@ -7,6 +7,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Database.Config;
@@ -15,7 +16,7 @@ using Raven.Server;
 
 namespace Raven.Database.Client
 {
-    public class EmbeddedDocumentStore : IDocumentStore
+    internal class EmbeddedDocumentStore : IDocumentStore
     {
         private readonly RavenDbServer server;
 
@@ -39,14 +40,23 @@ namespace Raven.Database.Client
             set { server.Configuration = value; }
         }
 
-        public DocumentDatabase DocumentDatabase
+        public DocumentDatabase SystemDatabase
         {
             get
             {
-                //TODO oren: what should be returned here?
                 return server.SystemDatabase;
             }
         }
+
+		public DocumentDatabase DocumentDatabase
+		{
+			get
+			{
+				return server.Server
+					.GetDatabaseInternal(DefaultDatabase ?? Constants.SystemDatabase)
+					.ResultUnwrap();
+			}
+		}
 
         public string ConnectionStringName
         {

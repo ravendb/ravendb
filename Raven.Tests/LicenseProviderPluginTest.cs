@@ -32,7 +32,7 @@ namespace Raven.Tests
 			{
 				// We have to get the license status via reflection since it is not exposed otherwise.
 
-				var database = documentStore.DocumentDatabase;
+				var database = documentStore.SystemDatabase;
 
 				var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
 				Assert.NotNull(field);

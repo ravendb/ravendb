@@ -21,7 +21,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
-				var documentDatabase = store.DocumentDatabase;
+				var documentDatabase = store.SystemDatabase;
 
 				var tx1 = new TransactionInformation
 				{

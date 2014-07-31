@@ -72,14 +72,14 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
-				var storage = store.DocumentDatabase.TransactionalStorage;
+				var storage = store.SystemDatabase.TransactionalStorage;
 
 				using (var session = store.OpenSession())
 				{
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-                var indexId = store.DocumentDatabase.Indexes.GetIndexDefinition(index.IndexName).IndexId;
+                var indexId = store.SystemDatabase.Indexes.GetIndexDefinition(index.IndexName).IndexId;
 				storage.Batch(accessor =>
 				{
 					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
@@ -88,7 +88,7 @@ namespace Raven.Tests.Bugs
 					Assert.Equal(1, stats.First(x => x.Key == "John").Count);
 				});
 
-				store.DocumentDatabase.Documents.Delete("Users/1", null, null); // delete "Adam" reduce key
+				store.SystemDatabase.Documents.Delete("Users/1", null, null); // delete "Adam" reduce key
 
 				using (var session = store.OpenSession())
 				{

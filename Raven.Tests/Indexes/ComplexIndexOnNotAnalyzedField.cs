@@ -24,7 +24,7 @@ namespace Raven.Tests.Indexes
 		public ComplexIndexOnNotAnalyzedField()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

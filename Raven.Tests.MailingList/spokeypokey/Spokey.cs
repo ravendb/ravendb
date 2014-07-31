@@ -42,7 +42,7 @@ namespace Raven.Tests.MailingList.spokeypokey
 								  where u.ZipCodes2.Count == 0
 								  select u).ToArray();
 
-					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(docStore.SystemDatabase.Statistics.Errors);
 					Assert.Equal(1, result.Count());
 				}
 			}
@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList.spokeypokey
 								  where u.ZipCodes.Length == 0
 								  select u).ToArray();
 
-					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(docStore.SystemDatabase.Statistics.Errors);
 					Assert.Equal(1, result.Count());
 				}
 			}
