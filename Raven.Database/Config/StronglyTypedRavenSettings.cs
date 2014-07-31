@@ -24,13 +24,16 @@ namespace Raven.Database.Config
 
         public FileSystemConfiguration FileSystem { get; private set; }
 
+		public EncryptionConfiguration Encryption { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
 			Voron = new VoronConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
             FileSystem = new FileSystemConfiguration();
-
+			Encryption = new EncryptionConfiguration();
+			
 			this.settings = settings;
 		}
 
@@ -49,8 +52,6 @@ namespace Raven.Database.Config
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
 				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
 
-		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
-		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -120,8 +121,6 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
 				new StringSetting(settings["Raven/Port"], "*");
-			UseSsl = 
-				new BooleanSetting(settings["Raven/UseSsl"], false);
 			HttpCompression =
 				new BooleanSetting(settings["Raven/HttpCompression"], true);
 			AccessControlAllowOrigin =
@@ -186,6 +185,10 @@ namespace Raven.Database.Config
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
+
+			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
+			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
+			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 		}
 
 		private string GetDefaultWebDir()
@@ -217,8 +220,6 @@ namespace Raven.Database.Config
 		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
 		public TimeSpanSetting BulkImportBatchTimeout { get; private set; }
-
-		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 
@@ -269,12 +270,6 @@ namespace Raven.Database.Config
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
-
-		public StringSetting SslCertificatePath { get; private set; }
-
-		public StringSetting SslCertificatePassword { get; private set; }
-
-		public BooleanSetting UseSsl { get; private set; }
 
 		public BooleanSetting HttpCompression { get; private set; }
 
@@ -354,5 +349,16 @@ namespace Raven.Database.Config
         {
             public TimeSpanSetting MaximumSynchronizationInterval { get; set; }
         }
+
+		public class EncryptionConfiguration
+		{
+			public BooleanSetting UseFips { get; set; }
+
+			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
+
+			public BooleanSetting UseSsl { get; set; }
+		}
 	}
+
+	
 }
