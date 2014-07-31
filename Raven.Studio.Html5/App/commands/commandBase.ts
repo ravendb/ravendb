@@ -134,7 +134,22 @@ class commandBase {
             dataType: "json",
             contentType: contentType, 
             type: method,
-            headers: undefined
+            headers: undefined,
+            xhr: () => {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
+                    if (evt.lengthComputable) {
+                        var percentComplete = evt.loaded / evt.total;
+                        if (percentComplete < 1) {
+                            // waiting for upload progress to complete
+                            clearTimeout(commandBase.splashTimerHandle);
+                            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 0, timeToAlert);
+                        }
+                    }
+                }, false);
+
+                return xhr;
+            }
         };
         
         if (options) {
@@ -283,7 +298,7 @@ class commandBase {
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
 	}
 
-    private static showSpin(timeToAlert:number) {
+    private static showSpin(timeToAlert: number) {
         ko.postbox.publish("LoadProgress", alertType.warning);
         commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
     }
