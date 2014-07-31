@@ -216,7 +216,16 @@ namespace Raven.Client.Embedded
         {
             get { return Inner.JsonRequestFactory; }
         }
-        public string Identifier
+
+	    public bool HasJsonRequestFactory
+	    {
+		    get
+		    {
+			    return Inner.HasJsonRequestFactory;
+		    }
+	    }
+
+	    public string Identifier
         {
             get { return Inner.Identifier; }
             set { Inner.Identifier = value; }
