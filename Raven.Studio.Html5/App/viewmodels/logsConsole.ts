@@ -32,7 +32,8 @@ class logsConsole extends  viewModelBase {
                     this.allLogsNotifications.shift();
                 }
                 this.allLogsNotifications.push(e);
-                $("#logNotificationsContainer").scrollTop($('#logNotificationsContainer').height())
+                var objDiv = document.getElementById("logNotificationsContainer");
+                objDiv.scrollTop = objDiv.scrollHeight;
             })
         ];
     }

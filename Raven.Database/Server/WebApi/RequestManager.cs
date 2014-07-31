@@ -420,10 +420,8 @@ namespace Raven.Database.Server.WebApi
 	        {
                 transportState.Send(logNotification);
 	        }
-            
 	    }
-
-
+        
 		private void IdleOperations(object state)
 		{
 			if ((SystemTime.UtcNow - lastWriteRequest).TotalMinutes < 1)

@@ -65,10 +65,24 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (user == null)
                     return null;
-                if (user.IsAdministrator(annonymouseUserAccessMode) == false)
+                bool isAdministrator=false;
+                
+                if (user is MixedModeRequestAuthorizer.OneTimetokenPrincipal)
+                {
+                    var oneTimePrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+                    if (oneTimePrincipal != null)
+                    {
+                        isAdministrator = oneTimePrincipal.IsAdministratorInAnonymouseMode;
+                    }
+                }
+                else
+                {
+                    isAdministrator = user.IsAdministrator(annonymouseUserAccessMode);
+                }
+
+                if (isAdministrator == false)
                 {
                     var authorizer = mixedModeRequestAuthorizer;
-
                     approvedResources = authorizer.GetApprovedResources(user, authHeader, reourcesNames);
                 }
             }

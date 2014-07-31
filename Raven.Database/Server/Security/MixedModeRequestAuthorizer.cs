@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
@@ -38,9 +39,11 @@ namespace Raven.Database.Server.Security
 						user = null;
 						return;
 					}
+                    
 					user = new OneTimetokenPrincipal
 					{
-						Name = value.Identity.Name
+						Name = value.Identity.Name,
+                        IsAdministratorInAnonymouseMode = value.IsAdministrator(AnonymousUserAccessMode.None)
 					};
 				}
 			}
@@ -54,9 +57,10 @@ namespace Raven.Database.Server.Security
 		{
 			public bool IsInRole(string role)
 			{
-				return false;
+			    return false;
 			}
 
+            public bool IsAdministratorInAnonymouseMode { get; set; }
 			public IIdentity Identity { get { return this; } }
 			public string Name { get; set; }
 			public string AuthenticationType { get { return "one-time-token"; } }
