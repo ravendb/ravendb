@@ -35,7 +35,7 @@ namespace Raven.Tests.MailingList
 					List<SiteSale> sitesales = s.Query<SiteSale, Sales_ByLocation>().Customize(x => x.WaitForNonStaleResults())
 						.ToList();
 
-					Assert.Empty(d.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(d.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(sitesales);
 				}

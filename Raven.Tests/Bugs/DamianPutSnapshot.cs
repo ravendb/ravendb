@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = NewDocumentStore())
 			{
 				documentStore.Initialize();
-				documentStore.DocumentDatabase.PutTriggers.Add(new PutTrigger {Database = documentStore.DocumentDatabase});
+				documentStore.SystemDatabase.PutTriggers.Add(new PutTrigger {Database = documentStore.SystemDatabase});
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
 					session.Store(new Doc {Id = "DocId1", Name = "Name1"});

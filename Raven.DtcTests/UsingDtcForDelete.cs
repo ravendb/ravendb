@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs.DTC
 					Id = Guid.NewGuid().ToString()
 				};
 
-				store.DocumentDatabase.Documents.Put(documentKey, null, new RavenJObject(),
+				store.SystemDatabase.Documents.Put(documentKey, null, new RavenJObject(),
 				                     RavenJObject.Parse(
 				                     	@"{
   ""Raven-Entity-Name"": ""MySagaDatas"",
@@ -43,10 +43,10 @@ namespace Raven.Tests.Bugs.DTC
 				{
                     Id = Guid.NewGuid().ToString()
 				};
-				store.DocumentDatabase.Documents.Delete(documentKey, null, deleteTx);
+				store.SystemDatabase.Documents.Delete(documentKey, null, deleteTx);
 
 				store.DatabaseCommands.PrepareTransaction(deleteTx.Id);
-				store.DocumentDatabase.Commit(deleteTx.Id);
+				store.SystemDatabase.Commit(deleteTx.Id);
 			}
 		}
 	}

@@ -65,7 +65,7 @@ namespace Raven.Database.Server.Connections
         
         public string Id { get; private set; }
         public bool Connected { get; set; }
-        public long CoolDownWithDataLossInMilisecods { get; set; }
+        public long CoolDownWithDataLossInMiliseconds { get; set; }
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Connections
             Id = context.Request.Query["id"];
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
-            CoolDownWithDataLossInMilisecods = waitTimeBetweenMessages;
+            CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
         }
 
         public void Dispose()
@@ -137,7 +137,7 @@ namespace Raven.Database.Server.Connections
 						if (callCancelled.IsCancellationRequested)
 							break;
 
-                        if (CoolDownWithDataLossInMilisecods > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMilisecods)
+                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
                         {
                             lastMessageEnqueuedAndNotSent = message;
                             continue;

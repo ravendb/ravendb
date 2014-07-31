@@ -21,9 +21,7 @@
             <div class="panel-heading">
                 <h3 class="panel-title">
                     <span data-bind="text: name() ? name() : '[new api key]'"></span>
-                    <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">
-                        <span class="glyphicon glyphicon-remove remove-icon"></span>
-                    </button>
+                    <button type="button" style="display: inline-block;" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key"></button>
                 </h3>
             </div>
             <div class="panel-body">
@@ -112,9 +110,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button type="button" class="close" style="display:inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
-                                            <span class="glyphicon glyphicon-remove remove-icon"></span>
-                                        </button>
+                                        <button type="button" class="close close glyphicon glyphicon-remove remove-icon" style="display: inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database"></button>
                                     </td>
                                 </tr>
                             </tbody>

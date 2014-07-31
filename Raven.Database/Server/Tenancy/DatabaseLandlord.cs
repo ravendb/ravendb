@@ -48,7 +48,6 @@ namespace Raven.Database.Server.Tenancy
             return CreateConfiguration(tenantId, document, "Raven/DataDir", systemConfiguration);
         }
 
-
 		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;

@@ -303,13 +303,12 @@ class editDocument extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        this.documentNameElement = $("#documentName");
+
         var editorElement = $("#docEditor");
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
-
-        this.documentNameElement = $("#documentName");
-
         this.focusOnEditor();
     }
 
@@ -336,7 +335,7 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
-    focusOnEditor() {
+    private focusOnEditor() {
         this.docEditor.focus();
     }
 
@@ -481,24 +480,24 @@ class editDocument extends viewModelBase {
             message = "Document name cannot contain '\\'";
             this.documentNameElement.focus();
         } else {
-        try {
-            var updatedDto;
+            try {
+                var updatedDto;
                 if (this.isNewLineFriendlyMode() === true) {
-            updatedDto = JSON.parse(this.escapeNewlinesInTextFields(this.documentText()));
-        } else {
-            updatedDto = JSON.parse(this.documentText());
-        }
-        var meta = JSON.parse(this.metadataText());
+                    updatedDto = JSON.parse(this.escapeNewlinesInTextFields(this.documentText()));
+                } else {
+                    updatedDto = JSON.parse(this.documentText());
+                }
+                var meta = JSON.parse(this.metadataText());
             } catch (e) {
-            if (updatedDto == undefined) {
-                message = "The data isn't a legal JSON expression!";
-                this.isEditingMetadata(false);
+                if (updatedDto == undefined) {
+                    message = "The document data isn't a legal JSON expression!";
+                    this.isEditingMetadata(false);
                 } else if (meta == undefined) {
-                message = "The metadata isn't a legal JSON expression!";
-                this.isEditingMetadata(true);
-            }
+                    message = "The document metadata isn't a legal JSON expression!";
+                    this.isEditingMetadata(true);
+                }
                 this.focusOnEditor();
-        }
+            }
         }
         
         if (message != "") {

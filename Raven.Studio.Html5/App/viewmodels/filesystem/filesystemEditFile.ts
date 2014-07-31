@@ -111,8 +111,6 @@ class filesystemEditFile extends viewModelBase {
         });
     }
 
-
-
     downloadFile() {
         var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + this.fileName();
         window.location.assign(url);

@@ -1,16 +1,10 @@
-﻿<style>
-  .versioning-inner-margin {
-      margin-left: 25px;
-      margin-right: 25px;
-  }
-</style>
-<section>
+﻿<section>
     <form class="versioning-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <div class="pull-right">
-                    <button type="button" class="btn btn-default" data-bind="click: createNewVersioning" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add versioning</button>
+                <div class="navbar-form">
                     <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: isSaveEnabled" accesskey="S"><i class="fa fa-save"></i></button>
+                    <button type="button" class="btn btn-default" data-bind="click: createNewVersioning" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add versioning</button>
                 </div>
                 <div class="clearfix"></div>
             </div>

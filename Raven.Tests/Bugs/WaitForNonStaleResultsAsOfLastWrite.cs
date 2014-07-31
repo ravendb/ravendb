@@ -88,10 +88,10 @@ namespace Raven.Tests.Bugs
 						.WaitForNonStaleResultsAsOfLastWrite();
 
 					// wait for indexing to complete
-					while(store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+					while(store.SystemDatabase.Statistics.StaleIndexes.Length > 0)
 						Thread.Sleep(100);
 
-					store.DocumentDatabase.StopBackgroundWorkers();
+					store.SystemDatabase.StopBackgroundWorkers();
 
 					session.Store(new User());
 					session.SaveChanges();

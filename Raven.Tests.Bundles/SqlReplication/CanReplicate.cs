@@ -93,7 +93,7 @@ CREATE TABLE [dbo].[Orders]
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
-				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
 					.First().AfterReplicationCompleted += successCount =>
 					{
 						if (successCount != 0)
@@ -144,7 +144,7 @@ CREATE TABLE [dbo].[Orders]
 				var eventSlim = new ManualResetEventSlim(false);
 
 				int testCount = 5000;
-				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
 					.First().AfterReplicationCompleted += successCount =>
 					{
 						if (GetOrdersCount() == testCount)
@@ -205,7 +205,7 @@ CREATE TABLE [dbo].[Orders]
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
-				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
 					 .First().AfterReplicationCompleted += successCount =>
 					 {
 						 if (successCount != 0)
@@ -253,7 +253,7 @@ CREATE TABLE [dbo].[Orders]
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
-				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
 					 .First().AfterReplicationCompleted += successCount =>
 					 {
 						 if (successCount != 0)
@@ -299,7 +299,7 @@ CREATE TABLE [dbo].[Orders]
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
-				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
 					 .First().AfterReplicationCompleted += successCount =>
 					 {
 						 if (successCount != 0)

@@ -23,7 +23,7 @@ namespace Raven.Tests.Transactions
 		public Etags()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

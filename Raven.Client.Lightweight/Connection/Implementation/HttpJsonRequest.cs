@@ -172,7 +172,7 @@ namespace Raven.Client.Connection
 				});
 				return cachedResult;
 			}
-
+			
 			if (writeCalled)
                 return await ReadJsonInternalAsync().ConfigureAwait(false);
 
@@ -441,13 +441,17 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public long Size { get; private set; }
+
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
 			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				var data = RavenJToken.TryLoad(responseStream);
+				var countingStream = new CountingStream(responseStream);
+				var data = RavenJToken.TryLoad(countingStream);
+				Size = countingStream.NumberOfReadBytes;
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{

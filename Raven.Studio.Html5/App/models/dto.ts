@@ -636,6 +636,11 @@ interface histogramDataDto {
     Percentiles: any;
 }
 
+interface fileSystemDto {
+    Name: string;
+    Disabled: boolean;
+}
+
 interface statusDebugDocrefsDto {
     TotalCount: number;
     Results: Array<string>;

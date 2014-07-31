@@ -1,33 +1,34 @@
 ﻿<div class="messageBox" tabindex="-1">
     <div class="modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+        <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: cancel" aria-hidden="true"></button>
         <h4 class="modal-title">Sure?</h4>
     </div>
     <div class="modal-body">
-        <div data-bind="visible: databasesToDelete().length === 1">
+        <div data-bind="visible: resourcesToDelete().length === 1">
             <span>You're deleting </span>
-            <strong data-bind="with: databasesToDelete()[0]">
+            <strong data-bind="with: resourcesToDelete()[0]">
                 <span data-bind="text: name"></span>
             </strong>
         </div>
-        <div data-bind="visible: databasesToDelete().length > 1">
+        <div data-bind="visible: resourcesToDelete().length > 1">
             <span>You're deleting </span>
-            <strong data-bind="text: databasesToDelete().length"></strong>
-            <span>databases:</span>
+            <strong data-bind="text: resourcesToDelete().length"></strong>
+            <span data-bind="text: resourcesTypeText + ':'"></span>
             <br />
-            <ul data-bind="foreach: databasesToDelete" style="max-height: 100px; overflow-y: auto;">
+            <ul data-bind="foreach: resourcesToDelete" style="max-height: 100px; overflow-y: auto;">
                 <li data-bind="text: name"></li>
             </ul>
         </div>
 
-        <div data-bind="visible: databasesToDelete().length > 1">
-            <strong>You can export these databases if needed.</strong><br />
+        <div data-bind="visible: isDeletingDatabase">
+            <div data-bind="visible: resourcesToDelete().length === 1">
+                You can <a href="#" data-bind="click: navigateToExportDatabase">export the database</a> if needed.<br />
+            </div>
 
+            <div data-bind="visible: resourcesToDelete().length > 1">
+                <strong>You can export these databases if needed.</strong><br />
+            </div>
         </div>
-
-        <p data-bind="visible: databasesToDelete().length === 1">
-            You can <a href="#" data-bind="click: navigateToExportDatabase">export the database</a> if needed.<br />
-        </p>
 
         <p>Delete options:</p>
         <div class="btn-group" data-toggle="buttons">
@@ -39,8 +40,9 @@
             </label>
         </div>
 
-        <p data-bind="visible: databasesToDelete().length > 1">
-            <strong>Note: </strong> Delete options will be applied to all <br /> of the deleted databases.
+        <p data-bind="visible: resourcesToDelete().length > 1">
+            <strong>Note: </strong>
+            Delete options will be applied to all <br /> of the deleted <span data-bind="text: resourcesTypeText"></span>.
         </p>
     </div>
     <div class="modal-footer">

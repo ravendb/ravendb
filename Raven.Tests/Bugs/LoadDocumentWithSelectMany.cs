@@ -74,7 +74,7 @@ namespace Raven.Tests.Bugs
 				var dic = new Dictionary<string, int>();
 				for (int i = 0; i < count; i++)
 				{
-					store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+					store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						dic["users/" + i] = accessor.Indexing.GetDocumentsReferencesFrom("users/" + i).Count();
 					});

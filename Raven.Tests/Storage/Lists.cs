@@ -26,7 +26,7 @@ namespace Raven.Tests.Storage
 		public Lists()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

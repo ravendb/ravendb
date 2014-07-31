@@ -134,7 +134,7 @@ namespace Raven.Tests.Issues
 					       .ToList();
 
 					Assert.Equal(6, results.Count);
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 				}
 			}
 		}

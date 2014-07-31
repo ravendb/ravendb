@@ -3,9 +3,10 @@ import resource = require("models/resource");
 class database extends resource {
     statistics = ko.observable<databaseStatisticsDto>();
     activeBundles = ko.observableArray<string>();
+    static type = 'database';
 
-    constructor(public name: string, isDisabled: boolean = false, private bundles = []) {
-        super(name, 'database');
+    constructor(public name: string, isDisabled: boolean = false, bundles: Array<string> = []) {
+        super(name, database.type);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.itemCount = ko.computed(() => this.statistics() ? this.statistics().CountOfDocuments : 0);

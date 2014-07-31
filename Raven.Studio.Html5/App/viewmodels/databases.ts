@@ -3,11 +3,8 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import createDefaultSettingsCommand = require("commands/createDefaultSettingsCommand");
-import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
-import databaseSettingsDialog = require("viewmodels/databaseSettingsDialog");
 
 class databases extends viewModelBase {
 
@@ -19,7 +16,6 @@ class databases extends viewModelBase {
     systemDb: database;
     docsForSystemUrl: string;
     optionsClicked = ko.observable<boolean>(false);
-    clickedDatabase = ko.observable<database>(null);
 
     constructor() {
         super();
@@ -179,8 +175,10 @@ class databases extends viewModelBase {
                         this.createDefaultSettings(newDatabase, bundles).always(() => {
                             if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                                 encryptionConfirmationDialogPromise.always(() => {
-                                    var settingsDialog = new databaseSettingsDialog(bundles);
-                                    app.showDialog(settingsDialog);
+                                    require(["viewmodels/databaseSettingsDialog"], databaseSettingsDialog => {
+                                        var settingsDialog = new databaseSettingsDialog(bundles);
+                                        app.showDialog(settingsDialog);
+                                    });
                                 });
                             }
                         });
@@ -190,19 +188,23 @@ class databases extends viewModelBase {
     }
 
     private addNewDatabase(databaseName: string): database {
-        var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
+        var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
-        if (!databaseInArray) {
+        if (!foundDatabase) {
             var newDatabase = new database(databaseName);
             this.databases.unshift(newDatabase);
             return newDatabase;
         }
 
-        return databaseInArray;
+        return foundDatabase;
     }
 
     private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
-        return new createDefaultSettingsCommand(db, bundles).execute();
+        var deferred = $.Deferred();
+        require(["commands/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
+            deferred = new createDefaultSettingsCommand(db, bundles).execute();
+        });
+        return deferred;
     }
 
     private isEmptyStringOrWhitespace(str: string) {
@@ -229,7 +231,7 @@ class databases extends viewModelBase {
 
     deleteSelectedDatabases(databases: Array<database>) {
         if (databases.length > 0) {
-            require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
+            require(["viewmodels/deleteResourceConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteViewModel = new deleteDatabaseConfirm(databases);
 
                 confirmDeleteViewModel.deleteTask.done((deletedDatabaseNames: string[]) => {
@@ -268,17 +270,17 @@ class databases extends viewModelBase {
         if (databases.length > 0) {
             var action = !databases[0].disabled();
 
-            require(["viewmodels/disableDatabaseToggleConfirm"], disableDatabaseToggleConfirm => {
+            require(["viewmodels/disableResourceToggleConfirm"], disableDatabaseToggleConfirm => {
                 var disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(databases);
 
                 disableDatabaseToggleViewModel.disableToggleTask
-                    .done((toggledDatabaseNames: string[]) => {
+                    .done((toggledDatabasesNames: string[]) => {
                         var activeDatabase: database = this.activeDatabase();
 
                         if (databases.length == 1) {
                             this.onDatabaseDisabledToggle(databases[0].name, action, activeDatabase);
                         } else {
-                            toggledDatabaseNames.forEach(databaseName => {
+                            toggledDatabasesNames.forEach(databaseName => {
                                 this.onDatabaseDisabledToggle(databaseName, action, activeDatabase);
                             });
                         }
@@ -309,16 +311,12 @@ class databases extends viewModelBase {
 
     private filterDatabases(filter: string) {
         var filterLower = filter.toLowerCase();
-        this.databases().forEach(d=> {
-            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
-            d.isVisible(isMatch);
+        this.databases().forEach((db: database) => {
+            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name != '<system>';
+            db.isVisible(isMatch);
         });
 
-        var selectedDatabase = this.selectedDatabase();
-        if (selectedDatabase && !selectedDatabase.isVisible()) {
-            selectedDatabase.isSelected(false);
-            this.selectedDatabase(null);
-        }
+        this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
 }
 

@@ -189,7 +189,7 @@ namespace Raven.Database.Commercial
 				{
 					Status = "AGPL - Open Source",
 					Error = false,
-					Message = "No license file was found at " + licenseText +
+					Message = "No license file was found." +
 					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
 				};
 				return false;
@@ -199,7 +199,7 @@ namespace Raven.Database.Commercial
 
 		private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
 		{
-			string version,expiration;
+			string version;
 		    var errorMessage = string.Empty;
             
 			if (licenseAttributes.TryGetValue("version", out version) == false)
