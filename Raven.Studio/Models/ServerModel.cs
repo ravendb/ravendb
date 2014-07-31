@@ -117,7 +117,7 @@ namespace Raven.Studio.Models
 
 			defaultDatabase = new[] { Constants.SystemDatabase };
 			Databases.Set(defaultDatabase);
-			SetCurrentDatabase(urlParser);
+			SetCurrentDatabase(urlParser, firstTime: true);
 
 			//DisplayRawUrl();
 			DisplayBuildNumber();
@@ -233,7 +233,7 @@ namespace Raven.Studio.Models
 			}.Uri.ToString();
 		}
 
-		public void SetCurrentDatabase(UrlParser urlParser)
+		public void SetCurrentDatabase(UrlParser urlParser, bool firstTime = false)
 		{
 			var databaseName = urlParser.GetQueryParam("database");
 
@@ -265,9 +265,17 @@ namespace Raven.Studio.Models
 					if (httpWebResponse == null)
 						return false;
 
+					if (firstTime && 
+						httpWebResponse.StatusCode == HttpStatusCode.Forbidden &&
+						databaseName == null)
+					{
+						return true; // we won't show error in this case
+					}
+
 					if (httpWebResponse.StatusCode != HttpStatusCode.ServiceUnavailable)
 						return false;
 
+					
 					ApplicationModel.Current.Notifications.Add(new Notification("Database " + databaseName + " does not exist.", NotificationLevel.Error, webException));
 
 					return true;
@@ -284,10 +292,13 @@ namespace Raven.Studio.Models
 		private void DisplayLicenseStatus()
 		{
 			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
-				.ContinueOnSuccessInTheUIThread(x =>
+				.ContinueOnUIThread(x =>
 				{
-					License.Value = x;
-					if (x.Error == false)
+					if (x.Exception != null)
+						return;
+
+					License.Value = x.Result;
+					if (x.Result.Error == false)
 						return;
 					new ShowLicensingStatusCommand().Execute(x);
 				})

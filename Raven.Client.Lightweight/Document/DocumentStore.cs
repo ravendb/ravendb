@@ -655,7 +655,13 @@ namespace Raven.Client.Document
 
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
-			var task = asyncDatabaseCommandsGenerator().GetDocumentsAsync(0, 0, metadataOnly: true);
+			var task = asyncDatabaseCommandsGenerator().GetDocumentsAsync(0, 0, metadataOnly: true)
+				.ContinueWith(t=>
+				{
+					// we don't actually _care_ if we succeed or not here, we just care that we 
+					// issued this command and now will only have a single auth dialog
+					return t.Exception != null;
+				});
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
 				args.JsonRequest.WaitForTask = task;
