@@ -258,15 +258,23 @@ class shell extends viewModelBase {
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
 
-            new getDatabasesCommand()
+            var databasesLoadTask = new getDatabasesCommand()
                 .execute()
                 .done((results: database[]) => this.updateResourceObservableArray(shell.databases, results, this.activeDatabase));
-            new getFileSystemsCommand()
+            var fileSystemsLoadTask = new getFileSystemsCommand()
                 .execute()
                 .done((results: filesystem[]) => this.updateResourceObservableArray(shell.fileSystems, results, this.activeFilesystem));
-            new getCounterStoragesCommand()
+            var counterStoragesLoadTask = new getCounterStoragesCommand()
                 .execute()
                 .done((results: counterStorage[]) => this.updateResourceObservableArray(shell.counterStorages, results, this.activeCounterStorage));
+
+            $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
+                .done(() => {
+                    var connectedResource = this.currentConnectedResource;
+                    var resourceObservableArray: any = (connectedResource instanceof database) ? shell.databases : (connectedResource instanceof filesystem) ? shell.fileSystems : shell.counterStorages;
+                    var activeResourceObservable: any = (connectedResource instanceof database) ? this.activeDatabase : (connectedResource instanceof filesystem) ? this.activeFilesystem : this.activeCounterStorage;
+                    this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
+            });
         }
     }
 
@@ -276,9 +284,11 @@ class shell extends viewModelBase {
         var deletedResources = [];
 
         resourceObservableArray().forEach((rs: resource) => {
-            var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name == rs.name || rs.name == "<system>");
-            if (existingResource == null) {
-                deletedResources.push(rs);
+            if (rs.name != '<system>') {
+                var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name == rs.name);
+                if (existingResource == null) {
+                    deletedResources.push(rs);
+                }
             }
         });
 
@@ -292,18 +302,10 @@ class shell extends viewModelBase {
                 foundResource.disabled(recievedResource.disabled());
             }
         });
-
-        if (deletedResources.length > 0) {
-            this.selectNewActiveResourceIfNeeded(deletedResources[0], resourceObservableArray, activeResourceObservable);
-        }
     }
 
-    private selectNewActiveResourceIfNeeded(resourceToDelete: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
-        var isSameInstanceAsCurrent = resourceToDelete instanceof database && this.currentConnectedResource instanceof database ||
-            resourceToDelete instanceof filesystem && this.currentConnectedResource instanceof filesystem ||
-            resourceToDelete instanceof counterStorage && this.currentConnectedResource instanceof counterStorage;
-
-        if (isSameInstanceAsCurrent && resourceObservableArray.contains(activeResourceObservable()) == false) {
+    private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
+        if (!!activeResourceObservable() && resourceObservableArray.contains(activeResourceObservable()) == false) {
             if (resourceObservableArray().length > 0) {
                 this.selectResource(resourceObservableArray().first());
             } else if (resourceObservableArray().length == 0) {
@@ -335,7 +337,7 @@ class shell extends viewModelBase {
                 if (!!resourceToDelete) {
                     resourceObservableArray.remove(resourceToDelete);
 
-                    this.selectNewActiveResourceIfNeeded(resourceToDelete, resourceObservableArray, activeResourceObservable);
+                    this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
                 }
             } else { // e.Type === documentChangeType.Put
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
