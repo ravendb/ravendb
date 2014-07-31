@@ -39,7 +39,23 @@ class viewModelBase {
     canActivate(args: any): any {
         var resource = appUrl.getResource();
 
-        if (resource instanceof database) {
+        if (resource instanceof filesystem) {
+            var fs = this.activeFilesystem();
+
+            if (!!fs && fs.disabled()) {
+                messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system while it's disabled.");
+                return { redirect: appUrl.forFilesystems() };
+            }
+        }
+        else if (resource instanceof counterStorage) {
+            var cs = this.activeCounterStorage();
+
+            if (!!cs && cs.disabled()) {
+                messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
+                return { redirect: appUrl.forFilesystems() };
+            }
+        }
+        else { //it's a database
             var db = this.activeDatabase();
 
             // we only want to prompt warning to system db if we are in the databases section
@@ -51,22 +67,11 @@ class viewModelBase {
                 return this.promptNavSystemDb();
             }
             else if (!!db && db.disabled()) {
-                messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
+                messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database while it's disabled.");
                 return { redirect: appUrl.forDatabases() };
             }
 
             viewModelBase.isConfirmedUsingSystemDatabase = false;
-        }
-        else if (resource instanceof filesystem) {
-            var fs = this.activeFilesystem();
-
-            if (!!fs && fs.disabled()) {
-                messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system when it's disabled.");
-                return { redirect: appUrl.forFilesystems() };
-            }
-        }
-        else if (resource instanceof counterStorage) {
-            
         }
 
         return true;
