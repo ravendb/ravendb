@@ -656,7 +656,8 @@ namespace Raven.Database.Server.Controllers
 						catch (Exception ex)
 						{
 							var streamWriter = new StreamWriter(stacktraceStream);
-							streamWriter.WriteLine("Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex);
+                            jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
+                            streamWriter.Flush();
 						}
 						finally
 						{

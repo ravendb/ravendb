@@ -1,4 +1,6 @@
-﻿class svgDownloader {
+﻿import d3 = require('d3/d3');
+
+class svgDownloader {
 
     static svgHeader = '<?xml version="1.0" standalone="no"?>\n' + 
     '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">';
@@ -17,10 +19,12 @@
         s.setAttribute('type', 'text/css');
         s.innerHTML = "<![CDATA[\n" + targetStyles + "\n]]>";
 
-        var defs = document.createElement('defs');
+        var defs = d3.select(svgClone).select('defs').node();
+        if (!defs) {
+            defs = document.createElement('defs');
+            svgClone.insertBefore(defs, svgClone.firstChild);
+        }
         defs.appendChild(s);
-
-        svgClone.insertBefore(defs, svgClone.firstChild);
 
         return svgDownloader.svgHeader + "\n" + svgContainer.innerHTML;
     }
