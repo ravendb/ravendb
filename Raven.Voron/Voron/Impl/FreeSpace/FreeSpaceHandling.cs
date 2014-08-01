@@ -212,8 +212,8 @@ namespace Voron.Impl.FreeSpace
 		private static bool TryFindSmallValueMergingTwoSections(Transaction tx, TreeIterator it, int num, StreamBitArray current, long currentSectionId, out long? result)
 		{
 			result = -1;
-			var currentRange = current.GetEndRangeCount();
-			if (currentRange == 0)
+			var currentEndRange = current.GetEndRangeCount();
+			if (currentEndRange == 0)
 				return false;
 
 			var nextSectionId = currentSectionId + 1;
@@ -225,7 +225,7 @@ namespace Voron.Impl.FreeSpace
 
 			var next = new StreamBitArray(read.Reader);
 
-			var nextRange = num - currentRange;
+			var nextRange = num - currentEndRange;
 			if (next.HasStartRangeCount(nextRange) == false)
 				return false;
 
@@ -242,13 +242,13 @@ namespace Voron.Impl.FreeSpace
 				tx.State.FreeSpaceRoot.Add(nextId, next.ToStream());
 			}
 
-			if (current.SetCount == currentRange)
+			if (current.SetCount == currentEndRange)
 			{
 				tx.State.FreeSpaceRoot.Delete(it.CurrentKey);
 			}
 			else
 			{
-				for (int i = 0; i < currentRange; i++)
+				for (int i = 0; i < currentEndRange; i++)
 				{
 					current.Set(NumberOfPagesInSection - 1 - i, false);
 				}
@@ -256,7 +256,7 @@ namespace Voron.Impl.FreeSpace
 			}
 
 
-			result = currentSectionId * NumberOfPagesInSection + currentRange;
+			result = currentSectionId * NumberOfPagesInSection + (NumberOfPagesInSection - currentEndRange);
 			return true;
 		}
 
