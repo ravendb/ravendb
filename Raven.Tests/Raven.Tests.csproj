@@ -824,6 +824,7 @@
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Garrett.cs" />
+    <Compile Include="MailingList\gaz.cs" />
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
