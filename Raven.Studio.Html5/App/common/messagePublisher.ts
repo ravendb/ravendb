@@ -7,7 +7,7 @@ class messagePublisher {
     }
 
     static reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = true) {
-        this.reportProgress(alertType.danger, title, details, httpStatusText);
+        this.reportProgress(alertType.danger, title, details, httpStatusText, displayInRecentErrors);
         if (console && console.log && typeof console.log === "function") {
             console.log("Error during command execution", title, details, httpStatusText);
         }

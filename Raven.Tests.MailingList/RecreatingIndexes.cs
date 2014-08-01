@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 					Conventions = new DocumentConvention()
 				}.CreateIndexDefinition();
 				var findIndexCreationOptions = typeof(IndexActions).GetMethod("FindIndexCreationOptions", BindingFlags.Instance | BindingFlags.NonPublic);
-				var result = findIndexCreationOptions.Invoke(store.DocumentDatabase.Indexes, new object[] { index, "Audio/Index" });
+				var result = findIndexCreationOptions.Invoke(store.SystemDatabase.Indexes, new object[] { index, "Audio/Index" });
 				Assert.Equal(IndexCreationOptions.Noop, result);
 			}
 		}

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;

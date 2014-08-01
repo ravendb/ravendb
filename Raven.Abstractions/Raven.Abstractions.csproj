@@ -313,7 +313,9 @@
     <Compile Include="FileSystem\Notifications\SynchronizationUpdateNotification.cs" />
     <Compile Include="FileSystem\SyncingMultipartConstants.cs" />
     <Compile Include="FileSystem\Notifications\UploadFailedNotification.cs" />
+    <Compile Include="Replication\FailoverBehavior.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
+    <Compile Include="Replication\ReplicationClientConfiguration.cs" />
     <Compile Include="Replication\ReplicationConfig.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />

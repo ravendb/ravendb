@@ -27,7 +27,7 @@ namespace Raven.Tests.Queries
 		public ParameterizedDynamicQuery()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

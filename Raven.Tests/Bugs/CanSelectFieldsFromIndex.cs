@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 		{
 			using(var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Documents.Put("ayende", null,
+				store.SystemDatabase.Documents.Put("ayende", null,
 										   RavenJObject.Parse(
 											   @"{
 	'name': 'ayende',

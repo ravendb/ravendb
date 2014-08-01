@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs
 			{
 				EnsureDtcIsSupported(store);
 
-				PutResult putResult = store.DocumentDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), null);
+				PutResult putResult = store.SystemDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), null);
 
 				var transactionInformation = new TransactionInformation
 				{
@@ -30,13 +30,13 @@ namespace Raven.Tests.Bugs
 				};
 				Raven.Abstractions.Data.Etag etag;
 				
-				store.DocumentDatabase.Documents.Put("test", putResult.ETag, new RavenJObject(), new RavenJObject(), transactionInformation);
+				store.SystemDatabase.Documents.Put("test", putResult.ETag, new RavenJObject(), new RavenJObject(), transactionInformation);
 
-				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 					accessor.Documents.TouchDocument("test", out etag, out etag));
 				
-				store.DocumentDatabase.PrepareTransaction("tx");
-				store.DocumentDatabase.Commit("tx");
+				store.SystemDatabase.PrepareTransaction("tx");
+				store.SystemDatabase.Commit("tx");
 			}
 		}
 	}

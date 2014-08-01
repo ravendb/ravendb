@@ -31,9 +31,10 @@ class filesystemFiles extends viewModelBase {
     uploadFiles = ko.observable<FileList>();
     uploadQueue = ko.observableArray<uploadItem>();
     folderNotificationSubscriptions = {};
+    hasAnyFilesSelected: KnockoutComputed<boolean>;
+    hasAllFilesSelected: KnockoutComputed<boolean>;
 
     private activeFilesystemSubscription: any;
-
 
     static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
@@ -41,23 +42,19 @@ class filesystemFiles extends viewModelBase {
     static uploadQueueSelector = "#uploadQueue";
     static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
 
+
     constructor() {
         super();
 
-        this.uploadQueue.subscribe(x => uploadQueueHelper.updateLocalStorage(x, this.activeFilesystem()));
+        this.uploadQueue.subscribe(x => this.newUpload(x));
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
-    }
-
-    canActivate(args: any) {
-        return true;
     }
 
     activate(args) {
         super.activate(args);
 
         this.appUrls = appUrl.forCurrentFilesystem();
-        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
         this.loadFiles();
@@ -77,8 +74,6 @@ class filesystemFiles extends viewModelBase {
 
     deactivate() {
         super.deactivate();
-
-        this.activeFilesystemSubscription.dispose();
     }
 
     loadFiles() {
@@ -180,14 +175,10 @@ class filesystemFiles extends viewModelBase {
     }
 
     fileSystemChanged(fs: filesystem) {
-        if (fs) {
-            var filesystemFilesUrl = appUrl.forFilesystemFiles(fs);
-            this.navigate(filesystemFilesUrl);
-
+        if (!!fs) {
             this.loadFiles();
         }
     }
-
     editSelectedFile() {
         var grid = this.getFilesGrid();
         if (grid) {
@@ -237,13 +228,16 @@ class filesystemFiles extends viewModelBase {
         if (grid) {
             grid.deleteSelectedItems();
         }
+
+        this.isSelectAll(false);
     }
 
     downloadSelectedFiles() {
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
-            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + selectedItem.getId();
+            var selectedFolder = this.selectedFolder();
+            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + selectedItem.getId();
             window.location.assign(url);
         }
     }
@@ -259,10 +253,12 @@ class filesystemFiles extends viewModelBase {
 
     uploadSuccess(x: uploadItem) {
         ko.postbox.publish("UploadFileStatusChanged", x);
-        uploadQueueHelper.updateQueueStatus(x.id(), "Uploaded", this.uploadQueue());
+        uploadQueueHelper.updateQueueStatus(x.id(), uploadQueueHelper.uploadedStatus, this.uploadQueue());
+        this.uploadQueue(uploadQueueHelper.sortUploadQueue(this.uploadQueue()));
         var persistedFolder = folder.getFolderFromFilePath(x.fileName());
         if (persistedFolder) {
             treeBindingHandler.updateNodeHierarchyStyle(filesystemFiles.treeSelector, persistedFolder.path, "");
+            treeBindingHandler.setNodeLoadStatus(filesystemFiles.treeSelector, persistedFolder.path, 0);
         }
 
         this.loadFiles();
@@ -270,7 +266,19 @@ class filesystemFiles extends viewModelBase {
 
     uploadFailed(x: uploadItem) {
         ko.postbox.publish("UploadFileStatusChanged", x);
-        uploadQueueHelper.updateQueueStatus(x.id(), "Failed", this.uploadQueue());
+        uploadQueueHelper.updateQueueStatus(x.id(), uploadQueueHelper.failedStatus, this.uploadQueue());
+        this.uploadQueue(uploadQueueHelper.sortUploadQueue(this.uploadQueue()));
+    }
+
+    newUpload(x: uploadItem[]) {
+        if (x && x.length > 0) {
+            uploadQueueHelper.updateLocalStorage(x, this.activeFilesystem())
+            var waitingItems = x.filter(x => x.status() === uploadQueueHelper.queuedStatus || x.status() === uploadQueueHelper.uploadingStatus);
+            for (var i = 0; i < waitingItems.length; i++) {
+                var persistedFolder = folder.getFolderFromFilePath(waitingItems[i].fileName());
+                treeBindingHandler.setNodeLoadStatus(filesystemFiles.treeSelector, persistedFolder.path, 1);
+            }
+        }
     }
 
     toggleCollapseUploadQueue() {

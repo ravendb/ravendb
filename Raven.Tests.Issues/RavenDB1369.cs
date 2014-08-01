@@ -71,8 +71,8 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.DocumentDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
-                WaitForBackup(store.DocumentDatabase, true);
+                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
+                WaitForBackup(store.SystemDatabase, true);
             }
 
             MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
@@ -116,8 +116,8 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.DocumentDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
-                WaitForBackup(store.DocumentDatabase, true);
+                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
+                WaitForBackup(store.SystemDatabase, true);
             }
 
             MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest

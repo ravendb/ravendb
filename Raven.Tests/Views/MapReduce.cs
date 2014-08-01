@@ -41,7 +41,7 @@ select new {
 		public MapReduce()
 		{
 			store = NewDocumentStore(runInMemory: true);
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 			db.Indexes.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
 		}
 

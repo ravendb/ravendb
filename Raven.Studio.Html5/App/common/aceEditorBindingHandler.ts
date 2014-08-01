@@ -180,7 +180,6 @@ class aceEditorBindingHandler {
             handles: "s, se",
             grid: [10000000000000000, 1],
             resize: function (event, ui) {
-                alert("b");
                 aceEditor.resize();
             }
         });

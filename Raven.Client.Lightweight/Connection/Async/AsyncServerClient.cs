@@ -1312,7 +1312,7 @@ namespace Raven.Client.Connection.Async
 						throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
 
 					var queryResult = SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
-						request.ResponseHeaders.Get("Temp-Request-Time"));
+						request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
 					var docResults = queryResult.Results.Concat(queryResult.Includes);
 					return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult,

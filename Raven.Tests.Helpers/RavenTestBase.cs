@@ -19,6 +19,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
@@ -139,7 +140,7 @@ namespace Raven.Tests.Helpers
 
 				if (enableAuthentication)
 				{
-					EnableAuthentication(documentStore.DocumentDatabase);
+					EnableAuthentication(documentStore.SystemDatabase);
 				}
 
 				CreateDefaultIndexes(documentStore);
@@ -538,7 +539,7 @@ namespace Raven.Tests.Helpers
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
+				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.SystemDatabase);
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
@@ -717,7 +718,7 @@ namespace Raven.Tests.Helpers
 		{
 			var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
 			var errors = embeddableDocumentStore != null
-									   ? embeddableDocumentStore.DocumentDatabase.Statistics.Errors
+									   ? embeddableDocumentStore.SystemDatabase.Statistics.Errors
 									   : documentStore.DatabaseCommands.GetStatistics().Errors;
 
 			try

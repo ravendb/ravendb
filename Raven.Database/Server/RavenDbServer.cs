@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;

@@ -55,7 +55,7 @@ select new
 
 			WaitForIndexing(store);
 
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				Assert.Equal("items/2", accessor.Indexing.GetDocumentsReferencing("items/1").Single());
 				Assert.Equal("items/1", accessor.Indexing.GetDocumentsReferencing("items/2").Single());
@@ -73,7 +73,7 @@ select new
 			}
 
 			WaitForIndexing(store);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor => 
+			store.SystemDatabase.TransactionalStorage.Batch(accessor => 
 				Assert.Equal("items/1", accessor.Indexing.GetDocumentsReferencing("items/2").Single()));
 
 			using (IDocumentSession session = store.OpenSession())
@@ -84,7 +84,7 @@ select new
 
 			WaitForIndexing(store);
 
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				Assert.Equal("items/1", accessor.Indexing.GetDocumentsReferencing("items/2").Single()));
 		}
 
@@ -100,7 +100,7 @@ select new
 			}
 
 			WaitForIndexing(store);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				Assert.Equal("items/1", accessor.Indexing.GetDocumentsReferencing("items/2").Single());
 				Assert.Empty(accessor.Indexing.GetDocumentsReferencing("items/3"));
@@ -114,7 +114,7 @@ select new
 
 			WaitForIndexing(store);
 
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				Assert.Empty(accessor.Indexing.GetDocumentsReferencing("items/2"));
 				Assert.Equal("items/1", accessor.Indexing.GetDocumentsReferencing("items/3").Single());
@@ -132,7 +132,7 @@ select new
 			}
 
 			WaitForIndexing(store);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				Assert.Equal("items/1", accessor.Indexing.GetDocumentsReferencing("items/2").Single()));
 		}
 
@@ -146,7 +146,7 @@ select new
 			}
 
 			WaitForIndexing(store);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				Assert.Empty(accessor.Indexing.GetDocumentsReferencesFrom("items/1")));
 	
 		}
@@ -161,7 +161,7 @@ select new
 			}
 
 			WaitForIndexing(store);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				Assert.Empty(accessor.Indexing.GetDocumentsReferencing("items/1")));
 		}
 
@@ -176,11 +176,11 @@ select new
 			}
 
 			WaitForIndexing(store);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				Assert.NotEmpty(accessor.Indexing.GetDocumentsReferencesFrom("items/1")));
 
 			store.DatabaseCommands.Delete("items/1", null);
-			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				Assert.Empty(accessor.Indexing.GetDocumentsReferencesFrom("items/1")));
 
 		}

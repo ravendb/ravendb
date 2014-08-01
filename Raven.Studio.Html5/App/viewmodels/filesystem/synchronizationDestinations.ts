@@ -10,9 +10,8 @@ import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
-
 
 class synchronizationDestinations extends viewModelBase {
 
@@ -21,6 +20,8 @@ class synchronizationDestinations extends viewModelBase {
     replicationsSetup = ko.observable<synchronizationReplicationSetup>(new synchronizationReplicationSetup({ Destinations: [], Source: null }));
 
     canActivate(args: any): JQueryPromise<any> {
+        super.canActivate(args);
+
         var deferred = $.Deferred();
         var fs = this.activeFilesystem();
         if (fs) {
@@ -50,11 +51,9 @@ class synchronizationDestinations extends viewModelBase {
         } else {
             var fs = this.activeFilesystem();
             if (fs) {
-                new getFilesystemStatsCommand(fs)
+                new getFileSystemStatsCommand(fs)
                     .execute()
-                    .done(result=> {
-                        this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                    });
+                    .done(result => this.prepareAndSaveReplicationSetup(result.DatabaseId));
             }
         }
     }

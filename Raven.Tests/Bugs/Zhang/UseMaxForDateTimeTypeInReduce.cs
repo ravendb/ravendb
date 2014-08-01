@@ -50,7 +50,7 @@ select new {Name = g.Key, CreatedTime = createdTime}
                     session.Advanced.DocumentQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

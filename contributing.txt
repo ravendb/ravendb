@@ -43,6 +43,6 @@ Contributor license agreement
 In order to accept your contribution, we require that you'll send us a signed
 contributor license agreement.
 
-http://ravendb.net/CopyrightAssignmentAgreement.pdf
+Download http://ravendb.net/CopyrightAssignmentAgreement.pdf, sign it, and send it to support@ravendb.net
 
 http://hibernatingrhinos.com/contact

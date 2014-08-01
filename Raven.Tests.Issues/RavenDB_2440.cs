@@ -48,6 +48,13 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(0, queryStats.TimingsInMilliseconds.Count);
 
+					session.Query<User>()
+						.Customize(x=>x.ShowTimings())
+						.Statistics(out queryStats)
+						.Where(x => x.Age > 15)
+						.ToList();
+
+
 					RavenQueryStatistics documentQueryStats;
 					results = session.Advanced.DocumentQuery<object>(Constants.DocumentsByEntityNameIndex)
 						.NoCaching()
@@ -102,6 +109,8 @@ namespace Raven.Tests.Issues
 						.ToList();
 
 					Assert.Equal(3, documentQueryStats.TimingsInMilliseconds.Count);
+
+					Assert.NotEqual(0, documentQueryStats.ResultSize);
 				}
 			}
 		}

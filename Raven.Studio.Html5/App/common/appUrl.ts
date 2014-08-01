@@ -539,16 +539,6 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
-    static forFilesystemUploadFile(fs: filesystem, folderName: string): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs);
-        var url = "#filesystems/upload?" + filesystemPart;
-        if (folderName) {
-            url += "&folderName=" + encodeURIComponent(folderName);
-        }
-
-        return url;
-    }
-
     /**
     * Gets the resource from the current web browser address. Returns the system database if no resource name is found.
     */

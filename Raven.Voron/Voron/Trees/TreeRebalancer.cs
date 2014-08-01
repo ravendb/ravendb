@@ -11,24 +11,26 @@ namespace Voron.Trees
     {
         private readonly Transaction _tx;
 		private readonly Tree _tree;
+	    private readonly Cursor _cursor;
 
-        public TreeRebalancer(Transaction tx, Tree tree)
+        public TreeRebalancer(Transaction tx, Tree tree, Cursor cursor)
         {
             _tx = tx;
 			_tree = tree;
+	        _cursor = cursor;
         }
 
-        public Page Execute(Cursor cursor, Page page)
+        public Page Execute(Page page)
         {
             _tx.ClearRecentFoundPages(_tree);
-            if (cursor.PageCount <= 1) // the root page
+            if (_cursor.PageCount <= 1) // the root page
             {
-                RebalanceRoot(cursor, page);
+                RebalanceRoot(page);
                 return null;
             }
 
-			var parentPage = _tx.ModifyPage(cursor.ParentPage.PageNumber, cursor.ParentPage);
-			cursor.Update(cursor.Pages.First.Next, parentPage);
+			var parentPage = _tx.ModifyPage(_cursor.ParentPage.PageNumber, _cursor.ParentPage);
+			_cursor.Update(_cursor.Pages.First.Next, parentPage);
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
@@ -45,7 +47,7 @@ namespace Voron.Trees
                 }
 				
 				_tx.FreePage(page.PageNumber);
-                cursor.Pop();
+                _cursor.Pop();
 
                 return parentPage;
             }
@@ -57,20 +59,20 @@ namespace Voron.Trees
 
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
-            var sibling = SetupMoveOrMerge(cursor, page, parentPage);
+            var sibling = SetupMoveOrMerge(page, parentPage);
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
             if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                 sibling.NumberOfEntries > minKeys)
-            {	         
+            {
+				_cursor.Pop();
+
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
 	            if (page.IsBranch)
 		            MoveBranchNode(parentPage, sibling, page);
 	            else
 		            MoveLeafNode(parentPage, sibling, page);
-
-	            cursor.Pop();
 
                 return parentPage;
             }
@@ -86,7 +88,7 @@ namespace Voron.Trees
 					return null;
             }
 
-            cursor.Pop();			
+            _cursor.Pop();			
 
             return parentPage;
         }
@@ -127,7 +129,7 @@ namespace Voron.Trees
 			return true;
 		}
 
-        private Page SetupMoveOrMerge(Cursor c, Page page, Page parentPage)
+        private Page SetupMoveOrMerge(Page page, Page parentPage)
         {
             Page sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
@@ -196,19 +198,32 @@ namespace Voron.Trees
             var pos = parentPage.LastSearchPositionOrLastEntry;
             parentPage.RemoveNode(pos);
 
-            var newKey = GetActualKey(to, 0); // get the next smallest key it has now
+            var newSeparatorKey = GetActualKey(to, 0); // get the next smallest key it has now
             var pageNumber = to.PageNumber;
             if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
             {
                 pageNumber = from.PageNumber;
-                newKey = GetActualKey(from, 0);
+                newSeparatorKey = GetActualKey(from, 0);
             }
 
-	        var prefixedNewKey = parentPage.PrepareKeyToInsert(newKey, pos);
-
-			parentPage.EnsureHasSpaceFor(_tx, prefixedNewKey, -1);
-			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);
+			AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
         }
+
+		private void AddSeparatorToParentPage(Page parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
+		{
+			var separatorKeyToInsert = parentPage.PrepareKeyToInsert(seperatorKey, separatorKeyPosition);
+
+			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
+			{
+				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+					0, _cursor, _tree.State);
+				pageSplitter.Execute();
+			}
+			else
+			{
+				parentPage.AddPageRefNode(separatorKeyPosition, separatorKeyToInsert, pageNumber);
+			}
+		}
 
         private void MoveBranchNode(Page parentPage, Page from, Page to)
         {
@@ -270,18 +285,15 @@ namespace Voron.Trees
 
             var pos = parentPage.LastSearchPositionOrLastEntry;
             parentPage.RemoveNode(pos);
-            var newKey = GetActualKey(to, 0); // get the next smallest key it has now
+            var newSeparatorKey = GetActualKey(to, 0); // get the next smallest key it has now
             var pageNumber = to.PageNumber;
             if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
             {
                 pageNumber = from.PageNumber;
-                newKey = GetActualKey(from, 0);
+                newSeparatorKey = GetActualKey(from, 0);
             }
 
-	        var prefixedNewKey = parentPage.PrepareKeyToInsert(newKey, pos);
-
-			parentPage.EnsureHasSpaceFor(_tx, prefixedNewKey, -1);
-			parentPage.AddPageRefNode(pos, prefixedNewKey, pageNumber);
+			AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -307,7 +319,7 @@ namespace Voron.Trees
 			return key;
         }
 
-        private void RebalanceRoot(Cursor cursor, Page page)
+        private void RebalanceRoot(Page page)
         {
             if (page.NumberOfEntries == 0)
                 return; // nothing to do 
@@ -330,8 +342,8 @@ namespace Voron.Trees
 
             Debug.Assert(rootPage.Dirty);
 
-            cursor.Pop();
-            cursor.Push(rootPage);
+            _cursor.Pop();
+            _cursor.Push(rootPage);
 
             _tx.FreePage(page.PageNumber);
         }

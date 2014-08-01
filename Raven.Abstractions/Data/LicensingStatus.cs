@@ -13,6 +13,7 @@ namespace Raven.Abstractions.Data
 	{
 		private Dictionary<string, string> attributes;
 		public string Message { get; set; }
+        public string Details { get; set; }
 		public string Status { get; set; }
 		public bool Error { get; set; }
 		public bool IsCommercial

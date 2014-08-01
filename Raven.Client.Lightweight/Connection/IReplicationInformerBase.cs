@@ -63,5 +63,11 @@ namespace Raven.Client.Connection
         /// Expert use only.
         /// </summary>
         void RefreshReplicationInformation(TClient client);
+
+		/// <summary>
+		/// Clears the replication information local cache.
+		/// Expert use only.
+		/// </summary>
+	    void ClearReplicationInformationLocalCache(TClient client);
     }
 }

@@ -124,6 +124,7 @@ interface licenseStatusDto {
     Message: string;
     Status: string;
     Error: boolean;
+    Details?:string;
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
@@ -633,6 +634,11 @@ interface histogramDataDto {
     Mean: number;
     Stdev: number;
     Percentiles: any;
+}
+
+interface fileSystemDto {
+    Name: string;
+    Disabled: boolean;
 }
 
 interface statusDebugDocrefsDto {

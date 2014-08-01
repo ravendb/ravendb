@@ -16,6 +16,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -88,7 +89,9 @@ namespace Raven.Client.Connection
         /// </summary>
         public abstract void RefreshReplicationInformation(TClient client);
 
-        protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
+		public abstract void ClearReplicationInformationLocalCache(TClient client);
+
+		protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
 		protected readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
 

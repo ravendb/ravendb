@@ -33,6 +33,10 @@ class synchronization extends viewModelBase {
             return activeRoute != null ? activeRoute.title : "";
         });
     }
+
+    canActivate(args) {
+        return true;
+    }
 }
 
 export = synchronization;

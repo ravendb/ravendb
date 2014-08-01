@@ -3,8 +3,8 @@
         <div class="panel panel-default">
             <div class="panel-heading">
                 <div class="pull-left">
-                    <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add SQL Replication Connection (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></button>
                     <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                    <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add SQL Replication Connection (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></button>
                 </div>
                 <div class="clearfix"></div>
             </div>
@@ -25,7 +25,7 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Name</label>
                                 <div class="col-sm-7">
-                                    <input required name="name" type="text" data-bind="value:name, valueUpdate: 'keyup'"></input>
+                                    <input required name="name" type="text" data-bind="value:name, valueUpdate: 'afterkeydown'"></input>
 
                                 </div>
                             </div>
@@ -40,7 +40,7 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Connection String</label>
                                 <div class="col-sm-7">
-                                    <textarea tabindex="6" rows="4" required type="text" class="form-control" data-bind="value: connectionString, valueUpdate: 'keyup'" />
+                                    <textarea tabindex="6" rows="4" required type="text" class="form-control" data-bind="value: connectionString, valueUpdate: 'afterkeydown'" />
                                 </div>
                             </div>
                             <div class="form-group">

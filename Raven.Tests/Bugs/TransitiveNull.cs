@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs
 					Query = "Tags,:abc"
 				}, new string[0]);
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 
@@ -68,7 +68,7 @@ namespace Raven.Tests.Bugs
 				}, new string[0]);
 
 
-				var autoIndex = store.DocumentDatabase.IndexStorage.IndexNames.First(x=>x.StartsWith("Auto"));
+				var autoIndex = store.SystemDatabase.IndexStorage.IndexNames.First(x=>x.StartsWith("Auto"));
                 var results = store.OpenSession().Advanced.DocumentQuery<dynamic>(autoIndex).WaitForNonStaleResults().ToArray();
 
 				Assert.Equal(1, results.Length);
