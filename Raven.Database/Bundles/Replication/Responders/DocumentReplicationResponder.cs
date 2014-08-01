@@ -3,24 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Data;
+using Raven.Bundles.Replication.Plugins;
+using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Extensions;
+using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Storage;
+using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using Raven.Abstractions.Logging;
-using Raven.Bundles.Replication.Tasks;
-using Raven.Database.Server;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Bundles.Replication.Data;
-using Raven.Bundles.Replication.Plugins;
-using Raven.Database.Extensions;
-using Raven.Database.Server.Abstractions;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -120,42 +118,6 @@ namespace Raven.Bundles.Replication.Responders
 					string.Format("Exception occurred during the replication of the document {0} from the server {1}", id, src), ex);
 				throw;
 			}
-		}
-
-		private static string HashReplicationIdentifier(RavenJObject metadata)
-		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + metadata.Value<string>("@etag"));
-				return new Guid(md5.ComputeHash(bytes)).ToString();
-			}
-		}
-
-		private string HashReplicationIdentifier(Guid existingEtag)
-		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
-				return new Guid(md5.ComputeHash(bytes)).ToString();
-			}
-		}
-
-		private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, RavenJObject metadata)
-		{
-			var version = new RavenJObject
-			{
-				{Constants.RavenReplicationSource, existingDoc.Metadata[Constants.RavenReplicationSource]},
-				{Constants.RavenReplicationVersion, existingDoc.Metadata[Constants.RavenReplicationVersion]},
-			};
-
-			var history = metadata[Constants.RavenReplicationHistory];
-			if (history == null || history.Type == JTokenType.Null) // no history, not a parent
-				return false;
-
-			if (history.Type != JTokenType.Array)
-				return false;
-
-			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
 		}
 
 		public override string UrlPattern
