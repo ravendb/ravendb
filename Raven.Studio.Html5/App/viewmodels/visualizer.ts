@@ -6,7 +6,7 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import generalUtils = require("common/generalUtils");
 import svgDownloader = require("common/svgDownloader");
-import jsonDownloader = require("common/jsonDownloader");
+import fileDownloader = require("common/fileDownloader");
 
 import chunkFetcher = require("common/chunkFetcher");
 
@@ -710,11 +710,11 @@ class visualizer extends viewModelBase {
             tree: this.exportTree(this.tree)
         };
 
-        jsonDownloader.downloadAsJson(model, "visualizer.json");
+        fileDownloader.downloadAsJson(model, "visualizer.json");
     }
 
     chooseImportFile() {
-        var dialog = new visualizerImport(this);
+        var dialog = new visualizerImport();
         dialog.task().
             done((importedData: visualizerExportDto) => {
                 this.clearChart();

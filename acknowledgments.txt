@@ -18,4 +18,3 @@
 * Mono.Cecil - (https://github.com/jbevain/cecil/) under the MIT license: http://www.mono-project.com/Licensing
 * KBCsv - (http://kbcsv.codeplex.com) under the MS-PL license http://kbcsv.codeplex.com/license
 * lodash.js / underscore.js - (http://lodash.com) under the MIT license http://lodash.com/license
-* StackDump (http://stackdump.codeplex.com) under Ms-RL license http://stackdump.codeplex.com/license

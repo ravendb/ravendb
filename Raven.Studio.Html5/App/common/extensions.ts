@@ -251,6 +251,14 @@ class extensions {
 
             return results ? results.length : 0;
         }
+
+        String.prototype.startsWith = String.prototype.startsWith || function (str) {
+            return this.indexOf(str) == 0;
+        };
+
+        String.prototype.contains = String.prototype.contains || function (str) {
+            return this.indexOf(str) > 0;
+        }
     }
 
     private static installStorageExtension() {
