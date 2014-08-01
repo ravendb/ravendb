@@ -123,9 +123,11 @@ namespace Raven.Tests.Common
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory,
 				Port = previousServer.SystemDatabase.Configuration.Port,
-                UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
                 DefaultStorageTypeName = GetDefaultStorageType()
             };
+
+	        serverConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+
 			ModifyConfiguration(serverConfiguration);
 
             serverConfiguration.PostInit();

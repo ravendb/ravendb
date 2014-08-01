@@ -47,12 +47,15 @@ namespace Raven.Database.Config
 
         public FileSystemConfiguration FileSystem { get; private set; }
 
+		public EncryptionConfiguration Encryption { get; private set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
 			Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
+			Encryption = new EncryptionConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -105,7 +108,6 @@ namespace Raven.Database.Config
 
 			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
-			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
@@ -225,7 +227,7 @@ namespace Raven.Database.Config
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
-				UseSsl = ravenSettings.UseSsl.Value;
+				Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
 			}
 
 			SetVirtualDirectory();
@@ -271,6 +273,9 @@ namespace Raven.Database.Config
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 
+			Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
+			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
+
 			PostInit();
 		}
 
@@ -279,8 +284,6 @@ namespace Raven.Database.Config
 		public int MaxConcurrentMultiGetRequests { get; set; }
 
 		public int PrefetchingDurationLimit { get; private set; }
-
-		public int EncryptionKeyBitsPreference { get; set; }
 
 		public TimeSpan BulkImportBatchTimeout { get; set; }
 
@@ -450,7 +453,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(Encryption.UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -563,16 +566,6 @@ namespace Raven.Database.Config
 		/// Default: none, binds to all host names
 		/// </summary>
 		public string HostName { get; set; }
-
-		/// <summary>
-		/// Whatever we should use SSL for this connection
-		/// </summary>
-		public bool UseSsl { get; set; }
-
-		/// <summary>
-		/// Whatever we should use FIPS compliant encryption algorithms
-		/// </summary>
-		public bool UseFips { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
@@ -1181,5 +1174,20 @@ namespace Raven.Database.Config
         {
             public TimeSpan MaximumSynchronizationInterval { get; set; }
         }
+
+		public class EncryptionConfiguration
+		{
+			/// <summary>
+			/// Whatever we should use FIPS compliant encryption algorithms
+			/// </summary>
+			public bool UseFips { get; set; }
+
+			public int EncryptionKeyBitsPreference { get; set; }
+
+			/// <summary>
+			/// Whatever we should use SSL for this connection
+			/// </summary>
+			public bool UseSsl { get; set; }
+		}
 	}
 }
