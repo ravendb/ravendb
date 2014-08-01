@@ -30,9 +30,18 @@ text.trace {
 
 <section id="infoPackageSection">
     
-    <button data-bind="click: createPackage" class="btn btn-primary">
-        Create info package <i class="fa fa-file-zip-o"></i>
-    </button>
+    <div class="btn-group">
+        <button data-bind="click: createPackageWithoutStacks" class="btn btn-default">
+            Create info package <i class="fa fa-file-zip-o"></i>
+        </button>
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <span class="caret"></span>
+            <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+            <li><a data-bind="click: createPackageWithStacks" href="#">Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span></a></li>
+        </ul>
+    </div>
     
     <div class="btn-group" data-bind="visible: hasStackDump">
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">

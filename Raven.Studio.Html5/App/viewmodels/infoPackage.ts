@@ -316,21 +316,32 @@ class infoPackage extends viewModelBase {
         nv.tooltip.cleanup();
         $("#parallelStacks").empty();
         this.infoPackage(null);
+        this.fetchException(null);
         this.stacksJson(null);
     }
 
-    createPackage() {
+    createPackageWithStacks() {
+        this.createPackage(true);
+    }
+
+    createPackageWithoutStacks() {
+        this.createPackage(false);
+    }
+
+    createPackage(includeStacks: boolean) {
         this.showLoadingIndicator(true); 
         this.cleanup();
-        new getInfoPackage(this.activeDatabase(), true)
+        new getInfoPackage(this.activeDatabase(), includeStacks)
             .execute()
             .done((data) => {
                 this.infoPackage(data);
                 var zip = new jszip(data); 
                 var stacks = zip.file("stacktraces.txt");
-                var stacksText = stacks.asText();
-                var stacksJson = JSON.parse(stacksText);
-                this.packageCreated(stacksJson);
+                if (stacks) {
+                    var stacksText = stacks.asText();
+                    var stacksJson = JSON.parse(stacksText);
+                    this.packageCreated(stacksJson);
+                }
             })
             .always(() => this.showLoadingIndicator(false)); 
     }
@@ -382,7 +393,11 @@ class infoPackage extends viewModelBase {
         dialog.task()
             .done((importedData: any) => {
                 this.cleanup();
-                this.packageCreated(importedData);
+                if (importedData) {
+                    this.packageCreated(importedData);
+                } else {
+                    messagePublisher.reportWarning("Stacktraces are not available in given file. Please create info package with stacktraces.");
+                }
             })
             .fail(e => messagePublisher.reportError(e));
          

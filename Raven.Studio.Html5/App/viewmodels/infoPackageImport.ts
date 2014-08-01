@@ -36,9 +36,13 @@ class importPackageImport extends dialogViewModelBase {
             } else {
                 var zip = new jszip(this.result);
                 var stacks = zip.file("stacktraces.txt");
-                var stacksText = stacks.asText();
-                var stacksJson = JSON.parse(stacksText);
-                self.dataImported(stacksJson);
+                if (stacks) {
+                    var stacksText = stacks.asText();
+                    var stacksJson = JSON.parse(stacksText);
+                    self.dataImported(stacksJson);
+                } else {
+                    self.dataImported(null);
+                }
             }
         };
         reader.onerror = (error) => this.importTask.reject(error);
