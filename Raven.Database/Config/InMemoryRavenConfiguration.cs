@@ -228,6 +228,7 @@ namespace Raven.Database.Config
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
 				Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
+				Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
 			}
 
 			SetVirtualDirectory();
@@ -273,7 +274,6 @@ namespace Raven.Database.Config
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 
-			Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			PostInit();
