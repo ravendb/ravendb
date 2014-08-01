@@ -90,6 +90,7 @@ class infoPackage extends viewModelBase {
     hasSaveAsPngSupport = ko.computed(() => {
         return !(navigator && navigator.msSaveBlob);
     });
+    stackDumpEnabled = ko.computed(() => this.activeDatabase().isSystem);
 
     attached() {
         var self = this;

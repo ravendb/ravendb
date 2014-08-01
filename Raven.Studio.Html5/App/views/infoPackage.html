@@ -39,7 +39,9 @@ text.trace {
             <span class="sr-only">Toggle Dropdown</span>
         </button>
         <ul class="dropdown-menu" role="menu">
-            <li><a data-bind="click: createPackageWithStacks" href="#">Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span></a></li>
+            <li>
+                <button class="btn btn-default" title="Creates package with stacktrace (available ONLY for system database)" data-bind="click: createPackageWithStacks, enable: stackDumpEnabled()" >Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span></button>
+            </li>
         </ul>
     </div>
     

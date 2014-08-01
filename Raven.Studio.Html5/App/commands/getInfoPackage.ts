@@ -15,8 +15,8 @@ class getInfoPackage extends commandBase {
 
     execute(): JQueryPromise<any> {
         var task = $.Deferred();
-        var url = appUrl.forResourceQuery(this.db) + '/debug/info-package';
-        if (this.withStackTrace) {
+        var url = appUrl.forResourceQuery(this.db)  + (this.db.isSystem ? '/admin/debug/info-package' : '/debug/info-package');
+        if (this.withStackTrace && this.db.isSystem) {
             url += "?stacktrace";
         }
         zipUtils.getBinaryContent(url, function (err, data) {
