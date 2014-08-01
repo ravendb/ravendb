@@ -36,6 +36,7 @@ class changesApi {
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
+    private allFsDestinationsHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
     private commandBase = new commandBase();
 
@@ -244,6 +245,9 @@ class changesApi {
                     });
                 }
             } else if (type === "ConfigurationChangeNotification") {
+                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                    this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
+                }
                 this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
             } else {
                 console.log("Unhandled Changes API notification type: " + type);
@@ -391,6 +395,20 @@ class changesApi {
         return new changeSubscription(() => {
             this.allFsConfigHandlers.remove(callback);
             if (this.allFsConfigHandlers().length == 0) {
+                this.send('unwatch-config');
+            }
+        });
+    }
+
+    watchFsDestinations(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
+        var callback = new changesCallback<filesystemConfigNotification>(onChange);
+        if (this.allFsDestinationsHandlers().length == 0) {
+            this.send('watch-config');
+        }
+        this.allFsDestinationsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsDestinationsHandlers.remove(callback);
+            if (this.allFsDestinationsHandlers().length == 0) {
                 this.send('unwatch-config');
             }
         });
