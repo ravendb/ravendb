@@ -25,6 +25,8 @@ using Raven.Database.Server.Security;
 using Raven.Server;
 using Raven.Client.FileSystem;
 
+using RavenFS.Tests.Tools;
+
 namespace RavenFS.Tests
 {
     public class RavenFsTestBase : WithNLog, IDisposable
@@ -67,6 +69,7 @@ namespace RavenFS.Tests
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
 			};
 
+	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
             ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
 
             if (enableAuthentication)
