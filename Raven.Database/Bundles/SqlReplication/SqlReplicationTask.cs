@@ -99,7 +99,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				bool hasChanges = false;
-				foreach (var config in replicationConfigs)
+				foreach (var config in GetConfiguredReplicationDestinations())
 				{
 					if (string.Equals(config.RavenEntityName, metadata.Value<string>(Constants.RavenEntityName), StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;

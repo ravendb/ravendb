@@ -22,10 +22,12 @@ namespace Raven.Client.Embedded
 {
 	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
+		private readonly EmbeddableDocumentStore db;
 		private readonly IDatabaseCommands databaseCommands;
 
-		public EmbeddedAsyncServerClient(IDatabaseCommands databaseCommands)
+		public EmbeddedAsyncServerClient(EmbeddableDocumentStore db, IDatabaseCommands databaseCommands)
 		{
+			this.db = db;
 			this.databaseCommands = databaseCommands;
 			OperationsHeaders = new DictionaryWrapper(databaseCommands.OperationsHeaders);
 		}
@@ -270,17 +272,17 @@ namespace Raven.Client.Embedded
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
+			return new EmbeddedAsyncServerClient(db, databaseCommands.ForDatabase(database));
 		}
 
 		public IAsyncDatabaseCommands ForSystemDatabase()
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForSystemDatabase());
+			return new EmbeddedAsyncServerClient(db, databaseCommands.ForSystemDatabase());
 		}
 
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.With(credentialsForSession));
+			return new EmbeddedAsyncServerClient(db, databaseCommands.With(credentialsForSession));
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync()
@@ -440,6 +442,16 @@ namespace Raven.Client.Embedded
 	
 		}
 
+		public Task<RavenJObject> GetDatabaseConfigurationAsync()
+		{
+			var cfg = RavenJObject.FromObject(db.Configuration);
+			cfg["OAuthTokenKey"] = "<not shown>";
+		    var changesAllowed = db.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+		    if (string.IsNullOrWhiteSpace(changesAllowed) == false)
+		        cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
+
+			return new CompletedTask<RavenJObject>(cfg);
+		}
 
 		#region IAsyncGlobalAdminDatabaseCommands
 

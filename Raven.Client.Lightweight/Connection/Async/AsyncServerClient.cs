@@ -143,6 +143,21 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<RavenJObject> GetDatabaseConfigurationAsync()
+		{
+			return ExecuteWithReplication("GET", operationMetadata =>
+			{
+				var url2 = (operationMetadata.Url + "/debug/config").NoCache();
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET",
+						operationMetadata.Credentials, convention));
+				request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+					HandleReplicationStatusChanges);
+
+				return request.ReadResponseJsonAsync().ContinueWith(x => (RavenJObject) x.Result);
+			});
+		}
+
 		/// <summary>
 		/// Gets the indexes from the server asynchronously
 		/// </summary>
@@ -741,6 +756,7 @@ namespace Raven.Client.Connection.Async
 
 			return ExecuteWithReplication("GET", operationMetadata => DirectGetAsync(operationMetadata, key));
 		}
+
 
 		public async Task<JsonDocument> DirectGetAsync(OperationMetadata operationMetadata, string key)
 		{

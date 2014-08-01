@@ -66,14 +66,13 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
-		private int currentBatchSize, currentLimit;
+		private int currentBatchSize;
 		private SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 		public override async Task ImportData(Stream stream, SmugglerOptions options)
 		{
 			jintHelper.Initialize(options ?? SmugglerOptions);
 
 			currentBatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
-			currentLimit = options != null ? options.Limit : SmugglerOptions.Limit;
 
 			using (store = CreateStore())
 			{
@@ -131,7 +130,7 @@ namespace Raven.Smuggler
 
 			operation.Store(document, metadata, id);
 			storedDocumentCountInBatch++;
-			if (storedDocumentCountInBatch >= currentLimit && currentLimit > 0)
+			if (storedDocumentCountInBatch >= currentBatchSize && currentBatchSize > 0)
 			{
 				storedDocumentCountInBatch = 0;
 				await operation.DisposeAsync();
