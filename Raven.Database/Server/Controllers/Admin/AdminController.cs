@@ -298,14 +298,20 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (Database != DatabasesLandlord.SystemDatabase)
 				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
 
-		    var allDbs = new List<DocumentDatabase>();
+		    var stats = CreateAdminStats();
+		    return GetMessageWithObject(stats);
+		}
+
+	    private AdminStatistics CreateAdminStats()
+	    {
+            var allDbs = new List<DocumentDatabase>();
             var allFs = new List<RavenFileSystem>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
             FileSystemsLandlord.ForAllFileSystems(allFs.Add);
-		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+            var currentConfiguration = DatabasesLandlord.SystemConfiguration;
 
-            
-            var stats =  new AdminStatistics
+
+            var stats = new AdminStatistics
             {
                 ServerName = currentConfiguration.ServerName,
                 TotalNumberOfRequests = RequestManager.NumberOfRequests,
@@ -345,13 +351,12 @@ namespace Raven.Database.Server.Controllers.Admin
                         Metrics = documentDatabase.CreateMetrics()
                     },
                 LoadedFileSystems = from fileSystem in allFs
-                   select fileSystem.GetFileSystemStats()
+                                    select fileSystem.GetFileSystemStats()
             };
+	        return stats;
+	    }
 
-            return GetMessageWithObject(stats);
-		}
-
-        private decimal ConvertBytesToMBs(long bytes)
+	    private decimal ConvertBytesToMBs(long bytes)
         {
             return Math.Round(bytes / 1024.0m / 1024.0m, 2);
         }
@@ -464,9 +469,21 @@ namespace Raven.Database.Server.Controllers.Admin
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
             try
             {
+                var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
+                jsonSerializer.Converters.Add(new EtagJsonConverter());
+
                 using (var file = new FileStream(tempFileName, FileMode.Create))
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create))
                 {
+                    var adminStats = package.CreateEntry("admin_stats.txt", CompressionLevel.Optimal);
+
+                    using (var metricsStream = adminStats.Open())
+                    using (var streamWriter = new StreamWriter(metricsStream))
+                    {
+                        jsonSerializer.Serialize(streamWriter, CreateAdminStats());
+                        streamWriter.Flush();
+                    }
+
                     DatabasesLandlord.ForAllDatabases(database =>
                     {
                         var prefix = string.IsNullOrWhiteSpace(database.Name) ? "System" : database.Name;

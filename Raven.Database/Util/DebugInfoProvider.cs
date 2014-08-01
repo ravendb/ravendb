@@ -12,6 +12,10 @@ using System.Linq;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
+using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Bundles.Replication.Utils;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server.Tenancy;
@@ -36,6 +40,31 @@ namespace Raven.Database.Util
 
             var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
             jsonSerializer.Converters.Add(new EtagJsonConverter());
+
+            if (database.StartupTasks.OfType<ReplicationTask>().Any())
+            {
+                var replication = package.CreateEntry(zipEntryPrefix + "replication.txt", compressionLevel);
+
+                using (var statsStream = replication.Open())
+                using (var streamWriter = new StreamWriter(statsStream))
+                {
+                    jsonSerializer.Serialize(streamWriter, ReplicationUtils.GetReplicationInformation(database));
+                    streamWriter.Flush();
+                }
+            }
+
+            var sqlReplicationTask = database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (sqlReplicationTask != null)
+            {
+                var replication = package.CreateEntry(zipEntryPrefix + "sql_replication.txt", compressionLevel);
+
+                using (var statsStream = replication.Open())
+                using (var streamWriter = new StreamWriter(statsStream))
+                {
+                    jsonSerializer.Serialize(streamWriter, sqlReplicationTask.Statistics);
+                    streamWriter.Flush();
+                }
+            }
 
             var stats = package.CreateEntry(zipEntryPrefix + "stats.txt", compressionLevel);
 
