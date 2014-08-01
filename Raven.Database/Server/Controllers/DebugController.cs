@@ -495,7 +495,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
-			var compressionLevel = CompressionLevel.Optimal;
+			const CompressionLevel compressionLevel = CompressionLevel.Optimal;
 
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
