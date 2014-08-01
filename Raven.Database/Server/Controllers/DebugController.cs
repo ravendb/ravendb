@@ -40,32 +40,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/prefetch-status")]
 		public HttpResponseMessage PrefetchingQueueStatus()
 		{
-			return GetMessageWithObject(GetPrefetchingQueueStatusForDebug());
-		}
-
-		private object GetPrefetchingQueueStatusForDebug()
-		{
-			var prefetcherDocs = Database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
-			var compareToCollection = new Dictionary<Etag, int>();
-
-			for (int i = 1; i < prefetcherDocs.Length; i++)
-				compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
-
-			if (compareToCollection.Any(x => x.Value < 0))
-			{
-				return new
-				{
-					HasCorrectlyOrderedEtags = true,
-					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-				};
-			}
-
-			return new
-			{
-				HasCorrectlyOrderedEtags = false,
-				IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-				EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-			};
+			return GetMessageWithObject(DebugInfoProvider.GetPrefetchingQueueStatusForDebug(Database));
 		}
 
         [HttpGet]
@@ -113,19 +88,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
-			return GetMessageWithObject(GetConfigForDebug());
-		}
-
-		private RavenJObject GetConfigForDebug()
-		{
-			var cfg = RavenJObject.FromObject(Database.Configuration);
-			cfg["OAuthTokenKey"] = "<not shown>";
-			var changesAllowed = Database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
-
-			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
-
-			return cfg;
+			return GetMessageWithObject(DebugInfoProvider.GetConfigForDebug(Database));
 		}
 
 		[HttpGet]
@@ -336,26 +299,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/tasks")]
 		public HttpResponseMessage Tasks()
 		{
-			return GetMessageWithObject(GetTasksForDebug());
-		}
-
-		private IList<TaskMetadata> GetTasksForDebug()
-		{
-			IList<TaskMetadata> tasks = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				tasks = accessor.Tasks
-					.GetPendingTasksForDebug()
-					.ToList();
-			});
-
-			foreach (var taskMetadata in tasks)
-			{
-				var indexInstance = Database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
-				if (indexInstance != null)
-					taskMetadata.IndexName = indexInstance.PublicName;
-			}
-			return tasks;
+			return GetMessageWithObject(DebugInfoProvider.GetTasksForDebug(Database));
 		}
 
 		[HttpGet]
@@ -422,32 +366,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/currently-indexing")]
 		public HttpResponseMessage CurrentlyIndexing()
 		{
-			return GetMessageWithObject(GetCurrentlyIndexingForDebug());
-		}
-
-		private object GetCurrentlyIndexingForDebug()
-		{
-			var indexingWork = Database.IndexingExecuter.GetCurrentlyProcessingIndexes();
-			var reduceWork = Database.ReducingExecuter.GetCurrentlyProcessingIndexes();
-
-			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-
-			return new
-			{
-				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x => new
-				{
-					IndexName = x.PublicName,
-					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount}),
-					Priority = x.Priority,
-					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
-					{
-						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
-					})
-				})
-			};
+			return GetMessageWithObject(DebugInfoProvider.GetCurrentlyIndexingForDebug(Database));
 		}
 
 		[HttpGet]
@@ -455,20 +374,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()
 		{
-			return GetMessageWithObject(GetRequestTrackingForDebug());
-		}
-
-		private object GetRequestTrackingForDebug()
-		{
-			return RequestManager.GetRecentRequests(DatabaseName).Select(x => new
-			{
-				Uri = x.RequestUri,
-				Method = x.HttpMethod,
-				StatusCode = x.ResponseStatusCode,
-				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k)}),
-				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-				AdditionalInfo = x.CustomInfo ?? string.Empty
-			});
+			return GetMessageWithObject(DebugInfoProvider.GetRequestTrackingForDebug(RequestManager, DatabaseName));
 		}
 
 		[HttpGet]
@@ -491,226 +397,38 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/info-package")]
 		[Route("databases/{databaseName}/debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
-			const CompressionLevel compressionLevel = CompressionLevel.Optimal;
-
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            try
+            {
+                using (var file = new FileStream(tempFileName, FileMode.Create))
+                using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+                {
+                    DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager);
+                }
 
-			using (var file = new FileStream(tempFileName, FileMode.Create))
-			using (var package = new ZipArchive(file, ZipArchiveMode.Create))
-			{
-				var jsonSerializer = new JsonSerializer
-				{
-					Formatting = Formatting.Indented
-				};
-				jsonSerializer.Converters.Add(new EtagJsonConverter());
+                var response = new HttpResponseMessage();
 
-				var stats = package.CreateEntry("stats.txt", compressionLevel);
+                response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
+                                   {
+                                       Headers =
+                                       {
+                                           ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                                                                {
+                                                                    FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
+                                                                }, 
+                                                                ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                                       }
+                                   };
 
-				using (var statsStream = stats.Open())
-				using (var streamWriter = new StreamWriter(statsStream))
-				{
-					
-					jsonSerializer.Serialize(streamWriter, Database.Statistics);
-					streamWriter.Flush();
-				}
-
-				var metrics = package.CreateEntry("metrics.txt", compressionLevel);
-
-				using (var metricsStream = metrics.Open())
-				using (var streamWriter = new StreamWriter(metricsStream))
-				{
-					jsonSerializer.Serialize(streamWriter, Database.CreateMetrics());
-					streamWriter.Flush();
-				}
-
-				var logs = package.CreateEntry("logs.txt", compressionLevel);
-
-				using (var logsStream = logs.Open())
-				using (var streamWriter = new StreamWriter(logsStream))
-				{
-					var target = LogManager.GetTarget<DatabaseMemoryTarget>();
-
-					if (target == null)
-						streamWriter.WriteLine("DatabaseMemoryTarget was not registered in the log manager, logs are not available");
-					else
-					{
-						var dbName = DatabaseName ?? Constants.SystemDatabase;
-						var boundedMemoryTarget = target[dbName];
-						var log = boundedMemoryTarget.GeneralLog;
-
-						streamWriter.WriteLine("time,logger,level,message,exception");
-
-						foreach (var logEvent in log)
-						{
-							streamWriter.WriteLine("{0:O},{1},{2},{3},{4}", logEvent.TimeStamp, logEvent.LoggerName, logEvent.Level, logEvent.FormattedMessage, logEvent.Exception);
-						}
-					}
-
-					streamWriter.Flush();
-				}
-
-				var config = package.CreateEntry("config.txt", compressionLevel);
-
-				using (var configStream = config.Open())
-				using (var streamWriter = new StreamWriter(configStream))
-				using (var jsonWriter = new JsonTextWriter(streamWriter))
-				{
-					GetConfigForDebug().WriteTo(jsonWriter, new EtagJsonConverter());
-					jsonWriter.Flush();
-				}
-
-				var currentlyIndexing = package.CreateEntry("currently-indexing.txt", compressionLevel);
-
-				using (var currentlyIndexingStream = currentlyIndexing.Open())
-				using (var streamWriter = new StreamWriter(currentlyIndexingStream))
-				{
-					jsonSerializer.Serialize(streamWriter, GetCurrentlyIndexingForDebug());
-					streamWriter.Flush();
-				}
-
-				var queries = package.CreateEntry("queries.txt", compressionLevel);
-
-				using (var queriesStream = queries.Open())
-				using (var streamWriter = new StreamWriter(queriesStream))
-				{
-					jsonSerializer.Serialize(streamWriter, Database.WorkContext.CurrentlyRunningQueries);
-					streamWriter.Flush();
-				}
-
-				var prefetchStatus = package.CreateEntry("prefetch-status.txt", compressionLevel);
-
-				using (var prefetchStatusStream = prefetchStatus.Open())
-				using (var streamWriter = new StreamWriter(prefetchStatusStream))
-				{
-					jsonSerializer.Serialize(streamWriter, GetPrefetchingQueueStatusForDebug());
-					streamWriter.Flush();
-				}
-
-				var requestTracking = package.CreateEntry("request-tracking.txt", compressionLevel);
-
-				using (var requestTrackingStream = requestTracking.Open())
-				using (var streamWriter = new StreamWriter(requestTrackingStream))
-				{
-					jsonSerializer.Serialize(streamWriter, GetRequestTrackingForDebug());
-					streamWriter.Flush();
-				}
-
-				var tasks = package.CreateEntry("tasks.txt", compressionLevel);
-
-				using (var tasksStream = tasks.Open())
-				using (var streamWriter = new StreamWriter(tasksStream))
-				{
-					jsonSerializer.Serialize(streamWriter, GetTasksForDebug());
-					streamWriter.Flush();
-				}
-
-				var stacktraceRequsted = GetQueryStringValue("stacktrace");
-
-				if (stacktraceRequsted != null)
-				{
-					var stacktrace = package.CreateEntry("stacktraces.txt", compressionLevel);
-
-					using (var stacktraceStream = stacktrace.Open())
-					{
-						string ravenDebugDir = null;
-
-						try
-						{
-							if (Debugger.IsAttached)
-								throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
-
-							ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-							var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
-							var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
-
-							Directory.CreateDirectory(ravenDebugDir);
-
-							if (Environment.Is64BitProcess)
-								ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
-							else
-								ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
-
-							var process = new Process
-							{
-								StartInfo = new ProcessStartInfo
-								{
-									Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput),
-									FileName = ravenDebugExe,
-									WindowStyle = ProcessWindowStyle.Hidden,
-								}
-							};
-
-							process.Start();
-
-							process.WaitForExit();
-
-							using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
-							{
-								stackDumpOutputStream.CopyTo(stacktraceStream);
-							}
-						}
-						catch (Exception ex)
-						{
-							var streamWriter = new StreamWriter(stacktraceStream);
-                            jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
-                            streamWriter.Flush();
-						}
-						finally
-						{
-							if (ravenDebugDir != null && Directory.Exists(ravenDebugDir))
-								IOExtensions.DeleteDirectory(ravenDebugDir);
-						}
-
-						stacktraceStream.Flush();
-					}
-				}
-
-				file.Flush();
-			}
-
-			var response = new HttpResponseMessage();
-
-			response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-			{
-				Headers =
-				{
-					ContentDisposition = new ContentDispositionHeaderValue("attachment")
-					{
-						FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
-					},
-					ContentType = new MediaTypeHeaderValue("application/octet-stream")
-				}
-			};
-
-			return response;
-		}
-
-		private void ExtractResource(string resource, string path)
-		{
-			var stream = GetType().Assembly.GetManifestResourceStream(resource);
-
-			if(stream == null)
-				throw new InvalidOperationException("Could not find the requested resource: " + resource);
-
-			var bytes = new byte[4096];
-
-			using (var stackDump = File.Create(path, 4096))
-			{
-				while (true)
-				{
-					var read = stream.Read(bytes, 0, bytes.Length);
-					if(read == 0)
-						break;
-
-					stackDump.Write(bytes, 0, read);
-				}
-
-				stackDump.Flush();
-			}
+                return response;
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(tempFileName);
+            }
 		}
 	}
 
