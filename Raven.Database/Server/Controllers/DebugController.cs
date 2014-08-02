@@ -398,6 +398,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
 		[Route("databases/{databaseName}/debug/info-package")]
+		[Route("debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
