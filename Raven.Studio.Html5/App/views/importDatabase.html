@@ -22,6 +22,7 @@
                 </div>
             </div>
             <br />
+            <div data-bind="text: $root.importSummary, visible: isImporting() == false"></div>
             <div data-bind="text: importStatus, visible: isImporting"></div>
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
