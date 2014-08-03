@@ -48,13 +48,21 @@ namespace Raven.Database.Server.Controllers
 			await Request.Content.ReadAsMultipartAsync(streamProvider);
 
 			var status = new ImportOperationStatus();
+			string fileName = null;
 			var task = Task.Factory.StartNew(async() =>
 			{
 				try
 				{
+					var fileContent = streamProvider.Contents.SingleOrDefault();
+					if (fileContent != null)
+					{
+						fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
+					}
+
 					var fileStream = await streamProvider.Contents
 						.First(c => c.Headers.ContentDisposition.Name == "\"file\"")
 						.ReadAsStreamAsync();
+					
 					var dataDumper = new DataDumper(Database);
 					dataDumper.Progress += s => status.LastProgress = s;
 					var importOptions = new SmugglerImportOptions
@@ -102,7 +110,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.ImportDatabase,
-				Payload = "Import of file " + "file name",
+				Payload = fileName,
 				
 			}, out id, cts);
 
