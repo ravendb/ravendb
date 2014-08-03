@@ -107,8 +107,8 @@ class commandBase {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
-    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", resource, options);
+    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", resource, options, timeToAlert);
     }
 
     patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {

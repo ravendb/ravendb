@@ -15,7 +15,7 @@ class disableResourceToggleCommand extends commandBase {
     * @param isSettingDisabled - Status of disabled to set
     * @param resourceType - The resource type
     */
-    constructor(private names: Array<string>, private isSettingDisabled: boolean, private resourceType: string) {
+    constructor(private resourcesNames: Array<string>, private isSettingDisabled: boolean, private resourceType: string) {
         super();
     }
 
@@ -23,7 +23,7 @@ class disableResourceToggleCommand extends commandBase {
         var action = this.isSettingDisabled ? "disable" : "enable";
 
         var toggleTask;
-        if (this.names.length == 1) {
+        if (this.resourcesNames.length == 1) {
             toggleTask = this.disableOneResource(action);
         } else {
             toggleTask = this.disableMultipleResources(action);
@@ -33,7 +33,7 @@ class disableResourceToggleCommand extends commandBase {
     }
 
     private disableOneResource(action: string): JQueryPromise<any> {
-        var name = this.names[0];
+        var name = this.resourcesNames[0];
         this.reportInfo("Trying to " + action + " " + name + "...");
 
         var args = {
@@ -53,17 +53,17 @@ class disableResourceToggleCommand extends commandBase {
 
     private disableMultipleResources(action: string): JQueryPromise<any> {
         var resourcesType = (this.resourceType == database.type) ? "databases" : (this.resourceType == filesystem.type) ? "file systems" : "counter storages";
-        this.reportInfo("Trying to " + action + " " + this.names.length + " " + resourcesType + "...");
+        this.reportInfo("Trying to " + action + " " + this.resourcesNames.length + " " + resourcesType + "...");
 
         var args = {
-            ids: this.names,
+            ids: this.resourcesNames,
             isSettingDisabled: this.isSettingDisabled
         };
 
         var disableMultipleResourcesPath = (this.resourceType == database.type) ? this.multipleDatabasesPath :
             (this.resourceType == filesystem.type) ? this.multipleFileSystemsPath : this.multipleCounterStoragesPath;
         var url = disableMultipleResourcesPath + this.urlEncodeArgs(args);
-        var toggleTask = this.post(url, null);
+        var toggleTask = this.post(url, null, null, null, 9000 * this.resourcesNames.length);
 
         toggleTask.done((toggledResourcesNames: string[]) => this.reportSuccess("Succefully " + action + "d " + toggledResourcesNames.length + " " + resourcesType + "!"));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + resourcesType, response.responseText, response.statusText));
