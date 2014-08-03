@@ -70,9 +70,11 @@ class changesApi {
 
                 action.call(this, connectionString);
             })
-            .fail(() => {
-                // Connection has closed so try to reconnect every 3 seconds.
-                setTimeout(() => this.connect(action), 3 * 1000);
+            .fail((e) => {
+                if (e.status == 0) {
+                    // Connection has closed so try to reconnect every 3 seconds.
+                    setTimeout(() => this.connect(action), 3 * 1000);
+                }
             });
     }
 
