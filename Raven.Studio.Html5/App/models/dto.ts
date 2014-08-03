@@ -920,12 +920,20 @@ interface operationIdDto {
 
 interface operationStatusDto {
     Completed: boolean;
+}
+
+interface bulkOperationStatusDto extends operationStatusDto{
     State: documentStateDto[];
 }
 
 interface documentStateDto {
     Document: string;
     Deleted: boolean;
+}
+
+interface importOperationStatusDto extends operationStatusDto{
+    LastProgress: string;
+    ExceptionDetails: string;
 }
 
 interface replicationTopologyDto {

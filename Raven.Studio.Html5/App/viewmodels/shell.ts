@@ -305,15 +305,16 @@ class shell extends viewModelBase {
     }
 
     private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
-        if (!!activeResourceObservable() && resourceObservableArray.contains(activeResourceObservable()) == false) {
+        var activeResource = activeResourceObservable();
+        if (!!activeResource && resourceObservableArray.contains(activeResource) == false) {
+            var url = (activeResource instanceof database) ? "#databases" : (activeResource instanceof filesystem) ? "#filesystems" : "#counterstorages";
+            this.navigate(url);
             if (resourceObservableArray().length > 0) {
                 this.selectResource(resourceObservableArray().first());
             } else if (resourceObservableArray().length == 0) {
                 //if we are in file systems or counter storages page
                 this.disconnectFromResourceChangesApi();
-                var url = (activeResourceObservable() instanceof filesystem) ? "#filesystems" : "#counterstorages";
                 activeResourceObservable(null);
-                this.navigate(url);
             }
         }
     }

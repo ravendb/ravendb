@@ -16,6 +16,7 @@ class commandBase {
     // TODO: better place for this?
     static ravenClientVersion = '3.0.0.0';
     static splashTimerHandle = 0;
+    static alertTimeout = 0;
     static loadingCounter = 0;
 
     constructor() {
@@ -139,12 +140,13 @@ class commandBase {
                 var xhr = new XMLHttpRequest();
                 xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
                     if (evt.lengthComputable) {
-                        var percentComplete = evt.loaded / evt.total;
-                        if (percentComplete < 1) {
+                        var percentComplete = (evt.loaded / evt.total) * 100;
+                        if (percentComplete < 100) {
                             // waiting for upload progress to complete
-                            clearTimeout(commandBase.splashTimerHandle);
-                            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 0, timeToAlert);
+                            clearTimeout(commandBase.alertTimeout);
+                            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
                         }
+                        ko.postbox.publish("UploadProgress", percentComplete);
                     }
                 }, false);
 
@@ -181,6 +183,8 @@ class commandBase {
         $.ajax(defaultOptions).always(() => {
             --commandBase.loadingCounter;
             if (commandBase.loadingCounter == 0) {
+                clearTimeout(commandBase.alertTimeout);
+                commandBase.alertTimeout = 0;
                 clearTimeout(commandBase.splashTimerHandle);
                 commandBase.hideSpin();
             }
@@ -300,7 +304,9 @@ class commandBase {
 
     private static showSpin(timeToAlert: number) {
         ko.postbox.publish("LoadProgress", alertType.warning);
-        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+        if (commandBase.alertTimeout == 0) {
+            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+        }
     }
 
     private static showServerNotRespondingAlert() {
