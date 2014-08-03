@@ -260,7 +260,8 @@ namespace Raven.Database.Smuggler
 					DataAsJson = document,
 				});
 
-				return new CompletedTask();
+				if (options.BatchSize > bulkInsertBatch.Count)
+					return new CompletedTask();
 			}
 
 			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
