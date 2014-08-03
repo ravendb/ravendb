@@ -394,27 +394,17 @@ namespace Raven.Database.Server.WebApi
 	        TransportState transportState = null;
 	        if (controller is RavenDbApiController)
 	        {
-	            var typedController = controller as RavenDbApiController;
-	            var database = typedController.Database;
-	            transportState = database.TransportState;
                 logNotification.TenantType = LogTenantType.Database;
 	        }
-
             if (controller is RavenFsApiController)
             {
-                var typedController = controller as RavenFsApiController;
-                var database = typedController.FileSystem;
-                transportState = database.TransportState;
                 logNotification.TenantType = LogTenantType.Filesystem;
             }
-
             if (controller is RavenCountersApiController)
             {
-                var typedController = controller as RavenCountersApiController;
-                var counterStorage = typedController.CounterStorage;
-                transportState = counterStorage.TransportState;
                 logNotification.TenantType = LogTenantType.CounterStorage;
             }
+
 	        var notificationMessage = new {Type = "LogNotification", Value = logNotification};
 	        foreach (var eventsTransport in serverHttpTrace)
 	        {
@@ -422,11 +412,21 @@ namespace Raven.Database.Server.WebApi
 	        }
 
 	        List<IEventsTransport> resourceEventTransports;
-	        if (resourceHttpTraces.TryGetValue(logNotification.TenantName, out resourceEventTransports))
+            
+	        var tenantName = logNotification.TenantName;
+	        if (tenantName.IndexOf("counters/") == 0)
+	        {
+	            tenantName = tenantName.Substring(9);
+	        }
+            else if (tenantName.IndexOf("fs/") == 0)
+	        {
+	            tenantName = tenantName.Substring(3);
+	        }
+            if (resourceHttpTraces.TryGetValue(tenantName, out resourceEventTransports))
 	        {
                 foreach (var eventTransport in resourceEventTransports)
 	            {
-                    eventTransport.SendAsync(notificationMessage);
+	                eventTransport.SendAsync(notificationMessage);
 	            }
 	        }
 	    }

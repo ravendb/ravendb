@@ -25,6 +25,9 @@
 </style>
 <section id="logsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div style="height: 65%; position: relative;">
+        <div class="btn-group">
+            <a class="btn btn-default" target="_blank" data-bind="attr:{href:dbLogsHref}">Log Console</a>
+        </div>
         <button type="button" class="btn btn-default" data-bind="click: fetchLogs"><i class="fa fa-refresh"></i></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterAll">

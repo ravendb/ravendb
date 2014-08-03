@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers
@@ -13,6 +15,22 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
+            bool shouldCheckIfMachineAdmin = false;
+
+
+            if ((DatabaseName == "<system>" || string.IsNullOrEmpty(DatabaseName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
+            {
+
+                if (!User.IsAdministrator(AnonymousUserAccessMode.None) &&
+                    DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                {
+                    return GetMessageWithObject(new
+                    {
+                        Reason = "User is null or not authenticated"
+                    }, HttpStatusCode.Unauthorized);
+                }
+
+            }
 
             var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);
 

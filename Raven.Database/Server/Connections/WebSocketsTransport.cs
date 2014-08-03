@@ -269,6 +269,7 @@ namespace Raven.Database.Server.Connections
                         _context.Response.StatusCode = 403;
                         _context.Response.ReasonPhrase = "Forbidden";
                         _context.Response.Write("{'Error': 'Single use token is required for authenticated web sockets connections' }");
+                        return false;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(_options.SystemDatabase.Configuration.AnonymousUserAccessMode.ToString());
@@ -292,10 +293,10 @@ namespace Raven.Database.Server.Connections
                     }
                     else
                     {
-                        return false;
                         _context.Response.StatusCode = 403;
                         _context.Response.ReasonPhrase = "Forbidden";
                         _context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
+                        return false;
                     }
                 }
             }

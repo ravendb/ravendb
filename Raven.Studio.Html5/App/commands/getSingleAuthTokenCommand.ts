@@ -6,7 +6,7 @@ import counterStorage = require("models/counter/counterStorage");
 
 class getSingleAuthTokenCommand extends commandBase {
 
-    constructor(private resourcePath: string) {
+    constructor(private resourcePath: string, private checkIfMachineAdmin :boolean = false) {
         super();
 
         if (resourcePath == null) {
@@ -16,8 +16,15 @@ class getSingleAuthTokenCommand extends commandBase {
 
     execute(): JQueryPromise<singleAuthToken> {
         var url = this.resourcePath + "/singleAuthToken";
+        var args = null;
 
-        var getTask = this.query(url, null, null);
+        if (this.checkIfMachineAdmin) {
+            args = {
+                CheckIfMachineAdmin:true
+            };
+        }
+            
+        var getTask = this.query(url, args, null);
 
         return getTask;
     }

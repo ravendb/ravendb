@@ -6,6 +6,7 @@ import database = require("models/database");
 import moment = require("moment");
 import copyDocuments = require("viewmodels/copyDocuments");
 import document = require("models/document");
+import appUrl = require("common/appUrl");
 
 class logs extends viewModelBase {
     
@@ -26,6 +27,8 @@ class logs extends viewModelBase {
     sortAsc = ko.observable<boolean>(true);
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
     columnWidths: Array<KnockoutObservable<number>>;
+    dbLogsHref: KnockoutComputed<string>;
+    adminLogsHref: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -64,6 +67,8 @@ class logs extends viewModelBase {
             ko.observable<number>(360)
         ];
         this.registerColumnResizing();
+        this.dbLogsHref = ko.computed(() => appUrl.forLogsConsole(this.activeDatabase()));
+        this.adminLogsHref = ko.computed(() => appUrl.forLogsConsole(null));
         return this.fetchLogs();
     }
 

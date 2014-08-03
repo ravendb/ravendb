@@ -15,7 +15,7 @@ class httpTraceClient {
 
     private eventsId: string;
     private resourcePath: string;
-    private connectToChangesApiTask: JQueryDeferred<any>;
+    public connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
     static isServerSupportingWebSockets: boolean = true;
     private eventSource: EventSource;
@@ -33,7 +33,7 @@ class httpTraceClient {
     constructor(private rs?: resource) {
         this.eventsId = this.makeId();
         
-        this.resourcePath = !!rs ? appUrl.forResourceQuery(this.rs) : "";
+        this.resourcePath = !!rs ? appUrl.forResourceQuery(rs) : "";
         this.connectToChangesApiTask = $.Deferred();
 
         if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
@@ -51,7 +51,8 @@ class httpTraceClient {
     }
 
     private connect(action: Function, needToReconnect: boolean = false) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath).execute();
+        
+        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath, !this.rs).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
@@ -60,9 +61,15 @@ class httpTraceClient {
 
                 action.call(this, connectionString);
             })
-            .fail(() => {
-                // Connection has closed so try to reconnect every 3 seconds.
-                setTimeout(() => this.connect(action), 3 * 1000);
+            .fail((e) => {
+
+                if (e.status == 401) {
+                    this.connectToChangesApiTask.reject(e);
+                } else {
+                    // Connection has closed so try to reconnect every 3 seconds.
+                    setTimeout(() => this.connect(action), 3 * 1000);    
+                }
+                
             });
     }
 
@@ -86,7 +93,7 @@ class httpTraceClient {
             }
         }
         this.webSocket.onopen = () => {
-            console.log("Connected to WebSocket changes API (rs = " + this.rs.name + ")");
+            console.log("Connected to WebSockets HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -110,7 +117,7 @@ class httpTraceClient {
             }
         };
         this.eventSource.onopen = () => {
-            console.log("Connected to EventSource HTTP Trace " + !!this.rs ? ("for (rs = " + this.rs.name + ")") : "admin");;
+            console.log("Connected to EventSource HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -196,11 +203,11 @@ class httpTraceClient {
     dispose() {
         this.connectToChangesApiTask.done(() => {
             if (this.webSocket && this.webSocket.readyState == this.readyStateOpen){
-                console.log("Disconnecting from WebSocket HTTP Trace " + !!this.rs?("for (rs = " + this.rs.name + ")"):"admin");
+                console.log("Disconnecting from WebSocket HTTP Trace " + ((!!this.rs && !!this.rs.name)?("for (rs = " + this.rs.name + ")"):"admin"));
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
             }
             else if (this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
-                console.log("Disconnecting from EventSource HTTP Trace " + !!this.rs ? ("for (rs = " + this.rs.name + ")") : "admin");
+                console.log("Disconnecting from EventSource HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
                 this.eventSource.close();
             }
         });

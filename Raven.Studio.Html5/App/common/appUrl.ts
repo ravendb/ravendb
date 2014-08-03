@@ -123,6 +123,8 @@ class appUrl {
         return "#counterstorages/configuration?" + counterStroragePart;
     }
 
+    
+
     static forDatabases(): string {
         return "#databases";
     }
@@ -256,6 +258,10 @@ class appUrl {
     static forSettings(db: database): string {
         var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
         return path;
+    }
+
+    static forLogsConsole(db?:database):string {
+        return "http://localhost:8080/studio/index.html#databases/logsConsole?" + (!!db?appUrl.getEncodedDbPart(db):"");
     }
 
     static forLogs(db: database): string {

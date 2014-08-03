@@ -103,12 +103,6 @@ namespace Owin
                 if (await webSocketsTrasport.TrySetupRequest())
                     accept(null, webSocketsTrasport.Run);
             }
-            else
-            {
-                // Not a websocket request
-                await next();
-                return;
-            }
         }
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{

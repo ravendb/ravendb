@@ -13,6 +13,24 @@ class logsConsole extends  viewModelBase {
         super();
 
     }
+
+    canActivate(args) {
+        super.canActivate(args);
+        var canReadLogs = $.Deferred();        
+        var tracedDB = (!!args && !!args.database ? (args.database !== "<system>" && this.activeDatabase().name == args.database? this.activeDatabase():null) : null);
+        this.loghttpTraceClient = new httpTraceClient(tracedDB);
+        this.loghttpTraceClient.connectToChangesApiTask
+            .done(() => canReadLogs.resolve({ can: true }))
+            .fail((e) => {
+                if (!!e && !!e.status && e.status == 401) {
+                    canReadLogs.resolve({ redirect: appUrl.forLogs(this.activeDatabase()) });
+                } else {
+                    canReadLogs.resolve({ can: true });
+                }
+        });
+
+        return canReadLogs;
+    }
     activate(args) {
         super.activate(args);
     }
@@ -25,7 +43,6 @@ class logsConsole extends  viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        this.loghttpTraceClient = new httpTraceClient();
         return [
             this.loghttpTraceClient.watchAdminLogs((e: logNotificationDto) => {
                 
@@ -34,7 +51,15 @@ class logsConsole extends  viewModelBase {
                 }
                 this.allLogsNotifications.push(e);
                 var objDiv = document.getElementById("logNotificationsContainer");
-                objDiv.scrollTop = objDiv.scrollHeight;
+                var selection;
+
+                if (window.getSelection) {
+                    selection = window.getSelection().toString();
+                } else if (document.selection && document.selection.type != "Control") {
+                    selection = document.selection.createRange().text;
+                }
+                if (selection.length == 0)
+                objDiv.scrollTop = objDiv.scrollHeight*1.1 ;
             })
         ];
     }
