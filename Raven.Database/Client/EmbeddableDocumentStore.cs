@@ -325,14 +325,6 @@ namespace Raven.Client.Embedded
             return this;
         }
 
-
-        public IDocumentStore RegisterListener(IExtendedDocumentConversionListener listener)
-        {
-            Listeners.RegisterListener(listener);
-            return this;
-        }
-
-
         public IDocumentStore RegisterListener(IDocumentQueryListener listener)
         {
             Listeners.RegisterListener(listener);

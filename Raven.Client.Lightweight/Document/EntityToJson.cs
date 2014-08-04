@@ -33,7 +33,7 @@ namespace Raven.Client.Document
 
         public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
         {
-            foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
+            foreach (var extendedDocumentConversionListener in Listeners.ConversionListeners)
             {
                 extendedDocumentConversionListener.BeforeConversionToDocument(key, entity, metadata);
             }
@@ -49,12 +49,7 @@ namespace Raven.Client.Document
 
             SetClrType(entityType, metadata);
 
-            foreach (var documentConversionListener in Listeners.ConversionListeners)
-            {
-                documentConversionListener.EntityToDocument(key, entity, objectAsJson, metadata);
-            }
-
-            foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
+            foreach (var extendedDocumentConversionListener in Listeners.ConversionListeners)
             {
                 extendedDocumentConversionListener.AfterConversionToDocument(key, entity, objectAsJson, metadata);
             }

@@ -71,7 +71,13 @@ namespace Raven.Tests.MailingList
 		public class CreateDateMetadataConversion : IDocumentConversionListener
 		{
 			private int count;
-			public void EntityToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
+
+			public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
+			{
+				
+			}
+
+			public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
 			{
 				if (entity is ITimeStamped)
 				{
@@ -83,7 +89,11 @@ namespace Raven.Tests.MailingList
 				}
 			}
 
-			public void DocumentToEntity(string key, object entity, RavenJObject document, RavenJObject metadata)
+			public void BeforeConversionToEntity(string key, RavenJObject document, RavenJObject metadata)
+			{
+			}
+
+			public void AfterConversionToEntity(string key, RavenJObject document, RavenJObject metadata, object entity)
 			{
 				var timestamped = entity as ITimeStamped;
 				if (timestamped != null && metadata.ContainsKey("DateCreated"))
