@@ -69,8 +69,7 @@ namespace Raven.Smuggler
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}
 
-		protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
-												LastEtagsInfo maxEtagsToFetch)
+		protected override void ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch)
 		{
 			throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
 		}
@@ -96,12 +95,9 @@ namespace Raven.Smuggler
 			return Commands.DeleteAttachmentAsync(key, null);
 		}
 
-		public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
+		public override async Task ImportData(SmugglerImportOptions importOptions, Stream stream)
 		{
-			SetSmugglerOptions(options);
-			jintHelper.Initialize(options);
-
-			currentBatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
+			jintHelper.Initialize(SmugglerOptions);
 
 			using (store = CreateStore(importOptions.To))
 			{
@@ -111,13 +107,13 @@ namespace Raven.Smuggler
 				{
 					operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 					{
-						BatchSize = currentBatchSize,
+						BatchSize = SmugglerOptions.BatchSize,
 						OverwriteExisting = true
-					}, store.Changes(), options.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
+					}, store.Changes(), SmugglerOptions.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
 
 					operation.Report += text => ShowProgress(text);
 
-					await base.ImportData(importOptions, options, stream);
+					await base.ImportData(importOptions, stream);
 				}
 				finally
 				{
@@ -131,16 +127,16 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptions options)
+		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions)
 		{
 			using (store = CreateStore(exportOptions.From))
 			{
-				return await base.ExportData(exportOptions, options);
+				return await base.ExportData(exportOptions);
 			}
 		}
 
 		private int storedDocumentCountInBatch;
-		protected override async Task PutDocument(RavenJObject document, SmugglerOptions options, int size)
+		protected override async Task PutDocument(RavenJObject document, int size)
 		{
 			if (document == null)
 				return;

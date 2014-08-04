@@ -42,16 +42,16 @@ namespace Raven.Database.Smuggler
         /// <param name="options"></param>
         /// <param name="result"></param>
         /// <param name="maxEtags">Max etags are inclusive</param>
-        protected async override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtags)
+        protected async override void ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtags)
         {
             jsonWriter.WritePropertyName("DocsDeletions");
             jsonWriter.WriteStartArray();
-            result.LastDocDeleteEtag = await ExportDocumentsDeletion(options, jsonWriter, result.LastDocDeleteEtag, maxEtags.LastDocDeleteEtag.IncrementBy(1));
+            result.LastDocDeleteEtag = await ExportDocumentsDeletion(jsonWriter, result.LastDocDeleteEtag, maxEtags.LastDocDeleteEtag.IncrementBy(1));
             jsonWriter.WriteEndArray();
 
             jsonWriter.WritePropertyName("AttachmentsDeletions");
             jsonWriter.WriteStartArray();
-            result.LastAttachmentsDeleteEtag = await ExportAttachmentsDeletion(options, jsonWriter, result.LastAttachmentsDeleteEtag, maxEtags.LastAttachmentsDeleteEtag.IncrementBy(1));
+            result.LastAttachmentsDeleteEtag = await ExportAttachmentsDeletion(jsonWriter, result.LastAttachmentsDeleteEtag, maxEtags.LastAttachmentsDeleteEtag.IncrementBy(1));
             jsonWriter.WriteEndArray();
         }
 
@@ -149,7 +149,7 @@ namespace Raven.Database.Smuggler
 		    }
 		}
 
-        protected Task<Etag> ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        protected Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
         {
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>
@@ -216,7 +216,7 @@ namespace Raven.Database.Smuggler
             return new CompletedTask();
 	    }
 
-	    protected Task<Etag> ExportAttachmentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+	    protected Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
 	    {
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
@@ -245,7 +245,7 @@ namespace Raven.Database.Smuggler
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		protected override Task PutDocument(RavenJObject document, SmugglerOptions options, int size)
+		protected override Task PutDocument(RavenJObject document, int size)
 		{
 			if (document != null)
 			{
@@ -260,13 +260,13 @@ namespace Raven.Database.Smuggler
 					DataAsJson = document,
 				});
 
-				if (options.BatchSize > bulkInsertBatch.Count)
+				if (SmugglerOptions.BatchSize > bulkInsertBatch.Count)
 					return new CompletedTask();
 			}
 
 			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
 			bulkInsertBatch = new List<JsonDocument>();
-			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true}, batchToSave, Guid.NewGuid(), CancellationToken.None);
+			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = SmugglerOptions.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid(), CancellationToken.None);
 			return new CompletedTask();
 		}
 
