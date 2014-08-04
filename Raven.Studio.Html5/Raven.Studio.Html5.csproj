@@ -207,7 +207,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
-    <TypeScriptCompile Include="App\viewmodels\logsConsole.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
@@ -361,7 +360,6 @@
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
-    <Content Include="App\views\logsConsole.html" />
     <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\disableDatabaseToggleConfirm.html" />
     <Content Include="App\views\visualizerImport.html" />

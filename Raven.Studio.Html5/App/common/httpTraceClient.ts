@@ -30,7 +30,7 @@ class httpTraceClient {
     private commandBase = new commandBase();
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private rs?: resource) {
+    constructor(private rs?: resource, private token?:string) {
         this.eventsId = this.makeId();
         
         this.resourcePath = !!rs ? appUrl.forResourceQuery(rs) : "";
@@ -38,9 +38,6 @@ class httpTraceClient {
 
         if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
             this.connect(this.connectWebSocket);
-        }
-        else if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
@@ -52,6 +49,7 @@ class httpTraceClient {
 
     private connect(action: Function, needToReconnect: boolean = false) {
         
+
         var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath, !this.rs).execute();
 
         getTokenTask
@@ -192,7 +190,7 @@ class httpTraceClient {
         }
     }
 
-    watchAdminLogs(onChange: (e: logNotificationDto) => void) {
+    watchLogs(onChange: (e: logNotificationDto) => void) {
         var callback = new changesCallback<logNotificationDto>(onChange);
         this.adminLogsHandlers.push(callback);
         return new changeSubscription(() => {
@@ -203,11 +201,13 @@ class httpTraceClient {
     dispose() {
         this.connectToChangesApiTask.done(() => {
             if (this.webSocket && this.webSocket.readyState == this.readyStateOpen){
-                console.log("Disconnecting from WebSocket HTTP Trace " + ((!!this.rs && !!this.rs.name)?("for (rs = " + this.rs.name + ")"):"admin"));
+                console.log("Disconnecting from WebSocket HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
+                this.isCleanClose = true;
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
             }
             else if (this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
                 console.log("Disconnecting from EventSource HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
+                this.isCleanClose = true;
                 this.eventSource.close();
             }
         });

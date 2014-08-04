@@ -259,11 +259,7 @@ class appUrl {
         var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
         return path;
     }
-
-    static forLogsConsole(db?:database):string {
-        return "http://localhost:8080/studio/index.html#databases/logsConsole?" + (!!db?appUrl.getEncodedDbPart(db):"");
-    }
-
+    
     static forLogs(db: database): string {
         return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
     }

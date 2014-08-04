@@ -259,6 +259,14 @@ class viewModelBase {
             return message;
         }
     }
+
+    public AddNotification(subscription: changeSubscription) {
+        this.notifications.push(subscription);
+    }
+
+    public RemoveNotification(subscription: changeSubscription) {
+        this.notifications.remove(subscription);
+    }
 }
 
 export = viewModelBase;

@@ -4,9 +4,11 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import database = require("models/database");
 import moment = require("moment");
-import copyDocuments = require("viewmodels/copyDocuments");
-import document = require("models/document");
+/*import copyDocuments = require("viewmodels/copyDocuments");
+import document = require("models/document");*/
 import appUrl = require("common/appUrl");
+import httpTraceClient = require("common/httpTraceClient");
+import changeSubscription = require('models/changeSubscription');
 
 class logs extends viewModelBase {
     
@@ -23,12 +25,13 @@ class logs extends viewModelBase {
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
     filteredLoggers = ko.observableArray<string>();
-    sortColumn = ko.observable<string>("logged");
+    sortColumn = ko.observable<string>("TimeStamp");
     sortAsc = ko.observable<boolean>(true);
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
     columnWidths: Array<KnockoutObservable<number>>;
-    dbLogsHref: KnockoutComputed<string>;
-    adminLogsHref: KnockoutComputed<string>;
+    logsMode = ko.observable<string>("Regular");
+    logHttpTraceClient: httpTraceClient;
+    httpTraceSubscription: changeSubscription;
 
     constructor() {
         super();
@@ -67,9 +70,17 @@ class logs extends viewModelBase {
             ko.observable<number>(360)
         ];
         this.registerColumnResizing();
-        this.dbLogsHref = ko.computed(() => appUrl.forLogsConsole(this.activeDatabase()));
-        this.adminLogsHref = ko.computed(() => appUrl.forLogsConsole(null));
         return this.fetchLogs();
+    }
+
+    attached() {
+        var logsRecordsContainerWidth = $("#logRecordsContainer").width();
+        var widthUnit = 0.08;
+        this.columnWidths[0](100 * widthUnit);
+        this.columnWidths[1](100 * widthUnit);
+        this.columnWidths[2](100 * widthUnit*6);
+        this.columnWidths[3](100 * widthUnit*2);
+        this.columnWidths[4](100 * widthUnit*2);
     }
 
     deactivate() {
@@ -88,13 +99,24 @@ class logs extends viewModelBase {
         return null;
     }
 
-    processLogResults(results: logDto[]) {
+    processLogResults(results: logDto[], append:boolean=false) {
         var now = moment();
         results.forEach(r => {
-            r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp);
+            r['HumanizedTimestamp'] = this.createHumanReadableTime(r.TimeStamp,true,false);
+            r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp,true,true);
             r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
         });
-        this.allLogs(results.reverse());
+
+        if (append === false) {
+            this.allLogs(results.reverse());
+        } else {
+            if (results.length == 1) {
+                this.allLogs.unshift((results[0]));
+            } else {
+                results.forEach(x=>this.allLogs.unshift(x));
+            }
+            
+        }
     }
 
     
@@ -110,12 +132,17 @@ class logs extends viewModelBase {
         return matchesLogLevel && matchesSearchText;
     }
 
-    createHumanReadableTime(time: string): KnockoutComputed<string> {
+    createHumanReadableTime(time: string, chainHumanized: boolean= true, chainDateTime:boolean=true): KnockoutComputed<string> {
         if (time) {
             return ko.computed(() => {
                 var dateMoment = moment(time);
+                var humanized = "", formattedDateTime = "";
                 var agoInMs = dateMoment.diff(this.now());
-                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+                if (chainHumanized == true)
+                    humanized = moment.duration(agoInMs).humanize(true);
+                if (chainDateTime == true)
+                    formattedDateTime = dateMoment.format(" (MM/DD/YY, h:mma)");
+                return humanized + formattedDateTime;
             });
         }
 
@@ -242,7 +269,8 @@ class logs extends viewModelBase {
 
         $(document).on("mousemove.logTableColumnResize", "", (e: any) => {
             if (resizingColumn) {
-                var targetColumnSize = startingWidth + e.pageX - startX;
+                var logsRecordsContainerWidth = $("#logRecordsContainer").width();
+                var targetColumnSize = startingWidth + 100*(e.pageX - startX)/logsRecordsContainerWidth;
                 this.columnWidths[columnIndex](targetColumnSize);
 
                 // Stop propagation of the event so the text selection doesn't fire up
@@ -261,6 +289,76 @@ class logs extends viewModelBase {
         $(document).off("mouseup.logTableColumnResize");
         $(document).off("mousemove.logTableColumnResize");
     }
+
+    switchToRegularMode() {
+        this.logsMode("Regular");
+        this.allLogs.removeAll();
+        this.fetchLogs();
+        this.disposeHttpTraceClient();
+    }
+
+    switchToHttpTraceMode() {
+
+
+        var tracedDB = appUrl.getResource();
+        this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
+        this.logHttpTraceClient.connectToChangesApiTask
+            .done(() => {
+                this.logsMode("Http Trace");
+                this.allLogs.removeAll();
+                this.httpTraceSubscription =
+                    this.logHttpTraceClient.watchLogs((e: logNotificationDto) => this.processHttpTraceMessage(e));
+            })
+            .fail((e) => {
+                if (!!e && !!e.status && e.status == 401) {
+                    app.showMessage("You do not have the sufficient permissions", "Http-Trace failed to start");
+                } else {
+                    app.showMessage("Could not open connection", "Http-Trace failed to start");
+                }
+            });
+    }
+
+    switchToSystemLogsMode() {
+        app.showMessage("To Be Delivered", "TBD");
+        this.allLogs.removeAll();
+        this.disposeHttpTraceClient();
+        this.logsMode("System Logger");
+    }
+
+    detached() {
+        super.detached();
+        this.disposeHttpTraceClient();
+    }
+
+    processHttpTraceMessage(e: logNotificationDto) {
+        var logObject: logDto;
+        logObject = {
+            Exception: null,
+            Level: e.Level,
+            TimeStamp: e.TimeStamp,
+            LoggerName: e.LoggerName,
+            Message: !e.CustomInfo ? this.formatLogRecord(e) : e.CustomInfo
+        };
+        this.processLogResults([logObject], true);
+    }
+
+    disposeHttpTraceClient() {
+        if (!!this.httpTraceSubscription) {
+            this.httpTraceSubscription.off();
+            this.httpTraceSubscription = null;
+        }
+
+        if (!!this.logHttpTraceClient) {
+            this.logHttpTraceClient.dispose();
+            this.logHttpTraceClient = null;
+        }
+    }
+
+
+    formatLogRecord(logRecord: logNotificationDto) {
+        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.EllapsedMiliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
+    }
+    
 }
 
 export = logs;

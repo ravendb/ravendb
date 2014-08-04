@@ -25,6 +25,9 @@ interface documentChangeNotificationDto {
 }
 
 interface logNotificationDto {
+    Level :string;
+    TimeStamp :string;
+    LoggerName :string;
     RequestId: number;
     HttpMethod: string;
     EllapsedMiliseconds: number;

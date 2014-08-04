@@ -73,6 +73,7 @@ namespace Raven.Database.Server.Connections
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
         private bool isResourceBound = true;
+        public string ResourceName { get; set; }
 
         public WebSocketsTransport(RavenDBOptions options, IOwinContext context, bool isResourceBound=true)
         {
@@ -239,14 +240,14 @@ namespace Raven.Database.Server.Connections
 			var singleUseToken = _context.Request.Query["singleUseAuthToken"];
             IPrincipal user = null;
 
-            var resourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : (documentDatabase != null) ? documentDatabase.Name : null;
+            var ResourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : (documentDatabase != null) ? documentDatabase.Name : null;
 
             if (string.IsNullOrEmpty(singleUseToken) == false)
             {
                 object msg;
                 HttpStatusCode code;
 
-				if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, resourceName, out msg, out code, out user) == false)
+                if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, ResourceName, out msg, out code, out user) == false)
                 {
                     _context.Response.StatusCode = (int) code;
                     _context.Response.ReasonPhrase = code.ToString();
@@ -278,9 +279,9 @@ namespace Raven.Database.Server.Connections
 
             if (!isResourceBound)
             {
-                if (resourceName != null)
+                if (ResourceName != null)
                 {
-                    _options.RequestManager.RegisterResourceHttpTraceTransport(this,resourceName);
+                    _options.RequestManager.RegisterResourceHttpTraceTransport(this, ResourceName);
                 }
                 else
                 {
@@ -318,11 +319,6 @@ namespace Raven.Database.Server.Connections
             }
 
             return true;
-        }
-
-        private void RegisterToAllPermittedTransportStates(IPrincipal user)
-        {
-            
         }
 
         private async Task<DocumentDatabase> GetDatabase()

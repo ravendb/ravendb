@@ -49,7 +49,6 @@ class settings extends viewModelBase {
         var periodicExportRoute = { route: 'databases/settings/periodicExports', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         //var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
         var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
-        var adminLogs = { route: 'databases/settings/adminLogs', moduleId: 'viewmodels/logsConsole', title: 'Custom Functions', nav: true, hash: 'databases/settings/adminLogs' };
         
 
         this.router = durandalRouter.createChildRouter()
@@ -65,8 +64,7 @@ class settings extends viewModelBase {
                 versioningRoute,
                 periodicExportRoute,
                 //scriptedIndexesRoute,
-                customFunctionsEditorRoute,
-                adminLogs
+                customFunctionsEditorRoute
             ])
             .buildNavigationModel();
 

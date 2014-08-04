@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.VisualBasic.Logging;
+using Mono.Cecil;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -23,6 +24,7 @@ using Raven.Database.Server.Controllers;
 using Raven.Database.Server.RavenFS.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 
 namespace Raven.Database.Server.WebApi
 {
@@ -371,6 +373,9 @@ namespace Raven.Database.Server.WebApi
             Logger.Debug(message);
             NotifyLogChangesApi(controller, new LogNotification()
             {
+                Level=LogLevel.Debug.ToString("G"),
+                TimeStamp = DateTime.UtcNow,
+                LoggerName = GetType().ToString(),
                 RequestId = curReq,
                 HttpMethod = logHttpRequestStatsParams.HttpMethod,
                 EllapsedMiliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
@@ -383,6 +388,9 @@ namespace Raven.Database.Server.WebApi
 		        Logger.Debug(logHttpRequestStatsParams.CustomInfo);
                 NotifyLogChangesApi(controller, new LogNotification()
                 {
+                    Level = LogLevel.Debug.ToString("G"),
+                    TimeStamp = DateTime.UtcNow,
+                    LoggerName = GetType().ToString(),
                    CustomInfo = logHttpRequestStatsParams.CustomInfo,
                    TenantName = databaseName ?? "<system>"
                 });
@@ -411,18 +419,11 @@ namespace Raven.Database.Server.WebApi
                 eventsTransport.SendAsync(notificationMessage);
 	        }
 
-	        List<IEventsTransport> resourceEventTransports;
-            
-	        var tenantName = logNotification.TenantName;
-	        if (tenantName.IndexOf("counters/") == 0)
-	        {
-	            tenantName = tenantName.Substring(9);
-	        }
-            else if (tenantName.IndexOf("fs/") == 0)
-	        {
-	            tenantName = tenantName.Substring(3);
-	        }
-            if (resourceHttpTraces.TryGetValue(tenantName, out resourceEventTransports))
+	        ConcurrentSet<IEventsTransport> resourceEventTransports;
+
+            var resourceName = NormalizeResourceName(logNotification.TenantName);
+
+            if (resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports))
 	        {
                 foreach (var eventTransport in resourceEventTransports)
 	            {
@@ -431,20 +432,41 @@ namespace Raven.Database.Server.WebApi
 	        }
 	    }
 
-	    private Dictionary<string, List<IEventsTransport>> resourceHttpTraces = new Dictionary<string, List<IEventsTransport>>();
-        private List<IEventsTransport> serverHttpTrace = new List<IEventsTransport>();
+	    private string NormalizeResourceName(string resourceName)
+	    {
+            if (resourceName.IndexOf("counters/") == 0)
+	        {
+                return resourceName.Substring(9);
+	        }
+            
+            if (resourceName.IndexOf("fs/") == 0)
+	        {
+                return resourceName.Substring(3);
+	        }
+
+	        return resourceName;
+	    }
+	    private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
+        private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
 
 	    public void RegisterServerHttpTraceTransport(IEventsTransport transport)
 	    {
 	        serverHttpTrace.Add(transport);
-	        transport.Disconnected += () => serverHttpTrace.Remove(transport);
+	        transport.Disconnected += () => serverHttpTrace.TryRemove(transport);
 	    }
 
         public void RegisterResourceHttpTraceTransport(IEventsTransport transport, string resourceName)
         {
-            List<IEventsTransport> curResourceEventTransports = resourceHttpTraces.GetOrAdd(resourceName);
+            var curResourceEventTransports = resourceHttpTraces.GetOrAdd(resourceName);
             curResourceEventTransports.Add(transport);
-            transport.Disconnected += () => serverHttpTrace.Remove(transport);
+            transport.Disconnected += () =>
+            {
+                ConcurrentSet<IEventsTransport> resourceEventTransports;
+                resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports);
+
+                if (resourceEventTransports != null)
+                    resourceEventTransports.TryRemove(transport);
+            };
         }
 
 		private void IdleOperations(object state)

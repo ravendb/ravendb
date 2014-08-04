@@ -125,9 +125,12 @@ namespace Raven.Abstractions.Data
 		Put = 1,
 		Delete = 2,
 	}
-
+    
     public class LogNotification : EventArgs
     {
+        public string Level { get; set; }
+        public DateTime TimeStamp { get; set; }
+        public string LoggerName { get; set; }
         public int RequestId { get; set; }
         public string HttpMethod { get; set; }
         public long EllapsedMiliseconds { get; set; }
