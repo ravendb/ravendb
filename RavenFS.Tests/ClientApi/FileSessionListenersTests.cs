@@ -131,15 +131,13 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictNotifications(2, 5);
+                var notificationTask = WaitForConflictNotifications(2, 10);
 
-                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
-                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
-
+                var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
-                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -174,7 +172,7 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(128, file.TotalSize);
                 Assert.Equal(130, file2.TotalSize);
 
-                var notificationTask = WaitForConflictNotifications(2, 5);
+                var notificationTask = WaitForConflictNotifications(2, 10);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
@@ -187,7 +185,6 @@ namespace RavenFS.Tests.ClientApi
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
-                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
