@@ -20,7 +20,7 @@ class importDatabase extends viewModelBase {
     //includedCollections = ko.observableArray<{ collection: string; isIncluded: KnockoutObservable<boolean>; }>();
     hasFileSelected = ko.observable(false);
     isUploading = false;
-    importSummary = ko.observable<string>('');
+    private importedFileName: string;
     private filePickerTag = "#importDatabaseFilePicker";
 
     constructor() {
@@ -85,6 +85,7 @@ class importDatabase extends viewModelBase {
         db.importStatus("Uploading 0%");
 
         var formData = new FormData();
+        this.importedFileName = $(this.filePickerTag).val().split(/(\\|\/)/g).pop();
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
         formData.append("file", fileInput.files[0]);
         var importItemTypes: ImportItemType[] = [];
@@ -125,9 +126,10 @@ class importDatabase extends viewModelBase {
                     if (result.ExceptionDetails == null) {
                         this.hasFileSelected(false);
                         $(this.filePickerTag).val('');
-                        this.importSummary(result.LastProgress);
+                        db.importStatus("Last import was from '" + this.importedFileName + "', " + result.LastProgress.toLocaleLowerCase());
                         messagePublisher.reportSuccess("Successfully imported data to " + db.name);
                     } else {
+                        db.importStatus("");
                         messagePublisher.reportError("Failed to import data!", result.ExceptionDetails);
                     }
                     db.isImporting(false);
