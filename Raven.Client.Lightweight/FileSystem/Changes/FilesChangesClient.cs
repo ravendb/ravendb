@@ -17,7 +17,7 @@ namespace Raven.Client.FileSystem.Changes
 {
 
     public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>,
-                                        IFilesChanges,
+                                        IFilesChanges, IFilesChangesImpl,
                                         IHoldProfilingInformation
     {
         private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>();
@@ -247,6 +247,10 @@ namespace Raven.Client.FileSystem.Changes
 
                 case "ConflictNotification":
                     var conflictNotification = value.JsonDeserialization<ConflictNotification>();
+
+                    foreach (var observer in this.conflictObservers)
+                        observer.OnNext(conflictNotification);
+
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(conflictNotification);
@@ -254,13 +258,21 @@ namespace Raven.Client.FileSystem.Changes
                     break;
                 case "ConflictDetectedNotification":
                     var conflictDetectedNotification = value.JsonDeserialization<ConflictNotification>();
+                    
+                    foreach (var observer in this.conflictObservers)
+                        observer.OnNext(conflictDetectedNotification);
+
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(conflictDetectedNotification);
                     }
                     break;
                 case "ConflictResolvedNotification":
-                     var conflictResolvedNotification = value.JsonDeserialization<ConflictNotification>();
+                    var conflictResolvedNotification = value.JsonDeserialization<ConflictNotification>();
+
+                    foreach (var observer in this.conflictObservers)
+                        observer.OnNext(conflictResolvedNotification);
+
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(conflictResolvedNotification);
@@ -279,6 +291,14 @@ namespace Raven.Client.FileSystem.Changes
                 return action();
             })
             .Unwrap();
+        }
+
+
+        private List<IObserver<ConflictNotification>> conflictObservers = new List<IObserver<ConflictNotification>>();
+
+        void IFilesChangesImpl.AddObserver(IObserver<ConflictNotification> observer)
+        {
+            conflictObservers.Add(observer);
         }
     }
 }

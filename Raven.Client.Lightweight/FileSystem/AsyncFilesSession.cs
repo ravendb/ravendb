@@ -133,27 +133,25 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        public async void OnNext(ConflictNotification notification)
+        async void IObserver<ConflictNotification>.OnNext(ConflictNotification notification)
         {
             if (!conflicts.Contains(notification.FileName))
                 conflicts.Add(notification.FileName);
-                
+
             var localHeader = await this.LoadFileAsync(notification.FileName);
-            //var remolocalHeaderteHeader = await Commands.ForFileSystem(notification.SourceServerUrl).GetMetadataForAsync(notification.FileName);
+
             if (notification.Status == ConflictStatus.Detected) 
-            {
-                var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
+            {                               
                 int actionableListenersCount = 0;
+                var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
                 foreach( var listener in Listeners.ConflictListeners)
                 {
                     var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
-
                     if (strategy != ConflictResolutionStrategy.NoResolution )
                     {
                         if (actionableListenersCount > 0)
-                        {
                             return;
-                        }
+                        
                         if (actionableListenersCount == 0) 
                         {
                             actionableListenersCount++;
@@ -166,30 +164,22 @@ namespace Raven.Client.FileSystem
             }
             else
             {
-                callListenersOnConflictResolved(notification.FileName);  
+                if (entitiesByKey.ContainsKey(notification.FileName))
+                    entitiesByKey.Remove(notification.FileName);
+
+                if (conflicts.Contains(notification.FileName))
+                    conflicts.Remove(notification.FileName);
+
+                foreach (var listener in Listeners.ConflictListeners)
+                    listener.ConflictResolved(localHeader);
             }
         }
 
-        private async void callListenersOnConflictResolved(string fileName)
-        {
-            if (entitiesByKey.ContainsKey(fileName))
-                entitiesByKey.Remove(fileName);
-
-            if (conflicts.Contains(fileName))
-                conflicts.Remove(fileName);
-
-            var localHeader = await this.LoadFileAsync(fileName);
-            foreach (var listener in Listeners.ConflictListeners)
-            {
-                listener.ConflictResolved(localHeader);
-            }
-        }
-
-        public void OnError(Exception error)
+        void IObserver<ConflictNotification>.OnError(Exception error)
         {
         }
 
-        public void OnCompleted()
+        void IObserver<ConflictNotification>.OnCompleted()
         {
         }
     }
