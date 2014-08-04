@@ -19,7 +19,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.ExecuteDynamicQuery("Employees", new IndexQuery()
+				store.SystemDatabase.ExecuteDynamicQuery("Employees", new IndexQuery()
 				{
 					PageSize = 128,
 					Start = 0,
@@ -42,7 +42,7 @@ select new { LastName = doc.LastName }", indexDefinition.Map);
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.ExecuteDynamicQuery("Blogs", new IndexQuery()
+				store.SystemDatabase.ExecuteDynamicQuery("Blogs", new IndexQuery()
 				{
 					PageSize = 128,
 					Start = 0,
@@ -60,7 +60,7 @@ select new
 	Title = doc.Title
 }", indexDefinition.Map);
 
-				store.DocumentDatabase.ExecuteDynamicQuery("Users", new IndexQuery()
+				store.SystemDatabase.ExecuteDynamicQuery("Users", new IndexQuery()
 				{
 					PageSize = 128,
 					Start = 0,

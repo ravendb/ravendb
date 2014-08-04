@@ -1,4 +1,4 @@
-﻿class jsonDownloader {
+﻿class fileDownloader {
 
     private static cleanup(domCacheElementName: string) {
         // clean previous elements (in any)
@@ -20,13 +20,18 @@
         }
     }
 
-    static downloadAsJson(object: any, filename: string, domCacheElementName: string = "jsonLink") {
-        jsonDownloader.cleanup(domCacheElementName);
+    static downloadAsJson(object: any, filename: string, domCacheElementName: string = "link") {
+        fileDownloader.cleanup(domCacheElementName);
         var modelAsString = JSON.stringify(object, null, 2);
         var blob = new Blob([modelAsString], { type: 'application/json' });
-        jsonDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
+        fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
+    }
 
+    static downloadAsZip(buffer:any, filename: string, domCacheElementName: string = "link") {
+        fileDownloader.cleanup(domCacheElementName);
+        var blob = new Blob([buffer], { type: 'application/zip' });
+        fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
     }
 } 
 
-export = jsonDownloader;
+export = fileDownloader;

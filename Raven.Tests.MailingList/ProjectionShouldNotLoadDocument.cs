@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Documents.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject(), null);
+				store.SystemDatabase.Documents.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject(), null);
 				WaitForIndexing(store);
 				var result = store.DatabaseCommands.Query("dynamic", new IndexQuery
 				 {

@@ -16,11 +16,11 @@ class file implements documentBase {
 
             if (excludeDirectoryInId) {
                 this.id = dto.Name.substring(dto.Name.lastIndexOf("/") + 1);
+                this.directory = dto.Name.substring(0, dto.Name.lastIndexOf("/"))
             }
             else {
                 this.id = dto.Name;
             }
-            this.directory = dto.Name.substring(0, dto.Name.lastIndexOf("/"))
             if (dto.HumaneTotalSize === " Bytes") {
                 dto.HumaneTotalSize = "0 Bytes";
             }
@@ -40,7 +40,7 @@ class file implements documentBase {
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return ["Id", "Size", "LastModified"];
+        return ["Size", "LastModified"];
     }
 
 }

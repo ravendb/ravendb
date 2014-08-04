@@ -36,8 +36,8 @@ import getClientBuildVersionCommand = require("commands/getClientBuildVersionCom
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
+import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
@@ -50,14 +50,14 @@ class shell extends viewModelBase {
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     systemDatabase: database;
-    isDatabaseDisabled: KnockoutComputed<boolean>;
+    isActiveDatabaseDisabled: KnockoutComputed<boolean>;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
 
     static fileSystems = ko.observableArray<filesystem>();
     listedFileSystems: KnockoutComputed<filesystem[]>;
-    isFileSystemDisabled: KnockoutComputed<boolean>;
+    isActiveFileSystemDisabled: KnockoutComputed<boolean>;
     canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
 
     static counterStorages = ko.observableArray<counterStorage>();
@@ -109,12 +109,12 @@ class shell extends viewModelBase {
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
 
-        this.isDatabaseDisabled = ko.computed(() => {
+        this.isActiveDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
             return !!activeDb ? activeDb.disabled() : false;
         });
 
-        this.isFileSystemDisabled = ko.computed(() => {
+        this.isActiveFileSystemDisabled = ko.computed(() => {
             var activeFs = this.activeFilesystem();
             return !!activeFs ? activeFs.disabled() : false;
         });
@@ -149,7 +149,7 @@ class shell extends viewModelBase {
         });
     }
 
-        // Override canActivate: we can always load this page, regardless of any system db prompt.
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
     }
@@ -178,8 +178,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
-            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+            { route: 'filesystems/edit', title: 'Edit File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
             { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
             { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
             { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
@@ -211,13 +210,6 @@ class shell extends viewModelBase {
             e.preventDefault();
             return false;
         }, this, "#goToDocInput");
-
-        $("body").tooltip({
-            delay: { show: 1000, hide: 100 },
-            container: 'body',
-            selector: '.use-bootstrap-tooltip',
-            trigger: 'hover'
-        });
 
         router.activeInstruction.subscribe(val => {
             if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
@@ -269,7 +261,7 @@ class shell extends viewModelBase {
             new getDatabasesCommand()
                 .execute()
                 .done((results: database[]) => this.updateResourceObservableArray(shell.databases, results, this.activeDatabase));
-            new getFilesystemsCommand()
+            new getFileSystemsCommand()
                 .execute()
                 .done((results: filesystem[]) => this.updateResourceObservableArray(shell.fileSystems, results, this.activeFilesystem));
             new getCounterStoragesCommand()
@@ -401,8 +393,8 @@ class shell extends viewModelBase {
         shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private fileSystemsLoaded(filesystems: filesystem[]) {
-        shell.fileSystems(filesystems);
+    private fileSystemsLoaded(fileSystems: filesystem[]) {
+        shell.fileSystems(fileSystems);
     }
 
     private counterStoragesLoaded(results: counterStorage[]) {
@@ -427,10 +419,9 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-        var fileSystemsLoadedTask: JQueryPromise<any> = new getFilesystemsCommand()
+        var fileSystemsLoadedTask: JQueryPromise<any> = new getFileSystemsCommand()
             .execute()
             .done((results: filesystem[]) => this.fileSystemsLoaded(results));
-
 
         var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
             .execute()
@@ -510,7 +501,7 @@ class shell extends viewModelBase {
         } else {
             NProgress.done();
             NProgress.configure({ showSpinner: false });
-            this.showAlert(new alertArgs(alertType.danger, "Database load time is too long", "The database server might not be responding."));
+            this.showAlert(new alertArgs(alertType.danger, "Load time is too long", "The server might not be responding."));
         }
     }
 
@@ -646,7 +637,7 @@ class shell extends viewModelBase {
 
     static fetchFsStats(fs: filesystem) {
         if (fs && !fs.disabled()) {
-            new getFilesystemStatsCommand(fs)
+            new getFileSystemStatsCommand(fs)
                 .execute()
                 .done(result=> fs.statistics(result));
         }

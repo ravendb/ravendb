@@ -6,14 +6,14 @@
         <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse">
-                    <div class="navbar-form navbar-right">
-                            <button type="button" class="btn btn-default" title="Activate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: disabled()">
-                                <i class="fa fa-unlock"></i> Activate Periodic Export
-                            </button>
-                            <button type="button" class="btn btn-default" title="Deactivate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: !disabled()">
-                                <i class="fa fa-lock"></i> Deactivate Periodic Export
-                            </button>
-                               <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+                    <div class="navbar-form">
+                        <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+                        <button type="button" class="btn btn-default" title="Activate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: disabled()">
+                            <i class="fa fa-unlock"></i> Activate Periodic Export
+                        </button>
+                        <button type="button" class="btn btn-default" title="Deactivate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: !disabled()">
+                            <i class="fa fa-lock"></i> Deactivate Periodic Export
+                        </button>
                     </div>
                 </div>
             </nav>

@@ -45,7 +45,7 @@ class uploadFileToFilesystemCommand extends commandBase {
         };
 
 
-        var uploadTask = this.put(url, this.source, this.fs, jQueryOptions);
+        var uploadTask = this.put(url, this.source, this.fs, jQueryOptions, 0);
 
         if (this.reportUploadProgress) {
             uploadTask.done(() => {

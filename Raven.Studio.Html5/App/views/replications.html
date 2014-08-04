@@ -1,12 +1,11 @@
 ﻿<div>
-   
     <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
-        
+
         <div class="panel panel-default">
             <div class="panel-heading">
-               <div class="pull-left panel-title">Server Prefix for HiLo Configuration</div>
-                <div class="pull-right">
-                    <button data-bind="click: saveServerPrefixForHiLo" type="submit" class="btn btn-primary" title="Save changes"><i class="fa fa-save"></i></button>
+                <div class="navbar-form">
+                    <div class="panel-title text-center">Server Prefix for HiLo Configuration</div>
+                    <button data-bind="click: saveServerPrefixForHiLo, enable: isServerPrefixForHiLoSaveEnabled" type="submit" class="btn btn-primary" title="Save changes"><i class="fa fa-save"></i></button>
                 </div>
                 <div class="clearfix"></div>
 
@@ -16,7 +15,7 @@
                 <div class="form-group">
                     <label class="col-sm-2 control-label">Prefix</label>
                     <div class="col-sm-4">
-                        <input name="prefix" class="form-control" type="text" data-bind="value: prefixForHilo" >
+                        <input name="prefix" class="form-control" type="text" data-bind="value: prefixForHilo, valueUpdate: 'afterkeydown'">
                     </div>
                 </div>
             </div>
@@ -24,32 +23,26 @@
 
         <div class="panel panel-default">
             <div class="panel-heading">
-                <div class="pull-left panel-title">Replication Configuration</div>
-                <div  data-bind="with: replicationConfig">
-                    <div class="col-md-4">
-                        <select class=" col-md-offset-12 form-control" id="replOptionsList" data-bind="value:documentConflictResolution">
+                <div class="navbar-form">
+                    <div class="panel-title text-center">Replication Configuration</div>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                    <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                    <span data-bind="with: replicationConfig">
+                        <select class="form-control" data-bind="value: documentConflictResolution">
                             <option value="None">None Conflicts Resolution</option>
                             <option value="ResolveToLocal"> Resolve to local Conflicts Resolution</option>
                             <option value="ResolveToRemote">Resolve to remote Conflicts Resolution</option>
                             <option value="ResolveToLatest">Resolve to latest Conflicts Resolution</option>
                         </select>
-                    </div>
-
+                    </span>
                 </div>
-                <div class="pull-right">
-                   
-                    <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
-                    <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled()||isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
 
-                </div>
                 <div class="clearfix"></div>
             </div>
 
-    
-            <br/>
+            <br />
 
             <label class="col-md-offset-1">Replication Destinations</label>
-
 
             <div class="panel-body" data-bind="with: replicationsSetup">
                 <div class="alert alert-warning" data-bind="visible: destinations().length === 0">
@@ -80,13 +73,13 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Url</label>
                                 <div class="col-sm-7">
-                                    <input required type="url" class="form-control" data-bind="value: url, valueUpdate: 'keyup'" />
+                                    <input required type="url" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown'" />
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Database</label>
                                 <div class="col-sm-7">
-                                    <input required type="text" class="form-control" data-bind="value: database, valueUpdate: 'keyup'" />
+                                    <input required type="text" class="form-control" data-bind="value: database, valueUpdate: 'afterkeydown'" />
                                 </div>
                             </div>
                             <div class="form-group">
@@ -100,19 +93,19 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">User Name</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Password</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Domain</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                             </div>
@@ -120,7 +113,7 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">API Key</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                             </div>
@@ -131,7 +124,7 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Client Visible Url</label>
                                     <div class="col-sm-7">
-                                        <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'keyup'" />
+                                        <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                                 <div class="form-group">

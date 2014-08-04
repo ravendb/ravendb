@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
-import visualizer = require("viewmodels/visualizer");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class visualizerImport extends dialogViewModelBase {
@@ -9,10 +8,6 @@ class visualizerImport extends dialogViewModelBase {
     
     hasFileSelected = ko.observable(false);
     isImporting = ko.observable(false);
-
-    constructor(private visualizer:visualizer) {
-        super();
-    }
 
     fileSelected(args: any) {
         this.hasFileSelected(true);

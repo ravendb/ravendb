@@ -19,6 +19,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
@@ -115,10 +116,11 @@ namespace Raven.Tests.Helpers
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = port == null ? 8079 : port.Value,
-					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 					AnonymousUserAccessMode = anonymousUserAccessMode,
 				}
 			};
+
+			documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
 			if (activeBundles != null)
 			{
@@ -139,7 +141,7 @@ namespace Raven.Tests.Helpers
 
 				if (enableAuthentication)
 				{
-					EnableAuthentication(documentStore.DocumentDatabase);
+					EnableAuthentication(documentStore.SystemDatabase);
 				}
 
 				CreateDefaultIndexes(documentStore);
@@ -252,8 +254,9 @@ namespace Raven.Tests.Helpers
 #endif
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
+
+			ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
 			ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
@@ -538,7 +541,7 @@ namespace Raven.Tests.Helpers
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
+				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.SystemDatabase);
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
@@ -717,7 +720,7 @@ namespace Raven.Tests.Helpers
 		{
 			var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
 			var errors = embeddableDocumentStore != null
-									   ? embeddableDocumentStore.DocumentDatabase.Statistics.Errors
+									   ? embeddableDocumentStore.SystemDatabase.Statistics.Errors
 									   : documentStore.DatabaseCommands.GetStatistics().Errors;
 
 			try

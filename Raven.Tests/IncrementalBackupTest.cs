@@ -42,12 +42,12 @@ namespace Raven.Tests
 					session.SaveChanges();
                 }
 
-			    var indexDefinitionsFolder = Path.Combine(store.DocumentDatabase.Configuration.DataDirectory,"IndexDefinitions");
+			    var indexDefinitionsFolder = Path.Combine(store.SystemDatabase.Configuration.DataDirectory,"IndexDefinitions");
 			    if (!Directory.Exists(indexDefinitionsFolder))
 			        Directory.CreateDirectory(indexDefinitionsFolder);
 
-			    Assert.DoesNotThrow(() => store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));			    
-				WaitForBackup(store.DocumentDatabase, true);
+			    Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));			    
+				WaitForBackup(store.SystemDatabase, true);
 
 				using (var session = store.OpenSession())
 				{
@@ -55,8 +55,8 @@ namespace Raven.Tests
 					session.SaveChanges();
 				}
 
-				Assert.DoesNotThrow(() => store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
-				WaitForBackup(store.DocumentDatabase, true);
+				Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
+				WaitForBackup(store.SystemDatabase, true);
 			}
 		}
 

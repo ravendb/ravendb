@@ -51,7 +51,6 @@ namespace Raven.Database.Server.Tenancy
             return CreateConfiguration(tenantId, document, "Raven/DataDir", systemConfiguration);
         }
 
-
 		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;
@@ -111,8 +110,10 @@ namespace Raven.Database.Server.Tenancy
             database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-				var documentDatabase = new DocumentDatabase(config, transportState);
+
                 AssertLicenseParameters(config);
+                var documentDatabase = new DocumentDatabase(config, transportState);
+                
                 documentDatabase.SpinBackgroundWorkers();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.

@@ -6882,18 +6882,19 @@ body {
   padding: 0 10px 20px 10px;
   width: 98%;
 }
-#databasePage .btn-toolbar {
+#resources-page .btn-toolbar {
   margin-bottom: 20px;
 }
-#databasePage .databases-container {
+#resources-page .resources-container {
   margin-top: 10px;
 }
-#databasePage .databases-container .database:hover .checkbox {
+#resources-page .resources-container .resource:hover .checkbox {
   display: block;
 }
-#databasePage .databases-container .database {
+#resources-page .resources-container .resource {
   cursor: pointer;
   border-radius: 2px;
+  -webkit-box-shadow: 0 0 5px 2px silver;
   box-shadow: 0 0 5px 2px silver;
   min-width: 160px;
   min-height: 70px;
@@ -6902,7 +6903,7 @@ body {
   margin: 0 10px 14px 0;
   position: relative;
 }
-#databasePage .databases-container .database .checkbox {
+#resources-page .resources-container .resource .checkbox {
   display: none;
   position: absolute;
   top: 0;
@@ -6910,69 +6911,69 @@ body {
   margin: 0;
   padding: 0;
 }
-#databasePage .databases-container .database .checkbox img {
+#resources-page .resources-container .resource .checkbox img {
   height: 25px;
 }
-#databasePage .databases-container .database .details {
+#resources-page .resources-container .resource .details {
   float: left;
   line-height: 215%;
 }
-#databasePage .databases-container .database .details .database-name {
+#resources-page .resources-container .resource .details .resource-name {
   float: left;
 }
-#databasePage .databases-container .database .details .disabled {
+#resources-page .resources-container .resource .details .disabled {
   pointer-events: none;
 }
-#databasePage .databases-container .database .details .stats {
+#resources-page .resources-container .resource .details .stats {
   color: #3a822d;
 }
-#databasePage .databases-container .database .details .stats-disabled {
+#resources-page .resources-container .resource .details .stats-disabled {
   color: #d9534f;
 }
-#databasePage .databases-container .database .btn-group {
+#resources-page .resources-container .resource .btn-group {
   float: right;
   margin-left: 39.3px;
   margin-top: 45.3px;
 }
-#databasePage .databases-container .database .btn-group .dropdown-menu .fa-trash-o {
+#resources-page .resources-container .resource .btn-group .dropdown-menu .fa-trash-o {
   color: #eba5a3;
 }
-#databasePage .databases-container .database .btn-group .dropdown-menu .delete-database:hover .fa-trash-o {
+#resources-page .resources-container .resource .btn-group .dropdown-menu .delete-resource:hover .fa-trash-o {
   color: #d9534f;
 }
-#databasePage .databases-container .database .btn-default {
+#resources-page .resources-container .resource .btn-default {
   padding: 4px;
   padding-left: 10px;
   padding-right: 7px;
   border-color: white;
 }
-#databasePage .databases-container .database .btn-default:hover {
+#resources-page .resources-container .resource .btn-default:hover {
   -webkit-box-shadow: 0 0 5px 0 #106a8c;
   box-shadow: 0 0 5px 0 #106a8c;
 }
-#databasePage .databases-container .database .fa-cogs {
+#resources-page .resources-container .resource .fa-cogs {
   color: black;
 }
-#databasePage .databases-container .database:hover {
+#resources-page .resources-container .resource:hover {
   background-color: white;
   -webkit-box-shadow: 0 0 5px 0 #106a8c;
   box-shadow: 0 0 5px 0 #106a8c;
 }
-#databasePage .databases-container .database.selected {
-  -webkit-box-shadow: 0 0 17px 0 #158cba;
-  box-shadow: 0 0 17px 0 #158cba;
+#resources-page .resources-container .resource.selected {
+  -webkit-box-shadow: 0 0 20px 0 #158cba;
+  box-shadow: 0 0 20px 0 #158cba;
 }
-#databasePage .databases-container .database.system-database {
+#resources-page .resources-container .resource.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
-#databasePage .databases-container .database.system-database.selected {
+#resources-page .resources-container .resource.system-database.selected {
   background-color: rgba(14, 14, 14, 0.21);
 }
-#databasePage .databases-container .database.system-database.selected a,
-#databasePage .databases-container .database.system-database.selected .text-muted {
+#resources-page .resources-container .resource.system-database.selected a,
+#resources-page .resources-container .resource.system-database.selected .text-muted {
   color: #106a8c;
 }
-.menu-item-disabled {
+.menu-item-disabled a {
   pointer-events: none;
   cursor: default;
   text-decoration: line-through;
@@ -7791,7 +7792,15 @@ footer ul {
   box-shadow: none !important;
   border: 1px solid #357ebd !important;
 }
-.license-error {
+.licensing-Status {
+  max-height: 60vh!important;
+}
+.licensing-Status .form-group {
+  max-height: 30vh!important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.licensing-Status .license-error {
   color: #d2322d;
 }
 :invalid {
@@ -7800,64 +7809,28 @@ footer ul {
   outline: 0;
   /* IE 10 */
 }
+.versioning-inner-margin {
+  margin-left: 25px;
+  margin-right: 25px;
+}
 .remove-icon {
   color: #d2322d;
   border-color: #802925;
   cursor: pointer;
+  border-radius: 6px;
 }
 .remove-icon:hover {
   color: #ac2925;
 }
-/*.fa-plus {
-    color: #58cc46;
-}*/
-.filesystem-page .btn-toolbar {
-  margin-bottom: 20px;
+.fa-plus {
+  color: #58cc46;
 }
-.filesystem-page .filesystems-container {
-  margin-top: 10px;
-}
-.filesystem-page .filesystems-container .filesystem {
-  cursor: pointer;
-  border-radius: 10px;
-  -webkit-box-shadow: 0 0 5px 1px silver;
-  box-shadow: 0 0 5px 1px silver;
-  min-width: 140px;
-  min-height: 60px;
-  display: inline-block;
-  padding: 8px;
-  margin: 0 10px 14px 0;
-}
-.filesystem-page .filesystems-container .filesystem:hover {
-  background-color: white;
-  -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
-  box-shadow: 0 0 5px 0 #6aa3d5;
-}
-.filesystem-page .filesystems-container .filesystem.selected {
-  -webkit-box-shadow: 0 0 6px 0 #428bca;
-  box-shadow: 0 0 6px 0 #428bca;
-  background-color: #428bca;
-}
-.filesystem-page .filesystems-container .filesystem.selected a,
-.filesystem-page .filesystems-container .filesystem.selected .text-muted {
-  color: white;
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem {
-  background-color: rgba(192, 192, 192, 0.21);
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected {
-  background-color: rgba(14, 14, 14, 0.21);
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected a,
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected .text-muted {
-  color: #3071a9;
-}
-.filesystem-page .systemButton {
-  color: grey;
-  margin-top: 50px;
-  position: absolute;
-  top: -40px;
-  right: 25px;
+#fileSystemFilesPage .files-select {
+  text-align: center;
+  background-color: #ffffcc;
+  margin-top: 5px;
+  border: 1px solid;
+  border-radius: 25px;
 }
 #editFileContainer:focus {
   outline: 0;

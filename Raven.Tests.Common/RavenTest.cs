@@ -87,7 +87,7 @@ namespace Raven.Tests.Common
 
         protected static void EnsureDtcIsSupported(EmbeddableDocumentStore documentStore)
         {
-            EnsureDtcIsSupported(documentStore.DocumentDatabase);
+            EnsureDtcIsSupported(documentStore.SystemDatabase);
         }
 
         protected static void EnsureDtcIsSupported(DocumentDatabase documentDatabase)

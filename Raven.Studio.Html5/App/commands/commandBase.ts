@@ -91,8 +91,8 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", resource, options);
+    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
     }
 
     reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -102,8 +102,8 @@ class commandBase {
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "DELETE", resource, options);
+    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
     post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -142,7 +142,7 @@ class commandBase {
                 defaultOptions[prop] = options[prop];
             }
         }
-        if (commandBase.loadingCounter == 0) {
+        if (commandBase.loadingCounter == 0 && timeToAlert > 0) {
             commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert);
         }
 
@@ -170,7 +170,7 @@ class commandBase {
                 commandBase.hideSpin();
             }
         }).done((results, status, xhr) => {
-                ajaxTask.resolve(results, status, xhr);
+            ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
             if (request.status == 412 && oauthContext.apiKey()) {
                 this.handleOAuth(ajaxTask, request, originalArguments);

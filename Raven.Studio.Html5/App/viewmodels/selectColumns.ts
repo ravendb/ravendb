@@ -8,16 +8,15 @@ import customColumns = require('models/customColumns');
 import customColumnParams = require('models/customColumnParams');
 import saveDocumentCommand = require('commands/saveDocumentCommand');
 import deleteDocumentCommand = require('commands/deleteDocumentCommand');
-import commandBase = require('commands/commandBase');
 import inputCursor = require('common/inputCursor');
 import customFunctions = require('models/customFunctions');
 import autoCompleterSupport = require('common/autoCompleterSupport');
+import messagePublisher = require("common/messagePublisher");
 
 class selectColumns extends dialogViewModelBase {
 
     private nextTask = $.Deferred<customColumns>();
     nextTaskStarted = false;
-    private newCommandBase = new commandBase();
     private form: JQuery;
 
     private activeInput: JQuery;
@@ -178,20 +177,18 @@ class selectColumns extends dialogViewModelBase {
                 var configurationDocument = new document(this.customColumns.toDto());
                 new saveDocumentCommand(this.context, configurationDocument, this.database, false).execute()
                     .done(() => this.onConfigSaved())
-                    .fail(() => this.newCommandBase.reportError("Unable to save configuration!"));
+                    .fail(() => messagePublisher.reportError("Unable to save configuration!"));
             } else {
                 new deleteDocumentCommand(this.context, this.database).execute().done(() => this.onConfigSaved())
-                    .fail(() => {
-                        this.newCommandBase.reportError("Unable to save configuration!");
-                    });
+                    .fail(() => messagePublisher.reportError("Unable to save configuration!"));
             }
         } else {
-            this.newCommandBase.reportWarning('Configuration contains errors. Not saving it.');
+            messagePublisher.reportWarning('Configuration contains errors. Not saving it.');
         }
     }
 
     onConfigSaved() {
-        this.newCommandBase.reportSuccess('Configuration saved!');
+        messagePublisher.reportSuccess('Configuration saved!');
     }
 
     generateBindingInputId(index: number) {

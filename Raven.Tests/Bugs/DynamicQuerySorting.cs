@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 						.ToList();
 				}
 
-				var indexDefinition = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
+				var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
 				Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
 			}
 		}
@@ -53,7 +53,7 @@ namespace Raven.Tests.Bugs
 						.ToList();
 				}
 
-				var indexDefinition = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
+				var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
 				Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
 			}
 		}
@@ -73,7 +73,7 @@ namespace Raven.Tests.Bugs
 				}
 
 				CurrentOperationContext.Headers.Value.Clear();
-				var documentDatabase = store.DocumentDatabase;
+				var documentDatabase = store.SystemDatabase;
 				var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
 				{
 					SortedFields = new[]
@@ -102,7 +102,7 @@ namespace Raven.Tests.Bugs
 
 				CurrentOperationContext.Headers.Value.Clear();
 				CurrentOperationContext.Headers.Value.Set("SortHint-Name", "String");
-				var documentDatabase = store.DocumentDatabase;
+				var documentDatabase = store.SystemDatabase;
 				var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
 				{
 					SortedFields = new[]

@@ -105,13 +105,13 @@ namespace Raven.SlowTests.Issues
 		            session.SaveChanges();
 		        }
 
-		        WaitForIndexing(store.DocumentDatabase);
+		        WaitForIndexing(store.SystemDatabase);
 
 		        new SingleMapIndex().Execute(store);
 		        new MultiMapIndex().Execute(store);
                 new FooMapReduceIndex().Execute(store);
 
-		        WaitForIndexing(store.DocumentDatabase);
+		        WaitForIndexing(store.SystemDatabase);
 
 		        using (var session = store.OpenSession())
 		        {
@@ -165,7 +165,7 @@ namespace Raven.SlowTests.Issues
 	                session.SaveChanges();
 	            }
 
-                WaitForIndexing(store.DocumentDatabase);
+                WaitForIndexing(store.SystemDatabase);
 
                 new SingleMapIndex().Execute(store);
 

@@ -102,7 +102,7 @@ namespace Raven.Tests.Track
 						.ProjectFromIndexFieldsInto<JoinedChildTransport>()
 						.ToList();
 
-					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(docStore.SystemDatabase.Statistics.Errors);
 
 					Assert.Equal(4, transports.Count);
 

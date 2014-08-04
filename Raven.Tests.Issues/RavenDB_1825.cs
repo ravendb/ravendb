@@ -129,8 +129,8 @@ if(customer.StoredTotal != this.TotalOrderItems){
 
 				WaitForIndexing(store);
 
-				var patcher = new ScriptedJsonPatcher(store.DocumentDatabase);
-				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.DocumentDatabase, new HashSet<string> { "Orders" }))
+				var patcher = new ScriptedJsonPatcher(store.SystemDatabase);
+				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.SystemDatabase, new HashSet<string> { "Orders" }))
 				{
 					var e = Assert.Throws<InvalidOperationException>(() => patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
 					{

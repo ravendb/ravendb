@@ -12,7 +12,8 @@ namespace Raven.Abstractions.Connection
 	{
 		private readonly Stream inner;
 		private readonly Action<long> updateNumberOfWrittenBytes;
-		private long numberOfWrittenBytes;
+		private long numberOfWrittenBytes, numberOfReadBytes;
+		
 		private long position;
 
 		public CountingStream(Stream inner) : this(inner, l => { })
@@ -67,6 +68,7 @@ namespace Raven.Abstractions.Connection
 		{
 			var read = inner.Read(buffer, offset, count);
 			position += read;
+			numberOfReadBytes += read;
 			return read;
 		}
 
@@ -79,6 +81,16 @@ namespace Raven.Abstractions.Connection
 			numberOfWrittenBytes += count;
 			inner.Write(buffer, offset, count);
 			updateNumberOfWrittenBytes(numberOfWrittenBytes);
+		}
+
+		public long NumberOfWrittenBytes
+		{
+			get { return numberOfWrittenBytes; }
+		}
+
+		public long NumberOfReadBytes
+		{
+			get { return numberOfReadBytes; }
 		}
 
 		/// <summary>

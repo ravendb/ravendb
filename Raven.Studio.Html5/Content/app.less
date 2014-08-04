@@ -348,22 +348,22 @@ html, body {
     width: 98%;
 }
 
-#databasePage {
-
+#resources-page {
     .btn-toolbar {
         margin-bottom: 20px;
     }
 
-    .databases-container {
+    .resources-container {
         margin-top: 10px;
         
-        .database:hover .checkbox{
+        .resource:hover .checkbox{
             display : block;
         }
 
-        .database {
+        .resource {
             cursor: pointer;
             border-radius: 2px;
+            -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
             min-width: 160px;
             min-height: 70px;
@@ -394,7 +394,7 @@ html, body {
                 float: left;
                 line-height: 215%;
 
-                .database-name {
+                .resource-name {
                     float: left;
                 }
 
@@ -417,11 +417,11 @@ html, body {
                 margin-top: 45.3px;
 
                 .dropdown-menu{
-                    .fa-trash-o{
+                    .fa-trash-o {
                         color: lighten(@disabledColor, 20%);
-            }
+                    }
 
-                    .delete-database:hover .fa-trash-o{
+                    .delete-resource:hover .fa-trash-o {
                         color: @disabledColor;
                     }
                 }
@@ -450,9 +450,9 @@ html, body {
             }
 
             &.selected {
-                -webkit-box-shadow: 0 0 17px 0 @selectColor;
-                box-shadow: 0 0 17px 0 @selectColor;
-                }
+                -webkit-box-shadow: 0 0 20px 0 @selectColor;
+                box-shadow: 0 0 20px 0 @selectColor;
+            }
 
             &.system-database {
                 @systemDbColor: rgba(192, 192, 192, 0.21);
@@ -471,9 +471,11 @@ html, body {
 }
 
 .menu-item-disabled {
-    pointer-events: none;
-    cursor: default;
-    text-decoration: line-through;
+    a{
+        pointer-events: none;
+        cursor: default;
+        text-decoration: line-through;
+    }
 }
 
 .resource-link {
@@ -1110,13 +1112,10 @@ html, body {
 }
 
 #editDocumentContainer {
-
-    
-        .isActive{
-           background-color:#73c773!important;
-           border-color:#61b261!important;
-        }
-    
+    .isActive{
+        background-color:#73c773!important;
+        border-color:#61b261!important;
+    }
     
     &:focus {
         outline: 0;
@@ -1149,7 +1148,6 @@ html, body {
     .query-metadata {
         padding-top: 20px;
     }
-
 
     .documents-links-container {
         -webkit-column-count: 2; /* Chrome, Safari, Opera */
@@ -1467,8 +1465,20 @@ footer {
     border: 1px solid rgb(53, 126, 189) !important;
 }
 
-.license-error {
-    color: #d2322d;
+.licensing-Status{
+
+    max-height:60vh!important;
+
+    .form-group{
+            max-height:30vh!important;            
+            overflow-x:hidden;
+            overflow-y:auto;
+        }    
+    .license-error {
+        color: #d2322d;
+    }
+
+    
 }
 
 :invalid {
@@ -1476,89 +1486,40 @@ footer {
     outline: 0;       /* IE 10 */
 }
 
+.versioning-inner-margin {
+    margin-left: 25px;
+    margin-right: 25px;
+}
+
 // Start of icons
 .remove-icon {
     color: #d2322d;
     border-color: #802925;
     cursor: pointer;
+    border-radius: 6px;
 }
 
 .remove-icon:hover {
     color: #ac2925;
 }
 
-/*.fa-plus {
+.fa-plus {
     color: #58cc46;
-}*/
+}
 // End of icons
 
 // Start of Filesystems
-// TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name
-.filesystem-page {
-
-    .btn-toolbar {
-        margin-bottom: 20px;
-    }
-
-    .filesystems-container {
-        margin-top: 10px;
-
-        .filesystem {
-            cursor: pointer;
-            border-radius: 10px;
-            -webkit-box-shadow: 0 0 5px 1px silver;
-            box-shadow: 0 0 5px 1px silver;
-            min-width: 140px;
-            min-height: 60px;
-            display: inline-block;
-            padding: 8px;
-            margin: 0 10px 14px 0;
-
-            @selectColor: rgb(66, 139, 202);
-            @hoverColor: lighten(@selectColor, 10%);
-
-            &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }
-
-            &.selected {
-                -webkit-box-shadow: 0 0 6px 0 @selectColor;
-                box-shadow: 0 0 6px 0 @selectColor;
-                background-color: @selectColor;
-
-                a, .text-muted {
-                    color: white;
-                }
-            }
-
-            &.default-filesystem {
-                @systemDbColor: rgba(192, 192, 192, 0.21);
-                background-color: @systemDbColor;
-
-                &.selected {
-                    background-color: darken(@systemDbColor, 70%);
-
-                    a, .text-muted {
-                        color: darken(@selectColor, 10%);
-                    }
-                }
-            }
-        }
-    }
-
-    .systemButton {
-        color: grey;
-        margin-top: 50px;
-        position: absolute;
-        top: -40px;
-        right: 25px;
+#fileSystemFilesPage{
+    .files-select {
+        text-align: center;
+        background-color: #ffffcc;
+        margin-top: 5px;
+        border: 1px solid;
+        border-radius: 25px;
     }
 }
 
 #editFileContainer {
-
     &:focus {
         outline: 0;
     }

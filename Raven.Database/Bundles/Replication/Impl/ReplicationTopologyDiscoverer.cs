@@ -10,6 +10,7 @@ using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Data;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Impl
@@ -144,8 +145,23 @@ namespace Raven.Database.Bundles.Replication.Impl
 		{
 			var destination = ReplicationTask.GetConnectionOptions(replicationDestination, database);
 
+            string error;
+		    string targetServerUrl;
+
+            // since each server can be addresses using both dns and ips we normalize connection string url by fetching target server url
+            // it should give us consistent urls
+		    if (FetchTargetServerUrl(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out targetServerUrl, out error) == false)
+		    {
+                var offlineNode = ReplicationTopologyDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+
+                if (string.IsNullOrEmpty(error) == false)
+                    offlineNode.Errors.Add(error);
+
+                return offlineNode;
+		    }
+
 			if (replicationDestination.Disabled)
-				return ReplicationTopologyDestinationNode.Disabled(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+                return ReplicationTopologyDestinationNode.Disabled(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
 			if (from.Contains(destination.ConnectionStringOptions.Url))
 			{
@@ -153,19 +169,19 @@ namespace Raven.Database.Bundles.Replication.Impl
 				switch (state)
 				{
 					case ReplicatonNodeState.Online:
-						return ReplicationTopologyDestinationNode.Online(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+                        return ReplicationTopologyDestinationNode.Online(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 					case ReplicatonNodeState.Offline:
-						return ReplicationTopologyDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+                        return ReplicationTopologyDestinationNode.Offline(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 					default:
 						throw new NotSupportedException(state.ToString());
 				}
 			}
 
-			string error;
+			
 			ReplicationTopologyRootNode rootNode;
 			if (TryGetSchema(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out rootNode, out error))
 			{
-				var node = ReplicationTopologyDestinationNode.Online(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+                var node = ReplicationTopologyDestinationNode.Online(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 				node.Destinations = rootNode.Destinations;
 				node.Sources = rootNode.Sources;
 				node.Errors = rootNode.Errors;
@@ -173,7 +189,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 				return node;
 			}
 
-			var offline = ReplicationTopologyDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
+            var offline = ReplicationTopologyDestinationNode.Offline(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
 			if (string.IsNullOrEmpty(error) == false)
 				offline.Errors.Add(error);
@@ -181,7 +197,30 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return offline;
 		}
 
-		private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out ReplicationTopologyRootNode rootNode, out string error)
+	    private bool FetchTargetServerUrl(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out string targetServerUrl, out string error)
+	    {
+            var url = string.Format("{0}/debug/config", serverUrl);
+
+            try
+            {
+                var request = requestFactory.Create(url, "GET", connectionStringOptions);
+                error = null;
+                var ravenConfig = request.ExecuteRequest<RavenJObject>();
+                var serverUrlFromTargetConfig = ravenConfig.Value<string>("ServerUrl");
+
+                // replace host name with target hostname
+                targetServerUrl = new UriBuilder(serverUrl) { Host = new Uri(serverUrlFromTargetConfig).Host }.Uri.ToString();
+                return true;
+            }
+            catch (Exception e)
+            {
+                error = e.Message;
+                targetServerUrl = null;
+                return false;
+            }
+	    }
+
+	    private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out ReplicationTopologyRootNode rootNode, out string error)
 		{
 			var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
 

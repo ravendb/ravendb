@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
 			using (var s = NewDocumentStore())
 			{
 				new Index().Execute(s);
-				var indexDefinition = s.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
+				var indexDefinition = s.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
 				Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
         ((object) item.Age),

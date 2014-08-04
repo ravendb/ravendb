@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Tests.Common;
 

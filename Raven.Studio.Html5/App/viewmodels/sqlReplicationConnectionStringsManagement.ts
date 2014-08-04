@@ -12,7 +12,6 @@ import app = require("durandal/app");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
-    
     htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
     isSaveEnabled: KnockoutComputed<boolean>;

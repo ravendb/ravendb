@@ -27,7 +27,7 @@ namespace Raven.Tests.Indexes
 		public Statistics()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 
 			db.Indexes.PutIndex("pagesByTitle2",
 						new IndexDefinition

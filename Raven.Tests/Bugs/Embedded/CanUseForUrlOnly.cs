@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs.Embedded
 			})
 			{
 				embeddableDocumentStore.Initialize();
-				Assert.Null(embeddableDocumentStore.DocumentDatabase);
+				Assert.Null(embeddableDocumentStore.SystemDatabase);
 			}
 		}
 
@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs.Embedded
 			})
 			{
 				embeddableDocumentStore.Initialize();
-				Assert.Null(embeddableDocumentStore.DocumentDatabase);
+				Assert.Null(embeddableDocumentStore.SystemDatabase);
 			}
 		}
 	}

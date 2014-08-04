@@ -38,7 +38,7 @@ namespace Raven.Tests.Bugs.Errors
 					
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

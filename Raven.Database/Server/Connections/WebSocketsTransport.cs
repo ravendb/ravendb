@@ -68,14 +68,15 @@ namespace Raven.Database.Server.Connections
         
         public string Id { get; private set; }
         public bool Connected { get; set; }
-        public long CoolDownWithDataLossInMilisecods { get; set; }
+        public long CoolDownWithDataLossInMiliseconds { get; set; }
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
-        private bool isResourceBound = true;
+        
         public string ResourceName { get; set; }
+        private Func<string, WebSocketsTransport, IPrincipal,bool> RegistrationLogicAction = null;
 
-        public WebSocketsTransport(RavenDBOptions options, IOwinContext context, bool isResourceBound=true)
+        public WebSocketsTransport(RavenDBOptions options, IOwinContext context, Func<string, WebSocketsTransport, IPrincipal,bool> registrationLogics = null)
         {
             _options = options;
             _context = context;
@@ -83,8 +84,10 @@ namespace Raven.Database.Server.Connections
             Id = context.Request.Query["id"];
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
-            this.isResourceBound = isResourceBound;
-            CoolDownWithDataLossInMilisecods = waitTimeBetweenMessages;
+            
+            CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
+            RegistrationLogicAction = registrationLogics;
+
         }
 
         public void Dispose()
@@ -143,7 +146,7 @@ namespace Raven.Database.Server.Connections
 						if (callCancelled.IsCancellationRequested)
 							break;
 
-                        if (CoolDownWithDataLossInMilisecods > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMilisecods)
+                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
                         {
                             lastMessageEnqueuedAndNotSent = message;
                             continue;
@@ -277,46 +280,26 @@ namespace Raven.Database.Server.Connections
                 }
             }
 
-            if (!isResourceBound)
+            // execute custom registration logic received as a parameter
+            if (RegistrationLogicAction!= null)
             {
-                if (ResourceName != null)
-                {
-                    _options.RequestManager.RegisterResourceHttpTraceTransport(this, ResourceName);
-                }
-                else
-                {
-                     var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-
-                    if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) || 
-                        _options.SystemDatabase.Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin )
-                    {
-                        _options.RequestManager.RegisterServerHttpTraceTransport(this);        
-                    }
-                    else
-                    {
-                        _context.Response.StatusCode = 403;
-                        _context.Response.ReasonPhrase = "Forbidden";
-                        _context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
-                        return false;
-                    }
-                }
+                return RegistrationLogicAction(ResourceName, this, user);
             }
-            else
+            
+            if (fileSystem != null)
             {
-                if (fileSystem != null)
-                {
-                    fileSystem.TransportState.Register(this);
+                fileSystem.TransportState.Register(this);
 
-                }
-			    else if (counterStorage != null)
-			    {
-				    counterStorage.TransportState.Register(this);
-			    }
-                else if (documentDatabase != null)
-                {
-				    documentDatabase.TransportState.Register(this);
-                }
             }
+			else if (counterStorage != null)
+			{
+				counterStorage.TransportState.Register(this);
+			}
+            else if (documentDatabase != null)
+            {
+				documentDatabase.TransportState.Register(this);
+            }
+            
 
             return true;
         }

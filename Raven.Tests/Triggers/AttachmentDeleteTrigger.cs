@@ -25,7 +25,7 @@ namespace Raven.Tests.Triggers
 		public AttachmentDeleteTrigger()
 		{
 			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (RefuseAttachmentDeleteTrigger))));
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

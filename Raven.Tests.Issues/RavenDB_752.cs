@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;

@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Connections
 {
@@ -12,7 +7,7 @@ namespace Raven.Database.Server.Connections
 		string Id { get; }
         string ResourceName { get; set; }
 		bool Connected { get; set; }
-        long CoolDownWithDataLossInMilisecods { get; set; }
+        long CoolDownWithDataLossInMiliseconds { get; set; }
 
 		event Action Disconnected;
 		void SendAsync(object msg);

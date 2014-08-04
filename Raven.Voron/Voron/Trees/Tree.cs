@@ -513,11 +513,11 @@ namespace Voron.Trees
 
 			CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-			var treeRebalancer = new TreeRebalancer(_tx, this);
+			var treeRebalancer = new TreeRebalancer(_tx, this, lazy.Value);
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
+				changedPage = treeRebalancer.Execute(changedPage);
 			}
 
 			page.DebugValidate(_tx, State.RootPageNumber);

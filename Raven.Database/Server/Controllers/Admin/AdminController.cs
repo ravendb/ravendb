@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Runtime;
 using System.Security.Principal;
 using System.Threading.Tasks;
@@ -24,6 +26,7 @@ using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
@@ -295,14 +298,20 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (Database != DatabasesLandlord.SystemDatabase)
 				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
 
-		    var allDbs = new List<DocumentDatabase>();
+		    var stats = CreateAdminStats();
+		    return GetMessageWithObject(stats);
+		}
+
+	    private AdminStatistics CreateAdminStats()
+	    {
+            var allDbs = new List<DocumentDatabase>();
             var allFs = new List<RavenFileSystem>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
             FileSystemsLandlord.ForAllFileSystems(allFs.Add);
-		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+            var currentConfiguration = DatabasesLandlord.SystemConfiguration;
 
-            
-            var stats =  new AdminStatistics
+
+            var stats = new AdminStatistics
             {
                 ServerName = currentConfiguration.ServerName,
                 TotalNumberOfRequests = RequestManager.NumberOfRequests,
@@ -342,13 +351,12 @@ namespace Raven.Database.Server.Controllers.Admin
                         Metrics = documentDatabase.CreateMetrics()
                     },
                 LoadedFileSystems = from fileSystem in allFs
-                   select fileSystem.GetFileSystemStats()
+                                    select fileSystem.GetFileSystemStats()
             };
+	        return stats;
+	    }
 
-            return GetMessageWithObject(stats);
-		}
-
-        private decimal ConvertBytesToMBs(long bytes)
+	    private decimal ConvertBytesToMBs(long bytes)
         {
             return Math.Round(bytes / 1024.0m / 1024.0m, 2);
         }
@@ -452,6 +460,142 @@ namespace Raven.Database.Server.Controllers.Admin
             }
 
             return query == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetEmptyMessage(HttpStatusCode.NoContent);
+        }
+
+        [HttpGet]
+		[Route("admin/debug/info-package")]
+		public HttpResponseMessage InfoPackage()
+		{
+			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            try
+            {
+                var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
+                jsonSerializer.Converters.Add(new EtagJsonConverter());
+
+                using (var file = new FileStream(tempFileName, FileMode.Create))
+                using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+                {
+                    var adminStats = package.CreateEntry("admin_stats.txt", CompressionLevel.Optimal);
+
+                    using (var metricsStream = adminStats.Open())
+                    using (var streamWriter = new StreamWriter(metricsStream))
+                    {
+                        jsonSerializer.Serialize(streamWriter, CreateAdminStats());
+                        streamWriter.Flush();
+                    }
+
+                    DatabasesLandlord.ForAllDatabases(database =>
+                    {
+                        var prefix = string.IsNullOrWhiteSpace(database.Name) ? "System" : database.Name;
+                        DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, prefix + "/");
+                    });
+
+                    var stacktraceRequsted = GetQueryStringValue("stacktrace");
+                    if (stacktraceRequsted != null)
+                    {
+                        DumpStacktrace(package);
+                    }
+                }
+
+                var response = new HttpResponseMessage();
+
+                response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
+                                   {
+                                       Headers =
+                                       {
+                                           ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                                                                {
+                                                                    FileName = string.Format("Admin-Debug-Info-{0}.zip", SystemTime.UtcNow),
+                                                                }, 
+                                                                ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                                       }
+                                   };
+
+                return response;
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(tempFileName);
+            }
+		}
+
+        private void DumpStacktrace(ZipArchive package)
+        {
+            var stacktraceRequsted = GetQueryStringValue("stacktrace");
+
+            if (stacktraceRequsted != null)
+            {
+                var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
+
+                var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
+                jsonSerializer.Converters.Add(new EtagJsonConverter());
+
+                using (var stacktraceStream = stacktrace.Open())
+                {
+                    string ravenDebugDir = null;
+
+                    try
+                    {
+                        if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
+
+                        ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                        var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+                        var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
+
+                        Directory.CreateDirectory(ravenDebugDir);
+
+                        if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+                        else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+
+                        var process = new Process { StartInfo = new ProcessStartInfo { Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput), FileName = ravenDebugExe, WindowStyle = ProcessWindowStyle.Hidden, } };
+
+                        process.Start();
+
+                        process.WaitForExit();
+
+                        using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
+                        {
+                            stackDumpOutputStream.CopyTo(stacktraceStream);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        var streamWriter = new StreamWriter(stacktraceStream);
+                        jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
+                        streamWriter.Flush();
+                    }
+                    finally
+                    {
+                        if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
+                    }
+
+                    stacktraceStream.Flush();
+                }
+            }
+        }
+
+        private static void ExtractResource(string resource, string path)
+        {
+            var stream = typeof(DebugInfoProvider).Assembly.GetManifestResourceStream(resource);
+
+            if (stream == null)
+                throw new InvalidOperationException("Could not find the requested resource: " + resource);
+
+            var bytes = new byte[4096];
+
+            using (var stackDump = File.Create(path, 4096))
+            {
+                while (true)
+                {
+                    var read = stream.Read(bytes, 0, bytes.Length);
+                    if (read == 0)
+                        break;
+
+                    stackDump.Write(bytes, 0, read);
+                }
+
+                stackDump.Flush();
+            }
         }
 	}
 }

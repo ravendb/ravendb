@@ -115,7 +115,6 @@ class editIndex extends viewModelBase {
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
 
         this.checkIfScriptedIndexBundleIsActive();
-
     }
 
     attached() {

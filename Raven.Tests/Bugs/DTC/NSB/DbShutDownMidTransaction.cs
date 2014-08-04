@@ -37,17 +37,17 @@ namespace Raven.Tests.Bugs.DTC.NSB
                     Timeout = TimeSpan.FromHours(1)
                 };
 
-                store.DocumentDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), tx);
+                store.SystemDatabase.Documents.Put("test", null, new RavenJObject(), new RavenJObject(), tx);
 
-                store.DocumentDatabase.PrepareTransaction("tx");
+                store.SystemDatabase.PrepareTransaction("tx");
             }
 
             using ( var store = NewDocumentStore(runInMemory: false, requestedStorage: "esent", dataDir: "DbShutDownMidTransaction"))
             {
-                store.DocumentDatabase.Commit("tx");
+                store.SystemDatabase.Commit("tx");
 
 
-				Assert.NotNull(store.DocumentDatabase.Documents.Get("test", null));
+				Assert.NotNull(store.SystemDatabase.Documents.Get("test", null));
             }
         }
     }

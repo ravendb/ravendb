@@ -223,9 +223,11 @@
     <Compile Include="Bundles\Replication\Data\ReplicationTopology.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicatonNodeState.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationTopologyDiscoverer.cs" />
+    <Compile Include="Bundles\Replication\Utils\ReplicationUtils.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
+    <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
@@ -1063,8 +1065,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Util\StackDump\x64\StackDump.exe" />
-    <EmbeddedResource Include="Util\StackDump\x86\StackDump.exe" />
+    <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
+    <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
     <EmbeddedResource Include="Server\WebUI\studio.html" />
     <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />

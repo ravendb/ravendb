@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 			{
 				store.Initialize();
 				Assert.IsType<ServerClient>(store.DatabaseCommands);
-				Assert.Null(store.DocumentDatabase);
+				Assert.Null(store.SystemDatabase);
 			}
 		}
 	}

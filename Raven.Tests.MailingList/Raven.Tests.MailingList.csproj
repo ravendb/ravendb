@@ -251,6 +251,7 @@
     <Compile Include="LastModifiedMetadataTest.cs" />
     <Compile Include="LateBoundValue.cs" />
     <Compile Include="LazilyLoadByIdsWithTransformer.cs" />
+    <Compile Include="LazyBug.cs" />
     <Compile Include="LazyCount.cs" />
     <Compile Include="LazyEncoding.cs" />
     <Compile Include="LazyLoadFromSessionCache.cs" />

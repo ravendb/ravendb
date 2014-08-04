@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -93,7 +93,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -128,7 +128,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
