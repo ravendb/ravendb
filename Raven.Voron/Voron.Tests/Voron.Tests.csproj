@@ -85,6 +85,7 @@
     <Compile Include="Bugs\MultiReads.cs" />
     <Compile Include="Bugs\Iterating.cs" />
     <Compile Include="Bugs\StartsWithSearch.cs" />
+    <Compile Include="Bugs\FreeSpaceAndOverflowPages.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
