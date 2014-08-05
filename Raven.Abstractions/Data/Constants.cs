@@ -48,12 +48,14 @@ namespace Raven.Abstractions.Data
 		public const string RavenAlerts = "Raven/Alerts";
 		public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
 
+		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
+		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
+
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
 
 		// Indexing
-		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
 		public const int DefaultPrefetchingDurationLimit = 5000;
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";

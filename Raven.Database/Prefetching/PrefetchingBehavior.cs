@@ -67,7 +67,7 @@ namespace Raven.Database.Prefetching
 		public IDisposable DocumentBatchFrom(Etag etag, out List<JsonDocument> documents)
 		{
 			documents = GetDocumentsBatchFrom(etag);
-			return DocumentBatch(documents);
+			return UpdateCurrentlyUsedBatches(documents);
 		}
 
 		public List<JsonDocument> GetDocumentsBatchFrom(Etag etag)
@@ -120,9 +120,9 @@ namespace Raven.Database.Prefetching
 					etag = result[result.Count - 1].Etag;
 
 				prefetchingQueueSizeInBytes = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
-			 } while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded &&
+			 } while (result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && docsLoaded &&
 						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
-						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForIndexingInMb * 1024 * 1024)));
+						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024)));
 			
 			return result;
 		}
@@ -142,7 +142,7 @@ namespace Raven.Database.Prefetching
 			nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			bool hasDocs = false;
 
-			while (items.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && 
+			while (items.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && 
 				prefetchingQueue.TryPeek(out result) && 
 				// we compare to current or _smaller_ so we will remove from the queue old versions
 				// of documents that we have already loaded
@@ -177,7 +177,7 @@ namespace Raven.Database.Prefetching
 
 		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
+			if (context.Configuration.DisableDocumentPreFetching)
 				return false;
 
 			try
@@ -209,7 +209,7 @@ namespace Raven.Database.Prefetching
 			{
 			    //limit how much data we load from disk --> better adhere to memory limits
 			    var totalSizeAllowedToLoadInBytes =
-			        (context.Configuration.MemoryLimitForIndexingInMb*1024*1024) -
+			        (context.Configuration.MemoryLimitForProcessingInMb*1024*1024) -
 			        (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
 
                 // at any rate, we will load a min of 512Kb docs
@@ -220,7 +220,7 @@ namespace Raven.Database.Prefetching
 				jsonDocs = actions.Documents
 					.GetDocumentsAfter(
 						etag,
-						autoTuner.NumberOfItemsToIndexInSingleBatch,
+						autoTuner.NumberOfItemsToProcessInSingleBatch,
 						context.CancellationToken,
 						maxSize,
 						untilEtag,
@@ -244,16 +244,16 @@ namespace Raven.Database.Prefetching
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing || context.RunIndexing == false)
+			if (context.Configuration.DisableDocumentPreFetching || context.RunIndexing == false)
 				return;
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelProcessingTasks == 1)
 				return;
 			if (past.Count == 0)
 				return;
 		    if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes)
 		        return; // already have too much in memory
             // don't keep _too_ much in memory
-		    if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 2)
+		    if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 2)
 		        return;
 
 		    var size = 1024;
@@ -270,7 +270,7 @@ namespace Raven.Database.Prefetching
 			    return size;
 			});
 
-			if (alreadyLoadedSize > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (alreadyLoadedSize > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 
 			if(MemoryStatistics.IsLowMemory)
@@ -281,16 +281,16 @@ namespace Raven.Database.Prefetching
 				{
 					if (x.Task.IsCompleted)
 						return x.Task.Result.Count;
-					return autoTuner.NumberOfItemsToIndexInSingleBatch / 4 * 3;
+					return autoTuner.NumberOfItemsToProcessInSingleBatch / 4 * 3;
 				});
 
-				if (alreadyLoaded > autoTuner.NumberOfItemsToIndexInSingleBatch)
+				if (alreadyLoaded > autoTuner.NumberOfItemsToProcessInSingleBatch)
 					return;
 			}
 
 			// ensure we don't do TOO much future caching
 			if (MemoryStatistics.AvailableMemory <
-				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
@@ -414,12 +414,12 @@ namespace Raven.Database.Prefetching
 
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
+			if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0)
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
-				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing ||
-				prefetchingQueue.Aggregate(0, (x,c) => x + SelectSerializedSizeOnDiskIfNotNull(c)) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				context.Configuration.MaxNumberOfItemsToPreFetch ||
+				prefetchingQueue.Aggregate(0, (x,c) => x + SelectSerializedSizeOnDiskIfNotNull(c)) > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 
 			foreach (var jsonDocument in docs)
@@ -553,11 +553,11 @@ namespace Raven.Database.Prefetching
 
 		#endregion
 
-		protected IDisposable DocumentBatch(List<JsonDocument> jsonDocuments)
+		public IDisposable UpdateCurrentlyUsedBatches(List<JsonDocument> docBatch)
 		{
 			var batchId = Guid.NewGuid();
 
-			autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, jsonDocuments.Sum(x => x.SerializedSizeOnDisk));
+			autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, docBatch.Sum(x => x.SerializedSizeOnDisk));
 			return new DisposableAction(() =>
 			{
 				long _;
@@ -567,7 +567,7 @@ namespace Raven.Database.Prefetching
 
 		public void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
 		{
-			int currentBatchLength = autoTuner.NumberOfItemsToIndexInSingleBatch;
+			int currentBatchLength = autoTuner.NumberOfItemsToProcessInSingleBatch;
 			int futureLen = futureIndexBatches.Values.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
