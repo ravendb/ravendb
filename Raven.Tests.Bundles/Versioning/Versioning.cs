@@ -482,21 +482,22 @@ namespace Raven.Tests.Bundles.Versioning
             var file = Path.GetTempFileName();
 		    try
 			{
-				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait();
+				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait();
 
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
 					var importSmuggler = new SmugglerApi();
-					importSmuggler.ImportData(new SmugglerImportOptions
-					{
-						FromFile = file,
-						To = new RavenConnectionStringOptions
+					importSmuggler.ImportData(
+						new SmugglerImportOptions
 						{
-							Url = documentStore2.Url,
-							Credentials = documentStore2.Credentials,
-							DefaultDatabase = documentStore2.DefaultDatabase
-						}
-					}, new SmugglerOptions()).Wait();
+							FromFile = file,
+							To = new RavenConnectionStringOptions
+							{
+								Url = documentStore2.Url,
+								Credentials = documentStore2.Credentials,
+								DefaultDatabase = documentStore2.DefaultDatabase
+							}
+						}).Wait();
 
 					using (var session = documentStore2.OpenSession())
 					{

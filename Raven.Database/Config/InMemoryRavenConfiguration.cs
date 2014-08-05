@@ -86,7 +86,7 @@ namespace Raven.Database.Config
 		}
 
 		public void Initialize()
-		{
+		{			
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 

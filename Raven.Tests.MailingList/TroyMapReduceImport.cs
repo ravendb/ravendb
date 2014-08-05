@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
 				var dataDumper = new DataDumper(store.SystemDatabase);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
 				{
-					await dataDumper.ImportData(new SmugglerImportOptions {FromStream = stream}, new SmugglerOptions());
+					await dataDumper.ImportData(new SmugglerImportOptions {FromStream = stream});
 				}
 
 				using(var s = store.OpenSession())
@@ -39,7 +39,7 @@ namespace Raven.Tests.MailingList
 				var dataDumper = new DataDumper(store.SystemDatabase);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
 				{
-					await dataDumper.ImportData(new SmugglerImportOptions {FromStream = stream}, new SmugglerOptions());
+					await dataDumper.ImportData(new SmugglerImportOptions {FromStream = stream});
 				}
 
 				WaitForUserToContinueTheTest(store);

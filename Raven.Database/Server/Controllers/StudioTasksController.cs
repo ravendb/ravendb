@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,6 +15,7 @@ using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -23,7 +23,9 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Util;
+using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -38,47 +40,91 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
-            if (!Request.Content.IsMimeMultipartContent())
-            {
-                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
-            }
+			if (!Request.Content.IsMimeMultipartContent())
+			{
+				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
+			}
 
-            var streamProvider = new MultipartMemoryStreamProvider();
-            await Request.Content.ReadAsMultipartAsync(streamProvider);
-            var fileStream = await streamProvider.Contents
-                .First(c => c.Headers.ContentDisposition.Name == "\"file\"")
-                .ReadAsStreamAsync();
+			string tempPath = Path.GetTempPath();
+			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (Directory.Exists(fullTempPath) == false)
+				Directory.CreateDirectory(fullTempPath);
 
-            var dataDumper = new DataDumper(Database);
-            var importOptions = new SmugglerImportOptions
-            {
-                FromStream = fileStream
-            };
-            var options = new SmugglerOptions
-            {
-                BatchSize = batchSize,
-                ShouldExcludeExpired = !includeExpiredDocuments,
-                OperateOnTypes = operateOnTypes,
-                TransformScript = transformScript
-            };
+			var streamProvider = new MultipartFileStreamProvider(fullTempPath);
+			await Request.Content.ReadAsMultipartAsync(streamProvider);
+			var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
+			
+			string fileName = null;
+			var fileContent = streamProvider.Contents.SingleOrDefault();
+			if (fileContent != null)
+			{
+				fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
+			}
 
-            // Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
-            // Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
-            if (filtersPipeDelimited != null)
-            {
-                options.Filters.AddRange(filtersPipeDelimited
-                    .Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
-                    .Select(o => new FilterSetting
-                    {
-                        Path = o[0],
-                        Values = new List<string> { o[1] },
-                        ShouldMatch = bool.Parse(o[2])
-                    }));
-            }
+			var status = new ImportOperationStatus();
+			var cts = new CancellationTokenSource();
+			
+			var task = Task.Run(async () =>
+			{
+				try
+				{
+					using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
+					{
+						var dataDumper = new DataDumper(Database);
+						dataDumper.Progress += s => status.LastProgress = s;
+						var smugglerOptions = dataDumper.SmugglerOptions;
+						smugglerOptions.BatchSize = batchSize;
+						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
+						smugglerOptions.OperateOnTypes = operateOnTypes;
+						smugglerOptions.TransformScript = transformScript;
+						smugglerOptions.CancelToken = cts;
 
-            await dataDumper.ImportData(importOptions, options);
-            return GetEmptyMessage();
+						// Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
+						// Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
+						if (filtersPipeDelimited != null)
+						{
+							smugglerOptions.Filters.AddRange(filtersPipeDelimited
+								.Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+								.Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+								.Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
+						}
+
+						await dataDumper.ImportData(new SmugglerImportOptions { FromStream = fileStream });
+					}
+				}
+				catch (Exception e)
+				{
+					status.ExceptionDetails = e.Message + e.StackTrace;
+					if (cts.Token.IsCancellationRequested)
+					{
+						status.ExceptionDetails = "Task was cancelled";
+						cts.Token.ThrowIfCancellationRequested();
+					}
+					else
+					{
+						throw e;
+					}
+				}
+				finally
+				{
+					status.Completed = true;
+					File.Delete(uploadedFilePath);
+				}
+			}, cts.Token);
+
+			long id;
+			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+			{
+				StartTime = SystemTime.UtcNow,
+				TaskType = TaskActions.PendingTaskType.ImportDatabase,
+				Payload = fileName,
+				
+			}, out id, cts);
+
+			return GetMessageWithObject(new
+			{
+				OperationId = id
+			});
 		}
 
 	    public class ExportData
@@ -108,10 +154,12 @@ namespace Raven.Database.Server.Controllers
 			{
 			    try
 			    {
-			        await new DataDumper(Database).ExportData(new SmugglerExportOptions
-			        {
-			            ToStream = outputStream
-			        }, smugglerOptions).ConfigureAwait(false);
+				    var dataDumper = new DataDumper(Database) {SmugglerOptions = smugglerOptions};
+				    await dataDumper.ExportData(
+					    new SmugglerExportOptions
+					    {
+						    ToStream = outputStream
+					    }).ConfigureAwait(false);
 			    }
 			    finally
 			    {
@@ -142,13 +190,8 @@ namespace Raven.Database.Server.Controllers
 
 			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
 			{
-				var smugglerOptions = new SmugglerOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
-					ShouldExcludeExpired = false,
-				};
-				var dataDumper = new DataDumper(Database);
-				await dataDumper.ImportData(new SmugglerImportOptions {FromStream = sampleData}, smugglerOptions);
+				var dataDumper = new DataDumper(Database) {SmugglerOptions = {OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false}};
+				await dataDumper.ImportData(new SmugglerImportOptions {FromStream = sampleData});
 			}
 
 			return GetEmptyMessage();
@@ -469,6 +512,13 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			return value;
+		}
+
+		private class ImportOperationStatus
+		{
+			public bool Completed { get; set; }
+			public string LastProgress { get; set; }
+			public string ExceptionDetails { get; set; }
 		}
 	}
 }

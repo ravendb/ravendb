@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +26,11 @@ namespace Raven.Database.Server.Tenancy
         {
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
+
+			string tempPath = Path.GetTempPath();
+			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (Directory.Exists(fullTempPath))
+				Directory.Delete(fullTempPath, true);
 
             Init();
         }

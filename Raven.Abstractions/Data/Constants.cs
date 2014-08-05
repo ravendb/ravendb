@@ -158,7 +158,8 @@ namespace Raven.Abstractions.Data
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
 
+        public const string MetadataEtagField = "ETag";
 
-        public const string MetadataEtagField = "ETag";        
+		public const string TempUploadsDirectoryName = "RavenTempUploads";
 	}
 }

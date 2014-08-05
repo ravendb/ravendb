@@ -67,16 +67,12 @@ namespace Raven.Tests.Issues
                 }
                 using (var store = NewDocumentStore())
                 {
-                    var dataDumper = new DataDumper(store.SystemDatabase);
-                    dataDumper.ImportData(new SmugglerImportOptions
+	                var dataDumper = new DataDumper(store.SystemDatabase) { SmugglerOptions = { Incremental = false } };
+	                dataDumper.ImportData(new SmugglerImportOptions
                     {
                         FromFile = Directory.GetFiles(Path.GetFullPath(backupPath))
                           .Where(file => ".ravendb-full-dump".Equals(Path.GetExtension(file), StringComparison.InvariantCultureIgnoreCase))
                           .OrderBy(File.GetLastWriteTimeUtc).First()
-
-                    }, new SmugglerOptions
-                    {
-                        Incremental = false
                     }).Wait();
 
                     using (var session = store.OpenSession())
@@ -180,15 +176,8 @@ namespace Raven.Tests.Issues
             using (var store = NewDocumentStore())
             {
                 var dataDumper = new DataDumper(store.SystemDatabase);
-
-                dataDumper.ImportData(new SmugglerImportOptions
-                {
-                    FromFile = file
-
-                }, new SmugglerOptions
-                {
-                    Incremental = false
-                }).Wait();
+	            dataDumper.SmugglerOptions.Incremental = false;
+	            dataDumper.ImportData(new SmugglerImportOptions { FromFile = file }).Wait();
 
                 WaitForIndexing(store);
 
@@ -240,19 +229,14 @@ namespace Raven.Tests.Issues
 
             using (var store = NewRemoteDocumentStore())
             {
-	            var connection = new RavenConnectionStringOptions
-	            {
-		            Url = store.Url
-	            };
 	            var dataDumper = new SmugglerApi();
-                dataDumper.ImportData(new SmugglerImportOptions
-                {
-                    FromFile = backupPath,
-					To = connection,
-                }, new SmugglerOptions
-                {
-                    Incremental = true,
-                }).Wait();
+	            dataDumper.SmugglerOptions.Incremental = true;
+                dataDumper.ImportData(
+					new SmugglerImportOptions
+					{
+						FromFile = backupPath,
+						To = new RavenConnectionStringOptions { Url = store.Url }
+					}).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -303,14 +287,8 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.SystemDatabase);
-                dataDumper.ImportData(new SmugglerImportOptions
-                {
-                    FromFile = backupPath,
-                }, new SmugglerOptions
-                {
-                    Incremental = true,
-                }).Wait();
+                var dataDumper = new DataDumper(store.SystemDatabase) { SmugglerOptions = { Incremental = true } };
+	            dataDumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -353,14 +331,8 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.SystemDatabase);
-                dataDumper.ImportData(new SmugglerImportOptions
-                {
-                    FromFile = backupPath,
-                }, new SmugglerOptions
-                {
-                    Incremental = true,
-                }).Wait();
+                var dataDumper = new DataDumper(store.SystemDatabase) { SmugglerOptions = { Incremental = true } };
+	            dataDumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
 
                 Assert.Null(store.DatabaseCommands.GetAttachment("attach/1"));
             }
@@ -634,9 +606,9 @@ namespace Raven.Tests.Issues
             {
             }
 
-            public Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportDocuments(new RavenConnectionStringOptions(), options, jsonWriter, lastEtag, maxEtag);
+                return base.ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
             public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
@@ -644,9 +616,9 @@ namespace Raven.Tests.Issues
                 return base.ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-            public new void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtags)
+            public new void ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtags)
             {
-                base.ExportDeletions(jsonWriter, options, result, maxEtags);
+                base.ExportDeletions(jsonWriter, result, maxEtags);
             }
         }
 
@@ -667,16 +639,13 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.SystemDatabase)
-                    {
-                        SmugglerOptions = new SmugglerOptions()
-                    };
+                    var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
                     var endEtag = startEtag.IncrementBy(2);
 
                     writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportDocuments(new SmugglerOptions(), writer, startEtag, endEtag);
+                    var lastEtag = await dumper.ExportDocuments(writer, startEtag, endEtag);
                     writer.WriteEndArray();
                     writer.Flush();
 
@@ -693,15 +662,12 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.SystemDatabase)
-                    {
-                        SmugglerOptions = new SmugglerOptions()
-                    };
+	                var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
 
                     writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportDocuments(new SmugglerOptions(), writer, startEtag, null);
+                    var lastEtag = await dumper.ExportDocuments(writer, startEtag, null);
                     writer.WriteEndArray();
                     writer.Flush();
 
@@ -722,10 +688,7 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.SystemDatabase)
-                    {
-                        SmugglerOptions = new SmugglerOptions()
-                    };
+	                var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
                     var endEtag = startEtag.IncrementBy(2);
@@ -748,10 +711,7 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.SystemDatabase)
-                    {
-                        SmugglerOptions = new SmugglerOptions()
-                    };
+	                var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
 
@@ -802,10 +762,7 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.SystemDatabase)
-                    {
-                        SmugglerOptions = new SmugglerOptions()
-                    };
+	                var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     writer.WriteStartObject();
                     var lastEtags = new LastEtagsInfo();
@@ -817,7 +774,7 @@ namespace Raven.Tests.Issues
 
                     lastEtags.LastDocDeleteEtag = user9DeletionEtag;
                     lastEtags.LastAttachmentsDeleteEtag = attach7DeletionEtag;
-                    dumper.ExportDeletions(writer, new SmugglerOptions(), exportResult, lastEtags);
+                    dumper.ExportDeletions(writer, exportResult, lastEtags);
                     writer.WriteEndObject();
                     writer.Flush();
 
