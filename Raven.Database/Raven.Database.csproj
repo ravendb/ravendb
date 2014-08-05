@@ -227,6 +227,10 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
+    <Compile Include="Server\Connections\ILogsTransport.cs" />
+    <Compile Include="Server\Connections\LogPushContent.cs" />
+    <Compile Include="Server\Connections\OnDemandLogConnectionState.cs" />
+    <Compile Include="Server\Connections\OnDemandLogTarget.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />

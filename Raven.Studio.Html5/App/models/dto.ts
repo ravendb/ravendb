@@ -987,3 +987,9 @@ interface runningTaskDto {
     TaskType: string;
     StartTime: string;
 }
+
+
+interface customLogEntryDto {
+    category: string;
+    level: string;
+}

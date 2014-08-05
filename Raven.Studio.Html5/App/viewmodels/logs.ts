@@ -2,17 +2,28 @@
 import getLogsCommand = require("commands/getLogsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import onDemandLogsConfigureCommand = require("commands/onDemandLogsConfigureCommand");
 import database = require("models/database");
 import moment = require("moment");
-/*import copyDocuments = require("viewmodels/copyDocuments");
-import document = require("models/document");*/
 import appUrl = require("common/appUrl");
 import httpTraceClient = require("common/httpTraceClient");
 import changeSubscription = require('models/changeSubscription');
+import copyDocuments = require("viewmodels/copyDocuments");
+import fileDownloader = require("common/fileDownloader");
+import document = require("models/document");
+import customLogging = require("viewmodels/customLogging");
+import customLogConfig = require("models/customLogConfig");
+import customLogEntry = require("models/customLogEntry");
+
+import onDemandLogs = require("common/onDemandLogs");
 
 class logs extends viewModelBase {
-    
+
+    onDemandLogging = ko.observable<onDemandLogs>(null);
     allLogs = ko.observableArray<logDto>();
+    dataDirty = false;
+    intervalId: number;
+    maxEntries: number;
     filterLevel = ko.observable("All");
     selectedLog = ko.observable<logDto>();
     debugLogCount: KnockoutComputed<number>;
@@ -20,6 +31,8 @@ class logs extends viewModelBase {
     warningLogCount: KnockoutComputed<number>;
     errorLogCount: KnockoutComputed<number>;
     fatalLogCount: KnockoutComputed<number>;
+    customLoggingEnabled: KnockoutComputed<boolean>;
+    customLoggingInProgress = ko.observable(false);
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
     now = ko.observable<Moment>();
@@ -41,7 +54,8 @@ class logs extends viewModelBase {
         this.warningLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Warn"));
         this.errorLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Error"));
         this.fatalLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Fatal"));
-        this.searchTextThrottled = this.searchText.throttle(200);
+        this.customLoggingEnabled = ko.computed(() => this.onDemandLogging() != null);
+        this.searchTextThrottled = this.searchText.throttle(400);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
 
@@ -62,6 +76,7 @@ class logs extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 5000);
         this.columnWidths = [
             ko.observable<number>(100),
             ko.observable<number>(265),
@@ -78,14 +93,26 @@ class logs extends viewModelBase {
         var widthUnit = 0.08;
         this.columnWidths[0](100 * widthUnit);
         this.columnWidths[1](100 * widthUnit);
-        this.columnWidths[2](100 * widthUnit*6);
-        this.columnWidths[3](100 * widthUnit*2);
-        this.columnWidths[4](100 * widthUnit*2);
+        this.columnWidths[2](100 * widthUnit * 6);
+        this.columnWidths[3](100 * widthUnit * 2);
+        this.columnWidths[4](100 * widthUnit * 2);
+    }
+
+    redraw() {
+        if (this.dirtyFlag) {
+            this.dirtyFlag = false;
+            this.allLogs.valueHasMutated();
+
+        }
     }
 
     deactivate() {
         clearTimeout(this.updateNowTimeoutHandle);
+        clearInterval(this.intervalId);
         this.unregisterColumnResizing();
+        if (this.onDemandLogging()) {
+            this.onDemandLogging().dispose();
+        }
     }
 
     fetchLogs(): JQueryPromise<logDto[]> {
@@ -118,8 +145,6 @@ class logs extends viewModelBase {
             
         }
     }
-
-    
 
     matchesFilterAndSearch(log: logDto) {
         var searchTextThrottled = this.searchTextThrottled().toLowerCase();
@@ -359,6 +384,64 @@ class logs extends viewModelBase {
         return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.EllapsedMiliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
     }
     
+    onLogMessage(entry: logDto) {
+        if (this.allLogs().length < this.maxEntries) {
+            //this.extendLogEntry(entry, false);
+            //this.allLogs().push(entry);
+            this.dirtyFlag = true;
+        } else {
+            // stop logging
+            var onDemand = this.onDemandLogging();
+            this.customLoggingInProgress(false);
+            onDemand.dispose();
+        }
+    }
+
+    saveLogs() {
+        fileDownloader.downloadAsJson(this.allLogs(), "logs.json");
+    }
+
+    cleanupView() {
+        this.selectedLog(null);
+        this.allLogs.removeAll();
+        this.filterLevel("All");
+        this.searchText("");
+        this.filteredLoggers.removeAll();
+        this.sortColumn("logged");
+        this.sortAsc(true);
+    }
+
+    customLogging() {
+        if (this.customLoggingEnabled()) {
+            app.showMessage("You are about to cancel results of custom logging. Are you sure?", "Cancel on demand logs", ["Cancel", "OK"])
+                .then((dialogResult: string) => {
+                    if (dialogResult === "OK") {
+                        var onDemand = this.onDemandLogging();
+                        this.customLoggingInProgress(false);
+                        this.onDemandLogging(null);
+                        this.updateCurrentNowTime();
+                        onDemand.dispose();
+                        this.fetchLogs();
+                    }
+                });
+            
+        } else {
+            var logConfig = new customLogConfig();
+            logConfig.maxEntries(10000);
+            logConfig.entries.push(new customLogEntry("Raven.", "Info"));
+            var customLoggingViewModel = new customLogging(logConfig);
+            app.showDialog(customLoggingViewModel);
+            customLoggingViewModel.onExit().done((config: customLogConfig) => {
+                clearTimeout(this.updateNowTimeoutHandle);
+                var categoriesConfig = config.entries().map(e => e.toDto());
+                this.maxEntries = config.maxEntries();
+                this.onDemandLogging(new onDemandLogs(this.activeDatabase(), entry => this.onLogMessage(entry)));
+                this.customLoggingInProgress(true);
+                this.cleanupView();
+                this.onDemandLogging().configureCategories(categoriesConfig);
+            });
+        }
+    }
 }
 
 export = logs;

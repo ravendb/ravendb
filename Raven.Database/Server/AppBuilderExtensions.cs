@@ -203,6 +203,7 @@ namespace Owin
 		    private bool ShouldBuffer(HttpContent content)
 		    {
 		        return (content is ChangesPushContent ||
+                        content is LogsPushContent ||
 		                content is StreamsController.StreamQueryContent ||
 		                content is StreamContent ||
 		                content is PushStreamContent ||

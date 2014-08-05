@@ -60,6 +60,10 @@
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
+        <div class="btn-group" data-toggle="buttons">
+            <button class="btn" data-bind="css: { 'btn-info': customLoggingEnabled, 'btn-default': !customLoggingEnabled() }, click: customLogging"><i data-bind="    visible: customLoggingInProgress" class="fa fa-circle-o-notch fa-spin"></i> Custom logging</button>
+            <button class="btn btn-default" data-bind="click: saveLogs, visible: customLoggingEnabled"><i class="fa fa-download"></i></button>
+        </div>
         <div id="logTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
             <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
                 <button class="btn btn-default" data-bind="click: $root.unHidelogType.bind($root)">
