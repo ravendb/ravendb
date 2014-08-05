@@ -409,5 +409,45 @@ namespace Raven.Tests.Core.Session
                 }
             }
         }
+
+        [Fact]
+        public void CanExecuteAllPendingLazyOperations()
+        {
+            const string COMPANY1_ID = "companies/1";
+            const string COMPANY2_ID = "companies/2";
+
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    COMPANY1_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY1_ID }),
+                    new RavenJObject()
+                    );
+                store.DatabaseCommands.Put(
+                    COMPANY2_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY2_ID }),
+                    new RavenJObject()
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                    Company company1 = null;
+                    Company company2 = null;
+
+                    session.Advanced.Lazily.Load<Company>(COMPANY1_ID, x => company1 = x);
+                    session.Advanced.Lazily.Load<Company>(COMPANY2_ID, x => company2 = x);
+                    Assert.Null(company1);
+                    Assert.Null(company2);
+
+                    session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+                    Assert.NotNull(company1);
+                    Assert.NotNull(company2);
+                    Assert.Equal(COMPANY1_ID, company1.Id);
+                    Assert.Equal(COMPANY2_ID, company2.Id);
+                }
+            }
+        }
     }
 }
