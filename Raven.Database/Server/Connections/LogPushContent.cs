@@ -15,7 +15,11 @@ namespace Raven.Database.Server.Connections
 {
 	public class LogsPushContent : HttpContent, ILogsTransport
 	{
+	    private const int QueueCapacity = 10000;
+
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
+
+	    private bool hitCapacity = false;
 
 		public string Id { get; private set; }
 
@@ -23,8 +27,7 @@ namespace Raven.Database.Server.Connections
 
 		public event Action Disconnected = delegate { };
 
-        private readonly ConcurrentQueue<LogEventInfo> msgs = new ConcurrentQueue<LogEventInfo>(); //TODO: use bounded queue!
-		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
+        private readonly BlockingCollection<LogEventInfo> msgs = new BlockingCollection<LogEventInfo>(QueueCapacity); 
 
         public LogsPushContent(RavenBaseApiController controller)
 		{
@@ -46,24 +49,17 @@ namespace Raven.Database.Server.Connections
 				{
 					try
 					{
-						var result = await manualResetEvent.WaitAsync(5000);
-						if (Connected == false)
-							return;
+                        LogEventInfo message;
+                        while (msgs.TryTake(out message, millisecondsTimeout: 5000))
+                        {
+                            if (Connected == false)
+                                return;
 
-						if (result == false)
-						{
-                            await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-							await writer.FlushAsync();
-							continue;
-						}
+                            await SendMessage(message, writer);
+                        }
 
-						manualResetEvent.Reset();
-
-						LogEventInfo message;
-						while (msgs.TryDequeue(out message))
-						{
-							await SendMessage(message, writer);
-						}
+                        await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
+                        await writer.FlushAsync();
 					}
 					catch (Exception e)
 					{
@@ -90,7 +86,6 @@ namespace Raven.Database.Server.Connections
             await writer.WriteAsync("data: ");
             await writer.WriteAsync(o.ToString(Formatting.None));
             await writer.WriteAsync("\r\n\r\n");
-            await writer.FlushAsync();
 		}
 
 		protected override bool TryComputeLength(out long length)
@@ -103,13 +98,18 @@ namespace Raven.Database.Server.Connections
 		{
 			base.Dispose(disposing);
 			Connected = false;
-			manualResetEvent.Set();
 		}
 
 		public void SendAsync(LogEventInfo msg)
 		{
-			msgs.Enqueue(msg);
-			manualResetEvent.Set();
+			if (msgs.TryAdd(msg) == false)
+			{
+                if (hitCapacity == false)
+                {
+                    hitCapacity = true;
+                    log.Warn("Reached max capacity of LogPush queue, id = " + Id);
+                }
+			}
 		}
 	}
 }

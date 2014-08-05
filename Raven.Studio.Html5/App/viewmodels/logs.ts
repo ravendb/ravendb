@@ -21,9 +21,10 @@ class logs extends viewModelBase {
 
     onDemandLogging = ko.observable<onDemandLogs>(null);
     allLogs = ko.observableArray<logDto>();
-    dataDirty = false;
+    pendingLogs: logDto[] = [];
+    rawLogs = ko.observable<logDto[]>([]);
     intervalId: number;
-    maxEntries: number;
+    maxEntries = ko.observable(0);
     filterLevel = ko.observable("All");
     selectedLog = ko.observable<logDto>();
     debugLogCount: KnockoutComputed<number>;
@@ -54,7 +55,6 @@ class logs extends viewModelBase {
         this.warningLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Warn"));
         this.errorLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Error"));
         this.fatalLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Fatal"));
-        this.customLoggingEnabled = ko.computed(() => this.onDemandLogging() != null);
         this.searchTextThrottled = this.searchText.throttle(400);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
@@ -76,7 +76,6 @@ class logs extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 5000);
         this.columnWidths = [
             ko.observable<number>(100),
             ko.observable<number>(265),
@@ -99,10 +98,17 @@ class logs extends viewModelBase {
     }
 
     redraw() {
-        if (this.dirtyFlag) {
-            this.dirtyFlag = false;
-            this.allLogs.valueHasMutated();
-
+        if (this.pendingLogs.length > 0) {
+            var pendingCopy = this.pendingLogs;
+            this.pendingLogs = [];
+            var logsAsText = "";
+            pendingCopy.forEach(log => {
+                var line = log.TimeStamp + ";" + log.Level.toUpperCase() + ";" + log.LoggerName + ";" + log.Message + (log.Exception || "") + "\n";
+                logsAsText += line;
+            });
+            $("#rawLogsContainer pre").append(logsAsText); 
+            this.rawLogs().pushAll(pendingCopy);  
+            this.rawLogs.valueHasMutated();
         }
     }
 
@@ -320,12 +326,12 @@ class logs extends viewModelBase {
         this.allLogs.removeAll();
         this.fetchLogs();
         this.disposeHttpTraceClient();
+        this.disposeOnDemandLogsClient();
     }
 
     switchToHttpTraceMode() {
-
-
         var tracedDB = appUrl.getResource();
+        this.disposeOnDemandLogsClient();
         this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
         this.logHttpTraceClient.connectToChangesApiTask
             .done(() => {
@@ -343,16 +349,31 @@ class logs extends viewModelBase {
             });
     }
 
-    switchToSystemLogsMode() {
-        app.showMessage("To Be Delivered", "TBD");
+    switchToCustomLogsMode() {
+        this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
         this.allLogs.removeAll();
         this.disposeHttpTraceClient();
-        this.logsMode("System Logger");
+        this.logsMode("Custom Logger");
+
+        var logConfig = new customLogConfig();
+        logConfig.maxEntries(10000);
+        logConfig.entries.push(new customLogEntry("Raven.", "Info"));
+        var customLoggingViewModel = new customLogging(logConfig);
+        app.showDialog(customLoggingViewModel);
+        customLoggingViewModel.onExit().done((config: customLogConfig) => {
+            this.maxEntries(config.maxEntries());
+            this.onDemandLogging(new onDemandLogs(this.activeDatabase(), entry => this.onLogMessage(entry)));
+            this.customLoggingInProgress(true);
+
+            var categoriesConfig = config.entries().map(e => e.toDto());
+            this.onDemandLogging().configureCategories(categoriesConfig);
+        });
     }
 
     detached() {
         super.detached();
         this.disposeHttpTraceClient();
+        this.disposeOnDemandLogsClient();
     }
 
     processHttpTraceMessage(e: logNotificationDto) {
@@ -379,16 +400,26 @@ class logs extends viewModelBase {
         }
     }
 
+    disposeOnDemandLogsClient() {
+        var onDemand = this.onDemandLogging();
+        if (onDemand) {
+            onDemand.dispose();
+        }
+        this.customLoggingInProgress(false);
+        this.onDemandLogging(null);
+        this.rawLogs([]);
+        this.pendingLogs = [];
+        $("#rawLogsContainer pre").empty();
+    }
+
 
     formatLogRecord(logRecord: logNotificationDto) {
         return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.EllapsedMiliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
     }
     
     onLogMessage(entry: logDto) {
-        if (this.allLogs().length < this.maxEntries) {
-            //this.extendLogEntry(entry, false);
-            //this.allLogs().push(entry);
-            this.dirtyFlag = true;
+        if (this.rawLogs.length + this.pendingLogs.length < this.maxEntries()) {
+            this.pendingLogs.push(entry);
         } else {
             // stop logging
             var onDemand = this.onDemandLogging();
@@ -398,49 +429,7 @@ class logs extends viewModelBase {
     }
 
     saveLogs() {
-        fileDownloader.downloadAsJson(this.allLogs(), "logs.json");
-    }
-
-    cleanupView() {
-        this.selectedLog(null);
-        this.allLogs.removeAll();
-        this.filterLevel("All");
-        this.searchText("");
-        this.filteredLoggers.removeAll();
-        this.sortColumn("logged");
-        this.sortAsc(true);
-    }
-
-    customLogging() {
-        if (this.customLoggingEnabled()) {
-            app.showMessage("You are about to cancel results of custom logging. Are you sure?", "Cancel on demand logs", ["Cancel", "OK"])
-                .then((dialogResult: string) => {
-                    if (dialogResult === "OK") {
-                        var onDemand = this.onDemandLogging();
-                        this.customLoggingInProgress(false);
-                        this.onDemandLogging(null);
-                        this.updateCurrentNowTime();
-                        onDemand.dispose();
-                        this.fetchLogs();
-                    }
-                });
-            
-        } else {
-            var logConfig = new customLogConfig();
-            logConfig.maxEntries(10000);
-            logConfig.entries.push(new customLogEntry("Raven.", "Info"));
-            var customLoggingViewModel = new customLogging(logConfig);
-            app.showDialog(customLoggingViewModel);
-            customLoggingViewModel.onExit().done((config: customLogConfig) => {
-                clearTimeout(this.updateNowTimeoutHandle);
-                var categoriesConfig = config.entries().map(e => e.toDto());
-                this.maxEntries = config.maxEntries();
-                this.onDemandLogging(new onDemandLogs(this.activeDatabase(), entry => this.onLogMessage(entry)));
-                this.customLoggingInProgress(true);
-                this.cleanupView();
-                this.onDemandLogging().configureCategories(categoriesConfig);
-            });
-        }
+        fileDownloader.downloadAsJson(this.rawLogs(), "logs.json");
     }
 }
 

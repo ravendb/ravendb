@@ -24,20 +24,21 @@
 
 </style>
 <section id="logsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <div style="height: 65%; position: relative;">
+    <div style="position: relative;" data-bind="style: { height: logsMode() !== 'Custom Logger' ? '65%' : '100%' }">
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="A">
+                <i data-bind="visible: customLoggingInProgress" class="fa fa-circle-o-notch fa-spin"></i>
                 <span data-bind="text:logsMode"></span>
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
                 <li title="Switch to regular logs view" data-bind="click:switchToRegularMode, visible:logsMode()!=='Regular'"><a href="#">Regular</a></li>
                 <li title="Switch to live trace of http requests" data-bind="click:switchToHttpTraceMode,visible:logsMode()!=='Http Trace'"><a href="#">Http Trace</a></li>
-                <li title="Switch to live trace of all logs" data-bind="click:switchToSystemLogsMode,visible:logsMode()!=='System Logger'"><a href="#">System Logger</a></li>
+                <li title="Switch to live trace of desired logs" data-bind="click: switchToCustomLogsMode, visible: logsMode() !== 'Custom Logger'"><a href="#">Custom Logger</a></li>
             </ul>
         </div>
-        <button type="button" class="btn btn-default" data-bind="click: fetchLogs, enable:logsMode()=='Regular'"><i class="fa fa-refresh"></i></button>
-        <div class="btn-group" data-toggle="buttons">
+        <button type="button" class="btn btn-default" data-bind="click: fetchLogs, enable: logsMode() == 'Regular', visible: logsMode() !== 'Custom Logger'"><i class="fa fa-refresh"></i></button>
+        <div class="btn-group" data-toggle="buttons" data-bind="visible: logsMode() !== 'Custom Logger'">
             <label class="btn btn-default active" data-bind="click: setFilterAll">
                 <input type="radio" name="options" id="option1"> <span data-bind="text: 'All logs (' + allLogs().length + ')'"></span>
             </label>
@@ -57,14 +58,14 @@
                 <input type="radio" name="options" id="option3"> <span data-bind="text: 'Fatal (' + fatalLogCount() + ')'"></span>
             </label>
         </div>
-        <form class="form-inline" style="display: inline-block; vertical-align: middle;">
+        <form class="form-inline" style="display: inline-block; vertical-align: middle;" data-bind="visible: logsMode() !== 'Custom Logger'">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div class="btn-group" data-toggle="buttons">
-            <button class="btn" data-bind="css: { 'btn-info': customLoggingEnabled, 'btn-default': !customLoggingEnabled() }, click: customLogging"><i data-bind="    visible: customLoggingInProgress" class="fa fa-circle-o-notch fa-spin"></i> Custom logging</button>
-            <button class="btn btn-default" data-bind="click: saveLogs, visible: customLoggingEnabled"><i class="fa fa-download"></i></button>
+        <div class="btn-group" data-toggle="buttons" data-bind="visible: logsMode() == 'Custom Logger'">
+            <button class="btn btn-default" data-bind="click: saveLogs" title="Download as JSON"><i class="fa fa-download"></i></button>
         </div>
-        <div id="logTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
+        
+        <div id="logTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;" data-bind="visible: logsMode() !== 'Custom Logger'">
             <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
                 <button class="btn btn-default" data-bind="click: $root.unHidelogType.bind($root)">
                     <span data-bind="text: $data"></span>
@@ -123,8 +124,11 @@
                 </div>
             </div>
         </div>
+        <div id="rawLogsContainer" style="position: absolute; top: 40px; bottom: 10px; width: 100%;" data-bind="visible: logsMode() === 'Custom Logger' ">
+            <pre style="word-wrap: normal; overflow: auto; height: 100%"></pre>
+        </div>
     </div>
-    <div class="log-details panel panel-default" style="height: 30%">
+    <div class="log-details panel panel-default" style="height: 30%" data-bind="visible: logsMode() !== 'Custom Logger'">
         <div class="col-md-11">
             <div class="row">
                 <label class="col-md-2 text-right control-label">Message</label>
@@ -158,9 +162,9 @@
             </div>
         </div>
         <div class="col-md-1" data-bind="with: selectedLog">
-                 <button class="btn btn-default pull-right"  data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Filter out all ' + LoggerName.split('.').slice(2).join('.') + ' logs'}">
-                    <i class="fa fa-filter"></i>
-                </button>
+            <button class="btn btn-default pull-right"  data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Filter out all ' + LoggerName.split('.').slice(2).join('.') + ' logs'}">
+                <i class="fa fa-filter"></i>
+            </button>
         </div>
     </div>
 </section>
