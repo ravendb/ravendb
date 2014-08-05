@@ -45,7 +45,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.SystemDatabase.Configuration.MaxNumberOfParallelIndexTasks = 1;
+				store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks = 1;
 				store.DatabaseCommands.PutIndex("Foos/TestIndex", new IndexDefinition()
 				{
 					Map =
