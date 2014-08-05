@@ -34,7 +34,7 @@
             <ul class="dropdown-menu">
                 <li title="Switch to regular logs view" data-bind="click:switchToRegularMode, visible:logsMode()!=='Regular'"><a href="#">Regular</a></li>
                 <li title="Switch to live trace of http requests" data-bind="click:switchToHttpTraceMode,visible:logsMode()!=='Http Trace'"><a href="#">Http Trace</a></li>
-                <li title="Switch to live trace of desired logs" data-bind="click: switchToCustomLogsMode, visible: logsMode() !== 'Custom Logger'"><a href="#">Custom Logger</a></li>
+                <li title="Switch to live trace of desired logs" data-bind="click: switchToCustomLogsMode, visible: logsMode() !== 'Custom Logger' && activeDatabase().name == '<system>'"><a href="#">Custom Logger</a></li>
             </ul>
         </div>
         <button type="button" class="btn btn-default" data-bind="click: fetchLogs, enable: logsMode() == 'Regular', visible: logsMode() !== 'Custom Logger'"><i class="fa fa-refresh"></i></button>
