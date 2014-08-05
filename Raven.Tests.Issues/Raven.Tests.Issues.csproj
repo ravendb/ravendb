@@ -110,6 +110,7 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="DatabaseConfiguration.cs" />
     <Compile Include="EmbeddedMultipleDatabases.cs" />
     <Compile Include="GermanUmlauts.cs" />
     <Compile Include="IndexResestWithReplication.cs" />

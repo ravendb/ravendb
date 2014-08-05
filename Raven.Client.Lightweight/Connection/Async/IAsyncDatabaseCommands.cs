@@ -460,8 +460,6 @@ namespace Raven.Client.Connection.Async
 		/// Generate the next identity value from the server
 		/// </summary>
         Task<long> NextIdentityForAsync(string name);
-
-		Task<RavenJObject> GetDatabaseConfigurationAsync();
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
@@ -529,6 +527,8 @@ namespace Raven.Client.Connection.Async
 		/// Get the indexing status
 		/// </summary>
 		Task<string> GetIndexingStatusAsync();
+
+		Task<RavenJObject> GetDatabaseConfigurationAsync();
 	}
 
 	public interface IAsyncInfoDatabaseCommands

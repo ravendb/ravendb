@@ -98,6 +98,10 @@ namespace Raven.Client.Connection
 			return createRequestForSystemDatabase("/admin/compact?database=" + databaseName, "POST");
 		}
 
+		public HttpJsonRequest GetDatabaseConfiguration(string serverUrl)
+		{
+			return createReplicationAwareRequest(serverUrl, "/debug/config", "GET");
+		}
 
         /// <summary>
         /// Gets the list of databases from the server asynchronously
