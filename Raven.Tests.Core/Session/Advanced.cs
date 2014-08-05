@@ -371,5 +371,43 @@ namespace Raven.Tests.Core.Session
                 }
             }
         }
+
+        [Fact]
+        public void CanLazilyLoadEntity()
+        {
+            const string COMPANY1_ID = "companies/1";
+            const string COMPANY2_ID = "companies/2";
+
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    COMPANY1_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY1_ID }),
+                    new RavenJObject()
+                    );
+                store.DatabaseCommands.Put(
+                    COMPANY2_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY2_ID }),
+                    new RavenJObject()
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                        Lazy<Company> lazyOrder = session.Advanced.Lazily.Load<Company>(COMPANY1_ID);
+                        Assert.False(lazyOrder.IsValueCreated);
+                        var order = lazyOrder.Value;
+                        Assert.Equal(COMPANY1_ID, order.Id);
+
+                        Lazy<Company[]> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
+                        Assert.False(lazyOrders.IsValueCreated);
+                        Company[] orders = lazyOrders.Value;
+                        Assert.Equal(2, orders.Length);
+                        Assert.Equal(COMPANY1_ID, orders[0].Id);
+                        Assert.Equal(COMPANY2_ID, orders[1].Id);
+                }
+            }
+        }
     }
 }
