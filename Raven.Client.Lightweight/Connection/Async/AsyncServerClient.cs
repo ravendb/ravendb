@@ -140,7 +140,7 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", operationMetadata =>
 			{
-				var url2 = (operationMetadata.Url + "/debug/config").NoCache();
+				var url2 = (operationMetadata.Url + "/debug/config");
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET",
 						operationMetadata.Credentials, convention));

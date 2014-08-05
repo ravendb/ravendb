@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Specialized;
 
+using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
-    using System.Collections.Specialized;
-	using Raven.Abstractions.Connection;
-
 	public static class RavenUrlExtensions
 	{
         public static string ForDatabase(this string url, string database)
