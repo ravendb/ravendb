@@ -308,6 +308,9 @@ namespace Raven.Database.Bundles.SqlReplication
 
 	    public IEnumerable<DbCommand> DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, bool exportCommands=false)
 		{
+            var sqlReplicationMetricsCounters = database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
+//            Tuple<string,string> replicationNameTableNameTuple = Tuple.Create(tableName,cfg.)
+
 			const int maxParams = 1000;
 			using (var cmd = connection.CreateCommand())
 			{
