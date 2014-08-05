@@ -95,17 +95,19 @@ namespace Raven.Database.Actions
 
         public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
                                                           int pageSize, CancellationToken token, ref int nextStart,
-                                                          string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+                                                          string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
+														  string skipAfter = null)
         {
             var list = new RavenJArray();
             GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
-                                           transformer, transformerParameters);
+                                           transformer, transformerParameters, skipAfter);
             return list;
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
                                                    CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
-                                                   string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+                                                   string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
+												   string skipAfter = null)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -133,7 +135,7 @@ namespace Raven.Database.Actions
                     do
                     {
                         docCount = 0;
-                        var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
+						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, skipAfter);
                         var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)

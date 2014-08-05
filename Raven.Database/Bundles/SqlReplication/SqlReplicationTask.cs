@@ -596,8 +596,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName, null);
                 var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
                 
-				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(
-								prefix, 0, 256))
+				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
 				{
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));

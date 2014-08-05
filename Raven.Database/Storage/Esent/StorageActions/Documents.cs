@@ -299,12 +299,12 @@ namespace Raven.Storage.Esent.StorageActions
 	        return stat;
 	    }
 
-	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
+	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (take <= 0)
 				yield break;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Documents, skipAfter ?? idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				yield break;
 
@@ -313,6 +313,9 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) ==
 				false)
 				yield break;
+
+		    if (skipAfter != null && TryMoveTableRecords(Documents, 1, backward: false))
+			    yield break;
 
 			if (TryMoveTableRecords(Documents, start, backward: false))
 				yield break;

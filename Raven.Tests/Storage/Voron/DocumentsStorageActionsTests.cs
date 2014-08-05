@@ -875,7 +875,7 @@ namespace Raven.Tests.Storage.Voron
 
 				IList<JsonDocument> fetchedDocuments = null;
 				storage.Batch(
-					viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", start, take).ToList());
+					viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", start, take,null).ToList());
 
 				Assert.NotNull(fetchedDocuments);
 				var relevantInputKeys =
@@ -899,7 +899,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsWithIdStartingWith("Foo", 0, 25).ToList()));
+				storage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsWithIdStartingWith("Foo", 0, 25, null).ToList()));
 			}
 		}
 
@@ -920,7 +920,7 @@ namespace Raven.Tests.Storage.Voron
 				});
 
 				IList<JsonDocument> fetchedDocuments = null;
-				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 1, 3).ToList());
+				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 1, 3, null).ToList());
 
 				Assert.NotNull(fetchedDocuments);
 
@@ -953,7 +953,7 @@ namespace Raven.Tests.Storage.Voron
 				});
 
 				IList<JsonDocument> fetchedDocuments = null;
-				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 2, 3).ToList());
+				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 2, 3, null).ToList());
 
 				Assert.NotNull(fetchedDocuments);
 
@@ -961,6 +961,40 @@ namespace Raven.Tests.Storage.Voron
 				Assert.True(fetchedDocuments.Any(row => row.Key == "Bar3"));
 				Assert.True(fetchedDocuments.Any(row => row.Key == "Bar4"));
 				Assert.True(fetchedDocuments.Any(row => row.Key == "Bar5"));
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void DocumentStorage_GetDocumentsWithIdStartingWith_WithSkipAfter(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(mutator =>
+				{
+					mutator.Documents.AddDocument("Foo1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar11" }), new RavenJObject());
+					mutator.Documents.AddDocument("Bar1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar22" }), new RavenJObject());
+					mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar33" }), new RavenJObject());
+					mutator.Documents.AddDocument("Bar2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar44" }), new RavenJObject());
+					mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar55" }), new RavenJObject());
+					mutator.Documents.AddDocument("Bar3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar66" }), new RavenJObject());
+					mutator.Documents.AddDocument("Foo4", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar66" }), new RavenJObject());
+					mutator.Documents.AddDocument("Bar4", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar77" }), new RavenJObject());
+					mutator.Documents.AddDocument("Foo5", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar66" }), new RavenJObject());
+					mutator.Documents.AddDocument("Bar5", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar77" }), new RavenJObject());
+					mutator.Documents.AddDocument("Foo6", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar66" }), new RavenJObject());
+					mutator.Documents.AddDocument("Bar6", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar77" }), new RavenJObject());
+				});
+
+				IList<JsonDocument> fetchedDocuments = null;
+				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 0, 3, "Bar2").ToList());
+
+				Assert.NotNull(fetchedDocuments);
+
+				Assert.True(fetchedDocuments.Count == 3);
+				Assert.Equal("Bar3", fetchedDocuments[0].Key);
+				Assert.Equal("Bar4", fetchedDocuments[1].Key);
+				Assert.Equal("Bar5", fetchedDocuments[2].Key);
 			}
 		}
 	}
