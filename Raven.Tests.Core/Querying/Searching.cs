@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -262,7 +263,7 @@ namespace Raven.Tests.Core.Querying
         }
 
         [Fact]
-        public void CanProvideSuggestions()
+        public void CanProvideSuggestionsAndLazySuggestions()
         {
             using (var store = GetDocumentStore())
             {
@@ -292,6 +293,18 @@ namespace Raven.Tests.Core.Querying
                         .Where(x => x.Name == "johne");
 
                     SuggestionQueryResult suggestionResult = users.Suggest();
+                    Assert.Equal(3, suggestionResult.Suggestions.Length);
+                    Assert.Equal("john", suggestionResult.Suggestions[0]);
+                    Assert.Equal("jones", suggestionResult.Suggestions[1]);
+                    Assert.Equal("johnson", suggestionResult.Suggestions[2]);
+
+
+                    Lazy<SuggestionQueryResult> lazySuggestionResult = users.SuggestLazy();
+
+                    Assert.False(lazySuggestionResult.IsValueCreated);
+
+                    suggestionResult = lazySuggestionResult.Value;
+
                     Assert.Equal(3, suggestionResult.Suggestions.Length);
                     Assert.Equal("john", suggestionResult.Suggestions[0]);
                     Assert.Equal("jones", suggestionResult.Suggestions[1]);
