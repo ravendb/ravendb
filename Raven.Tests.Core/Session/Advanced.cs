@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
@@ -446,6 +447,44 @@ namespace Raven.Tests.Core.Session
                     Assert.NotNull(company2);
                     Assert.Equal(COMPANY1_ID, company1.Id);
                     Assert.Equal(COMPANY2_ID, company2.Id);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseDefer()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var commands = new ICommandData[]
+                    {
+                        new PutCommandData
+                        {
+                            Document =
+                                RavenJObject.FromObject(new Company {Name = "company 1"}),
+                            Etag = null,
+                            Key = "company1",
+                            Metadata = new RavenJObject(),
+                        },
+                        new PutCommandData
+                        {
+                            Document =
+                                RavenJObject.FromObject(new Company {Name = "company 2"}),
+                            Etag = null,
+                            Key = "company2",
+                            Metadata = new RavenJObject(),
+                        }
+                    };
+
+                    session.Advanced.Defer(commands);
+                    session.Advanced.Defer(new DeleteCommandData { Key = "company1" });
+
+                    session.SaveChanges();
+
+                    Assert.Null(session.Load<Company>("company1"));
+                    Assert.NotNull(session.Load<Company>("company2"));
                 }
             }
         }
