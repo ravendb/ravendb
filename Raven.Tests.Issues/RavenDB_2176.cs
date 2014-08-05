@@ -85,7 +85,7 @@ namespace Raven.Tests.Issues
         }
     }
 
-    class FakeLogTransport : ILogsTransport
+    class FakeLogTransport : IEventsTransport
     {
         public BlockingCollection<LogEventInfo> Messages { get; private set; }
 
@@ -105,9 +105,14 @@ namespace Raven.Tests.Issues
 
         public event Action Disconnected;
 
-        public void SendAsync(LogEventInfo msg)
+        public void SendAsync(object msg)
         {
-            Messages.Add(msg);
+            var message = msg as LogEventInfo;
+            Messages.Add(message);
         }
+        
+        public string ResourceName{get;set;}
+        public long CoolDownWithDataLossInMiliseconds{get;set;}
+        
     }
 }

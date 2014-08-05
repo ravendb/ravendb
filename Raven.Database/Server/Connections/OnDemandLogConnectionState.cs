@@ -13,14 +13,14 @@ namespace Raven.Database.Server.Connections
 
         private readonly SortedDictionary<string, LogLevel> logConfig = new SortedDictionary<string, LogLevel>(new ReverseStringComparer());
 
-        private ILogsTransport logsTransport;
+        private IEventsTransport logsTransport;
 
-        public OnDemandLogConnectionState(ILogsTransport logsTransport)
+        public OnDemandLogConnectionState(IEventsTransport logsTransport)
         {
             this.logsTransport = logsTransport;
         }
 
-        public void Reconnect(ILogsTransport transport)
+        public void Reconnect(IEventsTransport transport)
         {
             logsTransport = transport;
         }

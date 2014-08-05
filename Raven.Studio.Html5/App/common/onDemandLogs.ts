@@ -39,7 +39,8 @@ class onDemandLogs {
         if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
             this.connect(this.connectWebSocket);
         }
-        else if ("EventSource" in window) {
+        else
+            if ("EventSource" in window) {
             this.connect(this.connectEventSource);
         }
         else {
@@ -51,7 +52,7 @@ class onDemandLogs {
     }
 
     private connect(action: Function) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath).execute();
+        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath,true).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
@@ -70,7 +71,7 @@ class onDemandLogs {
         //TODO: change me! - note - we don't reconnect user after failure!
         var connectionOpened: boolean = false;
 
-        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString);
+        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/admin/logs/events?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -164,7 +165,7 @@ class onDemandLogs {
 
     private onMessage(e: any) {
         var eventDto: any = JSON.parse(e.data);
-        if ('Type' in eventDto && eventDto.Type == 'Heartbeat') {
+        if (!!eventDto.Type && eventDto.Type == 'Heartbeat') {
             return;
         }
         this.onMessageCallback(eventDto);

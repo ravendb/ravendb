@@ -13,7 +13,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Connections
 {
-	public class LogsPushContent : HttpContent, ILogsTransport
+    public class LogsPushContent : HttpContent, IEventsTransport
 	{
 	    private const int QueueCapacity = 10000;
 
@@ -100,9 +100,10 @@ namespace Raven.Database.Server.Connections
 			Connected = false;
 		}
 
-		public void SendAsync(LogEventInfo msg)
+		public void SendAsync(object msg)
 		{
-			if (msgs.TryAdd(msg) == false)
+		    var message = msg as LogEventInfo;
+            if (msgs.TryAdd(message) == false)
 			{
                 if (hitCapacity == false)
                 {
@@ -111,5 +112,11 @@ namespace Raven.Database.Server.Connections
                 }
 			}
 		}
-	}
+
+
+        public string ResourceName {get; set; }
+
+        public long CoolDownWithDataLossInMiliseconds { get; set; }
+        
+    }
 }

@@ -75,8 +75,9 @@ namespace Raven.Database.Server.Connections
         
         public string ResourceName { get; set; }
         private Func<string, WebSocketsTransport, IPrincipal,bool> RegistrationLogicAction = null;
+        private Func<object, object> MessageFormatter = null;
 
-        public WebSocketsTransport(RavenDBOptions options, IOwinContext context, Func<string, WebSocketsTransport, IPrincipal,bool> registrationLogics = null)
+        public WebSocketsTransport(RavenDBOptions options, IOwinContext context, Func<string, WebSocketsTransport, IPrincipal, bool> registrationLogics = null, Func<object, object> messageFormatter = null)
         {
             _options = options;
             _context = context;
@@ -87,6 +88,7 @@ namespace Raven.Database.Server.Connections
             
             CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
             RegistrationLogicAction = registrationLogics;
+            MessageFormatter = messageFormatter;
 
         }
 
@@ -131,7 +133,12 @@ namespace Raven.Database.Server.Connections
 
                         if (lastMessageEnqueuedAndNotSent != null)
                         {
-                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, callCancelled);
+                            var messageToSend = lastMessageEnqueuedAndNotSent;
+                            if (MessageFormatter != null)
+                            {
+                                messageToSend = MessageFormatter(lastMessageEnqueuedAndNotSent);
+                            }
+                            await SendMessage(memoryStream, serializer, messageToSend, sendAsync, callCancelled);
 							lastMessageEnqueuedAndNotSent = null;
 							lastMessageSentTick = Environment.TickCount;
                         }
@@ -152,7 +159,13 @@ namespace Raven.Database.Server.Connections
                             continue;
                         }
 
-                        await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
+                        var messageToSend = message;
+                        if (MessageFormatter != null)
+                        {
+                            messageToSend = MessageFormatter(message);
+                        }
+
+                        await SendMessage(memoryStream, serializer, messageToSend, sendAsync, callCancelled);
 						lastMessageEnqueuedAndNotSent = null;
 						lastMessageSentTick = Environment.TickCount;
                     }

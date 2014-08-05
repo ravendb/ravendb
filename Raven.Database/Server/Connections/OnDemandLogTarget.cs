@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Connections
             AlterEnabled();
         }
 
-        public OnDemandLogConnectionState Register(ILogsTransport transport)
+        public OnDemandLogConnectionState Register(IEventsTransport transport)
         {
             timeSensitiveStore.Seen(transport.Id);
             transport.Disconnected += () =>
@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Connections
                 id,
                 _ =>
                 {
-                    ILogsTransport logsTransport = null;
+                    IEventsTransport logsTransport = null;
                     if (controller != null)
                         logsTransport = new LogsPushContent(controller);
 
