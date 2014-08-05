@@ -128,6 +128,7 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\httpTraceClient.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
     <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
@@ -304,6 +305,7 @@
     <TypeScriptCompile Include="App\commands\killRunningTaskCommand.ts" />
     <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getInfoPackage.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -345,7 +347,7 @@
     <TypeScriptCompile Include="App\common\chunkFetcher.ts" />
     <TypeScriptCompile Include="App\commands\resolveMergeCommand.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
-    <TypeScriptCompile Include="App\common\jsonDownloader.ts" />
+    <TypeScriptCompile Include="App\common\fileDownloader.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
@@ -353,10 +355,14 @@
     <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
     <TypeScriptCompile Include="App\viewmodels\runningTasks.ts" />
+    <TypeScriptCompile Include="App\viewmodels\infoPackage.ts" />
+    <TypeScriptCompile Include="App\viewmodels\infoPackageImport.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\infoPackageImport.html" />
+    <Content Include="App\views\infoPackage.html" />
     <Content Include="App\views\deleteResourceConfirm.html" />
     <Content Include="App\views\disableResourceToggleConfirm.html" />
     <Content Include="App\views\runningTasks.html" />
@@ -759,6 +765,8 @@
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Scripts\jquery.fullscreen.js" />
+    <Content Include="Scripts\jszip\jszip-utils.min.js" />
+    <Content Include="Scripts\jszip\jszip.js" />
     <Content Include="Scripts\knockout.mapping-2.4.1.js" />
     <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="Scripts\durandal\transitions\entrance.js" />
@@ -813,6 +821,7 @@
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\d3\nvd3.d.ts" />
     <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jszip\jszip.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>

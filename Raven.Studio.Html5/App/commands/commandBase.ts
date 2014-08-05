@@ -189,7 +189,7 @@ class commandBase {
                 commandBase.hideSpin();
             }
         }).done((results, status, xhr) => {
-                ajaxTask.resolve(results, status, xhr);
+            ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
             if (request.status == 412 && oauthContext.apiKey()) {
                 this.handleOAuth(ajaxTask, request, originalArguments);

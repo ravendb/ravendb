@@ -49,7 +49,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			catch (Exception e)
 			{
-				log.Error("Replication - fetching existing item failed. (key = {0})", id);
+				log.ErrorException(string.Format("Replication - fetching existing item failed. (key = {0})", id), e);
 				throw new InvalidOperationException("Replication - fetching existing item failed. (key = " + id + ")", e);
 			}
 

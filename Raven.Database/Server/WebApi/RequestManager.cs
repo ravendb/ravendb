@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -11,14 +12,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.VisualBasic.Logging;
+using Mono.Cecil;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Counters.Controllers;
 using Raven.Database.Impl;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.RavenFS.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 
 namespace Raven.Database.Server.WebApi
 {
@@ -357,17 +363,111 @@ namespace Raven.Database.Server.WebApi
 				return;
 
 			var curReq = Interlocked.Increment(ref reqNum);
-			Logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-							   curReq,
-							   logHttpRequestStatsParams.HttpMethod,
-							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-							   logHttpRequestStatsParams.ResponseStatusCode,
-							   logHttpRequestStatsParams.RequestUri,
-							   databaseName);
+            var message = string.Format(CultureInfo.InvariantCulture, "Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
+		        curReq,
+		        logHttpRequestStatsParams.HttpMethod,
+		        logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+		        logHttpRequestStatsParams.ResponseStatusCode,
+		        logHttpRequestStatsParams.RequestUri,
+		        databaseName);
+            Logger.Debug(message);
+            NotifyLogChangesApi(controller, new LogNotification()
+            {
+                Level=LogLevel.Debug.ToString("G"),
+                TimeStamp = DateTime.UtcNow,
+                LoggerName = GetType().ToString(),
+                RequestId = curReq,
+                HttpMethod = logHttpRequestStatsParams.HttpMethod,
+                EllapsedMiliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
+                RequestUri = logHttpRequestStatsParams.RequestUri,
+                TenantName = databaseName ?? "<system>"
+            });
 		    if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
+		    {
 		        Logger.Debug(logHttpRequestStatsParams.CustomInfo);
+                NotifyLogChangesApi(controller, new LogNotification()
+                {
+                    Level = LogLevel.Debug.ToString("G"),
+                    TimeStamp = DateTime.UtcNow,
+                    LoggerName = GetType().ToString(),
+                   CustomInfo = logHttpRequestStatsParams.CustomInfo,
+                   TenantName = databaseName ?? "<system>"
+                });
+		    }
 		}
+        
+	    private void NotifyLogChangesApi(RavenBaseApiController controller,  LogNotification logNotification)
+	    {
+	        TransportState transportState = null;
+	        if (controller is RavenDbApiController)
+	        {
+                logNotification.TenantType = LogTenantType.Database;
+	        }
+            if (controller is RavenFsApiController)
+            {
+                logNotification.TenantType = LogTenantType.Filesystem;
+            }
+            if (controller is RavenCountersApiController)
+            {
+                logNotification.TenantType = LogTenantType.CounterStorage;
+            }
 
+	        var notificationMessage = new {Type = "LogNotification", Value = logNotification};
+	        foreach (var eventsTransport in serverHttpTrace)
+	        {
+                eventsTransport.SendAsync(notificationMessage);
+	        }
+
+	        ConcurrentSet<IEventsTransport> resourceEventTransports;
+
+            var resourceName = NormalizeResourceName(logNotification.TenantName);
+
+            if (resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports))
+	        {
+                foreach (var eventTransport in resourceEventTransports)
+	            {
+	                eventTransport.SendAsync(notificationMessage);
+	            }
+	        }
+	    }
+
+	    private string NormalizeResourceName(string resourceName)
+	    {
+            if (resourceName.IndexOf("counters/") == 0)
+	        {
+                return resourceName.Substring(9);
+	        }
+            
+            if (resourceName.IndexOf("fs/") == 0)
+	        {
+                return resourceName.Substring(3);
+	        }
+
+	        return resourceName;
+	    }
+	    private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
+        private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
+
+	    public void RegisterServerHttpTraceTransport(IEventsTransport transport)
+	    {
+	        serverHttpTrace.Add(transport);
+	        transport.Disconnected += () => serverHttpTrace.TryRemove(transport);
+	    }
+
+        public void RegisterResourceHttpTraceTransport(IEventsTransport transport, string resourceName)
+        {
+            var curResourceEventTransports = resourceHttpTraces.GetOrAdd(resourceName);
+            curResourceEventTransports.Add(transport);
+            transport.Disconnected += () =>
+            {
+                ConcurrentSet<IEventsTransport> resourceEventTransports;
+                resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports);
+
+                if (resourceEventTransports != null)
+                    resourceEventTransports.TryRemove(transport);
+            };
+        }
 
 		private void IdleOperations(object state)
 		{

@@ -1114,6 +1114,9 @@ declare module D3 {
             * Given the specified array of nodes, such as those returned by nodes, returns an array of objects representing the links from parent to child for each node
             */
             links(nodes: Array<GraphNode>): Array<GraphLink>;
+
+            //CUSTOM
+            nodeSize(size:number[]): TreeLayout;
             /**
             * If separation is specified, uses the specified function to compute separation between neighboring nodes. If separation is not specified, returns the current separation function
             */

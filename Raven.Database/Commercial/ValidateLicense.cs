@@ -199,7 +199,7 @@ namespace Raven.Database.Commercial
 
 		private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
 		{
-			string version,expiration;
+			string version;
 		    var errorMessage = string.Empty;
             
 			if (licenseAttributes.TryGetValue("version", out version) == false)

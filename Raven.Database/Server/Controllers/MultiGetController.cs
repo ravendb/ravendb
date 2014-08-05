@@ -46,9 +46,9 @@ namespace Raven.Database.Server.Controllers
 
 				foreach (var getRequest in requests.Where(getRequest => getRequest != null))
 				{
-					getRequest.Headers.Add("Raven-Internal-Request", "true");
-                    if (string.IsNullOrEmpty(clientVersion) == false)
-                        getRequest.Headers.Add("Raven-Client-Version", clientVersion);
+					getRequest.Headers["Raven-Internal-Request"] = "true";
+					if (string.IsNullOrEmpty(clientVersion) == false)
+						getRequest.Headers["Raven-Client-Version"] = clientVersion;
 					if (DatabaseName != null)
 					{
 						getRequest.Url = "databases/" + DatabaseName + getRequest.Url;

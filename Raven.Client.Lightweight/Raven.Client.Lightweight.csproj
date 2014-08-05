@@ -169,7 +169,7 @@
     <Compile Include="Document\RavenLoadConfiguration.cs" />
     <Compile Include="ILoadConfiguration.cs" />
     <Compile Include="Indexes\AbstractResultsTransformer.cs" />
-    <Compile Include="Listeners\IExtendedDocumentConversionListener.cs" />
+    <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
@@ -276,7 +276,6 @@
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Listeners\IDocumentConflictListener.cs" />
     <Compile Include="PublicExtensions\SearchOptions.cs" />
-    <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentQueryBase.cs" />

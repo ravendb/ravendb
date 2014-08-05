@@ -3,7 +3,7 @@ import getReplicationStatsCommand = require("commands/getReplicationStatsCommand
 import moment = require("moment");
 
 import svgDownloader = require("common/svgDownloader");
-import jsonDownloader = require("common/jsonDownloader");
+import fileDownloader = require("common/fileDownloader");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 
 import getReplicationTopology = require("commands/getReplicationTopology");
@@ -337,7 +337,7 @@ class replicationStats extends viewModelBase {
     }
 
     saveAsJson() {
-        jsonDownloader.downloadAsJson(this.topology(), "topology.json");
+        fileDownloader.downloadAsJson(this.topology(), "topology.json");
     }
 }
 

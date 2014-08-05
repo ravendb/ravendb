@@ -397,7 +397,7 @@ namespace Raven.Database.Indexing
 		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
 		{
 			if (disposed)
-				throw new ObjectDisposedException("Index " + indexId + " has been disposed");
+				throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
 
 			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
@@ -438,7 +438,7 @@ namespace Raven.Database.Indexing
 			                {
 			                    throw new InvalidOperationException(
 			                        string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-																				  indexId));
+																				  PublicName));
 			                }
 
 			                itemsInfo = action(indexWriter, searchAnalyzer, stats);
@@ -473,7 +473,7 @@ namespace Raven.Database.Indexing
 			    }
 			    catch (Exception e)
 			    {
-			        throw new InvalidOperationException("Could not properly write to index " + indexId, e);
+					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 			    }
 				finally
 				{

@@ -53,6 +53,9 @@ interface String {
     count: (input) => number;
     fixedCharCodeAt: (input, position) => number;
     getSizeInBytesAsUTF8: () => number;
+    multiply: (amount:number)=>string;
+    paddingLeft: (paddingChar: string, paddingLength: number) => string;
+    paddingRight: (paddingChar: string, paddingLength: number) => string;
 }
 
 // Storage extensions

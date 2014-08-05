@@ -116,10 +116,11 @@ namespace Raven.Tests.Helpers
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = port == null ? 8079 : port.Value,
-					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 					AnonymousUserAccessMode = anonymousUserAccessMode,
 				}
 			};
+
+			documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
 			if (activeBundles != null)
 			{
@@ -253,8 +254,9 @@ namespace Raven.Tests.Helpers
 #endif
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
+
+			ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
 			ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 

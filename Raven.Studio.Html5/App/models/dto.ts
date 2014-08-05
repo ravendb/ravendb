@@ -24,6 +24,20 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface logNotificationDto {
+    Level :string;
+    TimeStamp :string;
+    LoggerName :string;
+    RequestId: number;
+    HttpMethod: string;
+    EllapsedMiliseconds: number;
+    ResponseStatusCode: number;
+    RequestUri: string;
+    TenantName: string;
+    CustomInfo: string;
+    TenantType: logTenantType;
+
+}
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
     OperationId: string;
 }
@@ -771,6 +785,12 @@ enum transformerChangeType {
     None = 0,
     TransformerAdded = 1,
     TransformerRemoved = 2
+}
+
+enum logTenantType {
+    Database= 0,
+    Filesystem= 1,
+    CounterStorage=2
 }
 
 interface filterSettingDto {

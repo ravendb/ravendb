@@ -470,36 +470,35 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
-        // TODO: make this test work
-        //[Fact]
-        //public async void CombinationOfDeletesAndUpdates()
-        //{
-        //    var store = (FilesStore)filesStore;
+        [Fact(Skip="Review if we want this level of object tracking for Beta 2")]
+        public async void CombinationOfDeletesAndUpdates()
+        {
+            var store = (FilesStore)filesStore;
 
-        //    using (var session = filesStore.OpenAsyncSession())
-        //    {
-        //        session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-        //        await session.SaveChangesAsync();
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
 
-        //        // deleting file, then uploading it again and doing metadata change
-        //        var file = await session.LoadFileAsync("test1.file");
-        //        session.RegisterFileDeletion("test1.file");
-        //        session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-        //        file.Metadata["Test"] = new RavenJValue("Value");
+                // deleting file, then uploading it again and doing metadata change
+                var file = await session.LoadFileAsync("test1.file");
+                session.RegisterFileDeletion("test1.file");
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                file.Metadata["Test"] = new RavenJValue("Value");
 
-        //        await session.SaveChangesAsync();
+                await session.SaveChangesAsync();
 
-        //        file = await session.LoadFileAsync("test1.file");
-        //        Assert.NotNull(file);
-        //        Assert.True(file.Metadata.ContainsKey("Test"));
+                file = await session.LoadFileAsync("test1.file");
+                Assert.NotNull(file);
+                Assert.True(file.Metadata.ContainsKey("Test"));
 
-        //        session.RegisterUpload("test2.file", CreateUniformFileStream(128));
-        //        session.RegisterFileDeletion("test2.file");
-        //        await session.SaveChangesAsync();
+                session.RegisterUpload("test2.file", CreateUniformFileStream(128));
+                session.RegisterFileDeletion("test2.file");
+                await session.SaveChangesAsync();
 
-        //        file = await session.LoadFileAsync("test1.file");
-        //        Assert.Null(await session.LoadFileAsync("test2.file"));
-        //    }
-        //}
+                file = await session.LoadFileAsync("test1.file");
+                Assert.Null(await session.LoadFileAsync("test2.file"));
+            }
+        }
     }
 }

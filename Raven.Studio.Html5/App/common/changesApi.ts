@@ -14,6 +14,7 @@ class changesApi {
 
     private eventsId: string;
     private coolDownWithDataLoss: number;
+    private isMultyTenantTransport:boolean;
     private resourcePath: string;
     private connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
@@ -36,12 +37,16 @@ class changesApi {
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
+    private allFsDestinationsHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
     private commandBase = new commandBase();
+    
+    private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
+    constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = this.makeId();
         this.coolDownWithDataLoss = coolDownWithDataLoss;
+        this.isMultyTenantTransport = isMultyTenantTransport;
         this.resourcePath = appUrl.forResourceQuery(this.rs);
         this.connectToChangesApiTask = $.Deferred();
 
@@ -66,7 +71,7 @@ class changesApi {
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss;
+                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
 
                 action.call(this, connectionString);
             })
@@ -249,11 +254,32 @@ class changesApi {
                     });
                 }
             } else if (type === "ConfigurationChangeNotification") {
+                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                    this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
+                }
                 this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
-            } else {
+            }
+            else if (type === "LogNotification") {
+                this.fireEvents(this.adminLogsHandlers(), value, (e) => true);
+            }
+            else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
         }
+    }
+
+    watchAdminLogs(onChange: (e: logNotificationDto) => void) {
+        var callback = new changesCallback<logNotificationDto>(onChange);
+        if (this.adminLogsHandlers().length == 0) {
+            this.send('watch-admin-log');
+        }
+        this.adminLogsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.adminLogsHandlers.remove(callback);
+            if (this.adminLogsHandlers().length == 0) {
+                this.send('unwatch-admin-log');
+            }
+        });
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
@@ -396,6 +422,20 @@ class changesApi {
         return new changeSubscription(() => {
             this.allFsConfigHandlers.remove(callback);
             if (this.allFsConfigHandlers().length == 0) {
+                this.send('unwatch-config');
+            }
+        });
+    }
+
+    watchFsDestinations(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
+        var callback = new changesCallback<filesystemConfigNotification>(onChange);
+        if (this.allFsDestinationsHandlers().length == 0) {
+            this.send('watch-config');
+        }
+        this.allFsDestinationsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsDestinationsHandlers.remove(callback);
+            if (this.allFsDestinationsHandlers().length == 0) {
                 this.send('unwatch-config');
             }
         });

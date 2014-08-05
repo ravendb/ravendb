@@ -251,6 +251,29 @@ class extensions {
 
             return results ? results.length : 0;
         }
+
+        String.prototype.startsWith = String.prototype.startsWith || function (str) {
+            return this.indexOf(str) == 0;
+        };
+
+        String.prototype.contains = String.prototype.contains || function (str) {
+            return this.indexOf(str) > 0;
+        }
+
+        String.prototype.multiply = function (amount: number) {
+            var returnedString: string = new Array(amount + 1).join(this);
+            return returnedString;
+        }
+
+        String.prototype.paddingLeft = function (paddingChar: string, paddingLength: number) {
+            var paddingString = paddingChar.multiply(paddingLength);
+            return String(paddingString + this).slice(-paddingString.length);
+        }
+
+        String.prototype.paddingRight = function (paddingChar: string, paddingLength: number) {
+            var paddingString = paddingChar.multiply(paddingLength);
+            return String(paddingString + this).slice(paddingString.length);
+        }
     }
 
     private static installStorageExtension() {

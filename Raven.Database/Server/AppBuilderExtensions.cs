@@ -81,13 +81,6 @@ namespace Owin
 
         private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
         {
-            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket") == false)
-            {
-                // Not a websocket request
-                await next();
-                return;
-            }
-
             var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
             if (accept == null)
             {
@@ -96,9 +89,42 @@ namespace Owin
                 return;
             }
 
-            var webSocketsTrasport = new WebSocketsTransport(options, context);
-            if (await webSocketsTrasport.TrySetupRequest())
-                accept(null, webSocketsTrasport.Run);
+            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket"))
+            {
+                var webSocketsTrasport = new WebSocketsTransport(options, context);
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+            else if (context.Request.Uri.LocalPath.EndsWith("http-trace/websocket"))
+            {
+                var webSocketsTrasport = new WebSocketsTransport(options, context,  (resourceName, currentWebsocketTransport, user) =>
+                {
+                    if (resourceName != null)
+                    {
+                        options.RequestManager.RegisterResourceHttpTraceTransport(currentWebsocketTransport, resourceName);
+                    }
+                    else
+                    {
+                        var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+
+                        if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) ||
+                            options.SystemDatabase.Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin)
+                        {
+                            options.RequestManager.RegisterServerHttpTraceTransport(currentWebsocketTransport);
+                        }
+                        else
+                        {
+                            context.Response.StatusCode = 403;
+                            context.Response.ReasonPhrase = "Forbidden";
+                            context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
         }
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{

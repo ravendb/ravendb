@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.FileSystem.Changes;
@@ -69,10 +70,20 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filesystem))
                 filesystem = this.DefaultFileSystem;
 
-            return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges);
+            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x, null) );
         }
 
-        protected virtual IFilesChanges CreateFileSystemChanges(string filesystem)
+        internal IFilesChanges Changes(string filesystem, IObserver<ConflictNotification> notificationObserver)
+        {
+            AssertInitialized();
+
+            if (string.IsNullOrWhiteSpace(filesystem))
+                filesystem = this.DefaultFileSystem;
+
+            return fileSystemChanges.GetOrAdd(filesystem, x => CreateFileSystemChanges(x, notificationObserver));
+        }
+
+        protected virtual IFilesChanges CreateFileSystemChanges(string filesystem, IObserver<ConflictNotification> notificationObserver)
         {
             if (string.IsNullOrEmpty(Url))
                 throw new InvalidOperationException("Changes API requires usage of server/client");
@@ -83,16 +94,27 @@ namespace Raven.Client.FileSystem
 
             using (NoSynchronizationContext.Scope())
             {
-                return new FilesChangesClient(tenantUrl,
+                var client = new FilesChangesClient(tenantUrl,
                     ApiKey,
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
                     commands.ReplicationInformer,
-                    () => {
+                    () =>
+                    {
                         fileSystemChanges.Remove(filesystem);
                         fileSystemCommands.Remove(filesystem);
                     });
+
+                // We add a priority observer to dispatch listeners before making a notification. This solves a race condition between notifications and listeners
+                // introducing an artificial barrier. The order of execution is: Listeners, Notifications.
+                if ( notificationObserver != null )
+                {
+                    var changesImpl = (IFilesChangesImpl)client;
+                    changesImpl.AddObserver(notificationObserver);
+                }
+
+                return client;
             }
         }
 

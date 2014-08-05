@@ -20,6 +20,9 @@ namespace Raven.Database.Server.Tenancy
         private readonly DocumentDatabase systemDatabase;
 
 	    private bool initialized;
+        private const string DATABASES_PREFIX = "Raven/Databases/";
+        public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
+
         public DatabasesLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
