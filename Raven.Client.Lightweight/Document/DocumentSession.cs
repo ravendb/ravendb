@@ -951,10 +951,10 @@ namespace Raven.Client.Document
             }
         }
 
-        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
         {
 			IncrementRequestCount();
-            return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
+            return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, skipAfter: skipAfter)
                                    .Select(TrackEntity<T>)
                                    .ToArray();
         }
@@ -962,7 +962,8 @@ namespace Raven.Client.Document
 	    public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
 	                                                             int pageSize = 25, string exclude = null,
 	                                                             RavenPagingInformation pagingInformation = null,
-	                                                             Action<ILoadConfiguration> configure = null)
+																 Action<ILoadConfiguration> configure = null, 
+																 string skipAfter = null)
 		    where TTransformer : AbstractTransformerCreationTask, new()
         {
 			IncrementRequestCount();
@@ -976,7 +977,8 @@ namespace Raven.Client.Document
 
 		    return
 			    DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
-			                                pagingInformation: pagingInformation, transformer: transformer, transformerParameters: configuration.TransformerParameters)
+			                                pagingInformation: pagingInformation, transformer: transformer, transformerParameters: configuration.TransformerParameters,
+											skipAfter:skipAfter)
 			                    .Select(TrackEntity<TResult>)
 			                    .ToArray();
     }
@@ -988,9 +990,9 @@ namespace Raven.Client.Document
             return AddLazyOperation<TResult[]>(lazyOp, null);
 }
 
-        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation);
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
             return AddLazyOperation<T[]>(operation, null);
         }

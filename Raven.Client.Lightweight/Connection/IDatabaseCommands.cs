@@ -53,7 +53,8 @@ namespace Raven.Client.Connection
 		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                          string exclude = null, string transformer = null,
-		                          Dictionary<string, RavenJToken> transformerParameters = null);
+		                          Dictionary<string, RavenJToken> transformerParameters = null,
+								  string skipAfter = null);
 
 		/// <summary>
 		/// Retrieves the document for the specified key

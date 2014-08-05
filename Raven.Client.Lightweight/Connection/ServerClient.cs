@@ -106,11 +106,12 @@ namespace Raven.Client.Connection
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                                 string exclude = null, string transformer = null,
-		                                 Dictionary<string, RavenJToken> transformerParameters = null)
+		                                 Dictionary<string, RavenJToken> transformerParameters = null,
+										 string skipAfter = null)
 		{
 			return
 				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude,
-				                                  transformer, transformerParameters)
+				                                  transformer, transformerParameters, skipAfter)
 				                 .ResultUnwrap();
 		}
 

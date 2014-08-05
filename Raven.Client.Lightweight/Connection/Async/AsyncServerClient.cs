@@ -1165,8 +1165,12 @@ namespace Raven.Client.Connection.Async
 		}
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
-									RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
-									string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+									RavenPagingInformation pagingInformation = null, 
+									bool metadataOnly = false, 
+									string exclude = null,
+									string transformer = null, 
+									Dictionary<string, RavenJToken> transformerParameters = null,
+									string skipAfter = null)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
@@ -1184,6 +1188,9 @@ namespace Raven.Client.Connection.Async
 
 				if (metadataOnly)
 					actualUrl += "&metadata-only=true";
+
+				if (string.IsNullOrEmpty(skipAfter) == false)
+					actualUrl += "&skipAfter=" + Uri.EscapeDataString(skipAfter);
 
 				if (string.IsNullOrEmpty(transformer) == false)
 				{
@@ -1217,7 +1224,7 @@ namespace Raven.Client.Connection.Async
 																				.ToArray();
 				return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults,
 													() => StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation,
-														  metadataOnly, exclude, transformer, transformerParameters),
+														  metadataOnly, exclude, transformer, transformerParameters, skipAfter),
 													conflictedResultId =>
 												   new ConflictException(
 													   "Conflict detected on " +

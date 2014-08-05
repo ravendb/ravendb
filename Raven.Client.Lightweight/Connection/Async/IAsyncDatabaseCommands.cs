@@ -369,7 +369,8 @@ namespace Raven.Client.Connection.Async
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 		                                     RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                                     string exclude = null, string transformer = null,
-		                                     Dictionary<string, RavenJToken> transformerParameters = null);
+		                                     Dictionary<string, RavenJToken> transformerParameters = null,
+											 string skipAfter = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
