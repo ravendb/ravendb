@@ -25,6 +25,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -44,68 +45,73 @@ namespace Raven.Database.Server.Controllers
 				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
 			}
 
-			var streamProvider = new MultipartMemoryStreamProvider();
+			var fullPath = Constants.TempUploadsDirectory.ToFullPath();
+			if (Directory.Exists(fullPath) == false)
+				Directory.CreateDirectory(fullPath);
+			
+			var streamProvider = new MultipartFileStreamProvider(fullPath);
 			await Request.Content.ReadAsMultipartAsync(streamProvider);
+			var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
+
+			string fileName = null;
+			var fileContent = streamProvider.Contents.SingleOrDefault();
+			if (fileContent != null)
+			{
+				fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
+			}
 
 			var status = new ImportOperationStatus();
-			string fileName = null;
-			var task = Task.Factory.StartNew(async() =>
+			var cts = new CancellationTokenSource();
+			
+			var task = Task.Run(async () =>
 			{
 				try
 				{
-					var fileContent = streamProvider.Contents.SingleOrDefault();
-					if (fileContent != null)
+					using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
 					{
-						fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
+						var dataDumper = new DataDumper(Database);
+						dataDumper.Progress += s => status.LastProgress = s;
+						var smugglerOptions = dataDumper.SmugglerOptions;
+						smugglerOptions.BatchSize = batchSize;
+						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
+						smugglerOptions.OperateOnTypes = operateOnTypes;
+						smugglerOptions.TransformScript = transformScript;
+						smugglerOptions.CancelToken = cts;
+
+						// Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
+						// Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
+						if (filtersPipeDelimited != null)
+						{
+							smugglerOptions.Filters.AddRange(filtersPipeDelimited
+								.Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+								.Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+								.Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
+						}
+
+						await dataDumper.ImportData(new SmugglerImportOptions { FromStream = fileStream });
 					}
-
-					var fileStream = await streamProvider.Contents
-						.First(c => c.Headers.ContentDisposition.Name == "\"file\"")
-						.ReadAsStreamAsync();
-					
-					var dataDumper = new DataDumper(Database);
-					dataDumper.Progress += s => status.LastProgress = s;
-					var importOptions = new SmugglerImportOptions
-					{
-						FromStream = fileStream
-					};
-					var options = new SmugglerOptions
-					{
-						BatchSize = batchSize,
-						ShouldExcludeExpired = !includeExpiredDocuments,
-						OperateOnTypes = operateOnTypes,
-						TransformScript = transformScript
-					};
-
-					// Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
-					// Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
-					if (filtersPipeDelimited != null)
-					{
-						options.Filters.AddRange(filtersPipeDelimited
-							.Split(new string[] {"|||"}, StringSplitOptions.RemoveEmptyEntries)
-							.Select(f => f.Split(new string[] {";;;"}, StringSplitOptions.RemoveEmptyEntries))
-							.Select(o => new FilterSetting
-							{
-								Path = o[0],
-								Values = new List<string> {o[1]},
-								ShouldMatch = bool.Parse(o[2])
-							}));
-					}
-
-					await dataDumper.ImportData(importOptions, options);
 				}
 				catch (Exception e)
 				{
 					status.ExceptionDetails = e.Message + e.StackTrace;
+					if (cts.Token.IsCancellationRequested)
+					{
+						status.ExceptionDetails = "Task was cancelled";
+						cts.Token.ThrowIfCancellationRequested();
+					}
+					else
+					{
+						throw e;
+					}
 				}
 				finally
 				{
 					status.Completed = true;
+					File.Delete(uploadedFilePath);
 				}
-			});
+			}, cts.Token);
 
 			long id;
-			var cts = new CancellationTokenSource();
 			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
@@ -147,10 +153,12 @@ namespace Raven.Database.Server.Controllers
 			{
 			    try
 			    {
-			        await new DataDumper(Database).ExportData(new SmugglerExportOptions
-			        {
-			            ToStream = outputStream
-			        }, smugglerOptions).ConfigureAwait(false);
+				    var dataDumper = new DataDumper(Database) {SmugglerOptions = smugglerOptions};
+				    await dataDumper.ExportData(
+					    new SmugglerExportOptions
+					    {
+						    ToStream = outputStream
+					    }).ConfigureAwait(false);
 			    }
 			    finally
 			    {
@@ -181,13 +189,8 @@ namespace Raven.Database.Server.Controllers
 
 			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
 			{
-				var smugglerOptions = new SmugglerOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
-					ShouldExcludeExpired = false,
-				};
-				var dataDumper = new DataDumper(Database);
-				await dataDumper.ImportData(new SmugglerImportOptions {FromStream = sampleData}, smugglerOptions);
+				var dataDumper = new DataDumper(Database) {SmugglerOptions = {OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false}};
+				await dataDumper.ImportData(new SmugglerImportOptions {FromStream = sampleData});
 			}
 
 			return GetEmptyMessage();

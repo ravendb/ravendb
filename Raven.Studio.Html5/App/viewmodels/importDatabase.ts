@@ -49,7 +49,11 @@ class importDatabase extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("UploadProgress", (percentComplete: number) => this.activeDatabase().importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%")),
-            ko.postbox.subscribe("ChangesApiReconnected", () => this.isUploading = false)
+            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => {
+                db.importStatus('');
+                db.isImporting(false);
+                this.isUploading = false;
+            })
         ];
     }
 

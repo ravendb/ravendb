@@ -18,7 +18,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Extensions;
