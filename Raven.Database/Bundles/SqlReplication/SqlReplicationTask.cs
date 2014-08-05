@@ -263,10 +263,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
                             spRepTime.Stop();
 						    var metricsCounters = Database.WorkContext.MetricsCounters;
-                            metricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(docsToReplicate.Count);
-                            metricsCounters.GetSqlReplicationDurationMetric(replicationConfig).Mark(spRepTime.ElapsedMilliseconds);
-                            metricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(docsToReplicate.Count);
-                            metricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(spRepTime.ElapsedMilliseconds);
+                            metricsCounters.SqlReplicationMetricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(docsToReplicate.Count);
+                            metricsCounters.SqlReplicationMetricsCounters.GetSqlReplicationDurationMetric(replicationConfig).Mark(spRepTime.ElapsedMilliseconds);
+                            metricsCounters.SqlReplicationMetricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(docsToReplicate.Count);
+                            metricsCounters.SqlReplicationMetricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(spRepTime.ElapsedMilliseconds);
 
 						}
 						catch (Exception e)

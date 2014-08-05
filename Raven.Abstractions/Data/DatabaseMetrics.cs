@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
@@ -30,13 +31,23 @@ namespace Raven.Abstractions.Data
 
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
 
-        public Dictionary<string, MeterData> SqlReplicationBatchSizeMeter { get; set; }
+        public SQLReplicationMetrics SQLReplicationMetrics { get; set; }
+    }
 
-        public Dictionary<string, MeterData> SqlReplicationDurationMeter { get; set; }
-
-        public Dictionary<string, HistogramData> SqlReplicationBatchSizeHistogram { get; set; }
-
-        public Dictionary<string, HistogramData> SqlReplicationDurationHistogram { get; set; }
+    public class SQLReplicationMetrics
+    {
+        public Dictionary<string, MeterData> SqlReplicationBatchSizeMeter { get;  set; }
+        public Dictionary<string, MeterData> SqlReplicationDurationMeter { get;  set; }
+        public Dictionary<string, HistogramData> SqlReplicationBatchSizeHistogram { get;  set; }
+        public Dictionary<string, HistogramData> SqlReplicationDurationHistogram { get;  set; }
+        public Dictionary<Tuple<string, string>, MeterData> SqlReplicationDeleteActionsMeter { get;  set; }
+        public Dictionary<Tuple<string, string>, MeterData> SqlReplicationInsertActionsMeter { get;  set; }
+        public Dictionary<Tuple<string, string>, MeterData> SqlReplicationDeleteActionsDurationMeter { get;  set; }
+        public Dictionary<Tuple<string, string>, MeterData> SqlReplicationInsertActionsDurationMeter { get;  set; }
+        public Dictionary<Tuple<string, string>, HistogramData> SqlReplicationDeleteActionsHistogram { get;  set; }
+        public Dictionary<Tuple<string, string>, HistogramData> SqlReplicationInsertActionsHistogram { get;  set; }
+        public Dictionary<Tuple<string, string>, HistogramData> SqlReplicationDeleteActionsDurationHistogram { get;  set; }
+        public Dictionary<Tuple<string, string>, HistogramData> SqlReplicationInsertActionsDurationHistogram { get;  set; }
     }
 
     public class HistogramData

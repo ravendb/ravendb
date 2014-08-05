@@ -582,10 +582,20 @@ namespace Raven.Database
 			ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
 			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
 			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-            SqlReplicationBatchSizeMeter = metrics.SqlReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-            SqlReplicationDurationMeter = metrics.SqlReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-            SqlReplicationBatchSizeHistogram = metrics.SqlReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-            SqlReplicationDurationHistogram = metrics.SqlReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+            SQLReplicationMetrics = new SQLReplicationMetrics(){
+                SqlReplicationBatchSizeMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                SqlReplicationDurationMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                SqlReplicationBatchSizeHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                SqlReplicationDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                SqlReplicationDeleteActionsDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                SqlReplicationDeleteActionsDurationMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                SqlReplicationDeleteActionsHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                SqlReplicationDeleteActionsMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                SqlReplicationInsertActionsDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                SqlReplicationInsertActionsDurationMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                SqlReplicationInsertActionsHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+                SqlReplicationInsertActionsMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value))
+            }
 		};
 		}
 
