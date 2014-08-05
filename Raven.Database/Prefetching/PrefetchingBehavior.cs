@@ -67,7 +67,7 @@ namespace Raven.Database.Prefetching
 		public IDisposable DocumentBatchFrom(Etag etag, out List<JsonDocument> documents)
 		{
 			documents = GetDocumentsBatchFrom(etag);
-			return DocumentBatch(documents);
+			return UpdateCurrentlyUsedBatches(documents);
 		}
 
 		public List<JsonDocument> GetDocumentsBatchFrom(Etag etag)
@@ -553,11 +553,11 @@ namespace Raven.Database.Prefetching
 
 		#endregion
 
-		protected IDisposable DocumentBatch(List<JsonDocument> jsonDocuments)
+		public IDisposable UpdateCurrentlyUsedBatches(List<JsonDocument> docBatch)
 		{
 			var batchId = Guid.NewGuid();
 
-			autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, jsonDocuments.Sum(x => x.SerializedSizeOnDisk));
+			autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, docBatch.Sum(x => x.SerializedSizeOnDisk));
 			return new DisposableAction(() =>
 			{
 				long _;
