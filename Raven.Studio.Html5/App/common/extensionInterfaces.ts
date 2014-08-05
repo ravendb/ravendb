@@ -25,6 +25,14 @@ interface Window {
     EventSource: EventSource;
 }
 
+interface Date {
+    getUTCDateFormatted(): string;
+    getUTCMonthFormatted(): string;
+    getUTCHoursFormatted(): string;
+    getUTCMinutesFormatted(): string;
+    getUTCSecondsFormatted(): string;
+}
+
 declare class EventSource {
     constructor(string);
     close();
