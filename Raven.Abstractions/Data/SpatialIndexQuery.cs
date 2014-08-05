@@ -58,6 +58,7 @@ namespace Raven.Abstractions.Data
 		    HighlightedFields = query.HighlightedFields;
 	        TransformerParameters = query.TransformerParameters;
 		    ResultsTransformer = query.ResultsTransformer;
+		    DefaultOperator = query.DefaultOperator;
 		}
 
 		/// <summary>
