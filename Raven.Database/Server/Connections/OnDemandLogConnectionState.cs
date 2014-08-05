@@ -7,7 +7,7 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.Connections
 {
-    public class OnDemandLogConnectionState
+    public class OnDemandLogConnectionState : IDisposable
     {
         private readonly EasyReaderWriterLock slim = new EasyReaderWriterLock();
 
