@@ -198,6 +198,7 @@
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="Gal.cs" />
     <Compile Include="Garrett.cs" />
+    <Compile Include="gaz.cs" />
     <Compile Include="Georgiosd.cs" />
     <Compile Include="gjerster.cs" />
     <Compile Include="Groenewoud.cs" />

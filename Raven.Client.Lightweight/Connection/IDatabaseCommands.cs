@@ -551,5 +551,7 @@ namespace Raven.Client.Connection
 		/// Get the indexing status
 		/// </summary>
 		string GetIndexingStatus();
+
+		RavenJObject GetDatabaseConfiguration();
 	}
 }

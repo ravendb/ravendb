@@ -69,7 +69,7 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
-        /// <summary>
+		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
@@ -137,7 +137,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
-        /// <summary>
+		/// <summary>
         /// Checks asynchronously if passed index definition matches version stored on server.
         /// If index does not exist this method returns true.
         /// </summary>
@@ -184,7 +184,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+        Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -264,7 +264,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
-        /// <summary>
+		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -298,7 +298,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		Task DeleteAttachmentAsync(string key, Etag etag);
+        Task DeleteAttachmentAsync(string key, Etag etag);
 
 		///<summary>
 		/// Get the possible terms for the specified field in the index asynchronously
@@ -460,7 +460,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Generate the next identity value from the server
 		/// </summary>
-		Task<long> NextIdentityForAsync(string name);
+        Task<long> NextIdentityForAsync(string name);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
@@ -511,14 +511,14 @@ namespace Raven.Client.Connection.Async
 		///</summary>
 		Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false);
 	}
-
+	
 	public interface IAsyncAdminDatabaseCommands
 	{
 		/// <summary>
 		/// Sends an async command that disables all indexing
 		/// </summary>
 		Task StopIndexingAsync();
-
+		
 		/// <summary>
 		/// Sends an async command that enables indexing
 		/// </summary>
@@ -528,6 +528,8 @@ namespace Raven.Client.Connection.Async
 		/// Get the indexing status
 		/// </summary>
 		Task<string> GetIndexingStatusAsync();
+
+		Task<RavenJObject> GetDatabaseConfigurationAsync();
 	}
 
 	public interface IAsyncInfoDatabaseCommands

@@ -1957,7 +1957,7 @@ namespace Raven.Client.Connection.Async
 				if (skipAfter != null)
 				{
 					sb.Append("skipAfter=").Append(Uri.EscapeDataString(skipAfter)).Append("&");
-				}
+			}
 			}
 
 			var actualStart = start;
@@ -2442,4 +2442,4 @@ namespace Raven.Client.Connection.Async
 										 replicationInformerGetter, databaseName, conflictListeners);
 		}
 	}
-}
+	}
