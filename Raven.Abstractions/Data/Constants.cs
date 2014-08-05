@@ -158,6 +158,6 @@ namespace Raven.Abstractions.Data
 
         public const string MetadataEtagField = "ETag";
 
-		public const string TempUploadsDirectory = "~/TempUploads";
+		public const string TempUploadsDirectoryName = "RavenTempUploads";
 	}
 }

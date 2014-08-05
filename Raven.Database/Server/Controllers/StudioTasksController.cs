@@ -45,14 +45,15 @@ namespace Raven.Database.Server.Controllers
 				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
 			}
 
-			var fullPath = Constants.TempUploadsDirectory.ToFullPath();
-			if (Directory.Exists(fullPath) == false)
-				Directory.CreateDirectory(fullPath);
-			
-			var streamProvider = new MultipartFileStreamProvider(fullPath);
+			string tempPath = Path.GetTempPath();
+			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (Directory.Exists(fullTempPath) == false)
+				Directory.CreateDirectory(fullTempPath);
+
+			var streamProvider = new MultipartFileStreamProvider(fullTempPath);
 			await Request.Content.ReadAsMultipartAsync(streamProvider);
 			var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
-
+			
 			string fileName = null;
 			var fileContent = streamProvider.Contents.SingleOrDefault();
 			if (fileContent != null)

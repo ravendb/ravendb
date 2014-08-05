@@ -9,7 +9,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Tenancy
@@ -28,6 +27,11 @@ namespace Raven.Database.Server.Tenancy
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
 
+			string tempPath = Path.GetTempPath();
+			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (Directory.Exists(fullTempPath))
+				Directory.Delete(fullTempPath, true);
+
             Init();
         }
 
@@ -43,11 +47,7 @@ namespace Raven.Database.Server.Tenancy
 
         public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledDatabase = false)
         {
-			var fullPath = Constants.TempUploadsDirectory.ToFullPath();
-			if (Directory.Exists(fullPath))
-				Directory.Delete(fullPath, true);
-
-			if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
                 return systemConfiguration;
 			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledDatabase);
             if (document == null)
