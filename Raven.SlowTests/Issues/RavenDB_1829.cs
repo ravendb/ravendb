@@ -107,7 +107,7 @@ namespace Raven.Tests.Issues
                 WaitForIndexing(store2);
 
                 var count = 0;
-                var enumerator = store1.DatabaseCommands.StreamDocs(null, "people/");
+                var enumerator = store1.DatabaseCommands.StreamDocs(fromEtag: null, startsWith: "people/");
                 while (enumerator.MoveNext())
                 {
                     count++;
@@ -116,7 +116,7 @@ namespace Raven.Tests.Issues
                 Assert.Equal(10, count);
 
                 count = 0;
-                enumerator = store2.DatabaseCommands.StreamDocs(null, "people/");
+                enumerator = store2.DatabaseCommands.StreamDocs(fromEtag: null, startsWith: "people/");
                 while (enumerator.MoveNext())
                 {
                     count++;
@@ -131,7 +131,7 @@ namespace Raven.Tests.Issues
                 var failed = false;
 
                 replicationInformerForDatabase.FailoverStatusChanged += (sender, args) => failed = true;
-                enumerator = store1.DatabaseCommands.StreamDocs(null, "people/");
+                enumerator = store1.DatabaseCommands.StreamDocs(fromEtag: null, startsWith: "people/");
                 while (enumerator.MoveNext())
                 {
                     count++;
@@ -165,7 +165,7 @@ namespace Raven.Tests.Issues
                 var startEtag2 = EtagUtil.Increment(store2.DatabaseCommands.Get(firstPersonId).Etag, -1);
 
                 var count = 0;
-                var enumerator = store1.DatabaseCommands.StreamDocs(startEtag1);
+                var enumerator = store1.DatabaseCommands.StreamDocs(fromEtag: startEtag1);
                 while (enumerator.MoveNext())
                 {
                     count++;
@@ -174,7 +174,7 @@ namespace Raven.Tests.Issues
                 Assert.True(count > 0);
 
                 count = 0;
-                enumerator = store2.DatabaseCommands.StreamDocs(startEtag2);
+                enumerator = store2.DatabaseCommands.StreamDocs(fromEtag: startEtag2);
                 while (enumerator.MoveNext())
                 {
                     count++;
@@ -184,7 +184,7 @@ namespace Raven.Tests.Issues
 
                 StopDatabase(0);
 
-                var e = Assert.Throws<AggregateException>(() => store1.DatabaseCommands.StreamDocs(startEtag1));
+                var e = Assert.Throws<AggregateException>(() => store1.DatabaseCommands.StreamDocs(fromEtag: startEtag1));
                 var requestException = e.InnerException as HttpRequestException;
 
                 Assert.NotNull(requestException);

@@ -1917,18 +1917,19 @@ namespace Raven.Client.Connection.Async
 						string matches = null, int start = 0,
 						int pageSize = Int32.MaxValue,
 						string exclude = null,
-						RavenPagingInformation pagingInformation = null)
+						RavenPagingInformation pagingInformation = null,
+						string skipAfter = null)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
 			if (fromEtag != null) // etags does not match between servers
-				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication)).ConfigureAwait(false);
+				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication), skipAfter).ConfigureAwait(false);
 
-			return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata)).ConfigureAwait(false);
+			return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, skipAfter)).ConfigureAwait(false);
 		}
 
-		private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata)
+		private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, string skipAfter)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1952,6 +1953,10 @@ namespace Raven.Client.Connection.Async
 				if (exclude != null)
 				{
 					sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+				}
+				if (skipAfter != null)
+				{
+					sb.Append("skipAfter=").Append(Uri.EscapeDataString(skipAfter)).Append("&");
 				}
 			}
 

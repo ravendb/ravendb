@@ -80,7 +80,8 @@ namespace Raven.Database.Server.Controllers
 							    GetStart(),
 							    GetPageSize(Database.Configuration.MaxPageSize),
 							    cts.Token,
-							    ref nextPageStart, transformer, transformerParameters));
+							    ref nextPageStart, transformer, transformerParameters,
+								skipAfter: GetQueryStringValue("skipAfter")));
 			    }
 
 			    WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);

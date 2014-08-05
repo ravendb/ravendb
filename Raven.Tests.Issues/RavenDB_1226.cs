@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
 
                     var fetchedDocumentsCollection1 = new HashSet<DummyDocument>();
 
-                    using (var docStream = documentStore.DatabaseCommands.StreamDocs(start:0,pageSize: TestPageSize))
+                    using (var docStream = documentStore.DatabaseCommands.StreamDocs(start: 0,pageSize: TestPageSize))
                     {
                         while (docStream.MoveNext())
                         {
