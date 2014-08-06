@@ -231,8 +231,8 @@ class databases extends viewModelBase {
 
     deleteSelectedDatabases(databases: Array<database>) {
         if (databases.length > 0) {
-            require(["viewmodels/deleteResourceConfirm"], deleteDatabaseConfirm => {
-                var confirmDeleteViewModel = new deleteDatabaseConfirm(databases);
+            require(["viewmodels/deleteResourceConfirm"], deleteResourceConfirm => {
+                var confirmDeleteViewModel = new deleteResourceConfirm(databases);
 
                 confirmDeleteViewModel.deleteTask.done((deletedDatabaseNames: string[]) => {
                     if (databases.length == 1) {
@@ -270,8 +270,8 @@ class databases extends viewModelBase {
         if (databases.length > 0) {
             var action = !databases[0].disabled();
 
-            require(["viewmodels/disableResourceToggleConfirm"], disableDatabaseToggleConfirm => {
-                var disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(databases);
+            require(["viewmodels/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
+                var disableDatabaseToggleViewModel = new disableResourceToggleConfirm(databases);
 
                 disableDatabaseToggleViewModel.disableToggleTask
                     .done((toggledDatabasesNames: string[]) => {

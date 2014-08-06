@@ -106,11 +106,12 @@ namespace Raven.Client.Connection
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                                 string exclude = null, string transformer = null,
-		                                 Dictionary<string, RavenJToken> transformerParameters = null)
+		                                 Dictionary<string, RavenJToken> transformerParameters = null,
+										 string skipAfter = null)
 		{
 			return
 				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude,
-				                                  transformer, transformerParameters)
+				                                  transformer, transformerParameters, skipAfter)
 				                 .ResultUnwrap();
 		}
 
@@ -421,11 +422,10 @@ namespace Raven.Client.Connection
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize,
-			string exclude, RavenPagingInformation pagingInformation = null)
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			return new AsycnEnumerableWrapper<RavenJObject>(
-				asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation).Result);
+				asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter).Result);
 			}
 
 		/// <summary>

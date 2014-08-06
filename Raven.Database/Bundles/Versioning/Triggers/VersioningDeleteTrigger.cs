@@ -63,7 +63,7 @@ namespace Raven.Bundles.Versioning.Triggers
 		    {
                 Database.TransactionalStorage.Batch(accessor =>
                 {
-                    foreach (var jsonDocument in  accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue))
+                    foreach (var jsonDocument in  accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue, null))
                     {
                         if(jsonDocument == null)
                             continue;

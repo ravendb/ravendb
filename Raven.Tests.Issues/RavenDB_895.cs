@@ -55,42 +55,45 @@ namespace Raven.Tests.Issues
 	                session.SaveChanges();
 	            }
 	            var smugglerApi = new SmugglerApi();
-	            await smugglerApi.ExportData(new SmugglerExportOptions
-	            {
-	                ToFile = file,
-					From = new RavenConnectionStringOptions
-					{
-						Url = store.Url,
-						DefaultDatabase = store.DefaultDatabase
-					}
-	                },new SmugglerOptions{
-				TransformScript = @"function(doc) { 
+		        smugglerApi.SmugglerOptions.TransformScript =
+			        @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
 						return doc;
-					}"
-	            });
+					}";
+		        await smugglerApi.ExportData(
+			        new SmugglerExportOptions
+			        {
+				        ToFile = file,
+				        From = new RavenConnectionStringOptions
+				        {
+					        Url = store.Url,
+					        DefaultDatabase = store.DefaultDatabase
+				        }
+			        });
 	        }
 
 	        using (var documentStore = NewRemoteDocumentStore())
 	        {
 	            var smugglerApi = new SmugglerApi();
-	            await smugglerApi.ImportData(new SmugglerImportOptions
-	            {
-	                FromFile = file,
-					To = new RavenConnectionStringOptions
-					{
-						Url = documentStore.Url,
-						DefaultDatabase = documentStore.DefaultDatabase
-					}
-	                },new SmugglerOptions{TransformScript = @"function(doc) { 
+		        smugglerApi.SmugglerOptions.TransformScript =
+			        @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
 						return doc;
-					}"
-	            });
+					}";
+		        await smugglerApi.ImportData(
+			        new SmugglerImportOptions
+			        {
+				        FromFile = file,
+				        To = new RavenConnectionStringOptions
+				        {
+					        Url = documentStore.Url,
+					        DefaultDatabase = documentStore.DefaultDatabase
+				        }
+			        });
 
 	            using (var session = documentStore.OpenSession())
 	            {
@@ -120,41 +123,41 @@ namespace Raven.Tests.Issues
 	                session.SaveChanges();
 	            }
 	            var smugglerApi = new SmugglerApi();
-	            await smugglerApi.ExportData(new SmugglerExportOptions
-	            {
-					From = new RavenConnectionStringOptions
-	            {
-	                Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
-	            },
-	                ToFile = file,
-				}, new SmugglerOptions
-				{
-					TransformScript = @"function(doc) { 
+		        smugglerApi.SmugglerOptions.TransformScript =
+			        @"function(doc) { 
 						doc['Name'] = 'Changed';
 						return doc;
-					}"
-	            });
+					}";
+		        await smugglerApi.ExportData(
+			        new SmugglerExportOptions
+			        {
+				        From = new RavenConnectionStringOptions
+				        {
+					        Url = store.Url,
+					        DefaultDatabase = store.DefaultDatabase
+				        },
+				        ToFile = file,
+			        });
 	        }
 
 	        using (var store = NewRemoteDocumentStore())
 	        {
 	            var smugglerApi = new SmugglerApi();
-	            await smugglerApi.ImportData(new SmugglerImportOptions
-				{
-					To = new RavenConnectionStringOptions
-					{
-						Url = store.Url,
-						DefaultDatabase = store.DefaultDatabase
-					},
-	                FromFile = file,
-				}, new SmugglerOptions
-				{
-					TransformScript = @"function(doc) { 
+		        smugglerApi.SmugglerOptions.TransformScript =
+			        @"function(doc) { 
 						doc['Name'] = 'Changed';
 						return doc;
-					}"
-	            });
+					}";
+		        await smugglerApi.ImportData(
+			        new SmugglerImportOptions
+			        {
+				        To = new RavenConnectionStringOptions
+				        {
+					        Url = store.Url,
+					        DefaultDatabase = store.DefaultDatabase
+				        },
+				        FromFile = file,
+			        });
 
 	            using (var session = store.OpenSession())
 	            {

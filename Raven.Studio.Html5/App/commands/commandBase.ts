@@ -16,6 +16,7 @@ class commandBase {
     // TODO: better place for this?
     static ravenClientVersion = '3.0.0.0';
     static splashTimerHandle = 0;
+    static alertTimeout = 0;
     static loadingCounter = 0;
 
     constructor() {
@@ -106,8 +107,8 @@ class commandBase {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
-    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", resource, options);
+    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", resource, options, timeToAlert);
     }
 
     patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -134,7 +135,23 @@ class commandBase {
             dataType: "json",
             contentType: contentType, 
             type: method,
-            headers: undefined
+            headers: undefined,
+            xhr: () => {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
+                    if (evt.lengthComputable) {
+                        var percentComplete = (evt.loaded / evt.total) * 100;
+                        if (percentComplete < 100) {
+                            // waiting for upload progress to complete
+                            clearTimeout(commandBase.alertTimeout);
+                            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+                        }
+                        ko.postbox.publish("UploadProgress", percentComplete);
+                    }
+                }, false);
+
+                return xhr;
+            }
         };
         
         if (options) {
@@ -166,6 +183,8 @@ class commandBase {
         $.ajax(defaultOptions).always(() => {
             --commandBase.loadingCounter;
             if (commandBase.loadingCounter == 0) {
+                clearTimeout(commandBase.alertTimeout);
+                commandBase.alertTimeout = 0;
                 clearTimeout(commandBase.splashTimerHandle);
                 commandBase.hideSpin();
             }
@@ -283,9 +302,11 @@ class commandBase {
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
 	}
 
-    private static showSpin(timeToAlert:number) {
+    private static showSpin(timeToAlert: number) {
         ko.postbox.publish("LoadProgress", alertType.warning);
-        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+        if (commandBase.alertTimeout == 0) {
+            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+        }
     }
 
     private static showServerNotRespondingAlert() {

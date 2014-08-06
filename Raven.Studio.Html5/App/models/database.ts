@@ -3,6 +3,8 @@ import resource = require("models/resource");
 class database extends resource {
     statistics = ko.observable<databaseStatisticsDto>();
     activeBundles = ko.observableArray<string>();
+    isImporting = ko.observable<boolean>(false);
+    importStatus = ko.observable<string>('');
     static type = 'database';
 
     constructor(public name: string, isDisabled: boolean = false, bundles: Array<string> = []) {

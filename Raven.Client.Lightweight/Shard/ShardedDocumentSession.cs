@@ -824,7 +824,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -836,7 +836,7 @@ namespace Raven.Client.Shard
 			{
 				EntityType = typeof(T),
 				Keys = { keyPrefix }
-			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude));
+			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, skipAfter: skipAfter));
 
 			return results.SelectMany(x => x).Select(TrackEntity<T>)
 						  .ToArray();
@@ -844,8 +844,9 @@ namespace Raven.Client.Shard
 
 		public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
 																 int pageSize = 25, string exclude = null,
-																 RavenPagingInformation pagingInformation = null, 
-																 Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+																 RavenPagingInformation pagingInformation = null,
+																 Action<ILoadConfiguration> configure = null, 
+																 string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -870,7 +871,8 @@ namespace Raven.Client.Shard
 			(dbCmd, i) =>
 			dbCmd.StartsWith(keyPrefix, matches, start, pageSize,
 							exclude: exclude, transformer: transformer,
-							transformerParameters: configuration.TransformerParameters));
+							transformerParameters: configuration.TransformerParameters,
+							skipAfter: skipAfter));
 
 			return results.SelectMany(x => x).Select(TrackEntity<TResult>)
 						  .ToArray();
@@ -881,7 +883,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Not supported for sharded session");
 		}
 
-		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
 		{
 			IncrementRequestCount();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
@@ -890,7 +892,7 @@ namespace Raven.Client.Shard
 				Keys = { keyPrefix }
 			});
 
-			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, null);
+			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, null, skipAfter);
 
 			return AddLazyOperation<T[]>(lazyLoadOperation, null, cmds);
 		}
@@ -940,7 +942,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}

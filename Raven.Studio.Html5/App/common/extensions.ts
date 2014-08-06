@@ -1,11 +1,45 @@
 class extensions {
     static install() {
+        extensions.installNumberExtensions();
         extensions.installArrayExtensions();
         extensions.installFunctionExtensions();
         extensions.installObservableExtensions();
         extensions.installStringExtension();
         extensions.installStorageExtension();
         extensions.installBindingHandlers();
+    }
+
+    private static installNumberExtensions() {
+        var datePrototype: any = Date.prototype;
+
+        datePrototype.getUTCDateFormatted = function () {
+            var date = this.getUTCDate();
+            return extensions.formatNumber(date);
+        }
+
+        datePrototype.getUTCMonthFormatted = function () {
+            var month = this.getUTCMonth() + 1;
+            return extensions.formatNumber(month);
+        }
+
+        datePrototype.getUTCHoursFormatted = function () {
+            var hours = this.getUTCHours();
+            return extensions.formatNumber(hours);
+        }
+
+        datePrototype.getUTCMinutesFormatted = function () {
+            var minutes = this.getUTCMinutes();
+            return extensions.formatNumber(minutes);
+        }
+
+        datePrototype.getUTCSecondsFormatted = function () {
+            var seconds = this.getUTCSeconds();
+            return extensions.formatNumber(seconds);
+        }
+    }
+
+    private static formatNumber(num) {
+        return num < 10 ? '0' + num : num;
     }
 
     private static installObservableExtensions() {

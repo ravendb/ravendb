@@ -473,6 +473,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			JsonDocumentsToReplicate documentsToReplicate = null;
 			Stopwatch sp = Stopwatch.StartNew();
+			IDisposable removeBatch = null;
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
 				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, null));
@@ -509,6 +510,8 @@ namespace Raven.Bundles.Replication.Tasks
 				// if the db is idling in all respect except sending out replication, let us keep it that way.
 				docDb.WorkContext.UpdateFoundWork();
 
+				removeBatch = prefetchingBehavior.UpdateCurrentlyUsedBatches(documentsToReplicate.LoadedDocs);
+
 				using (var scope = recorder.StartRecording("Send"))
 				{
 					string lastError;
@@ -539,6 +542,9 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				if (documentsToReplicate != null && documentsToReplicate.LoadedDocs != null)
 					prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
+
+				if(removeBatch != null)
+					removeBatch.Dispose();
 			}
 
 			RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);

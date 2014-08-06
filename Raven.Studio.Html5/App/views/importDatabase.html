@@ -10,19 +10,22 @@
         </div>
         <br />
         <br />
-        <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: fileSelected }" />
-        <br />
-        <div class="btn-toolbar" data-bind="visible: hasFileSelected">
-            <div class="btn-group">
-                <button class="btn btn-primary" data-bind="click: importDb">
-                    <div class="glyphicon glyphicon-import"></div>
-                    Import Database
-                </button>
+        <div data-bind="with: activeDatabase">
+            <input id="importDatabaseFilePicker" type="file" data-bind="visible: isImporting() == false, event: { change: $root.fileSelected.bind($root, $element.value) }" />
+            <br />
+            <div class="btn-toolbar" data-bind="visible: $root.hasFileSelected() && isImporting() == false">
+                <div class="btn-group">
+                    <button class="btn btn-primary" data-bind="click: $root.importDb.bind($root)">
+                        <div class="glyphicon glyphicon-import"></div>
+                        Import Database
+                    </button>
+                </div>
             </div>
-        </div>
-        <br />
-        <div class="progress progress-striped active" data-bind="visible: isImporting">
-            <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+            <br />
+            <div data-bind="text: importStatus"></div>
+            <div class="progress progress-striped active" data-bind="visible: isImporting">
+                <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+            </div>
         </div>
         <ul class="nav nav-tabs">
             <li data-bind="click: selectOptions, css: { active: !showAdvancedOptions() }"><a href="#">General</a></li>

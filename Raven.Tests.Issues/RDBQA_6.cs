@@ -31,29 +31,21 @@ namespace Raven.Tests.Issues
             {
                 using (var store = NewRemoteDocumentStore())
                 {
+					var connectionStringOptions =
+						new RavenConnectionStringOptions
+						{
+							Url = store.Url,
+							DefaultDatabase = "DoesNotExist"
+						};
                     var smuggler = new SmugglerApi();
 
-                    var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(new SmugglerImportOptions
-                    {
-                        FromFile = path,
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = "DoesNotExist"
-                        }
-                    }, new SmugglerOptions()));
+	                var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(
+						new SmugglerImportOptions{ FromFile = path, To = connectionStringOptions }));
 
                     Assert.Equal(string.Format("Smuggler does not support database creation (database 'DoesNotExist' on server '{0}' must exist before running Smuggler).", store.Url), e.Message);
 
-                    e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(new SmugglerExportOptions
-                    {
-                        ToFile = path,
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = "DoesNotExist"
-                        }
-                    }, new SmugglerOptions()));
+	                e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(
+						new SmugglerExportOptions{ ToFile = path, From = connectionStringOptions }));
 
                     Assert.Equal(string.Format("Smuggler does not support database creation (database 'DoesNotExist' on server '{0}' must exist before running Smuggler).", store.Url), e.Message);
                 }
@@ -75,26 +67,11 @@ namespace Raven.Tests.Issues
                 {
                     store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DoesNotExist");
 
+	                var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = "DoesNotExist" };
                     var smuggler = new SmugglerApi();
 
-                    await smuggler.ImportData(new SmugglerImportOptions
-                    {
-                        FromFile = path,
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = "DoesNotExist"
-                        }
-                    }, new SmugglerOptions());
-                    await smuggler.ExportData(new SmugglerExportOptions
-                    {
-                        ToFile = path,
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = "DoesNotExist"
-                        }
-                    }, new SmugglerOptions());
+	                await smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = connectionStringOptions });
+	                await smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = connectionStringOptions });
                 }
             }
             finally
@@ -112,26 +89,11 @@ namespace Raven.Tests.Issues
             {
                 using (var store = NewRemoteDocumentStore())
                 {
+	                var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
                     var smuggler = new SmugglerApi();
 
-                    await smuggler.ImportData(new SmugglerImportOptions
-                    {
-                        FromFile = path,
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = store.DefaultDatabase
-                        }
-                    }, new SmugglerOptions());
-                    await smuggler.ExportData(new SmugglerExportOptions
-                    {
-                        ToFile = path,
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = store.DefaultDatabase
-                        }
-                    }, new SmugglerOptions());
+	                await smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = connectionStringOptions });
+	                await smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = connectionStringOptions });
                 }
             }
             finally
@@ -147,29 +109,24 @@ namespace Raven.Tests.Issues
 
             try
             {
+	            var connectionStringOptions = new RavenConnectionStringOptions { Url = "http://localhost:8078/", DefaultDatabase = "DoesNotExist" };
                 var smuggler = new SmugglerApi();
 
-                var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(new SmugglerImportOptions
-                {
-                    FromFile = path,
-                    To = new RavenConnectionStringOptions
-                    {
-                        Url = "http://localhost:8078/",
-                        DefaultDatabase = "DoesNotExist"
-                    }
-                }, new SmugglerOptions()));
+                var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(
+					new SmugglerImportOptions
+					{
+						FromFile = path,
+						To = connectionStringOptions
+					}));
 
                 Assert.Contains("Smuggler encountered a connection problem:", e.Message);
 
-                e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(new SmugglerExportOptions
-                {
-                    ToFile = path,
-                    From = new RavenConnectionStringOptions
-                    {
-                        Url = "http://localhost:8078/",
-                        DefaultDatabase = "DoesNotExist"
-                    }
-                }, new SmugglerOptions()));
+	            e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(
+		            new SmugglerExportOptions
+		            {
+			            ToFile = path,
+			            From = connectionStringOptions
+		            }));
 
                 Assert.Contains("Smuggler encountered a connection problem:", e.Message);
             }
