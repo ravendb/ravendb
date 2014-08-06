@@ -25,7 +25,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -47,6 +46,8 @@ namespace Raven.Database.Server.Controllers
 
 			string tempPath = Path.GetTempPath();
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (File.Exists(fullTempPath))
+				File.Delete(fullTempPath);
 			if (Directory.Exists(fullTempPath) == false)
 				Directory.CreateDirectory(fullTempPath);
 
@@ -98,8 +99,10 @@ namespace Raven.Database.Server.Controllers
 					if (cts.Token.IsCancellationRequested)
 					{
 						status.ExceptionDetails = "Task was cancelled";
+					
 					}
 					throw;
+					
 				}
 				finally
 				{
