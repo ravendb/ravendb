@@ -14,7 +14,10 @@ namespace Raven.Client.FileSystem
 {
     public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
     {
-        	/// <summary>
+
+        private IDisposable sessionChangesSubscription;
+
+        /// <summary>
 		/// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
 		/// </summary>
         public AsyncFilesSession(FilesStore filesStore,
@@ -24,7 +27,7 @@ namespace Raven.Client.FileSystem
 			: base(filesStore, listeners, id)
 		{
             Commands = asyncFilesCommands;
-            filesStore.Changes().ForConflicts().Subscribe(this);
+            sessionChangesSubscription = filesStore.Changes(null, this).ForConflicts().Subscribe();
 		}
 
         /// <summary>
@@ -133,12 +136,15 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        async void IObserver<ConflictNotification>.OnNext(ConflictNotification notification)
+        void IObserver<ConflictNotification>.OnNext(ConflictNotification notification)
         {
             if (!conflicts.Contains(notification.FileName))
                 conflicts.Add(notification.FileName);
 
-            var localHeader = await this.LoadFileAsync(notification.FileName);
+            // IMPORTANT: Going async here will break the &4.2 reactive extension guideline and more importantly
+            //            introduce a race condition in the handling of conflict listeners at the client side.
+            //            http://go.microsoft.com/fwlink/?LinkID=205219
+            var localHeader = this.LoadFileAsync(notification.FileName).Result;
 
             if (notification.Status == ConflictStatus.Detected) 
             {                               
@@ -160,7 +166,7 @@ namespace Raven.Client.FileSystem
                     }
                 }
 
-                await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resolutionStrategy);
+                Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resolutionStrategy).Wait();
             }
             else
             {
@@ -181,6 +187,14 @@ namespace Raven.Client.FileSystem
 
         void IObserver<ConflictNotification>.OnCompleted()
         {
+        }
+
+        public override void Dispose ()
+        {
+            base.Dispose();
+
+            if (sessionChangesSubscription != null)
+                sessionChangesSubscription.Dispose();
         }
     }
 }
