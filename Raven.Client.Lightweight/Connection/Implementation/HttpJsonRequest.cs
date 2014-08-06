@@ -449,9 +449,15 @@ namespace Raven.Client.Connection
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				var countingStream = new CountingStream(responseStream);
+				var cachingStream = new CachingStream(responseStream, 4 * 1024);
+				var countingStream = new CountingStream(cachingStream);
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
+
+				if (data == null && (Method == "PUT" || Method == "POST"))
+				{
+					throw new InvalidOperationException("Stange response: " + Encoding.UTF8.GetString(cachingStream.Cache));
+				}
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{

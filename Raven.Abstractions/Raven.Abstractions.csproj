@@ -97,6 +97,7 @@
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Connection\CachingStream.cs" />
     <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\CountingStream.cs" />
     <Compile Include="Connection\ErrorResponseException.cs" />
