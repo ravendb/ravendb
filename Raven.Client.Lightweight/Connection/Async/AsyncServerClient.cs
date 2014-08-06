@@ -1877,6 +1877,8 @@ namespace Raven.Client.Connection.Async
 
 					await TryReadNextPageStart().ConfigureAwait(false);
 
+					await EnsureValidEndOfResponse();
+
 					return false;
 				}
 
@@ -1907,6 +1909,20 @@ namespace Raven.Client.Connection.Async
                         throw new InvalidOperationException("Unexpected property name: " + reader.Value);
 			    }
 				
+			}
+
+			private async Task EnsureValidEndOfResponse()
+			{
+				if(reader.TokenType != JsonToken.EndObject && await reader.ReadAsync().ConfigureAwait(false) == false)
+					throw new InvalidOperationException("Unexpected end of response - missing EndObject token");
+
+				if (reader.TokenType != JsonToken.EndObject)
+					throw new InvalidOperationException(string.Format("Unexpected token type at the end of the response: {0}. Error: {1}", reader.TokenType, streamReader.ReadToEnd()));
+
+				var remainingContent = streamReader.ReadToEnd();
+
+				if(string.IsNullOrEmpty(remainingContent) == false)
+					throw new InvalidOperationException("Server error: " + remainingContent);
 			}
 
 			public RavenJObject Current { get; private set; }
