@@ -1,10 +1,10 @@
-﻿// -----------------------------------------------------------------------
+﻿using Raven.Client.FileSystem.Connection;
+// -----------------------------------------------------------------------
 //  <copyright file="RavenFsWebApiTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Net;
-using Raven.Client.RavenFS;
 
 namespace RavenFS.Tests
 {
@@ -14,7 +14,7 @@ namespace RavenFS.Tests
 
         public RavenFsWebApiTest()
         {
-            var ravenFsClient = NewClient(fileSystemName: WebApiTestName);
+            var ravenFsClient = (IAsyncFilesCommandsImpl) NewAsyncClient(fileSystemName: WebApiTestName);
 
             WebClient = new WebClient()
             {

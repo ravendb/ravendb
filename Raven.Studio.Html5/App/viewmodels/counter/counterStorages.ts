@@ -1,32 +1,81 @@
 ﻿import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require('viewmodels/shell');
 import counterStorage = require("models/counter/counterStorage");
+import changeSubscription = require("models/changeSubscription");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import createCounterStorageCommand = require("commands/counter/createCounterStorageCommand");
 import appUrl = require("common/appUrl");
 
 class counterStorages extends viewModelBase {
 
-    storages = ko.observableArray<counterStorage>();
-    hasCounterStorages = ko.computed(() => this.storages().length >0 );
-    isFirstLoad: boolean = true;
+    counterStorages = ko.observableArray<counterStorage>();
     selectedCounterStorage = ko.observable<counterStorage>();
     searchCounterStorageByText = ko.observable<string>();
 
-
     constructor() {
         super();
+
+        this.counterStorages = shell.counterStorages;
         this.searchCounterStorageByText.extend({ throttle: 200 }).subscribe(s => this.filterCounterStorages(s));
+
+        var currentCounterStorage = this.activeCounterStorage();
+        if (!!currentCounterStorage) {
+            this.selectCounterStorage(currentCounterStorage, false);
+        }
     }
 
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
-        
     }
 
-    filterCounterStorages(filterString: string) {
+    attached() {
+        this.counterStoragesLoaded();
+    }
+
+    private counterStoragesLoaded() {
+        // If we have no counter storages, show the "create a new counter storage" screen.
+        if (this.counterStorages().length === 0) {
+            this.createNewCountersStorage();
+        } else {
+            // If we have just a few counter storages, grab the cs stats for all of them.
+            // (Otherwise, we'll grab them when we click them.)
+            var few = 20;
+            var enabledCounterStorages: counterStorage[] = this.counterStorages().filter((db: counterStorage) => !db.disabled());
+            if (enabledCounterStorages.length < few) {
+                enabledCounterStorages.forEach(cs => shell.fetchCsStats(cs));
+            }
+        }
+    }
+
+    private addNewCounterStorage(counterStorageName: string): counterStorage {
+        var counterStorageInArray = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
+
+        if (!counterStorageInArray) {
+            var newCounterStorage = new counterStorage(counterStorageName);
+            this.counterStorages.unshift(newCounterStorage);
+            return newCounterStorage;
+        }
+
+        return counterStorageInArray;
+    }
+
+    private onCounterStorageDeleted(counterStorageName: string) {
+        var counterStorageInArray = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
+
+        if (!!counterStorageInArray) {
+            this.counterStorages.remove(counterStorageInArray);
+
+            if ((this.counterStorages().length > 0) && (this.counterStorages.contains(this.activeCounterStorage()) === false)) {
+                this.selectCounterStorage(this.counterStorages().first());
+            }
+        }
+    }
+
+    private filterCounterStorages(filterString: string) {
         var filterStringLower = filterString.toLowerCase();
-        this.storages().forEach(x => {
+        this.counterStorages().forEach(x => {
             var isMatch = !filterString|| (x.name.toLowerCase().indexOf(filterStringLower) >= 0);
             x.isVisible(isMatch);
         });
@@ -38,84 +87,50 @@ class counterStorages extends viewModelBase {
         }
     }
     
-    deleteSelectedCounterStorage() {
-        var counterStorage = this.selectedCounterStorage();
-        if (!!counterStorage) {
-            require(["viewmodels/counter/deleteCounterStorageConfirm"], deleteCounterStorageConfirm => {
-                var confirmDeleteVm = new deleteCounterStorageConfirm(counterStorage);
-                confirmDeleteVm.deleteTask.done(() => {
-                    this.onCounterStorageDeleted(counterStorage);
-                    this.selectedCounterStorage(null);
-                });
-                app.showDialog(confirmDeleteVm);
-            });
-        }
-    }
-
-    onCounterStorageDeleted(storage: counterStorage) {
-        this.storages.remove(storage);
-        if (this.storages.length > 0 && this.storages.contains(this.selectedCounterStorage()) === false)
-            this.selectCounterStorage(this.storages().first());
-        
-    }
-
     createNewCountersStorage() {
         require(["viewmodels/counter/createCounterStorage"], createCounterStorage => {
-            var createCounterStorageiewModel = new createCounterStorage(this.storages);
+            var createCounterStorageiewModel = new createCounterStorage(this.counterStorages);
             createCounterStorageiewModel
                 .creationTask
                 .done((counterStorageName: string, counterStoragePath: string) => {
                     counterStoragePath = !!counterStoragePath && counterStoragePath.length > 0 ? counterStoragePath : "~/Counters/" + counterStorageName;
                     this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
-            });
+                });
             app.showDialog(createCounterStorageiewModel);
         });
     }
 
-    showCreationAdvancedStepsIfNecessary(counterStorageName: string, counterStoragePath: string) {
+    private showCreationAdvancedStepsIfNecessary(counterStorageName: string, counterStoragePath: string) {
         new createCounterStorageCommand(counterStorageName, counterStoragePath)
             .execute()
-            .done(() => this.storages.unshift(new counterStorage(counterStorageName)));
+            .done(() => {
+                var newCounterStorage = this.addNewCounterStorage(counterStorageName);
+                this.selectCounterStorage(newCounterStorage);
+            });
     }
 
-    countersStoragesLoaded(storages: counterStorage[]) {
-        if (storages.length === 0 && this.isFirstLoad) {
-            this.createNewCountersStorage();
+    deleteSelectedCounterStorage() {
+        var cs: counterStorage = this.selectedCounterStorage();
+        if (!!cs) {
+            require(["viewmodels/counter/deleteCounterStorageConfirm"], deleteCounterStorageConfirm => {
+                var confirmDeleteVm = new deleteCounterStorageConfirm(cs);
+                confirmDeleteVm.deleteTask.done(() => this.onCounterStorageDeleted(cs.name));
+                app.showDialog(confirmDeleteVm);
+            });
         }
+    }
 
-        var counterSotragesHaveChanged = this.checkDifferentCounterStorages(storages);
-        if (counterSotragesHaveChanged) {
-            this.storages(storages);
+    selectCounterStorage(cs: counterStorage, activateCounterStorage: boolean = true) {
+        this.counterStorages().forEach((c: counterStorage)=> c.isSelected(c.name === cs.name));
+        if (activateCounterStorage) {
+            cs.activate();
         }
-
-        this.isFirstLoad = false;
-    }
-
-    checkDifferentCounterStorages(storages: counterStorage[]) {
-        if (storages.length !== this.storages().length) {
-            return true;
-        }
-
-        var freshStorageNames = storages.map(storage => storage.name);
-        var existingStorageNames = this.storages().map(d => d.name);
-        return existingStorageNames.some(existing => !freshStorageNames.contains(existing));
-    }
-
-    modelPolling() {
-        new getCounterStoragesCommand().execute().done((results: counterStorage[]) => this.countersStoragesLoaded(results));
-    }
-
-    selectCounterStorage(storage: counterStorage) {
-        this.storages().forEach(d=> d.isSelected(d == storage));
-        storage.activate();
-        this.selectedCounterStorage(storage);
+        this.selectedCounterStorage(cs);
     }
 
     getCounterStorageUrl(storage: counterStorage) {
         return appUrl.forCounterStorageCounters(storage);
     }
-
-    
 }
 
 export = counterStorages;

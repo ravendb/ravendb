@@ -16,6 +16,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -88,7 +89,9 @@ namespace Raven.Client.Connection
         /// </summary>
         public abstract void RefreshReplicationInformation(TClient client);
 
-        protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
+		public abstract void ClearReplicationInformationLocalCache(TClient client);
+
+		protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
 		protected readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
 
@@ -138,10 +141,10 @@ namespace Raven.Client.Connection
 	    /// <summary>
 	    /// Should execute the operation using the specified operation URL
 	    /// </summary>
-	    public virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary)
+	    public virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error)
 	    {
 	        if (primary == false)
-	            AssertValidOperation(method);
+	            AssertValidOperation(method, error);
 
 	        var failureCounter = GetHolder(operationMetadata.Url);
 	        if (failureCounter.Value == 0)
@@ -191,7 +194,7 @@ namespace Raven.Client.Connection
 
 	    protected abstract string GetServerCheckUrl(string baseUrl);
 
-	    protected void AssertValidOperation(string method)
+	    protected void AssertValidOperation(string method, Exception e)
 		{
 			switch (conventions.FailoverBehaviorWithoutFlags)
 			{
@@ -209,7 +212,7 @@ namespace Raven.Client.Connection
 			}
 			throw new InvalidOperationException("Could not replicate " + method +
 												" operation to secondary node, failover behavior is: " +
-												conventions.FailoverBehavior);
+												conventions.FailoverBehavior, e);
 		}
 
 		protected FailureCounter GetHolder(string operationUrl)
@@ -292,7 +295,7 @@ namespace Raven.Client.Connection
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
                     // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false))
+                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false, error: null))
                     {
                         operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true).ConfigureAwait(false);
                         if (operationResult.Success)
@@ -301,9 +304,10 @@ namespace Raven.Client.Connection
                 }
             }
 
-            if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true))
+            if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true, error: null))
             {
-                operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0).ConfigureAwait(false);
+                operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0)
+                    .ConfigureAwait(false);
 
                 if (operationResult.Success)
                     return operationResult.Result;
@@ -322,7 +326,7 @@ namespace Raven.Client.Connection
             for (var i = 0; i < localReplicationDestinations.Count; i++)
             {
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination,primaryOperation, currentRequest, method, false) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, currentRequest, method, false, operationResult.Error) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
@@ -354,6 +358,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 	        public T Result;
 	        public bool WasTimeout;
 	        public bool Success;
+	        public Exception Error;
 	    }
 
         protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
@@ -406,7 +411,8 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                         return new AsyncOperationResult<T>
                         {
                             Success = false,
-                            WasTimeout = wasTimeout
+                            WasTimeout = wasTimeout,
+                            Error = e
                         };
                     }
                     throw;
@@ -461,7 +467,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			{
 				switch (webException.Status)
 				{
-#if !NETFX_CORE
 					case WebExceptionStatus.Timeout:
 						timeout = true;
 						return true;
@@ -469,8 +474,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
 					case WebExceptionStatus.ConnectionClosed:
-
-#endif
 					case WebExceptionStatus.ConnectFailure:
 					case WebExceptionStatus.SendFailure:
 						return true;
@@ -484,9 +487,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				}
 			}
 			return
-#if !NETFX_CORE
  e.InnerException is SocketException ||
-#endif
  e.InnerException is IOException;
 		}
 

@@ -41,6 +41,7 @@
         this.password(dto.Password);
         this.domain(dto.Domain);
         this.apiKey(dto.ApiKey);
+        this.disabled(!dto.Enabled);
         this.filesystem(dto.FileSystem);
 
         if (this.username()) {
@@ -71,7 +72,8 @@
             Password: null,
             Domain: null,
             ApiKey: null,
-            FileSystem: null
+            FileSystem: null,
+            Enabled: false,
         });
     }
 
@@ -91,6 +93,7 @@
             Domain: this.domain(),
             ApiKey: this.apiKey(),
             FileSystem: this.filesystem(),
+            Enabled: !this.disabled(),
         };
     }
 

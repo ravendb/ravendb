@@ -1,4 +1,26 @@
-﻿<div class="panel-group" id="accordion" data-bind="foreach: fields, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li>
+        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+    </li>
+    <li class="active">
+        <a data-bind="text: indexName, attr: { href: appUrls.editIndex(indexName) }"></a>
+    </li>
+    <li class="active">
+        <span>Terms</span>
+    </li>
+</ul>
+
+<div class="panel-group" id="accordion" data-bind="foreach: fields, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div class="panel panel-default">
         <div class="panel-heading">
             <h4 class="panel-title">

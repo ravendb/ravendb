@@ -698,7 +698,7 @@ namespace Raven.Tests.Storage.Voron
 
 		[Theory]
 		[PropertyData("Storages")]
-		public void GetKeysForIndexForDebug(string requestedStorage)
+		public void GetKeysForIndexForDebug1(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
@@ -713,7 +713,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 0, 10)
+						.GetKeysForIndexForDebug(303, null, null, 0, 10)
 						.ToList();
 
 					Assert.Equal(3, keys.Count);
@@ -722,14 +722,14 @@ namespace Raven.Tests.Storage.Voron
 					Assert.True(keys.Contains("reduceKey3"));
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(404, 0, 10)
+						.GetKeysForIndexForDebug(404, null, null, 0, 10)
 						.ToList();
 
 					Assert.Equal(1, keys.Count);
 					Assert.Equal("reduceKey4", keys[0]);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(505, 0, 10)
+						.GetKeysForIndexForDebug(505, null, null, 0, 10)
 						.ToList();
 
 					Assert.Equal(0, keys.Count);
@@ -738,7 +738,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 0, 10)
+						.GetKeysForIndexForDebug(303, null, null, 0, 10)
 						.ToList();
 
 					var k1 = keys[0];
@@ -746,34 +746,34 @@ namespace Raven.Tests.Storage.Voron
 					var k3 = keys[2];
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 0, 1)
+						.GetKeysForIndexForDebug(303, null, null, 0, 1)
 						.ToList();
 
 					Assert.Equal(1, keys.Count);
 					Assert.Equal(k1, keys[0]);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 1, 1)
+						.GetKeysForIndexForDebug(303, null, null, 1, 1)
 						.ToList();
 
 					Assert.Equal(1, keys.Count);
 					Assert.Equal(k2, keys[0]);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 2, 1)
+						.GetKeysForIndexForDebug(303, null, null, 2, 1)
 						.ToList();
 
 					Assert.Equal(1, keys.Count);
 					Assert.Equal(k3, keys[0]);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 3, 1)
+						.GetKeysForIndexForDebug(303, null, null, 3, 1)
 						.ToList();
 
 					Assert.Equal(0, keys.Count);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 0, 2)
+						.GetKeysForIndexForDebug(303, null, null, 0, 2)
 						.ToList();
 
 					Assert.Equal(2, keys.Count);
@@ -781,7 +781,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(k2, keys[1]);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 1, 2)
+						.GetKeysForIndexForDebug(303, null, null, 1, 2)
 						.ToList();
 
 					Assert.Equal(2, keys.Count);
@@ -789,11 +789,84 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(k3, keys[1]);
 
 					keys = accessor.MapReduce
-						.GetKeysForIndexForDebug(303, 2, 2)
+						.GetKeysForIndexForDebug(303, null, null, 2, 2)
 						.ToList();
 
 					Assert.Equal(1, keys.Count);
 					Assert.Equal(k3, keys[0]);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetKeysForIndexForDebug2(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.PutMappedResult(303, "doc1", "reduceKey/1", new RavenJObject { { "data", "data1" } });
+					accessor.MapReduce.PutMappedResult(303, "doc2", "reduceKey/2", new RavenJObject { { "data", "data2" } });
+					accessor.MapReduce.PutMappedResult(303, "doc3", "reduceKey/3", new RavenJObject { { "data", "data3" } });
+					accessor.MapReduce.PutMappedResult(404, "doc1", "reduceKey/4", new RavenJObject { { "data", "data4" } });
+					accessor.MapReduce.PutMappedResult(303, "doc1", "reduceKey/10", new RavenJObject { { "data", "data5" } });
+				});
+
+				storage.Batch(accessor =>
+				{
+					var keys = accessor.MapReduce
+						.GetKeysForIndexForDebug(303, "reduceKey", null, 0, 10)
+						.ToList();
+
+					Assert.Equal(4, keys.Count);
+					Assert.True(keys.Contains("reduceKey/1"));
+					Assert.True(keys.Contains("reduceKey/2"));
+					Assert.True(keys.Contains("reduceKey/3"));
+					Assert.True(keys.Contains("reduceKey/10"));
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug(303, "reduceKey/1", null, 0, 10)
+						.ToList();
+
+					Assert.Equal(2, keys.Count);
+					Assert.True(keys.Contains("reduceKey/1"));
+					Assert.True(keys.Contains("reduceKey/10"));
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetKeysForIndexForDebug3(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.PutMappedResult(303, "doc1", "reduceKey/1", new RavenJObject { { "data", "data1" } });
+					accessor.MapReduce.PutMappedResult(303, "doc2", "reduceKey/2", new RavenJObject { { "data", "data2" } });
+					accessor.MapReduce.PutMappedResult(303, "doc3", "reduceKey/3", new RavenJObject { { "data", "data3" } });
+					accessor.MapReduce.PutMappedResult(404, "doc1", "reduceKey/4", new RavenJObject { { "data", "data4" } });
+					accessor.MapReduce.PutMappedResult(303, "doC1", "reduceKey/10", new RavenJObject { { "data", "data5" } });
+				});
+
+				storage.Batch(accessor =>
+				{
+					var keys = accessor.MapReduce
+						.GetKeysForIndexForDebug(303, null, "doc1", 0, 10)
+						.ToList();
+
+					Assert.Equal(2, keys.Count);
+					Assert.True(keys.Contains("reduceKey/1"));
+					Assert.True(keys.Contains("reduceKey/10"));
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug(303, null, "doc2", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, keys.Count);
+					Assert.True(keys.Contains("reduceKey/2"));
 				});
 			}
 		}

@@ -18,13 +18,14 @@ class createEncryption extends dialogViewModelBase {
     keyFocus = ko.observable(true);
     algorithmFocus = ko.observable(false);
     bitsFocus = ko.observable(false);
+    
 
     private newEncryptionKey: getNewEncryptionKey;
     private base64Matcher = new RegExp("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$");
 
     constructor() {
         super();
-
+        
         this.newEncryptionKey = new getNewEncryptionKey();
         this.newEncryptionKey
             .execute()
@@ -34,6 +35,8 @@ class createEncryption extends dialogViewModelBase {
     }
 
     attached() {
+        this.dialogSelectorName = "#CreateEncriptionDialog";
+        super.attached();
         var self = this;
         var inputElement: any = $("#key")[0];
         this.key.subscribe((newKey) => {

@@ -5,6 +5,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 {
 	public class RenameFileOperation
 	{
+        public string FileSystem { get; set; }
 		public string Name { get; set; }
 
 		public string Rename { get; set; }

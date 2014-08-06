@@ -3,11 +3,13 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 
+import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 
 import conflictItem = require("models/filesystem/conflictItem");
 import filesystem = require("models/filesystem/filesystem");
+import changeSubscription = require("models/changeSubscription");
 
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
@@ -24,6 +26,8 @@ class synchronizationConflicts extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        this.loadConflicts();
     }
 
     deactivate() {
@@ -31,15 +35,54 @@ class synchronizationConflicts extends viewModelBase {
         this.activeFilesystemSubscription.dispose();
     }
 
-    modelPolling() {
-        var fs = this.activeFilesystem();
-        if (fs) {
-            new getFilesConflictsCommand(fs).execute()
-                .done(x => this.conflicts(x));
+    createNotifications(): Array<changeSubscription> {
+        return [ shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) ];
+    }
+
+    private processFsConflicts(e: synchronizationConflictNotification) {
+        // treat notifications events
+        switch (e.Status) {
+            case conflictStatus.Detected:
+                {
+                    this.addConflict(e);
+                    break;
+                }
+            case conflictStatus.Resolved:
+                {
+                    this.removeResolvedConflict(e);
+                    break;
+                }
+            default:
+                console.error("unknown notification action");
         }
     }
 
-    loadConflicts(): JQueryPromise<any> {
+    addConflict(conflictUpdate: synchronizationConflictNotification) {
+        var match = this.conflictsContains(conflictUpdate);
+        if (!match) {
+            this.conflicts.push(conflictItem.fromConflictNotificationDto(conflictUpdate));
+        }
+    }
+
+    removeResolvedConflict(conflictUpdate: synchronizationConflictNotification) {
+        var match = this.conflictsContains(conflictUpdate);
+        if (match) {
+            this.conflicts.remove(match);
+            this.selectedConflicts.remove(match.fileName);
+        }
+        this.isSelectAllValue(false);
+    }
+
+    private conflictsContains(e: synchronizationConflictNotification) : conflictItem {
+        var match = ko.utils.arrayFirst(this.conflicts(), (item) => {
+            return item.fileName === e.FileName;
+        });
+
+        return match;
+    }
+
+
+    private loadConflicts(): JQueryPromise<any> {
         var fs = this.activeFilesystem();
         if (fs) {
             var deferred = $.Deferred();
@@ -76,8 +119,9 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 1, fs).execute()
-                            .done(this.modelPolling());
+                        new resolveConflictCommand(conflict, 1, fs).execute().done(() => {
+                            this.selectedConflicts.remove(conflict);
+                        });
                     }
                 });
             app.showDialog(resolveConflictViewModel);
@@ -99,8 +143,7 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 0, fs).execute()
-                            .done(this.modelPolling());
+                        new resolveConflictCommand(conflict, 0, fs).execute();
                     }
                 });
             app.showDialog(resolveConflictViewModel);
@@ -110,10 +153,7 @@ class synchronizationConflicts extends viewModelBase {
 
     fileSystemChanged(fs: filesystem) {
         if (fs) {
-            this.modelPollingStop();
-            this.loadConflicts().always(() => {
-                this.modelPollingStart();
-            });
+            this.loadConflicts();
         }
     }
 

@@ -1,52 +1,34 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import synchronizationDetails = require("models/filesystem/synchronizationDetails");
-import synchronizationReport = require("models/filesystem/synchronizationReport");
-import pagedResultSet = require("common/pagedResultSet");
+import synchronizationDetail = require("models/filesystem/synchronizationDetail");
 
 class getSyncIncomingActivitiesCommand extends commandBase {
 
-    //maxItems = 50;
-
-    constructor(private fs: filesystem, private skip : number, private take: number) {
+    constructor(private fs: filesystem) {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<synchronizationDetail[]> {
 
-        var args = {
-            start: this.skip,
-            pageSize: this.take
-        };
+        var doneTask = $.Deferred();
+        var start = 0;
+        var pageSize = 50;
 
-        var task = $.Deferred();
-        // Incoming: All the finished activities. 
-        var url = "/synchronization/finished";
-        var pageSize = this.take;
+        this.getIncomingActivity(start, pageSize)
+            .done(x => doneTask.resolve(x.Items.map(x => new synchronizationDetail(x, "Pending", x.Type))))
+            .fail((xhr) => {
+                this.reportError("Failed to get synchronization incoming activities.");
+                doneTask.reject(xhr);
+            });
 
-        //if (this.skip < this.maxItems) {
-            this.query<filesystemListPageDto<filesystemSynchronizationReportDto>>(url, args, this.fs)
-                .done((x: filesystemListPageDto<filesystemSynchronizationReportDto>) => {
-                    //var totalCount = x.TotalCount > 50 ? 50 : x.TotalCount;
-                    //if (pageSize + x.Items.length <= this.maxItems) {
-                    task.resolve(new pagedResultSet(x.Items.map(item => new synchronizationReport(item)), x.TotalCount));
-                    //}
-                    //else {
-                    //    var itemsToTake = this.maxItems - this.skip;
-                    //    task.resolve(new pagedResultSet(x.Items.slice(0, itemsToTake), this.maxItems));
-                    //}
-                })
-                .fail((xhr) => {
-                    this.reportError("Failed to get synchronization incoming activities.")
-                        task.reject(xhr);
-                });
-        //}
-        //else {
-        //    task.resolve(new pagedResultSet([], this.maxItems));
-        //}
+        return doneTask;
+    }
 
-        return task;
+    getIncomingActivity(skip: number, take: number): JQueryPromise<filesystemListPageDto<filesystemSynchronizationDetailsDto>> {
+        var incomingUrl = "/synchronization/incoming";
+        var resultsSelector = (x: filesystemListPageDto<filesystemSynchronizationDetailsDto>) => { x.Items.map((item: filesystemSynchronizationDetailsDto) => item.Direction = synchronizationDirection.Incoming); return x; };
+        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(incomingUrl, { start: skip, pageSize: take }, this.fs, resultsSelector);
     }
 }
 
-export = getSyncIncomingActivitiesCommand;
+export = getSyncIncomingActivitiesCommand; 

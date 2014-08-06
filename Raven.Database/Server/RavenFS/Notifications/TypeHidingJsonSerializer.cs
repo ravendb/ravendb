@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Runtime.Serialization;
-using Raven.Client.RavenFS;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Notifications
 {

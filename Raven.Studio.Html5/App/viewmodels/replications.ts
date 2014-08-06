@@ -4,19 +4,24 @@ import replicationConfig = require("models/replicationConfig")
 import replicationDestination = require("models/replicationDestination");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/getReplicationsCommand");
+import updateServerPrefixHiLoCommand = require("commands/updateServerPrefixHiLoCommand");
 import saveReplicationDocumentCommand = require("commands/saveReplicationDocumentCommand");
 import getAutomaticConflictResolutionDocumentCommand = require("commands/getAutomaticConflictResolutionDocumentCommand");
 import saveAutomaticConflictResolutionDocument = require("commands/saveAutomaticConflictResolutionDocument");
+import getServerPrefixForHiLoCommand = require("commands/getServerPrefixForHiLoCommand");
 import appUrl = require("common/appUrl");
 
 class replications extends viewModelBase {
 
+    prefixForHilo = ko.observable<string>('');
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
-    
+
+    serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
     replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
-
+    
+    isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
@@ -24,7 +29,7 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
                 .done(() => deferred.resolve({ can: true }) )
                 .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
@@ -33,21 +38,27 @@ class replications extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
-        var self = this;
+        
+        this.serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([this.prefixForHilo]);
+        this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
-        this.isConfigSaveEnabled = ko.computed(function () {
-            return self.replicationConfigDirtyFlag().isDirty();
-        });
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
-        this.isSetupSaveEnabled = ko.computed(function () {
-            return self.replicationsSetupDirtyFlag().isDirty();
-        });
+        this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig]);
+        this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
-        var combinedFlag = ko.computed(function () {
-            return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
+        var combinedFlag = ko.computed(() => {
+            return (this.replicationConfigDirtyFlag().isDirty() || this.replicationsSetupDirtyFlag().isDirty() || this.serverPrefixForHiLoDirtyFlag().isDirty());
         });
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+        this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+    }
+
+    private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getServerPrefixForHiLoCommand(db)
+            .execute()
+            .done((result) => this.prefixForHilo(result))
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
     fetchAutomaticConflictResolution(db): JQueryPromise<any> {
@@ -69,7 +80,8 @@ class replications extends viewModelBase {
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(replicationDestination.empty());
+        var db = this.activeDatabase();
+        this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
     }
 
     removeDestination(repl: replicationDestination) {
@@ -85,16 +97,20 @@ class replications extends viewModelBase {
     }
 
     saveChanges() {
-        if (this.replicationsSetup().source()) {
-            this.saveReplicationSetup();
-        } else {
-            var db = this.activeDatabase();
-            if (db) {
-                new getDatabaseStatsCommand(db)
-                    .execute()
-                    .done(result=> {
-                        this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                });
+        if (this.isConfigSaveEnabled())
+            this.saveAutomaticConflictResolutionSettings();
+        if (this.isSetupSaveEnabled()) {
+            if (this.replicationsSetup().source()) {
+                this.saveReplicationSetup();
+            } else {
+                var db = this.activeDatabase();
+                if (db) {
+                    new getDatabaseStatsCommand(db)
+                        .execute()
+                        .done(result=> {
+                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                        });
+                }
             }
         }
     }
@@ -110,6 +126,15 @@ class replications extends viewModelBase {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db)
                 .execute()
                 .done(() => this.replicationsSetupDirtyFlag().reset() );
+        }
+    }
+
+    saveServerPrefixForHiLo() {
+        var db = this.activeDatabase();
+        if (db) {
+            new updateServerPrefixHiLoCommand(this.prefixForHilo(), db)
+                .execute()
+                .done(() => this.serverPrefixForHiLoDirtyFlag().reset());
         }
     }
 

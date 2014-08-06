@@ -1,7 +1,7 @@
 ﻿<div class="messageBox" tabindex="-1" style="width:60%">
     <form data-bind="submit: nextOrCreate">
         <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: cancel" aria-hidden="true"></button>
             <h4 class="modal-title" data-bind="text:(isNewCounter == true? 'Create ' : 'Update ' ) + 'Counter'"></h4>
         </div>
         <div class="modal-body">
@@ -10,13 +10,13 @@
                     <div class="col-md-12">
                         <label class="col-md-6" for="counterId">Counter Name:</label>
                         <div class="col-md-6">
-                            <input required type="text" class="form-control" id="counterId" placeholder="Counter Name" data-bind="enable: $root.isNewCounter, value: id, valueUpdate: 'keyup'">
+                            <input required type="text" class="form-control" id="counterId" placeholder="Counter Name" data-bind="enable: $root.isNewCounter, value: id, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                     <div class="col-md-12">
                         <label class="col-md-6" for="counterGroup">Group Name:</label>
                         <div class="col-md-6">
-                            <input required type="text" class="form-control" id="counterGroup" placeholder="Group Name" data-bind="enable: $root.isNewCounter, value: group, valueUpdate: 'keyup'">
+                            <input required type="text" class="form-control" id="counterGroup" placeholder="Group Name" data-bind="enable: $root.isNewCounter, value: group, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                     <div class="col-md-12">
@@ -28,7 +28,7 @@
                     <div class="col-md-12">
                         <label class="col-md-6" for="counterDelta">Delta</label>
                         <div class="col-md-6" style="display:inline-block">
-                            <input class="form-control" required type="number" id="counterDelta" placeholder="Counter Delta" data-bind="value: $root.counterDelta, valueUpdate: 'keyup'">
+                            <input class="form-control" required type="number" id="counterDelta" placeholder="Counter Delta" data-bind="value: $root.counterDelta, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                 </div>

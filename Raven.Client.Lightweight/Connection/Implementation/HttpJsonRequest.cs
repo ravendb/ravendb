@@ -1,5 +1,3 @@
-using Raven.Client.Extensions;
-#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -7,27 +5,19 @@ using Raven.Client.Extensions;
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Util;
+using Raven.Abstractions.Replication;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -35,6 +25,7 @@ using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using System.Collections;
 
 namespace Raven.Client.Connection
 {
@@ -181,7 +172,7 @@ namespace Raven.Client.Connection
 				});
 				return cachedResult;
 			}
-
+			
 			if (writeCalled)
                 return await ReadJsonInternalAsync().ConfigureAwait(false);
 
@@ -193,7 +184,7 @@ namespace Raven.Client.Connection
 
         private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
 		{
-			if (isRequestSentToServer)
+			if (isRequestSentToServer && Debugger.IsAttached == false)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 			isRequestSentToServer = true;
 
@@ -393,7 +384,7 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false);
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false).ConfigureAwait(false);
 
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
@@ -450,13 +441,17 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public long Size { get; private set; }
+
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
 			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				var data = await RavenJToken.TryLoadAsync(responseStream);
+				var countingStream = new CountingStream(responseStream);
+				var data = RavenJToken.TryLoad(countingStream);
+				Size = countingStream.NumberOfReadBytes;
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
@@ -566,7 +561,7 @@ namespace Raven.Client.Connection
 
 				var headerName = prop.Key;
 				var value = prop.Value.Value<object>().ToString();
-				if (headerName == "ETag")
+                if (headerName == Constants.MetadataEtagField)
 				{
 					headerName = "If-None-Match";
 					if (!value.StartsWith("\""))
@@ -645,6 +640,19 @@ namespace Raven.Client.Connection
 			}).ConfigureAwait(false);
 		}
 
+        public Task WriteWithObjectAsync<T>(IEnumerable<T> data) 
+        {
+            return WriteAsync(JsonExtensions.ToJArray(data));
+        }
+
+        public Task WriteWithObjectAsync<T>(T data)
+        {
+            if (data is IEnumerable)
+                throw new ArgumentException("The object implements IEnumerable. This method cannot handle it. Give the type system some hint with the 'as IEnumerable' statement to help the compiler to select the correct overload.");
+
+            return WriteAsync(JsonExtensions.ToJObject(data));           
+        }
+
         public async Task WriteAsync(RavenJToken tokenToWrite)
         {
             postedToken = tokenToWrite;
@@ -709,8 +717,12 @@ namespace Raven.Client.Connection
 			};
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-			await AssertNotFailingResponse(response);
+			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
+                                           .ConfigureAwait(false);
+
+            this.ResponseStatusCode = response.StatusCode;
+
+			// await AssertNotFailingResponse(response);
 			return response;
 		}
 
@@ -719,7 +731,10 @@ namespace Raven.Client.Connection
 			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
 			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
-			await AssertNotFailingResponse(response).ConfigureAwait(false);
+
+            this.ResponseStatusCode = response.StatusCode;
+
+			// await AssertNotFailingResponse(response).ConfigureAwait(false);
 			return response;
 		}
 
@@ -734,8 +749,10 @@ namespace Raven.Client.Connection
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
 			var response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
+            
+            this.ResponseStatusCode = response.StatusCode;
 
-			await AssertNotFailingResponse(response).ConfigureAwait(false);
+			//await AssertNotFailingResponse(response).ConfigureAwait(false);
 			return response;
 		}
 
@@ -759,28 +776,6 @@ namespace Raven.Client.Connection
 			{
 				length = -1;
 				return false;
-			}
-		}
-
-		private async Task AssertNotFailingResponse(HttpResponseMessage response)
-		{
-			ResponseStatusCode = response.StatusCode;
-
-			if (response.IsSuccessStatusCode == false)
-			{
-				var sb = new StringBuilder()
-					.Append(response.StatusCode)
-					.AppendLine();
-
-				using (var reader = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						sb.AppendLine(line);
-					}
-				}
-				throw new InvalidOperationException(sb.ToString());
 			}
 		}
 
@@ -826,4 +821,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

@@ -65,9 +65,18 @@ namespace Raven.Tests.Core.ChangesApi
         [Fact]
         public void ClientImplementationShouldWorkWithUntypedInterface()
         {
-            new UntypedInterfaceInheritanceChangesClient();
+            using (var untypedInterfaceInheritanceChangesClient = new UntypedInterfaceInheritanceChangesClient())
+            {
+                try
+                {
+                    untypedInterfaceInheritanceChangesClient.Task.Wait();
+                }
+                catch (Exception)
+                {
+                    
+                }
+            }
         }
-
 
 
         private interface ITypedConnectable : IConnectableChanges<ITypedConnectable>
@@ -130,11 +139,12 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         private class MockReplicationInformerBase : IReplicationInformerBase
-        {
+		{
+#pragma warning disable 67
+			public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+#pragma warning restore 67
 
-            public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
-
-            public int DelayTimeInMiliSec
+			public int DelayTimeInMiliSec
             {
                 get
                 {

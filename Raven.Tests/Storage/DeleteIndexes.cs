@@ -22,7 +22,7 @@ namespace Raven.Tests.Storage
 		public DeleteIndexes()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

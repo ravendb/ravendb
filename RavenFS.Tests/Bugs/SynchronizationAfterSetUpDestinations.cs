@@ -1,10 +1,10 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using RavenFS.Tests.Synchronization;
 using Xunit;
+using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Bugs
 {
@@ -13,8 +13,8 @@ namespace RavenFS.Tests.Bugs
 		[Fact]
 		public async Task Should_transfer_entire_file_even_if_rename_operation_was_performed()
 		{
-			var source = NewClient(0);
-			var destination = NewClient(1);
+			var source = NewAsyncClient(0);
+			var destination = NewAsyncClient(1);
 
 			var fileContent = new MemoryStream(new byte[] {1, 2, 3});
 			await source.UploadAsync("test.bin", fileContent);
@@ -22,7 +22,7 @@ namespace RavenFS.Tests.Bugs
 
 			SyncTestUtils.TurnOnSynchronization(source, destination);
 
-			var destinationSyncResults = await source.Synchronization.SynchronizeDestinationsAsync();
+			var destinationSyncResults = await source.Synchronization.SynchronizeAsync();
 			Assert.Equal(1, destinationSyncResults.Length);
 
 			var reports = destinationSyncResults[0].Reports.ToArray();

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
@@ -20,6 +22,49 @@ namespace Raven.Database.Linq
 		// ReSharper disable once InconsistentNaming
 		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
 
+
+		public IEnumerable<dynamic> TransfromWith(IEnumerable<string> transformers, dynamic maybeItems)
+		{
+			return Enumerable.Aggregate(transformers, maybeItems, 
+				(Func<dynamic, string, dynamic>)((items, transformer) => TransfromWith(transformer, items)));
+		}
+
+		public IEnumerable<dynamic> TransfromWith(string transformer, dynamic maybeItems)
+		{
+			if (CurrentTransformationScope.Current == null)
+				throw new InvalidOperationException("TransfromWith was accessed without CurrentTransformationScope.Current being set");
+
+			var storedTransformer = CurrentTransformationScope.Current.Database.IndexDefinitionStorage.GetTransformer(transformer);
+			if (storedTransformer == null)
+				throw new InvalidOperationException("No transformer with the name: " + transformer);
+
+			var enumerable = maybeItems as IEnumerable;
+			if ( enumerable != null && AnonymousObjectToLuceneDocumentConverter.ShouldTreatAsEnumerable(enumerable))
+				return AllowAccessToResultsEvenIfTheyAreStupidInternalAnonymousTypes(storedTransformer.TransformResultsDefinition(enumerable.Cast<dynamic>()));
+
+			return AllowAccessToResultsEvenIfTheyAreStupidInternalAnonymousTypes(storedTransformer.TransformResultsDefinition(new[] { maybeItems }));
+		}
+
+		// need to work around this: http://www.heartysoft.com/ashic/blog/2010/5/anonymous-types-c-sharp-4-dynamic
+		private IEnumerable<object> AllowAccessToResultsEvenIfTheyAreStupidInternalAnonymousTypes(IEnumerable<object> items)
+		{
+			foreach (var item in items)
+			{
+				if (item == null)
+					yield return new DynamicNullObject();
+				if (item is ValueType ||
+					item is string || 
+					item is RavenJToken || 
+					item is DynamicJsonObject || 
+					item is DynamicNullObject ||
+					item is IDictionary )
+					yield return item;
+				// assume that this is anonymous type, hence all internals, hence can't be access by the calling transformer
+				var json = RavenJObject.FromObject(item);
+				yield return new DynamicJsonObject(json);
+			}
+		}
+
 		// Required for RavenDB-1519
 		protected dynamic LoadDocument<TIgnored>(object key)
 		{
@@ -31,28 +76,40 @@ namespace Raven.Database.Linq
 			if (CurrentTransformationScope.Current == null)
 				throw new InvalidOperationException("LoadDocument was called without CurrentTransformationScope.Current being set: " + key);
 
-			return CurrentTransformationScope.Current.Load(key);
+			return CurrentTransformationScope.Current.Retriever.Load(key);
 		}
 
+		[Obsolete("Use Parameter instead.")]
 	    protected RavenJToken Query(string key)
+	    {
+			return Parameter(key);
+		}
+
+		[Obsolete("Use ParameterOrDefault instead.")]
+		protected RavenJToken QueryOrDefault(string key, object val)
+		{
+			return ParameterOrDefault(key, val);
+		}
+
+	    protected RavenJToken Parameter(string key)
 	    {
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
 	        RavenJToken value;
-	        if(CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+	        if(CurrentTransformationScope.Current.Retriever.TransformerParameters.TryGetValue(key, out value) == false)
                 throw new InvalidOperationException("Query parameter "+key+ " was accessed, but it wasn't provided for this query.");
 	        return value;
 
 	    }
 
-        protected RavenJToken QueryOrDefault(string key, object val)
+        protected RavenJToken ParameterOrDefault(string key, object val)
         {
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
             RavenJToken value;
-            if (CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+            if (CurrentTransformationScope.Current.Retriever.TransformerParameters.TryGetValue(key, out value) == false)
                 return RavenJToken.FromObject(val);
             return value;
 
@@ -63,7 +120,7 @@ namespace Raven.Database.Linq
 			if (CurrentTransformationScope.Current == null)
 				throw new InvalidOperationException("Include was called without CurrentTransformationScope.Current being set: " + key);
 
-			return CurrentTransformationScope.Current.Include(key);
+			return CurrentTransformationScope.Current.Retriever.Include(key);
 	
 		}
 
@@ -94,7 +151,7 @@ namespace Raven.Database.Linq
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != this.GetType()) return false;
-			return Equals((AbstractTransformer) obj);
+			return Equals((AbstractTransformer)obj);
 		}
 
 		public override int GetHashCode()

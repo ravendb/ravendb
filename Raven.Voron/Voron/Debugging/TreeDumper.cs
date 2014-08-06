@@ -27,11 +27,12 @@ namespace Voron.Debugging
 						if(currentPage.NumberOfEntries <= 0)
 							writer.WriteLine("Empty page (tree corrupted?)");
 					    
-						var key = new Slice(SliceOptions.Key);
+						
 					    for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries;nodeIndex++)
 					    {
 						    var node = currentPage.GetNode(nodeIndex);
-							key.Set(node);
+						    var key = currentPage.GetNodeKey(node);
+
 							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page",
                                 SizeOf.NodeEntry(node));
 					    }
@@ -96,7 +97,7 @@ digraph structs {
 ", p.PageNumber, p.Flags, p.NumberOfEntries, p.IsLeaf ? "black" : "blue",
 	Math.Round(((AbstractPager.PageSize - p.SizeLeft) / (double)AbstractPager.PageSize), 2),
     Math.Round(((AbstractPager.PageSize - p.CalcSizeLeft()) / (double)AbstractPager.PageSize), 2));
-                    var key = new Slice(SliceOptions.Key);
+                    MemorySlice key = new Slice(SliceOptions.Key);
                     if (p.IsLeaf && showNodesEvery > 0)
                     {
                         writer.WriteLine("		p_{0}_nodes [label=\" Entries:", p.PageNumber);
@@ -107,7 +108,7 @@ digraph structs {
                                 writer.WriteLine(" ... {0:#,#} keys redacted ...", showNodesEvery - 1);
                             }
                             var node = p.GetNode(i);
-                            key.Set(node);
+                            key = p.GetNodeKey(node);
                             writer.WriteLine("{0} - {2} {1:#,#}", MaxString(key.ToString(), 25),
                                 node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
                         }
@@ -163,17 +164,17 @@ digraph structs {
             return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
-        private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
+        private static string GetBranchNodeString(int i, MemorySlice key, Page p, NodeHeader* node)
         {
             string keyStr;
-            if (i == 0 && key.Size == 0)
+            if (i == 0 && key.KeyLength == 0)
             {
-                key.Set(p.GetNode(1));
+                key = p.GetNodeKey(1);
                 keyStr = "(lt " + key + ")";
             }
             else
             {
-                key.Set(node);
+                key = p.GetNodeKey(node);
                 keyStr = key.ToString();
             }
             return MaxString(keyStr, 25);

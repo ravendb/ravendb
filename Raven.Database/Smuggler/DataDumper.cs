@@ -29,9 +29,10 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase database;
 
-		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+		protected override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
 		{
 			EnsuredDatabaseExists = true;
+			return new CompletedTask();
 		}
 
         /// <summary>
@@ -172,15 +173,20 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
-		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)
+	    protected override JsonDocument GetDocument(string key)
+	    {
+	        return database.Documents.Get(key, null);
+	    }
+
+	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
 		{
 			const int dummy = 0;
-			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
+			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, take), lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();
 
-			return new AsyncEnumeratorBridge<RavenJObject>(enumerator);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
 		}
 
 		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
@@ -239,7 +245,7 @@ namespace Raven.Database.Smuggler
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		protected override void PutDocument(RavenJObject document, SmugglerOptions options)
+		protected override Task PutDocument(RavenJObject document, SmugglerOptions options, int size)
 		{
 			if (document != null)
 			{
@@ -253,12 +259,14 @@ namespace Raven.Database.Smuggler
 					Metadata = metadata,
 					DataAsJson = document,
 				});
-				return;
+
+				return new CompletedTask();
 			}
 
 			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
 			bulkInsertBatch = new List<JsonDocument>();
-			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid());
+			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true}, batchToSave, Guid.NewGuid(), CancellationToken.None);
+			return new CompletedTask();
 		}
 
 		protected override Task PutTransformer(string transformerName, RavenJToken transformer)

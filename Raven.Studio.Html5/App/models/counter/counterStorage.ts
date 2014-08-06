@@ -2,8 +2,11 @@
 import resource = require("models/resource");
 
 class counterStorage extends resource{
-    constructor(public name: string) {
-        super(name, 'counterstorage');
+    static type = 'counterstorage';
+
+    constructor(public name: string, private isDisabled: boolean = false) {
+        super(name, counterStorage.type);
+        this.disabled(isDisabled);
         this.name = name;
     }
 

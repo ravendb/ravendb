@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -35,11 +36,11 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				Name = "test",
 				Secret = "ThisIsMySecret",
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess {TenantId = "*", Admin = true},
-					new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true},
-                    new DatabaseAccess {TenantId = databaseName, Admin = true}
+					new ResourceAccess {TenantId = "*", Admin = true},
+					new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
+                    new ResourceAccess {TenantId = databaseName, Admin = true}
 				}
 			}), new RavenJObject(), null);
 		}

@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
+
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Common;
@@ -88,10 +91,10 @@ namespace Raven.Tests.Issues
             for (int i = 0; i < 10; i++)
             {
                 var req = i + 1;
-                replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, async url =>
+                replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, url =>
                 {
                     urlsTried.Add(Tuple.Create(req, url.Url));
-                    return 1;
+	                return new CompletedTask<int>(1);
                 }).Wait();
             }
             var expectedUrls = GetExpectedUrlForReadStriping().Take(urlsTried.Count).ToList();

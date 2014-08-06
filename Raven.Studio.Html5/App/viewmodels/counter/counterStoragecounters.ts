@@ -3,7 +3,7 @@ import counter = require("models/counter/counter");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import getCounterGroupsCommand = require("commands/counter/getCounterGroupsCommand");
 import updateCounterCommand = require("commands/counter/updateCounterCommand");
-import getCounterValueCommand = require("commands/counter/getCounterValueCommand");
+import getCounterOverallTotalCommand = require("commands/counter/getCounterOverallTotalCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import editCounterDialog = require("viewmodels/counter/editCounterDialog");
@@ -24,7 +24,6 @@ class counterStorageCounters extends viewModelBase {
     constructor() {
         super();
         this.fetchGroups();
-
     }
 
     fetchGroups() {
@@ -49,7 +48,6 @@ class counterStorageCounters extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.hasAnyCounterSelected = ko.computed(() => this.selectedCountersIndices().length > 0);
-        
     }
 
     addOrEditCounter(counterToUpdate: counter) {
@@ -57,15 +55,28 @@ class counterStorageCounters extends viewModelBase {
             var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
             editCounterDialogViewModel.updateTask
                 .done((editedCounter: counter, delta: number) => {
-                new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
-                    .execute()
-                    .done(() => {
-                        this.fetchGroups();
-                    });
+                    new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
+                        .execute()
+                        .done(() => {
+                            this.fetchGroups(); //TODO: remove this after changes api is implemented
+                        });
                 });
             app.showDialog(editCounterDialogViewModel);
         });
-        
+    }
+
+    resetCounter(counterToReset: counter) {
+        var confirmationMessageViewModel = this.confirmationMessage('Reset Counter', 'Are you sure you want to reset the counter?');
+        confirmationMessageViewModel
+            .done(() => {
+                require(["commands/counter/resetCounterCommand"], resetCounterCommand => {
+                    new resetCounterCommand(this.activeCounterStorage(), counterToReset)
+                        .execute()
+                        .done(() => {
+                            this.fetchGroups(); //TODO: remove this after changes api is implemented
+                        });
+                });
+            });
     }
 
     selectGroup(group: counterGroup) {

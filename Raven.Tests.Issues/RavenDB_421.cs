@@ -100,7 +100,7 @@ namespace Raven.Tests.Issues
 						.ToList();
 
 					WaitForUserToContinueTheTest(store);
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 					Assert.Equal(1, results[0].Children.Length);
 
 				}

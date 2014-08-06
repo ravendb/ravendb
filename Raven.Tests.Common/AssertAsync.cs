@@ -12,7 +12,6 @@ namespace Raven.Tests.Common
 	{
 		public static async Task<TException> Throws<TException>(Func<Task> func) where TException : Exception
 		{
-			Type actual = null;
 			try
 			{
 				await func();

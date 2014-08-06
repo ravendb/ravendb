@@ -91,13 +91,12 @@ namespace Raven.Database.Queries
 				CutoffEtag = query.CutoffEtag,
 				DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
 				DefaultOperator = query.DefaultOperator,
-				SkipTransformResults = query.SkipTransformResults,
 				SkippedResults = query.SkippedResults,
 				HighlighterPreTags = query.HighlighterPreTags,
 				HighlighterPostTags = query.HighlighterPostTags,
 				HighlightedFields = query.HighlightedFields,
 				ResultsTransformer = query.ResultsTransformer,
-				QueryInputs = query.QueryInputs,
+				TransformerParameters = query.TransformerParameters,
 				ExplainScores = query.ExplainScores,
 				SortHints = query.SortHints
 			};

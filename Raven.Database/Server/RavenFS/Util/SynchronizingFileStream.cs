@@ -46,7 +46,7 @@ namespace Raven.Database.Server.RavenFS.Util
 			}
 		}
 
-		public static SynchronizingFileStream CreatingOrOpeningAndWritting(ITransactionalStorage storage, IndexStorage search,
+		public static SynchronizingFileStream CreatingOrOpeningAndWriting(ITransactionalStorage storage, IndexStorage search,
 																		   StorageOperationsTask operationsTask,
 																		   string fileName, RavenJObject metadata)
 		{

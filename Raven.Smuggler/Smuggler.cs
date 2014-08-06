@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -349,7 +350,7 @@ namespace Raven.Smuggler
 
         private static async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(DocumentStore store)
         {
-            var buildNumber = await store.AsyncDatabaseCommands.GetBuildNumberAsync();
+            var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
             if (buildNumber == null || string.IsNullOrEmpty(buildNumber.ProductVersion))
             {
                 ShowProgress("Server version is not available. Running in legacy mode which does not support transformers and documents streaming.");

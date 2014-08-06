@@ -1,5 +1,5 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import filesystem = require("models/filesystem/filesystem");
 import moment = require("moment");
 
@@ -10,7 +10,7 @@ class filesystemStatistics extends viewModelBase {
     fetchStats(): JQueryPromise<filesystemStatisticsDto> {
         var db = this.activeFilesystem();
         if (db) {
-            return new getFilesystemStatsCommand(db)
+            return new getFileSystemStatsCommand(db)
                 .execute()
                 .done((result: filesystemStatisticsDto) => this.processStatsResults(result));
         }

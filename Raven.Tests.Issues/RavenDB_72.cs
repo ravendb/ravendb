@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
 				}
 
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 

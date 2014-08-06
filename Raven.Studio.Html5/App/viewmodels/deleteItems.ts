@@ -23,13 +23,13 @@ class deleteItems extends dialogViewModelBase {
     }
 
     deleteItems() {
-        var deleteItemsIds = this.documents().map(i => i.getId());
+        var deleteItemsIds = this.documents().map(i => i.getUrl());
         var deleteCommand;
         if (this.documents()[0] instanceof document) {
             deleteCommand = new deleteDocumentsCommand(deleteItemsIds, appUrl.getDatabase());
         }
         else if (this.documents()[0] instanceof file) {
-            deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFilesystem());
+            deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
         }
         var deleteCommandTask = deleteCommand.execute();
 

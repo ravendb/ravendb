@@ -10,6 +10,8 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Connections
 {
@@ -22,16 +24,27 @@ namespace Raven.Database.Server.Connections
 		public bool Connected { get; set; }
 
 		public event Action Disconnected = delegate { };
+        public long CoolDownWithDataLossInMiliseconds { get; set; }
+
+        private long lastMessageSentTick = 0;
+        private object lastMessageEnqueuedAndNotSent = null;
 
 		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
+        public string ResourceName { get; set; }
 
-		public ChangesPushContent(RavenDbApiController controller)
+        public ChangesPushContent(RavenBaseApiController controller)
 		{
 			Connected = true;
+            ResourceName = controller.TenantName;
 			Id = controller.GetQueryStringValue("id");
+            
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
+
+            long coolDownWithDataLossInMiliseconds = 0;
+			long.TryParse(controller.GetQueryStringValue("coolDownWithDataLoss"), out coolDownWithDataLossInMiliseconds);
+            CoolDownWithDataLossInMiliseconds = coolDownWithDataLossInMiliseconds;
 		}
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -53,17 +66,26 @@ namespace Raven.Database.Server.Connections
 						{
                             await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
 							await writer.FlushAsync();
+
+                            if (lastMessageEnqueuedAndNotSent != null)
+                            {
+								await SendMessage(lastMessageEnqueuedAndNotSent, writer);
+                            }
 							continue;
 						}
+
 						manualResetEvent.Reset();
+
 						object message;
 						while (msgs.TryDequeue(out message))
 						{
-							var obj = JsonConvert.SerializeObject(message, Formatting.None, new EtagJsonConverter());
-							await writer.WriteAsync("data: ");
-							await writer.WriteAsync(obj);
-							await writer.WriteAsync("\r\n\r\n");
-							await writer.FlushAsync();
+							if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
+                            {
+                                lastMessageEnqueuedAndNotSent = message;
+                                continue;
+                            }
+
+							await SendMessage(message, writer);
 						}
 					}
 					catch (Exception e)
@@ -84,6 +106,17 @@ namespace Raven.Database.Server.Connections
 					}
 				}
 			}
+		}
+
+		private async Task SendMessage(object message, StreamWriter writer)
+		{
+            var o = JsonExtensions.ToJObject(message);        
+            await writer.WriteAsync("data: ");
+            await writer.WriteAsync(o.ToString(Formatting.None));
+            await writer.WriteAsync("\r\n\r\n");
+            await writer.FlushAsync();
+			lastMessageEnqueuedAndNotSent = null;
+			lastMessageSentTick = Environment.TickCount;
 		}
 
 		protected override bool TryComputeLength(out long length)

@@ -2,12 +2,11 @@
 using System.IO;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.RavenFS;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {

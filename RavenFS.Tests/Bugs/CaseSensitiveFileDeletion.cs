@@ -8,13 +8,13 @@ namespace RavenFS.Tests.Bugs
         [Fact]
         public void FilesWithUpperCaseNamesAreDeletedProperly()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
             var ms = new MemoryStream();
             client.UploadAsync("Abc.txt", ms).Wait();
 
             client.DeleteAsync("Abc.txt").Wait();
 
-            var result = client.GetFilesAsync("/").Result;
+            var result = client.SearchOnDirectoryAsync("/").Result;
 
             Assert.Equal(0, result.FileCount);
         }

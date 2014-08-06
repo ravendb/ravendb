@@ -3,23 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 {
 	public class RemoteRdcManager
 	{
-		private readonly ISignatureRepository localSignatureRepository;
-        private readonly RavenFileSystemClient.SynchronizationClient ravenFileSystemClient;
-		private readonly ISignatureRepository remoteCacheSignatureRepository;
+        private readonly IAsyncFilesSynchronizationCommands commands;		
 
-        public RemoteRdcManager(RavenFileSystemClient.SynchronizationClient ravenFileSystemClient, ISignatureRepository localSignatureRepository,
+		private readonly ISignatureRepository localSignatureRepository;
+        private readonly ISignatureRepository remoteCacheSignatureRepository;        
+
+        public RemoteRdcManager(IAsyncFilesSynchronizationCommands commands, 
+                                ISignatureRepository localSignatureRepository,
 								ISignatureRepository remoteCacheSignatureRepository)
-		{
+		{            
 			this.localSignatureRepository = localSignatureRepository;
 			this.remoteCacheSignatureRepository = remoteCacheSignatureRepository;
-			this.ravenFileSystemClient = ravenFileSystemClient;
+			this.commands = commands;
 		}
 
 		/// <summary>
@@ -28,24 +31,24 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 		/// <param name="dataInfo"></param>
 		/// <param name="token"> </param>
 		/// <returns></returns>
-		public async Task<SignatureManifest> SynchronizeSignaturesAsync(DataInfo dataInfo, CancellationToken token)
-		{
-			var remoteSignatureManifest = await ravenFileSystemClient.GetRdcManifestAsync(dataInfo.Name);
+        public async Task<SignatureManifest> SynchronizeSignaturesAsync(DataInfo dataInfo, CancellationToken token)
+        {
+            var remoteSignatureManifest = await commands.GetRdcManifestAsync(dataInfo.Name);
+            if (remoteSignatureManifest.Signatures.Any())
+            {
+                var sigPairs = PrepareSigPairs(remoteSignatureManifest);
+              
+                var highestSigName = sigPairs.First().Remote;
 
-			if (remoteSignatureManifest.Signatures.Count > 0)
-			{
-				var sigPairs = PrepareSigPairs(remoteSignatureManifest);
+                using (var highestSigContent = remoteCacheSignatureRepository.CreateContent(highestSigName))
+                {
+                    await commands.DownloadSignatureAsync(highestSigName, highestSigContent);
+                    await SynchronizePairAsync(sigPairs, token);
+                }
+            }
 
-				var highestSigName = sigPairs.First().Remote;
-				using (var highestSigContent = remoteCacheSignatureRepository.CreateContent(highestSigName))
-				{
-					await ravenFileSystemClient.DownloadSignatureAsync(highestSigName, highestSigContent);
-					await SynchronizePairAsync(sigPairs, token);
-				}
-			}
-
-			return remoteSignatureManifest;
-		}
+            return remoteSignatureManifest;
+        }
 
 		private async Task SynchronizePairAsync(IList<LocalRemotePair> sigPairs, CancellationToken token)
 		{
@@ -66,13 +69,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 			var localSignatures = localSignatureRepository.GetByFileName().ToList();
 
 			var length = Math.Min(remoteSignatures.Count, localSignatures.Count);
-			var remoteSignatureNames =
-				remoteSignatures.Skip(remoteSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
-			var localSignatureNames =
-				localSignatures.Skip(localSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
-			return
-				localSignatureNames.Zip(remoteSignatureNames,
-										(local, remote) => new LocalRemotePair { Local = local, Remote = remote }).ToList();
+			var remoteSignatureNames = remoteSignatures.Skip(remoteSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
+			var localSignatureNames = localSignatures.Skip(localSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
+			return localSignatureNames.Zip(remoteSignatureNames,
+										   (local, remote) => new LocalRemotePair { Local = local, Remote = remote }).ToList();
 		}
 
 		private async Task SynchronizeAsync(string localSigName, string localSigSigName, string remoteSigName,
@@ -80,7 +80,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 		{
 			using (var needListGenerator = new NeedListGenerator(localSignatureRepository, remoteCacheSignatureRepository))
 			{
-				var source = new RemoteSignaturePartialAccess(ravenFileSystemClient, remoteSigName);
+				var source = new RemoteSignaturePartialAccess(commands, remoteSigName);
 				var seed = new SignaturePartialAccess(localSigName, localSignatureRepository);
 				var needList = needListGenerator.CreateNeedsList(SignatureInfo.Parse(localSigSigName),
 																 SignatureInfo.Parse(remoteSigSigName), token);

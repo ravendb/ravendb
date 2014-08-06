@@ -4,8 +4,10 @@ import database = require("models/database");
 
 class saveSqlReplicationsCommand extends executeBulkDocsCommand {
 
-    constructor(sqlReplications: sqlReplication[], db: database) {
-        super(sqlReplications.map(sr => sr.toBulkDoc("PUT")), db);
+    constructor(onScreenReplications: sqlReplication[], deletedReplications: sqlReplication[], db: database) {
+        var bulkPutReplications: bulkDocumentDto[] = onScreenReplications.map(sr => sr.toBulkDoc("PUT"));
+        var bulkDeleteReplications: bulkDocumentDto[] = deletedReplications.map(sr => sr.toBulkDoc("DELETE"));
+        super(bulkPutReplications.concat(bulkDeleteReplications), db);
     }
 
     execute(): JQueryPromise<bulkDocumentDto[]> {

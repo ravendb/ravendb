@@ -91,25 +91,25 @@ namespace Raven.Database.Util
         public MeterMetric GetReplicationBatchSizeMetric(ReplicationStrategy destination)
         {
             return ReplicationBatchSizeMeter.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Meter("metrics", "docs/min", "Replication docs/min Counter", TimeUnit.Minutes));
+                s => dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes));
         }
 
         public MeterMetric GetReplicationDurationMetric(ReplicationStrategy destination)
         {
             return ReplicationDurationMeter.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Meter("metrics", "duration", "Replication duration Counter", TimeUnit.Minutes));
+                s => dbMetrics.Meter("metrics", "duration for " + s, "Replication duration Counter", TimeUnit.Minutes));
         }
 
         public HistogramMetric GetReplicationBatchSizeHistogram(ReplicationStrategy destination)
         {
             return ReplicationBatchSizeHistogram.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Histogram("metrics", "Replication docs/min Histogram"));
+                s => dbMetrics.Histogram("metrics", "Replication docs/min Histogram for " + s));
         }
 
         public HistogramMetric GetReplicationDurationHistogram(ReplicationStrategy destination)
         {
             return ReplicationDurationHistogram.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Histogram("metrics", "Replication duration Histogram"));
+                s => dbMetrics.Histogram("metrics", "Replication duration Histogram for " + s));
         }
     }
 }

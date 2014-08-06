@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RavenFS.Tests</RootNamespace>
     <AssemblyName>RavenFS.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -44,6 +44,7 @@
       <HintPath>..\packages\NLog.2.1.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
@@ -89,7 +90,10 @@
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
     <Compile Include="Bugs\UploadDownload.cs" />
-    <Compile Include="ClientUsage.cs" />
+    <Compile Include="ClientApi\FileSessionListenersTests.cs" />
+    <Compile Include="ClientApi\FileSessionTests.cs" />
+    <Compile Include="ClientApi\SerializationTests.cs" />
+    <Compile Include="CommandsUsage.cs" />
     <Compile Include="CompleteUsage.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="FileHandling.cs" />
@@ -130,6 +134,7 @@
     <Compile Include="StorageStreamTest.cs" />
     <Compile Include="Synchronization\FileChangesPropagationTests.cs" />
     <Compile Include="Synchronization\WorkingWithConflictsTests.cs" />
+    <Compile Include="TaskAssert.cs" />
     <Compile Include="Tools\HttpWebRequestExtensions.cs" />
     <Compile Include="Tools\IisDeploymentUtil.cs" />
     <Compile Include="NarrowedStreamTests.cs" />
@@ -137,6 +142,7 @@
     <Compile Include="RemoteFilesHandlerTests.cs" />
     <Compile Include="PagesTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tools\SettingsHelper.cs" />
     <Compile Include="Tools\TimeMeasure.cs" />
     <Compile Include="WithNLog.cs" />
   </ItemGroup>
@@ -180,8 +186,8 @@
     <Content Include="Scripts\jquery-2.0.3.js" />
     <Content Include="Scripts\jquery-2.0.3.min.js" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
@@ -189,4 +195,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

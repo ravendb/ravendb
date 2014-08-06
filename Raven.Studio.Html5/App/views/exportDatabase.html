@@ -7,13 +7,13 @@
         <br />
         <br />
         <div class="btn-toolbar">
-            <div class="btn-group">
+            <div >
                 <button class="btn btn-primary" data-bind="click: startExport">
                     <div class="glyphicon glyphicon-import"></div>
                     Export Database
                 </button>
                 
-                <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="_blank">
+                <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="about:blank">
                     <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
                 </form>
             </div>
@@ -108,7 +108,7 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <button type="button" class="close" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">×</button>
+                                            <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">×</button>
                                         </td>
                                     </tr>
                                 </tbody>

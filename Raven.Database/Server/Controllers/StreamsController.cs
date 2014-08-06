@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
 			{
 				writer.WriteStartObject();
@@ -77,6 +77,7 @@ namespace Raven.Database.Server.Controllers
 							{
 								timeout.Delay();
 								doc.WriteTo(writer);
+                                writer.WriteRaw(Environment.NewLine);
 							});
 						else
 						{
@@ -86,6 +87,7 @@ namespace Raven.Database.Server.Controllers
 							{
 								timeout.Delay();
 								doc.WriteTo(writer);
+                                writer.WriteRaw(Environment.NewLine);
 							});
 
 							nextPageStart = nextPageStartInternal;
@@ -106,43 +108,46 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
-			using (var cts = new CancellationTokenSource())
-			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			var cts = new CancellationTokenSource();
+			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+			var msg = GetEmptyMessage();
+
+			var index = id;
+			var query = GetIndexQuery(int.MaxValue);
+			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
+			var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+			if (isHeadRequest) query.PageSize = 0;
+
+			var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
+
+			try
 			{
-				var msg = GetEmptyMessage();
+				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
+				queryOp.Init();
+				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
+					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"});
 
-				var index = id;
-				var query = GetIndexQuery(int.MaxValue);
-				if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-				var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
-				if (isHeadRequest) query.PageSize = 0;
+				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+				msg.Headers.Add(
+					"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
-				var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
 
-				try
+				if (IsCsvDownloadRequest(InnerRequest))
 				{
-					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
-					queryOp.Init();
-					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
-						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
-
-					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
-					msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
-					msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
-					msg.Headers.Add("Raven-Index", queryOp.Header.Index);
-					msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-					msg.Headers.Add(
-						"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
-
+					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 				}
-				catch (Exception)
-				{
-					accessor.Dispose();
-					throw;
-				}
-
-				return msg;
 			}
+			catch (Exception)
+			{
+				accessor.Dispose();
+				throw;
+			}
+
+			return msg;
 		}
 
 		[HttpPost]
@@ -167,10 +172,10 @@ namespace Raven.Database.Server.Controllers
 			private readonly HttpRequestMessage req;
 			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
-		    private readonly CancellationTokenSourceExtensions.CancellationTimeout _timeout;
+		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTokenSourceExtensions.CancellationTimeout timeout, Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;
@@ -183,6 +188,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				using (queryOp)
 				using (accessor)
+				using(_timeout)
 				using (var writer = GetOutputWriter(req, stream))
 				{
                     outputContentTypeSetter(writer.ContentType);
@@ -217,6 +223,13 @@ namespace Raven.Database.Server.Controllers
 			var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
 			return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
 		}
+
+        private static Boolean IsCsvDownloadRequest(HttpRequestMessage req)
+        {
+            return "true".Equals(GetQueryStringValue(req, "download"), StringComparison.InvariantCultureIgnoreCase) 
+                && "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
+        }
+
 
 		public interface IOutputWriter : IDisposable
 		{
@@ -372,6 +385,7 @@ namespace Raven.Database.Server.Controllers
 			public void Write(RavenJObject result)
 			{
 				result.WriteTo(writer, Default.Converters);
+                writer.WriteRaw(Environment.NewLine);
 			}
 
 		    public void WriteError(Exception exception)

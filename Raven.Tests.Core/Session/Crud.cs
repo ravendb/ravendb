@@ -7,6 +7,7 @@ using System;
 using System.Dynamic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Transformers;
 using Xunit;
@@ -69,7 +70,7 @@ namespace Raven.Tests.Core.Session
 		}
 
 		[Fact]
-		public async Task CanLoadWithTransformer()
+		public Task CanLoadWithTransformer()
 		{
 			using (var store = GetDocumentStore())
 			{
@@ -96,6 +97,8 @@ namespace Raven.Tests.Core.Session
 					Assert.Equal("Lorem ipsum...", result.Content);
 				}
 			}
+
+			return new CompletedTask();
 		}
 
 		[Fact]

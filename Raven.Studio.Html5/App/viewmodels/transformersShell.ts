@@ -23,6 +23,8 @@ class transformerShell extends viewModelBase {
             ])
             .buildNavigationModel();
 
+        appUrl.mapUnknownRoutes(this.router);
+
         this.currentBreadcrumbTitle = ko.computed(() => {
             // Is there a better way to get the active route?
             var activeRoute = this.router.navigationModel().first(r => r.isActive());

@@ -4,8 +4,7 @@ using System.Linq;
 using System.Threading;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.RavenFS;
-using Raven.Client.RavenFS;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -67,13 +66,14 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
         public int NumberOfActiveSynchronizationTasksFor(string destinationFileSystemUrl)
 		{
-			return
-				activeSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>()).Count;
+			return activeSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>())
+                                         .Count;
 		}
 
-        public void EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
+        public bool EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
 		{
-			pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).EnterUpgradeableReadLock();
+			pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim())
+                              .EnterUpgradeableReadLock();
 
 			try
 			{
@@ -82,8 +82,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 				// if delete work is enqueued and there are other synchronization works for a given file then remove them from a queue
 				if (workItem.SynchronizationType == SynchronizationType.Delete &&
-					pendingForDestination.Any(
-						x => x.FileName == workItem.FileName && x.SynchronizationType != SynchronizationType.Delete))
+					pendingForDestination.Any(x => x.FileName == workItem.FileName && x.SynchronizationType != SynchronizationType.Delete))
 				{
 					pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).EnterWriteLock();
 
@@ -115,7 +114,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					{
 						Log.Debug("{0} for a file {1} and a destination {2} was already existed in a pending queue",
 								  workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-						return;
+						return false;
 					}
 
 					// if there is a work for a file of the same type but with lower file ETag just refresh existing work metadata and do not enqueue again
@@ -127,7 +126,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 						Log.Debug(
 							"{0} for a file {1} and a destination {2} was already existed in a pending queue but with older ETag, it's metadata has been refreshed",
 							workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-						return;
+						return false;
 					}
 				}
 
@@ -140,7 +139,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				{
 					Log.Debug("{0} for a file {1} and a destination {2} was already existed in an active queue",
 							  workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-					return;
+					return false;
 				}
 
 				pendingForDestination.Enqueue(workItem);
@@ -151,6 +150,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			{
 				pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).ExitUpgradeableReadLock();
 			}
+
+            return true;
 		}
 
         public bool TryDequePendingSynchronization(string destinationFileSystemUrl, out SynchronizationWorkItem workItem)

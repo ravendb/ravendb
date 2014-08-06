@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
 
+using Raven.Abstractions.Extensions;
+
 namespace Raven.Client.Document
 {
 	public class GenerateEntityIdOnTheClient
@@ -17,7 +19,7 @@ namespace Raven.Client.Document
 			this.generateKey = generateKey;
 		}
 
-		private PropertyInfo GetIdentityProperty(Type entityType)
+		private MemberInfo GetIdentityProperty(Type entityType)
 		{
 			return documentStore.Conventions.GetIdentityProperty(entityType);
 		}
@@ -30,7 +32,7 @@ namespace Raven.Client.Document
 			var identityProperty = GetIdentityProperty(entity.GetType());
 			if (identityProperty != null)
 			{
-			    var value = identityProperty.GetValue(entity, new object[0]);
+			    var value = identityProperty.GetValue(entity);
 			    return GetIdAsString(entity, value, out id);
 			}
 		   
@@ -123,9 +125,9 @@ namespace Raven.Client.Document
 				return;
 			}
 
-			if (identityProperty.CanWrite)
+			if (identityProperty.CanWrite())
 			{
-				SetPropertyOrField(identityProperty.PropertyType, entity, val => identityProperty.SetValue(entity, val, null), id);
+				SetPropertyOrField(identityProperty.Type(), entity, val => identityProperty.SetValue(entity, val), id);
 			}
 			else
 			{
@@ -136,9 +138,7 @@ namespace Raven.Client.Document
 				if (fieldInfo == null)
 					return;
 
-#if !NETFX_CORE
-				SetPropertyOrField(identityProperty.PropertyType, entity, val => fieldInfo.SetValue(entity, val), id);
-#endif
+				SetPropertyOrField(identityProperty.Type(), entity, val => fieldInfo.SetValue(entity, val), id);
 			}
 		}
 

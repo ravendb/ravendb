@@ -61,7 +61,7 @@ namespace Raven.SlowTests.Issues
             {
                 InsertUsers(store, 0, 2000);
 
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
                 {
                     ToFile = backupPath,
@@ -137,7 +137,7 @@ namespace Raven.SlowTests.Issues
                                   }
                 };
 
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
                 {
                     ToFile = backupPath
@@ -201,7 +201,7 @@ namespace Raven.SlowTests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 dumper.ImportData(new SmugglerImportOptions
                 {
                     FromFile = backupPath
@@ -242,7 +242,7 @@ namespace Raven.SlowTests.Issues
                     }
                 }
                 };
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
                 {
                     ToFile = backupPath
@@ -457,7 +457,7 @@ namespace Raven.SlowTests.Issues
                 }
             }
 
-            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+            VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
 
             IOExtensions.DeleteDirectory(backupPath);
         }
@@ -481,7 +481,7 @@ namespace Raven.SlowTests.Issues
 				}, new SmugglerOptions { Incremental = true });
             }
 
-            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+            VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
 
             IOExtensions.DeleteDirectory(backupPath);
         }
@@ -579,7 +579,7 @@ namespace Raven.SlowTests.Issues
             {
                 InsertAttachments(store, 328);
 
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100 });
             }
 
@@ -619,7 +619,7 @@ namespace Raven.SlowTests.Issues
             {
                 InsertAttachments(store, 328);
 
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100, Limit = 206 });
             }
 
@@ -657,7 +657,7 @@ namespace Raven.SlowTests.Issues
             var backupPath = NewDataPath("BackupFolder");
             using (var store = NewDocumentStore())
             {
-                var dumper = new DataDumper(store.DocumentDatabase);
+                var dumper = new DataDumper(store.SystemDatabase);
                 await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100, Limit = 206 });
             }
 

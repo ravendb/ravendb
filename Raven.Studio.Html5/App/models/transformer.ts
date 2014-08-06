@@ -2,7 +2,6 @@
 
 import appUrl = require("common/appUrl");
 
-
 class transformer {
     public name = ko.observable<string>().extend({ required: true });
     public transformResults = ko.observable<string>().extend({ required: true });
@@ -46,6 +45,33 @@ class transformer {
         };
     }
 
+    extractInputs(): Array<transformerParamInfo> {
+        var matcher = /(Query|Parameter)\(["'].*?["']\)/g;
+        var defaultMatcher = /(Query|Parameter)OrDefault\(["'].*?["'],\s+["'].*?["']\)/g;
+        if (this.transformResults()) {
+            var parameters: string[] = this.transformResults().match(matcher);
+            var parametersWithDefault: string[] = this.transformResults().match(defaultMatcher);
+            var results = [];
+
+            if (parameters !== null) {
+                parameters.forEach((value: string) => results.push( {
+                    name: value.substring(value.indexOf('(') + 2, value.length - 2),
+                    hasDefault: false
+                }));
+            }
+
+            if (parametersWithDefault !== null) {
+                parametersWithDefault.forEach((value: string) => results.push({
+                    name: value.substring(value.indexOf('(') + 2, value.indexOf(',') - 1),
+                    hasDefault: true
+                }));
+            }
+            return results;
+        }
+
+        return [];
+    }
+    
     static empty(): transformer{
         return new transformer().initFromLoad({
             'name': "",

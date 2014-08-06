@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Controllers
             var includedIds = new HashSet<string>();
 			var includes = GetQueryStringValues("include") ?? new string[0];
 			var transformer = GetQueryStringValue("transformer") ?? GetQueryStringValue("resultTransformer");
-			var queryInputs = ExtractQueryInputs();
+			var transformerParameters = this.ExtractTransformerParameters();
 			var transactionInformation = GetRequestTransaction();
 			var includedEtags = new List<byte>();
 
@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Controllers
 						continue;
 					var documentByKey = string.IsNullOrEmpty(transformer)
 										? Database.Documents.Get(value, transactionInformation)
-                                        : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs, out includedIds);
+                                        : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, transformerParameters, out includedIds);
 				    if (documentByKey == null)
 				    {
                         if(ClientIsV3OrHigher)

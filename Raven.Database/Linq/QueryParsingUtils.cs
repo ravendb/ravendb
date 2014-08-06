@@ -26,6 +26,7 @@ using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -40,23 +41,28 @@ namespace Raven.Database.Linq
 	public static class QueryParsingUtils
 	{
 		[CLSCompliant(false)]
-		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
+		public static string GenerateText(TypeDeclaration type, 
+			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+			HashSet<string> namespaces = null)
 		{
 			var unit = new SyntaxTree();
 
-			var namespaces = new HashSet<string>
+			if (namespaces == null)
 			{
-				typeof (SystemTime).Namespace,
-				typeof (AbstractViewGenerator).Namespace,
-				typeof (Enumerable).Namespace,
-				typeof (IEnumerable<>).Namespace,
-				typeof (IEnumerable).Namespace,
-				typeof (int).Namespace,
-				typeof (LinqOnDynamic).Namespace,
-				typeof(Field).Namespace,
-				typeof(CultureInfo).Namespace,
-				typeof(Regex).Namespace
-			};
+				namespaces = new HashSet<string>
+				{
+					typeof (SystemTime).Namespace,
+					typeof (AbstractViewGenerator).Namespace,
+					typeof (Enumerable).Namespace,
+					typeof (IEnumerable<>).Namespace,
+					typeof (IEnumerable).Namespace,
+					typeof (int).Namespace,
+					typeof (LinqOnDynamic).Namespace,
+					typeof (Field).Namespace,
+					typeof (CultureInfo).Namespace,
+					typeof (Regex).Namespace
+				};
+			}
 
 			foreach (var extension in extensions)
 			{
@@ -71,7 +77,6 @@ namespace Raven.Database.Linq
 				unit.Members.Add(new UsingDeclaration(ns));
 			}
 
-			unit.Members.Add(new WindowsNewLine());
 			unit.Members.Add(new WindowsNewLine());
 
 			unit.Members.Add(type);
@@ -399,12 +404,8 @@ namespace Raven.Database.Linq
 
 		private static string GetIndexFilePath(string source, string indexCacheDir)
 		{
-			string sourceHashed;
-			using (var md5 = MD5.Create())
-			{
-				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
-				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
-			}
+			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
+			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
 			var indexFilePath = Path.Combine(indexCacheDir,
 				IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
 				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");

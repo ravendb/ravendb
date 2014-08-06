@@ -16,6 +16,8 @@ namespace Raven.Database.Bundles.SqlReplication
 		public bool Disabled { get; set; }
 
 		public bool ParameterizeDeletesDisabled { get; set; }
+        public bool ForceSqlServerQueryRecompile { get; set; }
+        public bool PerformTableQuatation { get; set; }
 
 		public string RavenEntityName { get; set; }
 		public string Script { get; set; }
@@ -23,6 +25,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public string ConnectionString { get; set; }
 
+        public string PredefinedConnectionStringSettingName { get; set; }
 		public string ConnectionStringName { get; set; }
 		public string ConnectionStringSettingName { get; set; }
 
@@ -55,4 +58,20 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 	}
+
+    public class SqlReplicationConnections
+    {
+        public List<PredefinedSqlConnection> predefinedConnections { get; set; }
+
+        public SqlReplicationConnections()
+        {
+            predefinedConnections = new List<PredefinedSqlConnection>();
+        }
+        public class PredefinedSqlConnection
+        {
+            public string Name { get; set; }
+            public string FactoryName { get; set; }
+            public string ConnectionString { get; set; }
+        }
+    }
 }

@@ -437,7 +437,7 @@ Configuration options:
 			if (noLog == false)
 				ConfigureDebugLogging();
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.UseSsl);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.Encryption.UseSsl);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			while (RunServerInDebugMode(ravenConfiguration, launchBrowser))
@@ -581,7 +581,7 @@ Configuration options:
 		{
 			Console.WriteLine(
 				@"
-Raven DB
+RavenDB
 Document Database for the .Net Platform
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
@@ -650,7 +650,6 @@ Enjoy...
 				stopController.Start();
 				stopController.WaitForStatus(ServiceControllerStatus.Running);
 			}
-
 		}
 
 		private static void InstallAndStart()

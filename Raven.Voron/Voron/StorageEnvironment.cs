@@ -39,12 +39,12 @@ namespace Voron
         private readonly HeaderAccessor _headerAccessor;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private ScratchBufferPool _scratchBufferPool;
+        private readonly ScratchBufferPool _scratchBufferPool;
 	    private DebugJournal _debugJournal;
 	    private EndOfDiskSpaceEvent _endOfDiskSpace;
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
-		private Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>(); 
+		private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>(); 
 
         public TransactionMergingWriter Writer { get; private set; }
 
@@ -67,7 +67,7 @@ namespace Voron
 	    }
 #endif
 
-        public unsafe StorageEnvironment(StorageEnvironmentOptions options)
+        public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
             {
@@ -79,12 +79,13 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
-                _journal = new WriteAheadJournal(this);
-
-                if (isNew)
+				_journal = new WriteAheadJournal(this);
+				
+				if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
+
 
                 State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
                 State.Root.Name = Constants.RootTreeName;
@@ -134,23 +135,27 @@ namespace Voron
 
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
-            }
-        }
 
-        private unsafe void CreateNewDatabase()
+			}
+		}
+
+        private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
             State = new StorageEnvironmentState(null, null, initialNextPageNumber);
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Create(tx);
-                var freeSpace = Tree.Create(tx);
+                var root = Tree.Create(tx, false);
+                var freeSpace = Tree.Create(tx, false);
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);
 
                 tx.Commit();
-            }
+
+				//since this transaction is never shipped, this is the first previous transaction
+				//when applying shipped logs
+			}
         }
 
         public IFreeSpaceHandling FreeSpaceHandling
@@ -231,12 +236,12 @@ namespace Voron
                 tx.FreePage(page);
             }
 
-            tx.State.Root.Delete(name);
+            tx.State.Root.Delete((Slice) name);
 
             tx.RemoveTree(name);
         }
 
-        public unsafe Tree CreateTree(Transaction tx, string name)
+        public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
@@ -257,7 +262,7 @@ namespace Voron
                 return tree;
             }
 
-            tree = Tree.Create(tx);
+            tree = Tree.Create(tx, keysPrefixing);
             tree.Name = name;
             var space = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
 
@@ -390,6 +395,11 @@ namespace Voron
                 throw;
             }
         }
+
+	    public long NextWriteTransactionId
+	    {
+		    get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
+	    }
 
         private void TransactionAfterCommit(Transaction tx)
         {

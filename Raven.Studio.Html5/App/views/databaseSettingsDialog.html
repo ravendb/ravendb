@@ -1,0 +1,39 @@
+﻿<style>
+    .modal-body {
+        min-width: 800px;
+        max-width: 800px;
+    }
+    .settings-container span.input-group-addon{
+        width: 1px;
+    }
+
+    .composite-view {
+        overflow-x: hidden;
+        overflow-y: auto;
+        min-height: 600px;
+        max-height: 600px;
+    }
+</style>
+<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: close" aria-hidden="true"></button>
+        <h4 class="modal-title">Database Settings</h4>
+    </div>
+    <div class="modal-body">
+        <div class="settings-container row">
+            <div class="col-md-2">
+                <ul class="nav nav-pills nav-stacked" data-bind="foreach: routes">
+                    <li data-bind="css: { active: $root.isActive(moduleId) }">
+                        <a href="#" data-bind="text: title, click: $root.showView.bind($root, moduleId)"></a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-10 composite-view" data-bind="compose: content">
+            </div>
+            <div class="clearfix"></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bind="click: close">Done</button>
+    </div>
+</div>

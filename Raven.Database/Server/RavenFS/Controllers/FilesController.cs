@@ -1,36 +1,34 @@
-﻿using System;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Abstractions.Util.Streams;
+using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Util;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
+using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
+using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util.Encryptors;
-using Raven.Abstractions.Util.Streams;
-using Raven.Client.RavenFS;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
-using Raven.Database.Server.RavenFS.Util;
-using Raven.Database.Util.Streams;
-using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
-using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
-using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	public class FilesController : RavenFsApiController
-	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class FilesController : RavenFsApiController
+    {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/files")]
@@ -42,7 +40,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
-            return this.GetMessageWithObject(list, HttpStatusCode.OK);
+            return this.GetMessageWithObject(list, HttpStatusCode.OK)
+                       .WithNoCache();
 		}
 
 		[HttpGet]
@@ -50,7 +49,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -67,10 +66,18 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				throw new HttpResponseException(HttpStatusCode.NotFound);
 			}
 
-			var readingStream = StorageStream.Reading(Storage, name);
-			var result = StreamResult(name, readingStream);
-            AddHeaders(result, fileAndPages.Metadata);
-			return result;
+            var readingStream = StorageStream.Reading(Storage, name);
+
+            var filename = Path.GetFileName(name);
+            var result = StreamResult(filename, readingStream);
+
+            var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
+            fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
+            WriteHeaders(fileAndPages.Metadata, etag, result);
+
+            log.Debug("File '{0}' with etag {1} is being retrieved.", name, etag);
+
+            return result.WithNoCache();
 		}
 
 		[HttpDelete]
@@ -139,7 +146,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
@@ -156,10 +163,36 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
+            
+
 			var httpResponseMessage = GetEmptyMessage();
-			AddHeaders(httpResponseMessage, fileAndPages.Metadata);
+
+            var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
+            fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
+
+            WriteHeaders(fileAndPages.Metadata, etag, httpResponseMessage);
+
 			return httpResponseMessage;
 		}
+
+        [HttpGet]
+        [Route("fs/{fileSystemName}/files/metadata")]
+        public HttpResponseMessage Metadata([FromUri] string[] fileNames)
+        {
+            if (fileNames == null || fileNames.Length == 0)
+            {
+                log.Debug("'fileNames' parameter should have a value.");
+                return GetEmptyMessage(HttpStatusCode.BadRequest);
+            }
+
+            var ravenPaths = fileNames.Where(x => x != null).Select(x => RavenFileNameHelper.RavenPath(x));
+
+            var list = new List<FileHeader>();
+            Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
+
+            return this.GetMessageWithObject(list, HttpStatusCode.OK)
+                       .WithNoCache();
+        }
 
 		[HttpPost]
         [Route("fs/{fileSystemName}/files/{*name}")]
@@ -231,6 +264,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                         var operation = new RenameFileOperation
                         {
+                            FileSystem = FileSystem.Name,
                             Name = name,
                             Rename = rename,
                             MetadataAfterOperation = metadata
@@ -258,20 +292,22 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		[HttpPut]
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
-		{
+		{         
 			try
 			{
-                RavenFileSystem.MetricsCounters.FilesPerSecond.Mark();
+                FileSystem.MetricsCounters.FilesPerSecond.Mark();
 
 				name = RavenFileNameHelper.RavenPath(name);
 
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
+                headers[Constants.CreationDate] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);
 
+                long? size = -1;
                 ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
                 {
                     AssertFileIsNotBeingSynced(name, accessor, true);
@@ -279,7 +315,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                     var contentLength = Request.Content.Headers.ContentLength;
                     var sizeHeader = GetHeader("RavenFS-size");
-                    long? size;
+
                     long sizeForParse;
                     if (contentLength == 0 || long.TryParse(sizeHeader, out sizeForParse) == false)
                     {
@@ -295,28 +331,38 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     }
 
                     accessor.PutFile(name, size, headers);
+
                     Search.Index(name, headers);                  
                 }));
 
-                log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>("ETag"));
+                log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
                 using (var contentStream = await Request.Content.ReadAsStreamAsync())
                 using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
                 {
-                    await readFileToDatabase.Execute();
+                    await readFileToDatabase.Execute();                
+   
+                    if ( readFileToDatabase.TotalSizeRead != size )
+                    {
+                        Storage.Batch(accessor => { StorageOperationsTask.IndicateFileToDelete(name); });
+                        throw new HttpResponseException(HttpStatusCode.BadRequest);
+                    }                        
 
                     Historian.UpdateLastModified(headers); // update with the final file size
 
                     log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 
-                    headers["Content-MD5"] = readFileToDatabase.FileHash;
+                    headers["Content-MD5"] = readFileToDatabase.FileHash;                    
 
                     Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
-                    headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
+
+                    int totalSizeRead = readFileToDatabase.TotalSizeRead;
+                    headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
+                    
                     Search.Index(name, headers);
                     Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
-                    log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
+                    log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
                     StartSynchronizeDestinationsInBackground();
                 }
@@ -348,48 +394,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		private void StartSynchronizeDestinationsInBackground()
 		{
-			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None,
-								  TaskCreationOptions.None, TaskScheduler.Default);
+			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
-
-        private static void AddHeaders(HttpResponseMessage context, RavenJObject metadata)
-        {
-            foreach (var item in metadata)
-            {
-                if (item.Key == "ETag")
-                {
-                    var etag = item.Value.Value<Guid>();
-                    if (etag == null)
-                        continue;
-
-                    context.Headers.ETag = new EntityTagHeaderValue(@"""" + etag + @"""");
-                }
-                else
-                {
-                    if (item.Key == "Last-Modified")
-                    {
-                        string value = item.Value.Value<string>();
-                        context.Content.Headers.Add(item.Key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
-                    }
-                    else
-                    {
-                        string value;
-                        switch (item.Value.Type)
-                        {
-                            // REVIEW: Can we just do item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None) everywhere?
-                            case JTokenType.Object:
-                            case JTokenType.Array:
-                                value = item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None);
-                                break;
-                            default:
-                                value = item.Value.Value<string>();
-                                break;
-                        }
-                        context.Content.Headers.Add(item.Key, value);
-                    }
-                }
-            }
-        }
 
 		private class ReadFileToDatabase : IDisposable
 		{

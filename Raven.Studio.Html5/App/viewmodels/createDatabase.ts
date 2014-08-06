@@ -5,17 +5,25 @@ import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
+import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 
 class createDatabase extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
+    private emptyNameMessage = "Please fill out the database name field!";
 
     databaseName = ko.observable('');
+    nameCustomValidity = ko.observable<string>(this.emptyNameMessage);
     databasePath = ko.observable('');
-    databaseLogs = ko.observable('');
-    databaseIndexes = ko.observable('');
+    pathCustomValidity = ko.observable<string>('');
+    databaseLogsPath = ko.observable('');
+    logsCustomValidity = ko.observable<string>('');
+    databaseIndexesPath = ko.observable('');
+    indexesCustomValidity = ko.observable<string>('');
     databaseNameFocus = ko.observable(true);
+    private maxNameLength = 200;
+
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
     isExpirationBundleEnabled = ko.observable(false);
@@ -26,29 +34,33 @@ class createDatabase extends dialogViewModelBase {
     isPeriodicExportBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
-    private databases = ko.observableArray<database>();
-    private maxNameLength = 200;
-
-    constructor(databases) {
+    constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
-        this.databases = databases;
+
+        this.licenseStatus = licenseStatus;
+        if (this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
+            this.isPeriodicExportBundleEnabled(false);
+        }
     }
 
     attached() {
-        this.databaseNameFocus(true);
-        
-        var inputElement: any = $("#databaseName")[0];
+        super.attached();
+
         this.databaseName.subscribe((newDatabaseName) => {
             var errorMessage: string = '';
             if (this.isDatabaseNameExists(newDatabaseName, this.databases()) === true) {
-                errorMessage = "Database Name Already Exists!";
+                errorMessage = "Database name already exists!";
             }
-            else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
-            inputElement.setCustomValidity(errorMessage);
+            else if ((errorMessage = this.checkName(newDatabaseName)) != '') { }
+
+            this.nameCustomValidity(errorMessage);
         });
-        this.subscribeToPath("#databasePath", this.databasePath, "Path");
-        this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
-        this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
+    
+        this.subscribeToPath(this.databasePath, this.pathCustomValidity, "Path");
+        this.subscribeToPath(this.databaseLogsPath, this.logsCustomValidity, "Logs");
+        this.subscribeToPath(this.databaseIndexesPath, this.indexesCustomValidity, "Indexes");
+
+        this.databaseNameFocus(true);
     }
 
     deactivate() {
@@ -63,36 +75,49 @@ class createDatabase extends dialogViewModelBase {
         dialog.close(this);
     }
 
+    isBundleActive(name: string): boolean {
+        var licenseStatus: licenseStatusDto = this.licenseStatus();
+
+        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+            return true;
+        }
+        else {
+            var value = licenseStatus.Attributes[name];
+            return value === "true";
+        }
+    }
+
     nextOrCreate() {
         // Next needs to configure bundle settings, if we've selected some bundles.
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
 
         this.creationTaskStarted = true;
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
         dialog.close(this);
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath());
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
+        databaseName = databaseName.toLowerCase();
         for (var i = 0; i < databases.length; i++) {
-            if (databaseName == databases[i].name) {
+            if (databaseName == databases[i].name.toLowerCase()) {
                 return true;
             }
         }
         return false;
     }
 
-    private CheckName(name: string): string {
+    private checkName(name: string): string {
         var rg1 = /^[^\\/\*:\?"<>\|]+$/; // forbidden characters \ / * : ? " < > |
         var rg2 = /^\./; // cannot start with dot (.)
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
         var message = '';
         if (!$.trim(name)) {
-            message = "An empty databse name is forbidden for use!";
+            message = this.emptyNameMessage;
         }
         else if (name.length > this.maxNameLength) {
-            message = "The database length can't exceed " + this.maxNameLength + " characters!";
+            message = "The database name length can't exceed " + this.maxNameLength + " characters!";
         }
         else if (!rg1.test(name)) {
             message = "The database name can't contain any of the following characters: \ / * : ?" + ' " ' + "< > |";
@@ -103,25 +128,30 @@ class createDatabase extends dialogViewModelBase {
         else if (rg3.test(name)) {
             message = "The name '" + name + "' is forbidden for use!";
         }
+        else if (name[name.length-1]==".") {
+            message = "The database name can't end with a dot!";
+        }
+        else if (name.toLocaleLowerCase() == "system") {
+            message = "This name is reserved for the actual system database!";
+        }
         return message;
     }
 
-    private subscribeToPath(tag, element, pathName) {
-        var inputElement: any = $(tag)[0];
+    private subscribeToPath(element, validityObservable: KnockoutObservable<string>, pathName) {
         element.subscribe((path) => {
             var errorMessage: string = this.isPathLegal(path, pathName);
-            inputElement.setCustomValidity(errorMessage);
+            validityObservable(errorMessage);
         });
     }
 
     private isPathLegal(name: string, pathName: string): string {
-        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
         var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var errorMessage = null;
 
         if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
-            if (name.length > 30) {
-                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 30 + " characters!";
+            if (name.length > 248) {
+                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 248 + " characters!";
             } else if (!rg1.test(name)) {
                 errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
             } else if (rg2.test(name)) {
@@ -156,8 +186,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
-        if (this.isVersioningBundleEnabled() === false)
-            app.showMessage("Versioning Bundle configuration window is not implemented yet.", "Not implemented");
         this.isVersioningBundleEnabled.toggle();
     }
 
@@ -206,6 +234,7 @@ class createDatabase extends dialogViewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
+
         return activeBundles;
     }
 }

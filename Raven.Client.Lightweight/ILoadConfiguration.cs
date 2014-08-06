@@ -1,9 +1,14 @@
+using System;
+
 using Raven.Json.Linq;
 
 namespace Raven.Client
 {
     public interface ILoadConfiguration
     {
-        void AddQueryParam(string name, RavenJToken value);
+		[Obsolete("Use AddTransformerParameter instead.")]
+		void AddQueryParam(string name, RavenJToken value);
+
+        void AddTransformerParameter(string name, RavenJToken value);
     }
 }

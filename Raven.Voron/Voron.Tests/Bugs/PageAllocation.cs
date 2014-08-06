@@ -17,7 +17,7 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void MultipleTxPagesCanPointToOnePageNumberWhichShouldNotBeCausingIssuesDuringFlushing()
         {
-            var options = StorageEnvironmentOptions.GetInMemory();
+            var options = StorageEnvironmentOptions.CreateMemoryOnly();
             options.ManualFlushing = true;
             using (var env = new StorageEnvironment(options))
             {
@@ -29,8 +29,8 @@ namespace Voron.Tests.Bugs
                 {
                     var t1 = tx.State.GetTree(tx, tree1);
 
-                    t1.MultiAdd(tx, "key", "value/1");
-                    t1.MultiAdd(tx, "key", "value/2");
+                    t1.MultiAdd("key", "value/1");
+                    t1.MultiAdd("key", "value/2");
 
                     tx.Commit();
                 }
@@ -42,14 +42,14 @@ namespace Voron.Tests.Bugs
 
                     var buffer = new byte[1000];
 
-                    t1.MultiDelete(tx, "key", "value/1");
-                    t1.MultiDelete(tx, "key", "value/2");
+                    t1.MultiDelete("key", "value/1");
+                    t1.MultiDelete("key", "value/2");
 
-                    t2.Add(tx, "key/1", new MemoryStream(buffer));
-                    t2.Add(tx, "key/2", new MemoryStream(buffer));
-                    t2.Add(tx, "key/3", new MemoryStream(buffer));
-                    t2.Add(tx, "key/4", new MemoryStream(buffer));
-                    t2.Add(tx, "key/5", new MemoryStream(buffer));
+                    t2.Add("key/1", new MemoryStream(buffer));
+                    t2.Add("key/2", new MemoryStream(buffer));
+                    t2.Add("key/3", new MemoryStream(buffer));
+                    t2.Add("key/4", new MemoryStream(buffer));
+                    t2.Add("key/5", new MemoryStream(buffer));
 
                     tx.Commit();
                 }

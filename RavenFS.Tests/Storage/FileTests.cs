@@ -14,6 +14,7 @@ using Xunit;
 using Xunit.Extensions;
 using Raven.Json.Linq;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Storage
 {
@@ -60,7 +61,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag1, file1Metadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag1, file1Metadata.Value<Guid>(Constants.MetadataEtagField));
 
                     var file2 = accessor.GetFile("file2", 5, 10);
 
@@ -75,7 +76,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file2Metadata);
                     Assert.Equal(1, file2Metadata.Count);
-                    Assert.Equal(etag2, file2Metadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag2, file2Metadata.Value<Guid>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -109,7 +110,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag1, file1Metadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag1, file1Metadata.Value<Guid>(Constants.MetadataEtagField));
 
                     var file2 = accessor.ReadFile("file2");
 
@@ -122,7 +123,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file2Metadata);
                     Assert.Equal(1, file2Metadata.Count);
-                    Assert.Equal(etag2, file2Metadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag2, file2Metadata.Value<Guid>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -424,7 +425,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag2, file1Metadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag2, file1Metadata.Value<Guid>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -460,7 +461,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
-                    Assert.Equal(etag1, fileMetadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag1, fileMetadata.Value<Guid>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -499,7 +500,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
-                    Assert.Equal(etag1, fileMetadata.Value<Guid>("ETag"));
+                    Assert.Equal(etag1, fileMetadata.Value<Guid>(Constants.MetadataEtagField));
                 });
             }
         }

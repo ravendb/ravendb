@@ -18,9 +18,6 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-#if !NETFX_CORE
-using Raven.Abstractions.MissingFromBCL;
-#endif
 
 namespace Raven.Client.Indexes
 {
@@ -313,14 +310,24 @@ namespace Raven.Client.Indexes
 
 		private string GetPropertyName(string name, Type exprType)
 		{
-			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
-							   exprType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(x => x.Name == name);
-			if (propertyInfo != null)
+			var memberInfo = (MemberInfo)exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
+				exprType.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+			if (memberInfo == null)
 			{
-				foreach (var customAttribute in propertyInfo.GetCustomAttributes(true))
+				memberInfo = ReflectionUtil.GetPropertiesAndFieldsFor(exprType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+					.FirstOrDefault(x => x.Name == name);
+			}
+
+			if (memberInfo != null)
+			{
+				foreach (var customAttribute in memberInfo.GetCustomAttributes(true))
 				{
 					string propName;
-					switch (customAttribute.GetType().Name)
+					var customAttributeType = customAttribute.GetType();
+					if (typeof (JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+						continue;
+					switch (customAttributeType.Name)
 					{
 						case "JsonPropertyAttribute":
 							propName = ((dynamic)customAttribute).PropertyName;
@@ -885,11 +892,7 @@ namespace Raven.Client.Indexes
 			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
 				return @"\u" + ((int)c).ToString("x4");
 
-#if NETFX_CORE
-			return c.ToString();
-#else
 			return c.ToString(CultureInfo.InvariantCulture);
-#endif
 		}
 
 		private bool IsLastOperatorIs(char s)
@@ -1055,6 +1058,9 @@ namespace Raven.Client.Indexes
 			if (type.Assembly() == typeof(object).Assembly()) // mscorlib
 				return true;
 
+			if (type.Assembly == typeof (Uri).Assembly()) // System assembly
+				return true;
+
 			if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
 				return true;
 
@@ -1103,7 +1109,6 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		///   Visits the children of the <see cref = "T:System.Linq.Expressions.DynamicExpression" />.
 		/// </summary>
@@ -1117,7 +1122,6 @@ namespace Raven.Client.Indexes
 			VisitExpressions('(', node.Arguments, ')');
 			return node;
 		}
-#endif
 
 		/// <summary>
 		///   Visits the element init.
@@ -1184,11 +1188,8 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitGoto(GotoExpression node)
 		{
-#if NETFX_CORE
-			Out(node.Kind.ToString().ToLower());
-#else
 			Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
-#endif
+
 			DumpLabel(node.Target);
 			if (node.Value != null)
 			{
@@ -1729,11 +1730,7 @@ namespace Raven.Client.Indexes
 		}
 		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
-#if NETFX_CORE
-			var attribute = node.Method.GetType().GetTypeInfo().GetCustomAttribute(typeof (ExtensionAttribute));
-#else
 			var attribute = Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute));
-#endif
 			if (attribute == null)
 				return false;
 

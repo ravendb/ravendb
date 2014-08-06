@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 				WaitForUserToContinueTheTest(store);
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

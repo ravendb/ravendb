@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
@@ -28,11 +29,11 @@ namespace Raven.Tests.Security.OAuth
 				Name = "test",
 				Secret = "ThisIsMySecret",
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess {TenantId = "*"},
-					new DatabaseAccess {TenantId = Constants.SystemDatabase},
-                    new DatabaseAccess {TenantId = databaseName, Admin = true}
+					new ResourceAccess {TenantId = "*"},
+					new ResourceAccess {TenantId = Constants.SystemDatabase},
+                    new ResourceAccess {TenantId = databaseName, Admin = true}
 				}
 			}), new RavenJObject(), null);
 		}

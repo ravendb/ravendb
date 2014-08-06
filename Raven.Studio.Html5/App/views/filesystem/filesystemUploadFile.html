@@ -6,7 +6,7 @@
         <li>
             <h3>
                 <a href="#filesystems" data-bind="click: navigateToFiles">
-                    Files
+                    Filesystems
                 </a>
             </h3>
         </li>
@@ -14,7 +14,10 @@
             <a data-bind="text: name"></a>
         </li>
         <li>
-            <a>Upload Files</a>
+            <a>Files</a>
+        </li>
+        <li>
+            <a>Upload</a>
         </li>
     </ul>
 
@@ -22,7 +25,7 @@
         <br />
         <br />
         <form>
-            <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: files, fileUpload: { files: files, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
+            <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: files, fileUpload: { files: files, directory: selectedDirectory, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
         </form>
         <br />
         <br />
@@ -32,11 +35,11 @@
         <div class="index-group panel panel-default">
             <div class="panel-heading">
                 <div class="pull-right indexGroup-actions-container">
-                    <button class=" btn btn-danger use-bootstrap-tooltip" title="Clear queue" data-trigger="hover" data-toggle="tooltip"
-                            data-placement="bottom" data-bind="click: $root.clearUploadQueue.bind($root)">
-                        <i class="fa fa-trash-o"></i>
-                    </button>
-                </div>
+                         <button class=" btn btn-danger" title="Clear queue" 
+                                 data-bind="click: $root.clearUploadQueue.bind($root)">
+                            <i class="fa fa-trash-o"></i>
+                        </button>
+</div>
 
                 <h1 class="panel-title">
                     Upload Queue

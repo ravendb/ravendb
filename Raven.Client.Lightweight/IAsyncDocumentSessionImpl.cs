@@ -21,7 +21,7 @@ namespace Raven.Client
 
 		Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes);
 
-		Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null);
+		Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null);
 
        Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval);
 

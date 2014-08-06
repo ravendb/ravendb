@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Indexing.Collation.Cultures;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
@@ -23,6 +25,16 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	    private readonly StorageEnvironment env;
 
+#if DEBUG
+		public TableStorage(StorageEnvironment environment, IBufferPool bufferPool)
+		{
+			this.bufferPool = bufferPool;
+			env = environment;
+
+			Initialize();
+		}
+#endif
+
 		public TableStorage(StorageEnvironmentOptions options, IBufferPool bufferPool)
 		{
             if (options == null)
@@ -32,8 +44,20 @@ namespace Raven.Database.Storage.Voron.Impl
 		    this.bufferPool = bufferPool;
 
             Debug.Assert(options != null);
-            env = new StorageEnvironment(options);
 
+//#if DEBUG
+//			var directoryOptions = options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
+//
+//			string debugJournalName;
+//			if (directoryOptions != null)
+//				debugJournalName = directoryOptions.TempPath.Replace(Path.DirectorySeparatorChar, '_').Replace(':','_');
+//			else
+//				debugJournalName = "InMemoryDebugJournal-" + Interlocked.Increment(ref debugJournalCount);
+//
+//			env = new StorageEnvironment(options, debugJournalName) {IsDebugRecording = true};
+//#else
+			env = new StorageEnvironment(options);
+//#endif
 			Initialize();
 		}
 

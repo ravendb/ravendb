@@ -21,7 +21,7 @@ namespace Voron.Impl
 		private readonly long _id;
 
 		private readonly WriteAheadJournal _journal;
-		private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+		private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
 		private readonly HashSet<long> _dirtyPages = new HashSet<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -68,6 +68,11 @@ namespace Voron.Impl
 			get { return _state; }
 		}
 
+		public uint Crc
+		{
+			get { return _txHeader->Crc; }
+		}
+
 		public bool FlushedToJournal { get; private set; }
 
 		public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
@@ -97,6 +102,36 @@ namespace Voron.Impl
 			InitTransactionHeader();
 
 			MarkTreesForWriteTransaction();
+		}
+
+		internal void WriteDirect(TransactionHeader* transactionHeader, PageFromScratchBuffer pages)
+		{
+			for (int i = 0; i < pages.NumberOfPages; i++)
+		    {
+		        var page = _env.ScratchBufferPool.ReadPage(pages.PositionInScratchBuffer+i);
+			    int numberOfPages = 1;
+			    if (page.IsOverflow)
+		        {
+					numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					i += numberOfPages;
+			        _overflowPagesInTransaction += (numberOfPages - 1);
+		        }
+
+			    var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
+			   
+				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.PositionInScratchBuffer);
+			    NativeMethods.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
+
+			    _allocatedPagesInTransaction++;
+				
+				_dirtyPages.Add(page.PageNumber);
+                page.Dirty = true;
+			    
+			    _scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
+				_transactionPages.Add(pageFromScratchBuffer);
+			
+				_state.NextPageNumber = transactionHeader->NextPageNumber;
+			}
 		}
 
 		private void InitTransactionHeader()
@@ -168,7 +203,7 @@ namespace Voron.Impl
 
 			page = GetPageForModification(num, page);
 
-			var newPage = AllocatePage(1, num); // allocate new page in a log file but with the same number
+			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
 			NativeMethods.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
@@ -200,7 +235,7 @@ namespace Voron.Impl
 		    return p;
 		}
 
-		internal Page AllocatePage(int numberOfPages, long? pageNumber = null)
+		internal Page AllocatePage(int numberOfPages, PageFlags flags, long? pageNumber = null)
 		{
 			if (pageNumber == null)
 			{
@@ -243,7 +278,16 @@ namespace Voron.Impl
 			_scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer;
 
 			page.Lower = (ushort)Constants.PageHeaderSize;
-			page.Upper = AbstractPager.PageSize;
+			page.Flags = flags;
+
+			if ((flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed)
+			{
+				page.Upper = (ushort) (AbstractPager.PageSize - Constants.PrefixInfoSectionSize);
+				page.ClearPrefixInfo();
+			}
+			else
+				page.Upper = AbstractPager.PageSize;
+
 			page.Dirty = true;
 
 			_dirtyPages.Add(page.PageNumber);
@@ -292,7 +336,7 @@ namespace Voron.Impl
 				var treeState = tree.State;
 				if (treeState.IsModified)
 				{
-					var treePtr = (TreeRootHeader*)State.Root.DirectAdd(tree.Name, sizeof(TreeRootHeader));
+					var treePtr = (TreeRootHeader*)State.Root.DirectAdd((Slice) tree.Name, sizeof(TreeRootHeader));
 					treeState.CopyTo(treePtr);
 				}
 			}
@@ -390,15 +434,15 @@ namespace Voron.Impl
 			_pagerStates.Add(state);
 		}
 
-		internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
+		internal void AddMultiValueTree(Tree tree, MemorySlice key, Tree mvTree)
 		{
 			if (_multiValueTrees == null)
-				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
+				_multiValueTrees = new Dictionary<Tuple<Tree, MemorySlice>, Tree>(new TreeAndSliceComparer());
 			mvTree.IsMultiValueTree = true;
 			_multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
 		}
 
-		internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
+		internal bool TryGetMultiValueTree(Tree tree, MemorySlice key, out Tree mvTree)
 		{
 			mvTree = null;
 			if (_multiValueTrees == null)
@@ -406,7 +450,7 @@ namespace Voron.Impl
 			return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
 		}
 
-		internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
+		internal bool TryRemoveMultiValueTree(Tree parentTree, MemorySlice key)
 		{
 			var keyToRemove = Tuple.Create(parentTree, key);
 			if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))

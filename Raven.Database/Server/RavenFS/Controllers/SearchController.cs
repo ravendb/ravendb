@@ -6,6 +6,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using System.Net.Http;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -32,7 +33,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			int results;
 			var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results);
 
-			var list = new List<FileHeader>();
+            var list = new List<FileHeader>();
 
 			Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 

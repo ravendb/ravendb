@@ -20,39 +20,6 @@ namespace Raven.Tests.MailingList
 					docs =>
 					from course in (IEnumerable<Course>) docs
 					select new {course.Id, course},
-
-				TransformResults =
-					(database, docs) =>
-					from course in (IEnumerable<Course>) docs
-					select new
-					{
-						item = course.Name,
-						id = course.Id,
-						iconCls = "course",
-						leaf = false,
-						expanded = true,
-						children =
-						from unit in course.Syllabus
-						select new
-						{
-							item = unit.Name,
-							id = unit.Name,
-							iconCls = "unit",
-							leaf = false,
-							expanded = true,
-							children =
-							from notebook in unit.Notebooks
-							select new
-							{
-								item = notebook.Name,
-								id = notebook.Id,
-								courseId = course.Id,
-								iconCls = "notebook",
-								type = notebook.Type,
-								leaf = true,
-							}
-						}
-					}
 			};
 
 			using(var store = NewDocumentStore())

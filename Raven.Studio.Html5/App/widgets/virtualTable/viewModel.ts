@@ -14,13 +14,13 @@ import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
+import customFunctions = require('models/customFunctions');
 
 class ctor {
 
     static idColumnWidth = 200;
 
     items: pagedList;
-    visibleRowCount = 0;
     recycleRows = ko.observableArray<row>();
     rowHeight = 38;
     borderHeight = 2;
@@ -33,8 +33,11 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+    lastVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
+    collections: KnockoutObservableArray<string>;
+    noResults: KnockoutComputed<boolean>;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -52,6 +55,12 @@ class ctor {
         contextMenuOptions: string[];
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
+        customFunctions: KnockoutObservable<customFunctions>;
+        collections: KnockoutObservableArray<collection>;
+        rowsAreLoading: KnockoutObservable<boolean>;
+        noResultsMessage: string;
+        isAnyDocumentsAutoSelected: KnockoutObservable<boolean>;
+        isAllDocumentsAutoSelected: KnockoutObservable<boolean>;
     }
 
     activate(settings: any) {
@@ -66,12 +75,17 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
-            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", 'EditItem'],
             selectionEnabled: true,
-            customColumns: ko.observable(customColumns.empty())
+            customColumns: ko.observable(customColumns.empty()),
+            customFunctions: ko.observable(customFunctions.empty()),
+            collections: ko.observableArray<collection>([]),
+            rowsAreLoading: ko.observable<boolean>(false),
+            noResultsMessage: "No records found.",
+            isAnyDocumentsAutoSelected: ko.observable<boolean>(false),
+            isAllDocumentsAutoSelected: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
-
 
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;
@@ -100,9 +114,14 @@ class ctor {
 
             this.refreshIdAndCheckboxColumn();
         });
+
+        this.noResults = ko.computed<boolean>(() => {
+            var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
+            return numOfRowsInUse == 0 && !this.settings.rowsAreLoading();
+        });
+
+        this.registerColumnResizing();
     }
-
-
 
     // Attached is called by Durandal when the view is attached to the DOM.
     // We use this to setup some UI-specific things like context menus, row creation, keyboard shortcuts, etc.
@@ -129,6 +148,8 @@ class ctor {
         if (this.itemsSourceSubscription) {
             this.itemsSourceSubscription.dispose();
         }
+
+        this.unregisterColumnResizing();
     }
 
     calculateRecycleRowCount() {
@@ -137,23 +158,28 @@ class ctor {
         return rowCountWithPadding;
     }
 
-    createRecycleRows(rowCount: number) {
-        var rows = [];
-        for (var i = 0; i < rowCount; i++) {
+    private createRecycleRows(rowCount: number) {
+        for (var i = this.recycleRows().length; i < rowCount; i++) {
             var newRow = new row(this.settings.showIds, this);
             newRow.createPlaceholderCells(this.columns().map(c => c.binding));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
             newRow.top(desiredTop);
-            rows.push(newRow);
+            this.recycleRows.push(newRow);
         }
 
-        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
+        for (var i = rowCount; i < this.recycleRows().length; i++) {
+            var r: row = this.recycleRows()[i];
+            r.isInUse(false);
+        }
 
-        return rows;
+        //this.recycleRows().length = rowCount;
+
+        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
     }
 
     onGridScrolled() {
+        this.settings.rowsAreLoading(true);
         this.ensureRowsCoverViewport();
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
@@ -167,12 +193,17 @@ class ctor {
     }
 
     onWindowHeightChanged() {
+        this.settings.rowsAreLoading(true);
         var newViewportHeight = this.gridViewport.height();
         this.viewportHeight(newViewportHeight);
         var desiredRowCount = this.calculateRecycleRowCount();
-        this.recycleRows(this.createRecycleRows(desiredRowCount));
+        this.createRecycleRows(desiredRowCount);
         this.ensureRowsCoverViewport();
         this.loadRowData();
+        
+
+        // Update row checked states.
+        this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
     }
 
     setupKeyboardShortcuts() {
@@ -193,13 +224,19 @@ class ctor {
         untypedGrid.contextmenu({
             target: '#gridContextMenu',
             before: (e: MouseEvent) => {
+                var target: any = e.target;
+                var rowTag = (target.className.indexOf("ko-grid-row") > -1) ? $(target) : $(e.target).parents(".ko-grid-row");
+                var rightClickedElement: row = rowTag.length ? ko.dataFor(rowTag[0]) : null;
 
                 if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
-                    var parentRow = $(e.target).parent(".ko-grid-row");
-                    var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
                         this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                    }
+                } else {
+                    if (rightClickedElement) {
+                        this.settings.selectedIndices([rightClickedElement.rowIndex()]);
                     }
                 }
                 return true;
@@ -226,7 +263,8 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
-            var that = this;
+            this.settings.rowsAreLoading(true);
+
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -237,6 +275,7 @@ class ctor {
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
                 }
+                this.settings.rowsAreLoading(false);
             });
         }
     }
@@ -246,7 +285,7 @@ class ctor {
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getId(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
+            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getUrl(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
@@ -255,7 +294,7 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditItem(selectedItem.getId(), appUrl.getResource(), itemIndex, collectionName));
+            router.navigate(appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName));
         }
     }
 
@@ -291,6 +330,13 @@ class ctor {
             if (customConfig) {
                 return customConfig.header();
             }
+        } else {
+            var columns = this.settings.customColumns().columns();
+            for (var i = 0; i < columns.length; i++) {
+                if (columns[i].binding() === binding) {
+                    return columns[i].header();
+                }
+            }
         }
         return binding;
     }
@@ -300,7 +346,7 @@ class ctor {
         // Keep allocations to a minimum.
 
         var columnsNeeded = {};
-        
+
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
             for (var i = 0; i < colParams.length; i++) {
@@ -368,7 +414,7 @@ class ctor {
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
-            if ((binding === "Name") && (!this.settings.customColumns().customMode())){
+            if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
                 this.columns.splice(2, 0, newColumn);
             } else {
                 this.columns.push(newColumn);
@@ -400,8 +446,9 @@ class ctor {
         var positionCheck = viewportTop;
 
         this.firstVisibleRow = null;
+        var rowAtPosition = null;
         while (positionCheck < viewportBottom) {
-            var rowAtPosition = this.findRowAtY(positionCheck);
+            rowAtPosition = this.findRowAtY(positionCheck);
             if (!rowAtPosition) {
                 // If there's no row at this position, recycle one.
                 rowAtPosition = this.getOffscreenRow(viewportTop, viewportBottom);
@@ -421,6 +468,8 @@ class ctor {
 
             positionCheck = rowAtPosition.top() + this.rowHeight;
         }
+
+        this.lastVisibleRow = rowAtPosition;
     }
 
     getOffscreenRow(viewportTop: number, viewportBottom: number) {
@@ -466,6 +515,14 @@ class ctor {
     }
 
     toggleRowChecked(row: row, isShiftSelect = false) {
+        if (this.settings.isAllDocumentsAutoSelected()) {
+            var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
+            this.settings.selectedIndices(cachedIndeices);
+            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
+            this.settings.isAllDocumentsAutoSelected(false);
+            this.settings.isAnyDocumentsAutoSelected(true);
+        }
+
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
         var firstIndex = <number>this.settings.selectedIndices.first();
@@ -489,15 +546,41 @@ class ctor {
     selectNone() {
         this.settings.selectedIndices([]);
         this.recycleRows().forEach(r => r.isChecked(false));
+        this.settings.isAnyDocumentsAutoSelected(false);
+        this.settings.isAllDocumentsAutoSelected(false);
     }
 
-    selectAll() {
+    selectAll(documentCount: number) {
         var allIndices = [];
-        for (var i = 0; i < this.items.totalResultCount(); i++) {
+
+        /*this.settings.itemsSource().totalResultCount()*/
+        for (var i = 0; i < documentCount; i++) {
             allIndices.push(i);
         }
-        this.settings.selectedIndices(allIndices);
         this.recycleRows().forEach(r => r.isChecked(true));
+
+        this.settings.selectedIndices(allIndices);
+
+        this.settings.isAnyDocumentsAutoSelected(false);
+        this.settings.isAllDocumentsAutoSelected(true);
+    }
+
+    selectSome() {
+        var allIndices = [];
+
+        var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
+        var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();
+        var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
+        var actualNumberOfVisibleRows = Math.min(lastVisibleRowNumber - firstVisibleRowNumber, numOfRowsInUse);
+
+        for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
+            allIndices.push(i);
+        }
+        this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
+
+        this.settings.selectedIndices(allIndices);
+
+        this.settings.isAllDocumentsAutoSelected(false);
     }
 
     getRowIndicesRange(firstRowIndex: number, secondRowIndex: number): Array<number> {
@@ -510,6 +593,12 @@ class ctor {
         }
 
         return indices;
+    }
+
+    editItem() {
+        if (this.settings.selectedIndices().length > 0) {
+            ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
+        }
     }
 
     copySelectedDocs() {
@@ -536,9 +625,24 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
+    refreshCollectionData() {
+        this.items.invalidateCache(); // Causes the cache of items to be discarded.
+        this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+        this.onWindowHeightChanged();
+    }
+
+    getNumberOfCachedItems() {
+        var items = this.items;
+        if (!!items) {
+            return this.items.itemCount();
+        }
+        return 0;
+    }
+
     deleteSelectedItems() {
         var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+
         deleteDocsVm.deletionTask.done(() => {
             var deletedDocIndices = documents.map(d => this.items.indexOf(d));
             deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
@@ -546,8 +650,12 @@ class ctor {
             this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
             this.items.invalidateCache(); // Causes the cache of items to be discarded.
             this.onGridScrolled(); // Forces a re-fetch of the rows in view.
-        });
 
+            // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
+            // note: won't run on delete of last document(s) of a collection in order to prevent race condition 
+            // with changes api. Now we don't use changes api to update the documents list, so this isn't a problem.
+            this.onWindowHeightChanged();
+        });
         app.showDialog(deleteDocsVm);
     }
 
@@ -558,7 +666,54 @@ class ctor {
             return "#";
         }
     }
+
+    collectionExists(collectionName: string): boolean {
+        var result = this.settings.collections()
+            .map((c: collection) =>
+                collectionName.toLowerCase().substr(0, c.name.length) === c.name.toLowerCase()
+            )
+            .reduce((p: boolean, c: boolean) => c || p, false);
+        return result;
+    }
+
+    registerColumnResizing() {
+        var resizingColumn = false;
+        var startX = 0;
+        var startingWidth = 0;
+        var columnIndex = 0;
+
+        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
+            columnIndex = parseInt($(e.currentTarget).attr("column"));
+            startingWidth = parseInt(this.columns()[columnIndex].width().toString());
+            startX = e.pageX;
+            resizingColumn = true;
+        });
+
+        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", (e: any) => {
+            resizingColumn = false;
+        });
+
+        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: any) => {
+            if (resizingColumn) {
+                var targetColumnSize = startingWidth + e.pageX - startX;
+                this.columns()[columnIndex].width(targetColumnSize);
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+
+                return false;
+            }
+        });
+    }
+
+    unregisterColumnResizing() {
+        $(this.settings.gridSelector).off("mousedown.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mouseup.virtualTableColumnResize");
+        $(this.settings.gridSelector).off("mousemove.virtualTableColumnResize");
+    }
 }
 
 export = ctor;
-

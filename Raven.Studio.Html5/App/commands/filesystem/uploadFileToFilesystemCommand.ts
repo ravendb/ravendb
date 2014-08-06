@@ -8,7 +8,7 @@ class uploadFileToFilesystemCommand extends commandBase {
     /**
     * @param ownerDb The database the collections will belong to.
     */
-    constructor(private source: File, private uploadId: string, private fs: filesystem, progressHandlingFunction: (evt: any) => void, private reportUploadProgress = true) {
+    constructor(private source: File, private directory: string, private uploadId: string, private fs: filesystem, progressHandlingFunction: (evt: any) => void, private reportUploadProgress = true) {
         super();
     }
 
@@ -17,7 +17,8 @@ class uploadFileToFilesystemCommand extends commandBase {
             this.reportInfo("File " + this.source.name + "queued for upload...");
         }
 
-        var url = '/files?name=' + this.source.name + '&uploadId=' + this.uploadId;
+        var fileName = this.directory +"/"+ this.source.name;
+        var url = '/files?name=' + fileName + '&uploadId=' + this.uploadId;
 
         var customHeaders = {
             'RavenFS-Size': this.source.size
@@ -39,21 +40,21 @@ class uploadFileToFilesystemCommand extends commandBase {
                 return myXhr;
             },
             cache: false,
-            contentType: false,
+            contentType: "application/json; charset=UTF-8",
             dataType: ''
         };
 
 
-        var uploadTask = this.put(url, this.source, this.fs, jQueryOptions);
+        var uploadTask = this.put(url, this.source, this.fs, jQueryOptions, 0);
 
         if (this.reportUploadProgress) {
             uploadTask.done(() => {
-                this.reportSuccess("Uploaded " + this.source.name)
-                return deferred.resolve(new uploadItem(this.uploadId, this.source.name, "Uploaded", this.fs));
+                this.reportSuccess("Uploaded " + fileName)
+                return deferred.resolve(new uploadItem(this.uploadId, fileName, "Uploaded", this.fs));
             });
             uploadTask.fail((response: JQueryXHR) => {
-                this.reportError("Failed to upload " + this.source.name, response.responseText, response.statusText)
-                return deferred.reject(new uploadItem(this.uploadId, this.source.name, "Failed", this.fs));
+                this.reportError("Failed to upload " + fileName, response.responseText, response.statusText)
+                return deferred.reject(new uploadItem(this.uploadId, fileName, "Failed", this.fs));
             });
         }
 

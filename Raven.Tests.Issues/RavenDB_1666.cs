@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Web.Http;
-using Raven.Client.RavenFS;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Controllers.Admin;
@@ -55,14 +54,21 @@ namespace Raven.Tests.Issues
         {
             RegisterNoSysDbForControllersInThisNamespace<FilesController>();
             RegisterNoSysDbForControllersInThisNamespace<CountersController>();
-            
+
             RegisterRouteForOnlySysDb<AdminController>(a => a.Stats());
+			RegisterRouteForOnlySysDb<AdminController>(a => a.InfoPackage());
             RegisterRouteForOnlySysDb<AdminController>(a => a.Gc());
             RegisterRouteForOnlySysDb<AdminController>(a => a.LohCompaction());
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesGet(string.Empty));
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesPut(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesDelete(string.Empty));
-            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesPut(string.Empty));
-            RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases());
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesBatchDelete());
+            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleDisable(string.Empty, false));
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleDisable(string.Empty, true));
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(false));
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(true));
+            RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(false));
+			RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(true));
             RegisterRouteForOnlySysDb<DebugController>(a => a.Routes());
             RegisterRouteForOnlySysDb<HardRouteController>(a => a.FaviconGet());
             RegisterRouteForOnlySysDb<HardRouteController>(a => a.ClientaccessPolicyGet());

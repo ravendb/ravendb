@@ -22,10 +22,7 @@ namespace Raven.Tests.Bugs.Async
         [IISExpressInstalledFact]
         public void InsertAndReadFromDB()
         {
-            const int threadCount = 4;
-            var tasks = new List<Task>();
-
-            using (var store = NewDocumentStore())
+	        using (var store = NewDocumentStore())
             {
                 DoInsert(store, 1);
 
@@ -33,12 +30,9 @@ namespace Raven.Tests.Bugs.Async
             }
         }
 
-        [IISExpressInstalledFact]
+	    [IISExpressInstalledFact]
         public void LoadDbInfo()
         {
-            const int threadCount = 4;
-            var tasks = new List<Task>();
-
             using (var _store = NewDocumentStore())
             {
                 using (var session = _store.OpenSession())

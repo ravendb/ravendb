@@ -34,7 +34,7 @@ namespace Voron.Impl.FreeSpace
 			int numberOfNeededFullSections = num / NumberOfPagesInSection;
 			int numberOfExtraBitsNeeded = num % NumberOfPagesInSection;
 			int foundSections = 0;
-			Slice startSection = null;
+			MemorySlice startSection = null;
 			long? startSectionId = null;
 			var sections = new List<Slice>();
 
@@ -127,7 +127,7 @@ namespace Voron.Impl.FreeSpace
 			return null;
 		}
 
-		private static void ResetSections(ref int foundSections, List<Slice> sections, ref Slice startSection, ref long? startSectionId)
+		private static void ResetSections(ref int foundSections, List<Slice> sections, ref MemorySlice startSection, ref long? startSectionId)
 		{
 			foundSections = 0;
 			startSection = null;
@@ -147,7 +147,7 @@ namespace Voron.Impl.FreeSpace
 					long? page;
 					if (current.SetCount < num)
 					{
-						if (TryFindSmallValueMergingTwoSections(tx, it, num, current, currentSectionId, out page))
+						if (TryFindSmallValueMergingTwoSections(tx, it.CurrentKey, num, current, currentSectionId, out page))
 							return page;
 						continue;
 					}
@@ -156,7 +156,7 @@ namespace Voron.Impl.FreeSpace
 						return page;
 
 					//could not find a continuous so trying to merge
-					if (TryFindSmallValueMergingTwoSections(tx, it, num, current, currentSectionId, out page))
+					if (TryFindSmallValueMergingTwoSections(tx, it.CurrentKey, num, current, currentSectionId, out page))
 						return page;
 				}
 			} while (it.MoveNext());
@@ -209,11 +209,11 @@ namespace Voron.Impl.FreeSpace
 			return true;
 		}
 
-		private static bool TryFindSmallValueMergingTwoSections(Transaction tx, TreeIterator it, int num, StreamBitArray current, long currentSectionId, out long? result)
+		private static bool TryFindSmallValueMergingTwoSections(Transaction tx, Slice currentSectionIdSlice, int num, StreamBitArray current, long currentSectionId, out long? result)
 		{
 			result = -1;
-			var currentRange = current.GetEndRangeCount();
-			if (currentRange == 0)
+			var currentEndRange = current.GetEndRangeCount();
+			if (currentEndRange == 0)
 				return false;
 
 			var nextSectionId = currentSectionId + 1;
@@ -225,7 +225,7 @@ namespace Voron.Impl.FreeSpace
 
 			var next = new StreamBitArray(read.Reader);
 
-			var nextRange = num - currentRange;
+			var nextRange = num - currentEndRange;
 			if (next.HasStartRangeCount(nextRange) == false)
 				return false;
 
@@ -242,21 +242,21 @@ namespace Voron.Impl.FreeSpace
 				tx.State.FreeSpaceRoot.Add(nextId, next.ToStream());
 			}
 
-			if (current.SetCount == currentRange)
+			if (current.SetCount == currentEndRange)
 			{
-				tx.State.FreeSpaceRoot.Delete(it.CurrentKey);
+				tx.State.FreeSpaceRoot.Delete(currentSectionIdSlice);
 			}
 			else
 			{
-				for (int i = 0; i < currentRange; i++)
+				for (int i = 0; i < currentEndRange; i++)
 				{
 					current.Set(NumberOfPagesInSection - 1 - i, false);
 				}
-				tx.State.FreeSpaceRoot.Add(nextId, next.ToStream());
+				tx.State.FreeSpaceRoot.Add(currentSectionIdSlice, current.ToStream());
 			}
 
 
-			result = currentSectionId * NumberOfPagesInSection + currentRange;
+			result = currentSectionId * NumberOfPagesInSection + (NumberOfPagesInSection - currentEndRange);
 			return true;
 		}
 

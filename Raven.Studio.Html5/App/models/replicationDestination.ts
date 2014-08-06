@@ -75,14 +75,14 @@ class replicationDestination {
         }
     }
 
-    static empty(): replicationDestination {
+    static empty(databaseName: string): replicationDestination {
         return new replicationDestination({
             Url: null,
             Username: null,
             Password: null,
             Domain: null,
             ApiKey: null,
-            Database: null,
+            Database: databaseName,
             TransitiveReplicationBehavior: "None",
             IgnoredClient: false,
             Disabled: false,

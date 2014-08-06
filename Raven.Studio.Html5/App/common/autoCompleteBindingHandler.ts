@@ -12,7 +12,7 @@
  * In the above sample, yourOwnResults is an array that you are responsible for populating. And 'name' is the property on the items in that array.
  */
 class autoCompleteBindingHandler {
-    
+
     static install() {
         if (!ko.bindingHandlers["autoComplete"]) {
             ko.bindingHandlers["autoComplete"] = new autoCompleteBindingHandler();
@@ -49,7 +49,8 @@ class autoCompleteBindingHandler {
         input.on('blur', (args: JQueryEventObject) => setTimeout(() => element.style.display = "none", 200));
 
         // Putting the focus back on the textbox should show the auto complete list if we have items.
-        input.on('focus', (args: JQueryEventObject) => setTimeout(() => element.style.display = this.getAllAutoCompleteItems($element).length > 0 ? "block" : "none"));
+        input.on('focus', (args: JQueryEventObject) => setTimeout(() =>
+            element.style.display = this.getAllAutoCompleteItems($element).length > 0 ? "block" : "none"));
 
         // Up, down, enter all have special meaning.
         input.on('keydown', (args: JQueryEventObject) => this.handleKeyPress(element, $element, input, args));
@@ -60,7 +61,7 @@ class autoCompleteBindingHandler {
             throw new Error("Unable to find results list for auto complete.");
         }
         var subscription = results.subscribe((array: any[]) => {
-            element.style.display = array.length === 0 ? "none" : "block";
+            element.style.display = array.length === 0 || !input.is(":focus") ? "none" : "block";
         });
 
         // Clean up after ourselves when the node is removed from the DOM.
@@ -90,7 +91,7 @@ class autoCompleteBindingHandler {
 
         var lis: JQuery, curSelected: JQuery;
         if (element.style.display == "none" && args.which === downArrow) {
-            if ($element.children("li").length > 0) {
+            if ($element.children("li").length > 0 && $input.is(":focus")) {
                 setTimeout(() => element.style.display = "block", 0);
                 return true;
             }

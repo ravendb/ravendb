@@ -22,8 +22,11 @@ using Raven.Json.Linq;
 
 using Voron;
 using Voron.Impl;
-using Raven.Client.RavenFS;
+using RavenConstants = Raven.Abstractions.Data.Constants;
+
 using System.Diagnostics;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
@@ -107,15 +110,15 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             var key = CreateKey(filename);
 
-            if (!metadata.ContainsKey("ETag"))
+            if (!metadata.ContainsKey(RavenConstants.MetadataEtagField))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
             ushort version;
             var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = innerMetadata.Value<Guid>("ETag");
-            innerMetadata.Remove("ETag");
+            var etag = innerMetadata.Value<Guid>(RavenConstants.MetadataEtagField);
+            innerMetadata.Remove(RavenConstants.MetadataEtagField);
 
             var file = new RavenJObject
                        {
@@ -212,7 +215,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return ConvertToFile(file);
         }
 
-        public FileAndPages GetFile(string filename, int start, int pagesToLoad)
+        public FileAndPagesInformation GetFile(string filename, int start, int pagesToLoad)
         {
             var key = CreateKey(filename);
 
@@ -222,7 +225,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException("Could not find file: " + filename);
 
             var f = ConvertToFile(file);
-            var fileInformation = new FileAndPages
+            var fileInformation = new FileAndPagesInformation
                                   {
                                       TotalSize = f.TotalSize,
                                       Name = f.Name,
@@ -330,16 +333,19 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException(filename);
 
-            if (!metadata.ContainsKey("ETag"))
+            if (!metadata.ContainsKey(RavenConstants.MetadataEtagField))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = innerMetadata.Value<Guid>("ETag");
-            innerMetadata.Remove("ETag");
+            var etag = innerMetadata.Value<Guid>(RavenConstants.MetadataEtagField);
+            innerMetadata.Remove(RavenConstants.MetadataEtagField);
 
             var existingMetadata = (RavenJObject) file["metadata"];
-            if (existingMetadata.ContainsKey("Content-MD5"))
+
+            if (!innerMetadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
                 innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
+            if (!innerMetadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
+                innerMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
 
             var oldEtag = file.Value<Guid>("etag");
 
@@ -364,7 +370,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException(filename);
 
             var totalSize = file.Value<long?>("total_size") ?? 0;
-            file["total_size"] = Math.Abs(totalSize);
+            var uploadedSize = file.Value<long?>("uploaded_size") ?? 0;
+
+            if (uploadedSize < totalSize )
+                file["total_size"] = Math.Abs(uploadedSize);
+            else
+                file["total_size"] = Math.Abs(totalSize);            
 
             storage.Files.Add(writeBatch.Value, key, file, version);
         }
@@ -822,7 +833,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         private static FileHeader ConvertToFile(RavenJObject file)
         {
             var metadata = (RavenJObject)file["metadata"];
-            metadata["ETag"] = file["etag"];
+            metadata[RavenConstants.MetadataEtagField] = file["etag"];
+            // To avoid useless handling of conversions for special headers we return the same type we stored.
+            if (metadata.ContainsKey(RavenConstants.LastModified))
+                metadata[RavenConstants.LastModified] = metadata.Value<DateTimeOffset>(RavenConstants.LastModified);            
 
             return new FileHeader
                    {

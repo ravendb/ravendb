@@ -10,6 +10,7 @@ using System.Net;
 using Lucene.Net.Util;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
@@ -44,9 +45,9 @@ namespace Raven.Tests.Notifications
 					Name = "test",
 					Secret = "test",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 					{
-						new DatabaseAccess {TenantId = "<system>"},
+						new ResourceAccess {TenantId = "<system>"},
 					}
 				}), new RavenJObject(), null);
 
@@ -90,9 +91,9 @@ namespace Raven.Tests.Notifications
 					Name = "test",
 					Secret = "test",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 					{
-						new DatabaseAccess {TenantId = "*"},
+						new ResourceAccess {TenantId = "*"},
 					}
 				}), new RavenJObject(), null);
 
@@ -136,9 +137,9 @@ namespace Raven.Tests.Notifications
 					Name = "test",
 					Secret = "test",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 					{
-						new DatabaseAccess {TenantId = "OAuthTest"},
+						new ResourceAccess {TenantId = "OAuthTest"},
 					}
 				}), new RavenJObject(), null);
 
@@ -203,9 +204,9 @@ namespace Raven.Tests.Notifications
 					Name = "test",
 					Secret = "test",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 					{
-						new DatabaseAccess {TenantId = "OAuthTest1"},
+						new ResourceAccess {TenantId = "OAuthTest1"},
 					}
 				}), new RavenJObject(), null);
 
@@ -249,9 +250,9 @@ namespace Raven.Tests.Notifications
 					Name = "test",
 					Secret = "test",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 					{
-						new DatabaseAccess {TenantId = "*"},
+						new ResourceAccess {TenantId = "*"},
 					}
 				}), new RavenJObject(), null);
 

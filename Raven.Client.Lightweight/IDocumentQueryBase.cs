@@ -673,6 +673,11 @@ If you really want to do in memory filtering on the data returned from the query
 	    TSelf SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 
 		/// <summary>
+        /// Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		TSelf ShowTimings();
+
+		/// <summary>
 		/// Apply distinct operation to this query
 		/// </summary>
 		TSelf Distinct();

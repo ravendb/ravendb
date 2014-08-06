@@ -20,23 +20,21 @@
                     <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <!-- ko foreach: indexes -->
+                    <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
-                    <li class="divider"></li>
-                    <!-- ko foreach: collectionNames -->
+                    <li class="divider" data-bind="visible: collectionNames.length"></li>
+                    <!-- ko foreach: collectionNamesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + $data)">
                         <a href="#">
-                            <span class="text-muted">dynamic/</span>
-                            <span data-bind="text: $data"></span>
+                            <span data-bind="text: 'dynamic/' + $data"></span>
                         </a>
                     </li>
                     <!-- /ko -->
                     <li class="divider"></li>
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic')">
                         <a href="#">
-                            <span class="text-muted">dynamic/</span>
-                            <span>All Documents</span>
+                            <span>dynamic/All Documents</span>
                         </a>
                     </li>
                 </ul>
@@ -47,38 +45,44 @@
 
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary use-bootstrap-tooltip" title="Run the query (Alt+R)" accesskey="R" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
+            <button class="btn btn-primary" title="Run the query (Alt+R)" accesskey="R"  data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
-                    <i class="fa fa-plus"></i> Add <span class="caret"></span>
-                </button>
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
+                        <i class="fa fa-plus"></i> Add <span class="caret"></span>
+                    </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li data-bind="visible: selectedIndex() !== 'All Documents'"><a class="use-bootstrap-tooltip" href="#" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
-                    <li data-bind="visible: !transformer()"><a href="#" class="use-bootstrap-tooltip" data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
+                     <li data-bind="visible: selectedIndex() !== 'All Documents'"><a  href="#" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
+                    <li data-bind="visible: !transformer()"><a href="#"  data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
                 </ul>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
-                    <i class="fa fa-cog"></i> <span class="caret"></span>
-                </button>
+                    <button type="button" class="btn btn-default dropdown-toggle"  data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
+                        <i class="fa fa-cog"></i> <span class="caret"></span>
+                    </button>
                 <ul class="dropdown-menu" role="menu">
                     <li style="padding-left: 20px;">
                         <div class="btn-group">
-                            <label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-trigger="hover" data-toggle="tooltip" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
-                            <label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-trigger="hover" data-toggle="tooltip" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
-                        </div>
+                             <label class="btn btn-default"  data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
+                            <label class="btn btn-default"  data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
+                      </div>
                     </li>
-                    <li><a href="#"><label class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: toggleShowFields, css: { active: showFields }" title="Show fields from matching index entries instead of matching documents">Show Fields</label></a></li>
-                    <li><a href="#"><label class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
+                     <li><a href="#"><label class="btn btn-default"  data-bind="click: toggleShowFields, css: { active: showFields }" title="Show fields from matching index entries instead of matching documents">Show Fields</label></a></li>
+                    <li><a href="#"><label class="btn btn-default"  data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
                 </ul>
             </div>
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: selectColumns" title="Choose columns...">
+            <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+            <button type="button" class="btn btn-default"  data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
+            <a href="#" data-bind="attr: { href: exportUrl }, visible: hasSelectedIndex" class="btn btn-default" title="Export CSV">
+                <i class="fa fa-file-excel-o"></i>
+            </a>
+            <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
+                <i class="fa fa-sitemap"></i>
+            </a>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentQueries().length > 0">
                 Recent Queries <span class="caret"></span>
             </button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: recentQueries">
@@ -89,25 +93,29 @@
                             <span class="text-muted">|</span>
                             <span data-bind="text: QueryText"></span>
                         </span>
-                        <span data-bind="visible: Sorts.length">
-                            <span class="text-muted">| sort by</span>
-                            <span data-bind="text: $root.getRecentQuerySortsText($index())"></span>
+                        <span data-bind="visible: Sorts.length, with: Sorts">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: 'sort by ' + $root.getRecentQuerySortText($data)"></span>
                         </span>
-                        <span data-bind="visible: TransformerName">
-                            <span class="text-muted">| transform by</span>
-                            <span data-bind="text: TransformerName"></span>
+                        <span data-bind="with: TransformerQuery">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
+                        </span>
+                        <span data-bind="visible: UseAndOperator == false">
+                            <span class="text-muted">|</span>
+                            <span>OR operator</span>
+                        </span>
+                        <span data-bind="visible: UseAndOperator">
+                            <span class="text-muted">|</span>
+                            <span>AND operator</span>
                         </span>
                         <span data-bind="visible: ShowFields">
                             <span class="text-muted">|</span>
                             <span>show fields</span>
                         </span>
-                        <span data-bind="visible: ShowFields">
+                        <span data-bind="visible: IndexEntries">
                             <span class="text-muted">|</span>
                             <span>index entries</span>
-                        </span>
-                        <span data-bind="visible: ShowFields">
-                            <span class="text-muted">|</span>
-                            <span>AND operator</span>
                         </span>
                     </a>
                 </li>
@@ -115,12 +123,12 @@
         </div>
 
         <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: termsUrl }, enable: hasSelectedIndex" title="Navigate to index terms">Terms</a>
-            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="enable: !!queryStats(), click: openQueryStats" title="Show Query Stats In Dialog">Query Stats</a>
-        </div>
+            <a class="btn btn-default"  data-bind="attr: { href: termsUrl }, enable: hasSelectedIndex" title="Navigate to index terms">Terms</a>
+            <a class="btn btn-default"  data-bind="enable: !!queryStats(), click: openQueryStats" title="Show Query Stats In Dialog">Query Stats</a>
+       </div>
 
-        <div class="btn-group use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom"  title="Delete all documents matching the query">
-            <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex, click: deleteDocsMatchingQuery">
+        <div class="btn-group" title="Delete all documents matching the query (map index only)">
+            <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex && isIndexMapReduce() == false, click: deleteDocsMatchingQuery">
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>
@@ -134,12 +142,12 @@
                     Query
                     <i class="fa fa-info-circle text-info"></i>
                 </span>
-                <a target="_blank" class="use-bootstrap-tooltip control-label-additional-link" data-trigger="hover" data-toggle="tooltip" data-placement="right" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                <a target="_blank" class="control-label-additional-link"  title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
             </label>
             <div class="col-md-11">
                 <div class="row">
                     <div class="col-md-11">
-                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: queryText,completer:queryCompleter, typeName:'query', lang:'ace/mode/lucene', containigViewModel:$root}, valueUpdate: 'afterkeydown'"></pre>
+                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: queryText,completer:queryCompleter, typeName:'query', lang:'ace/mode/lucene', completerHostObject:$root}, valueUpdate: 'afterkeydown'"></pre>
                     </div>
                 </div>
             </div>
@@ -161,7 +169,7 @@
                                 </ul>
                             </div>
                             <div>
-                                <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                                <button type="button" class="close glyphicon glyphicon-remove remove-icon"  data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query"></button>
                             </div>
                             <div class="clearfix"></div>
                         </div>
@@ -192,17 +200,31 @@
                     <div class="panel-heading">
                         <div class="btn-group col-md-11">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="text: transformer() ? transformer : 'Select a transformer'"></span> <span class="caret"></span>
+                                <span data-bind="text: transformer() && transformer().name() ? transformer().name() : 'Select a transformer'"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
                                 <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
                             </ul>
+                            
                         </div>
                         <div>
-                            <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
+                            <button type="button" class="close glyphicon glyphicon-remove remove-icon"  data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query"></button>
                         </div>
                         <div class="clearfix"></div>
                     </div>
+                    <!-- ko if: typeof transformer() !== "undefined" && transformer() != null && transformer().extractInputs().length > 0 -->
+                    <div class="panel-body">
+                        <div class="btn-group col-md-12">
+                            <div class="clearfix"></div>
+                            <div id="transformerParams" data-bind="foreach: transformer().extractInputs()">
+                                <div class="form-group row">
+                                    <label data-bind="text: 'Parameter: '+$data.name" class="control-label"></label>
+                                    <input type="text" class="form-control transformer_param_flag" data-bind="attr: { name: $data.name, required: $data.hasDefault ? null : '' }, event: { change: $root.runQuery.bind($root) }" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /ko -->
                 </div>
             </div>
         </div>
@@ -217,7 +239,10 @@
                 <div class="col-md-11 query-results">
                     <div id="queryResultsPanel" class="panel panel-default">
                         <div class="panel-body">
-                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce:isIndexMapReduce }"></div>
+                            <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
+                                <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
+                            </div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce:isIndexMapReduce, collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
                         </div>
                     </div>
                 </div>               

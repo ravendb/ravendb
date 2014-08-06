@@ -132,8 +132,14 @@ namespace Voron
                 if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
                     Directory.CreateDirectory(_journalPath);
 
-				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename), InitialFileSize));
+				_dataPager = new Lazy<IVirtualPager>(() =>
+				{
+					FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
+					return new Win32MemoryMapPager(FilePath, InitialFileSize);
+				});
 			}
+
+			public string FilePath { get; private set; }
 
 			public override IVirtualPager DataPager
 			{

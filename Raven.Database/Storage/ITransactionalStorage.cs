@@ -45,7 +45,7 @@ namespace Raven.Database.Storage
 		Guid ChangeId();
 		void ClearCaches();
 		void DumpAllStorageTables();
-		InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
+		InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
         IList<string> ComputeDetailedStorageInformation();
 	}
 }

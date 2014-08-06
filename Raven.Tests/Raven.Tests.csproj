@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Tests</RootNamespace>
     <AssemblyName>Raven.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -46,6 +46,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>618, 612</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -88,13 +89,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="Jint, Version=2.1.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Jint">
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
-    </Reference>
-    <Reference Include="Jint.Raven, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -211,6 +207,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="Bugs\AccessingHostPropertyOnUri.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
@@ -235,16 +232,22 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\CustomizingIndexQuery.cs" />
+    <Compile Include="Bugs\DocumentWithNaN.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\CompilingIndexesCreatesCacheDirectory.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
+    <Compile Include="Bugs\DTC\NSB\DbShutDownMidTransaction.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
+    <Compile Include="Bugs\LazilyLoadWithTransformerWhileUsingSharding.cs" />
+    <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
+    <Compile Include="Bugs\PatchingWithDefault.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
@@ -282,7 +285,6 @@
     <Compile Include="Bugs\EmptyAttachments.cs" />
     <Compile Include="Bugs\EqualityWithArrayOfGuids.cs" />
     <Compile Include="Bugs\Everett.cs" />
-    <Compile Include="Bugs\FacetCountTest.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
     <Compile Include="Bugs\HiLoKeyGeneratorConcurrency.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
@@ -437,7 +439,6 @@
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
     <Compile Include="Bugs\Identifiers\LongId.cs" />
-    <Compile Include="Bugs\IndexDefinitionEquality.cs" />
     <Compile Include="Bugs\Image.cs" />
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\Includes.cs" />
@@ -591,7 +592,6 @@
     <Compile Include="Linq\SelectDictionaryItem.cs" />
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="Linq\WhereStringEquals.cs" />
-    <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
@@ -605,7 +605,8 @@
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
-    <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\NestingTransformers.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
@@ -660,14 +661,10 @@
     <Compile Include="Bugs\TransformResults\QuestionWithVoteTotalIndex.cs" />
     <Compile Include="Bugs\TransformResults\User.cs" />
     <Compile Include="Bugs\TransformResults\QuestionView.cs" />
-    <Compile Include="Bugs\TransformResults\Thor.cs" />
-    <Compile Include="Bugs\TransformResults\ThorIndex.cs" />
     <Compile Include="Bugs\TransformResults\Votes_ByAnswerEntity.cs" />
-    <Compile Include="Bugs\TransformResults\WithGuidId.cs" />
     <Compile Include="Bugs\TransitiveNull.cs" />
     <Compile Include="Bugs\TranslatingLinqQueriesToIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
-    <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\TypeNameHandlingTest.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UserGuid.cs" />
@@ -731,7 +728,6 @@
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
-    <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\OldIndexRunWhileNewIndexesAreRunning.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
@@ -984,7 +980,7 @@
     <EmbeddedResource Include="Patching\failingdump11.ravendump" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Bugs\DTC\" />
+    <Folder Include="Issues\" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
@@ -992,12 +988,9 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
@@ -1013,4 +1006,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

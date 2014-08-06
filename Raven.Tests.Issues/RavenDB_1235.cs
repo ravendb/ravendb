@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Replication;
 using Raven.Tests.Common;
 using Raven.Tests.MailingList;
 
@@ -20,7 +21,7 @@ namespace Raven.Tests.Issues
 
 	public class RavenDB_1235 : RavenTest
 	{
-		private readonly RavenDbServer[] servers;
+		private new readonly RavenDbServer[] servers;
 		private readonly ShardedDocumentStore shardedDocumentStore;
 
 		private readonly IList<string> shardNames = new List<string>

@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Abstractions</RootNamespace>
     <AssemblyName>Raven.Abstractions</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -39,6 +39,7 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -47,7 +48,8 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Spatial4n.Core.NTS">
+    <Reference Include="Spatial4n.Core.NTS, Version=0.3.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -107,7 +109,13 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Counters\CounterStorageStats.cs" />
+    <Compile Include="Counters\CounterChanges.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
+    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
+    <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
+    <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\AggregationData.cs" />
     <Compile Include="Data\Alert.cs" />
@@ -119,6 +127,9 @@
     <Compile Include="Data\DocumentsChanges.cs" />
     <Compile Include="Data\FacetQuery.cs" />
     <Compile Include="Data\FailoverServers.cs" />
+    <Compile Include="Data\ExtensionsLog.cs" />
+    <Compile Include="Data\ExtensionsLogDetail.cs" />
+    <Compile Include="Data\FutureBatchStats.cs" />
     <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
@@ -200,7 +211,12 @@
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
+    <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
+    <Compile Include="FileSystem\FileHeader.cs" />
+    <Compile Include="FileSystem\FileSystemDocument.cs" />
+    <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexMergeSuggestion.cs" />
@@ -269,35 +285,37 @@
     <Compile Include="OAuth\AbstractAuthenticator.cs" />
     <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
-    <Compile Include="RavenFS\ConfigurationChangeNotification.cs" />
-    <Compile Include="RavenFS\ConflictDetectedNotification.cs" />
-    <Compile Include="RavenFS\ConflictItem.cs" />
-    <Compile Include="RavenFS\ConflictNotification.cs" />
-    <Compile Include="RavenFS\ConflictResolutionStrategy.cs" />
-    <Compile Include="RavenFS\ConflictResolved.cs" />
-    <Compile Include="RavenFS\DestinationSyncResult.cs" />
-    <Compile Include="RavenFS\FileChangeNotification.cs" />
-    <Compile Include="RavenFS\FileInfo.cs" />
-    <Compile Include="RavenFS\FilesSortOptions.cs" />
-    <Compile Include="RavenFS\FileStatus.cs" />
-    <Compile Include="RavenFS\FileSystemMetrics.cs" />
-    <Compile Include="RavenFS\HistoryItem.cs" />
-    <Compile Include="RavenFS\Notification.cs" />
-    <Compile Include="RavenFS\RdcStats.cs" />
-    <Compile Include="RavenFS\ServerInfo.cs" />
-    <Compile Include="RavenFS\FileSystemStats.cs" />
-    <Compile Include="RavenFS\Signature.cs" />
-    <Compile Include="RavenFS\SignatureManifest.cs" />
-    <Compile Include="RavenFS\SynchronizationConfirmation.cs" />
-    <Compile Include="RavenFS\SynchronizationConstants.cs" />
-    <Compile Include="RavenFS\SynchronizationDetails.cs" />
-    <Compile Include="RavenFS\SynchronizationException.cs" />
-    <Compile Include="RavenFS\SynchronizationReport.cs" />
-    <Compile Include="RavenFS\SynchronizationType.cs" />
-    <Compile Include="RavenFS\SynchronizationUpdateNotification.cs" />
-    <Compile Include="RavenFS\SyncingMultipartConstants.cs" />
-    <Compile Include="RavenFS\UploadFailedNotification.cs" />
+    <Compile Include="FileSystem\Notifications\ConfigurationChangeNotification.cs" />
+    <Compile Include="FileSystem\ConflictItem.cs" />
+    <Compile Include="FileSystem\Notifications\ConflictNotification.cs" />
+    <Compile Include="FileSystem\ConflictResolutionStrategy.cs" />
+    <Compile Include="FileSystem\DestinationSyncResult.cs" />
+    <Compile Include="FileSystem\Notifications\FileChangeNotification.cs" />
+    <Compile Include="FileSystem\FilesSortOptions.cs" />
+    <Compile Include="FileSystem\FileStatus.cs" />
+    <Compile Include="FileSystem\FileSystemMetrics.cs" />
+    <Compile Include="FileSystem\HistoryItem.cs" />
+    <Compile Include="FileSystem\ItemsPage.cs" />
+    <Compile Include="FileSystem\Notification.cs" />
+    <Compile Include="FileSystem\RdcStats.cs" />
+    <Compile Include="FileSystem\ServerInfo.cs" />
+    <Compile Include="FileSystem\FileSystemStats.cs" />
+    <Compile Include="FileSystem\Signature.cs" />
+    <Compile Include="FileSystem\SignatureManifest.cs" />
+    <Compile Include="FileSystem\SourceSynchronizationInformation.cs" />
+    <Compile Include="FileSystem\SynchronizationConfirmation.cs" />
+    <Compile Include="FileSystem\SynchronizationConstants.cs" />
+    <Compile Include="FileSystem\SynchronizationDestination.cs" />
+    <Compile Include="FileSystem\SynchronizationDetails.cs" />
+    <Compile Include="FileSystem\SynchronizationException.cs" />
+    <Compile Include="FileSystem\SynchronizationReport.cs" />
+    <Compile Include="FileSystem\SynchronizationType.cs" />
+    <Compile Include="FileSystem\Notifications\SynchronizationUpdateNotification.cs" />
+    <Compile Include="FileSystem\SyncingMultipartConstants.cs" />
+    <Compile Include="FileSystem\Notifications\UploadFailedNotification.cs" />
+    <Compile Include="Replication\FailoverBehavior.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
+    <Compile Include="Replication\ReplicationClientConfiguration.cs" />
     <Compile Include="Replication\ReplicationConfig.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
@@ -348,8 +366,9 @@
       <Link>RavenDB.snk</Link>
     </None>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -358,4 +377,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

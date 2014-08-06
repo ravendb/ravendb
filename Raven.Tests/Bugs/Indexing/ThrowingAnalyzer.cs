@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs.Indexing
 						.ToList();
 
 				}
-				Assert.NotEmpty(store.DocumentDatabase.Statistics.Errors);
+				Assert.NotEmpty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 

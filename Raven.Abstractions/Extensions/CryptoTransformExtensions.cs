@@ -1,11 +1,5 @@
-﻿#if !NETFX_CORE
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -23,4 +17,3 @@ namespace Raven.Abstractions.Extensions
 		}
 	}
 }
-#endif

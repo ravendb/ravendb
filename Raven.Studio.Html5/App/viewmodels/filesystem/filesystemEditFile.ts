@@ -48,14 +48,19 @@ class filesystemEditFile extends viewModelBase {
     // Called when the view is attached to the DOM.
     attached() {
         this.initializeFileEditor();
-        //this.setupKeyboardShortcuts();
+        this.setupKeyboardShortcuts();
         this.focusOnEditor();
+    }
+
+    setupKeyboardShortcuts() {
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteFile(), filesystemEditFile.editFileSelector);
     }
 
     initializeFileEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
+        // TODO: Just use the simple binding handler instead.
         this.fileMetadataEditor = ace.edit("fileMetadataEditor");
-        this.fileMetadataEditor.setTheme("ace/theme/github");
+        this.fileMetadataEditor.setTheme("ace/theme/xcode");
         this.fileMetadataEditor.setFontSize("16px");
         this.fileMetadataEditor.getSession().setMode("ace/mode/json");
         $("#fileMetadataEditor").on('blur', ".ace_text-input", () => this.storeFileEditorTextIntoObservable());
@@ -94,25 +99,17 @@ class filesystemEditFile extends viewModelBase {
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.fileMetadataText());
         var currentDocumentId = this.fileName();
-        //if (this.lodaedDocumentName && this.lodaedDocumentName != currentDocumentId) {
-        //    this.isCreatingNewDocument(true);
-        //}
-
 
         this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
 
         var saveCommand = new updateFileMetadataCommand(this.fileName(), meta, this.activeFilesystem(), true);
         var saveTask = saveCommand.execute();
         saveTask.done(() => {
-            // Resync Changes
-            viewModelBase.dirtyFlag().reset();
+            this.dirtyFlag().reset(); // Resync Changes
 
             this.loadFile(this.fileName());
-            //this.updateUrl(idAndEtag.Key);
         });
     }
-
-
 
     downloadFile() {
         var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + this.fileName();
@@ -138,8 +135,7 @@ class filesystemEditFile extends viewModelBase {
             app.showDialog(viewModel, filesystemEditFile.editFileSelector);
         }
 
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        this.dirtyFlag().reset(); // Resync Changes
     }
 
     metadataChanged(meta: fileMetadata) {
@@ -170,7 +166,6 @@ class filesystemEditFile extends viewModelBase {
 
             var metaString = this.stringify(metaDto);
             this.fileMetadataText(metaString);
-            //this.userSpecifiedId(meta.id);
         }
     }
 

@@ -13,6 +13,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Listeners;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -671,7 +672,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			return SelectFields<TProjection>(typeof (TProjection).GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Select(x => x.Name).ToArray());
+			return SelectFields<TProjection>(ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Select(x => x.Name).ToArray());
 		}
 
 		/// <summary>
@@ -725,9 +726,10 @@ namespace Raven.Client.Document
 											highlighterPreTags = highlighterPreTags,
 											highlighterPostTags = highlighterPostTags,
 											resultsTransformer = resultsTransformer,
-											queryInputs = queryInputs,
+											transformerParameters = transformerParameters,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
+											showQueryTimings = showQueryTimings,
 											lastEquality = lastEquality,
 											shouldExplainScores = shouldExplainScores
 										};
@@ -744,6 +746,16 @@ namespace Raven.Client.Document
 		{
 			var criteria = clause(new SpatialCriteriaFactory());
 			return GenerateSpatialQueryData(fieldName, criteria);
+		}
+
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+		{
+			SetTransformerParameters(queryInputs);
+		}
+
+		public void SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
+		{
+			transformerParameters = parameters;
 		}
 
 		/// <summary>
@@ -936,6 +948,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ShowTimings()
+		{
+			ShowTimings();
+			return this;
+		}
+
 		IAsyncDocumentQuery<T>  IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
 		{
 			Distinct();
@@ -957,12 +975,11 @@ namespace Raven.Client.Document
 			shouldExplainScores = true;
 			return this;
 
-        }
+	}
 
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
 	    {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
 	        return this;
-		}
-	}
+}	}
 }

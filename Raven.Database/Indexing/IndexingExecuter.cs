@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -23,13 +24,18 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
-		readonly PrefetchingBehavior prefetchingBehavior;
+		private readonly PrefetchingBehavior prefetchingBehavior;
 
 		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
-			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			prefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+		}
+
+		public PrefetchingBehavior PrefetchingBehavior
+		{
+			get { return prefetchingBehavior; }
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -42,23 +48,22 @@ namespace Raven.Database.Indexing
 			if (indexingPriority == IndexingPriority.None)
 				return true;
 
-			if (indexingPriority.HasFlag(IndexingPriority.Normal))
+            if ((indexingPriority & IndexingPriority.Normal) == IndexingPriority.Normal)
 			{
 				onlyFoundIdleWork.Value = false;
 				return true;
 			}
 
-			if (indexingPriority.HasFlag(IndexingPriority.Disabled) || 
-                indexingPriority.HasFlag(IndexingPriority.Error))
+			if ((indexingPriority & (IndexingPriority.Disabled | IndexingPriority.Error)) != IndexingPriority.None)
 				return false;
 
 			if (isIdle == false)
 				return false; // everything else is only valid on idle runs
 
-			if (indexingPriority.HasFlag(IndexingPriority.Idle))
+			if ((indexingPriority & IndexingPriority.Idle) == IndexingPriority.Idle)
 				return true;
 
-			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
+			if ((indexingPriority & IndexingPriority.Abandoned) == IndexingPriority.Abandoned)
 			{
 				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
@@ -69,15 +74,17 @@ namespace Raven.Database.Indexing
 		}
 
 	    protected override void UpdateStalenessMetrics(int staleCount)
-	    {
+		{
 	        context.MetricsCounters.StaleIndexMaps.Update(staleCount);
-	    }
+		}
 
 	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
-		{
-            return (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
-		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
-		}
+	    {
+		    var removeFromIndexTasks = (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
+			var touchReferenceDocumentIfChangedTask = removeFromIndexTasks ?? actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>();
+
+		    return touchReferenceDocumentIfChangedTask;
+	    }
 
 		protected override void FlushAllIndexes()
 		{
@@ -108,50 +115,64 @@ namespace Raven.Database.Indexing
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
-			List<JsonDocument> jsonDocs = null;
 			var lastEtag = Etag.Empty;
 
+			List<JsonDocument> jsonDocs;
+
+	        using (MapIndexingInProgress(indexesToWorkOn))
+	        using (PrefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForAllIndexes, out jsonDocs))
+	        {
+		        try
+		        {
+			        if (Log.IsDebugEnabled)
+			        {
+				        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+					        jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+			        }
+
+			        context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
+
+			        context.CancellationToken.ThrowIfCancellationRequested();
+
+			        if (jsonDocs.Count <= 0)
+			        {
+				        return;
+			        }
+
+			        var sw = Stopwatch.StartNew();
+
+			        lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+
+			        indexingDuration = sw.Elapsed;
+		        }
+		        catch (InvalidDataException e)
+		        {
+			        Log.ErrorException("Failed to index because of data corruption. ", e);
+			        indexesToWorkOn.ForEach(index =>
+				        context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+		        }
+		        catch (OperationCanceledException)
+		        {
+			        operationCancelled = true;
+		        }
+		        finally
+		        {
+			        if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+			        {
+				        PrefetchingBehavior.CleanupDocuments(lastEtag);
+				        PrefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+			        }
+
+			        PrefetchingBehavior.BatchProcessingComplete();
+		        }
+	        }
+		}
+
+		private static IDisposable MapIndexingInProgress(IList<IndexToWorkOn> indexesToWorkOn)
+		{
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
 
-			try
-			{
-                jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedEtagForAllIndexes);
-					
-				if (Log.IsDebugEnabled)
-				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                              jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
-				}
-
-				context.ReportIndexingActualBatchSize(jsonDocs.Count);
-
-				context.CancellationToken.ThrowIfCancellationRequested();
-
-				if (jsonDocs.Count <= 0)
-					return;
-
-				var sw = Stopwatch.StartNew();
-
-				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
-
-				indexingDuration = sw.Elapsed;
-			}
-			catch (OperationCanceledException)
-			{
-				operationCancelled = true;
-			}
-			finally
-			{
-				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
-				{
-					prefetchingBehavior.CleanupDocuments(lastEtag);
-					prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
-				}
-
-				prefetchingBehavior.BatchProcessingComplete();
-
-				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
-			}
+			return new DisposableAction(() => indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false));
 		}
 
 		private Etag DoActualIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
@@ -222,7 +243,7 @@ namespace Raven.Database.Indexing
 				transactionalStorage.Batch(actions =>
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
-										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
+					actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
 
 				Index _;
 				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
@@ -284,7 +305,7 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
-					if (prefetchingBehavior.FilterDocuments(item.Doc) == false)
+					if (PrefetchingBehavior.FilterDocuments(item.Doc) == false)
 						continue;
 
 					// did we already indexed this document in this index?
@@ -299,7 +320,7 @@ namespace Raven.Database.Indexing
 						continue;
 					}
 
-					batch.Add(item.Doc, item.Json, prefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
+					batch.Add(item.Doc, item.Json, PrefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
@@ -390,9 +411,9 @@ namespace Raven.Database.Indexing
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not dispose of IndexingExecuter");
 
-			exceptionAggregator.Execute(prefetchingBehavior.Dispose);
+			exceptionAggregator.Execute(PrefetchingBehavior.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
 		}
-		}
     }
+}

@@ -25,10 +25,8 @@ namespace Raven.Abstractions.OAuth
 				SetAuthorization(e.Client);
 			}
 
-#if !NETFX_CORE
 			if (e.Request != null)
 				SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
-#endif
 		}
 
 		protected void SetAuthorization(HttpClient e)
@@ -46,7 +44,6 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
-#if !NETFX_CORE
 		protected static void SetHeader(WebHeaderCollection headers, string key, string value)
 		{
 			try
@@ -60,6 +57,5 @@ namespace Raven.Abstractions.OAuth
 		}
 
 		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey);
-#endif
 	}
 }

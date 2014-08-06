@@ -1,7 +1,7 @@
-﻿<div class="messageBox" tabindex="-1" style="width:720px;">
+﻿<div class="messageBox" tabindex="-1" style="width: 715px;">
     <form data-bind="submit: changeCurrentColumns" id="select-columns-form" onkeypress="return event.keyCode != 13;">
         <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: cancel" aria-hidden="true"></button>
             <h4 class="modal-title">Choose columns</h4>
         </div>
 
@@ -23,23 +23,34 @@
                 </div>
             </div>
 
-            <div data-bind="slideVisible: !customColumns.customMode()" class="alert alert-info">RavenDB will choose columns based on visible document contents</div>
+            <div data-bind="visible: !customColumns.customMode()" class="alert alert-info">RavenDB will choose columns based on visible document contents</div>
 
-            <table class="table table-hover" data-bind="slideVisible: customColumns.customMode()">
+            <table class="table table-hover" data-bind="visible: customColumns.customMode(), css: { 'custom-table': isScrollNeeded }">
                 <thead>
                     <tr>
-                        <th>Binding</th>
-                        <th>Title</th>
-                        <th>Default Width</th>
-                        <th>Options</th>
+                        <th class="col-md-3">Binding</th>
+                        <th class="col-md-3">Title</th>
+                        <th class="col-md-2">Default Width</th>
+                        <th class="col-md-2">Options</th>
                     </tr>
                 </thead>
-                <tbody data-bind="foreach: customColumns.columns" id="qqq">
+                <tbody data-bind="foreach: customColumns.columns, css: { 'custom-table-tbody': isScrollNeeded }">
                     <tr>
-                        <td><input class="form-control" required type="text" data-bind="value: binding, valueUpdate: 'keyup'" /></td>
-                        <td><input class="form-control" required type="text" data-bind="value: header, valueUpdate: 'keyup'" /></td>
-                        <td><input class="form-control input-sm" required type="number" data-bind="value: width, valueUpdate: 'keyup'" /></td>
-                        <td>
+                        <td class="col-md-3">
+                            <div style="position: relative">
+                                <input class="form-control" required type="text" data-bind="attr: { 'id': $root.generateBindingInputId($index()) }, value: binding, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root) }" autocomplete="off"/>
+                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + $root.generateBindingInputId($index()), foreach: $root.autoCompleteResults">
+                                    <li role="presentation" data-bind="click: $root.completeTheWord.bind($root)">
+                                        <a href="#" data-bind="click: $root.completeTheWord.bind($root)">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                        <td class="col-md-3"><input class="form-control" required type="text" data-bind="value: header, valueUpdate: 'afterkeydown'" /></td>
+                        <td class="col-md-2"><input class="form-control" required type="number" data-bind="value: width, valueUpdate: 'afterkeydown'" /></td>
+                        <td class="col-md-2">
                             <div class="btn-group">
                                 <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>
                                 <button data-bind="click: $root.moveDown.bind($root, $data), disable: ($index() === $root.customColumns.columns().length - 1)" type="button" class="btn btn-default"><i class="fa fa-arrow-down"></i></button>
@@ -49,6 +60,7 @@
                     </tr>
                 </tbody>
             </table>
+
         </div>
         <div class="modal-footer">
             <button type="submit" class="btn btn-primary">Ok</button>
@@ -58,3 +70,4 @@
         </div>
     </form>
 </div>
+

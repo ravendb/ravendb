@@ -7,8 +7,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -24,8 +28,8 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/bulk_docs")]
 		public async Task<HttpResponseMessage> BulkPost()
 		{
-            using (var cts = new CancellationTokenSource())
-            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+		    using (var cts = new CancellationTokenSource())
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var jsonCommandArray = await ReadJsonArrayAsync();
 
@@ -63,45 +67,53 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public HttpResponseMessage BulkDelete(string id)
 		{
-            using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
-            {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
-                return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id);
+            // we don't use using because execution is async
+		    var cts = new CancellationTokenSource();
+		    var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+
+	            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+				if (indexDefinition == null)
+					throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", id));
+
+				if (indexDefinition.IsMapReduce)
+					throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
+
+
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, cts, timeout);
             }
-		}
 
 		[HttpPatch]
 		[Route("bulk_docs/{*id}")]
 		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public async Task<HttpResponseMessage> BulkPatch(string id)
 		{
-            using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
-            {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+            // we don't use using because execution is async
+		    var cts = new CancellationTokenSource();
+		    var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 var patchRequestJson = await ReadJsonArrayAsync();
                 var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-                return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id);
+            return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id, cts, timeout);
             }
-		}
 
 		[HttpEval]
 		[Route("bulk_docs/{*id}")]
 		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public async Task<HttpResponseMessage> BulkEval(string id)
 		{
-            using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
-            {
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts.Token, timeout);
+            // we don't use using because execution is async
+		    var cts = new CancellationTokenSource();
+		    var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+
+                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
                 var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
                 var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-                return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale), id);
+            return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale), id, cts, timeout);
             }
-		}
 
-		private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, bool, RavenJArray> batchOperation, string index)
+		private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, bool, RavenJArray> batchOperation, string index, CancellationTokenSource cts, CancellationTimeout timeout)
 		{
 			if (string.IsNullOrEmpty(index))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -110,20 +122,23 @@ namespace Raven.Database.Server.Controllers
 			var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
 
 			var status = new BulkOperationStatus();
-			var sp = Stopwatch.StartNew();
-			long id = 0;
+			long id;
 
 			var task = Task.Factory.StartNew(() =>
 			{
+			   
 				var array = batchOperation(index, indexQuery, allowStale);
 				status.State = array;
 				status.Completed = true;
-
-				//TODO: log
-				//context.Log(log => log.Debug("\tBatch Operation worked on {0:#,#;;0} documents in {1}, task #: {2}", array.Length, sp.Elapsed, id));
+			    
 			});
 
-			Database.Tasks.AddTask(task, status, out id);
+			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+			                                     {
+			                                         StartTime = SystemTime.UtcNow,
+                                                     TaskType = TaskActions.PendingTaskType.IndexBulkOperation,
+                                                     Payload = index
+                                                 }, out id, cts);
 
 			return GetMessageWithObject(new { OperationId = id });
 		}

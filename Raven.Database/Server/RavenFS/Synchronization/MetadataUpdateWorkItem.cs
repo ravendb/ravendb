@@ -1,9 +1,10 @@
 ﻿using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -27,14 +28,14 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.MetadataUpdate; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination)
+        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
 			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
 			if (conflict != null)
-				return ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.FileSystemUrl, log);
+                return ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
 
             return destination.UpdateMetadataAsync(FileName, FileMetadata, ServerInfo);
 		}

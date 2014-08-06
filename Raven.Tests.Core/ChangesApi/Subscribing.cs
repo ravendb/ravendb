@@ -5,7 +5,6 @@ using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Raven.Tests.Core.ChangesApi

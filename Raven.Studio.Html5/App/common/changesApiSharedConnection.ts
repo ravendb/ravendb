@@ -1,15 +1,11 @@
-﻿interface sharedChangesConnection {
-    databases: sharedChangesConnectionDatabase[];
-} 
-
-interface sharedChangesConnectionDatabase {
-    id: string;
+﻿interface changesApiEventQueue {
+    ownerId: string;
     name: string;
     lastHeartbeatMs: number;
-    events: sharedChangesConnectionEvent[];
+    events: changesApiEvent[];
 }
 
-interface sharedChangesConnectionEvent {
-    eventJson: string;
+interface changesApiEvent {
+    dtoJson: string;
     time: number;
 }

@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -23,7 +24,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			this.sigGenerator = sigGenerator;
 		}
 
-		public bool Filter(FileHeader file, Guid destinationId, IEnumerable<FileHeader> candidatesToSynchronization)
+        public bool Filter(FileHeader file, Guid destinationId, IEnumerable<FileHeader> candidatesToSynchronization)
 		{
 			// prevent synchronization back to source
 			if (file.Metadata.Value<Guid>(SynchronizationConstants.RavenSynchronizationSource) == destinationId)
@@ -44,7 +45,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return true;
 		}
 
-		private static bool ExistsRenameTombstone(string name, IEnumerable<FileHeader> candidatesToSynchronization)
+        private static bool ExistsRenameTombstone(string name, IEnumerable<FileHeader> candidatesToSynchronization)
 		{
 			return
 				candidatesToSynchronization.Any(
@@ -100,7 +101,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             if (destinationMetadata != null && localMetadata.Value<string>("Content-MD5") == destinationMetadata.Value<string>("Content-MD5"))
             {
                 // check metadata to detect if any synchronization is needed
-                if (localMetadata.Keys.Except(new[] { "ETag", "Last-Modified" })
+                if (localMetadata.Keys.Except(new[] { Constants.MetadataEtagField, Constants.LastModified })
                                  .Any(key => !destinationMetadata.ContainsKey(key) || localMetadata[key] != destinationMetadata[key]))
                 {
                     return new MetadataUpdateWorkItem(file, localServerUrl, destinationMetadata, storage);

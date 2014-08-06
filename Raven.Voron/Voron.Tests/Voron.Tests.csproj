@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Voron.Tests</RootNamespace>
     <AssemblyName>Voron.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -20,7 +20,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;DEBUG_PAGER_STATE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -67,6 +67,7 @@
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\PageAllocation.cs" />
     <Compile Include="Bugs\PagesFilteredOutByJournalApplicator.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
     <Compile Include="Bugs\Isolation.cs" />
@@ -84,12 +85,14 @@
     <Compile Include="Bugs\MultiReads.cs" />
     <Compile Include="Bugs\Iterating.cs" />
     <Compile Include="Bugs\StartsWithSearch.cs" />
+    <Compile Include="Bugs\FreeSpaceAndOverflowPages.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="DebugJournalTest.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
+    <Compile Include="Journal\LogShipping.cs" />
     <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />
@@ -116,10 +119,12 @@
     <Compile Include="Trees\CanIterateBackward.cs" />
     <Compile Include="Trees\Deletes.cs" />
     <Compile Include="Trees\FreeSpaceTest.cs" />
+    <Compile Include="Trees\ItemsCount.cs" />
     <Compile Include="Trees\Iteration.cs" />
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />
     <Compile Include="Trees\Rebalance.cs" />
+    <Compile Include="Trees\TreesWithPrefixedKeys.cs" />
     <Compile Include="Trees\Updates.cs" />
     <Compile Include="Util\CrcTests.cs" />
     <Compile Include="Util\ImmutableAppendOnlyTests.cs" />
@@ -149,11 +154,14 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Bugs\Data\mapped.djrs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
@@ -161,4 +169,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

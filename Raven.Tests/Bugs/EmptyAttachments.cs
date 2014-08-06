@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 			{
 				store.DatabaseCommands.PutAttachment("a", null, new MemoryStream(), new RavenJObject());
 
-				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					accessor.Attachments.GetAttachmentsAfter(Raven.Abstractions.Data.Etag.Empty, 100, long.MaxValue).ToList();
 				});

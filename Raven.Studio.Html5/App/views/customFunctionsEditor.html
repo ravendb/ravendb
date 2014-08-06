@@ -1,0 +1,19 @@
+﻿<form class="custom-functions-form" id="customFunctionsContainer">
+    <nav class="navbar navbar-default popover-container-flag" role="navigation">
+        <div class="collapse navbar-collapse">
+            <div class="navbar-form">
+                <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <span style="margin-left: 10px">
+                    You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
+                </span>
+                <span id="customFunctionsExample" class="help-cursor" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
+                    See the example. <i class="fa fa-info-circle text-info"></i>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="row">
+        <pre class="editor" data-bind="aceEditor: { code: documentText, fontSize:'18px', lang: 'ace/mode/javascript' }"></pre>
+    </div>
+</form>                                                                                                           

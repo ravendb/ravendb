@@ -2,46 +2,46 @@
     <form class="quotas-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
         <nav class="navbar navbar-default" role="navigation">
             <div class="collapse navbar-collapse">
-                <div class="navbar-form navbar-right">
-                    <button type="submit" class="btn btn-primary use-bootstrap-tooltip" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+                <div class="navbar-form">
+                     <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
                 </div>
             </div>
         </nav>
-        <div class="row form-group">
-            <div class="col-md-3 control-label">Maximum size:</div>
-            <div class="col-md-3">
+        <div class="form-group">
+            <div class="col-md-4 control-label">Maximum size:</div>
+            <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="value: maximumSize" />
+                    <input required type="number" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">MB</span>
                 </div>
             </div>
         </div>
 
-        <div class="row form-group">
-            <div class="col-md-3 control-label">Warning limit threshold:</div>
-            <div class="col-md-3">
+        <div class="form-group">
+            <div class="col-md-4 control-label">Warning limit threshold:</div>
+            <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="value: warningLimitThreshold" />
+                    <input required type="number" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">MB</span>
                 </div>
             </div>
         </div>
 
-        <div class="row form-group">
-            <div class="col-md-3 control-label">Maximum number of docs:</div>
-            <div class="col-md-3">
+        <div class="form-group">
+            <div class="col-md-4 control-label">Maximum number of docs:</div>
+            <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="value: maxNumberOfDocs" />
+                    <input required type="number" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">docs</span>
                 </div>
             </div>
         </div>
 
-        <div class="row form-group">
-            <div class="col-md-3 control-label">Warning threshold for docs:</div>
-            <div class="col-md-3">
+        <div class="form-group">
+            <div class="col-md-4 control-label">Warning threshold for docs:</div>
+            <div class="col-md-8">
                 <div class="input-group">
-                    <input required type="number" class="form-control" data-bind="value: warningThresholdForDocs" />
+                    <input required type="number" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown'" />
                     <span class="input-group-addon">docs</span>
                 </div>
             </div>

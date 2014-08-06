@@ -3,9 +3,10 @@ import database = require("models/database");
 import document = require("models/document");
 import pagedResultSet = require("common/pagedResultSet");
 import querySort = require("models/querySort");
+import transformerQueryType = require("models/transformerQuery");
 
 class queryIndexCommand extends commandBase {
-    constructor(private indexName: string, private db: database, private skip: number, private take: number, private queryText?: string, private sorts?: querySort[], private transformerName?: string, private showFields?: boolean, private indexEntries?: boolean, private useAndOperator?: boolean) {
+    constructor(private indexName: string, private db: database, private skip: number, private take: number, private queryText?: string, private sorts?: querySort[], private transformerQuery?: transformerQueryType, private showFields?: boolean, private indexEntries?: boolean, private useAndOperator?: boolean) {
         super();
     }
 
@@ -21,7 +22,8 @@ class queryIndexCommand extends commandBase {
 
     getUrl() {
         var url = "/indexes/" + this.indexName;
-        var resultsTransformerUrlFragment = this.transformerName ? "&resultsTransformer=" + this.transformerName : ""; // This should not be urlEncoded, as it breaks the query.
+        //var resultsTransformerUrlFragment = this.transformer && this.transformer.name() ? "&resultsTransformer=" + this.transformer.name() : ""; // This should not be urlEncoded, as it breaks the query.
+        var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
         var urlArgs = this.urlEncodeArgs({
             query: this.queryText ? this.queryText : undefined,
             start: this.skip,
@@ -31,6 +33,23 @@ class queryIndexCommand extends commandBase {
             fetch: this.showFields ? "__all_fields" : undefined,
             debug: this.indexEntries ? "entries" : undefined,
             operator: this.useAndOperator ? "AND" : undefined
+        }) + resultsTransformerUrlFragment;
+
+        return url + urlArgs;
+    }
+
+    getCsvUrl() {
+        var url = "/streams/query/" + this.indexName;
+        var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
+        var urlArgs = this.urlEncodeArgs({
+            query: this.queryText ? this.queryText : undefined,
+            sort: this.sorts.map(s => s.toQuerySortString()),
+            skipTransformResults: true,
+            fetch: this.showFields ? "__all_fields" : undefined,
+            debug: this.indexEntries ? "entries" : undefined,
+            operator: this.useAndOperator ? "AND" : undefined,
+            format: "excel",
+            download: true
         }) + resultsTransformerUrlFragment;
 
         return url + urlArgs;

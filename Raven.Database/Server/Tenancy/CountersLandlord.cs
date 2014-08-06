@@ -14,6 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Counters;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -22,13 +23,19 @@ namespace Raven.Database.Server.Tenancy
 		private readonly DocumentDatabase systemDatabase;
 		private bool initialized;
 
+        private const string COUNTERS_PREFIX = "Raven/Counters/";
+        public override string ResourcePrefix { get { return COUNTERS_PREFIX; } }
+
 		public CountersLandlord(DocumentDatabase systemDatabase)
 		{
 			this.systemDatabase = systemDatabase;
+		    Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled",null) != null;
 			Init();
 		}
 
-		public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+	    public bool Enabled { get; set; }
+
+	    public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
 		public void Init()
         {
@@ -44,7 +51,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down counters {0} because the tenant counter document has been updated or removed", dbName);
-                Cleanup(dbName, skipIfActive: false);
+				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
 
@@ -80,15 +87,12 @@ namespace Raven.Database.Server.Tenancy
 			return document;
 		}
 
-
-		public bool TryGetFileSystem(string tenantId, out Task<CounterStorage> fileSystem)
-		{
-			return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
-		}
-
-
 		public bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
 		{
+		    if (Enabled == false)
+		    {
+                throw new InvalidOperationException("Counters are an experimental feature that is not enabled");
+		    }
 			if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
 			{
 				if (counter.IsFaulted || counter.IsCanceled)
@@ -113,7 +117,8 @@ namespace Raven.Database.Server.Tenancy
 
 			counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var cs = new CounterStorage(systemDatabase.ServerUrl,tenantId, config);
+				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+				var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
 				AssertLicenseParameters();
 
 				// if we have a very long init process, make sure that we reset the last idle time for this db.

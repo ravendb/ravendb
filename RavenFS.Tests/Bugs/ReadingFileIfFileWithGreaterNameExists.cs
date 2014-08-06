@@ -43,7 +43,7 @@ namespace RavenFS.Tests.Bugs
 						accessor.CompleteFileUpload(greaterFileName);
 					});
 
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			transactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile(filename, 0, 32));
 
 			Assert.Equal(2, fileAndPages.Pages.Count);

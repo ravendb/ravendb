@@ -31,7 +31,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 
 					var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
-						.AsProjection<App_WaiverWaitlistItemSearch.IndexResult>()
+						.ProjectFromIndexFieldsInto<App_WaiverWaitlistItemSearch.IndexResult>()
 						.ToList();
 
 					Assert.False(list.Any(result => result.GroupNumber == null));

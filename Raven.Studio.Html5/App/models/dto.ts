@@ -24,6 +24,20 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface logNotificationDto {
+    Level :string;
+    TimeStamp :string;
+    LoggerName :string;
+    RequestId: number;
+    HttpMethod: string;
+    EllapsedMiliseconds: number;
+    ResponseStatusCode: number;
+    RequestUri: string;
+    TenantName: string;
+    CustomInfo: string;
+    TenantType: logTenantType;
+
+}
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
     OperationId: string;
 }
@@ -66,6 +80,7 @@ interface databaseStatisticsDto {
     LastDocEtag: string;
     Prefetches: Array<any>;
     StaleIndexes: Array<any>;
+    ActualIndexingBatchSize: Array<any>;
     Triggers: Array<any>;
 }
 
@@ -123,10 +138,11 @@ interface licenseStatusDto {
     Message: string;
     Status: string;
     Error: boolean;
+    Details?:string;
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
-        periodicExport: string;
+        periodicBackup: string;
         encryption: string;
         compression: string;
         quotas: string;
@@ -289,6 +305,16 @@ interface indexQueryResultsDto extends indexResultsDto<documentDto> {
 
 }
 
+interface versioningEntryDto extends documentDto {
+  Id: string;
+  MaxRevisions: number;
+  Exclude: boolean;
+}
+
+interface versioningDto {
+  Entries: versioningEntryDto[]
+}
+
 interface replicationDestinationDto {
     Url: string;
     Username: string;
@@ -354,20 +380,36 @@ interface savedTransformerDto {
     }
 }
 
+interface transformerParamInfo {
+  name: string;
+  hasDefault: boolean;
+}
+
+interface transformerParamDto {
+    name: string;
+    value: string;
+}
+
+interface transformerQueryDto {
+    transformerName: string;
+    queryParams: Array<transformerParamDto>;
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
     QueryText: string;
     Sorts: string[];
-    TransformerName: string;
+    TransformerQuery: transformerQueryDto;
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;
     Hash: number;
 }
 
-interface storedQueryContainerDto extends documentDto {
-    Queries: storedQueryDto[];
+interface indexDataDto {
+    name: string;
+    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {
@@ -431,8 +473,36 @@ interface sqlReplicationDto extends documentDto {
     FactoryName: string;
     ConnectionString: string;
     ConnectionStringName: string;
+    PredefinedConnectionStringSettingName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+    ForceSqlServerQueryRecompile?: boolean;
+    PerformTableQuatation?:boolean;
+}
+
+interface commandData {
+    CommandText: string;
+    Params:{Key:string;Value:any}[]
+}
+
+interface tableQuerySummary {
+    TableName: string;
+    Commands: commandData[];
+}
+
+interface sqlReplicationSimulationResultDto {
+    Results: tableQuerySummary[];
+    LastAlert: alertDto;
+}
+
+interface sqlReplicationConnectionsDto extends documentDto {
+    PredefinedConnections: predefinedSqlConnectionDto[];
+}
+
+interface predefinedSqlConnectionDto {
+    Name:string;
+    FactoryName: string;
+    ConnectionString: string;
 }
 
 interface facetDto {
@@ -495,6 +565,7 @@ interface conflictVersionsDto {
 
 interface documentBase {
     getId(): string;
+    getUrl(): string;
     getDocumentPropertyNames(): Array<string>;
 }
 
@@ -504,7 +575,6 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
-
 }
 
 interface customColumnParamsDto {
@@ -552,11 +622,18 @@ interface statusDebugMetricsDto {
     IndexedPerSecond: number;
     ReducedPerSecond: number;
     RequestsPerSecond: number;
-    Requests: statusDebugMetricsRequestsDto;
-    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+    Requests: meterDataDto;
+    RequestsDuration: histogramDataDto;
+    StaleIndexMaps: histogramDataDto;
+    StaleIndexReduces: histogramDataDto;
+    Gauges: any;
+    ReplicationBatchSizeMeter: dictionary<meterDataDto>;
+    ReplicationDurationMeter: dictionary<meterDataDto>;
+    ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
+    ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
 
-interface statusDebugMetricsRequestsDto {
+interface meterDataDto {
     Count: number;
     MeanRate: number;
     OneMinuteRate: number;
@@ -564,13 +641,18 @@ interface statusDebugMetricsRequestsDto {
     FifteenMinuteRate: number;
 }
 
-interface statusDebugMetricsRequestsDurationDto {
+interface histogramDataDto {
     Counter: number;
     Max: number;
     Min: number;
     Mean: number;
     Stdev: number;
     Percentiles: any;
+}
+
+interface fileSystemDto {
+    Name: string;
+    Disabled: boolean;
 }
 
 interface statusDebugDocrefsDto {
@@ -613,7 +695,9 @@ interface statusDebugQueriesGroupDto {
 
 interface statusDebugQueriesQueryDto {
     StartTime: string;
-    QueryInfo: KnockoutObservable<any>;
+    QueryInfo: string;
+    QueryId: number;
+    Duration: string;
 }
 
 interface taskMetadataDto {
@@ -654,11 +738,19 @@ interface statusDebugIndexFieldsDto {
 
 interface debugDocumentStatsDto {
     Total: number;
+    TotalSize: number;
     Tombstones: number;
     System: number;
+    SystemSize: number;
     NoCollection: number;
-    Collections: dictionary<number>;
+    NoCollectionSize: number;
+    Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
+}
+
+interface collectionStats {
+    Quantity: number;
+    Size: number;
 }
 
 enum documentChangeType {
@@ -668,7 +760,7 @@ enum documentChangeType {
     Common= 3,
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
-    BulkInsertError = 16
+    BulkInsertError = 16,
 }
 
 enum indexChangeType {
@@ -693,6 +785,12 @@ enum transformerChangeType {
     None = 0,
     TransformerAdded = 1,
     TransformerRemoved = 2
+}
+
+enum logTenantType {
+    Database= 0,
+    Filesystem= 1,
+    CounterStorage=2
 }
 
 interface filterSettingDto {
@@ -744,4 +842,154 @@ enum ImportItemType {
     Attachments = 0x4,
     Transformers = 0x8,
     RemoveAnalyzers = 0x8000
+}
+
+interface changesApiEventDto {
+    Time: string; // ISO date string
+    Type: string;
+    Value?: any;
+}
+
+interface databaseDto {
+    Name: string;
+    Disabled: boolean;
+}
+
+interface customFunctionsDto {
+    Functions: string;
+}
+
+interface singleAuthToken {
+    Token: string;
+}
+
+interface suggestionsDto {
+    Suggestions: Array<string>;
+}
+
+interface queryFieldInfo {
+    Index: number;
+    FieldName: string;
+    FieldValue: string;
+}
+
+interface indexSuggestion extends queryFieldInfo {
+    Suggestion: string;
+}
+
+interface mappedResultInfo {
+    ReduceKey?: string;
+    Timestamp?: string;
+    Etag?: string;
+    Data?: any;
+    Bucket?: number;
+    Source?: string;
+}
+
+
+interface visualizerDataObjectDto {
+    x?: number;
+    y?: number;
+    type: number;
+    id: any;
+    source?: any;
+    idx: number;
+}
+
+interface visualizerDataObjectNodeDto {
+    children?: visualizerDataObjectNodeDto[];
+    name?: string;
+    level?: number;
+    origin?: visualizerDataObjectNodeDto;
+    x?: number;
+    y?: number;
+    depth?: number;
+    parent?: visualizerDataObjectNodeDto;
+    payload?: mappedResultInfo;
+    connections?: visualizerDataObjectNodeDto[];
+    cachedId?: string;
+}
+
+interface queryIndexDebugMapArgsDto {
+    key?: string;
+    sourceId?: string;
+    startsWith?: string;
+}
+
+interface graphLinkDto {
+    source: visualizerDataObjectNodeDto;
+    target: visualizerDataObjectNodeDto;
+    cachedId?: string;
+}
+
+interface mergeResult {
+  Document: string;
+  Metadata: string;
+}
+
+interface visualizerExportDto {
+    indexName: string;
+    docKeys: string[];
+    reduceKeys: string[];
+    tree: visualizerDataObjectNodeDto;
+}
+
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface operationStatusDto {
+    Completed: boolean;
+    State: documentStateDto[];
+}
+
+interface documentStateDto {
+    Document: string;
+    Deleted: boolean;
+}
+
+interface replicationTopologyDto {
+    Servers: string[];
+    Connections: replicationTopologyConnectionDto[];
+}
+
+interface replicationTopologyConnectionDto {
+    Destination: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    LastAttachmentEtag: string;
+    LastDocumentEtag: string;
+    ReplicationBehavior: string;
+    SendServerId: string;
+    Source: string;
+    SourceToDestinationState: string;
+    StoredServerId: string;
+}
+
+interface stringLinkDto {
+    source: string;
+    target: string;
+}
+
+interface replicationTopologyLinkDto extends stringLinkDto {
+    left: boolean;
+    right: boolean;
+    toRightPayload?: replicationTopologyConnectionDto;
+    toLeftPayload?: replicationTopologyConnectionDto;
+}
+
+interface runningTaskDto {
+    Id: number;
+    TaskStatus: string;
+    Exception: string;
+    ExceptionText: string;
+    Payload: string;
+    TaskType: string;
+    StartTime: string;
+}
+
+
+interface customLogEntryDto {
+    category: string;
+    level: string;
 }

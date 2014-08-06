@@ -1,21 +1,10 @@
 import durandalRouter = require("plugins/router");
-import database = require("models/database");
-import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 
-class indexesShell extends viewModelBase {
+class indexesShell {
     router: DurandalRootRouter;
-    currentBreadcrumbTitle: KnockoutComputed<string>;
-    indexesUrl = appUrl.forCurrentDatabase().indexes;
-    appUrls: computedAppUrls;
-    isIndexNameVisible = ko.observable(false);
-    indexName = ko.observable();
 
     constructor() {
-        super();
-
-        this.appUrls = appUrl.forCurrentDatabase();
-
         this.router = durandalRouter.createChildRouter()
             .map([
                 { route: 'databases/indexes', moduleId: 'viewmodels/indexes', title: 'Indexes', nav: true },
@@ -24,22 +13,19 @@ class indexesShell extends viewModelBase {
             ])
             .buildNavigationModel();
 
-        this.currentBreadcrumbTitle = ko.computed(() => {
-            // Is there a better way to get the active route?
-            var activeRoute = this.router.navigationModel().first(r => r.isActive());
-            if (activeRoute && activeRoute.title === "Indexes") {
-                return "All";
-            }
-
-            return activeRoute != null ? activeRoute.title : "";
-        });
+        appUrl.mapUnknownRoutes(this.router);
     }
 
-    activate(indexName?) {
-        if (indexName != null) {
-            this.indexName(indexName);
-            this.isIndexNameVisible(true);
+    static getRecentQueries(localStorageObjectName: string): storedQueryDto[] {
+        var recentQueriesFromLocalStorage: storedQueryDto[] = localStorage.getObject(localStorageObjectName);
+        var isArray = recentQueriesFromLocalStorage instanceof Array;
+
+        if (recentQueriesFromLocalStorage == null || isArray == false) {
+            localStorage.setObject(localStorageObjectName, []);
+            recentQueriesFromLocalStorage = [];
         }
+
+        return recentQueriesFromLocalStorage;
     }
 }
 

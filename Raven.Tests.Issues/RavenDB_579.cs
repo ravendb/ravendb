@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
@@ -12,7 +14,7 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_579 : RavenTest
 	{
-		private readonly RavenDbServer[] servers;
+		private new readonly RavenDbServer[] servers;
 		private readonly ShardedDocumentStore documentStore;
 
 		private readonly IList<string> shardNames = new List<string>

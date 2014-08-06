@@ -71,6 +71,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 				response.RequestMessage.Headers.AcceptEncoding.Count != 0 && 
 				response.Content != null &&
 				response.Content is ChangesPushContent == false &&
+                response.Content is LogsPushContent == false &&
 				response.Content is CompressedContent == false &&
 				response.Content is CompressedStreamContent == false &&
 				response.Content is CompressedStringContent == false)

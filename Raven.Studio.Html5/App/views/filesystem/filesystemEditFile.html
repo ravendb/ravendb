@@ -5,7 +5,7 @@
             <h3>
                 <i class="fa fa-file-text-o"></i>
                 <a data-bind="click: navigateToFiles">
-                    Files
+                    File Systems
                 </a>
             </h3>
         </li>
@@ -16,10 +16,10 @@
 
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveFileMetadata" title="Save (Alt+S)" accesskey="R"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: refreshFile" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: downloadFile" title="Download file (Alt+[)" accesskey="["><i class="fa fa-download"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteFile" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+            <button type="button" class="btn btn-primary" data-bind="click: saveFileMetadata" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: refreshFile" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: downloadFile" title="Download file (Alt+O)" accesskey="O"><i class="fa fa-download"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: deleteFile" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>
     <br />
@@ -27,16 +27,16 @@
         <div class="col-md-8">
             <div class="row">
                 <div class="col-md-12">
-                    <input type="text" class="form-control use-bootstrap-tooltip" title="File name" data-bind="value: fileName, attr: { disabled: true }" />
+                     <input type="text" class="form-control" title="File name" data-bind="value: fileName, attr: { disabled: true }" />
                 </div>
             </div>
             <br />
             <div class="row">
                 <div class="col-md-12">
                     <ul class="nav nav-tabs">
-                        <li class="use-bootstrap-tooltip" accesskey="m" title="Edit file metadata (Alt+M)">File Metadata</li>
+                         <li  accesskey="m" title="Edit file metadata (Alt+M)">File Metadata</li>
                     </ul>
-                    <pre id="fileMetadataEditor" class="form-control use-bootstrap-tooltip" data-bind="attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+                    <pre id="fileMetadataEditor" class="form-control" data-bind="attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
                 </div>
             </div>
         </div>

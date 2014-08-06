@@ -18,9 +18,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
@@ -59,7 +56,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins an async get operation for documents
@@ -80,7 +77,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="includes">The include paths</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <param name="indexEntriesOnly"></param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -139,6 +136,15 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">Should overwrite index</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
+
+        /// <summary>
+        /// Checks asynchronously if passed index definition matches version stored on server.
+        /// If index does not exist this method returns true.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="indexDef">The index definition.</param>
+        /// <returns></returns>
+	    Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef);
 
 		/// <summary>
 		/// Puts the transformer definition for the specified name asynchronously
@@ -258,11 +264,6 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
-		/// <summary>
-		/// Gets the list of databases from the server asynchronously
-		/// </summary>
-		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
-
         /// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
@@ -363,17 +364,12 @@ namespace Raven.Client.Connection.Async
 		Task<LicensingStatus> GetLicenseStatusAsync();
 
 		/// <summary>
-		/// Gets the build number
-		/// </summary>
-		Task<BuildNumber> GetBuildNumberAsync();
-
-		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 		                                     RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                                     string exclude = null, string transformer = null,
-		                                     Dictionary<string, RavenJToken> queryInputs = null);
+		                                     Dictionary<string, RavenJToken> transformerParameters = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
@@ -442,7 +438,7 @@ namespace Raven.Client.Connection.Async
 		/// Prepares the transaction on the server.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		Task PrepareTransactionAsync(string txId);
+		Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
 		/// <summary>
 		/// Perform a set based update using the specified index.
@@ -468,6 +464,16 @@ namespace Raven.Client.Connection.Async
 
 	public interface IAsyncGlobalAdminDatabaseCommands
 	{
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		Task<BuildNumber> GetBuildNumberAsync();
+
+		/// <summary>
+		/// Gets the list of databases from the server asynchronously
+		/// </summary>
+		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
+
 		/// <summary>
 		/// Get admin statistics
 		/// </summary>
@@ -515,7 +521,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Sends an async command that enables indexing
 		/// </summary>
-		Task StartIndexingAsync();
+        Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status

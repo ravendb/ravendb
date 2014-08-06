@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;

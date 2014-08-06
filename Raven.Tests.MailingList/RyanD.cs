@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 
+using Raven.Abstractions.Extensions;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -35,9 +36,9 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		private bool FindGuidIdentityProperty(PropertyInfo propertyInfo)
+		private bool FindGuidIdentityProperty(MemberInfo memberInfo)
 		{
-			var found = propertyInfo.Name == propertyInfo.DeclaringType.Name + "Guid";
+			var found = memberInfo.Name == memberInfo.DeclaringType.Name + "Guid";
 			return found;
 		}
 

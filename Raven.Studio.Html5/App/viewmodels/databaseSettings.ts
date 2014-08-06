@@ -9,6 +9,7 @@ import document = require("models/document");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import messagePublisher = require("common/messagePublisher");
 
 class databaseSettings extends viewModelBase {
    
@@ -19,10 +20,10 @@ class databaseSettings extends viewModelBase {
     docEditor: AceAjax.Editor;
     securedSettings: string;
     updatedDto: documentDto;
-    textarea: any;
     isSaveEnabled: KnockoutComputed<Boolean>;
     isEditingEnabled = ko.observable<boolean>(false);
     isEditingMetadata = ko.observable<boolean>(false);
+    leavePageDeffered :JQueryPromise<any>;
 
     static containerId ="#databaseSettingsContainer";
 
@@ -70,19 +71,18 @@ class databaseSettings extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
-        this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
-        });
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
-        this.docEditor = ko.utils.domData.get($("#dbDocEditor")[0], "aceEditor");
-        this.textarea = $(this.docEditor.container).find('textarea')[0];
 
-        this.subscribeToObservable(this.documentText, this.metadataText, "data", "metadata");
-        this.subscribeToObservable(this.metadataText, this.documentText, "metadata", "data");
+        var editorElement = $("#dbDocEditor");
+        if (editorElement.length > 0)
+        {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
     }
 
     editDatabaseSettings() {
@@ -98,17 +98,16 @@ class databaseSettings extends viewModelBase {
     }
 
     refreshFromServer() {
-        this.showRefreshAlert().done((answer) => {
-            if (answer == "Yes") {
-                this.fetchDatabaseSettings(this.activeDatabase(), true)
-                    .done(() => {
-                        this.metadataText("{}");
-                        this.docEditor.setReadOnly(true);
-                        this.isEditingEnabled(false);
-                        this.activateDoc();
-                        viewModelBase.dirtyFlag().reset(); //Resync Changes
-                    });
-            }
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+        canContinue.done(() => {
+            this.fetchDatabaseSettings(this.activeDatabase(), true)
+                .done(() => {
+                    this.metadataText("{}");
+                    this.docEditor.setReadOnly(true);
+                    this.isEditingEnabled(false);
+                    this.activateDoc();
+                    this.dirtyFlag().reset(); //Resync Changes
+                });
         });
     }
 
@@ -136,21 +135,38 @@ class databaseSettings extends viewModelBase {
         editDbConfirm
             .viewTask
             .done(() => {
-                var updatedDto: documentDto = JSON.parse(this.documentText());
-                var meta = JSON.parse(this.metadataText());
-                updatedDto['@metadata'] = meta;
-                updatedDto['@metadata']['@etag'] = this.document().__metadata['@etag'];
-                var newDoc = new document(updatedDto);
-                var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
-                var saveTask = saveCommand.execute();
-                saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-                    this.document().__metadata['@etag'] = idAndEtag.ETag;
-                    this.metadataText("{}");
-                    this.docEditor.setReadOnly(true);
-                    this.isEditingEnabled(false);
-                    this.formatDocument();
-                    viewModelBase.dirtyFlag().reset(); //Resync Changes
-                });
+                try {
+                    var updatedDto: documentDto = JSON.parse(this.documentText());
+                    var meta = JSON.parse(this.metadataText());
+
+                    updatedDto['@metadata'] = meta;
+                    updatedDto['@metadata']['@etag'] = this.document().__metadata['@etag'];
+                    var newDoc = new document(updatedDto);
+                    var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
+                    var saveTask = saveCommand.execute();
+                    saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+                        this.document().__metadata['@etag'] = idAndEtag.ETag;
+                        this.metadataText("{}");
+                        this.docEditor.setReadOnly(true);
+                        this.isEditingEnabled(false);
+                        this.formatDocument();
+                        this.dirtyFlag().reset(); //Resync Changes
+                    });
+                }
+                catch (e) {
+                    var message = "";
+                    if (updatedDto == undefined) {
+                        message = "The data isn't a legal JSON expression!";
+                        this.isEditingMetadata(false);
+                    }
+                    else if (meta == undefined) {
+                        message = "The metadata isn't a legal JSON expression!";
+                        this.isEditingMetadata(true);
+                    }
+                    this.docEditor.focus();
+                    messagePublisher.reportError(message);
+                }
+
             });
         app.showDialog(editDbConfirm);
     }
@@ -159,37 +175,6 @@ class databaseSettings extends viewModelBase {
         return new getDatabaseSettingsCommand(db, reportFetchProgress)
             .execute()
             .done((document: document) => { this.document(document); });
-    }
-
-
-    private subscribeToObservable(subscribedObservable, secondObservable, textType1: string, textType2: string) {
-        subscribedObservable.subscribe(text=> {
-            var message = "";
-            try {
-                var text1 = JSON.parse(text);
-                var text2 = JSON.parse(secondObservable());
-            }
-            catch (e1) {
-                if (text1 == undefined) {
-                    message = "The " + textType1 + " isn't a legal JSON expression!";
-                }
-                else if (text2 == undefined) {
-                    message = "The " + textType2 + " isn't a legal JSON expression!";
-                }
-            }
-            finally {
-                this.textarea.setCustomValidity(message);
-            }
-        });
-    }
-
-    private showRefreshAlert(): any {
-        var deferred = $.Deferred();
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
-        if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
-        }
-        return deferred.resolve("Yes");
     }
 
     private getDatabaseSettingsDocumentId(db: database) {

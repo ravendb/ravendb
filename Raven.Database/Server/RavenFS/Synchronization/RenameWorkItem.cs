@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -19,9 +20,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.Rename; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination)
+        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 
             return destination.RenameAsync(FileName, rename, fileAndPages.Metadata, ServerInfo);

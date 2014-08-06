@@ -30,12 +30,12 @@ namespace Voron.Tests.Bugs
         }
 
 		[Theory]
-        [InlineData(0500)]
-        [InlineData(1000)]
-        [InlineData(2000)]
-        [InlineData(3000)]
-        [InlineData(4000)]
-        [InlineData(5000)]
+		[InlineData(0500)]
+		[InlineData(1000)]
+		[InlineData(2000)]
+		[InlineData(3000)]
+		[InlineData(4000)]
+		[InlineData(5000)]
 		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
 		{
 			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
@@ -199,6 +199,23 @@ namespace Voron.Tests.Bugs
 
 						Assert.Equal("value2", it.CurrentKey.ToString());
 					}
+				}
+			}
+		}
+
+		[Fact]
+		public void PageNotSorted_ValidateDebugOption()
+		{
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+			{
+				env.DebugJournal = DebugJournal.FromFile("Bugs/Data/mapped", env);
+				env.DebugJournal.Replay();
+
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.ReadTree("mapped_results_by_view_and_reduce_key");
+
+					DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
 				}
 			}
 		}

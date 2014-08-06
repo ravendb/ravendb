@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Util
 {
     public class AsyncManualResetEvent
     {
-        private volatile TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+        private TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
 
         public Task WaitAsync() { return tcs.Task; }
 

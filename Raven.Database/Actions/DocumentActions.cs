@@ -95,17 +95,17 @@ namespace Raven.Database.Actions
 
         public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
                                                           int pageSize, CancellationToken token, ref int nextStart,
-                                                          string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
+                                                          string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             var list = new RavenJArray();
             GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
-                                           transformer, queryInputs);
+                                           transformer, transformerParameters);
             return list;
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
                                                    CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
-                                                   string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
+                                                   string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -134,7 +134,7 @@ namespace Raven.Database.Actions
                     {
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
-                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
+                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -162,7 +162,7 @@ namespace Raven.Database.Actions
 
                             if (storedTransformer != null)
                             {
-                                using (new CurrentTransformationScope(documentRetriever))
+                                using (new CurrentTransformationScope(Database, documentRetriever))
                                 {
                                     var transformed =
                                         storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
@@ -210,17 +210,17 @@ namespace Raven.Database.Actions
                 nextStart = actualStart;
         }
 
-        private static void RemoveMetadataReservedProperties(RavenJObject metadata)
+        private void RemoveMetadataReservedProperties(RavenJObject metadata)
         {
             RemoveReservedProperties(metadata);
             metadata.Remove("Raven-Last-Modified");
             metadata.Remove("Last-Modified");
         }
 
-        private static void RemoveReservedProperties(RavenJObject document)
+        private void RemoveReservedProperties(RavenJObject document)
         {
             document.Remove(string.Empty);
-            var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || HeadersToIgnoreServer.Contains(propertyName)).ToList();
+            var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || HeadersToIgnoreServer.Contains(propertyName) || Database.Configuration.HeadersToIgnore.Contains(propertyName)).ToList();
             foreach (var propertyName in toRemove)
             {
                 document.Remove(propertyName);
@@ -239,7 +239,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
+        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token)
         {
             var documents = 0;
             TransactionalStorage.Batch(accessor =>
@@ -249,9 +249,10 @@ namespace Raven.Database.Actions
                     OperationId = operationId,
                     Type = DocumentChangeTypes.BulkInsertStarted
                 });
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
                 foreach (var docs in docBatches)
                 {
-                    WorkContext.CancellationToken.ThrowIfCancellationRequested();
+                    cts.Token.ThrowIfCancellationRequested();
 
                     using (Database.DocumentLock.Lock())
                     {
@@ -265,6 +266,9 @@ namespace Raven.Database.Actions
                         {
                             try
                             {
+                                if (string.IsNullOrEmpty(doc.Key))
+                                    throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
+
                                 RemoveReservedProperties(doc.DataAsJson);
                                 RemoveMetadataReservedProperties(doc.Metadata);
 
@@ -322,6 +326,7 @@ namespace Raven.Database.Actions
 
                         WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                         WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                        WorkContext.UpdateFoundWork();
                     }
                 }
 
@@ -453,15 +458,15 @@ namespace Raven.Database.Actions
         }
 
 
-        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs, out HashSet<string> itemsToInclude)
+        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> transformerParameters, out HashSet<string> itemsToInclude)
         {
             JsonDocument result = null;
             DocumentRetriever docRetriever = null;
             TransactionalStorage.Batch(
             actions =>
             {
-                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
-                using (new CurrentTransformationScope(docRetriever))
+                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
                     if (document == null)
@@ -558,14 +563,18 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-                                Database.Notifications.RaiseNotifications(new DocumentChangeNotification
-                                {
-                                    Id = key,
-                                    Type = DocumentChangeTypes.Put,
-                                    TypeName = metadata.Value<string>(Constants.RavenClrType),
-                                    CollectionName = metadata.Value<string>(Constants.RavenEntityName),
-                                    Etag = newEtag,
-                                }, metadata);
+	                            
+								var newDocumentChangeNotification =
+		                            new DocumentChangeNotification
+		                            {
+			                            Id = key,
+			                            Type = DocumentChangeTypes.Put,
+			                            TypeName = metadata.Value<string>(Constants.RavenClrType),
+			                            CollectionName = metadata.Value<string>(Constants.RavenEntityName),
+			                            Etag = newEtag
+		                            };
+	                            
+								Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });
 
                         WorkContext.ShouldNotifyAboutWork(() => "PUT " + key);

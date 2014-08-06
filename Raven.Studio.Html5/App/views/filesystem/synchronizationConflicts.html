@@ -1,4 +1,4 @@
-﻿<div class="synchronization-group panel panel-default" data-bind="visible: isConflictsVisible()">
+﻿<div class="synchronization-group panel panel-default" >
 
     <div class="panel-heading">
         <h4 class="panel-title">
@@ -7,8 +7,8 @@
                 <span class="text-muted" data-bind="text: '(' + conflicts().length + ')'"></span>
             </a>
             <span class="btn-group">
-                <button type="button" class="btn btn-default" data-bind="click: toggleSelectAll" title="Select all or none">
-                    <img style="height: 18px;" data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll" title="Select all or none">
+                    <img data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
                 </button>
                 <button class="btn btn-primary" data-bind="click: resolveWithLocalVersion">Resolve with Local</button>
                 <button class="btn btn-primary" data-bind="click: resolveWithRemoteVersion">Resolve with Remote</button>
@@ -19,12 +19,17 @@
 
     <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'conflictsCollapse' }">
         <div class="panel-body">
+
+            <div class="alert alert-warning" data-bind="visible: conflicts().length === 0">
+                You've got no conflicts.
+            </div>
+
             <table class="table-no-borders">
                 <tbody data-bind="foreach: conflicts">
                     <tr>
                         <td style="padding:0px">
                             <h5 class="pull-left">
-                                <a class="use-bootstrap-tooltip">
+                                <a>
                                     <input type="checkbox" data-bind="attr: { value: fileName }, checked: $root.selectedConflicts" />
                                     <span data-bind="text: fileName"></span>
                                 </a>
@@ -33,6 +38,7 @@
                     </tr>
                 </tbody>
             </table>
+
         </div>
     </div>
 </div>

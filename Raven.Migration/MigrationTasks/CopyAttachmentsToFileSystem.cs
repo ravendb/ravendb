@@ -48,7 +48,7 @@ namespace Raven.Migration.MigrationTasks
 					{
 						var attachment = commands.GetAttachment(attachmentInfo.Key);
 
-						fsclient.UploadAsync(attachment.Key, attachment.Metadata, attachment.Data()).Wait();
+                        fsclient.UploadAsync(attachment.Key, attachment.Data(), attachment.Metadata).Wait();
 
 						startEtag = attachment.Etag;
 

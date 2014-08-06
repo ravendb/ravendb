@@ -18,6 +18,21 @@ class pagedList {
         }
     }
 
+    clear() {
+        if (!!this.queuedFetch) {
+            this.queuedFetch.task.reject("data is being reloaded");
+            this.queuedFetch = null;
+        }
+
+        while (this.items.length > 0) {
+            this.items.pop();
+        }
+    }
+
+    itemCount(): number {
+        return this.items.length;
+    }
+
     fetch(skip: number, take: number): JQueryPromise<pagedResultSet> {
         if (this.isFetching) {
             this.queuedFetch = { skip: skip, take: take, task: $.Deferred() };
@@ -55,7 +70,7 @@ class pagedList {
             }
         }
 
-        return this.items.slice(skip, skip + take)
+        return this.items.slice(skip, skip + take);
     }
 
     getNthItem(nth: number): JQueryPromise<any> {
@@ -77,6 +92,10 @@ class pagedList {
         return indices
             .filter(index => this.items[index])
             .map(validIndex => this.items[validIndex]);
+    }
+
+    getCachedIndices(indices: number[]): number[] {
+        return indices.filter(index => this.items[index]);
     }
 
     getAllCachedItems(): any[] {
@@ -106,7 +125,6 @@ class pagedList {
     hasIds(): boolean {
         return this.items && this.items.length > 0 && this.items[0] && this.items[0].getId && this.items[0].getId();
     }
-
 }
 
 export = pagedList;

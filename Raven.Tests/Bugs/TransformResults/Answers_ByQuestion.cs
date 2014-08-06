@@ -30,10 +30,18 @@ namespace Raven.Tests.Bugs.TransformResults
 								   DecimalTotal = g.Sum(x => x.DecimalTotal)
 							   };
 
-			TransformResults = (database, results) =>
+			this.IndexSortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.Int);
+		}
+	}
+
+	public class Answers_ByQuestionTransformer : AbstractTransformerCreationTask<AnswerViewItem>
+	{
+		public Answers_ByQuestionTransformer()
+		{
+			TransformResults = results =>
 				from result in results
-				let answer = database.Load<Answer>(result.AnswerId)
-				let user = database.Load<User>(answer.UserId)
+				let answer = LoadDocument<Answer>(result.AnswerId)
+				let user = LoadDocument<User>(answer.UserId)
 				select new
 				{
 					QuestionId = result.QuestionId,
@@ -44,7 +52,6 @@ namespace Raven.Tests.Bugs.TransformResults
 					VoteTotal = result.VoteTotal,
 					result.DecimalTotal
 				};
-			this.IndexSortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.Int);
 		}
 	}
 }

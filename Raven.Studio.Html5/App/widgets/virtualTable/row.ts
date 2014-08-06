@@ -1,6 +1,10 @@
 import document = require("models/document");
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
+import customColumns = require('models/customColumns');
+import customFunctions = require("models/customFunctions");
+import execJs = require('common/execJs');
+import collection = require("models/collection");
 
 class row {
     top = ko.observable(0);
@@ -10,11 +14,29 @@ class row {
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
+    compiledCustomFunctions = {};
+
+    calculateExternalIdCellColor(cellValue: string) {
+        var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf('/')).toLocaleLowerCase();
+        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() == cellCollectionName);
+
+        if (!!matchingCollection) {
+            return matchingCollection.colorClass;
+        }
+        return '';
+    }
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
             this.addOrUpdateCellMap('Id', null);
         }
+
+        this.viewModel.settings.customFunctions.subscribe(this.extractCustomFunctions);
+        this.extractCustomFunctions(this.viewModel.settings.customFunctions());
+    }
+
+    extractCustomFunctions(newValue: customFunctions) {
+        this.compiledCustomFunctions = new Function("var exports = {}; " + newValue.functions + "; return exports;")();
     }
 
     resetCells() {
@@ -33,16 +55,44 @@ class row {
     }
 
     fillCells(rowData: documentBase) {
+        var customFunctions = this.viewModel.settings.customFunctions();
+        var customColumns = this.viewModel.settings.customColumns();
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();
-        for (var i = 0; i < rowProperties.length; i++) {
-            var prop = rowProperties[i];
-            var cellValue = rowData[prop];
-            // pass json object when not custom template!
-            if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
-                cellValue = JSON.stringify(cellValue, null, 4);
+
+        if (customColumns.customMode()) {
+            customColumns.columns().forEach((column, index) => {
+                var binding = column.binding();
+                var context = {};
+                $.each(rowData, (name: string, value: any) => {
+                    context[name] = JSON.stringify(value, null, 4);
+                    if (context[name].length > 250) {
+                        context[name] = context[name].substring(0, 250);
+                    }
+                });
+
+                for (var p in this.compiledCustomFunctions) {
+                    context[p] = this.compiledCustomFunctions[p];
+                }
+
+                var cellValueGenerator = execJs.createSimpleCallableCode("return " + binding + ";", context);
+                this.addOrUpdateCellMap(binding, cellValueGenerator());
+            });
+
+        } else {
+            for (var i = 0; i < rowProperties.length; i++) {
+                var prop = rowProperties[i];
+                var cellValue = rowData[prop];
+                // pass json object when not custom template!
+                if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
+                    cellValue = JSON.stringify(cellValue, null, 4);
+                }
+
+                if (cellValue.length > 250) {
+                    cellValue = cellValue.substring(0, 250);
+                }
+                this.addOrUpdateCellMap(prop, cellValue);
             }
-            this.addOrUpdateCellMap(prop, cellValue);
         }
 
         if (rowData.getId()) {
@@ -52,7 +102,7 @@ class row {
 
     addOrUpdateCellMap(propertyName: string, data: any) {
         if (!this.cellMap[propertyName]) {
-            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));
+            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));            
         } else {
             var cellVal: cell = this.cellMap[propertyName];
             cellVal.data(data);
@@ -71,7 +121,14 @@ class row {
     getCellTemplate(cellName: string): string {
         var cellVal: cell = this.cellMap[cellName];
         if (cellVal) {
-            return cellVal.templateName;
+            if (cellVal.resetFlag === true) {
+                cellVal.templateName = this.getCellTemplateName(cellName, this.cellMap[cellName].data())
+                cellVal.resetFlag = false;
+                return cellVal.templateName;
+            }
+            else {
+                return cellVal.templateName;
+            }
         }
 
         // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002
@@ -98,13 +155,13 @@ class row {
                     //this handy REGEX for testing URLs was taken from http://stackoverflow.com/questions/8188645/javascript-regex-to-match-a-url-in-a-field-of-text
                     /(http|ftp|https):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/.test(cleanData))
                     return cell.defaultTemplate;
-                if (/^\w+\/\w+/ig.test(data)) {
+                if (/^\w+\/\w+/ig.test(data) && this.viewModel.collectionExists(data)) {
                     return cell.externalIdTemplate;
                 }
             }
             else if (!!data[propertyName] &&
                 typeof data[propertyName] == "string" &&
-                /\w+\/\w+/ig.test(data[propertyName])) {
+                /\w+\/\w+/.test(data[propertyName])) {
                 return cell.externalIdTemplate;
             }
         }

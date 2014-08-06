@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -20,9 +22,8 @@ namespace Raven.Tests.Shard
 {
 	public class RoundRobinSharding : RavenTest
 	{
-		private readonly Dictionary<string, RavenDbServer> servers;
+		private new readonly Dictionary<string, RavenDbServer> servers;
 		private readonly ShardedDocumentStore store;
-		private Dictionary<string, IDocumentStore> documentStores;
 
 		public RoundRobinSharding()
 		{
@@ -33,12 +34,12 @@ namespace Raven.Tests.Shard
 				{"tri", GetNewServer(8076)}
 			};
 
-			documentStores = new Dictionary<string, IDocumentStore>
-			{
-				{"one", new DocumentStore{Url = "http://localhost:8078"}},
-				{"two", new DocumentStore{Url = "http://localhost:8077"}},
-				{"tri", new DocumentStore{Url = "http://localhost:8076"}},
-			};
+			var documentStores = new Dictionary<string, IDocumentStore>
+			                            {
+				                            {"one", new DocumentStore{Url = "http://localhost:8078"}},
+				                            {"two", new DocumentStore{Url = "http://localhost:8077"}},
+				                            {"tri", new DocumentStore{Url = "http://localhost:8076"}},
+			                            };
 
 			foreach (var documentStore in documentStores)
 			{

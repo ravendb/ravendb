@@ -6,6 +6,7 @@
 
 using System;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -53,6 +54,23 @@ namespace Raven.Tests.Storage
 			}
 		}
 
+
+		[Fact]
+		public void AddDocumentInNestedBatchShouldThrowConcurrencyException()
+		{
+			using (var tx = NewTransactionalStorage(requestedStorage:"voron"))
+			{
+				Assert.Throws<ConcurrencyException>(() =>
+				tx.Batch(mutator =>
+				{
+					mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new {Name = "Bar"}), new RavenJObject());
+
+					using(tx.DisableBatchNesting())
+						tx.Batch(mutator2 =>mutator2.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new {Name = "Bar"}), new RavenJObject()));
+
+				}));
+			}
+		}
 
 		[Fact]
 		public void CanUpdateDocumentThenReadItWhenThereAreManyDocs()

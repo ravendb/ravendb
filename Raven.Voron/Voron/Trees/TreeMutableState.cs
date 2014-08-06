@@ -12,6 +12,7 @@ namespace Voron.Trees
         public long PageCount;
         public long EntriesCount;
 	    public TreeFlags Flags;
+		public bool KeysPrefixing;
 
         public long RootPageNumber;
         private bool _isModified;
@@ -29,7 +30,7 @@ namespace Voron.Trees
             }
         }
 
-        public void CopyTo(TreeRootHeader* header)
+	    public void CopyTo(TreeRootHeader* header)
         {
 			header->Flags = Flags;
             header->BranchPages = BranchPages;
@@ -39,6 +40,7 @@ namespace Voron.Trees
             header->PageCount = PageCount;
             header->EntriesCount = EntriesCount;
             header->RootPageNumber = RootPageNumber;
+		    header->KeysPrefixing = KeysPrefixing;
         }
 
         public TreeMutableState Clone()
@@ -53,6 +55,7 @@ namespace Voron.Trees
                     PageCount = PageCount,
 					Flags = Flags,
                     RootPageNumber = RootPageNumber,
+					KeysPrefixing = KeysPrefixing
                 };
         }
 
@@ -60,15 +63,15 @@ namespace Voron.Trees
 		{
 			PageCount++;
 			var flags = p.Flags;
-			if (flags == (PageFlags.Branch))
+			if ((flags & PageFlags.Branch) == PageFlags.Branch)
 			{
 				BranchPages++;
 			}
-			else if (flags == (PageFlags.Leaf))
+			else if ((flags & PageFlags.Leaf) == PageFlags.Leaf)
 			{
 				LeafPages++;
 			}
-			else if (flags == (PageFlags.Overflow))
+			else if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
 			{
 				OverflowPages += num;
 			}

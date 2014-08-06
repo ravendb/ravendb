@@ -19,30 +19,17 @@ class collection {
     private static systemDocsCollectionName = "System Documents";
     private static styleMap: any = {};
 
-    constructor(public name: string, public ownerDatabase: database) {
+    constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
         this.isAllDocuments = name === collection.allDocsCollectionName;
         this.isSystemDocuments = name === collection.systemDocsCollectionName;
         this.colorClass = collection.getCollectionCssClass(name);
-	}
+        this.documentCount(docCount);
+    }
 
 	// Notifies consumers that this collection should be the selected one.
 	// Called from the UI when a user clicks a collection the documents page.
 	activate() {
 		ko.postbox.publish("ActivateCollection", this);
-    }
-
-    fetchTotalDocumentCount() {
-        // AFAICT, there's no way to fetch just the total number of system 
-        // documents, other than doing a full fetch for sys docs.
-        if (this.isSystemDocuments) {
-            new getSystemDocumentsCommand(this.ownerDatabase, 0, 1024)
-                .execute()
-                .done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
-        } else {
-            new getCollectionInfoCommand(this)
-                .execute()
-                .done((info: collectionInfo) => this.documentCount(info.totalResults));
-        }
     }
 
     getDocuments(): pagedList {
@@ -51,6 +38,12 @@ class collection {
         }
 
         return this.documentsList;
+    }
+
+    clearCollection() {
+        if (this.isAllDocuments === true && !!this.documentsList) {
+            this.documentsList.clear();
+        }
     }
 
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet> {
@@ -89,7 +82,7 @@ class collection {
         } 
 
         // We don't have an existing style. Assign one in the form of 'collection-style-X', where X is a number between 0 and maxStyleCount. These styles are found in app.less.
-        var maxStyleCount = 16;
+        var maxStyleCount = 32;
         var styleNumber = Object.keys(collection.styleMap).length % maxStyleCount;
         var style = "collection-style-" + styleNumber;
         collection.styleMap[entityName] = style;

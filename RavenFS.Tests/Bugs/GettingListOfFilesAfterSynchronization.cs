@@ -16,16 +16,16 @@ namespace RavenFS.Tests.Bugs
 			streamWriter.Flush();
 			ms.Position = 0;
 
-			var sourceClient = NewClient(0);
-			var destinationClient = NewClient(1);
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
 
 			const string fileName = "abc.txt";
 			await sourceClient.UploadAsync(fileName, ms);
 			await sourceClient.Synchronization.StartAsync(fileName, destinationClient);
 
-			var destinationFiles = await destinationClient.GetFilesAsync("/");
+			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.True(destinationFiles.FileCount == 1, "count not one");
-			Assert.True(destinationFiles.Files.Length == 1, "not one file");
+			Assert.True(destinationFiles.Files.Count == 1, "not one file");
 			Assert.True(destinationFiles.Files[0].Name == fileName, "name doesn't match");
 		}
 	}

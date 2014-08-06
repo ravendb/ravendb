@@ -76,5 +76,23 @@ namespace Voron.Tests.Storage
 				Assert.Equal(12, read.Reader.ReadLittleEndianInt64());
 			}
 		}
+
+        [Fact]
+        public void SimpleIncrementEntriesCountShouldStayCorrectAfterCommit()
+        {
+            CreateTrees(Env, 1, "tree");
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Assert.Equal(10, tx.ReadTree("tree0").Increment("key/1", 10));
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                Assert.Equal(1, tx.ReadTree("tree0").State.EntriesCount);
+            }
+        }
 	}
 }

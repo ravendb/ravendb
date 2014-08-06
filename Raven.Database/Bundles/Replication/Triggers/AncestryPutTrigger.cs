@@ -39,7 +39,7 @@ namespace Raven.Bundles.Replication.Triggers
 				var documentMetadata = GetDocumentMetadata(key);
 				if (documentMetadata != null)
 				{
-					RavenJArray history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
+					var history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
@@ -49,6 +49,14 @@ namespace Raven.Bundles.Replication.Triggers
 						{
 							{Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
 							{Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
+						});
+					}
+					else 
+					{
+						history.Add(new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, 0},
+							{Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
 						});
 					}
 

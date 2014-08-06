@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
-using System.Linq;
 
 namespace Raven.Database.Backup
 {
@@ -142,7 +141,7 @@ namespace Raven.Database.Backup
 				if (success == false)
 				{
 					// 'The system cannot find the file specified' is explicitly ignored here
-					if (Marshal.GetLastWin32Error() != 0x80004005)
+					if (Marshal.GetLastWin32Error() != 2)
 						throw new Win32Exception();
 					sourceFilesSnapshot[index] = null;
 					continue;

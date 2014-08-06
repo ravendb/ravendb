@@ -4,76 +4,89 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
+import changesApi = require("common/changesApi");
 import virtualTable = require("widgets/virtualTable/viewModel");
-
+import shell = require("viewmodels/shell");
+import viewModelBase = require("viewmodels/viewModelBase");
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
-
-import viewModelBase = require("viewmodels/viewModelBase");
-
+import changeSubscription = require('models/changeSubscription');
 import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 
 class status extends viewModelBase {
 
-    outgoingActivity = ko.observableArray<synchronizationDetail>();
+    pendingActivity = ko.observableArray<synchronizationDetail>();
+    activeActivity = ko.observableArray<synchronizationDetail>();
+    appUrls: computedAppUrls;
+
+    outgoingActivity = ko.computed(() => {
+        var pendingOutgoing = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
+        var activeOutgoing = ko.utils.arrayFilter(this.activeActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
+        var allActivity = new Array<synchronizationDetail>();
+        allActivity.pushAll(activeOutgoing);
+        allActivity.pushAll(pendingOutgoing);
+        return allActivity.slice(0, 50);
+    });
+    incomingActivity = ko.computed(() => {
+        var pendingIncoming = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Incoming; });
+        var activeIncoming = ko.utils.arrayFilter(this.activeActivity(), (item) => { return item.Direction() === synchronizationDirection.Incoming; });
+        var allActivity = new Array <synchronizationDetail>();
+        allActivity.pushAll(activeIncoming);
+        allActivity.pushAll(pendingIncoming);
+        return allActivity.slice(0, 50);
+    });
+
     isOutgoingActivityVisible = ko.computed(() => true);
 
     incomingActivityPagedList = ko.observable<pagedList>();
     isIncomingActivityVisible = ko.computed(() => true);
-
-    static outgoingGridSelector = "#outgoingGrid";
-    static incomingGridSelector = "#incomingGrid";
-
-    private activeFilesystemSubscription: any;
-
-    canActivate(args: any) {
-        this.loadSynchronizationActivity();
-
-        return true;
-    }
+    isFsSyncUpToDate: boolean = true;
 
     activate(args) {
         super.activate(args);
-        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        this.appUrls = appUrl.forCurrentFilesystem();
+
+        new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+            .done((x: synchronizationDetail[]) => {
+                for (var i = 0; i < x.length; i++) {
+                    this.addOrUpdateActivity(x[i]);
+                }
+            });
+
+        new getSyncIncomingActivitiesCommand(this.activeFilesystem()).execute()
+            .done( (x : synchronizationDetail[]) => {
+                for (var i = 0; i < x.length; i++) {
+                    this.addOrUpdateActivity(x[i]);
+                }
+            });
 
         if (this.outgoingActivity().length == 0) {
             $("#outgoingActivityCollapse").collapse();
         }
     }
 
-    deactivate() {
-
-        super.deactivate();
-        this.activeFilesystemSubscription.dispose();
+    createNotifications(): Array<changeSubscription> {
+        return [ shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
     }
 
-    modelPolling() {
+    private processFsSync(e: synchronizationUpdateNotification) {
+        // treat notifications events
+        this.isFsSyncUpToDate = false;
 
-        var fs = this.activeFilesystem();
-        if (fs) {
-
-            var incomingGrid = this.getIncomingActivityTable();
-            if (incomingGrid) {
-                incomingGrid.loadRowData();
-            }
-
-            new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-                .done(x => {
-                    this.outgoingActivity(x);
-                    if (this.outgoingActivity().length > 0) {
-                        $("#outgoingActivityCollapse").collapse('show');
-                    }
-                    else {
-                        $("#outgoingActivityCollapse").collapse();
-                    }
-                });
+        var activity = new synchronizationDetail(e, this.getActionDescription(e.Action));
+        
+        if (e.Action != synchronizationAction.Finish) {
+            this.addOrUpdateActivity(activity);
         }
-    }
-
-    loadSynchronizationActivity() {
-        this.incomingActivityPagedList(this.createIncomingActivityPagedList());
+        else {
+            setTimeout(() => {
+                this.activeActivity.remove(item => item.fileName() == e.FileName && item.Type() == e.Type);
+                this.pendingActivity.remove(item => item.fileName() == e.FileName && item.Type() == e.Type);
+            }, 3000);
+        }
     }
 
     synchronizeNow() {
@@ -81,17 +94,6 @@ class status extends viewModelBase {
         if (fs) {
             new synchronizeNowCommand(fs).execute();
         }
-    }
-
-    createIncomingActivityPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.incomingActivityFetchTask(skip, take);
-        var list = new pagedList(fetcher);
-        return list;
-    }
-
-    incomingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncIncomingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
-        return task;
     }
 
     collapseAll() {
@@ -102,20 +104,49 @@ class status extends viewModelBase {
         $(".synchronization-group-content").collapse('show');
     }
 
-    getIncomingActivityTable(): virtualTable {
-        var gridContents = $(status.incomingGridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
+    private addOrUpdateActivity(e: synchronizationDetail) {
+        var matchingActivity = this.getMatchingActivity(e);
+        if (!matchingActivity) {
+            if (e.Status() === "Active") {
+                this.activeActivity.push(e);
+            }
+            else {
+                this.pendingActivity.push(e);
+            }
         }
-
-        return null;
+        else if (matchingActivity.Status() === "Pending" && e.Status() === "Active") {
+            this.pendingActivity.remove(matchingActivity);
+            this.activeActivity.push(e);
+        }
+        else {
+            matchingActivity.Status(e.Status());
+        }
     }
 
-    fileSystemChanged(fs: filesystem) {
-        if (fs) {
-            this.modelPollingStop();
-            this.loadSynchronizationActivity();
-            this.modelPollingStart();
+    private getMatchingActivity(e: synchronizationDetail) : synchronizationDetail {
+        var match = ko.utils.arrayFirst(this.pendingActivity(), (item) =>  {
+            return item.fileName() === e.fileName() && item.Type() === e.Type();
+        });
+
+        if (!match) {
+            match = ko.utils.arrayFirst(this.activeActivity(), (item) => {
+                return item.fileName() === e.fileName() && item.Type() === e.Type();
+            });
+        }
+
+        return match;
+    }
+
+    private getActionDescription(action: synchronizationAction) {
+        switch (action) {
+            case synchronizationAction.Enqueue:
+                return "Pending";
+            case synchronizationAction.Start:
+                return "Active";
+            case synchronizationAction.Finish:
+                return "Finished";
+            default:
+                return "Unknown";
         }
     }
 }

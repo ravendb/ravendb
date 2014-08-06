@@ -65,11 +65,11 @@
         }
     }
 
-    static empty(): counterStorageReplicationDestination {
+    static empty(counterStorageName: string): counterStorageReplicationDestination {
         return new counterStorageReplicationDestination({
             Disabled: false,
             ServerUrl: null,
-            CounterStorageName: null,
+            CounterStorageName: counterStorageName,
             Username: null,
             Password: null,
             Domain: null,

@@ -91,12 +91,12 @@ namespace Raven.Tests.Bugs
 
 			var conventions = new DocumentConvention();
 			var o = RavenJObject.FromObject(page,conventions.CreateSerializer());
-			o["@metadata"] = new RavenJObject {{"Raven-Entity-Name", "Pages"}};
+			o["@metadata"] = new RavenJObject {{"Raven-Entity-Name", "Pages"}, {"@id", "0"}};
 			dynamic dynamicObject = new DynamicJsonObject(o);
 
 			var result = mapInstance.MapDefinitions[0](new[] { dynamicObject }).ToList<object>();
-			Assert.Equal("{ Id = 0, CoAuthorUserID = 1, __document_id =  }", result[0].ToString());
-			Assert.Equal("{ Id = 0, CoAuthorUserID = 2, __document_id =  }", result[1].ToString());
+			Assert.Equal("{ Id = 0, CoAuthorUserID = 1, __document_id = 0 }", result[0].ToString());
+			Assert.Equal("{ Id = 0, CoAuthorUserID = 2, __document_id = 0 }", result[1].ToString());
 		}
 
 		private class Page

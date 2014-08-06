@@ -15,13 +15,18 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
-    public abstract class ScriptedJsonPatcherOperationScope : JintOperationScope
+	public abstract class ScriptedJsonPatcherOperationScope : JintOperationScope
 	{
 		protected DocumentDatabase Database { get; private set; }
+
+		public JsonDocument CustomFunctions { get; private set; }
 
 		protected ScriptedJsonPatcherOperationScope(DocumentDatabase database)
 		{
 			Database = database;
+
+			if (database != null)
+				CustomFunctions = database.Documents.Get(Constants.RavenJavascriptFunctions, null);
 		}
 
 		protected virtual void ValidateDocument(JsonDocument newDocument)

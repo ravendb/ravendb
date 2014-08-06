@@ -27,9 +27,9 @@ class counterStorageReplication extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
+        this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
         this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
+            return this.dirtyFlag().isDirty();
         });
     }
 
@@ -50,12 +50,13 @@ class counterStorageReplication extends viewModelBase {
         if (counter) {
             new saveCounterStorageReplicationCommand(this.replicationsSetup().toDto(), counter)
                 .execute()
-                .done(()=> viewModelBase.dirtyFlag().reset());
+                .done(() => this.dirtyFlag().reset());
         }
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(counterStorageReplicationDestination.empty());
+        var cs = this.activeCounterStorage();
+        this.replicationsSetup().destinations.unshift(counterStorageReplicationDestination.empty(cs.name));
     }
 
     removeDestination(resplicationDestination: counterStorageReplicationDestination) {
@@ -63,22 +64,11 @@ class counterStorageReplication extends viewModelBase {
     }
 
     refreshFromServer() {
-        this.showRefreshPrompt()
-            .done((answer) => {
-                if (answer == "Yes") {
-                    this.fetchCountersDestinations(this.activeCounterStorage(), true)
-                        .done(()=> viewModelBase.dirtyFlag().reset());
-                }
-            });
-    }
-
-    private showRefreshPrompt(): any {
-        var deferred = $.Deferred();
-        var isDirty = viewModelBase.dirtyFlag().isDirty();
-        if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
-        }
-        return deferred.resolve("Yes");
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
+        canContinue.done(() => {
+            this.fetchCountersDestinations(this.activeCounterStorage(), true)
+                .done(() => this.dirtyFlag().reset());
+        });
     }
 }
 

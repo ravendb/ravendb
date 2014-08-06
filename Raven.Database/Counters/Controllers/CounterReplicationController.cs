@@ -4,14 +4,27 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Client.Connection;
-using Raven.Json.Linq;
+using Raven.Abstractions.Counters;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterReplicationController : RavenCountersApiController
     {
+		[Route("counters/{counterName}/lastEtag")]
+		[HttpGet]
+		public HttpResponseMessage GetLastEtag(string serverUrl)
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				var sourceId = reader.SourceIdFor(serverUrl);
+				var result = reader.GetServerEtags().FirstOrDefault(x => x.SourceId == sourceId) ?? new CounterStorage.ServerEtag();
+				return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
+			}
+		}
+
         [Route("counters/{counterName}/replication")]
+		[HttpPost]
         public async Task<HttpResponseMessage> Post()
         {
             /*Read Current Counter Value for CounterStorageName - Need ReaderWriter Lock
@@ -19,8 +32,17 @@ namespace Raven.Database.Counters.Controllers
              *      Write delta
              *Store last ETag for servers we've successfully rpelicated to
              */
-            RavenJObject replicationMessageJObject = await ReadJsonAsync();
-	        ReplicationMessage replicationMessage = ReplicationMessage.GetReplicationMessage(replicationMessageJObject); 
+			ReplicationMessage replicationMessage;
+            Storage.MetricsCounters.IncomingReplications.Mark();
+
+			try
+			{
+				replicationMessage = await ReadJsonObjectAsync<ReplicationMessage>();
+			}
+			catch (Exception e)
+			{
+				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
+			}
 
 	        long lastEtag = 0;
             bool wroteCounter = false;
@@ -78,10 +100,9 @@ namespace Raven.Database.Counters.Controllers
         }
 
         [Route("counters/{counterName}/replication/heartbeat")]
-        public async Task<HttpResponseMessage> HeartbeatPost()
+		[HttpPost]
+        public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
-            var src = GetQueryStringValue("from");
-
             var replicationTask = Storage.ReplicationTask;
             if (replicationTask == null)
             {
@@ -92,27 +113,14 @@ namespace Raven.Database.Counters.Controllers
 
             }
 
-            replicationTask.HandleHeartbeat(src);
+			replicationTask.HandleHeartbeat(sourceServer);
 
             return GetEmptyMessage();
         }
 
-        [Route("counters/{counterName}/lastEtag/{server}")]
-        public HttpResponseMessage GetLastEtag(string server)
-        {
-			//HACK: need a wire friendly name or fix Owin impl to allow url on query string or just send back all etags
-            server = Storage.CounterStorageUrl.Replace(RavenCounterReplication.GetServerNameForWire(Storage.CounterStorageUrl), server);
-            using (var reader = Storage.CreateReader())
-            {
-				var sourceId = reader.SourceIdFor(server);
-                var result = reader.GetServerEtags().FirstOrDefault(x => x.SourceId == sourceId) ?? new CounterStorage.ServerEtag();
-                return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
-            }
-        }
-
-		[Route("counters/{counterName}/replications-get")]
+		[Route("counters/{counterName}/replications/get")]
 		[HttpGet]
-		public async Task<HttpResponseMessage> ReplicationsGet()
+		public HttpResponseMessage ReplicationsGet()
 		{
 			using (var reader = Storage.CreateReader())
 			{
@@ -126,7 +134,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[Route("counters/{counterName}/replications-save")]
+		[Route("counters/{counterName}/replications/save")]
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
@@ -148,5 +156,16 @@ namespace Raven.Database.Counters.Controllers
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
+
+        [Route("counters/{counterName}/replications/stats")]
+        [HttpGet]
+        public HttpResponseMessage ReplicationStats()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK,
+                new CounterStorageReplicationStats()
+                {
+                    Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
+                });
+        }
     }
 }

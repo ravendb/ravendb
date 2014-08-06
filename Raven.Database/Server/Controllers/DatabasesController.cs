@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,8 +14,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class DatabasesController : RavenDbApiController
 	{
-		[HttpGet][Route("databases")]
-		public HttpResponseMessage Databases()
+		[HttpGet]
+		[Route("databases")]
+		public HttpResponseMessage Databases(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
 				return
@@ -35,15 +35,22 @@ namespace Raven.Database.Server.Controllers
 
 			// If admin, show all dbs
 
-			List<string> approvedDatabases = null;
-		    var start = GetStart();
+			var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
 			var databases = Database.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
-																	GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-			var data = databases
-				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
-				.ToArray();
+										GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
+			var databasesData = databases
+				.Select(database =>
+					new
+					{
+						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
+						Disabled = database.Value<bool>("Disabled")
+					}).ToList();
+
+			var databasesNames = databasesData.Select(databaseObject => databaseObject.Name).ToArray();
+
+			List<string> approvedDatabases = null;
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
 				var user = User;
@@ -54,7 +61,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-					approvedDatabases = authorizer.GetApprovedDatabases(user, this, data);
+					approvedDatabases = authorizer.GetApprovedResources(user, this, databasesNames);
 				}
 			}
 
@@ -68,12 +75,14 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			if (approvedDatabases != null)
-				data = data.Where(s => approvedDatabases.Contains(s)).ToArray();
+			{
+				databasesData = databasesData.Where(databaseData => approvedDatabases.Contains(databaseData.Name)).ToList();
+				databasesNames = databasesNames.Where(databaseName => approvedDatabases.Contains(databaseName)).ToArray();
+			}
 
-			var msg = GetMessageWithObject(data);
-			WriteHeaders(new RavenJObject(), lastDocEtag, msg);
-
-			return msg;
+			var responseMessage = getAdditionalData ? GetMessageWithObject(databasesData) : GetMessageWithObject(databasesNames);
+			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
+			return responseMessage;
 		}
 
 		[HttpGet]
@@ -85,7 +94,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new
 			{
 				DatabaseSize = totalSizeOnDisk,
-                DatabaseSizeHumane = SizeHelper.Humane(totalSizeOnDisk)
+				DatabaseSizeHumane = SizeHelper.Humane(totalSizeOnDisk)
 			});
 		}
 
@@ -99,17 +108,17 @@ namespace Raven.Database.Server.Controllers
 			var totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes;
 			return GetMessageWithObject(new
 			{
-                TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
-                TransactionalStorageAllocatedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.AllocatedSizeInBytes),
-                TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
-                TransactionalStorageUsedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.UsedSizeInBytes),
+				TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
+				TransactionalStorageAllocatedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.AllocatedSizeInBytes),
+				TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
+				TransactionalStorageUsedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.UsedSizeInBytes),
 				IndexStorageSize = indexStorageSize,
-                IndexStorageSizeHumane = SizeHelper.Humane(indexStorageSize),
+				IndexStorageSizeHumane = SizeHelper.Humane(indexStorageSize),
 				TotalDatabaseSize = totalDatabaseSize,
 				TotalDatabaseSizeHumane = SizeHelper.Humane(totalDatabaseSize),
 			});
 		}
 
-		
+
 	}
 }

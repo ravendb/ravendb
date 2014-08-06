@@ -62,7 +62,7 @@ namespace Raven.Tests.Bugs.MapRedue
 
 				WaitForIndexing(store);
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

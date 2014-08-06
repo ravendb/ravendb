@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Specialized;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 {

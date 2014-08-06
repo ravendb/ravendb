@@ -1,10 +1,9 @@
 ﻿import app = require("durandal/app");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
-import commandBase = require("commands/commandBase");
-
 import configurationKey = require("models/filesystem/configurationKey");
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
+import messagePublisher = require("common/messagePublisher");
 
 class createConfigurationKey extends dialogViewModelBase {
 
@@ -14,8 +13,6 @@ class createConfigurationKey extends dialogViewModelBase {
     public configurationKeyName = ko.observable('');
     public configurationKeyNameFocus = ko.observable(true);
     private keys: configurationKey[];
-
-    private newCommandBase = new commandBase();
 
     constructor(keys: Array<configurationKey>) {
         super();
@@ -44,14 +41,14 @@ class createConfigurationKey extends dialogViewModelBase {
 
         var configKeyName = this.configurationKeyName();
 
-        if (this.isClientSideInputOK(configKeyName)) {
+        if (this.isClientSideInputOk(configKeyName)) {
             this.creationTaskStarted = true;
             this.creationTask.resolve(configKeyName);
             dialog.close(this);
         }
     }
 
-    private isClientSideInputOK(keyName): boolean {
+    private isClientSideInputOk(keyName): boolean {
         var errorMessage = "";
 
         if (keyName == null) {
@@ -63,7 +60,7 @@ class createConfigurationKey extends dialogViewModelBase {
         else if ((errorMessage = this.checkInput(keyName)) != null) { }
 
         if (errorMessage != null) {
-            this.newCommandBase.reportError(errorMessage);
+            messagePublisher.reportError(errorMessage);
             this.configurationKeyNameFocus(true);
             return false;
         }

@@ -98,7 +98,8 @@ namespace Raven.Abstractions.Commands
 							{ "Values", RavenJObject.FromObject(Patch.Values)}
 						}},
 						{"DebugMode", DebugMode},
-						{"AdditionalData", AdditionalData}
+						{"AdditionalData", AdditionalData},
+						{"Metadata", Metadata}
 					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());

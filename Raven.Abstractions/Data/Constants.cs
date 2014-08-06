@@ -21,6 +21,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
+        public const string CreationDate = "Creation-Date";
 		public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
@@ -45,9 +46,22 @@ namespace Raven.Abstractions.Data
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
+		public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
+
+		// Server
+		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
+		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+
+		// Indexing
+		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
+		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
+		public const int DefaultPrefetchingDurationLimit = 5000;
+		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
+		public const int BulkImportDefaultTimeoutInMs = 60000;
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
+		public const string RavenLogsPath = "Raven/Esent/LogsPath";
         public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
@@ -76,9 +90,7 @@ namespace Raven.Abstractions.Data
 
 		public const int DefaultIndexFileBlockSize = 12*1024;
 
-#if !NETFX_CORE
 		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
-#endif
 
 		//Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
@@ -139,12 +151,12 @@ namespace Raven.Abstractions.Data
 
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
-		// Indexing
-		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
-
-		// counters
+		//Counters
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
+
+
+        public const string MetadataEtagField = "ETag";        
 	}
 }

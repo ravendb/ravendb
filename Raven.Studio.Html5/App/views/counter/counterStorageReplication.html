@@ -4,13 +4,13 @@
             <div class="panel-heading">
                 <div class="pull-left panel-title">Replication Destinations</div>
                 <div class="pull-right">
-                    <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                    <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
                     <!-- ko if: true -->
-                    <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">
-                        <i class="fa fa-refresh"></i>
-                    </button>
+                         <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes" >
+                            <i class="fa fa-refresh"></i>
+                        </button>
                     <!-- /ko -->
-                    <button type="submit" class="btn btn-primary use-bootstrap-tooltip" data-bind="enable: isSaveEnabled" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                     <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                 </div>
                 <div class="clearfix"></div>
             </div>
@@ -43,13 +43,13 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Url</label>
                                 <div class="col-sm-7">
-                                    <input required type="url" class="form-control" data-bind="value: serverUrl, valueUpdate: 'keyup'" />
+                                    <input required type="url" class="form-control" data-bind="value: serverUrl, valueUpdate: 'afterkeydown'" />
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Counter Storage</label>
                                 <div class="col-sm-7">
-                                    <input required type="text" class="form-control" data-bind="value: counterStorageName, valueUpdate: 'keyup'" />
+                                    <input required type="text" class="form-control" data-bind="value: counterStorageName, valueUpdate: 'afterkeydown'" />
                                 </div>
                             </div>
                             <div class="form-group">
@@ -63,19 +63,19 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">User Name</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Password</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Domain</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                             </div>
@@ -83,7 +83,7 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">API Key</label>
                                     <div class="col-sm-7">
-                                        <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'keyup'" />
+                                        <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown'" />
                                     </div>
                                 </div>
                             </div>

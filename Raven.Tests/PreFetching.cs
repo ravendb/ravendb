@@ -19,14 +19,15 @@ namespace Raven.Tests
 		public PreFetching()
 		{
 			store = NewDocumentStore();
-			var workContext = store.DocumentDatabase.WorkContext;
-			prefetchingBehavior = new PrefetchingBehavior(workContext, new IndexBatchSizeAutoTuner(workContext));
+			var workContext = store.SystemDatabase.WorkContext;
+			prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext));
 		}
 
 		public override void Dispose()
 		{
 			store.Dispose();
 			base.Dispose();
+			prefetchingBehavior.Dispose();
 		}
 
 		[Fact]

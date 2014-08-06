@@ -1,13 +1,19 @@
 using System;
 using System.Collections.Generic;
+using Mono.CSharp;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
 {
 	public class CurrentIndexingScope : IDisposable
 	{
-		private readonly Func<string, dynamic> loadDocument;
-		private readonly Action<IDictionary<string, HashSet<string>>, IDictionary<string, HashSet<string>>> onDispose;
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
+
+		private readonly DocumentDatabase database;
+		private readonly string index;
+
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
@@ -17,18 +23,25 @@ namespace Raven.Database.Indexing
 			set { current = value; }
 		}
 
-		public CurrentIndexingScope(
-			Func<string, dynamic> loadDocument,
-			Action<IDictionary<string, HashSet<string>>, IDictionary<string, HashSet<string>>> onDispose)
+		public CurrentIndexingScope(DocumentDatabase database, string index)
 		{
-			this.loadDocument = loadDocument;
-			this.onDispose = onDispose;
+		    this.database = database;
+		    this.index = index;
+		}
+
+        public IDictionary<string, HashSet<string>> ReferencedDocuments
+		{
+			get { return referencedDocuments; }
+		}
+		public IDictionary<string, Etag> ReferencesEtags
+		{
+			get { return referencesEtags; }
 		}
 
 		public dynamic Source { get; set; }
 
 		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-		private readonly IDictionary<string, HashSet<string>> missingReferencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+		private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>();
 		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
 
 		public dynamic LoadDocument(string key)
@@ -51,24 +64,30 @@ namespace Raven.Database.Indexing
 				return source;
 
 			HashSet<string> set;
-			if(referencedDocuments.TryGetValue(id, out set) == false)
-				referencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+			if(ReferencedDocuments.TryGetValue(id, out set) == false)
+				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 			set.Add(key);
 
 			dynamic value;
 			if (docsCache.TryGetValue(key, out value))
 				return value;
 
-			value = loadDocument(key);
+			var doc = database.Documents.Get(key, null);
 
-            if (value == null)
+			if (doc == null)
             {
-				HashSet<string> missingDocsSet;
-				if (missingReferencedDocuments.TryGetValue(id, out missingDocsSet) == false)
-					missingReferencedDocuments.Add(id, missingDocsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+			    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
 
-	            missingDocsSet.Add(key);
+				ReferencesEtags.Add(key, Etag.Empty);
+				value = new DynamicNullObject();
             }
+			else
+			{
+				log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
+
+				ReferencesEtags.Add(key, doc.Etag);
+				value = new DynamicJsonObject(doc.ToJson());
+			}
 
 			docsCache[key] = value;
 			return value;
@@ -76,7 +95,6 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			onDispose(referencedDocuments, missingReferencedDocuments);
 			current = null;
 		}
 	}

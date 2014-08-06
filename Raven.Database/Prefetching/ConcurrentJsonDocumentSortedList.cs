@@ -17,9 +17,24 @@ namespace Raven.Database.Prefetching
 
 		private readonly IList<JsonDocument> innerList;
 
+	    private int loadedSize;
+
 		public ConcurrentJsonDocumentSortedList()
 		{
 			innerList = new List<JsonDocument>();
+		}
+
+		public IEnumerable<JsonDocument> Clone()
+		{
+			try
+			{
+				slim.EnterReadLock();
+				return new List<JsonDocument>(innerList);
+			}
+			finally
+			{
+				slim.ExitReadLock();
+			}
 		}
 
 		public int Count
@@ -45,6 +60,7 @@ namespace Raven.Database.Prefetching
 				slim.EnterWriteLock();
 				var index = CalculateEtagIndex(value.Etag);
 				innerList.Insert(index, value);
+			    loadedSize += value.SerializedSizeOnDisk;
 			}
 			finally
 			{
@@ -74,7 +90,10 @@ namespace Raven.Database.Prefetching
 				slim.EnterWriteLock();
 				result = innerList.FirstOrDefault();
 				if (result != null)
+			    {
 					innerList.RemoveAt(0);
+			        loadedSize -= result.SerializedSizeOnDisk;
+			    }
 
 				return result != null;
 			}
@@ -103,42 +122,29 @@ namespace Raven.Database.Prefetching
 			return i;
 		}
 
-		public Etag GetFirstETagGap()
+	    public int LoadedSize
+	    {
+	        get
 		{
 			slim.EnterReadLock();
-
 			try
 			{
-				if (innerList.Count == 0)
+                    return loadedSize;
+	            }
+	            finally
 				{
-					return null;
+	                slim.ExitReadLock();
 				}
+	        }
+	    }
 
-				// look for the first gap of etag
-				for (var i = 0; i < innerList.Count - 1; i++)
+	    public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
 				{
-					var oneUp = innerList[i].Etag.IncrementBy(1);
-					if (oneUp.Equals(innerList[i + 1].Etag) == false)
+            slim.EnterReadLock();
+	        try
 					{
-						return oneUp;
+	            return innerList.Aggregate(seed, aggregate);
 					}
-				}
-
-				return innerList[innerList.Count - 1].Etag; // take the last one
-			}
-			finally
-			{
-				slim.ExitReadLock();
-			}
-		}
-
-		public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
-		{
-			slim.EnterReadLock();
-			try
-			{
-				return innerList.Aggregate(seed, aggregate);
-			}
 			finally
 			{
 				slim.ExitReadLock();

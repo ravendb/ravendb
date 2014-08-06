@@ -2,27 +2,24 @@
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
-import commandBase = require("commands/commandBase");
-
 import filesystem = require("models/filesystem/filesystem");
-import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
 class createFilesystem extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
+    private emptyNameMessage = "Please fill out the file system name field!";
 
-    public filesystemName = ko.observable('');
-    public filesystemPath = ko.observable('');
-    public filesystemLogs = ko.observable('');
-    public filesystemNameFocus = ko.observable(true);
+    public fileSystemName = ko.observable('');
+    nameCustomValidity = ko.observable<string>(this.emptyNameMessage);
+    public fileSystemPath = ko.observable('');
+    pathCustomValidity = ko.observable<string>('');
+    public fileSystemLogsPath = ko.observable('');
+    logsCustomValidity = ko.observable<string>('');
+    public fileSystemNameFocus = ko.observable(true);
 
-    private filesystems = ko.observableArray<filesystem>();
-    private newCommandBase = new commandBase();
-
-    constructor(filesystems) {
+    constructor(private filesystems: KnockoutObservableArray<filesystem>) {
         super();
-        this.filesystems = filesystems;
     }
 
     cancel() {
@@ -31,7 +28,21 @@ class createFilesystem extends dialogViewModelBase {
 
     attached() {
         super.attached();
-        this.filesystemNameFocus(true);
+
+        this.fileSystemName.subscribe((newFileSystemName) => {
+            var errorMessage: string = '';
+            if (this.isFilesystemNameExists(newFileSystemName, this.filesystems()) === true) {
+                errorMessage = "File system name already exists!";
+            }
+            else if ((errorMessage = this.checkName(newFileSystemName)) != '') { }
+
+            this.nameCustomValidity(errorMessage);
+        });
+
+        this.subscribeToPath(this.fileSystemPath, this.pathCustomValidity, "Path");
+        this.subscribeToPath(this.fileSystemLogsPath, this.logsCustomValidity, "Logs");
+
+        this.fileSystemNameFocus(true);
     }
 
     deactivate() {
@@ -44,50 +55,39 @@ class createFilesystem extends dialogViewModelBase {
 
     nextOrCreate() {
         // For now we're just creating the filesystem.
-
-        var filesystemName = this.filesystemName();
-
-        if (this.isClientSideInputOK(filesystemName)) {
-            this.creationTaskStarted = true;
-            this.creationTask.resolve(filesystemName);
-            dialog.close(this);
-        }
+        this.creationTaskStarted = true;
+        dialog.close(this);
+        this.creationTask.resolve(this.fileSystemName(), this.fileSystemPath(), this.fileSystemLogsPath());
     }
 
-    private isClientSideInputOK(filesystemName): boolean {
-        var errorMessage = "";
-
-        if (filesystemName == null) {
-            errorMessage = "Please fill out the Filesystem Name field";
+    private isFilesystemNameExists(fileSystemName: string, filesystems: filesystem[]): boolean {
+        fileSystemName = fileSystemName.toLowerCase();
+        for (var i = 0; i < filesystems.length; i++) {
+            if (fileSystemName == filesystems[i].name.toLowerCase()) {
+                return true;
+            }
         }
-        else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) === true) {
-            errorMessage = "Filesystem Name Already Exists!";
-        }
-        else if ((errorMessage = this.CheckInput(filesystemName)) != null) { }
-
-        if (errorMessage != null) {
-            this.newCommandBase.reportError(errorMessage);
-            this.filesystemNameFocus(true);
-            return false;
-        }
-        return true;
+        return false;
     }
 
-    private CheckInput(name): string {
+    private checkName(name: string): string {
         var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
         var rg2 = /^\./; // cannot start with dot (.)
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var maxLength = 260 - 30;
 
-        var message = null;
-        if (name.length > maxLength) {
-            message = "The filesystem length can't exceed " + maxLength + " characters!";
+        var message = '';
+        if (!$.trim(name)) {
+            message = this.emptyNameMessage;
+        }
+        else if (name.length > maxLength) {
+            message = "The file system length can't exceed " + maxLength + " characters!";
         }
         else if (!rg1.test(name)) {
-            message = "The filesystem name can't contain any of the following characters: \ / : * ?" + ' " ' + "< > |";
+            message = "The file system name can't contain any of the following characters: \ / : * ?" + ' " ' + "< > |";
         }
         else if (rg2.test(name)) {
-            message = "The filesystem name can't start with a dot!";
+            message = "The file system name can't start with a dot!";
         }
         else if (rg3.test(name)) {
             message = "The name '" + name + "' is forbidden for use!";
@@ -95,14 +95,28 @@ class createFilesystem extends dialogViewModelBase {
         return message;       
     }
 
-    private isFilesystemNameExists(filesystemName: string, filesystems: filesystem[]): boolean {
-        filesystemName = filesystemName.toLowerCase();
-        for (var i = 0; i < filesystems.length; i++) {
-            if (filesystemName == filesystems[i].name.toLowerCase()) {
-                return true;
+    private subscribeToPath(element, validityObservable: KnockoutObservable<string>, pathName) {
+        element.subscribe((path) => {
+            var errorMessage: string = this.isPathLegal(path, pathName);
+            validityObservable(errorMessage);
+        });
+    }
+
+    private isPathLegal(name: string, pathName: string): string {
+        var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        var errorMessage = null;
+
+        if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
+            if (name.length > 248) {
+                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 248 + " characters!";
+            } else if (!rg1.test(name)) {
+                errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
+            } else if (rg2.test(name)) {
+                errorMessage = "The name '" + name + "' is forbidden for use!";
             }
         }
-        return false;
+        return errorMessage;
     }
 }
 

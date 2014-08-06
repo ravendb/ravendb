@@ -39,10 +39,17 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
 
 		/// <summary>
-		/// Sets user defined inputs to the query
+		/// User definied inputs that can be used in transformer
 		/// </summary>
 		/// <param name="queryInputs"></param>
+		[Obsolete("Use SetTransformerParameters instead.")]
 		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+
+		/// <summary>
+		/// User definied inputs that can be used in transformer
+		/// </summary>
+		/// <param name="transformerParameters"></param>
+		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
 
 		/// <summary>
 		/// Gets the query result

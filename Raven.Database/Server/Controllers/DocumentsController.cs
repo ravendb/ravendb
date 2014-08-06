@@ -43,7 +43,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage DocsGet()
 		{
 		    using (var cts = new CancellationTokenSource())
-		    using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+		    using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 		    {
 		        long documentsCount = 0;
 		        var lastDocEtag = Etag.Empty;
@@ -66,7 +66,7 @@ namespace Raven.Database.Server.Controllers
 		        else
 		        {
 			        var transformer = GetQueryStringValue("transformer");
-			        var queryInputs = ExtractQueryInputs();
+			        var transformerParameters = this.ExtractTransformerParameters();
 
 		            msg =
 		                GetMessageWithObject(
@@ -77,7 +77,7 @@ namespace Raven.Database.Server.Controllers
 		                        GetStart(),
 		                        GetPageSize(Database.Configuration.MaxPageSize),
 		                        cts.Token,
-		                        ref nextPageStart, transformer, queryInputs));
+		                        ref nextPageStart, transformer, transformerParameters));
 		        }
 
 		        WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);

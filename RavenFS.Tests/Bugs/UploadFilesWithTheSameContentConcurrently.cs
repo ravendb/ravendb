@@ -9,9 +9,9 @@ namespace RavenFS.Tests.Bugs
     public class UploadFilesWithTheSameContentConcurrently : RavenFsTestBase
 	{
 		[Fact]
-		public void ShouldWork()
+		public async void ShouldWork()
 		{
-			var client = NewClient();
+			var client = NewAsyncClient();
 			var tasks = new List<Task>(10);
 
 			// upload 10 files with the same content but different names concurrently
@@ -25,11 +25,7 @@ namespace RavenFS.Tests.Bugs
 
 			for (var i = 0; i < 10; i++)
 			{
-				var uploadedContent = new MemoryStream();
-				client.DownloadAsync("test" + i, uploadedContent).Wait();
-
-				uploadedContent.Position = 0;
-
+                 var uploadedContent = await client.DownloadAsync("test" + i);
 				Assert.Equal(hash, uploadedContent.GetMD5Hash());
 			}
 		}

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
@@ -20,7 +21,7 @@ namespace Raven.Tests.Shard.Async
 {
 	public class SimpleSharding : RavenTest
 	{
-		private readonly RavenDbServer[] servers;
+		private new readonly RavenDbServer[] servers;
 		private readonly ShardedDocumentStore documentStore;
 
 		public SimpleSharding()

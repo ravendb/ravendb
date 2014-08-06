@@ -11,8 +11,7 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -20,10 +19,16 @@ class editTransformer extends viewModelBase {
     popoverOptions = ko.observable<any>();
     static containerSelector = "#editTransformerContainer";
     editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
+    appUrls: computedAppUrls;
+    transformerName: KnockoutComputed<string>;
+    isSaveEnabled: KnockoutComputed<boolean>;
 
     constructor() {
         super();
+
         aceEditorBindingHandler.install();
+        this.appUrls = appUrl.forCurrentDatabase();
+        this.transformerName = ko.computed(() => (!!this.editedTransformer() && this.isEditingExistingTransformer()) ? this.editedTransformer().name() : null);
     }
 
     canActivate(transformerToEditName: string) {
@@ -32,7 +37,7 @@ class editTransformer extends viewModelBase {
             this.editExistingTransformer(transformerToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                    messagePublisher.reportError("Could not find " + transformerToEditName + " transformer");
                     canActivateResult.resolve({ redirect: appUrl.forTransformers(this.activeDatabase()) });
                 });
 
@@ -50,14 +55,15 @@ class editTransformer extends viewModelBase {
         } else {
             this.editedTransformer(transformer.empty());
         }
+
+        this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+        this.isSaveEnabled = ko.computed(() => !!this.editedTransformer().name() && this.dirtyFlag().isDirty());
     }
 
     attached() {
         this.addTransformerHelpPopover();
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
-
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
     }
 
     addTransformerHelpPopover() {
@@ -92,11 +98,12 @@ class editTransformer extends viewModelBase {
         if (this.isEditingExistingTransformer() && this.editedTransformer().wasNameChanged()) {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
-            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => this.updateUrl(this.editedTransformer().name()));
+            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => {
+                this.updateUrl(this.editedTransformer().name());
+                this.dirtyFlag().reset(); // Resync Changes
+            });
             dialog.show(saveTransformerWithNewNameViewModel);
-
         } else {
-
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
                 .done(() => {
@@ -104,11 +111,9 @@ class editTransformer extends viewModelBase {
                         this.isEditingExistingTransformer(true);
                         this.updateUrl(this.editedTransformer().name());
                     }
+                    this.dirtyFlag().reset(); // Resync Changes
                 });
         }
-
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
     }
 
     updateUrl(transformerName:string) {

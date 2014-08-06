@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -40,7 +42,7 @@ namespace Raven.Tests.MailingList.spokeypokey
 								  where u.ZipCodes2.Count == 0
 								  select u).ToArray();
 
-					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(docStore.SystemDatabase.Statistics.Errors);
 					Assert.Equal(1, result.Count());
 				}
 			}
@@ -65,7 +67,7 @@ namespace Raven.Tests.MailingList.spokeypokey
 								  where u.ZipCodes.Length == 0
 								  select u).ToArray();
 
-					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(docStore.SystemDatabase.Statistics.Errors);
 					Assert.Equal(1, result.Count());
 				}
 			}
@@ -110,9 +112,18 @@ namespace Raven.Tests.MailingList.spokeypokey
 									 provider.Name,
 								 };
 
+				Store(x => x.InternalId, FieldStorage.Yes);
+			}
+		}
+
+		public class IdentityProjectionIndex1Transformer : AbstractTransformerCreationTask<Provider1>
+		{
+			public IdentityProjectionIndex1Transformer()
+			{
+
 				TransformResults =
-					(db, providers) => from provider in providers
-									   let TaxonomyCode = db.Load<TaxonomyCode>(provider.TaxonomyCodeRef.InternalId)
+					providers => from provider in providers
+									   let TaxonomyCode = LoadDocument<TaxonomyCode>(provider.TaxonomyCodeRef.InternalId)
 									   select new
 									   {
 										   provider.InternalId,
@@ -156,10 +167,12 @@ namespace Raven.Tests.MailingList.spokeypokey
 				}
 
 				new IdentityProjectionIndex1().Execute(store);
+				new IdentityProjectionIndex1Transformer().Execute(store);
+
 				using (var session = store.OpenSession())
 				{
 					var result = (from p in session.Query<Provider1, IdentityProjectionIndex1>()
-								  .Customize(x => x.WaitForNonStaleResults())
+								  .Customize(x => x.WaitForNonStaleResults()).TransformWith<IdentityProjectionIndex1Transformer, Provider1>()
 								  select p).First();
 					Assert.Equal(provider1.Name, result.Name);
 					Assert.Equal(provider1.InternalId, result.InternalId);

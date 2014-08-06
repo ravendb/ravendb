@@ -22,7 +22,7 @@ class periodicExport extends viewModelBase {
         if (db) {
             $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
         }
         return deferred;
     }
@@ -34,12 +34,12 @@ class periodicExport extends viewModelBase {
         this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
         
         var self = this;
-        this.isSaveEnabled = ko.computed(function () {
+        this.isSaveEnabled = ko.computed(() => {
             return (self.backupConfigDirtyFlag().isDirty()) &&
                 (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
         });
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
+        this.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
     fetchPeriodicExportSetup(db): JQueryPromise<any> {

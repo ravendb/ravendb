@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Connection.Async;
-#if !NETFX_CORE
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -29,6 +28,16 @@ namespace Raven.Client.Document
 		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
 
 		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
+
+		public bool IsAborted
+		{
+			get { return Operation.IsAborted; }
+		}
+
+	    public void Abort()
+	    {
+	        Operation.Abort();
+	    }
 
 		public event Action<string> Report
 		{
@@ -76,6 +85,9 @@ namespace Raven.Client.Document
 
 		public void Store(object entity, string id)
 		{
+			if(Operation.IsAborted)
+				throw new InvalidOperationException("Bulk insert has been aborted or the operation was timed out");
+
 			var metadata = new RavenJObject();
 
 			var tag = documentStore.Conventions.GetDynamicTagName(entity);
@@ -89,11 +101,11 @@ namespace Raven.Client.Document
 			Operation.Write(id, metadata, data);
 		}
 
-		public void Store(RavenJObject document, RavenJObject metadata, string id)
+		public void Store(RavenJObject document, RavenJObject metadata, string id, int? dataSize = null)
 		{
 			OnBeforeEntityInsert(id, document, metadata);
 
-			Operation.Write(id, metadata, document);
+			Operation.Write(id, metadata, document, dataSize);
 		}
 
 		private string GetId(object entity)
@@ -112,4 +124,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

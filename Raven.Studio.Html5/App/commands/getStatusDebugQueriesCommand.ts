@@ -8,10 +8,10 @@ class getStatusDebugQueriesCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<statusDebugQueriesGroup[]> {
+    execute(): JQueryPromise<statusDebugQueriesGroupDto[]> {
         var url = "/debug/queries";
-        var resultSelector = (result) => $.map(result, (queries, key) => new statusDebugQueriesGroup({ "IndexName" : key, "Queries": queries }) );
-        return this.query<Array<statusDebugQueriesGroup>>(url, null, this.db, resultSelector);
+        var resultSelector = (result) => $.map(result, (queries, key) => { return { "IndexName": key, "Queries": queries } } );
+        return this.query<Array<statusDebugQueriesGroupDto>>(url, null, this.db, resultSelector);
     }
 }
 

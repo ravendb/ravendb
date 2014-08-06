@@ -74,7 +74,6 @@ namespace Raven.Client
 			return new DynamicAggregationQuery<T>(queryable, path, displayName);
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
@@ -178,9 +177,7 @@ namespace Raven.Client
 
             return documentQuery.GetFacets(facetsList, start, pageSize);
         }
-#endif
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
@@ -255,7 +252,6 @@ namespace Raven.Client
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
         }
-#endif
 
 		/// <summary>
 		/// Async Query the facets results for this query using the specified facet document with the given start and pageSize
@@ -299,7 +295,7 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Project using a different type
+		/// Project into a different type.
 		/// </summary>
 		public static IQueryable<TResult> As<TResult>(this IQueryable queryable)
 		{
@@ -308,7 +304,6 @@ namespace Raven.Client
 			return results;
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -326,25 +321,19 @@ namespace Raven.Client
 			return (IRavenQueryable<T>)queryable;
 		}
 
-		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
-		{
-			return queryable.AsProjection<TResult>();
-		}
-
 		/// <summary>
-		/// Project using a different type
+		/// Project from index fields (must be stored) into different type. If fields are not stored in index, document fields will be used.
 		/// </summary>
-		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
+		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
 		{
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
-			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
+
+			var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
+			ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));			
 			return (IRavenQueryable<TResult>)results;
 		}
-#endif
-
-#if !NETFX_CORE
 
 		/// <summary>
 		/// Suggest alternative values for the queried term
@@ -385,8 +374,6 @@ namespace Raven.Client
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
 		}
-
-#endif
 
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
 		{
@@ -471,11 +458,15 @@ namespace Raven.Client
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public static Lazy<int> CountLazily<T>(this IRavenQueryable<T> source)
+		public static Lazy<int> CountLazily<T>(this IQueryable<T> source)
 		{
+			if (source == null)
+				throw new ArgumentNullException("source");
+
 			var provider = source.Provider as IRavenQueryProvider;
+
 			if (provider == null)
-				throw new ArgumentException("You can only use Raven Queryable with LazyCount");
+				throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
 
 			return provider.CountLazily<T>(source.Expression);
 		}
@@ -1065,7 +1056,6 @@ namespace Raven.Client
             return result.SingleOrDefault();
         }
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
@@ -1104,7 +1094,5 @@ namespace Raven.Client
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IOrderedQueryable<T>)queryable;
 		}
-#endif
-
 	}
 }

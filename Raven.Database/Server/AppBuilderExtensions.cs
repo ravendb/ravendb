@@ -10,6 +10,8 @@ using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Logging;
+using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -72,11 +74,119 @@ namespace Owin
 			app.UseInterceptor();
 #endif
 
-		    app.UseWebApi(CreateHttpCfg(options));
-			
+            app.Use((context, func) => UpgradeToWebSockets(options, context, func));
+            
+            app.UseWebApi(CreateHttpCfg(options));
+
+
 			return app;
 		}
 
+        private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
+        {
+            var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+            if (accept == null)
+            {
+                // Not a websocket request
+                await next();
+                return;
+            }
+
+            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket"))
+            {
+                var webSocketsTrasport = new WebSocketsTransport(options, context);
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+            else if (context.Request.Uri.LocalPath.EndsWith("http-trace/websocket"))
+            {
+                var webSocketsTrasport = new WebSocketsTransport(options, context,  (resourceName, currentWebsocketTransport, user) =>
+                {
+                    if (resourceName != null)
+                    {
+                        options.RequestManager.RegisterResourceHttpTraceTransport(currentWebsocketTransport, resourceName);
+                    }
+                    else
+                    {
+                        var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+
+                        if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) ||
+                            options.SystemDatabase.Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin)
+                        {
+                            options.RequestManager.RegisterServerHttpTraceTransport(currentWebsocketTransport);
+                        }
+                        else
+                        {
+                            context.Response.StatusCode = 403;
+                            context.Response.ReasonPhrase = "Forbidden";
+                            context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+            else if (context.Request.Uri.LocalPath.EndsWith("admin/logs/events"))
+            {
+                /*public class LogEventInfoFormatted
+                    {
+                        public String Level { get; set; }
+                        public DateTime TimeStamp { get; set; }
+                        public string Message { get; set; }
+                        public string LoggerName { get; set; }
+                        public string Exception { get; set; }
+
+                        public LogEventInfoFormatted(LogEventInfo eventInfo)
+                        {
+                            TimeStamp = eventInfo.TimeStamp;
+                            Message = eventInfo.FormattedMessage;
+                            LoggerName = eventInfo.LoggerName;
+                            Level = eventInfo.Level.ToString();
+                            Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
+                        }
+                    }*/
+                var webSocketsTrasport = new WebSocketsTransport(options, context, (resourceName, currentWebsocketTransport, user) =>
+                {
+                    try
+                    {
+                        var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+
+                        if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
+                            options.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                        {
+                            context.Response.StatusCode = 403;
+                            context.Response.ReasonPhrase = "Forbidden";
+                            context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
+                            return false;
+                        }
+
+                        var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+                        logTarget.Register(currentWebsocketTransport);
+                        return true;
+                    }
+                    catch 
+                    {
+
+                        return false;
+                    }
+                    
+                }, (message) =>
+                {
+                    var typedMessage = message as LogEventInfo;
+                    if (typedMessage != null)
+                    {
+                        var formattedMessage = new LogEventInfoFormatted(typedMessage);
+                        return formattedMessage;
+                    }
+                    return message;
+                    
+                });
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+        }
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();
@@ -129,7 +239,11 @@ namespace Owin
 
 				if (context != null)
 				{
-					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase))
+					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
+                        context.Request.Uri.LocalPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) ||
+						context.Request.Uri.LocalPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase) ||
+						context.Request.Uri.LocalPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) ||
+						context.Request.Uri.LocalPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase))
 						return false;
 				}
 
@@ -148,6 +262,7 @@ namespace Owin
 		    private bool ShouldBuffer(HttpContent content)
 		    {
 		        return (content is ChangesPushContent ||
+                        content is LogsPushContent ||
 		                content is StreamsController.StreamQueryContent ||
 		                content is StreamContent ||
 		                content is PushStreamContent ||

@@ -22,17 +22,17 @@ namespace Raven.Database.Server.Tenancy
     {
 		private bool initialized;
         private readonly DocumentDatabase systemDatabase;
-        private readonly TransportState transportState;
+        private const string FILESYSTEMS_PREFIX = "Raven/FileSystems/";
+        public override string ResourcePrefix { get { return FILESYSTEMS_PREFIX; } }
 
         public InMemoryRavenConfiguration SystemConfiguration
         {
             get { return systemDatabase.Configuration; }
         }
 
-        public FileSystemsLandlord(DocumentDatabase systemDatabase, TransportState transportState)
+        public FileSystemsLandlord(DocumentDatabase systemDatabase)
 		{
 			this.systemDatabase = systemDatabase;
-            this.transportState = transportState;
 
             Init();
 		}
@@ -51,22 +51,22 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down filesystem {0} because the tenant fs document has been updated or removed", dbName);
-                Cleanup(dbName, skipIfActive: false);
+				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
-            var document = GetTenantDatabaseDocument(tenantId);
+			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledFileSystem);
             if (document == null)
                 return null;
 
             return CreateConfiguration(tenantId, document,"Raven/FileSystem/DataDir", systemDatabase.Configuration);
         }
 
-        private DatabaseDocument GetTenantDatabaseDocument(string tenantId)
+		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -81,18 +81,16 @@ namespace Raven.Database.Server.Tenancy
             if (document.Settings.Keys.Contains("Raven/FileSystem/DataDir") == false)
                 throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
 
-            if (document.Disabled)
-                throw new InvalidOperationException("The database has been disabled.");
+			if (document.Disabled && !ignoreDisabledFileSystem)
+                throw new InvalidOperationException("The file system has been disabled.");
 
             return document;
         }
-
 
         public bool TryGetFileSystem(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
             return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
         }
-
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
@@ -120,7 +118,8 @@ namespace Raven.Database.Server.Tenancy
 
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-                var fs = new RavenFileSystem(config, transportState, tenantId);
+				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+				var fs = new RavenFileSystem(config, tenantId, transportState);
                 AssertLicenseParameters();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.

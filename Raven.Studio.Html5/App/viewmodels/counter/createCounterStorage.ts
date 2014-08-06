@@ -13,6 +13,8 @@ class createCounterStorage extends dialogViewModelBase {
     counterStorageName = ko.observable('');
     counterStoragePath = ko.observable('');
     
+    counterStorageNameFocus = ko.observable(true);
+
     private counterStorages = ko.observableArray<counterStorage>();
     private maxNameLength = 200;
 
@@ -22,7 +24,7 @@ class createCounterStorage extends dialogViewModelBase {
     }
 
     attached() {
-
+        super.attached();
         var inputElement: any = $("#counterStorageName")[0];
         this.counterStorageName.subscribe((newCounterStorageName) => {
             var errorMessage: string = '';
@@ -34,6 +36,8 @@ class createCounterStorage extends dialogViewModelBase {
             inputElement.setCustomValidity(errorMessage);
         });
         this.subscribeToPath("#databasePath", this.counterStoragePath, "Path");
+
+        this.counterStorageNameFocus(true);
     }
 
     deactivate() {

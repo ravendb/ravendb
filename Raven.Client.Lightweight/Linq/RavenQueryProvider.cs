@@ -33,7 +33,7 @@ namespace Raven.Client.Linq
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		
         private readonly bool isMapReduce;
-        private readonly Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+        private readonly Dictionary<string, RavenJToken> transformerParamaters = new Dictionary<string, RavenJToken>();
  
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -100,11 +100,16 @@ namespace Raven.Client.Linq
         /// Gets the results transformer to use
         /// </summary>
 	    public string ResultTransformer { get; private set; }
-        public Dictionary<string, RavenJToken> QueryInputs { get { return queryInputs; } }
+        public Dictionary<string, RavenJToken> TransformerParameters { get { return transformerParamaters; } }
 
-	    public void AddQueryInput(string name, RavenJToken value)
+		public void AddQueryInput(string name, RavenJToken value)
+		{
+			AddTransformerParameter(name, value);
+		}
+
+	    public void AddTransformerParameter(string name, RavenJToken value)
 	    {
-	        queryInputs[name] = value;
+	        transformerParamaters[name] = value;
 	    }
 
 	   
@@ -128,9 +133,9 @@ namespace Raven.Client.Linq
 			);
 		    ravenQueryProvider.ResultTransformer = ResultTransformer;
 			ravenQueryProvider.Customize(customizeQuery);
-		    foreach (var queryInput in queryInputs)
+		    foreach (var transformerParam in this.transformerParamaters)
 		    {
-		        ravenQueryProvider.AddQueryInput(queryInput.Key, queryInput.Value);
+		        ravenQueryProvider.AddTransformerParameter(transformerParam.Key, transformerParam.Value);
 		    }
 			return ravenQueryProvider;
 		}
@@ -327,7 +332,7 @@ namespace Raven.Client.Linq
 			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,
 				FieldsToFetch, 
 				FieldsToRename,
-				isMapReduce, ResultTransformer, queryInputs);
+				isMapReduce, ResultTransformer, transformerParamaters);
 		}
 
 		/// <summary>

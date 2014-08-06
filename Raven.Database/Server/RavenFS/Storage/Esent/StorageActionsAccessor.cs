@@ -24,6 +24,8 @@ using Raven.Database.Server.RavenFS.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
@@ -175,12 +177,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"], BitConverter.GetBytes(0));
 
-                if (!metadata.ContainsKey("ETag"))
+                if (!metadata.ContainsKey(Constants.MetadataEtagField))
                     throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
                 var innerEsentMetadata = new RavenJObject(metadata);
-                var etag = innerEsentMetadata.Value<Guid>("ETag");
-                innerEsentMetadata.Remove("ETag");
+                var etag = innerEsentMetadata.Value<Guid>(Constants.MetadataEtagField);
+                innerEsentMetadata.Remove(Constants.MetadataEtagField);
 
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], etag.TransformToValueForEsentSorting());
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], ToQueryString(innerEsentMetadata), Encoding.Unicode);
@@ -272,7 +274,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			return size;
 		}
 
-		public FileHeader ReadFile(string filename)
+        public FileHeader ReadFile(string filename)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -280,7 +282,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 				return null;
 
-			return new FileHeader
+            return new FileHeader
 				       {
 					       Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					       TotalSize = GetTotalSize(),
@@ -289,14 +291,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 				       };
 		}
 
-		public FileAndPages GetFile(string filename, int start, int pagesToLoad)
+		public FileAndPagesInformation GetFile(string filename, int start, int pagesToLoad)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 				throw new FileNotFoundException("Could not find file: " + filename);
 
-			var fileInformation = new FileAndPages
+			var fileInformation = new FileAndPagesInformation
 				                      {
 					                      TotalSize = GetTotalSize(),
 					                      UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
@@ -369,7 +371,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             var metadataAsString = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
 
             var metadata = RavenJObject.Parse(metadataAsString);
-            metadata["ETag"] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
+            
+            // To avoid useless handling of conversions for special headers we return the same type we stored.
+            if (metadata.ContainsKey(Constants.LastModified))
+                metadata[Constants.LastModified] = metadata.Value<DateTimeOffset>(Constants.LastModified);   
+
+            metadata[Constants.MetadataEtagField] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
             
             return metadata;
         }
@@ -379,14 +386,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
-				return Enumerable.Empty<FileHeader>();
+                return Enumerable.Empty<FileHeader>();
 
-			var result = new List<FileHeader>();
+            var result = new List<FileHeader>();
 			var index = 0;
 
 			do
 			{
-				result.Add(new FileHeader
+                result.Add(new FileHeader
 					           {
 						           Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						           TotalSize = GetTotalSize(),
@@ -453,20 +460,25 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
             using (var update = new Update(session, Files, JET_prep.Replace))
             {
-                if (!metadata.ContainsKey("ETag"))
+                if (!metadata.ContainsKey(Constants.MetadataEtagField))
                 {
                     throw new InvalidOperationException("Metadata of file {0} does not contain 'ETag' key " + filename);
                 }
 
                 var innerEsentMetadata = new RavenJObject(metadata);
-                var etag = innerEsentMetadata.Value<Guid>("ETag");
-                innerEsentMetadata.Remove("ETag");
+                var etag = innerEsentMetadata.Value<Guid>(Constants.MetadataEtagField);
+                innerEsentMetadata.Remove(Constants.MetadataEtagField);
 
                 var existingMetadata = RetrieveMetadata();
 
-                if (existingMetadata.ContainsKey("Content-MD5"))
+                if (!innerEsentMetadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
                 {
                     innerEsentMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
+                }
+
+                if (!innerEsentMetadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
+                {
+                    innerEsentMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
                 }
 
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], etag.TransformToValueForEsentSorting());

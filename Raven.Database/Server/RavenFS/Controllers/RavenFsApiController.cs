@@ -17,7 +17,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.RavenFS;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -32,6 +31,8 @@ using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System.Collections.Generic;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -54,7 +55,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 return (RequestManager)Configuration.Properties[typeof(RequestManager)];
             }
         }
-	    public RavenFileSystem RavenFileSystem
+	    public RavenFileSystem FileSystem
 		{
 			get
 			{
@@ -156,22 +157,22 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		public NotificationPublisher Publisher
 		{
-			get { return RavenFileSystem.Publisher; }
+			get { return FileSystem.Publisher; }
 		}
 
 		public BufferPool BufferPool
 		{
-			get { return RavenFileSystem.BufferPool; }
+			get { return FileSystem.BufferPool; }
 		}
 
 		public SigGenerator SigGenerator
 		{
-			get { return RavenFileSystem.SigGenerator; }
+			get { return FileSystem.SigGenerator; }
 		}
 
 		public Historian Historian
 		{
-			get { return RavenFileSystem.Historian; }
+			get { return FileSystem.Historian; }
 		}
 
 	    public override InMemoryRavenConfiguration SystemConfiguration
@@ -186,42 +187,42 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		protected ITransactionalStorage Storage
 		{
-			get { return RavenFileSystem.Storage; }
+			get { return FileSystem.Storage; }
 		}
 
 		protected IndexStorage Search
 		{
-			get { return RavenFileSystem.Search; }
+			get { return FileSystem.Search; }
 		}
 
 		protected FileLockManager FileLockManager
 		{
-			get { return RavenFileSystem.FileLockManager; }
+			get { return FileSystem.FileLockManager; }
 		}
 
 		protected ConflictArtifactManager ConflictArtifactManager
 		{
-			get { return RavenFileSystem.ConflictArtifactManager; }
+			get { return FileSystem.ConflictArtifactManager; }
 		}
 
 		protected ConflictDetector ConflictDetector
 		{
-			get { return RavenFileSystem.ConflictDetector; }
+			get { return FileSystem.ConflictDetector; }
 		}
 
 		protected ConflictResolver ConflictResolver
 		{
-			get { return RavenFileSystem.ConflictResolver; }
+			get { return FileSystem.ConflictResolver; }
 		}
 
 		protected SynchronizationTask SynchronizationTask
 		{
-			get { return RavenFileSystem.SynchronizationTask; }
+			get { return FileSystem.SynchronizationTask; }
 		}
 
 		protected StorageOperationsTask StorageOperationsTask
 		{
-			get { return RavenFileSystem.StorageOperationsTask; }
+			get { return FileSystem.StorageOperationsTask; }
 		}
 
 		protected PagingInfo Paging
@@ -420,7 +421,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
-	        RavenFileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
+	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
 	    }
 
         #region Metadata Headers Handling
@@ -446,7 +447,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             "Content-Type",
             "Expires",
 			// ignoring this header, we handle this internally
-			"Last-Modified",
+			Constants.LastModified,
 			// Ignoring this header, since it may
 			// very well change due to things like encoding,
 			// adding metadata, etc
@@ -480,7 +481,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			"Accept-Ranges",
 			"Age",
 			"Allow",
-			"ETag",
+			Constants.MetadataEtagField,
 			"Location",
 			"Origin",
 			"Retry-After",
@@ -506,7 +507,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             "X-SITE-DEPLOYMENT-ID",
 		};
 
-        protected static readonly IList<string> ReadOnlyHeaders = new List<string> { "Last-Modified", "ETag" }.AsReadOnly();
+        protected static readonly IList<string> ReadOnlyHeaders = new List<string> { Constants.LastModified, Constants.MetadataEtagField }.AsReadOnly();
 
         protected virtual RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
         {            

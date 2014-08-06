@@ -14,18 +14,28 @@ interface computedAppUrls {
     reporting: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
+    metrics: KnockoutComputed<string>;
+    metricsRequests: KnockoutComputed<string>;
+    metricsIndexBatchSize: KnockoutComputed<string>;
+    metricsPrefetches: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;
+    runningTasks: KnockoutComputed<string>;
     alerts: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
     replicationStats: KnockoutComputed<string>;
     userInfo: KnockoutComputed<string>;
+    visualizer: KnockoutComputed<string>;
     databaseSettings: KnockoutComputed<string>;
     quotas: KnockoutComputed<string>;
     periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
+    versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
+    sqlReplicationsConnections: KnockoutComputed<string>;
+    editSqlReplication: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
+    customFunctionsEditor: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;
     statusDebugMetrics: KnockoutComputed<string>;
@@ -40,6 +50,7 @@ interface computedAppUrls {
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
+    infoPackage: KnockoutComputed<string>;
 
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;

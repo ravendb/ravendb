@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,12 +21,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Util;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
-using Raven.Database.Extensions;
-using System.Text.RegularExpressions;
-using System.Reflection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -39,7 +38,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
-            if (!this.Request.Content.IsMimeMultipartContent())
+            if (!Request.Content.IsMimeMultipartContent())
             {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
@@ -58,7 +57,7 @@ namespace Raven.Database.Server.Controllers
             var options = new SmugglerOptions
             {
                 BatchSize = batchSize,
-                ShouldExcludeExpired = includeExpiredDocuments,
+                ShouldExcludeExpired = !includeExpiredDocuments,
                 OperateOnTypes = operateOnTypes,
                 TransformScript = transformScript
             };
@@ -90,7 +89,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
             var requestString = smugglerOptionsJson.SmugglerOptions;
 	        SmugglerOptions smugglerOptions;
@@ -114,7 +113,6 @@ namespace Raven.Database.Server.Controllers
 			            ToStream = outputStream
 			        }, smugglerOptions).ConfigureAwait(false);
 			    }
-                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
 			    finally
 			    {
 			        outputStream.Close();
@@ -125,12 +123,10 @@ namespace Raven.Database.Server.Controllers
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = "Dump of " + this.DatabaseName + ", " + DateTime.Now.ToString("dd MMM yyyy HH-mm")
+                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture))
             };
 			
-			return result;
-
-
+			return new CompletedTask<HttpResponseMessage>(result);
 		}
         
 		[HttpPost]
@@ -159,6 +155,81 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
+        [Route("studio-tasks/simulate-sql-replication")]
+        [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
+        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, bool performRolledBackTransaction)
+        {
+
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+				return GetMessageWithObjectAsTask(new
+				{
+					Error = "SQL Replication bundle is not installed"
+				}, HttpStatusCode.NotFound);
+            try
+            {
+                Alert alert = null;
+                var sqlReplication =
+                    JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
+
+                // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
+                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
+
+                return GetMessageWithObjectAsTask(new {
+                    Results = results,
+                    LastAlert = alert
+                });
+            }
+            catch (Exception ex)
+            {
+                    return GetMessageWithObjectAsTask(new
+                    {
+                        Error = "Executeion failed",
+                        Exception = ex
+                    }, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/test-sql-replication-connection")]
+        [Route("databases/{databaseName}/studio-tasks/test-sql-replication-connection")]
+        public Task<HttpResponseMessage> TestSqlReplicationConnection(string factoryName, string connectionString)
+        {
+            try
+            {
+                RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
+                return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                return GetMessageWithObjectAsTask(new
+                {
+                    Error = "Connection failed",
+                    Exception = ex
+                }, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/createSampleDataClass")]
+        [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
+        public Task<HttpResponseMessage> CreateSampleDataClass()
+        {
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
+            {
+                if (sampleData == null)
+                    return GetEmptyMessageAsTask();
+                   
+                sampleData.Position = 0;
+                using (var reader = new StreamReader(sampleData, Encoding.UTF8))
+                {
+                   var data = reader.ReadToEnd();
+                   return GetMessageWithObjectAsTask(data);
+                }
+            }
+        }
+
+        [HttpGet]
         [Route("studio-tasks/new-encryption-key")]
         public HttpResponseMessage GetNewEncryption(string path = null)
         {
@@ -169,6 +240,52 @@ namespace Raven.Database.Server.Controllers
 
             HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
             return response;
+        }
+
+        [HttpGet]
+        [Route("studio-tasks/get-sql-replication-stats")]
+        [Route("databases/{databaseName}/studio-tasks/get-sql-replication-stats")]
+        public HttpResponseMessage GetSQLReplicationStats(string sqlReplicationName)
+        {
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+                return GetMessageWithObject(new
+                {
+                    Error = "SQL Replication bundle is not installed"
+                }, HttpStatusCode.NotFound);
+
+            var matchingStats = task.Statistics.FirstOrDefault(x => x.Key == sqlReplicationName);
+
+            if (matchingStats.Key != null)
+            {
+                return GetMessageWithObject(task.Statistics.FirstOrDefault(x => x.Key == sqlReplicationName));
+            }
+            return GetEmptyMessage(HttpStatusCode.NotFound);
+        }
+
+        [HttpPost]
+        [Route("studio-tasks/reset-sql-replication")]
+        [Route("databases/{databaseName}/studio-tasks/reset-sql-replication")]
+        public Task<HttpResponseMessage> ResetSqlReplication(string sqlReplicationName)
+        {
+            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (task == null)
+                return GetMessageWithObjectAsTask(new
+                {
+                    Error = "SQL Replication bundle is not installed"
+                }, HttpStatusCode.NotFound);
+            SqlReplicationStatistics stats;
+            task.Statistics.TryRemove(sqlReplicationName, out stats);
+            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlreplicationStatus, null);
+            if (jsonDocument != null)
+            {
+                var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
+                replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
+                
+                Database.Documents.Put(SqlReplicationTask.RavenSqlreplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
+            }
+
+            return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
         }
 
         [HttpPost]
@@ -187,7 +304,7 @@ namespace Raven.Database.Server.Controllers
                 //ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                 Convert.FromBase64String(key);
             }
-            catch (Exception e)
+            catch (Exception)
             {
 				message = "The key must be in Base64 encoding format!";
             }
@@ -196,10 +313,8 @@ namespace Raven.Database.Server.Controllers
             return response;
         }
 
-        async Task FlushBatch(IEnumerable<RavenJObject> batch)
+        private Task FlushBatch(IEnumerable<RavenJObject> batch)
         {
-            var sw = Stopwatch.StartNew();
-
             var commands = (from doc in batch
                             let metadata = doc.Value<RavenJObject>("@metadata")
                             let removal = doc.Remove("@metadata")
@@ -211,48 +326,19 @@ namespace Raven.Database.Server.Controllers
                             }).ToArray();
 
             Database.Batch(commands, CancellationToken.None);
+	        return new CompletedTask();
         }
 
-        private static RavenJToken SetValueInDocument(string value)
+        [HttpGet]
+        [Route("studio-tasks/resolveMerge")]
+        [Route("databases/{databaseName}/studio-tasks/resolveMerge")]
+        public Task<HttpResponseMessage> ResolveMerge(string documentId)
         {
-            if (string.IsNullOrEmpty(value))
-                return value;
-
-            var ch = value[0];
-            if (ch == '[' || ch == '{')
-            {
-                try
-                {
-                    return RavenJToken.Parse(value);
-                }
-                catch (Exception)
-                {
-                    // ignoring failure to parse, will proceed to insert as a string value
-                }
-            }
-            else if (char.IsDigit(ch) || ch == '-' || ch == '.')
-            {
-                // maybe it is a number?
-                long longResult;
-                if (long.TryParse(value, out longResult))
-                {
-                    return longResult;
-                }
-
-                decimal decimalResult;
-                if (decimal.TryParse(value, out decimalResult))
-                {
-                    return decimalResult;
-                }
-            }
-            else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
-            {
-                return value.Substring(1, value.Length - 2);
-            }
-
-            return value;
+            int nextPage = 0;
+            var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
+            var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
+            return GetMessageWithObjectAsTask(conflictsResolver.Resolve());
         }
-
 
 	    [HttpPost]
         [Route("studio-tasks/loadCsvFile")]
@@ -343,8 +429,47 @@ namespace Raven.Database.Server.Controllers
             }
 
             return GetEmptyMessage();
-
 	    }
+
+		private static RavenJToken SetValueInDocument(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return value;
+
+			var ch = value[0];
+			if (ch == '[' || ch == '{')
+			{
+				try
+				{
+					return RavenJToken.Parse(value);
+				}
+				catch (Exception)
+				{
+					// ignoring failure to parse, will proceed to insert as a string value
+				}
+			}
+			else if (char.IsDigit(ch) || ch == '-' || ch == '.')
+			{
+				// maybe it is a number?
+				long longResult;
+				if (long.TryParse(value, out longResult))
+				{
+					return longResult;
+				}
+
+				decimal decimalResult;
+				if (decimal.TryParse(value, out decimalResult))
+				{
+					return decimalResult;
+				}
+			}
+			else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
+			{
+				return value.Substring(1, value.Length - 2);
+			}
+
+			return value;
+		}
 	}
 }
 

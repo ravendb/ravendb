@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Voron</RootNamespace>
     <AssemblyName>Voron</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -20,7 +20,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;DEBUG_PAGER_STATE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -54,6 +54,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\DebugActionType.cs" />
     <Compile Include="Debugging\DebugJournal.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
@@ -66,10 +67,17 @@
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
+    <Compile Include="Impl\Journal\TransactionToShip.cs" />
     <Compile Include="Impl\MemoryMapNativeMethods.cs" />
     <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="PrefixComparisonCache.cs" />
+    <Compile Include="PrefixedSlice.cs" />
+    <Compile Include="SliceComparisonMethods.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="Trees\PageIterator.cs" />
+    <Compile Include="Trees\PrefixInfoSection.cs" />
+    <Compile Include="Trees\PrefixNodeHeader.cs" />
     <Compile Include="Trees\Tree.MultiTree.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
@@ -141,6 +149,7 @@
     <Compile Include="Util\DisposableAction.cs" />
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\LZ4.cs" />
+    <Compile Include="Util\MemoryUtils.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />

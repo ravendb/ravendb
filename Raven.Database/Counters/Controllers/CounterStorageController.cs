@@ -15,11 +15,19 @@ namespace Raven.Database.Counters.Controllers
     {
         [Route("counterStorage/conterStorages")]
         [HttpGet]
-        public HttpResponseMessage CounterStorages()
+        public HttpResponseMessage GetCounterStoragesNames()
         {
             var names = GetCounterStorages();
             return GetMessageWithObject(names);
         }
+
+		[Route("counterStorage/stats")]
+		[HttpGet]
+		public HttpResponseMessage GetCounterStoragesStats()
+		{
+			//TODO: implement getting the stats about the counter storages
+			return GetEmptyMessage();
+		}
 
         private string[] GetCounterStorages()
         {

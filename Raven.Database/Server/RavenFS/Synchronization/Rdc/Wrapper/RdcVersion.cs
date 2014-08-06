@@ -2,7 +2,7 @@
 {
 	public class RdcVersion
 	{
-		public uint CurrentVersion { get; set; }
-		public uint MinimumCompatibleAppVersion { get; set; }
+		public int CurrentVersion { get; set; }
+		public int MinimumCompatibleAppVersion { get; set; }
 	}
 }

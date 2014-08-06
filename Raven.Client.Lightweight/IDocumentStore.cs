@@ -13,11 +13,8 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Listeners;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#else
+
 using System.Collections.Specialized;
-#endif
 using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
 
@@ -78,16 +75,17 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-#if !NETFX_CORE
 		NameValueCollection SharedOperationsHeaders { get; }
-#else
-		IDictionary<string,string> SharedOperationsHeaders { get; }
-#endif
 
 		/// <summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
 		/// </summary>
 		HttpJsonRequestFactory JsonRequestFactory { get; }
+
+		/// <summary>
+		/// Whatever this instance has json request factory available
+		/// </summary>
+		bool HasJsonRequestFactory { get; }
 
 		/// <summary>
 		/// Gets or sets the identifier for this store.
@@ -119,7 +117,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -159,7 +156,6 @@ namespace Raven.Client
 		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
 
         Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask);
-#endif
 
 		/// <summary>
 		/// Gets the conventions.
@@ -178,9 +174,7 @@ namespace Raven.Client
 		///</summary>
 		Etag GetLastWrittenEtag();
 
-#if !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
-#endif
 
         DocumentSessionListeners Listeners { get; }
 

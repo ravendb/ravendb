@@ -37,7 +37,7 @@ namespace Raven.Database.Storage
 
         protected void ValidateRestorePreconditionsAndReturnLogsPath(string backupFilename)
         {
-            if (File.Exists(BackupFilenamePath(backupFilename)) == false)
+            if (IsValidBackup(backupFilename) == false)
             {
                 output("Error: " + backupLocation + " doesn't look like a valid backup");
                 output("Error: Restore Canceled");
@@ -61,7 +61,9 @@ namespace Raven.Database.Storage
                 Directory.CreateDirectory(journalLocation);
         }
 
-        protected string BackupIndexesPath()
+	    protected abstract bool IsValidBackup(string backupFilename);
+
+	    protected string BackupIndexesPath()
         {
             return Path.Combine(backupLocation, "Indexes");
         }

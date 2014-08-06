@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
                 }
                 using (var store = NewDocumentStore())
                 {
-                    var dataDumper = new DataDumper(store.DocumentDatabase);
+                    var dataDumper = new DataDumper(store.SystemDatabase);
                     dataDumper.ImportData(new SmugglerImportOptions
                     {
                         FromFile = Directory.GetFiles(Path.GetFullPath(backupPath))
@@ -179,7 +179,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.DocumentDatabase);
+                var dataDumper = new DataDumper(store.SystemDatabase);
 
                 dataDumper.ImportData(new SmugglerImportOptions
                 {
@@ -218,7 +218,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+                var backupStatus = GetPerodicBackupStatus(store.SystemDatabase);
 
                 using (var session = store.OpenSession())
                 {
@@ -229,12 +229,12 @@ namespace Raven.Tests.Issues
                 }
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1,2,3,4 }), new RavenJObject());
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
                 store.DatabaseCommands.Delete(userId, null);
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
             }
 
@@ -283,7 +283,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+                var backupStatus = GetPerodicBackupStatus(store.SystemDatabase);
 
                 using (var session = store.OpenSession())
                 {
@@ -293,17 +293,17 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
                 store.DatabaseCommands.Delete(userId, null);
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus, x => x.LastDocsDeletionEtag);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, x => x.LastDocsDeletionEtag);
 
             }
 
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.DocumentDatabase);
+                var dataDumper = new DataDumper(store.SystemDatabase);
                 dataDumper.ImportData(new SmugglerImportOptions
                 {
                     FromFile = backupPath,
@@ -327,8 +327,7 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             using (var store = NewDocumentStore())
             {
-                string userId;
-                using (var session = store.OpenSession())
+	            using (var session = store.OpenSession())
                 {
                     var periodicBackupSetup = new PeriodicExportSetup
                     {
@@ -340,21 +339,21 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+                var backupStatus = GetPerodicBackupStatus(store.SystemDatabase);
 
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1,2,3,4}), new RavenJObject());
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
             }
 
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.DocumentDatabase);
+                var dataDumper = new DataDumper(store.SystemDatabase);
                 dataDumper.ImportData(new SmugglerImportOptions
                 {
                     FromFile = backupPath,
@@ -391,7 +390,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, userId);
                     Assert.NotNull(tombstone);
@@ -403,7 +402,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, userId);
                     Assert.Null(tombstone);
@@ -423,7 +422,7 @@ namespace Raven.Tests.Issues
                 //now delete it and check for tombstone
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, "attach/1");
                     Assert.NotNull(tombstone);
@@ -431,7 +430,7 @@ namespace Raven.Tests.Issues
 
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, "attach/1");
                     Assert.Null(tombstone);
@@ -525,8 +524,7 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             using (var store = NewDocumentStore())
             {
-                string userId;
-                using (var session = store.OpenSession())
+	            using (var session = store.OpenSession())
                 {
                     var periodicBackupSetup = new PeriodicExportSetup
                     {
@@ -538,7 +536,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+                var backupStatus = GetPerodicBackupStatus(store.SystemDatabase);
 
                 using (var session = store.OpenSession())
                 {
@@ -549,7 +547,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
                 // status + one export
                 VerifyFilesCount(1 + 1, backupPath);
@@ -559,7 +557,7 @@ namespace Raven.Tests.Issues
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
                 store.DatabaseCommands.DeleteAttachment("attach/2", null);
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     Assert.Equal(2,
                                  accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 20)
@@ -570,12 +568,12 @@ namespace Raven.Tests.Issues
                 });
 
 
-                WaitForPeriodicExport(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
                 // status + two exports
                 VerifyFilesCount(1 + 2, backupPath);
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     Assert.Equal(1,
                                  accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 20)
@@ -636,12 +634,12 @@ namespace Raven.Tests.Issues
             {
             }
 
-            public new Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 return base.ExportDocuments(new RavenConnectionStringOptions(), options, jsonWriter, lastEtag, maxEtag);
             }
 
-            public new Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 return base.ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
@@ -669,12 +667,12 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    var dumper = new CustomDataDumper(store.SystemDatabase)
                     {
                         SmugglerOptions = new SmugglerOptions()
                     };
 
-                    var startEtag = store.DocumentDatabase.Statistics.LastDocEtag.IncrementBy(-5);
+                    var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
                     var endEtag = startEtag.IncrementBy(2);
 
                     writer.WriteStartArray();
@@ -695,12 +693,12 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    var dumper = new CustomDataDumper(store.SystemDatabase)
                     {
                         SmugglerOptions = new SmugglerOptions()
                     };
 
-                    var startEtag = store.DocumentDatabase.Statistics.LastDocEtag.IncrementBy(-5);
+                    var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
 
                     writer.WriteStartArray();
                     var lastEtag = await dumper.ExportDocuments(new SmugglerOptions(), writer, startEtag, null);
@@ -724,12 +722,12 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    var dumper = new CustomDataDumper(store.SystemDatabase)
                     {
                         SmugglerOptions = new SmugglerOptions()
                     };
 
-                    var startEtag = store.DocumentDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
+                    var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
                     var endEtag = startEtag.IncrementBy(2);
 
                     writer.WriteStartArray();
@@ -750,12 +748,12 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    var dumper = new CustomDataDumper(store.SystemDatabase)
                     {
                         SmugglerOptions = new SmugglerOptions()
                     };
 
-                    var startEtag = store.DocumentDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
+                    var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
 
                     writer.WriteStartArray();
                     var lastEtag = await dumper.ExportAttachments(writer, startEtag, null);
@@ -788,7 +786,7 @@ namespace Raven.Tests.Issues
                 
                 WaitForUserToContinueTheTest(store);
 
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     user6DeletionEtag =
                         accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "users/6").Etag;
@@ -804,7 +802,7 @@ namespace Raven.Tests.Issues
                 using (var textStream = new StringWriter())
                 using (var writer = new JsonTextWriter(textStream))
                 {
-                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    var dumper = new CustomDataDumper(store.SystemDatabase)
                     {
                         SmugglerOptions = new SmugglerOptions()
                     };

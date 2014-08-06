@@ -4,28 +4,28 @@ using System.IO;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Changes;
 using Xunit;
 using Raven.Json.Linq;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace RavenFS.Tests
 {
     public class Notifications : RavenFsTestBase
     {
-	    private readonly RavenFileSystemClient client;
-
-	    public Notifications()
-	    {
-		    client = NewClient();
-	    }
 
 		[Fact]
         public async Task NotificationReceivedWhenFileAdded()
         {
-            var notificationTask = client.Changes().ForFolder("/")
-                                                   .Timeout(TimeSpan.FromSeconds(2))
-                                                   .Take(1).ToTask();            
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
+                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
@@ -38,11 +38,17 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationReceivedWhenFileDeleted()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = client.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                                .Timeout(TimeSpan.FromSeconds(2))
                                                .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
 
             await client.DeleteAsync("abc.txt");
 
@@ -55,11 +61,17 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationReceivedWhenFileUpdated()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = client.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                                 .Timeout(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject { { "MyMetadata", "MyValue" } });
 
@@ -72,16 +84,23 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsReceivedWhenFileRenamed()
         {
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-            var notificationTask = client.Changes().ForFolder("/")
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
                                                 .Buffer(TimeSpan.FromSeconds(5))
-                                                .Take(1).ToTask();           
-            
-            await client.RenameAsync("abc.txt", "newName.txt");
+                                                .Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
+
+			await client.RenameAsync("abc.txt", "newName.txt");
 
             var fileChanges = await notificationTask;
 
+			Console.WriteLine("Notification count: " + fileChanges.Count);
             Assert.Equal("/abc.txt", fileChanges[0].File);
             Assert.Equal(FileChangeAction.Renaming, fileChanges[0].Action);
             Assert.Equal("/newName.txt", fileChanges[1].File);
@@ -91,11 +110,17 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsAreOnlyReceivedForFilesInGivenFolder()
         {
-            var notificationTask = client.Changes().ForFolder("/Folder")
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
+
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/Folder")
                                                 .Buffer(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
 
-            client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream()).Wait();
+			changes.WaitForAllPendingSubscriptions();
+
+			await client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream());
 
             var notifications = await notificationTask;
 
@@ -105,11 +130,17 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsUpdated()
         {
-            var notificationTask = client.Changes().ForConfiguration()
-                                               .Timeout(TimeSpan.FromSeconds(2))
-                                               .Take(1).ToTask();
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
 
-            await client.Config.SetConfig("Test", new RavenJObject());
+            var changesApi = store.Changes();
+            await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
+
+            var notificationTask = changesApi.ForConfiguration()
+                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Take(1).ToTask();
+
+            await client.Configuration.SetKeyAsync("Test", new RavenJObject());
 
             var configChange = await notificationTask;
 
@@ -120,22 +151,22 @@ namespace RavenFS.Tests
 		[Fact]
 		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
-            var notificationTask = client.Changes().ForConfiguration()
-                                                .Timeout(TimeSpan.FromSeconds(2))
-                                                .Take(1).ToTask();           
+            var store = NewStore();
+            var client = store.AsyncFilesCommands;
 
-            await client.Config.DeleteConfig("Test");
+            var changesApi = store.Changes();
+            await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
+
+            var notificationTask = changesApi.ForConfiguration()
+                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Take(1).ToTask();
+
+            await client.Configuration.DeleteKeyAsync("Test");
 
             var configChange = await notificationTask;
 
             Assert.Equal("Test", configChange.Name);
             Assert.Equal(ConfigurationChangeAction.Delete, configChange.Action);
         }
-
-		public override void Dispose()
-		{
-            client.Dispose();
-			base.Dispose();
-		}
     }
 }

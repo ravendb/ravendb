@@ -17,13 +17,13 @@ namespace Raven.Tests.MailingList
 			using (var server = GetNewServer(databaseName: Constants.SystemDatabase))
 			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
-				var dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
+				var dbNames = docStore.DatabaseCommands.GlobalAdmin.GetDatabaseNames(25, 0);
 
 				Assert.Empty(dbNames);
 
 				docStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 
-				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
+				dbNames = docStore.DatabaseCommands.GlobalAdmin.GetDatabaseNames(25, 0);
 
 				Assert.NotEmpty(dbNames);
 
@@ -54,7 +54,7 @@ namespace Raven.Tests.MailingList
 
 					var throws = Assert.Throws<ErrorResponseException>(()=>session.SaveChanges());
 
-					Assert.Contains(@"PUT vetoed on document bad\one by Raven.Database.Plugins.Builtins.InvalidDocumentNames because: Document names cannot contains '\' but attempted to save with: bad\one", throws.Message);
+					Assert.Contains(@"PUT vetoed on document bad\one by Raven.Database.Plugins.Builtins.InvalidDocumentNames because: Document name cannot contain '\' but attempted to save with: bad\one", throws.Message);
 				}
 			}
 		}

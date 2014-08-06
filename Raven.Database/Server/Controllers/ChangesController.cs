@@ -3,36 +3,38 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
+    [RoutePrefix("")]
 	public class ChangesController : RavenDbApiController
 	{
-		[HttpGet]
+        [HttpGet]
 		[Route("changes/config")]
 		[Route("databases/{databaseName}/changes/config")]
-		public HttpResponseMessage GetChangeConfig()
-		{
-			var value = GetQueryStringValue("value");
-			var id = GetQueryStringValue("id");
-			if (string.IsNullOrEmpty(id))
-			{
-				return GetMessageWithObject(new
-				{
-					Error = "id query string parameter is mandatory when using changes/config endpoint"
-				}, HttpStatusCode.BadRequest);
-			}
-			
-			var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
+        public HttpResponseMessage GetChangeConfig()
+        {
+            var value = GetQueryStringValue("value");
+            var id = GetQueryStringValue("id");
+            if (string.IsNullOrEmpty(id))
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "id query string parameter is mandatory when using changes/config endpoint"
+                }, HttpStatusCode.BadRequest);
+            }
 
-			var connectionState = Database.TransportState.For(id, this);
-			var cmd = GetQueryStringValue("command");
-			if (Match(cmd, "disconnect"))
-			{
-				Database.TransportState.Disconnect(id);
-			}
+            var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
+
+            var connectionState = Database.TransportState.For(id, this);
+            var cmd = GetQueryStringValue("command");
+            if (Match(cmd, "disconnect"))
+            {
+                Database.TransportState.Disconnect(id);
+            }
 			else if (Match(cmd, "watch-index"))
 			{
 				connectionState.WatchIndex(name);
@@ -113,47 +115,50 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchBulkInsert(name);
 			}
-			else if (Match(cmd, "watch-conflicts"))
-			{
-				connectionState.WatchConflicts();
-			}
-			else if (Match(cmd, "unwatch-conflicts"))
-			{
-				connectionState.UnwatchConflicts();
-			}
-			else if (Match(cmd, "watch-sync"))
-			{
-				connectionState.WatchSync();
-			}
-			else if (Match(cmd, "unwatch-sync"))
-			{
-				connectionState.UnwatchSync();
-			}
-			else if (Match(cmd, "watch-folder"))
-			{
-				connectionState.WatchFolder(value);
-			}
-			else if (Match(cmd, "unwatch-folder"))
-			{
-				connectionState.UnwatchFolder(value);
-			}
-			else if (Match(cmd, "watch-cancellations"))
-			{
-				connectionState.WatchCancellations();
-			}
-			else if (Match(cmd, "unwatch-cancellations"))
-			{
-				connectionState.UnwatchCancellations();
-			}
-			else if (Match(cmd, "watch-config"))
-			{
-				connectionState.WatchConfig();
-			}
-			else if (Match(cmd, "unwatch-config"))
-			{
-				connectionState.UnwatchConfig();
-			}
-			else
+            else if (Match(cmd,"watch-db-log"))
+            {
+                connectionState.WatchDBLog(Database.Name);
+            }
+            else if (Match(cmd, "unwatch-db-log"))
+            {
+                connectionState.UnwatchDBLog(Database.Name);
+            }
+            else if (Match(cmd, "watch-admin-log"))
+            {
+                var systemDatabase = DatabasesLandlord.SystemDatabase;
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                foreach (var transportState in DatabasesLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).WatchAdminLog();
+                }
+                foreach (var transportState in FileSystemsLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).WatchAdminLog();
+                }
+                foreach (var transportState in CountersLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).WatchAdminLog();
+                }
+                
+            }
+            else if (Match(cmd, "unwatch-admin-log"))
+            {
+                var systemDatabase = DatabasesLandlord.SystemDatabase;
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                foreach (var transportState in DatabasesLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).UnwatchAdminLog();
+                }
+                foreach (var transportState in FileSystemsLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).UnwatchAdminLog();
+                }
+                foreach (var transportState in CountersLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
+                {
+                    transportState.For(id, this).UnwatchAdminLog();
+                }
+            }
+            else
 			{
 				return GetMessageWithObject(new
 				{
@@ -175,9 +180,9 @@ namespace Raven.Database.Server.Controllers
 			return new HttpResponseMessage {Content = eventsTransport};
 		}
 
-		private bool Match(string x, string y)
-		{
-			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
-		}
+        private bool Match(string x, string y)
+        {
+            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        }
 	}
 }

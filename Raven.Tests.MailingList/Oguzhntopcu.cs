@@ -84,7 +84,15 @@ namespace Raven.Tests.MailingList
 											PostStatus = g.SelectMany(i => i.PostStatus).Where(i => i != PostStatus.None).ToArray(),
 										};
 
-				TransformResults = (database, results) => from x in results
+				Index(i => i.UserName, FieldIndexing.Analyzed);
+			}
+		}
+
+		internal class SearchTransformer : AbstractTransformerCreationTask<Result>
+		{
+			public SearchTransformer()
+			{
+				TransformResults = results => from x in results
 														  select new
 														  {
 															  x.Id,
@@ -95,8 +103,6 @@ namespace Raven.Tests.MailingList
 															  x.Body,
 															  x.PostStatus
 														  };
-
-				Index(i => i.UserName, FieldIndexing.Analyzed);
 			}
 		}
 
@@ -146,6 +152,7 @@ namespace Raven.Tests.MailingList
 			};
 			DocumentStore.Initialize();
 			DocumentStore.ExecuteIndex(new SearchIndex());
+			DocumentStore.ExecuteTransformer(new SearchTransformer());
 
 			PopulateData();
 		}
@@ -196,10 +203,10 @@ namespace Raven.Tests.MailingList
 				var query = session.Query<Result, SearchIndex>()
 					.Customize(i => i.WaitForNonStaleResults())
 													   .Where(i => i.PostStatus.Equals(PostStatus.Edited))
-													   .As<Transformed>();
+													   .TransformWith<SearchTransformer, Transformed>();
 
 				var data = query.FirstOrDefault();
-				Assert.Empty(DocumentStore.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(DocumentStore.SystemDatabase.Statistics.Errors);
 				Assert.NotNull(data);
 				Assert.NotNull(data.PostStatus);
 				//Assert.Contains(PostStatus.Edited, data.PostStatus);

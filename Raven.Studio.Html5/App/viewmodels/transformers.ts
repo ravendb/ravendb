@@ -13,7 +13,7 @@ import shell = require("viewmodels/shell");
 class Transformers extends viewModelBase {
 
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-    
+    appUrls: computedAppUrls;
     transformersGroups = ko.observableArray<{ entityName: string; transformers: KnockoutObservableArray<transformer> }>();
     containerSelector = "#transformersContainer";
     transformersMutex = true;
@@ -21,11 +21,19 @@ class Transformers extends viewModelBase {
 
     constructor() {
         super();
+
+        this.appUrls = appUrl.forCurrentDatabase();
     }
 
-    activate(args) {
-        this.fetchTransformers();
-        super.activate(args);
+    canActivate(args: any): any {
+        super.canActivate(args);
+
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            this.fetchTransformers(db).done(() => deferred.resolve({ can: true }));
+        }
+        return deferred;
     }
 
     attached() {
@@ -33,18 +41,28 @@ class Transformers extends viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [shell.currentDbChangesApi().watchAllTransformers(e => this.processTransformerEvent(e))];
+    private fetchTransformers(db) {
+        return new getTransformersCommand(db)
+            .execute()
+            .done((transformers: transformerDto[]) => {
+                transformers
+                    .map(curTransformer=> new transformer().initFromLoad(curTransformer))
+                    .forEach(i=> this.putTransformerIntoGroups(i));
+            });
     }
 
-    processTransformerEvent(e: transformerChangeNotificationDto) {
+    createNotifications(): Array<changeSubscription> {
+        return [shell.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
+    }
+
+    private processTransformerEvent(e: transformerChangeNotificationDto) {
         if (e.Type == transformerChangeType.TransformerRemoved) {
             this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
         } else {
             if (this.transformersMutex == true) {
                 this.transformersMutex = false;
                 setTimeout(() => {
-                    this.fetchTransformers().always(() => this.transformersMutex = true);
+                    this.fetchTransformers(this.activeDatabase()).always(() => this.transformersMutex = true);
                 }, 5000);
             }
         }
@@ -62,17 +80,6 @@ class Transformers extends viewModelBase {
 
         return result;
     }
-
-    fetchTransformers() {
-        return new getTransformersCommand(this.activeDatabase())
-            .execute()
-            .done((transformers: transformerDto[])=> {
-                transformers
-                    .map(curTransformer=> new transformer().initFromLoad(curTransformer))
-                    .forEach(i=> this.putTransformerIntoGroups(i));
-            });
-    }
-
 
     putTransformerIntoGroups(trans: transformer) {
         
@@ -111,14 +118,14 @@ class Transformers extends viewModelBase {
         this.promptDeleteTransformers([transformerToDelete]);
     }
 
-    promptDeleteTransformers(transformers: Array<transformer>) {
+    private promptDeleteTransformers(transformers: Array<transformer>) {
         var db = this.activeDatabase();
         var deleteViewmodel = new deleteTransformerConfirm(transformers.map(i => i.name()), db);
         deleteViewmodel.deleteTask.done(() => this.removeTransformersFromAllGroups(transformers));
         app.showDialog(deleteViewmodel);
     }
 
-    removeTransformersFromAllGroups(transformers: Array<transformer>) {
+    private removeTransformersFromAllGroups(transformers: Array<transformer>) {
         this.transformersGroups().forEach(transGroup => transGroup.transformers.removeAll(transformers));
         this.transformersGroups.remove((item: { entityName: string; transformers: KnockoutObservableArray<transformer> }) => item.transformers().length === 0);
     }

@@ -1,25 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using Voron.Debugging;
 using Voron.Impl;
-using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests
 {
 	public class DebugJournalTest
 	{
+		private const string debugJouralName = "debug_journal_test";
+
+		public DebugJournalTest()
+		{
+			const string fileNameWithDebugJournalExtension = debugJouralName + ".djrs";
+
+			if (File.Exists(fileNameWithDebugJournalExtension))
+				File.Delete(fileNameWithDebugJournalExtension);
+		}
+
 		[Fact]
 		public void Record_debug_journal_and_replay_it()
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 
-				env.DebugJournal = new DebugJournal("debug_journal_test", env, true);
+				env.DebugJournal = new DebugJournal(debugJouralName, env, true);
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					env.CreateTree(tx, "test-tree");
@@ -28,7 +33,7 @@ namespace Voron.Tests
 
 				using (var writeBatch = new WriteBatch())
 				{
-					var valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("testing testing 1!"));
+					var valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("{ \"title\": \"foo\",\"name\":\"bar\"}"));
 					writeBatch.Add("foo", valueBuffer, "test-tree");
 
 					valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("testing testing 1 2!"));
@@ -73,12 +78,12 @@ namespace Voron.Tests
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
-				env.DebugJournal = DebugJournal.FromFile("debug_journal_test",env);
+				env.DebugJournal = DebugJournal.FromFile(debugJouralName, env);
 				env.DebugJournal.Replay();
 
 				using (var snapshot = env.CreateSnapshot())
 				{
-				    Assert.Equal("testing testing 1!",snapshot.Read("test-tree", "foo").Reader.ToStringValue());
+					Assert.Equal("{ \"title\": \"foo\",\"name\":\"bar\"}", snapshot.Read("test-tree", "foo").Reader.ToStringValue());
 				    Assert.Equal("testing testing 1 2!", snapshot.Read("test-tree", "bar").Reader.ToStringValue());
 
 				    Assert.Equal("testing testing 1!", snapshot.Read("test-tree2", "foo").Reader.ToStringValue());

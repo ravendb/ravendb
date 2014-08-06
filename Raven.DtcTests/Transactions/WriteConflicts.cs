@@ -23,7 +23,7 @@ namespace Raven.Tests.Transactions
 		public WriteConflicts()
 		{
 			store = NewDocumentStore(requestedStorage: "esent");
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

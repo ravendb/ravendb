@@ -7,6 +7,7 @@ using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
@@ -17,7 +18,7 @@ namespace Raven.Database.Server.RavenFS.Util
 
 		private long currentPageFrameOffset;
 		private bool disposed;
-		private FileAndPages fileAndPages;
+		private FileAndPagesInformation fileAndPages;
 		private FileHeader fileHeader;
 
 		protected byte[] InnerBuffer;

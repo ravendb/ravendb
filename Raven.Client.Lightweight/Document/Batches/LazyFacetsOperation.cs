@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -107,15 +106,6 @@ namespace Raven.Client.Document.Batches
 		public IDisposable EnterContext()
 		{
 			return null;
-		}
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			return commands.GetFacets( index, query, facetSetupDoc, start, pageSize );
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			Result = result;
 		}
 	}
 }

@@ -162,7 +162,7 @@ namespace Raven.Tests.MailingList
 					                             .ToList();
 
 					WaitForUserToContinueTheTest(store);
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 					Assert.NotEmpty(result);
 				}
 			}

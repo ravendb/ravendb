@@ -22,9 +22,9 @@ namespace Raven.Abstractions.Util
 			enumerator.Dispose();
 		}
 
-		public async Task<bool> MoveNextAsync()
+		public Task<bool> MoveNextAsync()
 		{
-			return enumerator.MoveNext();
+			return new CompletedTask<bool>(enumerator.MoveNext());
 		}
 
 		public T Current { get { return enumerator.Current; } }

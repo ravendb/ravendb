@@ -7,10 +7,9 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
-using Raven.Database.Impl;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -19,10 +18,10 @@ namespace Raven.Database.Server.Tenancy
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly DocumentDatabase systemDatabase;
 
+	    private bool initialized;
+        private const string DATABASES_PREFIX = "Raven/Databases/";
+        public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
-
-
-        private bool initialized;
         public DatabasesLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
@@ -41,19 +40,18 @@ namespace Raven.Database.Server.Tenancy
             get { return systemConfiguration; }
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledDatabase = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
                 return systemConfiguration;
-            var document = GetTenantDatabaseDocument(tenantId);
+			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledDatabase);
             if (document == null)
                 return null;
 
             return CreateConfiguration(tenantId, document, "Raven/DataDir", systemConfiguration);
         }
 
-
-        private DatabaseDocument GetTenantDatabaseDocument(string tenantId)
+		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -68,7 +66,7 @@ namespace Raven.Database.Server.Tenancy
             if (document.Settings["Raven/DataDir"] == null)
                 throw new InvalidOperationException("Could not find Raven/DataDir");
 
-            if (document.Disabled)
+			if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
 
             return document;
@@ -84,7 +82,6 @@ namespace Raven.Database.Server.Tenancy
                 return await db;
             return null;
         }
-
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
@@ -112,8 +109,11 @@ namespace Raven.Database.Server.Tenancy
 
             database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-                var documentDatabase = new DocumentDatabase(config);
+				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+
                 AssertLicenseParameters(config);
+                var documentDatabase = new DocumentDatabase(config, transportState);
+                
                 documentDatabase.SpinBackgroundWorkers();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
@@ -176,7 +176,6 @@ namespace Raven.Database.Server.Tenancy
             return resource.WorkContext.LastWorkTime;
         }
 
-
         public void Init()
         {
             if (initialized)
@@ -191,7 +190,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down database {0} because the tenant database has been updated or removed", dbName);
-                Cleanup(dbName, skipIfActive: false);
+				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
     }

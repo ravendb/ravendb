@@ -1,4 +1,4 @@
-﻿using Raven.Client.RavenFS;
+﻿using Raven.Abstractions.FileSystem;
 using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.RavenFS.Notifications

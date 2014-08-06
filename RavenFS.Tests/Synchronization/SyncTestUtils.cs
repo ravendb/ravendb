@@ -2,16 +2,18 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Xunit;
+using Raven.Client.FileSystem;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 
 namespace RavenFS.Tests.Synchronization
 {
 	public class SyncTestUtils
 	{
-		public static SynchronizationReport ResolveConflictAndSynchronize(RavenFileSystemClient sourceClient,
-		                                                                  RavenFileSystemClient destinationClient,
+        public static SynchronizationReport ResolveConflictAndSynchronize(IAsyncFilesCommands sourceClient,
+                                                                          IAsyncFilesCommands destinationClient,
 		                                                                  string fileName)
 		{
 			var shouldBeConflict = sourceClient.Synchronization.StartAsync(fileName, destinationClient).Result;
@@ -22,18 +24,18 @@ namespace RavenFS.Tests.Synchronization
 			return sourceClient.Synchronization.StartAsync(fileName, destinationClient).Result;
 		}
 
-		public static void TurnOnSynchronization(RavenFileSystemClient source, params RavenFileSystemClient[] destinations)
+        public static void TurnOnSynchronization(IAsyncFilesCommands source, params IAsyncFilesCommands[] destinations)
 		{
-            source.Config.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
-            {
-                FileSystem = x.FileSystemName,
-                ServerUrl = x.ServerUrl
-            }).ToArray()).Wait();
+            source.Synchronization.SetDestinationsAsync(destinations.Select(x => x.ToSynchronizationDestination()).ToArray()).Wait();
 		}
 
-		public static void TurnOffSynchronization(RavenFileSystemClient source)
+		public static void TurnOffSynchronization(IAsyncFilesCommands source)
 		{
-			source.Config.DeleteConfig(SynchronizationConstants.RavenSynchronizationDestinations).Wait();
+            var destinations = source.Synchronization.GetDestinationsAsync().Result;
+            foreach ( var destination in destinations )
+                destination.Enabled = false;
+
+            source.Synchronization.SetDestinationsAsync(destinations).Wait();          
 		}
 
 		public static Exception ExecuteAndGetInnerException(Func<Task> action)

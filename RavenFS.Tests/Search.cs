@@ -11,7 +11,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesBySize()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
 
             client.UploadAsync("1", StreamOfLength(1)).Wait();
             client.UploadAsync("2", StreamOfLength(2)).Wait();
@@ -28,7 +28,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesBySizeWithWildcardMin()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
 
             client.UploadAsync("1", StreamOfLength(1)).Wait();
             client.UploadAsync("2", StreamOfLength(2)).Wait();
@@ -45,7 +45,7 @@ namespace RavenFS.Tests
         [Fact]
         public void CanSearchForFilesBySizeWithWildcardMax()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
 
             client.UploadAsync("1", StreamOfLength(1)).Wait();
             client.UploadAsync("2", StreamOfLength(2)).Wait();
@@ -62,11 +62,11 @@ namespace RavenFS.Tests
         [Fact]
         public void CanGetSearchTerms()
         {
-            var client = NewClient();
+            var client = NewAsyncClient();
 
             var ms = new MemoryStream();
-            client.UploadAsync("Test", new RavenJObject() { { "TestKey", "TestValue" } }, ms).Wait();
-            client.UploadAsync("Test2", new RavenJObject() { { "Another", "TestValue" } }, ms).Wait();
+            client.UploadAsync("Test", ms, new RavenJObject() { { "TestKey", "TestValue" } }).Wait();
+            client.UploadAsync("Test2", ms, new RavenJObject() { { "Another", "TestValue" } }).Wait();
 
             var terms = client.GetSearchFieldsAsync(0, pageSize: 1024).Result;
 

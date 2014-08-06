@@ -30,7 +30,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !MONO && !NETFX_CORE
+#if !MONO
 	[System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -188,8 +188,6 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-#if !NETFX_CORE
-
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
@@ -213,8 +211,6 @@ namespace Raven.Client.Indexes
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
 				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 		}
-
-#endif
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -278,9 +274,6 @@ namespace Raven.Client.Indexes
 				AnalyzersStrings = AnalyzersStrings,
 				Map = Map,
 				Reduce = Reduce,
-#pragma warning disable 612,618
-				TransformResults = TransformResults,
-#pragma warning restore 612,618
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
@@ -425,7 +418,7 @@ namespace Raven.Client.Indexes
 		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 		    if (asyncServerClient == null)
 		        return;
-		    var doc = await asyncServerClient.GetAsync("Raven/Replication/Destinations");
+		    var doc = await asyncServerClient.GetAsync(Constants.RavenReplicationDestinations);
 		    if (doc == null)
 		        return;
 		    var replicationDocument =
@@ -460,14 +453,13 @@ namespace Raven.Client.Indexes
 			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 
-#if !NETFX_CORE
 		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
 			Action<ServerClient, OperationMetadata> action)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
-			var doc = serverClient.Get("Raven/Replication/Destinations");
+			var doc = serverClient.Get(Constants.RavenReplicationDestinations);
 			if (doc == null)
 				return;
 			var replicationDocument =
@@ -489,6 +481,5 @@ namespace Raven.Client.Indexes
 				}
 			}
 		}
-#endif
 	}
 }

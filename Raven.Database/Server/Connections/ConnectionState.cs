@@ -2,8 +2,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Client.RavenFS;
 using Raven.Database.Util;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Database.Server.Connections
 {
@@ -29,6 +30,13 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingFolders =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+        private readonly ConcurrentSet<string> matchingDbLogs =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingFsLogs =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingCountersLogs =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        
 		private IEventsTransport eventsTransport;
 
 		private int watchAllDocuments;
@@ -39,6 +47,7 @@ namespace Raven.Database.Server.Connections
 		private int watchConfig;
 		private int watchConflicts;
 		private int watchSync;
+        private int watchAdminLog;
 
 		public ConnectionState(IEventsTransport eventsTransport)
 		{
@@ -68,6 +77,25 @@ namespace Raven.Database.Server.Connections
 				};
 			}
 		}
+
+	    public void WatchDBLog(string dbName)
+	    {
+	        matchingDbLogs.TryAdd(dbName);
+	    }
+        public void UnwatchDBLog(string dbName)
+        {
+            matchingDbLogs.TryRemove(dbName);
+        }
+
+        public void WatchAdminLog()
+        {
+            Interlocked.Increment(ref watchAdminLog);
+        }
+        public void UnwatchAdminLog()
+        {
+            Interlocked.Decrement(ref watchAdminLog);
+        }
+
 
 		public void WatchIndex(string name)
 		{
@@ -161,15 +189,13 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
 		{
-			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
-
-			if (matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()) == false)
-				return;
-
-			Enqueue(value);
+		    if (!matchingBulkInserts.Contains(string.Empty) && 
+                !matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString())) 
+                return;
+		    Enqueue(new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" });
 		}
 
-		public void Send(DocumentChangeNotification documentChangeNotification)
+	    public void Send(DocumentChangeNotification documentChangeNotification)
 		{
 			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
 			if (watchAllDocuments > 0)
@@ -219,42 +245,64 @@ namespace Raven.Database.Server.Connections
 			Enqueue(value);
 		}
 
+        public void Send(LogNotification logNotification)
+        {
+            var value = new { Value = logNotification, Type = "LogNotification" };
+            if (watchAdminLog > 0)
+            {
+                Enqueue(value);
+                return;
+            }
+
+            if (logNotification.TenantType == LogTenantType.Database && 
+                matchingDbLogs.Any(x=>  string.Equals(x,logNotification.TenantName,StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Enqueue(value);
+                return;
+            }
+            if (logNotification.TenantType == LogTenantType.Filesystem && 
+                matchingFsLogs.Any(x => string.Equals(x, logNotification.TenantName, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Enqueue(value);
+                return;
+            }
+            if (logNotification.TenantType == LogTenantType.CounterStorage && 
+                matchingCountersLogs.Any(x => string.Equals(x, logNotification.TenantName, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Enqueue(value);
+            }
+        }
+
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
-			var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
-
-			if (watchAllIndexes > 0)
+		    if (watchAllIndexes > 0)
 			{
-				Enqueue(value);
+				Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
 				return;
 			}
 
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
-			Enqueue(value);
+			Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
 		}
 
         public void Send(TransformerChangeNotification transformerChangeNotification)
         {
-            var value = new { Value = transformerChangeNotification, Type = "TransformerChangeNotification" };
-
             if (watchAllTransformers > 0)
             {
-                Enqueue(value);
+                Enqueue(new { Value = transformerChangeNotification, Type = "TransformerChangeNotification" });
             }
         }
 
 		public void Send(ReplicationConflictNotification replicationConflictNotification)
 		{
-			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
-
-			if (watchAllReplicationConflicts <= 0)
+		    if (watchAllReplicationConflicts <= 0)
 			{
 				return;
 			}
 
-			Enqueue(value);
+			Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
 		}
 
 		public void Send(Notification notification)
@@ -298,25 +346,6 @@ namespace Raven.Database.Server.Connections
 
 			return false;
 		}
-
-	//	private readonly ConcurrentQueue<Notification> pendingMessages = new ConcurrentQueue<Notification>();
-
-		//private async Task Enqueue(Notification msg)
-		//{
-		//	if (eventsTransport == null || eventsTransport.Connected == false)
-		//	{
-		//		pendingMessages.Enqueue(msg);
-		//		return;
-		//	}
-		//	try
-		//	{
-		//		eventsTransport.SendAsync(msg);
-		//		pendingMessages.Enqueue(msg);
-		//	}
-		//	catch (Exception)
-		//	{
-		//	}
-		//}
 
 		private void Enqueue(object msg)
 		{

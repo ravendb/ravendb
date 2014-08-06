@@ -11,7 +11,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
+using Lucene.Net.Search;
+
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -27,17 +30,21 @@ namespace Raven.Database.Indexing
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
 		private readonly AbstractViewGenerator viewGenerator;
+
+		private readonly ILog log;
+
 		private readonly DocumentDatabase database;
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
 		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
-		public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
+		public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, ILog log)
 		{
 			this.database = database;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
+			this.log = log;
 		}
 
 		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
@@ -117,6 +124,9 @@ namespace Raven.Database.Indexing
 								 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield break;
 			}
+
+			CheckIfSortOptionsAndInputTypeMatch(name, value);
+
 			var attachmentFoIndexing = value as AttachmentForIndexing;
 			if (attachmentFoIndexing != null)
 			{
@@ -170,11 +180,11 @@ namespace Raven.Database.Indexing
 					    sortOptions.Value == SortOptions.Custom)
 
 					{
-						yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-							Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-					}
+					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
+														Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+				    }
 
-					foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
+				    foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
                         yield return field;
                    
                  }
@@ -337,6 +347,35 @@ namespace Raven.Database.Indexing
 				yield return numericField;
 		}
 
+		private void CheckIfSortOptionsAndInputTypeMatch(string name, object value)
+		{
+			if (log == null)
+				return;
+
+			if (value == null)
+				return;
+
+			var sortOption = indexDefinition.GetSortOption(name, null);
+			if (sortOption.HasValue == false)
+				return;
+
+			switch (sortOption.Value)
+			{
+				case SortOptions.Double:
+				case SortOptions.Float:
+				case SortOptions.Int:
+				case SortOptions.Long:
+				case SortOptions.Short:
+					if (value is int || value is short || value is double || value is long || value is float || value is decimal)
+						return;
+
+					log.Warn(string.Format("Field '{1}' in index '{0}' has numerical sorting enabled, but input value '{2}' was a '{3}'.", indexDefinition.Name, name, value, value.GetType()));
+					break;
+				default:
+					return;
+			}
+		}
+
 	    private static object GetNullValueForSorting(SortOptions? sortOptions)
 	    {
 	        switch (sortOptions)
@@ -346,7 +385,6 @@ namespace Raven.Database.Indexing
 	                return int.MinValue;
 	            case SortOptions.Double:
 	                return double.MinValue;
-	                break;
 	            case SortOptions.Float:
 	                return float.MinValue;
 
@@ -381,18 +419,18 @@ namespace Raven.Database.Indexing
 			{
 				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
 			}
-            else if (value is int)
-            {
+			else if (value is int)
+			{
                 if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
-                    yield return numericField.SetLongValue((int)value);
+					yield return numericField.SetLongValue((int)value);
                 else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue((int)value);
                 else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
-                    yield return numericField.SetDoubleValue((int)value);
-                else
-                    yield return numericField.SetIntValue((int)value);
-            }
-            else if (value is long)
+					yield return numericField.SetDoubleValue((int)value);
+				else
+					yield return numericField.SetIntValue((int)value);
+			}
+			else if (value is long)
 			{
 				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((long)value);

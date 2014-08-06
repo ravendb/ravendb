@@ -153,7 +153,7 @@ namespace Raven.Tests.Core.Indexing
 		}
 
 		[Fact]
-		public void CanSpecifyQueryInputAndIncludeInTransformer()
+		public void CanSpecifyTransformerParameterAndIncludeInTransformer()
 		{
 			using (var store = GetDocumentStore())
 			{
@@ -182,7 +182,7 @@ namespace Raven.Tests.Core.Indexing
 					var user = session.Query<User, Users_ByName>()
 							.Customize(x => x.WaitForNonStaleResults())
 							.TransformWith<UserWithCustomDataAndAddressIncludeTransformer, UserWithCustomDataAndAddressIncludeTransformer.Result>()
-							.AddQueryInput("customData", "RavenDB Developer")
+							.AddTransformerParameter("customData", "RavenDB Developer")
 							.First();
 
 					Assert.Equal(1, session.Advanced.NumberOfRequests);

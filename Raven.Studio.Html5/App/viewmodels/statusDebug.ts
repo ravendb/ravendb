@@ -2,19 +2,15 @@ import durandalRouter = require("plugins/router");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
-
 import status = require("viewmodels/status");
 
 class statusDebug extends viewModelBase {
 
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
-    appUrls: computedAppUrls;
 
 	constructor() {
         super();
-        
-        this.appUrls = appUrl.forCurrentDatabase();
 
         this.router = status.statusRouter.createChildRouter()
             .map([
@@ -34,6 +30,7 @@ class statusDebug extends viewModelBase {
             ])
             .buildNavigationModel();
 
+        appUrl.mapUnknownRoutes(this.router);
 
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?

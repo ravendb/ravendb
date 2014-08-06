@@ -66,7 +66,10 @@ namespace Raven.Database.Storage
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private readonly string path;
         private readonly InMemoryRavenConfiguration configuration;
-        private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
+
+	    private readonly ITransactionalStorage transactionalStorage;
+
+	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
         private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
         public IndexDefinitionStorage(
@@ -78,7 +81,8 @@ namespace Raven.Database.Storage
         {
             IndexMergeSuggestions = new List<IndexMergeSuggestion>();
             this.configuration = configuration;
-            this.extensions = extensions; // this is used later in the ctor, so it must appears first
+	        this.transactionalStorage = transactionalStorage;
+	        this.extensions = extensions; // this is used later in the ctor, so it must appears first
             this.path = Path.Combine(path, IndexDefDir);
 
             if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
@@ -97,41 +101,96 @@ namespace Raven.Database.Storage
 
         private void ReadFromDisk()
         {
-            foreach (var index in Directory.GetFiles(path, "*.index"))
+            foreach (var indexDefinition in ReadIndexDefinitionsFromDisk())
             {
                 try
                 {
-                    var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index),
-                                                                                         Default.Converters);
+					if (Contains(indexDefinition.Name)) // checking if there are no older indexes with the same name
+						RemoveIndexAndCleanup(indexDefinition.Name);
+
                     ResolveAnalyzers(indexDefinition);
                     AddAndCompileIndex(indexDefinition);
                     AddIndex(indexDefinition.IndexId, indexDefinition);
                 }
                 catch (Exception e)
                 {
-                    logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
+					logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
                 }
             }
 
-            foreach (var transformer in Directory.GetFiles(path, "*.transform"))
+			foreach (var transformerDefinition in ReadTransformerDefinitionsFromDisk())
             {
                 try
                 {
-                    var indexDefinition =
-                        JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(transformer),
-                                                                             Default.Converters);
-                    AddAndCompileTransform(indexDefinition);
-                    AddTransform(indexDefinition.TransfomerId, indexDefinition);
+					RemoveTransformer(transformerDefinition.Name);
+
+                    AddAndCompileTransform(transformerDefinition);
+                    AddTransform(transformerDefinition.TransfomerId, transformerDefinition);
                 }
                 catch (Exception e)
                 {
-                    logger.WarnException("Could not compile transformer " + transformer + ", skipping bad transformer",
-                                         e);
+					logger.WarnException(string.Format("Could not compile transformer '{0} ({1})', skipping bad transformer", transformerDefinition.TransfomerId, transformerDefinition.Name), e);
                 }
             }
         }
 
-        public int IndexesCount
+	    private IEnumerable<IndexDefinition> ReadIndexDefinitionsFromDisk()
+	    {
+		    var result = new SortedList<int, IndexDefinition>();
+
+			foreach (var index in Directory.GetFiles(path, "*.index"))
+			{
+				try
+				{
+					var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
+					result.Add(indexDefinition.IndexId, indexDefinition);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
+				}
+			}
+
+		    return result.Values;
+	    }
+
+		private IEnumerable<TransformerDefinition> ReadTransformerDefinitionsFromDisk()
+		{
+			var result = new SortedList<int, TransformerDefinition>();
+
+			foreach (var transformer in Directory.GetFiles(path, "*.transform"))
+			{
+				try
+				{
+					var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(transformer), Default.Converters);
+
+					result.Add(transformerDefinition.TransfomerId, transformerDefinition);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not compile transformer " + transformer + ", skipping bad transformer", e);
+				}
+			}
+
+			return result.Values;
+		}
+
+		private void RemoveIndexAndCleanup(string name)
+		{
+			var index = GetIndexDefinition(name);
+			if (index == null) 
+				return;
+
+			transactionalStorage.Batch(accessor =>
+			{
+				accessor.Indexing.PrepareIndexForDeletion(index.IndexId);
+				accessor.Indexing.DeleteIndex(index.IndexId, CancellationToken.None);
+			});
+
+			RemoveIndex(index.IndexId);
+		}
+
+	    public int IndexesCount
         {
             get { return indexCache.Count; }
         }

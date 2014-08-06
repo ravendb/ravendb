@@ -25,5 +25,31 @@ namespace Raven.Database.Server.Controllers
 			var status = Database.Tasks.GetTaskState(id);
 			return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
 		}
+
+        [HttpGet]
+        [Route("operation/kill")]
+        [Route("databases/{databaseName}/operation/kill")]
+        public HttpResponseMessage OperationKill()
+        {
+            var idStr = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStr, out id) == false)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Query string variable id must be a valid int64"
+                }, HttpStatusCode.BadRequest);
+            }
+            var status = Database.Tasks.KillTask(id);
+            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+        }
+
+        [HttpGet]
+        [Route("operations")]
+        [Route("databases/{databaseName}/operations")]
+        public HttpResponseMessage CurrentOperations()
+        {
+            return GetMessageWithObject(Database.Tasks.GetAll());
+        }
 	}
 }

@@ -6,13 +6,14 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Infrastructure
 {
@@ -53,15 +54,15 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
         public void UpdateLastModified(RavenJObject metadata)
         {
             // internally keep last modified date with millisecond precision
-            metadata["Last-Modified"] = DateTime.UtcNow.ToString("d MMM yyyy H:m:s.fffff 'GMT'", CultureInfo.InvariantCulture);
-            metadata["ETag"] = new RavenJValue(uuidGenerator.CreateSequentialUuid());
+            metadata[Constants.LastModified] = DateTimeOffset.UtcNow; 
+            metadata[Constants.MetadataEtagField] = new RavenJValue(uuidGenerator.CreateSequentialUuid());
         }
 
         private RavenJObject GetMetadata(string fileName)
 		{
             try
             {
-                FileAndPages fileAndPages = null;
+                FileAndPagesInformation fileAndPages = null;
                 storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
                 return fileAndPages.Metadata;
             }

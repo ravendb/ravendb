@@ -1,5 +1,4 @@
-﻿#if !NETFX_CORE
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -51,7 +50,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			var propertyInfos = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
 			var projections = propertyInfos.Select(x => x.Name).ToArray();
 			var identityProperty = DocumentConvention.GetIdentityProperty(typeof (TProjection));
 			var fields = propertyInfos.Select(p =>(p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
@@ -64,7 +63,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
 	        base.SetResultTransformer(resultsTransformer);
 	        return this;
@@ -96,7 +95,12 @@ namespace Raven.Client.Document
 
 		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
-	        this.queryInputs = queryInputs;
+	        SetTransformerParameters(queryInputs);
+	    }
+
+		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+	    {
+	        this.transformerParameters = transformerParameters;
 	    }
 
 		public bool IsDistinct { get { return isDistinct; } }
@@ -155,9 +159,10 @@ namespace Raven.Client.Document
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
                 resultsTransformer = resultsTransformer,
-                queryInputs = queryInputs,
+                transformerParameters = transformerParameters,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
+				showQueryTimings = showQueryTimings,
                 lastEquality = lastEquality,
                 defaultOperator = defaultOperator,
 				shouldExplainScores = shouldExplainScores
@@ -345,6 +350,12 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
 		{
 			NoCaching();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ShowTimings()
+		{
+			ShowTimings();
 			return this;
 		}
 
@@ -872,7 +883,7 @@ namespace Raven.Client.Document
 			this.SetHighlighterTags(preTags, postTags);
 			return this;
 		}
-        
+
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
@@ -1020,4 +1031,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

@@ -5,6 +5,7 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import scriptedIndex = require("models/scriptedIndex");
 import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
 import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
+import appUrl = require("common/appUrl");
 
 class scriptedIndexes extends viewModelBase {
 
@@ -20,13 +21,13 @@ class scriptedIndexes extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
-        this.inactiveIndexNames = ko.computed(function() {
+        this.inactiveIndexNames = ko.computed(() => {
             var activeIndexNames = this.allScriptedIndexes()
                 .filter((index: scriptedIndex)=> { return !index.isMarkedToDelete(); })
                 .map((index: scriptedIndex) => index.indexName());
             return this.indexNames().filter((indexName: string) => { return activeIndexNames.indexOf(indexName) < 0; });
         }, this);
-        this.firstIndex = ko.computed(function () {
+        this.firstIndex = ko.computed(() => {
             return !this.isFirstLoad() ? 0 : -1;
         }, this);
     }
@@ -38,9 +39,8 @@ class scriptedIndexes extends viewModelBase {
             this.fetchAllIndexes(db)
                 .done(() => {
                     this.fetchAllScriptedIndexes(db)
-                    .done(()=> {
-                        deferred.resolve({ can: true });
-                    });
+                        .done(() => deferred.resolve({ can: true }))
+                        .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
                 });
         }
         return deferred;
@@ -49,10 +49,8 @@ class scriptedIndexes extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
-        this.isSaveEnabled = ko.computed(() => {
-            return viewModelBase.dirtyFlag().isDirty();
-        });
+        this.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
@@ -62,9 +60,11 @@ class scriptedIndexes extends viewModelBase {
         this.initializeCollapsedInvalidElements();
 
         $('pre').each((index, currentPreElement) => {
-            var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
-            var editorValue = editor.getSession().getValue();
-            this.initializeAceValidity(currentPreElement, editorValue);
+            if (currentPreElement) {
+                var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
+                var editorValue = editor.getSession().getValue();
+                this.initializeAceValidity(currentPreElement, editorValue);
+            }
         });
     }
 
@@ -103,19 +103,14 @@ class scriptedIndexes extends viewModelBase {
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 this.updateIndexes(result);
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.dirtyFlag().reset(); //Resync Changes
             });
     }
 
     private fetchAllIndexes(db): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        new getDatabaseStatsCommand(db)
+        return new getDatabaseStatsCommand(db)
             .execute()
-            .done((results: databaseStatisticsDto) => {
-                this.performAllIndexesResult(results);
-                deferred.resolve({ can: true });
-            });
-        return deferred;
+            .done((results: databaseStatisticsDto) => this.performAllIndexesResult(results));
     }
 
     private performAllIndexesResult(results: databaseStatisticsDto) {
@@ -123,15 +118,12 @@ class scriptedIndexes extends viewModelBase {
     }
 
     private fetchAllScriptedIndexes(db): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        new getScriptedIndexesCommand(db)
+        return new getScriptedIndexesCommand(db)
             .execute()
-            .done((indexes: scriptedIndex[])=> {
+            .done((indexes: scriptedIndex[]) => {
                 this.allScriptedIndexes.pushAll(indexes);
                 this.activeScriptedIndexes.pushAll(indexes);
-                deferred.resolve({ can: true });
             });
-        return deferred;
     }
 
     private addScriptsLabelPopover() {
@@ -147,8 +139,6 @@ class scriptedIndexes extends viewModelBase {
             trigger: 'hover',
             content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
             selector: '.delete-script-label',
-            delay: { show: 0, hide: 100000 }
-
         };
         $('#scriptedIndexesForm').popover(deleteScriptPopOverSettings);
     }

@@ -16,19 +16,42 @@ namespace Raven.Database.Config
 	{
 		private readonly NameValueCollection settings;
 
+		public ReplicationConfiguration Replication { get; private set; }
+
+		public VoronConfiguration Voron { get; private set; }
+
+		public PrefetcherConfiguration Prefetcher { get; private set; }
+
+        public FileSystemConfiguration FileSystem { get; private set; }
+
+		public EncryptionConfiguration Encryption { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
+			Replication = new ReplicationConfiguration();
+			Voron = new VoronConfiguration();
+			Prefetcher = new PrefetcherConfiguration();
+            FileSystem = new FileSystemConfiguration();
+			Encryption = new EncryptionConfiguration();
+			
 			this.settings = settings;
 		}
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+
+			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
+
+            BulkImportBatchTimeout = new TimeSpanSetting(settings[Constants.BulkImportBatchTimeout], TimeSpan.FromMilliseconds(Constants.BulkImportDefaultTimeoutInMs), TimeSpanArgumentType.FromParse);
+
+			MaxConcurrentServerRequests = new IntegerSetting(settings[Constants.MaxConcurrentServerRequests], 512);
+
+			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
+
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
 				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
 
-			EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
-		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -98,8 +121,6 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
 				new StringSetting(settings["Raven/Port"], "*");
-			UseSsl = 
-				new BooleanSetting(settings["Raven/UseSsl"], false);
 			HttpCompression =
 				new BooleanSetting(settings["Raven/HttpCompression"], true);
 			AccessControlAllowOrigin =
@@ -138,7 +159,7 @@ namespace Raven.Database.Config
             
 			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
 
-			DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatbaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
+			DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatabaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
 
@@ -154,11 +175,21 @@ namespace Raven.Database.Config
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
-            VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
-			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
-		}
 
-		public IntegerSetting MemoryLimitForIndexing { get;private set; }
+			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
+			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
+
+            Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
+
+			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
+
+            FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
+
+			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
+			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
+			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
+		}
 
 		private string GetDefaultWebDir()
 		{
@@ -180,7 +211,15 @@ namespace Raven.Database.Config
 			return val;
 		}
 
-		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
+		public IntegerSetting MemoryLimitForIndexing { get; private set; }
+
+		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
+
+		public IntegerSetting MaxConcurrentMultiGetRequests { get; private set; }
+
+		public IntegerSetting PrefetchingDurationLimit { get; private set; }
+
+		public TimeSpanSetting BulkImportBatchTimeout { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 
@@ -231,12 +270,6 @@ namespace Raven.Database.Config
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
-
-		public StringSetting SslCertificatePath { get; private set; }
-
-		public StringSetting SslCertificatePassword { get; private set; }
-
-		public BooleanSetting UseSsl { get; private set; }
 
 		public BooleanSetting HttpCompression { get; private set; }
 
@@ -292,7 +325,40 @@ namespace Raven.Database.Config
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
-        public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
-		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
+
+		public class VoronConfiguration
+		{
+			public IntegerSetting MaxBufferPoolSize { get; set; }
+
+			public NullableIntegerSetting InitialFileSize { get; set; }
+		}
+
+		public class PrefetcherConfiguration
+		{
+			public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+			public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+		}
+
+		public class ReplicationConfiguration
+		{
+			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
+		}
+
+        public class FileSystemConfiguration
+        {
+            public TimeSpanSetting MaximumSynchronizationInterval { get; set; }
+        }
+
+		public class EncryptionConfiguration
+		{
+			public BooleanSetting UseFips { get; set; }
+
+			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
+
+			public BooleanSetting UseSsl { get; set; }
+		}
 	}
+
+	
 }

@@ -10,6 +10,7 @@ namespace Raven.Database.Config
 			// Common
 			{"Raven/MaxPageSize", "int", null, "The maximum page size that can be specified on this server, default: 1,024."},
 			{"Raven/RunInMemory", "bool", "true,false", "Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing. Default: false."},
+			{"Raven/Headers/Ignore", "string", null, "Semicolon separated list of headers that server should ignore. e.g. Header-To-Ignore-1;Header-To-Ignore-2"},
 			
 			// Studio
 			{"Raven/RedirectStudioUrl", "string", null, "The url to redirect the user to when then try to access the local studio"},
@@ -55,6 +56,16 @@ namespace Raven.Database.Config
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			{"Raven/NewIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing. Default: 64 MB."},
 			
+			// Encryption
+			{"Raven/Encryption/FIPS", "bool", null, "Use FIPS compliant encryption algorithms. Default: false."},
+
+			// Replication
+			{"Raven/Replication/FetchingFromDiskTimeout", "int", null, "Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30."},
+			
+			// Prefetcher
+			{"Raven/Prefetcher/FetchingDocumentsFromDiskTimeout", "int", null, "Number of seconds after which prefetcher will stop reading documents from disk. Default: 5."},
+			{"Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage", "int", null, "Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256."},
+
             // Idle 
             {"Raven/TimeToWaitBeforeRunningIdleIndexes", "TimeSpan", "00:10:00", "How long the database should be idle for before updating low priority indexes, default: 10 minutes"},
             {"Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle", "TimeSpan", "1:00:00", "How long the database should wait before marking an index with the idle flag, default: 1 hour"},

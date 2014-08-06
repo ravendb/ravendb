@@ -8,17 +8,19 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
-using Raven.Client.RavenFS;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public class RdcController : RavenFsApiController
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/rdc/Signatures/{*id}")]
@@ -50,7 +52,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     MinimumCompatibleAppVersion = rdcVersion.MinimumCompatibleAppVersion
                 };
 
-                return this.GetMessageWithObject(stats, HttpStatusCode.OK);
+                return GetMessageWithObject(stats)
+                           .WithNoCache();
 			}
 		}
 
@@ -59,7 +62,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public async Task<HttpResponseMessage> Manifest(string id)
 		{
 			var filename = Uri.UnescapeDataString(id);
-			FileAndPages fileAndPages = null;
+			FileAndPagesInformation fileAndPages = null;
 			try
 			{
 				Storage.Batch(accessor => fileAndPages = accessor.GetFile(filename, 0, 0));
@@ -79,14 +82,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                 new DataInfo
 					                                            {
 						                                            Name = filename,
-						                                            CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>("Last-Modified"))
+                                                                    LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified)
 								                                                       .ToUniversalTime()
 					                                            });
 				signatureManifest.FileLength = fileLength ?? 0;
 
 				Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", filename, signatureManifest.Signatures.Count);
 
-                return this.GetMessageWithObject(signatureManifest, HttpStatusCode.OK);
+                return GetMessageWithObject(signatureManifest)
+                           .WithNoCache();
 			}
 		}
 	}

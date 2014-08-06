@@ -9,21 +9,15 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
-using System.Configuration;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS.Util;
@@ -37,16 +31,32 @@ namespace Raven.Database.Config
 	public class InMemoryRavenConfiguration
 	{
 	    public const string VoronTypeName = "voron";
-	    private const string EsentTypeName = "esent";
+	    public const string EsentTypeName = "esent";
+
 		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
 		private string fileSystemDataDirectory;
 
+		public ReplicationConfiguration Replication { get; private set; }
+
+		public PrefetcherConfiguration Prefetcher { get; private set; }
+
+		public StorageConfiguration Storage { get; private set; }
+
+        public FileSystemConfiguration FileSystem { get; private set; }
+
+		public EncryptionConfiguration Encryption { get; private set; }
 
 		public InMemoryRavenConfiguration()
 		{
+			Replication = new ReplicationConfiguration();
+			Prefetcher = new PrefetcherConfiguration();
+			Storage = new StorageConfiguration();
+            FileSystem = new FileSystemConfiguration();
+			Encryption = new EncryptionConfiguration();
+
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = true;
@@ -82,10 +92,22 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-
-			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 			
-			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
+			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
+
+			// Important! this value is synchronized with the max sessions number in esent
+			// since we cannot have more requests in the system than we have sessions for them
+			// and we also need to allow sessions for background operations and for multi get requests
+			MaxConcurrentServerRequests = ravenSettings.MaxConcurrentServerRequests.Value;
+
+			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
+			if (ConcurrentMultiGetRequests == null)
+				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
+
+			MemoryLimitForIndexingInMb = ravenSettings.MemoryLimitForIndexing.Value;
+
+			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
+
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
@@ -169,7 +191,7 @@ namespace Raven.Database.Config
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 
-			DatbaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
+			DatabaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
 
 			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
@@ -205,17 +227,15 @@ namespace Raven.Database.Config
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
-				UseSsl = ravenSettings.UseSsl.Value;
+				Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
+				Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
 			}
 
 			SetVirtualDirectory();
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
 
-			if (ravenSettings.AccessControlAllowOrigin.Value == null)
-				AccessControlAllowOrigin = new HashSet<string>();
-			else
-				AccessControlAllowOrigin = new HashSet<string>(ravenSettings.AccessControlAllowOrigin.Value.Split());
+			AccessControlAllowOrigin = ravenSettings.AccessControlAllowOrigin.Value == null ? new HashSet<string>() : new HashSet<string>(ravenSettings.AccessControlAllowOrigin.Value.Split());
 			AccessControlMaxAge = ravenSettings.AccessControlMaxAge.Value;
 			AccessControlAllowMethods = ravenSettings.AccessControlAllowMethods.Value;
 			AccessControlRequestHeaders = ravenSettings.AccessControlRequestHeaders.Value;
@@ -244,28 +264,40 @@ namespace Raven.Database.Config
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
-		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
-			VoronInitialFileSize = ravenSettings.VoronInitialFileSize.Value;
+		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
+			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
+
+			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
+			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
+
+			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
+
+            FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
+
+			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			PostInit();
 		}
 
-		public int EncryptionKeyBitsPreference
-		{
-		    get; set;
-		}
+		public int MaxConcurrentServerRequests { get; set; }
+
+		public int MaxConcurrentMultiGetRequests { get; set; }
+
+		public int PrefetchingDurationLimit { get; private set; }
+
+		public TimeSpan BulkImportBatchTimeout { get; set; }
 
 		/// <summary>
         /// This limits the number of concurrent multi get requests,
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
         /// </summary>
-        public SemaphoreSlim ConcurrentMultiGetRequests = new SemaphoreSlim(192);
+		public SemaphoreSlim ConcurrentMultiGetRequests;
 
 		/// <summary>
 		/// The time to wait before canceling a database operation such as load (many) or query
 		/// </summary>
-		public TimeSpan DatbaseOperationTimeout { get; private set; }
+		public TimeSpan DatabaseOperationTimeout { get; private set; }
 
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
 
@@ -299,6 +331,19 @@ namespace Raven.Database.Config
 					.Distinct();
 			}
 		}
+
+		private HashSet<string> headersToIgnore;
+		public HashSet<string> HeadersToIgnore
+		{
+			get
+			{
+				if (headersToIgnore != null)
+					return headersToIgnore;
+
+				var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
+				return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
+			}
+		} 
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
@@ -364,7 +409,7 @@ namespace Raven.Database.Config
 			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 		}
 
-		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
+		private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
 		{
 			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
@@ -379,7 +424,7 @@ namespace Raven.Database.Config
 			{
 				return Convert.FromBase64String(key);
 			}
-			return defaultOauthKey.Value; // ensure we only create this once per process
+			return DefaultOauthKey.Value; // ensure we only create this once per process
 		}
 
 		public NameValueCollection Settings { get; set; }
@@ -408,7 +453,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(Encryption.UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -464,11 +509,7 @@ namespace Raven.Database.Config
 		/// The initial number of items to take when indexing a batch
 		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
-		public int InitialNumberOfItemsToIndexInSingleBatch
-		{
-			get { return initialNumberOfItemsToIndexInSingleBatch; }
-			set { initialNumberOfItemsToIndexInSingleBatch = value; }
-		}
+		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		/// <summary>
 		/// Max number of items to take for reducing in a batch
@@ -525,16 +566,6 @@ namespace Raven.Database.Config
 		/// Default: none, binds to all host names
 		/// </summary>
 		public string HostName { get; set; }
-
-		/// <summary>
-		/// Whatever we should use SSL for this connection
-		/// </summary>
-		public bool UseSsl { get; set; }
-
-		/// <summary>
-		/// Whatever we should use FIPS compliant encryption algorithms
-		/// </summary>
-		public bool UseFips { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
@@ -605,11 +636,7 @@ namespace Raven.Database.Config
 		/// Allowed values: All, Get, None
 		/// Default: Get
 		/// </summary>
-		public AnonymousUserAccessMode AnonymousUserAccessMode
-		{
-			get { return anonymousUserAccessMode; }
-			set { anonymousUserAccessMode = value; }
-		}
+		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		/// <summary>
 		/// If set local request don't require authentication
@@ -716,9 +743,15 @@ namespace Raven.Database.Config
 
 		#endregion
 
-		#region Misc settings
+        #region File System Settings
 
-		/// <summary>
+        public TimeSpan MaxSynchronizationInterval { get; set; } 
+
+        #endregion
+
+        #region Misc settings
+
+        /// <summary>
 		/// The directory to search for RavenDB's WebUI. 
 		/// This is usually only useful if you are debugging RavenDB's WebUI. 
 		/// Default: ~/Raven/WebUI 
@@ -737,7 +770,7 @@ namespace Raven.Database.Config
 				ResetContainer();
 				// remove old directory catalog
 				var matchingCatalogs = Catalog.Catalogs.OfType<DirectoryCatalog>()
-					.Concat(Catalog.Catalogs.OfType<Raven.Database.Plugins.Catalogs.FilteredCatalog>()
+					.Concat(Catalog.Catalogs.OfType<Plugins.Catalogs.FilteredCatalog>()
 								.Select(x => x.CatalogToFilter as DirectoryCatalog)
 								.Where(x => x != null)
 					)
@@ -799,8 +832,7 @@ namespace Raven.Database.Config
 		private string fileSystemIndexStoragePath;
 		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
-		private int initialNumberOfItemsToIndexInSingleBatch;
-		private AnonymousUserAccessMode anonymousUserAccessMode;
+
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
@@ -834,7 +866,7 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// Limit of how much indexing process can take memory (in MBytes)
 		/// </summary>
-		public int MemoryLimitForIndexingInMB { get; set; }
+		public int MemoryLimitForIndexingInMb { get; set; }
 
 		public string IndexStoragePath
 		{
@@ -913,11 +945,11 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int MaxIndexOutputsPerDocument { get; set; }
 
-		[Browsable(false)]
-        /// <summary>
+		/// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
         /// the facet cache when finishing an indexing batch
         /// </summary>
+		[Browsable(false)]
 	    public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
 	    
         /// <summary>
@@ -926,18 +958,6 @@ namespace Raven.Database.Config
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
-
-        /// <summary>
-        /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
-        /// By default it is 4.
-        /// Minimum value is 2.
-        /// </summary>
-        public int VoronMaxBufferPoolSize { get; set; }
-
-		/// <summary>
-		/// You can use this setting to specify an initial file size for data file (in bytes).
-		/// </summary>
-		public int? VoronInitialFileSize { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -1005,7 +1025,7 @@ namespace Raven.Database.Config
 
         //TODO : perhaps refactor with enums?
 	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
-	    {
+		{
 	        switch (typeName.ToLowerInvariant())
 	        {
 	            case EsentTypeName:
@@ -1092,11 +1112,82 @@ namespace Raven.Database.Config
 			Port = defaultConfiguration.Port;
 			OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+
+            DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
+            DefaultStorageTypeName = defaultConfiguration.DefaultStorageTypeName;
+
+            FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
 		{
 			return ConfigOptionDocs.OptionsDocs;
+		}
+
+		public class StorageConfiguration
+		{
+			public StorageConfiguration()
+			{
+				Voron = new VoronConfiguration();
+			}
+
+			public VoronConfiguration Voron { get; private set; }
+
+			public class VoronConfiguration
+			{
+				/// <summary>
+				/// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
+				/// By default it is 4.
+				/// Minimum value is 2.
+				/// </summary>
+				public int MaxBufferPoolSize { get; set; }
+
+				/// <summary>
+				/// You can use this setting to specify an initial file size for data file (in bytes).
+				/// </summary>
+				public int? InitialFileSize { get; set; }
+			}
+		}
+
+		public class PrefetcherConfiguration
+		{
+			/// <summary>
+			/// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
+			/// </summary>
+			public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+			/// <summary>
+			/// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
+			/// </summary>
+			public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+		}
+
+		public class ReplicationConfiguration
+		{
+			/// <summary>
+			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
+			/// </summary>
+			public int FetchingFromDiskTimeoutInSeconds { get; set; }
+		}
+
+        public class FileSystemConfiguration
+        {
+            public TimeSpan MaximumSynchronizationInterval { get; set; }
+        }
+
+		public class EncryptionConfiguration
+		{
+			/// <summary>
+			/// Whatever we should use FIPS compliant encryption algorithms
+			/// </summary>
+			public bool UseFips { get; set; }
+
+			public int EncryptionKeyBitsPreference { get; set; }
+
+			/// <summary>
+			/// Whatever we should use SSL for this connection
+			/// </summary>
+			public bool UseSsl { get; set; }
 		}
 	}
 }

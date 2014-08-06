@@ -21,7 +21,7 @@ namespace RavenFS.Tests
         [InlineData(1024 * 1024 * 8)]	// 8 mb
         public async void CanHandleBigFiles(int size)
 		{
-            var client = NewClient(1);
+            var client = NewAsyncClient(1);
             await client.UploadAsync("mb.bin", new RandomStream(size));
 
             var files = await client.BrowseAsync();
@@ -31,8 +31,8 @@ namespace RavenFS.Tests
             // REVIEW: (Oren) what does UploadedSize means and where it is sent over? RavenFS-Size is that?
             //Assert.Equal(size, files.First().UploadedSize);
 
-            var downloadData = new MemoryStream();
-            await client.DownloadAsync("mb.bin", downloadData);
+            var downloadData = new MemoryStream();            
+            (await client.DownloadAsync("mb.bin")).CopyTo(downloadData);
 
             Assert.Equal(size, downloadData.Length);
 		}
@@ -44,7 +44,7 @@ namespace RavenFS.Tests
             var buffer = new byte[size];
             new Random().NextBytes(buffer);
 
-            var client = NewClient(1);
+            var client = NewAsyncClient(1);
             await client.UploadAsync("mb.bin", new MemoryStream(buffer));
 
             var files = await client.BrowseAsync();
@@ -52,7 +52,7 @@ namespace RavenFS.Tests
             Assert.Equal(size, files.First().TotalSize);
 
             var downloadData = new MemoryStream();
-            await client.DownloadAsync("mb.bin", downloadData, skip);
+            (await client.DownloadAsync("mb.bin", null, skip)).CopyTo(downloadData);
 
             var expected = buffer.Skip(skip).ToArray();
             Assert.Equal(expected.Length, downloadData.Length);

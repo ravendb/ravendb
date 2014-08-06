@@ -31,7 +31,7 @@ namespace Voron.Debugging
                         return null;
 
                     if (Value is Slice)
-                        return new MemoryStream(Encoding.UTF8.GetBytes(Value.ToString()));
+                        return new MemoryStream(Encoding.UTF8.GetBytes(Value.ToString().Replace("|,|",",")));
 
                     if (Value is Stream)
                         return Value as Stream;
@@ -75,7 +75,7 @@ namespace Voron.Debugging
                         ownsStream = true;
                     }
 
-                    entryValue = Encoding.UTF8.GetString(ms.ToArray());
+                    entryValue = Encoding.UTF8.GetString(ms.ToArray()).Replace(",","|");
 
                     if (ownsStream)
                     {
@@ -91,9 +91,13 @@ namespace Voron.Debugging
                         var array = new byte[slice.Size];
                         slice.CopyTo(array);
 
-                        entryValue = Encoding.UTF8.GetString(array);
+						entryValue = Encoding.UTF8.GetString(array).Replace(",", "|");
                     }
-                    else if (Value == Stream.Null || Value == null)
+					else if (Value != null && (Value.GetType().IsPrimitive || Value is String))
+					{
+						entryValue = Value.ToString().Replace(",", "|");
+					}
+					else if (Value == Stream.Null || Value == null)
                     {
                         // do nothing
                     }
@@ -103,7 +107,10 @@ namespace Voron.Debugging
                     }
                 }
 
-                return string.Format("{0},{1},{2},{3}", ActionType, TreeName, Key, entryValue);
+                var line = string.Format("{0},{1},{2},{3}", ActionType, TreeName, Key, entryValue);
+				Debug.Assert(line.Count(x => x == ',') == 3);
+	            
+				return line;
             }
 
             private string ToCsvWithValueLengthOnly()
@@ -122,6 +129,7 @@ namespace Voron.Debugging
                 if (columnArray.Count != 4)
                     throw new ArgumentException("invalid csv data - check that you do not have commas in data");
 
+	            columnArray[3] = columnArray[3].Replace('|', ',');
                 try
                 {
                     if (columnArray[0] == DebugActionType.CreateTree.ToString())
@@ -187,7 +195,8 @@ namespace Voron.Debugging
         private FileStream _journalFileStream;
         private TextWriter _journalWriter;
         private const string FileExtension = ".djrs";
-
+		private readonly object _journalWriteSyncObject = new object();
+		private bool _isDisposed;
         public bool IsRecording { get; set; }
 
         public bool RecordOnlyValueLength { get; set; }
@@ -197,13 +206,19 @@ namespace Voron.Debugging
         public DebugJournal(string journalName, StorageEnvironment env, bool isRecordingByDefault = false)
         {
             _env = env;
+			
             IsRecording = isRecordingByDefault;
             InitializeDebugJournal(journalName);
+	        _isDisposed = false;
         }
 
         private void InitializeDebugJournal(string journalName)
         {
             Dispose();
+	        var journalFileInfo = new FileInfo(journalName + FileExtension);
+	        if (journalFileInfo.Exists && journalFileInfo.Length >= 1024 * 1024 * 1024) //precaution - don't let the files grow too much
+				journalFileInfo.Delete();
+
             _journalFileStream = new FileStream(journalName + FileExtension, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             _journalWriter = new StreamWriter(_journalFileStream, Encoding.UTF8);
             WriteQueue = new ConcurrentQueue<ActivityEntry>();
@@ -211,14 +226,15 @@ namespace Voron.Debugging
 
         public void Load(string journalName)
         {
-            InitializeDebugJournal(journalName);
             using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
             {
                 while (journalReader.Peek() >= 0)
                 {
-                    var csvLine = journalReader.ReadLine();
-                    if (!string.IsNullOrWhiteSpace(csvLine))
-                        WriteQueue.Enqueue(ActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength));
+	                var csvLine = journalReader.ReadLine();
+	                if (!string.IsNullOrWhiteSpace(csvLine))
+	                {
+						WriteQueue.Enqueue(ActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength));
+					}
                 }
             }
 
@@ -240,7 +256,12 @@ namespace Voron.Debugging
             {
                 var newAction = new ActivityEntry(actionType, key, treeName, value);
                 WriteQueue.Enqueue(newAction);
-                _journalWriter.WriteLine(newAction.ToCsvLine(RecordOnlyValueLength));
+				lock(_journalWriteSyncObject)
+					if (!_isDisposed)
+					{
+						_journalWriter.WriteLine(newAction.ToCsvLine(RecordOnlyValueLength));
+						_journalWriter.Flush();
+					}
             }
         }
 
@@ -249,7 +270,9 @@ namespace Voron.Debugging
         {
             try
             {
-                _journalWriter.Flush();
+				lock(_journalWriteSyncObject)
+					if(!_isDisposed)
+						_journalWriter.Flush();
             }
             catch (ObjectDisposedException)
             {
@@ -287,6 +310,10 @@ namespace Voron.Debugging
                                 tx.Commit();
                             }
                             break;
+						case DebugActionType.Increment:
+							//TODO : make sure this is correct here
+							writeBatch.Increment(entry.Key, entry.ValueStream.ReadByte(), entry.TreeName);
+							break;
                         default: //precaution against newly added action types
                             throw new InvalidOperationException("unsupported tree action type");
                     }
@@ -302,11 +329,16 @@ namespace Voron.Debugging
         {
             try
             {
-                if (_journalWriter != null)
-                    _journalWriter.Dispose();
+	            lock (_journalWriteSyncObject)
+	            {
+		            if (_journalWriter != null)
+			            _journalWriter.Dispose();
 
-                if (_journalFileStream != null)
-                    _journalFileStream.Dispose();
+		            if (_journalFileStream != null)
+			            _journalFileStream.Dispose();
+
+		            _isDisposed = true;
+	            }
             }
             catch (ObjectDisposedException)
             {

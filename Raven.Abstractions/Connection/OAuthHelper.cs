@@ -1,15 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-#if NETFX_CORE
-using Windows.Security.Cryptography.Core;
-using Windows.Security.Cryptography;
-using Windows.Storage.Streams;
-#else
-using System.Security.Cryptography;
-#endif
 using System.Text;
-using System.Threading;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
@@ -36,29 +28,19 @@ namespace Raven.Abstractions.Connection
 			public const string WWWAuthenticateHeaderKey = "Raven ";
 		}
 
-#if NETFX_CORE
-		[ThreadStatic]
-		private static KeyDerivationAlgorithmProvider sha1;
-#else
 		[ThreadStatic]
 		private static IHashEncryptor sha1;
-#endif
 
 		/**** Cryptography *****/
 
 		public static string Hash(string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
-#if NETFX_CORE
-			/*if (sha1 == null)
-				sha1 = KeyDerivationAlgorithmProvider.OpenAlgorithm(KeyDerivationAlgorithmNames.Pbkdf2Sha1);*/
-			throw new NotImplementedException("WinRT...");
-#else
+
 			if (sha1 == null)
 				sha1 = Encryptor.Current.CreateHash();
 			var hash = sha1.Compute20(bytes);
 			return BytesToString(hash);
-#endif
 		}
 
 		public static string EncryptAsymmetric(byte[] exponent, byte[] modulus, string data)
@@ -66,9 +48,6 @@ namespace Raven.Abstractions.Connection
 			var bytes = Encoding.UTF8.GetBytes(data);
 			var results = new List<byte>();
 
-#if NETFX_CORE
-			throw new NotImplementedException("WinRT...");
-#else
 			using (var aesKeyGen = Encryptor.Current.CreateSymmetrical(keySize: 256))
 			{
 				aesKeyGen.GenerateKey();
@@ -83,12 +62,8 @@ namespace Raven.Abstractions.Connection
 				}
 			}
 			return BytesToString(results.ToArray());
-#endif
 		}
 
-#if NETFX_CORE
-		
-#else
 		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
 		{
 			using (var rsa = Encryptor.Current.CreateAsymmetrical(exponent, modulus))
@@ -96,7 +71,6 @@ namespace Raven.Abstractions.Connection
 				return rsa.Encrypt(key.Concat(iv).ToArray(), true);
 			}
 		}
-#endif
 
 		/**** On the wire *****/
 

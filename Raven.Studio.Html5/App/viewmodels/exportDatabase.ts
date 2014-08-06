@@ -54,19 +54,6 @@ class exportDatabase extends viewModelBase {
         });
     }
 
-    /*
-     * public enum ItemType
-	{
-		Documents = 0x1,
-		Indexes = 0x2,
-		Attachments = 0x4,
-		Transformers = 0x8,
-
-        RemoveAnalyzers = 0x8000,
-	}
-     * 
-     */
-
     startExport() {
         var operateOnTypes = 0;
         if (this.includeDocuments()) {
@@ -85,7 +72,6 @@ class exportDatabase extends viewModelBase {
             operateOnTypes += 8000;
         }
 
-
         var filtersToSend: filterSettingDto[] = [];
         filtersToSend.pushAll(this.filters());
 
@@ -98,7 +84,6 @@ class exportDatabase extends viewModelBase {
             });
         }
 
-
         var smugglerOptions = {
             OperateOnTypes: operateOnTypes,
             BatchSize: this.batchSize(),
@@ -106,12 +91,11 @@ class exportDatabase extends viewModelBase {
             Filters: filtersToSend,
             TransformScript: this.transformScript()
         };
-        /*
-        new exportDatabaseCommand(smugglerOptions, this.activeDatabase())
-            .execute();*/
+        
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
         $("#dbExportDownloadForm").submit();
     }
+
     selectOptions(){
         this.showAdvancedOptions(false);
     }

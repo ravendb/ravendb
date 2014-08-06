@@ -49,8 +49,20 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 
-       
 
+	    public CounterStorage CounterStorage
+	    {
+	        get
+	        {
+                var counterStorage = CountersLandlord.GetCounterInternal(CountersName);
+                if (counterStorage == null)
+                {
+                    throw new InvalidOperationException("Could not find a counter storage named: " + CountersName);
+                }
+
+                return counterStorage.Result;
+	        }
+	    }
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
@@ -243,14 +255,19 @@ namespace Raven.Database.Counters.Controllers
 			get { return "counters/" + CountersName; }
 		}
 
-		public override void MarkRequestDuration(long duration)
-		{
-		}
+        public override void MarkRequestDuration(long duration)
+        {
+            if (Storage == null)
+                return;
+            Storage.MetricsCounters.RequestDuationMetric.Update(duration);
+        }
 
 		public override InMemoryRavenConfiguration SystemConfiguration
 		{
 			get { return CountersLandlord.SystemConfiguration; }
 		}
+
+       
 
 		public CounterStorage Storage
 		{

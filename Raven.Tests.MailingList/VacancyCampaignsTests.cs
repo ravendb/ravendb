@@ -55,18 +55,6 @@ namespace Raven.Tests.MailingList
 									   Active = c.Active
 								   };
 
-				TransformResults = (store, results) => from result in results
-													   let vacancy = store.Load<Vacancy>(result.Id)
-													   let campaign = vacancy.Campaigns.FirstOrDefault(c => c.Id.ToString() == result.CampaignId.ToString())
-													   select new
-													   {
-														   Id = result.Id,
-														   Category = vacancy.Category,
-														   CampaignId = result.CampaignId,
-														   Title = campaign.Title,
-														   Active = campaign.Active
-													   };
-
 				Store(x => x.Id, FieldStorage.Yes);
 				Store(x => x.CampaignId, FieldStorage.Yes);
 			}
@@ -82,10 +70,31 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
+		public class VacancyCampaignsTransformer : AbstractTransformerCreationTask<VacancyCampaignsIndex.ReduceResult>
+		{
+			public VacancyCampaignsTransformer()
+			{
+
+				TransformResults = results => from result in results
+													   let vacancy = LoadDocument<Vacancy>(result.Id)
+													   let campaign = vacancy.Campaigns.FirstOrDefault(c => c.Id.ToString() == result.CampaignId.ToString())
+													   select new
+													   {
+														   Id = result.Id,
+														   Category = vacancy.Category,
+														   CampaignId = result.CampaignId,
+														   Title = campaign.Title,
+														   Active = campaign.Active
+													   };
+			}
+		}
+
 		public VacancyCampaignsTests()
 		{
 			Store = NewDocumentStore();
 			new VacancyCampaignsIndex().Execute(Store);
+			new VacancyCampaignsTransformer().Execute(Store);
+
 			using (var session = Store.OpenSession())
 			{
 				var v1 = new Vacancy { Category = "Industrial" };
@@ -115,7 +124,7 @@ namespace Raven.Tests.MailingList
 				var results = session.Query<VacancyCampaignsIndex.ReduceResult, VacancyCampaignsIndex>()
 					.Customize(x => x.WaitForNonStaleResults())
 					.Where(x => x.Active)
-					.AsProjection<VacancyCampaignsIndex.ReduceResult>()
+					.ProjectFromIndexFieldsInto<VacancyCampaignsIndex.ReduceResult>()
 					.ToList();
 				Assert.Equal(2, results.Count());
 			}

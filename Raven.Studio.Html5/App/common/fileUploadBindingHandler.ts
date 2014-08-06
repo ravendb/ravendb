@@ -4,6 +4,7 @@ import system = require("durandal/system");
 import uploadItem = require("models/uploadItem");
 import uploadFileToFilesystemCommand = require("commands/filesystem/uploadFileToFilesystemCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import uploadQueueHelper = require("common/uploadQueueHelper");
 
 // Usage: <input type="file" data-bind="fileUpload: { files: files, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
 // files: KnockoutObservable<File[]>
@@ -28,8 +29,10 @@ class fileUploadBindingHandler {
 
     update(element: HTMLInputElement, valueAccessor, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {
         var options: {
-            files: KnockoutObservable<File[]>;
+            files: KnockoutObservable<FileList>;
+            directory: KnockoutObservable<string>;
             uploads: KnockoutObservableArray<uploadItem>;
+            before?: () => void;
             success: (i: uploadItem) => void;
             fail: (i: uploadItem) => void;
         } = <any>ko.utils.unwrapObservable(valueAccessor());
@@ -37,22 +40,27 @@ class fileUploadBindingHandler {
         var filesystem = ko.utils.unwrapObservable<filesystem>(bindingContext.$data["activeFilesystem"]);
         
         if (options) {
-            // Access the files observable now so that .update is called whenever it changes.
             options.files();
+            // Access the files observable now so that .update is called whenever it changes.
             if (element.files.length) {
+                if (options.before) {
+                    options.before();
+                }
                 var files = element.files;
                 for (var i = 0; i < files.length; i++) {
                     var file = files[i];
                     var guid = system.guid();
-                    var item = new uploadItem(guid, file.name, "Queued", context.activeFilesystem());
+                    var directory = options.directory() ? options.directory() : ""
+                    var item = new uploadItem(guid, directory + "/" + file.name, uploadQueueHelper.queuedStatus, context.activeFilesystem());
                     options.uploads.push(item);
-
-                    new uploadFileToFilesystemCommand(file, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)
+                    
+                    new uploadFileToFilesystemCommand(file, directory, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)
                         .execute()
                         .done((x: uploadItem) => options.success(x))
                         .fail((x: uploadItem) => options.fail(x));
 
-                    item.status("Uploading...");
+                    item.status(uploadQueueHelper.uploadingStatus);
+                    options.uploads(uploadQueueHelper.sortUploadQueue(options.uploads()));
                     options.uploads.notifySubscribers(options.uploads());
                 }
             }

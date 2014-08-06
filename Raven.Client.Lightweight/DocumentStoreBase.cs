@@ -12,11 +12,7 @@ using Raven.Client.Document.DTC;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#else
-using Raven.Abstractions.Util.Encryptors;
-#endif
+
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 
@@ -58,7 +54,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Whatever the instance has been disposed
 		/// </summary>
-		public bool WasDisposed { get; protected set; }
+        public bool WasDisposed { get; protected set; }
 
 		/// <summary>
 		/// Subscribe to change notifications from the server
@@ -72,15 +68,11 @@ namespace Raven.Client
 
 		public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
 		public virtual NameValueCollection SharedOperationsHeaders { get; protected set; }
-#else
-		public virtual IDictionary<string,string> SharedOperationsHeaders { get; protected set; }
-#endif
 
 		public abstract bool HasJsonRequestFactory { get; }
 		public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
@@ -90,7 +82,6 @@ namespace Raven.Client
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !NETFX_CORE
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
@@ -121,7 +112,6 @@ namespace Raven.Client
 	    {
 	        return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }
-#endif
 
 		private DocumentConvention conventions;
 
@@ -185,9 +175,8 @@ namespace Raven.Client
 			return LastEtagHolder.GetLastWrittenEtag();
 		}
 
-#if !NETFX_CORE
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
-#endif
+
 		protected void EnsureNotClosed()
 		{
 			if (WasDisposed)
@@ -203,20 +192,11 @@ namespace Raven.Client
 		private DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
-		/// Registers the conversion listener.
+		/// Registers the extended conversion listener.
 		/// </summary>
 		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
 		{
 			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-			return this;
-		}
-
-		/// <summary>
-		/// Registers the extended conversion listener.
-		/// </summary>
-		public DocumentStoreBase RegisterListener(IExtendedDocumentConversionListener conversionListener)
-		{
-			listeners.ExtendedConversionListeners = listeners.ExtendedConversionListeners.Concat(new[] { conversionListener, }).ToArray();
 			return this;
 		}
 
@@ -261,14 +241,6 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Gets a read-only collection of the registered conversion listeners.
-		/// </summary>
-		public ReadOnlyCollection<IDocumentConversionListener> RegisteredConversionListeners
-		{
-			get { return new ReadOnlyCollection<IDocumentConversionListener>(listeners.ConversionListeners); }
-		}
-
-		/// <summary>
 		/// Gets a read-only collection of the registered query listeners.
 		/// </summary>
 		public ReadOnlyCollection<IDocumentQueryListener> RegisteredQueryListeners
@@ -300,17 +272,17 @@ namespace Raven.Client
 			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
-		protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-		{
-			var onSessionCreatedInternal = SessionCreatedInternal;
-			if (onSessionCreatedInternal != null)
-				onSessionCreatedInternal(session);
-		}
+        protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+        {
+            var onSessionCreatedInternal = SessionCreatedInternal;
+            if (onSessionCreatedInternal != null)
+                onSessionCreatedInternal(session);
+        }
 
-		///<summary>
-		/// Internal notification for integration tools, mainly
-		///</summary>
-		public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
+        ///<summary>
+        /// Internal notification for integration tools, mainly
+        ///</summary>
+        public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
 
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
@@ -333,7 +305,6 @@ namespace Raven.Client
 			return AggressivelyCacheFor(TimeSpan.FromDays(1));
 		}
 
-#if !NETFX_CORE
 		protected void InitializeEncryptor()
 		{
 			var setting = ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];
@@ -344,12 +315,5 @@ namespace Raven.Client
 
 			Encryptor.Initialize(fips);
 		}
-#else
-		protected void InitializeEncryptor()
-		{
-			Encryptor.Initialize(UseFipsEncryptionAlgorithms);
-		}
-#endif
-
     }
 }

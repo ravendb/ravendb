@@ -75,14 +75,7 @@ namespace Raven.Tests.MailingList
 										  Alias = duck.Name,
 										  Type = AnimalClass.Has2Legs
 									  });
-				TransformResults = (database, animals) =>
-								   from animal in animals
-								   select new
-								   {
-									   Name = animal.Name,
-									   Alias = animal.Alias,
-									   Type = animal.Type // Comment out this line and all works fine
-								   };
+
 
 				Store(x=>x.Alias, FieldStorage.Yes);
 				Store(x=>x.Type, FieldStorage.Yes);

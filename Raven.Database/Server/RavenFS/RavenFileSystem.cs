@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.RavenFS;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -19,6 +18,7 @@ using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Json.Linq;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS
 {
@@ -41,7 +41,7 @@ namespace Raven.Database.Server.RavenFS
 
         public string Name { get; private set; }
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, TransportState transportState, string name)
+		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState recievedTransportState = null)
 		{
 		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
@@ -65,7 +65,7 @@ namespace Raven.Database.Server.RavenFS
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
-			this.transportState = transportState;
+			transportState = recievedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			fileLockManager = new FileLockManager();
 			storage.Initialize();
