@@ -99,10 +99,9 @@ namespace Raven.Database.Server.Controllers
 					if (cts.Token.IsCancellationRequested)
 					{
 						status.ExceptionDetails = "Task was cancelled";
-					
+						cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
 					}
 					throw;
-					
 				}
 				finally
 				{
