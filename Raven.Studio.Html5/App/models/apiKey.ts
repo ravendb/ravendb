@@ -47,7 +47,7 @@ class apiKey extends document {
             if (!this.name() || !this.secret()) {
                 return "Requires name and secret";
             }
-            return appUrl.forServer() + "/studio/index.html?api-key=" + this.fullApiKey();
+            return appUrl.forServer() + "/studio/index.html#api-key=" + this.fullApiKey();
         });
     }
 

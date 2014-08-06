@@ -130,23 +130,6 @@ namespace Owin
             }
             else if (context.Request.Uri.LocalPath.EndsWith("admin/logs/events"))
             {
-                /*public class LogEventInfoFormatted
-                    {
-                        public String Level { get; set; }
-                        public DateTime TimeStamp { get; set; }
-                        public string Message { get; set; }
-                        public string LoggerName { get; set; }
-                        public string Exception { get; set; }
-
-                        public LogEventInfoFormatted(LogEventInfo eventInfo)
-                        {
-                            TimeStamp = eventInfo.TimeStamp;
-                            Message = eventInfo.FormattedMessage;
-                            LoggerName = eventInfo.LoggerName;
-                            Level = eventInfo.Level.ToString();
-                            Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
-                        }
-                    }*/
                 var webSocketsTrasport = new WebSocketsTransport(options, context, (resourceName, currentWebsocketTransport, user) =>
                 {
                     try
@@ -261,8 +244,7 @@ namespace Owin
 
 		    private bool ShouldBuffer(HttpContent content)
 		    {
-		        return (content is ChangesPushContent ||
-                        content is LogsPushContent ||
+		        return (content is IEventsTransport ||
 		                content is StreamsController.StreamQueryContent ||
 		                content is StreamContent ||
 		                content is PushStreamContent ||

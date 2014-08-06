@@ -109,10 +109,6 @@ class customLogging extends dialogViewModelBase {
         $(".modalHost").css('top', newTopPercentString);
     }
 
-    onConfigSaved() {
-        messagePublisher.reportSuccess('Configuration saved!');
-    }
-
     generateBindingInputId(index: number) {
         return 'binding-' + index;
     }

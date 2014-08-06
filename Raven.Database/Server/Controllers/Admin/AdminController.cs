@@ -601,6 +601,7 @@ namespace Raven.Database.Server.Controllers.Admin
             }
         }
 
+
 	    [HttpGet]
 	    [Route("admin/logs/configure")]
 	    public HttpResponseMessage OnDemandLogConfig()
@@ -656,7 +657,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	    }
 
         [HttpGet]
-        [Route("admin/logs/events")] //TODO: support for web sockets
+        [Route("admin/logs/events")] 
         public HttpResponseMessage OnDemandLogFetch()
         {
             var logsTransport = new LogsPushContent(this);
