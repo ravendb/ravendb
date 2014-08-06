@@ -202,7 +202,8 @@ class databases extends viewModelBase {
     private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
         require(["commands/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
-            deferred = new createDefaultSettingsCommand(db, bundles).execute();
+            new createDefaultSettingsCommand(db, bundles).execute()
+                .always(() => deferred.resolve());
         });
         return deferred;
     }

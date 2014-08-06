@@ -307,15 +307,16 @@ class shell extends viewModelBase {
     private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
         var activeResource = activeResourceObservable();
         if (!!activeResource && resourceObservableArray.contains(activeResource) == false) {
-            var url = (activeResource instanceof database) ? "#databases" : (activeResource instanceof filesystem) ? "#filesystems" : "#counterstorages";
-            this.navigate(url);
             if (resourceObservableArray().length > 0) {
-                this.selectResource(resourceObservableArray().first());
+                resourceObservableArray().first().activate();
             } else if (resourceObservableArray().length == 0) {
                 //if we are in file systems or counter storages page
                 this.disconnectFromResourceChangesApi();
                 activeResourceObservable(null);
             }
+
+            var url = (activeResource instanceof database) ? "#databases" : (activeResource instanceof filesystem) ? "#filesystems" : "#counterstorages";
+            this.navigate(url);
         }
     }
 
