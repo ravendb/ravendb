@@ -98,12 +98,8 @@ namespace Raven.Database.Server.Controllers
 					if (cts.Token.IsCancellationRequested)
 					{
 						status.ExceptionDetails = "Task was cancelled";
-						cts.Token.ThrowIfCancellationRequested();
 					}
-					else
-					{
-						throw e;
-					}
+					throw;
 				}
 				finally
 				{
