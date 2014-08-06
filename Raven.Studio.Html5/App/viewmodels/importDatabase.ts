@@ -113,11 +113,12 @@ class importDatabase extends viewModelBase {
             new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
                 .execute()
                 .done((result: operationIdDto) => {
-                    this.isUploading = false;
                     var operationId = result.OperationId;
                     this.waitForOperationToComplete(db, operationId);
                     db.importStatus("Processing uploaded file");
-                });
+                })
+                .fail(() => db.importStatus(""))
+                .always(() => this.isUploading = false);
         });
     }
 

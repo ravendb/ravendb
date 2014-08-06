@@ -29,6 +29,8 @@ namespace Raven.Database.Server.Tenancy
 
 			string tempPath = Path.GetTempPath();
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (File.Exists(fullTempPath))
+				File.Delete(fullTempPath);
 			if (Directory.Exists(fullTempPath))
 				Directory.Delete(fullTempPath, true);
 
