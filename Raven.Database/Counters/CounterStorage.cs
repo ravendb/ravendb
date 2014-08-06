@@ -11,6 +11,7 @@ using Raven.Abstractions.Counters;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Voron;
 using Voron.Impl;
@@ -22,7 +23,7 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Raven.Database.Counters
 {
-	public class CounterStorage : IDisposable
+	public class CounterStorage : IResource,IDisposable
 	{
         public string CounterStorageUrl { get; private set; }
         private readonly StorageEnvironment storageEnvironment;
@@ -36,7 +37,7 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-	    public readonly string Name;
+	    public string Name { get; private set; }
 
 		private const int ServerId = 0; // local is always 0
 

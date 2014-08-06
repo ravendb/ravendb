@@ -224,7 +224,7 @@ namespace Raven.Database.Server.Security
 		{
 			var token = new OneTimeToken
 			{
-				ResourceName = resourceName,
+				ResourceName = string.IsNullOrEmpty(resourceName)?"<system>":resourceName,
 				User = user
 			};
 			var tokenString = Guid.NewGuid().ToString();

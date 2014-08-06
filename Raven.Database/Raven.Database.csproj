@@ -226,6 +226,7 @@
     <Compile Include="Bundles\Replication\Utils\ReplicationUtils.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
+    <Compile Include="Server\Abstractions\IResource.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />
