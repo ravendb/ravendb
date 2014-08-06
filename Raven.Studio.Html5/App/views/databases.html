@@ -8,7 +8,11 @@
             </h3>
         </li>
     </ul>
-
+    
+    <a class="btn btn-warning pull-right" data-bind="click: showApiKeys">api</a>
+    <a class="btn btn-warning pull-right" data-bind="click: showWindowsAuth">win</a>
+    <a class="btn btn-warning pull-right" data-bind="click: showBackupDatabase">backup</a>
+    <a class="btn btn-warning pull-right" data-bind="click: showRestoreDatabase">restore</a>
     <a class="btn btn-warning pull-right" data-bind="attr: { href: docsForSystemUrl }">System Database</a>
     
     <div class="text-center" data-bind="visible: databases().length == 1">

@@ -6,15 +6,14 @@
         <div class="btn-group">
             <button type="button" class="btn btn-default" data-bind="click: createNewApiKey" title="Create a new API Key (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></button>
         </div>
-        <div class="input-group" style="max-width: 300px;">
+        <div class="input-group" style="max-width: 500px;" data-bind="visible: apiKeys().length > 0">
             <span class="input-group-addon"><i class="fa fa-search"></i></span>
             <input type="text" class="form-control" placeholder="Search for API keys" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </div>
     </div>
     <br />
-    <div class="alert alert-info" data-bind="visible: apiKeys().length === 0">
-        <span>You don't have any API keys.</span>
-        <a href="#" class="alert alert-link" data-bind="click: createNewApiKey">Create one now</a>
+    <div class="text-center" data-bind="visible: apiKeys().length == 0">
+        <h3 class="text-info">You don't have any API keys. <small>Go ahead and <a href="#" data-bind="click: createNewApiKey">create one now</a>.</small></h3>
     </div>
     <div data-bind="foreach: apiKeys">
         <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid($index), 'panel-warning': !enabled() && isValid($index), 'panel-danger': !isValid($index) }">

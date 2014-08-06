@@ -60,6 +60,11 @@ class databases extends viewModelBase {
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
+        var db: database = this.activeDatabase();
+        if (!!db && db.isSystem == false) {
+            viewModelBase.isConfirmedUsingSystemDatabase = false;
+        }
+
         return true;
     }
 
@@ -319,6 +324,44 @@ class databases extends viewModelBase {
 
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
+
+    showApiKeys() {
+        this.promptNavSystemDb(false).done(() => {
+            require(["viewmodels/settingsDialog"], showDialog => {
+                var settingsDialog = new showDialog("viewmodels/apiKeys", "API Keys");
+                app.showDialog(settingsDialog);
+                
+            });
+        });
+    }
+
+    showWindowsAuth() {
+        this.promptNavSystemDb(false).done(() => {
+            require(["viewmodels/settingsDialog"], showDialog => {
+                var settingsDialog = new showDialog("viewmodels/windowsAuth", "Windows Authentication");
+                app.showDialog(settingsDialog);
+            });
+        });
+    }
+
+  
+    showBackupDatabase() {
+        this.promptNavSystemDb(false).done(() => {
+            require(["viewmodels/settingsDialog"], showDialog => {
+                var settingsDialog = new showDialog("viewmodels/backupDatabase", "Backup Database");
+                app.showDialog(settingsDialog);
+            });
+        });
+    }
+    showRestoreDatabase() {
+        this.promptNavSystemDb(false).done(() => {
+            require(["viewmodels/settingsDialog"], showDialog => {
+                var settingsDialog = new showDialog("viewmodels/restoreDatabase", "Restore Database");
+                app.showDialog(settingsDialog);
+            });
+        });
+    }
+
 }
 
 export = databases;

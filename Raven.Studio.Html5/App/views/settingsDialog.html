@@ -1,0 +1,24 @@
+﻿<style>
+    .composite-view {
+        overflow-x: hidden;
+        overflow-y: auto;
+        min-width: 90vw;
+        min-height: 70vh;
+        max-height: 70vh;
+    }
+</style>
+<div class="messageBox settings-container" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: close" aria-hidden="true"></button>
+        <h4 class="modal-title" data-bind="text: title"></h4>
+    </div>
+    <div class="modal-body">
+        <div class=" row">
+            <div class="col-md-10 composite-view" data-bind="compose: content"></div>
+            <div class="clearfix"></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bind="click: close">Done</button>
+    </div>
+</div>

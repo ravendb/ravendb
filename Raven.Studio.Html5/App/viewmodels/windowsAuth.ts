@@ -10,7 +10,9 @@ class windowsAuth extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
 
     canActivate(args) {
-        super.canActivate(args);
+        if (viewModelBase.isConfirmedUsingSystemDatabase == false) {
+            super.canActivate(args);
+        }
 
         var deffered = $.Deferred();
         this.setup(new windowsAuthSetup({ RequiredUsers: [], RequiredGroups: [] }));

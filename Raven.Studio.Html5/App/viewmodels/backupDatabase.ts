@@ -1,5 +1,4 @@
-﻿import backupDatabaseCommand = require("commands/backupDatabaseCommand");
-import viewModelBase = require("viewmodels/viewModelBase");
+﻿import viewModelBase = require("viewmodels/viewModelBase");
 
 class backupDatabase extends viewModelBase {
 
@@ -13,11 +12,13 @@ class backupDatabase extends viewModelBase {
             this.isBusy(!!newBackupStatus.IsRunning);
         };
         this.isBusy(true);
-        new backupDatabaseCommand(this.activeDatabase(), this.backupLocation(), updateBackupStatus)
-            .execute()
-            .always(() => this.isBusy(false));
-    }
 
+        require(["commands/backupDatabaseCommand"], backupDatabaseCommand => {
+            new backupDatabaseCommand(this.activeDatabase(), this.backupLocation(), updateBackupStatus)
+                .execute()
+                .always(() => this.isBusy(false));
+        });
+    }
 }
 
 export = backupDatabase;

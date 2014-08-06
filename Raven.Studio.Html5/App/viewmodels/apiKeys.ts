@@ -4,7 +4,6 @@ import apiKey = require("models/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import database = require("models/database");
-import saveApiKeysCommand = require("commands/saveApiKeysCommand");
 import databaseAccess = require("models/databaseAccess");
 import shell = require('viewmodels/shell');
 
@@ -28,7 +27,9 @@ class apiKeys extends viewModelBase {
     }
 
     canActivate(args) {
-        super.canActivate(args);
+        if (viewModelBase.isConfirmedUsingSystemDatabase == false) {
+            super.canActivate(args);
+        }
 
         var deffered = $.Deferred();
         this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
@@ -100,12 +101,14 @@ class apiKeys extends viewModelBase {
         var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => apiKeysNamesArray.contains(key.name()) == false);
         deletedApiKeys.forEach((key: apiKey) => key.setIdFromName());
 
-        new saveApiKeysCommand(this.apiKeys(), deletedApiKeys, this.activeDatabase())
-            .execute()
-            .done((result: bulkDocumentDto[]) => {
-                this.updateKeys(result);
-                this.saveLoadedApiKeys(this.apiKeys());
-                this.dirtyFlag().reset();
+        require(["commands/saveApiKeysCommand"], saveApiKeysCommand => {
+            new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
+                .execute()
+                .done((result: bulkDocumentDto[]) => {
+                    this.updateKeys(result);
+                    this.saveLoadedApiKeys(this.apiKeys());
+                    this.dirtyFlag().reset();
+                });
         });
     }
 

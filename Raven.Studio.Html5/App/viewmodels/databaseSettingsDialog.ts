@@ -1,38 +1,22 @@
 ﻿import app = require("durandal/app");
 import dialog = require("plugins/dialog");
-import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import database = require("models/database");
-import durandalRouter = require("plugins/router");
 import activator = require("durandal/activator");
 
 class databaseSettingsDialog extends dialogViewModelBase {
 
     public dialogTask = $.Deferred();
-//    router: DurandalRootRouter = null;
     routes: Array<{title:string; moduleId:string}>;
-    appUrls: computedAppUrls;
     activeScreen: KnockoutObservable<string> = ko.observable<string>("");
-    activeModel: KnockoutObservable<viewModelBase> = ko.observable<viewModelBase>(null);
-
-    activeRoute = ko.observable<string>();
-
-    bundleMap = { quotas: "Quotas", versioning: "Versioning" };
-    userDatabasePages = ko.observableArray([]);
-
-    dirtyFlag = new ko.DirtyFlag([]);
-
     content: DurandalActivator<any>;
     currentModel: viewModelBase;
+    dirtyFlag = new ko.DirtyFlag([]);
 
     constructor(bundles: Array<string>) {
         super();
 
         this.content = activator.create();
-
-
-        this.appUrls = appUrl.forCurrentDatabase();
 
         var quotasRoute = { moduleId: 'viewmodels/quotas', title: 'Quotas', activate: true};
         var versioningRoute = { moduleId: 'viewmodels/versioning', title: 'Versioning', activate: true};
@@ -41,15 +25,10 @@ class databaseSettingsDialog extends dialogViewModelBase {
         // when the activeScreen name changes - load the viewmodel
         this.activeScreen.subscribe((newValue) => 
             require([newValue], (model) => {
-                //this.activeModel(new model());
                 this.currentModel = new model();
                 this.content.activateItem(this.currentModel);
             })
-            );
-
-        this.activeModel.subscribe(() => {
-            debugger;
-        });
+        );
 
         this.routes = [];
         if (bundles.contains("Quotas")) {
@@ -61,7 +40,6 @@ class databaseSettingsDialog extends dialogViewModelBase {
         if (bundles.contains("SqlReplication")) {
             this.routes.push(sqlReplicationConnectionRoute);
         }
-
     }
 
     attached() {
