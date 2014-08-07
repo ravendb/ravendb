@@ -23,6 +23,7 @@ class appUrl {
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        upgrade: ko.computed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
@@ -124,6 +125,10 @@ class appUrl {
         return "#counterstorages/configuration?" + counterStroragePart;
     }
 
+
+    static forUpgrade(db: database) {
+        return "#databases/upgrade?" + appUrl.getEncodedDbPart(db);
+    }
     
 
     static forDatabases(): string {

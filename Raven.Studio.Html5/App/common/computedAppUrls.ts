@@ -5,6 +5,7 @@ interface computedAppUrls {
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
+    upgrade: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     newTransformer: KnockoutComputed<string>;
