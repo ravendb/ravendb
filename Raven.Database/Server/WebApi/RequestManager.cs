@@ -301,7 +301,10 @@ namespace Raven.Database.Server.WebApi
 
 			sw.Stop();
 
-		    controller.MarkRequestDuration(sw.ElapsedMilliseconds);
+            if (landlord.IsDatabaseLoaded(controller.TenantName ?? Constants.SystemDatabase))
+            {
+                controller.MarkRequestDuration(sw.ElapsedMilliseconds);    
+            }
 
 			LogHttpRequestStats(controller,logHttpRequestStatsParam, controller.TenantName);
 
