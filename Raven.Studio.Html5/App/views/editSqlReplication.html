@@ -1,10 +1,8 @@
 ﻿<section id="editSQLReplication">
     <form class="form-horizontal" role="form" data-bind="submit: save">
         <div class="btn-toolbar">
-
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse edit-sql-replication-actions btn-toolbar">
-
                     <div class="btn-group">
                         <button type="submit" class="btn btn-primary" data-bind="enable: $root.isSaveEnabled()" title="Save the index (Alt+S)" accesskey="S">
                             <i class="fa fa-save"></i>
@@ -40,9 +38,6 @@
                     <div class="btn-group pull-right advanced-toggle">
                         <a class="btn btn-default" data-bind="text:'Advanced mode', attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}"></a>
                     </div>
-
-
-
                 </div>
             </nav>
         </div>

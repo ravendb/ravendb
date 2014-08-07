@@ -15,6 +15,8 @@ class restoreDatabase extends viewModelBase {
     }
 
     startRestore() {
+        this.isBusy(true);
+
         var restoreDatabaseDto: restoreRequestDto = {
             RestoreLocation: this.backupLocation(),
             DatabaseLocation: this.databaseLocation(),
@@ -26,7 +28,6 @@ class restoreDatabase extends viewModelBase {
         };
 
         require(["commands/startRestoreCommand"], startRestoreCommand => {
-            this.isBusy(true);
             new startRestoreCommand(this.defrag(), restoreDatabaseDto, updateRestoreStatus)
                 .execute();
         });

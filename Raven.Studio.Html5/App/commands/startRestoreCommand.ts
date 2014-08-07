@@ -15,27 +15,36 @@ class startRestoreCommand extends commandBase {
 
         new deleteDocumentCommand('Raven/Restore/Status', this.db)
             .execute()
-            .fail(response=> result.reject(response))
+            .fail((response: JQueryXHR) => {
+                this.reportError("Failed to delete resotre status document!", response.responseText, response.statusText);
+                this.logError(response, result);
+            })
             .done(_=> {
             this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
-                .fail(response=> {
-                    var r = JSON.parse(response.responseText);
-                    var restoreStatus: restoreStatusDto = { Messages: [r.Error], IsRunning: false };
-                    this.updateRestoreStatus(restoreStatus);
-                    result.reject(response);
+                .fail((response: JQueryXHR) => {
+                    this.reportError("Failed to restore backup!", response.responseText, response.statusText);
+                    this.logError(response, result);
                 })
-                .done(response => {
-                    this.getRestoreStatus(result);
-                });
+                .done(() => this.getRestoreStatus(result));
             });
 
         return result;
     }
 
+    private logError(response: JQueryXHR, result: JQueryDeferred<any>) {
+        var r = JSON.parse(response.responseText);
+        var restoreStatus: restoreStatusDto = { Messages: [r.Error], IsRunning: false };
+        this.updateRestoreStatus(restoreStatus);
+        result.reject();
+    }
+
     private getRestoreStatus(result: JQueryDeferred<any>) {
         new getDocumentWithMetadataCommand("Raven/Restore/Status", this.db)
             .execute()
-            .fail(response=> result.reject(response))
+            .fail((response: JQueryXHR) => {
+                this.reportError("Failed to fetch restore backup status!", response.responseText, response.statusText);
+                this.logError(response, result);
+            })
             .done((restoreStatus: restoreStatusDto)=> {
                 var lastMessage = restoreStatus.Messages.last();
                 var isRestoreFinished =

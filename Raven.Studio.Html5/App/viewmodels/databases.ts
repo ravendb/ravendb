@@ -14,7 +14,6 @@ class databases extends viewModelBase {
     isAnyDatabaseSelected: KnockoutComputed<boolean>;
     allCheckedDatabasesDisabled: KnockoutComputed<boolean>;
     systemDb: database;
-    docsForSystemUrl: string;
     optionsClicked = ko.observable<boolean>(false);
 
     constructor() {
@@ -22,7 +21,6 @@ class databases extends viewModelBase {
         
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
-        this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
 
         var currentDatabse = this.activeDatabase();

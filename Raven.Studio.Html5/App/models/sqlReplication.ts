@@ -38,7 +38,6 @@ class sqlReplication extends document {
     collections = ko.observableArray<string>();
     searchResults: KnockoutComputed<string[]>;
     
-
     showReplicationConfiguration = ko.observable<boolean>(false);
 
     constructor(dto: sqlReplicationDto) {
@@ -70,14 +69,11 @@ class sqlReplication extends document {
         });
 
         this.searchResults = ko.computed(() => {
-            var newRavenEntityName = this.ravenEntityName();
-            if (newRavenEntityName === "" || !newRavenEntityName) {
-                return this.collections();
-            } else {
-                return this.collections().filter((name) => {
-                    return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
-                });
+            var newRavenEntityName: string = this.ravenEntityName();
+            if (!newRavenEntityName || newRavenEntityName.length < 2) {
+                return [];
             }
+            return this.collections().filter((name) => name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1);
         });
         
         this.script.subscribe((newValue) => {

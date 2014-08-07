@@ -14,9 +14,6 @@
         <!-- Tab panes -->
         <div class="tab-content win-auth-tabs">
             <div class="tab-pane fade in active" id="windowsAuthUsers">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: addUserSettings" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
-                </div>
                 <div data-bind="foreach: setup().requiredUsers" class="win-auth-panels-container">
                     <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
                         <div class="panel-heading">
@@ -87,9 +84,6 @@
                 </div>
             </div>
             <div class="tab-pane fade" id="windowsAuthGroups">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: addGroupSettings"><i class="fa fa-plus"></i> Add Group Settings</button>
-                </div>
                 <div data-bind="foreach: setup().requiredGroups" class="win-auth-panels-container">
                     <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
                         <div class="panel-heading">

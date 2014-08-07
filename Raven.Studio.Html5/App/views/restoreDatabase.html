@@ -10,19 +10,19 @@
             <div class="form-group">
                 <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
                 <div class="col-sm-5">
-                    <input type="text" required class="form-control" id="backupLocation" placeholder="C:\path-to-your-backup-folder">
+                    <input data-bind="value: backupLocation" type="text" required class="form-control" id="backupLocation" placeholder="C:\path-to-your-backup-folder">
                 </div>
             </div>
             <div class="form-group">
                 <label for="databaseLocation" class="col-sm-2 control-label">Database Location</label>
                 <div class="col-sm-5">
-                    <input type="text" required class="form-control" id="databaseLocation" placeholder="C:\path-to-your-restored-database-folder">
+                    <input data-bind="value: databaseLocation" type="text" required class="form-control" id="databaseLocation" placeholder="C:\path-to-your-restored-database-folder">
                 </div>
             </div>
             <div class="form-group">
                 <label for="databaseName" class="col-sm-2 control-label">Database Name</label>
                 <div class="col-sm-3">
-                    <input type="text" required class="form-control" id="databaseName" placeholder="Restored database name">
+                    <input data-bind="value: databaseName" type="text" required class="form-control" id="databaseName" placeholder="Restored database name">
                 </div>
             </div>
             <div class="form-group">

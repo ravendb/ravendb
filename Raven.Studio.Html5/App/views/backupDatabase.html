@@ -12,13 +12,30 @@
             <div class="form-group">
                 <label for="databaseToBackup" class="col-sm-2 control-label">Database to backup</label>
                 <div class="col-sm-3">
-                    <input type="text" required="" class="form-control" id="databaseToBackup" data-bind="value: backupLocation" placeholder="Database name to backup">
+                    <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: databaseName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" placeholder="Database name to backup">
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
+                        <li role="presentation" data-bind="click: $parent.databaseName.bind($parent, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    
+<!--                    <input tabindex="2" required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'afterkeydown', attr: { 'id': 'sourceDocumentCollection'}" />
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection', foreach: searchResults">
+                        <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>-->
                 </div>
             </div>
             <div class="form-group">
                 <label for="location" class="col-sm-2 control-label">Location</label>
                 <div class="col-sm-5">
-                    <input type="text" required="" class="form-control" id="location" data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
+                    <input type="text" required class="form-control" id="location" data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
                 </div>
             </div>
             <div class="progress progress-striped active" data-bind="visible: isBusy">

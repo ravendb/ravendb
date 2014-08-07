@@ -2,7 +2,8 @@
 import windowsAuthData = require("models/windowsAuthData");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/getWindowsAuthCommand");
-import saveWindowsAuthCommand = require("commands/saveWindowsAuthCommand");
+import shell = require("viewmodels/shell");
+import database = require("models/database");
 
 class windowsAuth extends viewModelBase {
 
@@ -32,9 +33,11 @@ class windowsAuth extends viewModelBase {
     }
 
     saveChanges() {
-        new saveWindowsAuthCommand(this.setup().toDto())
-            .execute()
-            .done(() => this.dirtyFlag().reset());
+        require(["commands/saveWindowsAuthCommand"], saveWindowsAuthCommand => {
+            new saveWindowsAuthCommand(this.setup().toDto())
+                .execute()
+                .done(() => this.dirtyFlag().reset());
+        });
     }
 
     addUserSettings() {
