@@ -27,10 +27,6 @@ class apiKeys extends viewModelBase {
     }
 
     canActivate(args) {
-        if (viewModelBase.isConfirmedUsingSystemDatabase == false) {
-            super.canActivate(args);
-        }
-
         var deffered = $.Deferred();
         this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
 

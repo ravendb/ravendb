@@ -3,12 +3,16 @@
 class restoreDatabase extends viewModelBase {
 
     defrag = ko.observable<boolean>(false);
-    backupLocation = ko.observable<string>('C:\\path-to-your-backup-folder');
+    backupLocation = ko.observable<string>('');
     databaseLocation = ko.observable<string>();
     databaseName = ko.observable<string>();
 
     restoreStatusMessages = ko.observableArray<string>();
     isBusy = ko.observable<boolean>();
+
+    canActivate(args): any {
+        return true;
+    }
 
     startRestore() {
         var restoreDatabaseDto: restoreRequestDto = {
@@ -22,9 +26,9 @@ class restoreDatabase extends viewModelBase {
         };
 
         require(["commands/startRestoreCommand"], startRestoreCommand => {
-            new startRestoreCommand(this.activeDatabase(), this.defrag(), restoreDatabaseDto, updateRestoreStatus)
-                .execute()
-                .always(() => this.isBusy(false));
+            this.isBusy(true);
+            new startRestoreCommand(this.defrag(), restoreDatabaseDto, updateRestoreStatus)
+                .execute();
         });
     }
 }

@@ -7,7 +7,7 @@ import activator = require("durandal/activator");
 class databaseSettingsDialog extends dialogViewModelBase {
 
     public dialogTask = $.Deferred();
-    routes: Array<{title:string; moduleId:string}>;
+    routes: Array<{ title: string; moduleId: string }>;
     activeScreen: KnockoutObservable<string> = ko.observable<string>("");
     content: DurandalActivator<any>;
     currentModel: viewModelBase;
@@ -43,6 +43,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
     }
 
     attached() {
+        super.attached();
         this.dirtyFlag().reset();
         this.showView(this.routes[0].moduleId);
     }
@@ -56,25 +57,10 @@ class databaseSettingsDialog extends dialogViewModelBase {
         var isDirty = this.currentModel.dirtyFlag().isDirty();
         
         if (isDirty) {
-            return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
+            return app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['No', 'Yes']);
         }
 
         return true;
-    }
-
-    private confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No','Yes' ]): JQueryPromise<any> {
-        var viewTask = $.Deferred();
-        var messageView = app.showMessage(confirmationMessage, title, options);
-
-        messageView.done((answer) => {
-            if (answer == options[1]) {
-                viewTask.resolve({ can: true });
-            } else {
-                viewTask.resolve({ can: false });
-            }
-        });
-
-        return viewTask;
     }
 
     checkDirtyFlag(yesCallback: Function, noCallback?: Function) {

@@ -50,6 +50,7 @@ class shell extends viewModelBase {
     static databases = ko.observableArray<database>();
     listedDatabases: KnockoutComputed<database[]>;
     systemDatabase: database;
+    isSystemConnected: KnockoutComputed<boolean>;
     isActiveDatabaseDisabled: KnockoutComputed<boolean>;
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
@@ -109,6 +110,12 @@ class shell extends viewModelBase {
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
 
+        this.isSystemConnected = ko.computed(() => {
+            var activeDb = this.activeDatabase();
+            var systemDb = this.systemDatabase;
+            return (!!activeDb && !!systemDb) ? systemDb.name != activeDb.name : false;
+        });
+
         this.isActiveDatabaseDisabled = ko.computed(() => {
             var activeDb = this.activeDatabase();
             return !!activeDb ? activeDb.disabled() : false;
@@ -161,6 +168,7 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
+            { route: 'admin/settings*details', title: 'Admin Settings', moduleId: 'viewmodels/adminSettings', nav: true, hash: this.appUrls.adminSettings },
             { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
             { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
             { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
@@ -441,7 +449,11 @@ class shell extends viewModelBase {
                 }
                 else if (locationHash.indexOf("#counterstorages") == 0) {
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
-                } else {
+                }
+                else if (locationHash.indexOf("#admin/settings") == 0) {
+                    this.systemDatabase.activate();
+                }
+                else {
                     this.activateResource(appUrl.getDatabase(), shell.databases);
                 }
             });

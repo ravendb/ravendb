@@ -8,12 +8,9 @@ class windowsAuth extends viewModelBase {
 
     setup = ko.observable<windowsAuthSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
+    isUsersActive = ko.observable<boolean>(true);
 
     canActivate(args) {
-        if (viewModelBase.isConfirmedUsingSystemDatabase == false) {
-            super.canActivate(args);
-        }
-
         var deffered = $.Deferred();
         this.setup(new windowsAuthSetup({ RequiredUsers: [], RequiredGroups: [] }));
         this.fetchWindowsAuth().always(() => deffered.resolve({ can: true }));

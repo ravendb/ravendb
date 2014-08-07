@@ -9,9 +9,16 @@ class databaseSettingsDialog extends dialogViewModelBase {
     public dialogTask = $.Deferred();
     content: DurandalActivator<any>;
     currentModel: viewModelBase;
+    routes: Array<{ title: string; moduleId: string }>;
 
     constructor(moduleId: string, private title: string) {
         super();
+
+        this.routes = [
+            { moduleId: 'viewmodels/apiKeys', title: 'API Keys', activate: true },
+            { moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', activate: true },
+            { moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', activate: true }
+        ];
 
         this.content = activator.create();
 
@@ -19,6 +26,10 @@ class databaseSettingsDialog extends dialogViewModelBase {
             this.currentModel = new model();
             this.content.activateItem(this.currentModel);
         });
+    }
+
+    attache() {
+        super.attached();
     }
 
     detached() {

@@ -1,10 +1,25 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require("viewmodels/shell");
+import database = require("models/database");
 
 class backupDatabase extends viewModelBase {
 
-    backupLocation = ko.observable<string>("C:\\path-to-your-backup-folder");
+    backupLocation = ko.observable<string>('');
     backupStatusMessages = ko.observableArray<backupMessageDto>();
     isBusy = ko.observable<boolean>();
+    databaseNames: KnockoutComputed<Array<string>>;
+
+    constructor() {
+        super();
+
+        this.databaseNames = ko.computed(() => {
+            return shell.databases().map((db: database) => db.name);
+        });
+    }
+
+    canActivate(args): any {
+        return true;
+    }
 
     startBackup() {
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {

@@ -13,7 +13,6 @@ class settings extends viewModelBase {
 
     bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index"};
     userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
-    systemDatabasePages = ["API Keys", "Windows Authentication"];
     activeSubViewTitle: KnockoutComputed<string>;
 
     isEditingSqlReplication(navigationalModel:any, curNavHash:any) {
@@ -22,11 +21,8 @@ class settings extends viewModelBase {
             return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
                 (activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0 ||
                 activeRoute.route.indexOf('databases/settings/sqlReplicationConnectionStringsManagement') >= 0);
-        } else {
-            return false;
         }
-
-        //($root.router.navigationModel.first(function(x){return x.isActive}).hash().indexOf('databases/settings/editSqlReplication/')>=0)
+        return false;
     }
 
     constructor() {
@@ -37,8 +33,6 @@ class settings extends viewModelBase {
         this.isOnSystemDatabase = ko.computed(() => this.activeDatabase() && this.activeDatabase().isSystem);
         this.isOnUserDatabase = ko.computed(() => this.activeDatabase() && !this.isOnSystemDatabase());
 
-        var apiKeyRoute = { route: 'databases/settings/apiKeys', moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
-        var windowsAuthRoute = { route: 'databases/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var databaseSettingsRoute = { route: ['databases/settings', 'databases/settings/databaseSettings'], moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
         var quotasRoute = { route: 'databases/settings/quotas', moduleId: 'viewmodels/quotas', title: 'Quotas', nav: true, hash: appUrl.forCurrentDatabase().quotas };
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
@@ -53,8 +47,6 @@ class settings extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                apiKeyRoute,
-                windowsAuthRoute,
                 databaseSettingsRoute,
                 quotasRoute,
                 replicationsRoute,
@@ -139,10 +131,6 @@ class settings extends viewModelBase {
 
         if (this.isOnUserDatabase() && (this.userDatabasePages.indexOf(bundleTitle) !== -1)) {
             // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Export and Scripted Index are visible only when we're on a user database.
-            return true;
-        }
-        if (this.isOnSystemDatabase() && (this.systemDatabasePages.indexOf(bundleTitle) !== -1)) {
-            // API keys and Windows Auth are visible only when we're on the system database.
             return true;
         }
 

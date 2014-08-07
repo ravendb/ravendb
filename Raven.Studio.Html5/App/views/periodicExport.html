@@ -4,77 +4,77 @@
     </div>
     <div data-bind="visible: !unsupported()">
         <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
-            <nav class="navbar navbar-default" role="navigation">
-                <div class="collapse navbar-collapse">
-                    <div class="navbar-form">
-                        <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
-                        <button type="button" class="btn btn-default" title="Activate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: disabled()">
-                            <i class="fa fa-unlock"></i> Activate Periodic Export
-                        </button>
-                        <button type="button" class="btn btn-default" title="Deactivate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: !disabled()">
-                            <i class="fa fa-lock"></i> Deactivate Periodic Export
-                        </button>
-                    </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+                    <button type="button" class="btn btn-default" title="Activate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: disabled()">
+                        <i class="fa fa-unlock"></i> Activate Periodic Export
+                    </button>
+                    <button type="button" class="btn btn-default" title="Deactivate Periodic Export" data-bind="click: $root.activatePeriodicExport.bind($root), visible: !disabled()">
+                        <i class="fa fa-lock"></i> Deactivate Periodic Export
+                    </button>
                 </div>
-            </nav>
-            <div class="alert alert-warning" data-bind="visible: disabled()">
-                There is no Periodic Export set for this database.
-            </div>
-            <div data-bind="visible: !disabled()" id="periodicExportContainer">
-                <div class="form-group">
-                    <div class="col-sm-3">
-                        <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                <div class="panel-body">
+                    <div class="alert alert-warning" data-bind="visible: disabled()">
+                        There is no Periodic Export set for this database.
                     </div>
-                    <div class="col-sm-3">
-                        <input required type="text" class="form-control" data-bind="value: mainValue, valueUpdate: 'afterkeydown'" />
-                    </div>
-                </div>
-                <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
-                    <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
-                    <div class="col-sm-3">
-                        <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'" />
-                    </div>
-                </div>
-                <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
-                    <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
-                    <div class="col-sm-3">
-                        <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'" />
-                    </div>
-                </div>
-                <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
-                    <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
-                    <div class="col-sm-3">
-                        <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
-                    </div>
-                </div>
-                <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
-                    <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
-                    <div class="col-sm-3">
-                        <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
-                    </div>
-                </div>
-                <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
-                    <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
-                    <div class="col-sm-3">
-                        <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'" />
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
-                    <div class="col-sm-1">
-                        <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
-                    </div>
-                    <div class="col-sm-2">
-                        <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
-                    <div class="col-sm-1">
-                        <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
-                    </div>
-                    <div class="col-sm-2">
-                        <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
+                    <div data-bind="visible: !disabled()" id="periodicExportContainer">
+                        <div class="form-group">
+                            <div class="col-sm-3">
+                                <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                            </div>
+                            <div class="col-sm-3">
+                                <input required type="text" class="form-control" data-bind="value: mainValue, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
+                            <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
+                            <div class="col-sm-3">
+                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
+                            <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
+                            <div class="col-sm-3">
+                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
+                            <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
+                            <div class="col-sm-3">
+                                <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
+                            <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
+                            <div class="col-sm-3">
+                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
+                            <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
+                            <div class="col-sm-3">
+                                <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
+                            <div class="col-sm-1">
+                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
+                            </div>
+                            <div class="col-sm-2">
+                                <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
+                            <div class="col-sm-1">
+                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
+                            </div>
+                            <div class="col-sm-2">
+                                <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

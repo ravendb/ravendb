@@ -325,12 +325,21 @@ class databases extends viewModelBase {
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
 
-    showApiKeys() {
+
+
+    showBackupDatabase(db: database) {
+        require(["viewmodels/settingsDialog"], showDialog => {
+            var settingsDialog = new showDialog("viewmodels/backupDatabase", "Backup Database");
+            app.showDialog(settingsDialog);
+        });
+    }
+
+/*    showApiKeys() {
         this.promptNavSystemDb(false).done(() => {
             require(["viewmodels/settingsDialog"], showDialog => {
                 var settingsDialog = new showDialog("viewmodels/apiKeys", "API Keys");
                 app.showDialog(settingsDialog);
-                
+
             });
         });
     }
@@ -342,24 +351,11 @@ class databases extends viewModelBase {
                 app.showDialog(settingsDialog);
             });
         });
-    }
+    }*/
 
-  
-    showBackupDatabase() {
-        this.promptNavSystemDb(false).done(() => {
-            require(["viewmodels/settingsDialog"], showDialog => {
-                var settingsDialog = new showDialog("viewmodels/backupDatabase", "Backup Database");
-                app.showDialog(settingsDialog);
-            });
-        });
-    }
     showRestoreDatabase() {
-        this.promptNavSystemDb(false).done(() => {
-            require(["viewmodels/settingsDialog"], showDialog => {
-                var settingsDialog = new showDialog("viewmodels/restoreDatabase", "Restore Database");
-                app.showDialog(settingsDialog);
-            });
-        });
+        this.navigate("#admin/settings");
+        //this.systemDb.activate();
     }
 
 }
