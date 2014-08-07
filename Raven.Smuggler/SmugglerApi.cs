@@ -459,7 +459,7 @@ namespace Raven.Smuggler
 			request.ExecuteRequest();
 		}
 
-		private void ValidateThatServerIsUpAndDatabaseExists(RavenConnectionStringOptions server, DocumentStore s)
+		public static void ValidateThatServerIsUpAndDatabaseExists(RavenConnectionStringOptions server, DocumentStore s)
 		{
 			var shouldDispose = false;
 
@@ -470,7 +470,7 @@ namespace Raven.Smuggler
 								   : s.DatabaseCommands;
 
 				commands.GetStatistics(); // check if database exist
-		}
+			}
 			catch (Exception e)
 			{
 				shouldDispose = true;
@@ -490,9 +490,10 @@ namespace Raven.Smuggler
 					if (webException != null)
 					{
 						throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
-	}
+					}
 				} throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
-}			finally
+			}
+			finally
 			{
 				if (shouldDispose)
 					s.Dispose();
