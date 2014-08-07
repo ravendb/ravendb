@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -349,11 +350,24 @@ namespace Raven.Database.Server.WebApi
 
 		private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
-			if (Logger.IsDebugEnabled == false)
-				return;
 
 			if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
 				return;
+
+            var curReq = Interlocked.Increment(ref reqNum);
+            NotifyLogChangesApi(
+                SystemTime.UtcNow,
+                curReq,
+                logHttpRequestStatsParams.HttpMethod,
+                logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                logHttpRequestStatsParams.ResponseStatusCode,
+                logHttpRequestStatsParams.RequestUri,
+                databaseName ?? "<system>",
+                logHttpRequestStatsParams.CustomInfo
+            );
+
+            if (Logger.IsDebugEnabled == false)
+                return;
 
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
@@ -361,8 +375,6 @@ namespace Raven.Database.Server.WebApi
 			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" &&
 				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
-
-			var curReq = Interlocked.Increment(ref reqNum);
             var message = string.Format(CultureInfo.InvariantCulture, "Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
 		        curReq,
 		        logHttpRequestStatsParams.HttpMethod,
@@ -371,65 +383,69 @@ namespace Raven.Database.Server.WebApi
 		        logHttpRequestStatsParams.RequestUri,
 		        databaseName);
             Logger.Debug(message);
-            NotifyLogChangesApi(controller, new LogNotification()
-            {
-                Level=LogLevel.Debug.ToString("G"),
-                TimeStamp = DateTime.UtcNow,
-                LoggerName = GetType().ToString(),
-                RequestId = curReq,
-                HttpMethod = logHttpRequestStatsParams.HttpMethod,
-                EllapsedMiliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-                RequestUri = logHttpRequestStatsParams.RequestUri,
-                TenantName = databaseName ?? "<system>"
-            });
+            
 		    if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
 		    {
 		        Logger.Debug(logHttpRequestStatsParams.CustomInfo);
-                NotifyLogChangesApi(controller, new LogNotification()
-                {
-                    Level = LogLevel.Debug.ToString("G"),
-                    TimeStamp = DateTime.UtcNow,
-                    LoggerName = GetType().ToString(),
-                   CustomInfo = logHttpRequestStatsParams.CustomInfo,
-                   TenantName = databaseName ?? "<system>"
-                });
 		    }
 		}
-        
-	    private void NotifyLogChangesApi(RavenBaseApiController controller,  LogNotification logNotification)
+
+        private void NotifyLogChangesApi(DateTime timestamp, int requestId, string httpMethod, long ellapsedMiliseconds, int responseStatusCode, string requestUri, string resourceName, string customInfo)
 	    {
-	        TransportState transportState = null;
-	        if (controller is RavenDbApiController)
+	        object notificationMessage = null;
+            
+	        if (serverHttpTrace.Count > 0)
 	        {
-                logNotification.TenantType = LogTenantType.Database;
-	        }
-            if (controller is RavenFsApiController)
-            {
-                logNotification.TenantType = LogTenantType.Filesystem;
-            }
-            if (controller is RavenCountersApiController)
-            {
-                logNotification.TenantType = LogTenantType.CounterStorage;
-            }
-
-	        var notificationMessage = new {Type = "LogNotification", Value = logNotification};
-	        foreach (var eventsTransport in serverHttpTrace)
-	        {
-                eventsTransport.SendAsync(notificationMessage);
-	        }
-
-	        ConcurrentSet<IEventsTransport> resourceEventTransports;
-
-            var resourceName = NormalizeResourceName(logNotification.TenantName);
-
-            if (resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports))
-	        {
-                foreach (var eventTransport in resourceEventTransports)
+                notificationMessage = new { Type = "LogNotification", Value = new LogNotification()
+                {
+                    Level = "Debug",
+                    LoggerName = "RequestManager",
+                    RequestId = requestId,
+                    RequestUri = requestUri,
+                    EllapsedMiliseconds = ellapsedMiliseconds,
+                    CustomInfo = customInfo,
+                    HttpMethod = httpMethod,
+                    ResponseStatusCode = responseStatusCode,
+                    TenantName = resourceName,
+                    TimeStamp = timestamp
+                } };
+	            foreach (var eventsTransport in serverHttpTrace)
 	            {
-	                eventTransport.SendAsync(notificationMessage);
+                    eventsTransport.SendAsync(notificationMessage);
 	            }
 	        }
+
+            if (resourceHttpTraces.Count >0)
+            { 
+	            ConcurrentSet<IEventsTransport> resourceEventTransports;
+                
+                if (!resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports) || resourceEventTransports.Count ==0)
+                    return;
+
+                notificationMessage = notificationMessage ?? new
+                {
+                    Type = "LogNotification",
+                    Value = new LogNotification()
+                    {
+                        Level = "Debug",
+                        LoggerName = "RequestManager",
+                        RequestId = requestId,
+                        RequestUri = requestUri,
+                        EllapsedMiliseconds = ellapsedMiliseconds,
+                        CustomInfo = customInfo,
+                        HttpMethod = httpMethod,
+                        ResponseStatusCode = responseStatusCode,
+                        TenantName = resourceName,
+                        TimeStamp = timestamp
+                    }
+                }; 
+
+                foreach (var eventTransport in resourceEventTransports)
+	            {
+                    eventTransport.SendAsync(notificationMessage);
+	            }
+	            
+            }
 	    }
 
 	    private string NormalizeResourceName(string resourceName)

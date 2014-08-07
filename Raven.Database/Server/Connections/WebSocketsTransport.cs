@@ -375,110 +375,6 @@ namespace Raven.Database.Server.Connections
         {
             ActiveTenant.TransportState.Register(this);
         }
-        
-
-        private async Task<DocumentDatabase> GetDatabase()
-        {
-            var dbName = GetDatabaseName();
-
-            if (dbName == null)
-                return _options.SystemDatabase;
-
-            DocumentDatabase documentDatabase;
-            try
-            {
-                documentDatabase = await _options.DatabaseLandlord.GetDatabaseInternal(dbName);
-            }
-            catch (Exception e)
-            {
-                _context.Response.StatusCode = 500;
-                _context.Response.ReasonPhrase = "InternalServerError";
-                _context.Response.Write(e.ToString());
-                return null;
-            }
-            return documentDatabase;
-        }
-
-		private async Task<RavenFileSystem> GetFileSystem()
-		{
-			var fsName = GetFileSystemName();
-
-			if (fsName == null)
-				return null;
-
-			RavenFileSystem ravenFileSystem;
-			try
-			{
-				ravenFileSystem = await _options.FileSystemLandlord.GetFileSystemInternal(fsName);
-			}
-			catch (Exception e)
-			{
-				_context.Response.StatusCode = 500;
-				_context.Response.ReasonPhrase = "InternalServerError";
-				_context.Response.Write(e.ToString());
-				return null;
-			}
-			return ravenFileSystem;
-		}
-
-		private async Task<CounterStorage> GetCounterStorage()
-		{
-			var csName = GetCounterStorageName();
-
-			if (csName == null)
-				return null;
-
-			CounterStorage counterStorage;
-			try
-			{
-				counterStorage = await _options.CountersLandlord.GetCounterInternal(csName);
-			}
-			catch (Exception e)
-			{
-				_context.Response.StatusCode = 500;
-				_context.Response.ReasonPhrase = "InternalServerError";
-				_context.Response.Write(e.ToString());
-				return null;
-			}
-			return counterStorage;
-		}
-
-        private string GetDatabaseName()
-        {
-            var localPath = _context.Request.Uri.LocalPath;
-			const string databasesPrefix = "/databases/";
-
-			return GetResourceName(localPath, databasesPrefix);
-        }
-
-        private string GetFileSystemName()
-        {
-            var localPath = _context.Request.Uri.LocalPath;
-			const string fileSystemPrefix = "/fs/";
-
-			return GetResourceName(localPath, fileSystemPrefix);
-		}
-
-		private string GetCounterStorageName()
-		{
-			var localPath = _context.Request.Uri.LocalPath;
-			const string counterStoragePrefix = "/counters/";
-
-			return GetResourceName(localPath, counterStoragePrefix);
-		}
-
-	    private string GetResourceName(string localPath, string prefix)
-	    {
-			if (localPath.StartsWith(prefix) == false)
-				return null;
-
-			var indexOf = localPath.IndexOf('/', prefix.Length + 1);
-
-		    return (indexOf > -1) ? localPath.Substring(prefix.Length, indexOf - prefix.Length) : null;
-	    }
-
-
-        
     }
 
     public class WatchTrafficWebsocketTransport : WebSocketsTransport
@@ -488,7 +384,7 @@ namespace Raven.Database.Server.Connections
         {
 
         }
-
+        
         override protected string ExpectedRequestSuffix
         {
             get { return WebSocketTransportFactory.WATCH_TRAFFIC_WEBSOCKET_SUFFIX; }

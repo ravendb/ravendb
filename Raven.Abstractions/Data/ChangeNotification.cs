@@ -138,13 +138,5 @@ namespace Raven.Abstractions.Data
         public string RequestUri { get; set; }
         public string TenantName { get; set; }
         public string CustomInfo { get; set; }
-        public LogTenantType TenantType { get; set; }
-    }
-
-    public enum LogTenantType
-    {
-        Database=0,
-        Filesystem=1,
-        CounterStorage = 2
     }
 }
