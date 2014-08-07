@@ -7,7 +7,7 @@ using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Abstractions
 {
-    public interface IResource
+    public interface IResourceStore
     {
         string Name { get; }
         TransportState TransportState {get ; }

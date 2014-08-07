@@ -126,16 +126,15 @@ namespace Raven.Abstractions.Data
 		Delete = 2,
 	}
     
-    public class LogNotification : EventArgs
+    public class TrafficWatchNotification : EventArgs
     {
-        public string Level { get; set; }
         public DateTime TimeStamp { get; set; }
-        public string LoggerName { get; set; }
         public int RequestId { get; set; }
         public string HttpMethod { get; set; }
         public long EllapsedMiliseconds { get; set; }
         public int ResponseStatusCode { get; set; }
         public string RequestUri { get; set; }
+        public string AbsoluteUri { get; set; }
         public string TenantName { get; set; }
         public string CustomInfo { get; set; }
     }

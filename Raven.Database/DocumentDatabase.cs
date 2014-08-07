@@ -45,7 +45,7 @@ using metrics.Core;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IResource,IDisposable
+	public class DocumentDatabase : IResourceStore,IDisposable
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 

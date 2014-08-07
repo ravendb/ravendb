@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Connections
         private const string DATABASES_URL_PREFIX = "databases";
         private const string FILESYSTEMS_URL_PREFIX = "fs";
 
-        protected IResource ActiveTenant { get; set; }
+        protected IResourceStore ActiveTenant { get; set; }
         public string ResourceName { get; set; }
         
         public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
@@ -253,7 +253,7 @@ namespace Raven.Database.Server.Connections
                 onDisconnected();
         }
 
-        protected async Task<IResource> GetActiveResource()
+        protected async Task<IResourceStore> GetActiveResource()
         {
             try
             {
@@ -267,7 +267,7 @@ namespace Raven.Database.Server.Connections
                     ResourceName = "<system>";
                     return _options.SystemDatabase;
                 }
-                IResource activeResource;
+                IResourceStore activeResource;
                 switch (resourcePartsPathParts[1])
                 {
                     case COUNTERS_URL_PREFIX:

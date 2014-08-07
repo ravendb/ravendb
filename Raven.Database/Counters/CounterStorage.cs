@@ -23,7 +23,7 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Raven.Database.Counters
 {
-	public class CounterStorage : IResource,IDisposable
+	public class CounterStorage : IResourceStore,IDisposable
 	{
         public string CounterStorageUrl { get; private set; }
         private readonly StorageEnvironment storageEnvironment;

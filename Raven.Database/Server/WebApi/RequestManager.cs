@@ -288,7 +288,7 @@ namespace Raven.Database.Server.WebApi
 		            GetHeaders(controller.InnerHeaders), 
 		            controller.InnerRequest.Method.Method,
 		            response != null ? (int) response.StatusCode : 500,
-		            controller.InnerRequest.RequestUri.ToString(),
+		            controller.InnerRequest.RequestUri,
 		            sb != null ? sb.ToString() : null
 		            );
 		    }
@@ -355,7 +355,7 @@ namespace Raven.Database.Server.WebApi
 				return;
 
             var curReq = Interlocked.Increment(ref reqNum);
-            NotifyLogChangesApi(
+            NotifyTrafficWatch(
                 SystemTime.UtcNow,
                 curReq,
                 logHttpRequestStatsParams.HttpMethod,
@@ -390,16 +390,14 @@ namespace Raven.Database.Server.WebApi
 		    }
 		}
 
-        private void NotifyLogChangesApi(DateTime timestamp, int requestId, string httpMethod, long ellapsedMiliseconds, int responseStatusCode, string requestUri, string resourceName, string customInfo)
+        private void NotifyTrafficWatch(DateTime timestamp, int requestId, string httpMethod, long ellapsedMiliseconds, int responseStatusCode, string requestUri,string resourceName, string customInfo)
 	    {
 	        object notificationMessage = null;
             
 	        if (serverHttpTrace.Count > 0)
 	        {
-                notificationMessage = new { Type = "LogNotification", Value = new LogNotification()
+                notificationMessage = new { Type = "LogNotification", Value = new TrafficWatchNotification()
                 {
-                    Level = "Debug",
-                    LoggerName = "RequestManager",
                     RequestId = requestId,
                     RequestUri = requestUri,
                     EllapsedMiliseconds = ellapsedMiliseconds,
@@ -425,10 +423,8 @@ namespace Raven.Database.Server.WebApi
                 notificationMessage = notificationMessage ?? new
                 {
                     Type = "LogNotification",
-                    Value = new LogNotification()
+                    Value = new TrafficWatchNotification()
                     {
-                        Level = "Debug",
-                        LoggerName = "RequestManager",
                         RequestId = requestId,
                         RequestUri = requestUri,
                         EllapsedMiliseconds = ellapsedMiliseconds,
@@ -447,21 +443,7 @@ namespace Raven.Database.Server.WebApi
 	            
             }
 	    }
-
-	    private string NormalizeResourceName(string resourceName)
-	    {
-            if (resourceName.IndexOf("counters/") == 0)
-	        {
-                return resourceName.Substring(9);
-	        }
-            
-            if (resourceName.IndexOf("fs/") == 0)
-	        {
-                return resourceName.Substring(3);
-	        }
-
-	        return resourceName;
-	    }
+	   
 	    private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
         private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
 

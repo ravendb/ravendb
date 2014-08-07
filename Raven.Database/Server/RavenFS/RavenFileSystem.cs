@@ -23,7 +23,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS
 {
-    public class RavenFileSystem : IResource, IDisposable
+    public class RavenFileSystem : IResourceStore, IDisposable
 	{
 		private readonly ConflictArtifactManager conflictArtifactManager;
 		private readonly ConflictDetector conflictDetector;
