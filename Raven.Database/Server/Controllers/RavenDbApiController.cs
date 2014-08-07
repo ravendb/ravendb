@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 				    var timeout = httpException.InnerException as TimeoutException;
                     if (timeout != null)
                     {
-                        response.Headers.Add("Raven-Update-In-Progress", DatabaseName);
+                        response.Headers.Add("Raven-Database-Load-In-Progress", DatabaseName);
                     }
 				    return response;
 				});

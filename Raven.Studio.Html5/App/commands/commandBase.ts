@@ -192,7 +192,7 @@ class commandBase {
         }).done((results, status, xhr) => {
             ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
-            var dbBeingUpdated = request.getResponseHeader("Raven-Update-In-Progress");
+			var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
             if (dbBeingUpdated) {
                 ajaxTask.reject(request, status, error);
                 router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
