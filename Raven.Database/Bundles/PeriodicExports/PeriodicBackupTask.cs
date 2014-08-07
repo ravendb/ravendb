@@ -193,19 +193,17 @@ namespace Raven.Database.Bundles.PeriodicExports
                                 }
 						    }
 
-                            var smugglerOptions = (fullBackup)
-                                                      ? new SmugglerOptions()
-                                                      : new SmugglerOptions
-						    {
-                                                          StartDocsEtag = localBackupStatus.LastDocsEtag,
-                                                          StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
-                                                          StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag,
-                                                          StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag,
-                                                          Incremental = true,
-                                                          ExportDeletions = true
-                                                      };
-
-                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, smugglerOptions);
+							var smugglerOptions = dataDumper.SmugglerOptions;
+							if (fullBackup == false)
+							{
+								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
+								smugglerOptions.StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag;
+								smugglerOptions.StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag;
+								smugglerOptions.StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag;
+								smugglerOptions.Incremental = true;
+								smugglerOptions.ExportDeletions = true;
+							}
+							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions {ToFile = backupPath});
 
                             if (fullBackup == false)
                                 {

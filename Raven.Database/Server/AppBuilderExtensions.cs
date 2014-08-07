@@ -12,12 +12,10 @@ using System.Web.UI;
 using Microsoft.Owin;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Logging;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -177,8 +175,7 @@ namespace Owin
 
 		    private bool ShouldBuffer(HttpContent content)
 		    {
-		        return (content is ChangesPushContent ||
-                        content is LogsPushContent ||
+		        return (content is IEventsTransport ||
 		                content is StreamsController.StreamQueryContent ||
 		                content is StreamContent ||
 		                content is PushStreamContent ||

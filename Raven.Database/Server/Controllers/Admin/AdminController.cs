@@ -281,7 +281,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
 			if (string.IsNullOrEmpty(concurrency) == false)
-				Database.Configuration.MaxNumberOfParallelIndexTasks = Math.Max(1, int.Parse(concurrency));
+				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
 			Database.SpinIndexingWorkers();
 		}
@@ -601,6 +601,7 @@ namespace Raven.Database.Server.Controllers.Admin
             }
         }
 
+
 	    [HttpGet]
 	    [Route("admin/logs/configure")]
 	    public HttpResponseMessage OnDemandLogConfig()
@@ -656,7 +657,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	    }
 
         [HttpGet]
-        [Route("admin/logs/events")] //TODO: support for web sockets
+        [Route("admin/logs/events")] 
         public HttpResponseMessage OnDemandLogFetch()
         {
             var logsTransport = new LogsPushContent(this);

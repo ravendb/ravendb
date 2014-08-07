@@ -10,7 +10,7 @@ class deleteDatabaseCommand extends commandBase {
     private oneCounterStoragePath = "/admin/counterstorage/";
     private multipleCounterStoragesPath = "/admin/counterstorage/batch-delete";
 
-    constructor(private resourcesNames: string[], private isHardDelete: boolean, private resourceType: string) {
+    constructor(private resourcesNames: Array<string>, private isHardDelete: boolean, private resourceType: string) {
         super();
     }
 
@@ -57,7 +57,7 @@ class deleteDatabaseCommand extends commandBase {
         var disableMultipleResourcesPath = (this.resourceType == database.type) ? this.multipleDatabasesPath :
             (this.resourceType == filesystem.type) ? this.multipleFileSystemsPath : this.multipleCounterStoragesPath;
         var url = disableMultipleResourcesPath + this.urlEncodeArgs(args);
-        var deleteTask = this.del(url, null);
+        var deleteTask = this.del(url, null, null, null, 9000 * this.resourcesNames.length);
 
         deleteTask.done((deletedResourcesNames: string[]) => this.reportSuccess("Succefully deleted " + deletedResourcesNames.length + " " + resourcesType + "!"));
         deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete "+ resourcesType, response.responseText, response.statusText));

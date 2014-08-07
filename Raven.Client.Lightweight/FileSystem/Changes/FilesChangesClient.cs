@@ -256,28 +256,6 @@ namespace Raven.Client.FileSystem.Changes
                         counter.Value.Send(conflictNotification);
                     }
                     break;
-                case "ConflictDetectedNotification":
-                    var conflictDetectedNotification = value.JsonDeserialization<ConflictNotification>();
-                    
-                    foreach (var observer in this.conflictObservers)
-                        observer.OnNext(conflictDetectedNotification);
-
-                    foreach (var counter in connections)
-                    {
-                        counter.Value.Send(conflictDetectedNotification);
-                    }
-                    break;
-                case "ConflictResolvedNotification":
-                    var conflictResolvedNotification = value.JsonDeserialization<ConflictNotification>();
-
-                    foreach (var observer in this.conflictObservers)
-                        observer.OnNext(conflictResolvedNotification);
-
-                    foreach (var counter in connections)
-                    {
-                        counter.Value.Send(conflictResolvedNotification);
-                    }
-                    break;
                 default:
                     break;
             }

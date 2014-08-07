@@ -57,6 +57,10 @@ namespace Raven.Database.Server.Security
 		{
 			public bool IsInRole(string role)
 			{
+                if (role == "Administrators")
+                {
+                    return IsAdministratorInAnonymouseMode;
+                }
 			    return false;
 			}
 
@@ -159,6 +163,12 @@ namespace Raven.Database.Server.Security
 
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
 		{
+            if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
+            {
+                msg = controller.GetEmptyMessage();
+                return true;
+            }
+
             object result;
             HttpStatusCode statusCode;
             IPrincipal user;
@@ -168,11 +178,18 @@ namespace Raven.Database.Server.Security
                 msg = controller.GetMessageWithObject(result, statusCode);
             else
                 msg = controller.GetEmptyMessage();
+
+            controller.WasAlreadyAuthorizedUsingSingleAuthToken = success;
             return success;
         }
 
 	    public IPrincipal GetUser(RavenDbApiController controller)
 		{
+            if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
+            {
+                return controller.User;
+            }
+
 			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = controller.GetHeader("Authorization");
 			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");

@@ -3,11 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Security.Cryptography;
-using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -18,9 +13,11 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Storage;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using System.Linq;
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -114,50 +111,6 @@ namespace Raven.Bundles.Replication.Responders
 					string.Format("Exception occurred during the replication of the attachment {0} from the server {1}", id, src), ex);
 				throw;
 			}
-		}
-
-		private static string HashReplicationIdentifier(RavenJObject metadata, Guid lastEtag)
-		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + lastEtag);
-
-				var hash = Encryptor.Current.Hash.Compute16(bytes);
-				Array.Resize(ref hash, 16);
-
-				return new Guid(hash).ToString();
-			}
-		}
-
-		private string HashReplicationIdentifier(Guid existingEtag)
-		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
-
-				var hash = Encryptor.Current.Hash.Compute16(bytes);
-				Array.Resize(ref hash, 16);
-
-				return new Guid(hash).ToString();
-			}
-		}
-
-		private static bool IsDirectChildOfCurrentAttachment(Attachment existingAttachment, RavenJObject metadata)
-		{
-			var version = new RavenJObject
-			{
-				{Constants.RavenReplicationSource, existingAttachment.Metadata[Constants.RavenReplicationSource]},
-				{Constants.RavenReplicationVersion, existingAttachment.Metadata[Constants.RavenReplicationVersion]},
-			};
-
-			var history = metadata[Constants.RavenReplicationHistory];
-			if (history == null) // no history, not a parent
-				return false;
-
-			if (history.Type != JTokenType.Array)
-				return false;
-
-			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
 		}
 
 		public override string UrlPattern

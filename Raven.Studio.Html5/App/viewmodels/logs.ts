@@ -353,7 +353,7 @@ class logs extends viewModelBase {
         this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
         this.allLogs.removeAll();
         this.disposeHttpTraceClient();
-        this.logsMode("Custom Logger");
+        
 
         var logConfig = new customLogConfig();
         logConfig.maxEntries(10000);
@@ -363,10 +363,21 @@ class logs extends viewModelBase {
         customLoggingViewModel.onExit().done((config: customLogConfig) => {
             this.maxEntries(config.maxEntries());
             this.onDemandLogging(new onDemandLogs(this.activeDatabase(), entry => this.onLogMessage(entry)));
-            this.customLoggingInProgress(true);
+            this.onDemandLogging().connectToLogsTask.done(() => {
+                this.logsMode("Custom Logger");
+                this.customLoggingInProgress(true);
+            })
+            .fail((e) => {
+                if (!!e && !!e.status && e.status == 401) {
+                    app.showMessage("You do not have the sufficient permissions", "Custom logging failed to start");
+                } else {
+                    app.showMessage("Could not open connection", "Custom logging failed to start");
+                }
+            });
 
             var categoriesConfig = config.entries().map(e => e.toDto());
             this.onDemandLogging().configureCategories(categoriesConfig);
+            this.onDemandLogging().onExit(() => this.customLoggingInProgress(false));
         });
     }
 

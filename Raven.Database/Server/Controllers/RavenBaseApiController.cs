@@ -77,6 +77,8 @@ namespace Raven.Database.Server.Controllers
 
 		public new IPrincipal User { get; set; }
 
+        public bool WasAlreadyAuthorizedUsingSingleAuthToken { get; set; }
+
 		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
 		{
 			request = controllerContext.Request;

@@ -16,10 +16,12 @@ class onDemandLogs {
 
     private eventsId: string;
     private resourcePath: string;
-    private connectToLogsTask: JQueryDeferred<any>;
+    public connectToLogsTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
     private eventSource: EventSource;
     private readyStateOpen = 1;
+
+    private onExitCallback: Function;
 
     private isCleanClose: boolean = false;
     private normalClosureCode = 1000;
@@ -41,7 +43,7 @@ class onDemandLogs {
         }
         else
             if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
+                 this.connect(this.connectEventSource);
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
@@ -51,36 +53,32 @@ class onDemandLogs {
         }
     }
 
+    onExit(callback: Function) {
+        this.onExitCallback = callback;
+    }
+
     private connect(action: Function) {
         var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath,true).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                //TODO: revert token  var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId;
-                var connectionString = 'id=' + this.eventsId;
+                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId;
 
                 action.call(this, connectionString);
             })
-            .fail(() => {
-                this.commandBase.reportError("Unablt to get authToken for onDemandLogs");
+            .fail((e) => {
+                this.connectToLogsTask.reject(e);
             });
     }
 
     private connectWebSocket(connectionString: string) {
-        //TODO: change me! - note - we don't reconnect user after failure!
         var connectionOpened: boolean = false;
 
         this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/admin/logs/events?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
-        this.webSocket.onerror = (e) => {
-            if (connectionOpened == false) {
-                this.serverNotSupportingWebsocketsErrorHandler();
-            } else {
-                this.onError(e);
-            }
-        };
+        this.webSocket.onerror = (e) => this.onError(e);
         this.webSocket.onopen = () => {
             console.log("Connected to WebSocket logs");
             this.successfullyConnectedOnce = true;
@@ -95,7 +93,7 @@ class onDemandLogs {
         this.eventSource = new EventSource(this.resourcePath + '/admin/logs/events?' + connectionString);
 
         this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e) => { //TODO:
+        this.eventSource.onerror = (e) => {
             if (connectionOpened == false) {
                 this.connectToLogsTask.reject();
             } else {
@@ -110,27 +108,11 @@ class onDemandLogs {
     }
 
     private onError(e: Event) {
-        //TODO: display some info ? (we don't reconnect)
         this.eventSource.close();
-    }
-
-    private serverNotSupportingWebsocketsErrorHandler() {
-        var warningMessage;
-        var details;
-
-        if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
-            warningMessage = "Your server doesn't support the WebSocket protocol!";
-            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported. " +
-                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent.";
-        } else {
-            this.connectToLogsTask.reject();
-            warningMessage = "Changes API is Disabled!";
-            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API. " +
-                "In order to use it, please use a browser that supports the EventSource API.";
+        this.commandBase.reportError('On Demand Logs stream was disconnected.', "");
+        if (this.onExitCallback) {
+            this.onExitCallback();
         }
-
-        this.showWarning(warningMessage, details);
     }
 
     private showWarning(message: string, details: string) {
@@ -172,9 +154,7 @@ class onDemandLogs {
     }
 
     configureCategories(categoriesConfig: customLogEntryDto[]) {
-        new onDemandLogsConfigureCommand(this.db, categoriesConfig, this.eventsId).execute().done(() => {
-            console.log("categories configured");
-        });
+        new onDemandLogsConfigureCommand(this.db, categoriesConfig, this.eventsId).execute();
     }
 
     dispose() {

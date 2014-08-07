@@ -13,7 +13,6 @@ import changesApi = require("common/changesApi");
 
 class httpTraceClient {
 
-    private eventsId: string;
     private resourcePath: string;
     public connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
@@ -31,15 +30,15 @@ class httpTraceClient {
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
     constructor(private rs?: resource, private token?:string) {
-        this.eventsId = this.makeId();
         
         this.resourcePath = !!rs ? appUrl.forResourceQuery(rs) : "";
         this.connectToChangesApiTask = $.Deferred();
 
         if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
             this.connect(this.connectWebSocket);
-        }
-        else {
+        } else if ("EventSource" in window) {
+            this.connect(this.connectEventSource);
+        } else {
             //The browser doesn't support nor websocket nor eventsource
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
             //Anyway, at this point a warning message was already shown. 
@@ -48,14 +47,12 @@ class httpTraceClient {
     }
 
     private connect(action: Function, needToReconnect: boolean = false) {
-        
-
         var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath, !this.rs).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId;
+                var connectionString = 'singleUseAuthToken=' + token;
 
                 action.call(this, connectionString);
             })
@@ -67,7 +64,6 @@ class httpTraceClient {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);    
                 }
-                
             });
     }
 

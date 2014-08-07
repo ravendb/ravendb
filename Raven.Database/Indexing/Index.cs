@@ -650,7 +650,7 @@ namespace Raven.Database.Indexing
 
 					stats.IndexingErrors++;
 	        };
-	        return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+	        return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
@@ -663,7 +663,7 @@ namespace Raven.Database.Indexing
 			IndexingWorkStats stats)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => Interlocked.Increment(ref stats.ReduceAttempts),
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.ReduceAttempts),
@@ -690,7 +690,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => { }, // don't care
 				CancelMoveNext = () => { }, // don't care
