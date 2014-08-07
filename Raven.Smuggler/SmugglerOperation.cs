@@ -33,7 +33,8 @@ namespace Raven.Smuggler
 			using (var exportStore = CreateStore(betweenOptions.From))
 			using (var importStore = CreateStore(betweenOptions.To))
             {
-				await EnsureDatabaseExists(importStore, betweenOptions.To.DefaultDatabase);
+				SmugglerApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.From, exportStore);
+				SmugglerApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.To, importStore);
 
                 var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
                 var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
@@ -90,20 +91,6 @@ namespace Raven.Smuggler
 					await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(smugglerExportIncremental), new RavenJObject());
                 }
             }
-        }
-
-        private static async Task EnsureDatabaseExists(DocumentStore store, string databaseName)
-        {
-            if (string.IsNullOrWhiteSpace(databaseName))
-                return;
-
-            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-
-			var get = await store.AsyncDatabaseCommands.ForSystemDatabase().GetAsync(doc.Id);
-			if (get != null)
-				return;
-
-            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
         }
 
         private static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)
@@ -343,7 +330,7 @@ namespace Raven.Smuggler
                     ShouldSaveChangesForceAggressiveCacheCheck = false,
                 }
             };
-            store.Initialize();
+	        store.Initialize(ensureDatabaseExists: false);
             store.JsonRequestFactory.DisableAllCaching();
             return store;
         }
