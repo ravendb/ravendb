@@ -11,7 +11,7 @@ import getCounterStoragesCommand = require("commands/counter/getCounterStoragesC
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import appUrl = require('common/appUrl');
 
-class watchTrafficConfig extends dialogViewModelBase {
+class watchTrafficConfigDialog extends dialogViewModelBase {
     configurationTask = $.Deferred();
     
     watchedResourceMode = ko.observable("SingleResourceView");
@@ -110,7 +110,6 @@ class watchTrafficConfig extends dialogViewModelBase {
             .fail((e) => {
             app.showMessage("You are not authorized to trace this resource", "Ahuthorization error");
         });
-        
     }
     
 
@@ -128,4 +127,4 @@ class watchTrafficConfig extends dialogViewModelBase {
     }
 }
 
-export = watchTrafficConfig;
+export = watchTrafficConfigDialog;
