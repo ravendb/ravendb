@@ -19,6 +19,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
@@ -43,7 +44,32 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(DebugInfoProvider.GetPrefetchingQueueStatusForDebug(Database));
 		}
 
-        [HttpGet]
+		[HttpPost]
+		[Route("debug/format-index")]
+		[Route("databases/{databaseName}/debug/format-index")]
+		public async Task<HttpResponseMessage> FormatIndex()
+		{
+			var array = await ReadJsonArrayAsync();
+			var results = new string[array.Length];
+			for (int i = 0; i < array.Length; i++)
+			{
+					var value = array[i].Value<string>();
+				try
+				{
+					results[i] = IndexPrettyPrinter.Format(value);
+				}
+				catch (Exception e)
+				{
+					results[i] = "Could not format:" + Environment.NewLine +
+					             value + Environment.NewLine + e;
+				}
+			}
+
+			return GetMessageWithObject(results);
+		}
+
+
+		[HttpGet]
         [Route("debug/plugins")]
         [Route("databases/{databaseName}/debug/plugins")]
         public HttpResponseMessage Plugins()

@@ -200,5 +200,17 @@ namespace Raven.Database.Server.Tenancy
 				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
         }
+
+        public bool IsDatabaseLoaded(string tenantName)
+        {
+            if (tenantName == Constants.SystemDatabase)
+                return true;
+
+            Task<DocumentDatabase> dbTask;
+            if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+                return false;
+
+            return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
+        }
     }
 }

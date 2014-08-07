@@ -9,6 +9,7 @@ import appUrl = require("common/appUrl");
 import shell = require("viewmodels/shell");
 import oauthContext = require("common/oauthContext");
 import forge = require("forge/forge_custom.min");
+import router = require("plugins/router");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
@@ -191,7 +192,11 @@ class commandBase {
         }).done((results, status, xhr) => {
             ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
-            if (request.status == 412 && oauthContext.apiKey()) {
+			var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
+            if (dbBeingUpdated) {
+                ajaxTask.reject(request, status, error);
+                router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
+            } else if (request.status == 412 && oauthContext.apiKey()) {
                 this.handleOAuth(ajaxTask, request, originalArguments);
             } else {
                 ajaxTask.reject(request, status, error);
