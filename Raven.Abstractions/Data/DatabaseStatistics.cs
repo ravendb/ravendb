@@ -32,10 +32,6 @@ namespace Raven.Abstractions.Data
 
 		public ServerError[] Errors { get; set; }
 
-		public TriggerInfo[] Triggers { get; set; }
-
-		public IEnumerable<ExtensionsLog> Extensions { get; set; }
-
 		public IndexingBatchInfo[] IndexingBatchInfo { get; set; }
 
 		public FutureBatchStats[] Prefetches { get; set; }
