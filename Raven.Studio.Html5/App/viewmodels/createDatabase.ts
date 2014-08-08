@@ -22,6 +22,7 @@ class createDatabase extends dialogViewModelBase {
     databaseIndexesPath = ko.observable('');
     indexesCustomValidity = ko.observable<string>('');
     databaseNameFocus = ko.observable(true);
+    storageEngine = ko.observable('');
     private maxNameLength = 200;
 
     isCompressionBundleEnabled = ko.observable(false);
@@ -94,7 +95,7 @@ class createDatabase extends dialogViewModelBase {
 
         this.creationTaskStarted = true;
         dialog.close(this);
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath());
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.storageEngine());
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
