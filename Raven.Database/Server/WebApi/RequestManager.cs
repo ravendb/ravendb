@@ -409,20 +409,9 @@ namespace Raven.Database.Server.WebApi
 
 		private void NotifyLogChangesApi(RavenBaseApiController controller, LogNotification logNotification)
 		{
-			if (controller is RavenDbApiController)
-			{
-				logNotification.TenantType = LogTenantType.Database;
-			}
-			if (controller is RavenFsApiController)
-			{
-				logNotification.TenantType = LogTenantType.Filesystem;
-			}
-			if (controller is RavenCountersApiController)
-			{
-				logNotification.TenantType = LogTenantType.CounterStorage;
-			}
+			logNotification.TenantType = controller.TenantType;
 
-			var notificationMessage = new { Type = "LogNotification", Value = logNotification };
+			var notificationMessage = new {Type = "LogNotification", Value = logNotification};
 			foreach (var eventsTransport in serverHttpTrace)
 			{
 				eventsTransport.SendAsync(notificationMessage);

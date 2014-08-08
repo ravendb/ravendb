@@ -37,6 +37,8 @@ namespace Raven.Database.Server.Controllers
 	{
 		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
+		public abstract LogTenantType TenantType { get; }
+
 		private HttpRequestMessage request;
 
 		public HttpRequestMessage InnerRequest
