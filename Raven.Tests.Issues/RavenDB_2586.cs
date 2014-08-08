@@ -25,6 +25,8 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
+				var smugglerApi = new SmugglerApi();
+
 				var options = new SmugglerBetweenOptions
 				              {
 									From = new RavenConnectionStringOptions
@@ -39,13 +41,13 @@ namespace Raven.Tests.Issues
 					                }
 				              };
 
-				var aggregateException = Assert.Throws<AggregateException>(() => SmugglerOperation.Between(options, new SmugglerOptions()).Wait());
+				var aggregateException = Assert.Throws<AggregateException>(() => smugglerApi.Between(options).Wait());
 				var exception = aggregateException.ExtractSingleInnerException();
 				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB1' on server"));
 
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DB1");
 
-				aggregateException = Assert.Throws<AggregateException>(() => SmugglerOperation.Between(options, new SmugglerOptions()).Wait());
+				aggregateException = Assert.Throws<AggregateException>(() => smugglerApi.Between(options).Wait());
 				exception = aggregateException.ExtractSingleInnerException();
 				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB2' on server"));
 			}

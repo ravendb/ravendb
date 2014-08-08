@@ -17,6 +17,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;

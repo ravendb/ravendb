@@ -1500,11 +1500,11 @@ namespace Raven.Client.Connection.Async
 		}
 
 
-		public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
+		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag, "GET", operationMetadata.Credentials, convention)
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag + "&start=" + start, "GET", operationMetadata.Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);

@@ -152,7 +152,7 @@ namespace Raven.Database.Server.Controllers
 			{
 			    try
 			    {
-				    var dataDumper = new DataDumper(Database) {SmugglerOptions = smugglerOptions};
+				    var dataDumper = new DataDumper(Database, smugglerOptions);
 				    await dataDumper.ExportData(
 					    new SmugglerExportOptions
 					    {
