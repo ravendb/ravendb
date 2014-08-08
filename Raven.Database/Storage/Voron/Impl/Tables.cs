@@ -90,6 +90,8 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string ByIndexAndType = "by_index_and_type";
 
 				public const string ByIndex = "by_index";
+
+				public const string Data = "data";
 			}
 		}
 
