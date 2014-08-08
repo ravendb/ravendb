@@ -113,6 +113,7 @@
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
+    <Compile Include="FileSystem\AbstractFilesQuery.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
     <Compile Include="FileSystem\Changes\FilesConnectionState.cs" />
@@ -121,6 +122,10 @@
     <Compile Include="FileSystem\Connection\IFilesReplicationInformer.cs" />
     <Compile Include="FileSystem\Extensions\FilesSynchronizationExtensions.cs" />
     <Compile Include="FileSystem\Extensions\FilesTenancyExtensions.cs" />
+    <Compile Include="FileSystem\FilesQuery.cs" />
+    <Compile Include="FileSystem\IAbstractFilesQuery.cs" />
+    <Compile Include="FileSystem\IFilesQuery.cs" />
+    <Compile Include="FileSystem\IFilesQueryBase.cs" />
     <Compile Include="FileSystem\Impl\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Impl\IFilesOperation.cs" />
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
