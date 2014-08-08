@@ -95,7 +95,7 @@ namespace Raven.Database.Server.Controllers
 				}
 				catch (Exception e)
 				{
-					status.ExceptionDetails = e.Message + e.StackTrace;
+					status.ExceptionDetails = e.ToString();
 					if (cts.Token.IsCancellationRequested)
 					{
 						status.ExceptionDetails = "Task was cancelled";
