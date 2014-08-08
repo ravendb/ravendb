@@ -219,6 +219,7 @@ namespace Raven.Database.Server.Tenancy
 
             config.CustomizeValuesForTenant(tenantId);
 
+            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {

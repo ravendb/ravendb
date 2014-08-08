@@ -99,10 +99,13 @@ class databases extends viewModelBase {
             var createDatabaseViewModel = new createDatabase(this.databases, shell.licenseStatus);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string) => {
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
+                    if (storageEngine) {
+                        settings["Raven/StorageEngine"] = storageEngine;
+                    }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
                         settings["Raven/Esent/LogsPath"] = databaseLogs;
