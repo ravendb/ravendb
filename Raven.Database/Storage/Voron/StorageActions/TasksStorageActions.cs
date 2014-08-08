@@ -3,12 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Lucene.Net.Search;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -47,6 +43,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+			var tasksData = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.Data);
 
 			var type = task.GetType().FullName;
 			var index = task.Index;
@@ -62,9 +59,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "id", id.ToByteArray() },
 					{ "time", addedAt },
 					{ "type", type },
-					{ "task", task.AsBytes() }
 				}, 0);
 
+			tasksData.Add(writeBatch.Value, idAsString, task.AsBytes());
 			tasksByType.MultiAdd(writeBatch.Value, CreateKey(type), idAsString);
 			tasksByIndex.MultiAdd(writeBatch.Value, CreateKey(index), idAsString);
 			tasksByIndexAndType.MultiAdd(writeBatch.Value, CreateKey(index, type), idAsString);
@@ -87,6 +84,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var type = CreateKey(typeof(T).FullName);
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksData = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.Data);
 
 			using (var iterator = tasksByType.MultiRead(Snapshot, type))
 			{
@@ -101,7 +99,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					DatabaseTask task;
 					try
 					{
-						task = DatabaseTask.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						var taskData = tasksData.Read(Snapshot, iterator.CurrentKey, writeBatch.Value);
+						var taskSize = taskData.Reader.Length;
+						var taskAsBytes = BufferPool.TakeBuffer(taskSize);
+
+						try
+						{
+							taskData.Reader.Read(taskAsBytes, 0, taskSize);
+							task = DatabaseTask.ToTask(value.Value<string>("type"), taskAsBytes);
+						}
+						finally
+						{
+							BufferPool.ReturnBuffer(taskAsBytes);
+						}
 					}
 					catch (Exception e)
 					{
@@ -127,6 +137,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var id = Etag.Parse(taskId);
 			var type = task.GetType().FullName;
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+			var tasksData = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.Data);
 
 			using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, CreateKey(task.Index, type)))
 			{
@@ -145,9 +156,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
 
 					DatabaseTask existingTask;
+
+					
 					try
 					{
-						existingTask = DatabaseTask.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						var taskData = tasksData.Read(Snapshot, iterator.CurrentKey, writeBatch.Value);
+						var taskSize = taskData.Reader.Length;
+						var taskAsBytes = BufferPool.TakeBuffer(taskSize);
+
+						try
+						{
+							taskData.Reader.Read(taskAsBytes, 0, taskSize);
+							existingTask = DatabaseTask.ToTask(value.Value<string>("type"), taskAsBytes);
+						}
+						finally
+						{
+							BufferPool.ReturnBuffer(taskAsBytes);
+						}
 					}
 					catch (Exception e)
 					{
@@ -174,11 +199,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+			var tasksData = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.Data);
 
 			tableStorage.Tasks.Delete(writeBatch.Value, taskId);
 			tasksByType.MultiDelete(writeBatch.Value, CreateKey(type), taskId);
 			tasksByIndex.MultiDelete(writeBatch.Value, CreateKey(index), taskId);
 			tasksByIndexAndType.MultiDelete(writeBatch.Value, CreateKey(index, type), taskId);
+			tasksData.Delete(writeBatch.Value, taskId);
 		}
 
 

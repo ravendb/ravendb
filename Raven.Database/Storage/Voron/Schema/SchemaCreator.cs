@@ -233,6 +233,7 @@ namespace Raven.Database.Storage.Voron.Schema
 			storage.Environment.CreateTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndexAndType));
 			storage.Environment.CreateTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByType));
 			storage.Environment.CreateTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndex));
+			storage.Environment.CreateTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.Data));
 		}
 
 		private static void CreateListsSchema(Transaction tx, TableStorage storage)

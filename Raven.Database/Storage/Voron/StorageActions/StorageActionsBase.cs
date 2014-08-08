@@ -24,7 +24,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	{
 	    private readonly Reference<SnapshotReader> snapshotReference;
 
-	    private readonly IBufferPool bufferPool;
+	    protected readonly IBufferPool BufferPool;
 
 	    protected SnapshotReader Snapshot
 	    {
@@ -37,7 +37,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	    protected StorageActionsBase(Reference<SnapshotReader> snapshotReference, IBufferPool bufferPool)
 		{
 		    this.snapshotReference = snapshotReference;
-		    this.bufferPool = bufferPool;
+		    BufferPool = bufferPool;
 		}
 
 		protected string CreateKey(object value)
@@ -86,7 +86,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         protected BufferPoolMemoryStream CreateStream()
         {
-            return new BufferPoolMemoryStream(bufferPool);
+            return new BufferPoolMemoryStream(BufferPool);
         }
 	}
 }
