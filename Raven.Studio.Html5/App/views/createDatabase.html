@@ -34,6 +34,14 @@
                                         <label for="databaseIndexes">Indexes</label>
                                         <input data-bind="value: databaseIndexesPath, customValidity: indexesCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
                                     </div>
+                                    <div class="form-group">
+                                        <label for="storageEngine">Storage Engine</label>
+                                        <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+                                            <option value="">Default</option>
+                                            <option value="esent">Esent</option>
+                                            <option value="voron">Voron</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
