@@ -32,7 +32,7 @@ namespace Raven.Client.FileSystem.Changes
         private bool watchAllSynchronizations;
         private bool watchAllCancellations;
 
-        private readonly Func<string, FileHeader, string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+        private readonly Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
         public ProfilingInformation ProfilingInformation { get; private set; }
 
@@ -40,7 +40,7 @@ namespace Raven.Client.FileSystem.Changes
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory, FilesConvention conventions,
                                        IReplicationInformerBase replicationInformer,
-                                       Func<string, FileHeader, string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync,
+                                       Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync,
                                        Action onDispose)
             : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
         {
@@ -263,7 +263,10 @@ namespace Raven.Client.FileSystem.Changes
                         // We don't care about this one (this can happen concurrently). 
                         delayedConflictNotifications.AddOrUpdate(conflictNotification.FileName, conflictNotification, (x, y) => conflictNotification);
 
-                        tryResolveConflictByUsingRegisteredConflictListenersAsync(conflictNotification.FileName, conflictNotification.RemoteFileHeader, conflictNotification.SourceServerUrl)                             
+                        tryResolveConflictByUsingRegisteredConflictListenersAsync(conflictNotification.FileName, 
+                                                                                  conflictNotification.RemoteFileHeader, 
+                                                                                  conflictNotification.SourceServerUrl,
+                                                                                  () => NotifyConflictSubscribers(connections, conflictNotification))                             
                             .ContinueWith(t =>
                             {
                                 t.AssertNotFailed();
@@ -275,10 +278,7 @@ namespace Raven.Client.FileSystem.Changes
                                     if (delayedConflictNotifications.TryRemove(conflictNotification.FileName, out notification))
                                     {
                                         if (notification.Status == ConflictStatus.Resolved)
-                                        {
-                                            foreach (var counter in connections)
-                                                counter.Value.Send(notification);
-                                        }
+                                            NotifyConflictSubscribers(connections, notification);
                                     }
                                 }
 
@@ -300,14 +300,8 @@ namespace Raven.Client.FileSystem.Changes
                                 // We are delaying broadcasting.
                                 conflictNotification = null;
                             }
+                            else NotifyConflictSubscribers(connections, conflictNotification);
                         }
-                    }
-
-                    // Check if we are delaying the broadcast.
-                    if ( conflictNotification != null )
-                    {
-                        foreach (var counter in connections)
-                            counter.Value.Send(conflictNotification);
                     }
 
                     break;
@@ -315,6 +309,17 @@ namespace Raven.Client.FileSystem.Changes
                     break;
             }
         }
+
+        private static void NotifyConflictSubscribers(IEnumerable<KeyValuePair<string, FilesConnectionState>> connections, ConflictNotification conflictNotification)
+        {
+            // Check if we are delaying the broadcast.
+            if (conflictNotification != null)
+            {
+                foreach (var counter in connections)
+                    counter.Value.Send(conflictNotification);
+            }
+        }
+
 
         private Task AfterConnection(Func<Task> action)
         {
