@@ -11,16 +11,15 @@ class createDatabase extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
-    private emptyNameMessage = "Please fill out the database name field!";
 
     databaseName = ko.observable('');
-    nameCustomValidity = ko.observable<string>(this.emptyNameMessage);
+    nameCustomValidityError: KnockoutComputed<string>;
     databasePath = ko.observable('');
-    pathCustomValidity = ko.observable<string>('');
+    pathCustomValidityError: KnockoutComputed<string>;
     databaseLogsPath = ko.observable('');
-    logsCustomValidity = ko.observable<string>('');
+    logsCustomValidityError: KnockoutComputed<string>;
     databaseIndexesPath = ko.observable('');
-    indexesCustomValidity = ko.observable<string>('');
+    indexesCustomValidityError: KnockoutComputed<string>;
     databaseNameFocus = ko.observable(true);
     private maxNameLength = 200;
 
@@ -41,25 +40,40 @@ class createDatabase extends dialogViewModelBase {
         if (this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
             this.isPeriodicExportBundleEnabled(false);
         }
-    }
 
-    attached() {
-        super.attached();
-
-        this.databaseName.subscribe((newDatabaseName) => {
+        this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
-            if (this.isDatabaseNameExists(newDatabaseName, this.databases()) === true) {
+            var newDatabaseName = this.databaseName();
+
+            if (this.isDatabaseNameExists(newDatabaseName, this.databases()) == true) {
                 errorMessage = "Database name already exists!";
             }
             else if ((errorMessage = this.checkName(newDatabaseName)) != '') { }
 
-            this.nameCustomValidity(errorMessage);
+            return errorMessage;
         });
-    
-        this.subscribeToPath(this.databasePath, this.pathCustomValidity, "Path");
-        this.subscribeToPath(this.databaseLogsPath, this.logsCustomValidity, "Logs");
-        this.subscribeToPath(this.databaseIndexesPath, this.indexesCustomValidity, "Indexes");
 
+        this.pathCustomValidityError = ko.computed(() => {
+            var newPath = this.databasePath();
+            var errorMessage: string = this.isPathLegal(newPath, "Path");
+            return errorMessage;
+        });
+
+        this.logsCustomValidityError = ko.computed(() => {
+            var newPath = this.databaseLogsPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Logs");
+            return errorMessage;
+        });
+
+        this.indexesCustomValidityError = ko.computed(() => {
+            var newPath = this.databaseIndexesPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Indexes");
+            return errorMessage;
+        });
+    }
+
+    attached() {
+        super.attached();
         this.databaseNameFocus(true);
     }
 
@@ -114,7 +128,7 @@ class createDatabase extends dialogViewModelBase {
 
         var message = '';
         if (!$.trim(name)) {
-            message = this.emptyNameMessage;
+            message = "Please fill out the database name field!";
         }
         else if (name.length > this.maxNameLength) {
             message = "The database name length can't exceed " + this.maxNameLength + " characters!";
@@ -135,13 +149,6 @@ class createDatabase extends dialogViewModelBase {
             message = "This name is reserved for the actual system database!";
         }
         return message;
-    }
-
-    private subscribeToPath(element, validityObservable: KnockoutObservable<string>, pathName) {
-        element.subscribe((path) => {
-            var errorMessage: string = this.isPathLegal(path, pathName);
-            validityObservable(errorMessage);
-        });
     }
 
     private isPathLegal(name: string, pathName: string): string {

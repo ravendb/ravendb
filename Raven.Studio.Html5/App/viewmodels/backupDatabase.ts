@@ -10,7 +10,7 @@ class backupDatabase extends viewModelBase {
     isBusy = ko.observable<boolean>();
     databaseNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
-    nameCustomValidity = ko.observable<string>('');
+    customValidityError: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -25,15 +25,16 @@ class backupDatabase extends viewModelBase {
             return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
-        this.databaseName.subscribe((newDatabaseName: string) => {
+        this.customValidityError = ko.computed(() => {
             var errorMessage: string = '';
+            var newDatabaseName = this.databaseName();
             var foundDb = shell.databases.first((db: database) => newDatabaseName == db.name);
 
             if (!foundDb && newDatabaseName.length > 0) {
                 errorMessage = "Database name doesn't exist!";
             }
 
-            this.nameCustomValidity(errorMessage);
+            return errorMessage;
         });
     }
 

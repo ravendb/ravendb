@@ -86,17 +86,25 @@
                                         <tr>
                                             <td>
                                                 <div class="btn-group">
-                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                        <span data-bind="text: tenantIdOrDefault"></span> <span class="caret"></span>
-                                                    </button>
-                                                    <ul class="dropdown-menu" role="menu">
-                                                        <!-- ko foreach: $root.allDatabases -->
-                                                        <li><a href="#" data-bind="text: $data, click: $parent.tenantId.bind($data)"></a></li>
-                                                        <!-- /ko -->
-                                                        <li class="divider"></li>
+                                                    <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $index() }" placeholder="Database name">
+                                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName' + $index(), foreach: searchResults">
+                                                        <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
+                                                            <a role="menuitem" tabindex="-1" href="#">
+                                                                <span data-bind="text: $data"></span>
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                    <!--<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                            <span data-bind="text: tenantIdOrDefault"></span> <span class="caret"></span>
+                                                        </button>
+                                                        <ul class="dropdown-menu" role="menu">-->
+                                                    <!-- ko foreach: $root.allDatabases -->
+                                                    <!--<li><a href="#" data-bind="text: $data, click: $parent.tenantId.bind($data)"></a></li>-->
+                                                    <!-- /ko -->
+                                                    <!--<li class="divider"></li>
                                                         <li><a href="#" data-bind="click: tenantId.bind($data, '&lt;system&gt;')">&lt;system&gt;</a></li>
                                                         <li><a href="#" data-bind="click: tenantId.bind($data, '*')">* (All)</a></li>
-                                                    </ul>
+                                                    </ul>-->
                                                 </div>
                                             </td>
                                             <td>

@@ -40,6 +40,11 @@ class apiKeys extends viewModelBase {
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        $("form").on("keypress", 'input[name="databaseName"]', (e) => e.which != 13);
+    }
+
     private fetchApiKeys(): JQueryPromise<any> {
         return new getApiKeysCommand()
             .execute()
@@ -48,7 +53,7 @@ class apiKeys extends viewModelBase {
                 this.saveLoadedApiKeys(results);
                 apiKeys.globalApiKeys(results);
                 this.apiKeys().forEach((key: apiKey) => {
-                    this.subscribeToObservable(key);
+                    this.subscribeToObservableKeyName(key);
                 });
         });
     }
@@ -58,7 +63,7 @@ class apiKeys extends viewModelBase {
         this.loadedApiKeys = ko.mapping.fromJS(ko.mapping.toJS(apiKeys));
     }
 
-    private subscribeToObservable(key: apiKey) {
+    private subscribeToObservableKeyName(key: apiKey) {
         key.name.subscribe((previousApiKeyName) => {
             var existingApiKeysExceptCurrent = this.apiKeys().filter((k: apiKey) => k !== key && k.name() == previousApiKeyName);
             if (existingApiKeysExceptCurrent.length == 1) {
@@ -82,7 +87,7 @@ class apiKeys extends viewModelBase {
 
     createNewApiKey() {
         var newApiKey = apiKey.empty();
-        this.subscribeToObservable(newApiKey);
+        this.subscribeToObservableKeyName(newApiKey);
         this.apiKeys.unshift(newApiKey);
     }
 
