@@ -3,8 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Database.Indexing;
 
@@ -22,11 +24,7 @@ namespace Raven.Database.Tasks
 		public byte[] AsBytes()
 		{
 			var memoryStream = new MemoryStream();
-			var bsonWriter = new BsonWriter(memoryStream);
-			JsonExtensions.CreateDefaultJsonSerializer().Serialize(bsonWriter, this);
-
-			bsonWriter.Flush();
-
+			JsonExtensions.CreateDefaultJsonSerializer().Serialize(new BsonWriter(memoryStream), this);
 			return memoryStream.ToArray();
 		}
 
