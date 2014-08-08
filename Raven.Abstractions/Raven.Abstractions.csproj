@@ -320,7 +320,12 @@
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
+    <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
+    <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\Tombstone.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
+    <Compile Include="Smuggler\ISmugglerOperations.cs" />
+    <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />

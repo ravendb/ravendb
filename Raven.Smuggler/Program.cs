@@ -193,7 +193,7 @@ namespace Raven.Smuggler
 						break;
 					case SmugglerAction.Between:
 						connectionStringOptions2.Url = backupPath;
-						SmugglerOperation.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }, smugglerApi.SmugglerOptions).Wait();
+						smugglerApi.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }).Wait();
 						break;
 				}
 			}
