@@ -332,7 +332,7 @@ class logs extends viewModelBase {
     switchToHttpTraceMode() {
         var tracedDB = appUrl.getResource();
         this.disposeOnDemandLogsClient();
-        this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
+        this.logHttpTraceClient= new httpTraceClient(tracedDB);
         this.logHttpTraceClient.connectToChangesApiTask
             .done(() => {
                 this.logsMode("Http Trace");

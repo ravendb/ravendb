@@ -352,8 +352,10 @@ namespace Raven.Database.Server.WebApi
 
 		private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
-			if (Logger.IsDebugEnabled == false)
-				return;
+            // we perform fast precheck - in fact http trace can be inserted between this line and code which performs multiplexing
+            // even when it happen is shouldn't be any problem.
+		    if (Logger.IsDebugEnabled == false && !HasAnyHttpTraceEventTransport()) 
+                return;
 
 			if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
 				return;
@@ -400,6 +402,11 @@ namespace Raven.Database.Server.WebApi
 		    }
 		}
         
+        private bool HasAnyHttpTraceEventTransport()
+        {
+            return serverHttpTrace.Count > 0 || resourceHttpTraces.Count > 0;
+        }
+
 	    private void NotifyLogChangesApi(RavenBaseApiController controller,  LogNotification logNotification)
 	    {
 	        TransportState transportState = null;
