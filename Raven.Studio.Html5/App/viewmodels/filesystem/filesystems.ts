@@ -145,8 +145,8 @@ class filesystems extends viewModelBase {
 
     deleteSelectedFileSystems(fileSystems: Array<filesystem>) {
         if (fileSystems.length > 0) {
-            require(["viewmodels/deleteResourceConfirm"], deleteDatabaseConfirm => {
-                var confirmDeleteViewModel = new deleteDatabaseConfirm(fileSystems);
+            require(["viewmodels/deleteResourceConfirm"], deleteResourceConfirm => {
+                var confirmDeleteViewModel = new deleteResourceConfirm(fileSystems);
 
                 confirmDeleteViewModel.deleteTask.done((deletedFileSystemsNames: string[]) => {
                     if (fileSystems.length == 1) {

@@ -26,7 +26,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Actions;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Server;
 using Raven.Database.Util;
 
@@ -216,7 +215,11 @@ namespace Raven.Server
 				{"uninstallSSL={==}", "Unbind X509 certificate specified in {0:option} with optional password from {2:option} from 'Raven/Port'.", (sslCertificateFile, sslCertificatePassword) =>
 						{
 							actionToTake = () => UninstallSsl(sslCertificateFile, sslCertificatePassword, ravenConfiguration);
-						}}
+						}},
+                {"update-version=", "Updates the specified {0:databaseName} to newest version", dbName =>
+                    {
+                        actionToTake = () => UpdateVersion(dbName);
+                    }}
 			};
 
 
@@ -272,6 +275,20 @@ namespace Raven.Server
 
 			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
 		}
+
+        private static void UpdateVersion(string dbToUpdate)
+        {
+            var ravenConfiguration = new RavenConfiguration();
+		    ConfigureDebugLogging();
+
+            RunServerInDebugMode(ravenConfiguration, false, server =>
+            {
+                server.Server.GetDatabaseInternal(dbToUpdate).Wait();
+                return true;
+            }, false);
+        }
+
+
 
 		private static void SetupPerfCounters(string user)
 		{
@@ -440,7 +457,7 @@ Configuration options:
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.Encryption.UseSsl);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
-			while (RunServerInDebugMode(ravenConfiguration, launchBrowser))
+			while (RunServerInDebugMode(ravenConfiguration, launchBrowser, server => InteractiveRun(server)))
 			{
 				launchBrowser = false;
 			}
@@ -459,10 +476,10 @@ Configuration options:
 			}
 		}
 
-		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser)
+		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser, Func<RavenDbServer, bool> afterOpen, bool useEmbeddedServer = true)
 		{
 			var sp = Stopwatch.StartNew();
-			using (var server = new RavenDbServer(ravenConfiguration){ UseEmbeddedHttpServer = true }.Initialize())
+			using (var server = new RavenDbServer(ravenConfiguration){ UseEmbeddedHttpServer = useEmbeddedServer }.Initialize())
 			{
 				sp.Stop();
 				var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
@@ -491,7 +508,7 @@ Configuration options:
 						Console.WriteLine("Could not start browser: " + e.Message);
 					}
 				}
-				return InteractiveRun(server);
+			    return afterOpen(server);
 			}
 		}
 

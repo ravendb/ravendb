@@ -558,7 +558,8 @@ namespace Voron.Impl.Journal
 
 				try
 				{
-					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+					var sortedPages = pagesToWrite.Where(x => x.Value.OverwrittenByOverflowPage == false)
+													.OrderBy(x => x.Key)
 													.Select(x => scratchBufferPool.ReadPage(x.Value.ScratchPos, scratchPagerState))
 													.ToList();
 

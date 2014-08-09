@@ -48,14 +48,24 @@ namespace Raven.Tests.MailingList
 
         public class DocumentConversionListener  : IDocumentConversionListener
         {
-            public void DocumentToEntity(string key, object entityInstance, RavenJObject document, RavenJObject metadata)
-            {
-                ((TransformedItem) entityInstance).Converted = true;
-            }
+            
+	        public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
+	        {
 
-            public void EntityToDocument(string key, object entityInstance, RavenJObject document, RavenJObject metadata)
-            {
-            }
+	        }
+
+	        public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
+	        {
+	        }
+
+	        public void BeforeConversionToEntity(string key, RavenJObject document, RavenJObject metadata)
+	        {
+	        }
+
+	        public void AfterConversionToEntity(string key, RavenJObject document, RavenJObject metadata, object entity)
+	        {
+				((TransformedItem)entity).Converted = true;
+	        }
         }
 
         [Fact]

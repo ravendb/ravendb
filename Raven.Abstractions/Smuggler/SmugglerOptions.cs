@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -16,6 +17,7 @@ using System.Linq;
 namespace Raven.Abstractions.Smuggler
 {
     using System.Text.RegularExpressions;
+
     public class SmugglerOptions
 	{
         public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
@@ -37,7 +39,10 @@ namespace Raven.Abstractions.Smuggler
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
+			CancelToken = new CancellationTokenSource();
 		}
+
+		public CancellationTokenSource CancelToken;
 
 		/// <summary>
 		/// Limit total size of documents in each chunk

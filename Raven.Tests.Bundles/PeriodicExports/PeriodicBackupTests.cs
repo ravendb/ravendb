@@ -53,14 +53,8 @@ namespace Raven.Tests.Bundles.PeriodicExports
 
 			using (var store = NewDocumentStore())
 			{
-				var dataDumper = new DataDumper(store.SystemDatabase);
-				dataDumper.ImportData(new SmugglerImportOptions
-				{
-					FromFile = backupPath,
-				}, new SmugglerOptions
-				{
-					Incremental = true,
-				}).Wait();
+				var dataDumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true}};
+				dataDumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
 
 				using (var session = store.OpenSession())
 				{
@@ -111,14 +105,8 @@ namespace Raven.Tests.Bundles.PeriodicExports
 
 			using (var store = NewDocumentStore())
 			{
-			    var dataDumper = new DataDumper(store.SystemDatabase);
-				dataDumper.ImportData(new SmugglerImportOptions
-				{
-				    FromFile = backupPath,
-				}, new SmugglerOptions
-				{
-					Incremental = true,
-				}).Wait();
+			    var dataDumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true}};
+				dataDumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
 
 				using (var session = store.OpenSession())
 				{

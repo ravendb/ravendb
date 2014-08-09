@@ -86,7 +86,7 @@ namespace Raven.Database.Config
 		}
 
 		public void Initialize()
-		{
+		{			
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -104,7 +104,7 @@ namespace Raven.Database.Config
 			if (ConcurrentMultiGetRequests == null)
 				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
 
-			MemoryLimitForIndexingInMb = ravenSettings.MemoryLimitForIndexing.Value;
+			MemoryLimitForProcessingInMb = ravenSettings.MemoryLimitForProcessing.Value;
 
 			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
@@ -128,7 +128,7 @@ namespace Raven.Database.Config
 			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
 
 			// Index settings
-			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
+			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
@@ -136,26 +136,26 @@ namespace Raven.Database.Config
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
 
-			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
+			MaxNumberOfItemsToProcessInSingleBatch = ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Value;
 
-			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
+			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
-				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-																	MaxNumberOfItemsToIndexInSingleBatch);
+				InitialNumberOfItemsToProcessInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
+																	MaxNumberOfItemsToProcessInSingleBatch);
 			}
 			else
 			{
-				InitialNumberOfItemsToIndexInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default ?
+				InitialNumberOfItemsToProcessInSingleBatch = MaxNumberOfItemsToProcessInSingleBatch == ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Default ?
 				 defaultInitialNumberOfItemsToIndexInSingleBatch :
-				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToProcessInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
-			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
+			AvailableMemoryForRaisingBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingBatchSizeLimit.Value;
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
 			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
 				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
-				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToProcessInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
 
@@ -166,7 +166,7 @@ namespace Raven.Database.Config
 																	MaxNumberOfItemsToReduceInSingleBatch);
 			}
 
-			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
+			MaxNumberOfParallelProcessingTasks = ravenSettings.MaxNumberOfParallelProcessingTasks.Value;
 
 			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
@@ -244,9 +244,9 @@ namespace Raven.Database.Config
 
 			RedirectStudioUrl = ravenSettings.RedirectStudioUrl.Value;
 
-			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
+			DisableDocumentPreFetching = ravenSettings.DisableDocumentPreFetching.Value;
 
-			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
+			MaxNumberOfItemsToPreFetch = ravenSettings.MaxNumberOfItemsToPreFetch.Value;
 			
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
@@ -503,13 +503,13 @@ namespace Raven.Database.Config
 		/// Max number of items to take for indexing in a batch
 		/// Minimum: 128
 		/// </summary>
-		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int MaxNumberOfItemsToProcessInSingleBatch { get; set; }
 
 		/// <summary>
-		/// The initial number of items to take when indexing a batch
+		/// The initial number of items to take when processing a batch
 		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
-		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
 		/// <summary>
 		/// Max number of items to take for reducing in a batch
@@ -531,10 +531,10 @@ namespace Raven.Database.Config
 		public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
 
 		/// <summary>
-		/// The maximum number of indexing tasks allowed to run in parallel
+		/// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
 		/// Default: The number of processors in the current machine
 		/// </summary>
-		public int MaxNumberOfParallelIndexTasks
+		public int MaxNumberOfParallelProcessingTasks
 		{
 			get
 			{
@@ -819,9 +819,9 @@ namespace Raven.Database.Config
 			}
 		}
 
-		public bool DisableDocumentPreFetchingForIndexing { get; set; }
+		public bool DisableDocumentPreFetching { get; set; }
 
-		public int MaxNumberOfItemsToPreFetchForIndexing { get; set; }
+		public int MaxNumberOfItemsToPreFetch { get; set; }
 
 		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
@@ -864,9 +864,9 @@ namespace Raven.Database.Config
 		public int MaxNumberOfStoredCommitPoints { get; set; }
 
 		/// <summary>
-		/// Limit of how much indexing process can take memory (in MBytes)
+		/// Limit of how much memory a batch processing can take (in MBytes)
 		/// </summary>
-		public int MemoryLimitForIndexingInMb { get; set; }
+		public int MemoryLimitForProcessingInMb { get; set; }
 
 		public string IndexStoragePath
 		{
@@ -901,9 +901,9 @@ namespace Raven.Database.Config
 			set { fileSystemIndexStoragePath = value.ToFullPath(); }
 		}
 
-		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
+		public int AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
-		public TimeSpan MaxIndexingRunLatency { get; set; }
+		public TimeSpan MaxProcessingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
 		
@@ -1114,8 +1114,6 @@ namespace Raven.Database.Config
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 
             DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
-            DefaultStorageTypeName = defaultConfiguration.DefaultStorageTypeName;
-
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 

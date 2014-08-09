@@ -1165,8 +1165,12 @@ namespace Raven.Client.Connection.Async
 		}
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
-									RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
-									string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+									RavenPagingInformation pagingInformation = null, 
+									bool metadataOnly = false, 
+									string exclude = null,
+									string transformer = null, 
+									Dictionary<string, RavenJToken> transformerParameters = null,
+									string skipAfter = null)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
@@ -1184,6 +1188,9 @@ namespace Raven.Client.Connection.Async
 
 				if (metadataOnly)
 					actualUrl += "&metadata-only=true";
+
+				if (string.IsNullOrEmpty(skipAfter) == false)
+					actualUrl += "&skipAfter=" + Uri.EscapeDataString(skipAfter);
 
 				if (string.IsNullOrEmpty(transformer) == false)
 				{
@@ -1217,7 +1224,7 @@ namespace Raven.Client.Connection.Async
 																				.ToArray();
 				return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults,
 													() => StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation,
-														  metadataOnly, exclude, transformer, transformerParameters),
+														  metadataOnly, exclude, transformer, transformerParameters, skipAfter),
 													conflictedResultId =>
 												   new ConflictException(
 													   "Conflict detected on " +
@@ -1493,11 +1500,11 @@ namespace Raven.Client.Connection.Async
 		}
 
 
-		public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
+		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag, "GET", operationMetadata.Credentials, convention)
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag + "&start=" + start, "GET", operationMetadata.Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
@@ -1870,6 +1877,8 @@ namespace Raven.Client.Connection.Async
 
 					await TryReadNextPageStart().ConfigureAwait(false);
 
+					await EnsureValidEndOfResponse();
+
 					return false;
 				}
 
@@ -1902,6 +1911,20 @@ namespace Raven.Client.Connection.Async
 				
 			}
 
+			private async Task EnsureValidEndOfResponse()
+			{
+				if(reader.TokenType != JsonToken.EndObject && await reader.ReadAsync().ConfigureAwait(false) == false)
+					throw new InvalidOperationException("Unexpected end of response - missing EndObject token");
+
+				if (reader.TokenType != JsonToken.EndObject)
+					throw new InvalidOperationException(string.Format("Unexpected token type at the end of the response: {0}. Error: {1}", reader.TokenType, streamReader.ReadToEnd()));
+
+				var remainingContent = streamReader.ReadToEnd();
+
+				if(string.IsNullOrEmpty(remainingContent) == false)
+					throw new InvalidOperationException("Server error: " + remainingContent);
+			}
+
 			public RavenJObject Current { get; private set; }
 		}
 
@@ -1910,18 +1933,19 @@ namespace Raven.Client.Connection.Async
 						string matches = null, int start = 0,
 						int pageSize = Int32.MaxValue,
 						string exclude = null,
-						RavenPagingInformation pagingInformation = null)
+						RavenPagingInformation pagingInformation = null,
+						string skipAfter = null)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
 			if (fromEtag != null) // etags does not match between servers
-				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication)).ConfigureAwait(false);
+				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication), skipAfter).ConfigureAwait(false);
 
-			return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata)).ConfigureAwait(false);
+			return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, skipAfter)).ConfigureAwait(false);
 		}
 
-		private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata)
+		private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, string skipAfter)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1946,6 +1970,10 @@ namespace Raven.Client.Connection.Async
 				{
 					sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
 				}
+				if (skipAfter != null)
+				{
+					sb.Append("skipAfter=").Append(Uri.EscapeDataString(skipAfter)).Append("&");
+			}
 			}
 
 			var actualStart = start;
@@ -2430,4 +2458,4 @@ namespace Raven.Client.Connection.Async
 										 replicationInformerGetter, databaseName, conflictListeners);
 		}
 	}
-}
+	}

@@ -71,9 +71,11 @@
     <Compile Include="Client\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="Imports\SmugglerJintHelper.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Smuggler.cs" />
+    <Compile Include="SmugglerBetweenOperation.cs" />
+    <Compile Include="ServerSupportedFeatures.cs" />
     <Compile Include="SmugglerApi.cs" />
     <Compile Include="SmugglerExportIncremental.cs" />
+    <Compile Include="SmugglerOperations.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">

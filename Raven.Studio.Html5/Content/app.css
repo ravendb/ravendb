@@ -7060,6 +7060,16 @@ body {
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
 }
+#logNotificationsContainer {
+  background-color: black;
+  height: 80vh;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+#logNotificationsContainer div {
+  padding-left: 2%;
+  color: white;
+}
 #logsContainer .logRecord .logName .logName-actions-container {
   display: none;
 }

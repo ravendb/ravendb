@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,10 +19,20 @@ namespace Raven.Database.Server.Tenancy
         private readonly DocumentDatabase systemDatabase;
 
 	    private bool initialized;
+        private const string DATABASES_PREFIX = "Raven/Databases/";
+        public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
+
         public DatabasesLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
+
+			string tempPath = Path.GetTempPath();
+			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+			if (File.Exists(fullTempPath))
+				File.Delete(fullTempPath);
+			if (Directory.Exists(fullTempPath))
+				Directory.Delete(fullTempPath, true);
 
             Init();
         }
@@ -189,6 +199,18 @@ namespace Raven.Database.Server.Tenancy
                 Logger.Info("Shutting down database {0} because the tenant database has been updated or removed", dbName);
 				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
             };
+        }
+
+        public bool IsDatabaseLoaded(string tenantName)
+        {
+            if (tenantName == Constants.SystemDatabase)
+                return true;
+
+            Task<DocumentDatabase> dbTask;
+            if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+                return false;
+
+            return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
         }
     }
 }

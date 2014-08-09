@@ -7,6 +7,7 @@
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -61,6 +62,11 @@ namespace Raven.Client.Connection
 		public string GetIndexingStatus()
 		{
 			return asyncAdminServerClient.GetIndexingStatusAsync().ResultUnwrap();
+		}
+
+		public RavenJObject GetDatabaseConfiguration()
+		{
+			return asyncAdminServerClient.GetDatabaseConfigurationAsync().ResultUnwrap();
 		}
 
 		public BuildNumber GetBuildNumber()

@@ -192,20 +192,11 @@ namespace Raven.Client
 		private DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
-		/// Registers the conversion listener.
+		/// Registers the extended conversion listener.
 		/// </summary>
 		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
 		{
 			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-			return this;
-		}
-
-		/// <summary>
-		/// Registers the extended conversion listener.
-		/// </summary>
-		public DocumentStoreBase RegisterListener(IExtendedDocumentConversionListener conversionListener)
-		{
-			listeners.ExtendedConversionListeners = listeners.ExtendedConversionListeners.Concat(new[] { conversionListener, }).ToArray();
 			return this;
 		}
 
@@ -247,14 +238,6 @@ namespace Raven.Client
 		{
 			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
 			return this;
-		}
-
-		/// <summary>
-		/// Gets a read-only collection of the registered conversion listeners.
-		/// </summary>
-		public ReadOnlyCollection<IDocumentConversionListener> RegisteredConversionListeners
-		{
-			get { return new ReadOnlyCollection<IDocumentConversionListener>(listeners.ConversionListeners); }
 		}
 
 		/// <summary>

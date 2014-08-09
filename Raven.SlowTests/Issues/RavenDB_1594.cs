@@ -112,9 +112,8 @@ namespace Raven.SlowTests.Issues
 			}
 
 			var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
-			var smugglerApi = new SmugglerApi();
-			await
-				smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupFolder.FullName, To = connection }, new SmugglerOptions { Incremental = true });
+			var smugglerApi = new SmugglerApi {SmugglerOptions = {Incremental = true}};
+			await smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupFolder.FullName, To = connection });
 
 			using (var session = documentStore.OpenSession())
 			{

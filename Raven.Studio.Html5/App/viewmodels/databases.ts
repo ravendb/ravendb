@@ -72,14 +72,6 @@ class databases extends viewModelBase {
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.databases().length === 1) {
             this.newDatabase();
-        } else {
-            // If we have just a few databases, grab the db stats for all of them.
-            // (Otherwise, we'll grab them when we click them.)
-            var few = 20;
-            var enabledDatabases: database[] = this.databases().filter((db: database) => !db.disabled());
-            if (enabledDatabases.length < few) {
-                enabledDatabases.forEach(db => shell.fetchDbStats(db));
-            }
         }
     }
 
@@ -107,10 +99,13 @@ class databases extends viewModelBase {
             var createDatabaseViewModel = new createDatabase(this.databases, shell.licenseStatus);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string) => {
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
+                    if (storageEngine) {
+                        settings["Raven/StorageEngine"] = storageEngine;
+                    }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
                         settings["Raven/Esent/LogsPath"] = databaseLogs;
@@ -231,8 +226,8 @@ class databases extends viewModelBase {
 
     deleteSelectedDatabases(databases: Array<database>) {
         if (databases.length > 0) {
-            require(["viewmodels/deleteResourceConfirm"], deleteDatabaseConfirm => {
-                var confirmDeleteViewModel = new deleteDatabaseConfirm(databases);
+            require(["viewmodels/deleteResourceConfirm"], deleteResourceConfirm => {
+                var confirmDeleteViewModel = new deleteResourceConfirm(databases);
 
                 confirmDeleteViewModel.deleteTask.done((deletedDatabaseNames: string[]) => {
                     if (databases.length == 1) {
@@ -270,8 +265,8 @@ class databases extends viewModelBase {
         if (databases.length > 0) {
             var action = !databases[0].disabled();
 
-            require(["viewmodels/disableResourceToggleConfirm"], disableDatabaseToggleConfirm => {
-                var disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(databases);
+            require(["viewmodels/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
+                var disableDatabaseToggleViewModel = new disableResourceToggleConfirm(databases);
 
                 disableDatabaseToggleViewModel.disableToggleTask
                     .done((toggledDatabasesNames: string[]) => {

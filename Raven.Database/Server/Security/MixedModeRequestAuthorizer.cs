@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
@@ -38,9 +39,11 @@ namespace Raven.Database.Server.Security
 						user = null;
 						return;
 					}
+                    
 					user = new OneTimetokenPrincipal
 					{
-						Name = value.Identity.Name
+						Name = value.Identity.Name,
+                        IsAdministratorInAnonymouseMode = value.IsAdministrator(AnonymousUserAccessMode.None)
 					};
 				}
 			}
@@ -54,9 +57,14 @@ namespace Raven.Database.Server.Security
 		{
 			public bool IsInRole(string role)
 			{
-				return false;
+                if (role == "Administrators")
+                {
+                    return IsAdministratorInAnonymouseMode;
+                }
+			    return false;
 			}
 
+            public bool IsAdministratorInAnonymouseMode { get; set; }
 			public IIdentity Identity { get { return this; } }
 			public string Name { get; set; }
 			public string AuthenticationType { get { return "one-time-token"; } }
@@ -155,6 +163,12 @@ namespace Raven.Database.Server.Security
 
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
 		{
+            if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
+            {
+                msg = controller.GetEmptyMessage();
+                return true;
+            }
+
             object result;
             HttpStatusCode statusCode;
             IPrincipal user;
@@ -164,11 +178,18 @@ namespace Raven.Database.Server.Security
                 msg = controller.GetMessageWithObject(result, statusCode);
             else
                 msg = controller.GetEmptyMessage();
+
+            controller.WasAlreadyAuthorizedUsingSingleAuthToken = success;
             return success;
         }
 
 	    public IPrincipal GetUser(RavenDbApiController controller)
 		{
+            if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
+            {
+                return controller.User;
+            }
+
 			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = controller.GetHeader("Authorization");
 			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
@@ -195,6 +216,20 @@ namespace Raven.Database.Server.Security
 
 			return approved;
 		}
+
+        public List<string> GetApprovedResources(IPrincipal user, string authHeader, string[] databases)
+        {
+            List<string> approved;
+            if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+                approved = oAuthRequestAuthorizer.GetApprovedResources(user);
+            else
+                approved = windowsRequestAuthorizer.GetApprovedResources(user);
+
+            if (approved.Contains("*"))
+                return databases.ToList();
+
+            return approved;
+        }
 
 		public override void Dispose()
 		{

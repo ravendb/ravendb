@@ -10,9 +10,11 @@ using System.Runtime;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Http;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
@@ -23,6 +25,7 @@ using System.Net.Http;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Builtins;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Util;
@@ -278,7 +281,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
 			if (string.IsNullOrEmpty(concurrency) == false)
-				Database.Configuration.MaxNumberOfParallelIndexTasks = Math.Max(1, int.Parse(concurrency));
+				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
 			Database.SpinIndexingWorkers();
 		}
@@ -596,6 +599,73 @@ namespace Raven.Database.Server.Controllers.Admin
 
                 stackDump.Flush();
             }
+        }
+
+
+	    [HttpGet]
+	    [Route("admin/logs/configure")]
+	    public HttpResponseMessage OnDemandLogConfig()
+	    {
+	        var id = GetQueryStringValue("id");
+            if (string.IsNullOrEmpty(id))
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "id query string parameter is mandatory when using logs endpoint"
+                }, HttpStatusCode.BadRequest);
+            }
+
+            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+	        var connectionState = logTarget.For(id, this);
+
+	        var command = GetQueryStringValue("command");
+            if (string.IsNullOrEmpty(command) == false)
+            {
+                if ("disconnect" == command)
+                {
+                    logTarget.Disconnect(id);
+                }
+                return GetMessageWithObject(connectionState);
+            }
+
+	        var watchCatogory = GetQueryStringValues("watch-category");
+	        var categoriesToWatch = watchCatogory.Select(
+	            x =>
+	            {
+	                var tokens = x.Split(':');
+	                LogLevel level;
+                    if (Enum.TryParse(tokens[1], out level))
+                    {
+                        return Tuple.Create(tokens[0], level);
+                    }
+	                throw new InvalidOperationException("Unable to parse watch-category: " + tokens[1]);
+	            }).ToList();
+
+            var unwatchCatogory = GetQueryStringValues("unwatch-category");
+            foreach (var category in unwatchCatogory)
+	        {
+	            connectionState.DisableLogging(category);
+	        }
+
+	        foreach (var categoryAndLevel in categoriesToWatch)
+	        {
+	            connectionState.EnableLogging(categoryAndLevel.Item1, categoryAndLevel.Item2);
+	        }
+
+            return GetMessageWithObject(connectionState);
+
+	    }
+
+        [HttpGet]
+        [Route("admin/logs/events")] 
+        public HttpResponseMessage OnDemandLogFetch()
+        {
+            var logsTransport = new LogsPushContent(this);
+            logsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
+            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            logTarget.Register(logsTransport);
+
+            return new HttpResponseMessage { Content = logsTransport };
         }
 	}
 }

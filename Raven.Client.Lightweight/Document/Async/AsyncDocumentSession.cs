@@ -187,13 +187,14 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation<TResult[]>(lazyOp, null);
         }
 
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation);
+			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
             return AddLazyOperation<T[]>(operation, null);
         }
-	    /// <summary>
+
+		/// <summary>
         /// Loads the specified entities with the specified id after applying
         /// conventions on the provided id to get the real document id.
         /// </summary>
@@ -331,15 +332,16 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, skipAfter: skipAfter)
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
 		}
 
 		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
 		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
-		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		                                                    Action<ILoadConfiguration> configure = null,
+															string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -351,7 +353,8 @@ namespace Raven.Client.Document.Async
 
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
 			                                             pagingInformation: pagingInformation, transformer: transformer,
-			                                             transformerParameters: configuration.TransformerParameters)
+			                                             transformerParameters: configuration.TransformerParameters,
+														 skipAfter: skipAfter)
 			                            .ContinueWith(
 				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
 		}

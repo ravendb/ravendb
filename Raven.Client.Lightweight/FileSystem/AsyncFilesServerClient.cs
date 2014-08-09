@@ -12,6 +12,7 @@ using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem.Listeners;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
@@ -35,7 +36,10 @@ namespace Raven.Client.FileSystem
                                           IDisposable, IHoldProfilingInformation
     {
         private readonly Lazy<FilesChangesClient> notifications;
+        private readonly IFilesConflictListener[] conflictListeners;
 
+
+        private bool resolvingConflict = false;
         private IDisposable failedUploadsObserver;
 
         private const int DefaultNumberOfCachedRequests = 2048;
@@ -55,15 +59,16 @@ namespace Raven.Client.FileSystem
             remove { this.ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-        public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, NameValueCollection operationsHeaders = null)
+        public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null)
             : base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders)
         {
             try
-            {
-                FileSystem = fileSystemName;                
-                ApiKey = credentials.ApiKey;
+            {                
+                this.FileSystem = fileSystemName;
+                this.ApiKey = credentials.ApiKey;
+                this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
 
-                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, () => { }));
+                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, TryResolveConflictByUsingRegisteredListenersAsync, () => { }));
 
                 InitializeSecurity();
             }
@@ -75,7 +80,7 @@ namespace Raven.Client.FileSystem
         }
 
         public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-            : this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, new NameValueCollection())
+            : this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, null, new NameValueCollection())
         {
         }
 
@@ -101,17 +106,17 @@ namespace Raven.Client.FileSystem
 
         public IAsyncFilesCommands ForFileSystem(string fileSystem)
         {
-            return new AsyncFilesServerClient(this.ServerUrl, fileSystem, Conventions, PrimaryCredentials, RequestFactory, SessionId, OperationsHeaders);
+            return new AsyncFilesServerClient(this.ServerUrl, fileSystem, Conventions, PrimaryCredentials, RequestFactory, SessionId, this.conflictListeners, OperationsHeaders);
         }
 
         public IAsyncFilesCommands With(ICredentials credentials)
         {
             var primaryCredentials = new OperationCredentials(this.ApiKey, credentials);
-            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, primaryCredentials, RequestFactory, SessionId, OperationsHeaders);
+            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, primaryCredentials, RequestFactory, SessionId, this.conflictListeners, OperationsHeaders);
         }
         public IAsyncFilesCommands With(OperationCredentials credentials)
         {
-            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, credentials, RequestFactory, SessionId, OperationsHeaders);
+            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, credentials, RequestFactory, SessionId, this.conflictListeners, OperationsHeaders);
         }
 
         public string ApiKey { get; private set; }
@@ -124,7 +129,7 @@ namespace Raven.Client.FileSystem
                 if (value)
                 {
                     failedUploadsObserver = notifications.Value.ForCancellations()
-                                                .Subscribe(CancelFileUpload);
+                                                               .Subscribe(CancelFileUpload);
                 }
                 else
                 {
@@ -557,6 +562,65 @@ namespace Raven.Client.FileSystem
                     UnregisterUploadOperation(uploadIdentifier);
                 }
             });
+        }
+
+        internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
+        {
+            var files = await this.GetAsync(new[] { filename });
+            FileHeader local = files.FirstOrDefault();
+            
+            // File does not exists anymore on the server.
+            if (local == null)
+                return false;
+
+            if (conflictListeners.Length > 0 && resolvingConflict == false)
+            {
+                resolvingConflict = true;
+                try
+                {
+                    var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
+                    foreach (var conflictListener in conflictListeners)
+                    {
+                        var strategy = conflictListener.ConflictDetected(local, remote, sourceServerUri);
+                        if (strategy != ConflictResolutionStrategy.NoResolution)
+                        {
+                            resolutionStrategy = strategy;
+                            break;
+                        }
+                    }
+
+                    // We execute an external action before conflict resolution starts.
+                    beforeConflictResolution();
+
+                    if (resolutionStrategy == ConflictResolutionStrategy.NoResolution)
+                        return false;
+
+                    // We resolve the conflict.
+                    try
+                    {
+                        var client = new SynchronizationClient(this, this.Conventions);
+                        await client.ResolveConflictAsync(filename, resolutionStrategy);
+
+                        // Refreshing the file information.
+                        files = await this.GetAsync(new[] { filename });                        
+                        files.ApplyIfNotNull ( x => 
+                        {
+                            // We notify the listeners.
+                            foreach (var conflictListener in conflictListeners)
+                                conflictListener.ConflictResolved(x);
+                        });
+
+                        return true;
+                    }
+                    catch { }
+                }
+                finally
+                {
+                    resolvingConflict = false;
+                }
+            }
+
+            return false;
         }
 
         private void CancelFileUpload(CancellationNotification uploadFailed)

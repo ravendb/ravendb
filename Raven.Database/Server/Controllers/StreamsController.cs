@@ -42,10 +42,12 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
 				pageSize = int.MaxValue;
 
+			var skipAfter = GetQueryStringValue("skipAfter");
+
 			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new PushStreamContent((stream, content, transportContext) =>
-					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
+					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter))
 				{
 					Headers =
 					{
@@ -55,7 +57,7 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
-		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
+		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
 		{
 			using (var cts = new CancellationTokenSource())
 			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
@@ -88,7 +90,7 @@ namespace Raven.Database.Server.Controllers
 								timeout.Delay();
 								doc.WriteTo(writer);
                                 writer.WriteRaw(Environment.NewLine);
-							});
+							},skipAfter: skipAfter);
 
 							nextPageStart = nextPageStartInternal;
 						}

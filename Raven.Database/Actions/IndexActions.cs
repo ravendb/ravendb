@@ -351,7 +351,7 @@ namespace Raven.Database.Actions
                     op.Init();
                     if (op.Header.TotalResults == 0 ||
                         op.Header.TotalResults > (countOfDocuments * 0.25) ||
-                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 4))
+                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 4))
                     {
                         // we don't apply this optimization if the total number of results is more than
                         // 25% of the count of documents (would be easier to just run it regardless).

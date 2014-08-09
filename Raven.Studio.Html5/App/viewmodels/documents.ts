@@ -233,7 +233,7 @@ class documents extends viewModelBase {
     private updateGridAfterOperationComplete(collection: collection, operationId: number) {
         var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
         getOperationStatusTask.execute()
-            .done((result: operationStatusDto) => {
+            .done((result: bulkOperationStatusDto) => {
                 if (result.Completed) {
                     var selectedCollection: collection = this.selectedCollection();
 

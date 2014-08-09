@@ -12,9 +12,11 @@ using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
+    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
     {
-        	/// <summary>
+        private IDisposable conflictCacheRemoval; 
+
+        /// <summary>
 		/// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
 		/// </summary>
         public AsyncFilesSession(FilesStore filesStore,
@@ -24,7 +26,9 @@ namespace Raven.Client.FileSystem
 			: base(filesStore, listeners, id)
 		{
             Commands = asyncFilesCommands;
-            filesStore.Changes().ForConflicts().Subscribe(this);
+            conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
+                                             .ForConflicts()
+                                             .Subscribe<ConflictNotification>(this.OnFileConflict);
 		}
 
         /// <summary>
@@ -133,64 +137,25 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        public async void OnNext(ConflictNotification notification)
+        internal void OnFileConflict(ConflictNotification notification)
         {
-            if (!conflicts.Contains(notification.FileName))
-                conflicts.Add(notification.FileName);
-                
-            var localHeader = await this.LoadFileAsync(notification.FileName);
-            //var remolocalHeaderteHeader = await Commands.ForFileSystem(notification.SourceServerUrl).GetMetadataForAsync(notification.FileName);
-            if (notification.Status == ConflictStatus.Detected) 
+            if ( notification.Status == ConflictStatus.Detected)
             {
-                var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
-                int actionableListenersCount = 0;
-                foreach( var listener in Listeners.ConflictListeners)
-                {
-                    var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
-
-                    if (strategy != ConflictResolutionStrategy.NoResolution )
-                    {
-                        if (actionableListenersCount > 0)
-                        {
-                            return;
-                        }
-                        if (actionableListenersCount == 0) 
-                        {
-                            actionableListenersCount++;
-                            resolutionStrategy = strategy;
-                        }
-                    }
-                }
-
-                await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resolutionStrategy);
+                conflicts.Add(notification.FileName);                
             }
             else
             {
-                callListenersOnConflictResolved(notification.FileName);  
-            }
+                entitiesByKey.Remove(notification.FileName);
+                conflicts.Remove(notification.FileName);
+            }            
         }
 
-        private async void callListenersOnConflictResolved(string fileName)
+        public override void Dispose ()
         {
-            if (entitiesByKey.ContainsKey(fileName))
-                entitiesByKey.Remove(fileName);
+            base.Dispose();
 
-            if (conflicts.Contains(fileName))
-                conflicts.Remove(fileName);
-
-            var localHeader = await this.LoadFileAsync(fileName);
-            foreach (var listener in Listeners.ConflictListeners)
-            {
-                listener.ConflictResolved(localHeader);
-            }
-        }
-
-        public void OnError(Exception error)
-        {
-        }
-
-        public void OnCompleted()
-        {
+            if (this.conflictCacheRemoval != null)
+                this.conflictCacheRemoval.Dispose();
         }
     }
 }

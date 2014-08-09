@@ -24,6 +24,20 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface logNotificationDto {
+    Level :string;
+    TimeStamp :string;
+    LoggerName :string;
+    RequestId: number;
+    HttpMethod: string;
+    ElapsedMilliseconds: number;
+    ResponseStatusCode: number;
+    RequestUri: string;
+    TenantName: string;
+    CustomInfo: string;
+    TenantType: logTenantType;
+
+}
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
     OperationId: string;
 }
@@ -773,6 +787,12 @@ enum transformerChangeType {
     TransformerRemoved = 2
 }
 
+enum logTenantType {
+    Database= 0,
+    Filesystem= 1,
+    CounterStorage=2
+}
+
 interface filterSettingDto {
     Path: string;
     Values: string[];
@@ -920,12 +940,20 @@ interface operationIdDto {
 
 interface operationStatusDto {
     Completed: boolean;
+}
+
+interface bulkOperationStatusDto extends operationStatusDto{
     State: documentStateDto[];
 }
 
 interface documentStateDto {
     Document: string;
     Deleted: boolean;
+}
+
+interface importOperationStatusDto extends operationStatusDto{
+    LastProgress: string;
+    ExceptionDetails: string;
 }
 
 interface replicationTopologyDto {
@@ -966,4 +994,10 @@ interface runningTaskDto {
     Payload: string;
     TaskType: string;
     StartTime: string;
+}
+
+
+interface customLogEntryDto {
+    category: string;
+    level: string;
 }

@@ -126,11 +126,9 @@ namespace Raven.Database.Server.Controllers
 
 			var task = Task.Factory.StartNew(() =>
 			{
-			   
 				var array = batchOperation(index, indexQuery, allowStale);
 				status.State = array;
 				status.Completed = true;
-			    
 			});
 
 			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription

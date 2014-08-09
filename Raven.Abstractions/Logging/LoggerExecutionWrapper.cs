@@ -1,5 +1,7 @@
 ﻿using System;
 
+using System.Linq;
+
 namespace Raven.Abstractions.Logging
 {
 	public class LoggerExecutionWrapper : ILog
@@ -49,7 +51,7 @@ namespace Raven.Abstractions.Logging
 			};
 			logger.Log(logLevel, wrappedMessageFunc);
 
-			if (ShouldLogToTargets(logLevel) == false || targets.Length == 0)
+			if (targets.Length == 0 || targets.All(t => !t.ShouldLog(logger, logLevel)))
 				return;
 			var formattedMessage = wrappedMessageFunc();
 			foreach (var target in targets)
@@ -62,23 +64,6 @@ namespace Raven.Abstractions.Logging
 					LoggerName = loggerName,
 					TimeStamp = SystemTime.UtcNow,
 				});
-			}
-		}
-
-		private bool ShouldLogToTargets(LogLevel logLevel)
-		{
-			switch (logLevel)
-			{
-				case LogLevel.Debug:
-				case LogLevel.Info:
-					return logger.IsDebugEnabled;
-				case LogLevel.Warn:
-					return logger.IsWarnEnabled;
-				case LogLevel.Error:
-				case LogLevel.Fatal:
-					return true; // errors & fatal are ALWAYS logged to registered targets
-				default:
-					return true;
 			}
 		}
 

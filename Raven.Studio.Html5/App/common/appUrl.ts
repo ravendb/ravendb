@@ -10,8 +10,20 @@ import messagePublisher = require("common/messagePublisher");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
+
+    static detectAppUrl() {
+        var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
+        var suffix = "studio/index.html";
+        console.log("ends2?");
+
+        if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
+            return path.substring(0, path.length - suffix.length - 1);
+        }
+        return "";
+    }
+
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
@@ -23,6 +35,7 @@ class appUrl {
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        upgrade: ko.computed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
@@ -123,6 +136,12 @@ class appUrl {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/configuration?" + counterStroragePart;
     }
+
+
+    static forUpgrade(db: database) {
+        return "#databases/upgrade?" + appUrl.getEncodedDbPart(db);
+    }
+    
 
     static forDatabases(): string {
         return "#databases";
@@ -262,7 +281,7 @@ class appUrl {
         var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
         return path;
     }
-
+    
     static forLogs(db: database): string {
         return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
     }

@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.FileSystem.Changes;
@@ -69,7 +70,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filesystem))
                 filesystem = this.DefaultFileSystem;
 
-            return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges);
+            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x) );
         }
 
         protected virtual IFilesChanges CreateFileSystemChanges(string filesystem)
@@ -83,16 +84,20 @@ namespace Raven.Client.FileSystem
 
             using (NoSynchronizationContext.Scope())
             {
-                return new FilesChangesClient(tenantUrl,
+                var client = new FilesChangesClient(tenantUrl,
                     ApiKey,
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
                     commands.ReplicationInformer,
-                    () => {
+                    ((AsyncFilesServerClient) this.AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
+                    () =>
+                    {
                         fileSystemChanges.Remove(filesystem);
                         fileSystemCommands.Remove(filesystem);
                     });
+
+                return client;
             }
         }
 
@@ -222,7 +227,7 @@ namespace Raven.Client.FileSystem
         {
             asyncFilesCommandsGenerator = () =>
             {
-                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId);
+                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, this.Listeners.ConflictListeners);
             };
         }
 

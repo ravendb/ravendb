@@ -60,6 +60,7 @@ class editDocument extends viewModelBase {
     isNewLineFriendlyMode = ko.observable(false);
     isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
+    newLineToggle = '\\n';
     
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -274,7 +275,7 @@ class editDocument extends viewModelBase {
 
     updateNewlineLayoutInDocument(unescapeNewline) {
         var dirtyFlagValue = this.dirtyFlag().isDirty();
-        if (unescapeNewline) {
+        if (unescapeNewline == true) {
             this.documentText(this.unescapeNewlinesInTextFields(this.documentText()));
             this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
         } else {

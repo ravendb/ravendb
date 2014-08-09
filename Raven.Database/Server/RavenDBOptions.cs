@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -24,6 +27,7 @@ namespace Raven.Database.Server
 			try
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
+			    HttpEndpointRegistration.RegisterOnDemandLogTarget();
 				if (db == null)
 				{
 					systemDatabase = new DocumentDatabase(configuration);
@@ -85,6 +89,7 @@ namespace Raven.Database.Server
                                 databasesLandlord, 
                                 fileSystemLandlord,
                                 systemDatabase, 
+                                LogManager.GetTarget<OnDemandLogTarget>(),
                                 requestManager,
                                 countersLandlord
 		                    };

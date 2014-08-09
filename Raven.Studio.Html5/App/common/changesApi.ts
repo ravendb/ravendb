@@ -14,6 +14,7 @@ class changesApi {
 
     private eventsId: string;
     private coolDownWithDataLoss: number;
+    private isMultyTenantTransport:boolean;
     private resourcePath: string;
     private connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
@@ -39,10 +40,13 @@ class changesApi {
     private allFsDestinationsHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
     private commandBase = new commandBase();
+    
+    private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
+    constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = this.makeId();
         this.coolDownWithDataLoss = coolDownWithDataLoss;
+        this.isMultyTenantTransport = isMultyTenantTransport;
         this.resourcePath = appUrl.forResourceQuery(this.rs);
         this.connectToChangesApiTask = $.Deferred();
 
@@ -61,18 +65,23 @@ class changesApi {
     }
 
     private connect(action: Function, needToReconnect: boolean = false) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath).execute();
-
+        this.connectToChangesApiTask = $.Deferred();
+        var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
+       
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss;
+                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
 
                 action.call(this, connectionString);
             })
-            .fail(() => {
-                // Connection has closed so try to reconnect every 3 seconds.
-                setTimeout(() => this.connect(action), 3 * 1000);
+            .fail((e) => {
+                if (e.status == 0) {
+                    // Connection has closed so try to reconnect every 3 seconds.
+                    setTimeout(() => this.connect(action), 3 * 1000);
+                } else {
+                    this.connectToChangesApiTask.reject();
+                }
             });
     }
 
@@ -249,10 +258,28 @@ class changesApi {
                     this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
                 }
                 this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
-            } else {
+            }
+            else if (type === "LogNotification") {
+                this.fireEvents(this.adminLogsHandlers(), value, (e) => true);
+            }
+            else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
         }
+    }
+
+    watchAdminLogs(onChange: (e: logNotificationDto) => void) {
+        var callback = new changesCallback<logNotificationDto>(onChange);
+        if (this.adminLogsHandlers().length == 0) {
+            this.send('watch-admin-log');
+        }
+        this.adminLogsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.adminLogsHandlers.remove(callback);
+            if (this.adminLogsHandlers().length == 0) {
+                this.send('unwatch-admin-log');
+            }
+        });
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {

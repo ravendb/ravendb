@@ -46,6 +46,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	    private FileSystemsLandlord landlord;
 	    private RequestManager requestManager;
 
+		public override LogTenantType TenantType
+		{
+			get { return LogTenantType.Filesystem; }
+		}
+
         public RequestManager RequestManager
         {
             get

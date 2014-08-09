@@ -25,6 +25,14 @@ interface Window {
     EventSource: EventSource;
 }
 
+interface Date {
+    getUTCDateFormatted(): string;
+    getUTCMonthFormatted(): string;
+    getUTCHoursFormatted(): string;
+    getUTCMinutesFormatted(): string;
+    getUTCSecondsFormatted(): string;
+}
+
 declare class EventSource {
     constructor(string);
     close();
@@ -53,6 +61,9 @@ interface String {
     count: (input) => number;
     fixedCharCodeAt: (input, position) => number;
     getSizeInBytesAsUTF8: () => number;
+    multiply: (amount:number)=>string;
+    paddingLeft: (paddingChar: string, paddingLength: number) => string;
+    paddingRight: (paddingChar: string, paddingLength: number) => string;
 }
 
 // Storage extensions

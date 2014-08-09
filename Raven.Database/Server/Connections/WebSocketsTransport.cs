@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
-using System.Net.WebSockets;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +13,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Counters;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -69,8 +72,12 @@ namespace Raven.Database.Server.Connections
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
+        
+        public string ResourceName { get; set; }
+        private Func<string, WebSocketsTransport, IPrincipal,bool> RegistrationLogicAction = null;
+        private Func<object, object> MessageFormatter = null;
 
-        public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
+        public WebSocketsTransport(RavenDBOptions options, IOwinContext context, Func<string, WebSocketsTransport, IPrincipal, bool> registrationLogics = null, Func<object, object> messageFormatter = null)
         {
             _options = options;
             _context = context;
@@ -78,7 +85,11 @@ namespace Raven.Database.Server.Connections
             Id = context.Request.Query["id"];
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
+            
             CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
+            RegistrationLogicAction = registrationLogics;
+            MessageFormatter = messageFormatter;
+
         }
 
         public void Dispose()
@@ -122,7 +133,12 @@ namespace Raven.Database.Server.Connections
 
                         if (lastMessageEnqueuedAndNotSent != null)
                         {
-                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, callCancelled);
+                            var messageToSend = lastMessageEnqueuedAndNotSent;
+                            if (MessageFormatter != null)
+                            {
+                                messageToSend = MessageFormatter(lastMessageEnqueuedAndNotSent);
+                            }
+                            await SendMessage(memoryStream, serializer, messageToSend, sendAsync, callCancelled);
 							lastMessageEnqueuedAndNotSent = null;
 							lastMessageSentTick = Environment.TickCount;
                         }
@@ -143,7 +159,13 @@ namespace Raven.Database.Server.Connections
                             continue;
                         }
 
-                        await SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
+                        var messageToSend = message;
+                        if (MessageFormatter != null)
+                        {
+                            messageToSend = MessageFormatter(message);
+                        }
+
+                        await SendMessage(memoryStream, serializer, messageToSend, sendAsync, callCancelled);
 						lastMessageEnqueuedAndNotSent = null;
 						lastMessageSentTick = Environment.TickCount;
                     }
@@ -230,17 +252,18 @@ namespace Raven.Database.Server.Connections
             {
                 return false;
             }
-
+            
 			var singleUseToken = _context.Request.Query["singleUseAuthToken"];
+            IPrincipal user = null;
+
+            var ResourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : (documentDatabase != null) ? documentDatabase.Name : null;
 
             if (string.IsNullOrEmpty(singleUseToken) == false)
             {
                 object msg;
                 HttpStatusCode code;
-                IPrincipal user;
-				var resourceName = (fileSystem != null) ? fileSystem.Name : (counterStorage != null) ? counterStorage.Name : documentDatabase.Name;
 
-				if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, resourceName, out msg, out code, out user) == false)
+                if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, ResourceName, out msg, out code, out user) == false)
                 {
                     _context.Response.StatusCode = (int) code;
                     _context.Response.ReasonPhrase = code.ToString();
@@ -257,20 +280,29 @@ namespace Raven.Database.Server.Connections
                     case AnonymousUserAccessMode.Get:
                         // this is effectively a GET request, so we'll allow it
                         // under this circumstances
+                        user = CurrentOperationContext.User.Value;
                         break;
                     case AnonymousUserAccessMode.None:
                         _context.Response.StatusCode = 403;
                         _context.Response.ReasonPhrase = "Forbidden";
                         _context.Response.Write("{'Error': 'Single use token is required for authenticated web sockets connections' }");
+                        return false;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(_options.SystemDatabase.Configuration.AnonymousUserAccessMode.ToString());
                 }
             }
 
+            // execute custom registration logic received as a parameter
+            if (RegistrationLogicAction!= null)
+            {
+                return RegistrationLogicAction(ResourceName, this, user);
+            }
+            
             if (fileSystem != null)
             {
                 fileSystem.TransportState.Register(this);
+
             }
 			else if (counterStorage != null)
 			{
@@ -280,6 +312,7 @@ namespace Raven.Database.Server.Connections
             {
 				documentDatabase.TransportState.Register(this);
             }
+            
 
             return true;
         }

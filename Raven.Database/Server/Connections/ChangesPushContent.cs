@@ -31,10 +31,12 @@ namespace Raven.Database.Server.Connections
 
 		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
+        public string ResourceName { get; set; }
 
         public ChangesPushContent(RavenBaseApiController controller)
 		{
 			Connected = true;
+            ResourceName = controller.TenantName;
 			Id = controller.GetQueryStringValue("id");
             
 			if (string.IsNullOrEmpty(Id))

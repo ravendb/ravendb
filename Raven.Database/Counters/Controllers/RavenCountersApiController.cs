@@ -16,6 +16,7 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -38,6 +39,11 @@ namespace Raven.Database.Counters.Controllers
 		private CountersLandlord landlord;
 		private RequestManager requestManager;
 
+		public override LogTenantType TenantType
+		{
+			get { return LogTenantType.CounterStorage; }
+		}
+
 		public RequestManager RequestManager
 		{
 			get
@@ -49,8 +55,20 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 
-       
 
+	    public CounterStorage CounterStorage
+	    {
+	        get
+	        {
+                var counterStorage = CountersLandlord.GetCounterInternal(CountersName);
+                if (counterStorage == null)
+                {
+                    throw new InvalidOperationException("Could not find a counter storage named: " + CountersName);
+                }
+
+                return counterStorage.Result;
+	        }
+	    }
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
