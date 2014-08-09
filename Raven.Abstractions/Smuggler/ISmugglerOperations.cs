@@ -55,5 +55,7 @@ namespace Raven.Abstractions.Smuggler
 		void ShowProgress(string format, params object[] args);
 
 		Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
+
+		void Initialize(SmugglerOptions options);
 	}
 }

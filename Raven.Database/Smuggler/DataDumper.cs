@@ -16,9 +16,9 @@ namespace Raven.Database.Smuggler
 	public class DataDumper : SmugglerApiBase
 	{
 		public DataDumper(DocumentDatabase database, SmugglerOptions options = null)
+			: base(options ?? new SmugglerOptions())
 		{
-			SmugglerOptions = options ?? new SmugglerOptions();
-			Operations = new EmbeddedSmugglerOperations(database, SmugglerOptions);
+			Operations = new EmbeddedSmugglerOperations(database);
 		}
 
 		public override async Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch)

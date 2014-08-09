@@ -54,15 +54,12 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
-		public RemoteSmugglerOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, SmugglerOptions options)
+		public RemoteSmugglerOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported)
 		{
 			this.store = store;
 			this.operation = operation;
 			this.isDocsStreamingSupported = isDocsStreamingSupported;
 			this.isTransformersSupported = isTransformersSupported;
-			Options = options;
-
-			jintHelper.Initialize(options);
 		}
 
 		public Task DeleteAttachment(string key)
@@ -177,7 +174,18 @@ namespace Raven.Smuggler
 				return new RavenJArray();
 
 			var transformers = await Store.AsyncDatabaseCommands.GetTransformersAsync(start, Options.BatchSize);
-			return (RavenJArray)RavenJToken.FromObject(transformers);
+			var result = new RavenJArray();
+
+			foreach (var transformer in transformers)
+			{
+				result.Add(new RavenJObject
+				           {
+					           { "name", transformer.Name }, 
+							   { "definition", RavenJObject.FromObject(transformer) }
+				           });
+			}
+
+			return result;
 		}
 
 		public async Task<string> GetVersion(RavenConnectionStringOptions server)
@@ -255,6 +263,12 @@ namespace Raven.Smuggler
 		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
+		}
+
+		public void Initialize(SmugglerOptions options)
+		{
+			Options = options;
+			jintHelper.Initialize(options);
 		}
 	}
 }
