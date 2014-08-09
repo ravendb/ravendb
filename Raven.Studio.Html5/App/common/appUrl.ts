@@ -125,7 +125,7 @@ class appUrl {
     }
 
     static forAdminSettings(): string {
-        return "#databases/adminSettings";
+        return "#admin/settings/adminSettings";
     }
 
     static forApiKeys(): string {
@@ -150,6 +150,10 @@ class appUrl {
 
     static forTrafficWatch(): string {
         return "#admin/settings/trafficWatch";
+    }
+
+    static forStudioConfig(): string {
+        return "#admin/settings/studioConfig";
     }
 
     static forDatabases(): string {

@@ -1,0 +1,14 @@
+﻿<div class="panel panel-default">
+    <div class="panel-heading"></div>
+    <div class="panel-body">
+        System Database Prompt
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary" data-bind="click: saveStudioConfig, css: { active: !systemDatabasePrompt() }">
+                <input type="checkbox">
+                <i class="fa" data-bind="css: { 'fa-play': systemDatabasePrompt(), 'fa-stop text-danger': !systemDatabasePrompt() }"></i>
+                <span data-bind="text: systemDatabasePrompt() ? 'Enable': 'Disable'"></span>
+            </label>
+        </div>
+    </div>
+</div>
+
