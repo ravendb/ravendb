@@ -853,6 +853,7 @@ interface changesApiEventDto {
 interface databaseDto {
     Name: string;
     Disabled: boolean;
+    Bundles: string[];
 }
 
 interface customFunctionsDto {

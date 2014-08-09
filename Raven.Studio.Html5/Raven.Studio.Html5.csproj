@@ -238,7 +238,6 @@
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\reporting.ts" />
     <TypeScriptCompile Include="App\viewmodels\saveTransformerWithNewNameConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\settingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
@@ -375,7 +374,6 @@
     <Content Include="App\views\deleteResourceConfirm.html" />
     <Content Include="App\views\disableResourceToggleConfirm.html" />
     <Content Include="App\views\runningTasks.html" />
-    <Content Include="App\views\settingsDialog.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />

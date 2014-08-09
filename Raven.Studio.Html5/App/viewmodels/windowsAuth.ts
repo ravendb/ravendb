@@ -9,7 +9,7 @@ class windowsAuth extends viewModelBase {
 
     setup = ko.observable<windowsAuthSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
-    isUsersActive = ko.observable<boolean>(true);
+    isUsersSectionActive = ko.observable<boolean>(true);
 
     canActivate(args) {
         var deffered = $.Deferred();
@@ -26,10 +26,15 @@ class windowsAuth extends viewModelBase {
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        $("form").on("keypress", 'input[name="databaseName"]', (e) => e.which != 13);
+    }
+
     private fetchWindowsAuth(): JQueryPromise<any> {
         return new getWindowsAuthCommand()
             .execute()
-            .done(result => this.setup(result));
+            .done((result: windowsAuthSetup) => this.setup(result));
     }
 
     saveChanges() {
@@ -41,7 +46,9 @@ class windowsAuth extends viewModelBase {
     }
 
     addUserSettings() {
-        this.setup().requiredUsers.push(windowsAuthData.empty());
+        var newAuthData = windowsAuthData.empty();
+        windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredUsers);
+        this.setup().requiredUsers.push(newAuthData);
     }
 
     removeUserSettings(data: windowsAuthData) {
@@ -49,13 +56,14 @@ class windowsAuth extends viewModelBase {
     }
 
     addGroupSettings() {
-        this.setup().requiredGroups.push(windowsAuthData.empty());
+        var newAuthData = windowsAuthData.empty();
+        windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredGroups);
+        this.setup().requiredGroups.push(newAuthData);
     }
 
     removeGroupSettings(data: windowsAuthData) {
         this.setup().requiredGroups.remove(data);
     }
-
 }
 
 export = windowsAuth;

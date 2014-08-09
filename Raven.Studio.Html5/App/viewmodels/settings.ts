@@ -2,36 +2,20 @@ import durandalRouter = require("plugins/router");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 
 class settings extends viewModelBase {
 
     router: DurandalRootRouter = null;
-    isOnSystemDatabase: KnockoutComputed<boolean>;
-    isOnUserDatabase: KnockoutComputed<boolean>;
     appUrls: computedAppUrls;
 
     bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index"};
     userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
     activeSubViewTitle: KnockoutComputed<string>;
 
-    isEditingSqlReplication(navigationalModel:any, curNavHash:any) {
-        var activeRoute = navigationalModel.first(r=> r.isActive());
-        if (!!activeRoute && !!curNavHash && !!activeRoute.hash) {
-            return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
-                (activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0 ||
-                activeRoute.route.indexOf('databases/settings/sqlReplicationConnectionStringsManagement') >= 0);
-        }
-        return false;
-    }
-
     constructor() {
         super();
 
         this.appUrls = appUrl.forCurrentDatabase();
-
-        this.isOnSystemDatabase = ko.computed(() => this.activeDatabase() && this.activeDatabase().isSystem);
-        this.isOnUserDatabase = ko.computed(() => this.activeDatabase() && !this.isOnSystemDatabase());
 
         var databaseSettingsRoute = { route: ['databases/settings', 'databases/settings/databaseSettings'], moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
         var quotasRoute = { route: 'databases/settings/quotas', moduleId: 'viewmodels/quotas', title: 'Quotas', nav: true, hash: appUrl.forCurrentDatabase().quotas };
@@ -43,7 +27,6 @@ class settings extends viewModelBase {
         var periodicExportRoute = { route: 'databases/settings/periodicExports', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         //var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
         var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
-        
 
         this.router = durandalRouter.createChildRouter()
             .map([
@@ -76,60 +59,44 @@ class settings extends viewModelBase {
     * This is used for preventing a navigating to system-only pages when the current databagse is non-system, and vice-versa.
     */
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {
-        var pathArr = instruction.fragment.split('/');
-        var bundelName = pathArr[pathArr.length - 1].toLowerCase();
-        var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
-        var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
-        var isApiKeysPath = instruction.fragment.indexOf("apiKeys") >= 0;
-        var isWindowsAuthPath = instruction.fragment.indexOf("windowsAuth") >= 0;
-        var isSystemDbOnlyPath = isApiKeysPath || isWindowsAuthPath || instruction.fragment === "settings";
-        var isUserDbOnlyPath = !isSystemDbOnlyPath;
+        var db: database = this.activeDatabase();
 
-        if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){
-            return appUrl.forCurrentDatabase().databaseSettings();
-        } else if (isUserDbOnlyPath && this.activeDatabase().isSystem) {
-            return appUrl.forApiKeys();
-        } else if (isUserDbOnlyPath && isLegalBundelName && !isBundleExists) {
-            return appUrl.forCurrentDatabase().databaseSettings();
+        if (db.isSystem) {
+            return appUrl.forDocuments(null, db);
         }
 
         return true;
     }
 
+    isEditingSqlReplication(navigationalModel: any, curNavHash: any) {
+        var activeRoute = navigationalModel.first(r => r.isActive());
+        if (!!activeRoute && !!curNavHash && !!activeRoute.hash) {
+            return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
+                (activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0 ||
+                activeRoute.route.indexOf('databases/settings/sqlReplicationConnectionStringsManagement') >= 0);
+        }
+        return false;
+    }
+
     activate(args) {
         super.activate(args);
+
         this.userDatabasePages(["Database Settings", "Custom Functions"]);
-        if (args) {
-            var canActivateResult = $.Deferred();
-            var db = this.activeDatabase();
-            var self = this;
-            new getDatabaseSettingsCommand(db)
-                .execute()
-                .done(document => {
-                    var documentSettings = document.Settings["Raven/ActiveBundles"];
-                    if (documentSettings != undefined) {
-                        var arr = documentSettings.split(';');
+        var db: database = this.activeDatabase();
+        var bundles: string[] = db.activeBundles();
 
-                        for (var i = 0; i < arr.length; i++) {
-                            var bundleName = self.bundleMap[arr[i].toLowerCase()];
-                            if (bundleName != undefined) {
-                                self.userDatabasePages.push(bundleName);
-                            }
-                        }
-                    }
-
-                canActivateResult.resolve({ can: true });
-                });
-            return canActivateResult;
-        } else {
-            return $.Deferred().resolve({ can: true });
-        }
+        bundles.forEach((bundle: string) => {
+            var bundleName = this.bundleMap[bundle.toLowerCase()];
+            if (bundleName != undefined) {
+                this.userDatabasePages.push(bundleName);
+            }
+        });
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
         var bundleTitle = route.title;
 
-        if (this.isOnUserDatabase() && (this.userDatabasePages.indexOf(bundleTitle) !== -1)) {
+        if (this.userDatabasePages.indexOf(bundleTitle) !== -1) {
             // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Export and Scripted Index are visible only when we're on a user database.
             return true;
         }

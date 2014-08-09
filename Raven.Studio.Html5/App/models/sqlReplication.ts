@@ -126,9 +126,6 @@ class sqlReplication extends document {
     }
 
     static empty(): sqlReplication {
-        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
-        var sqlReplicationTables = [];
-        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
@@ -140,7 +137,7 @@ class sqlReplication extends document {
             PredefinedConnectionStringSettingName:null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: sqlReplicationTables,
+            SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
             PerformTableQuatation:true
         });

@@ -88,6 +88,7 @@ class apiKeys extends viewModelBase {
     createNewApiKey() {
         var newApiKey = apiKey.empty();
         this.subscribeToObservableKeyName(newApiKey);
+        newApiKey.generateSecret();
         this.apiKeys.unshift(newApiKey);
     }
 

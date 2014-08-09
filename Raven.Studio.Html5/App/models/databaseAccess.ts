@@ -6,7 +6,6 @@ class databaseAccess {
     admin = ko.observable<boolean>();
     tenantId = ko.observable<string>();
     readOnly = ko.observable<boolean>();
-    tenantIdOrDefault: KnockoutComputed<string>;
     databaseNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     tenantCustomValidityError: KnockoutComputed<string>;
@@ -50,8 +49,6 @@ class databaseAccess {
         this.admin(dto.Admin);
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId);
-
-        this.tenantIdOrDefault = ko.computed(() => this.tenantId() ? this.tenantId() : "Select a database");
 
         this.databaseNames = ko.computed(() => shell.databases().map((db: database) => db.name).concat("*"));
 

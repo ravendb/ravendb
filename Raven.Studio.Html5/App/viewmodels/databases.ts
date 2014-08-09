@@ -323,34 +323,6 @@ class databases extends viewModelBase {
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
 
-
-
-    showBackupDatabase(db: database) {
-        require(["viewmodels/settingsDialog"], showDialog => {
-            var settingsDialog = new showDialog("viewmodels/backupDatabase", "Backup Database");
-            app.showDialog(settingsDialog);
-        });
-    }
-
-/*    showApiKeys() {
-        this.promptNavSystemDb(false).done(() => {
-            require(["viewmodels/settingsDialog"], showDialog => {
-                var settingsDialog = new showDialog("viewmodels/apiKeys", "API Keys");
-                app.showDialog(settingsDialog);
-
-            });
-        });
-    }
-
-    showWindowsAuth() {
-        this.promptNavSystemDb(false).done(() => {
-            require(["viewmodels/settingsDialog"], showDialog => {
-                var settingsDialog = new showDialog("viewmodels/windowsAuth", "Windows Authentication");
-                app.showDialog(settingsDialog);
-            });
-        });
-    }*/
-
     showRestoreDatabase() {
         this.navigate("#admin/settings");
         //this.systemDb.activate();

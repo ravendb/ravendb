@@ -30,7 +30,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-7">
-                                <input type="text" class="form-control" required placeholder="MyApiKey" data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" />
+                                <input type="text" class="form-control" required placeholder="API Key name" data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -74,37 +74,37 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Databases</label>
                             <div class="col-sm-9">
-                                <table class="table table-striped table-hover" data-bind="visible: databases().length > 0">
+                                <table class="table table-striped table-hover">
                                     <thead>
-                                        <tr>
-                                            <td width="50%">Name</td>
+                                        <tr class="database-header" data-bind="visible: databases().length > 0">
+                                            <td>Name</td>
                                             <td>Type</td>
-                                            <td></td>
+                                            <td>
+                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase">
+                                                    <i class="fa fa-plus"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr data-bind="visible: databases().length == 0">
+                                            <td>
+                                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add database">
+                                                    <i class="fa fa-plus"></i> Add database
+                                                </button>
+                                            </td>
                                         </tr>
                                     </thead>
                                     <tbody data-bind="foreach: databases">
                                         <tr>
                                             <td>
                                                 <div class="btn-group">
-                                                    <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $index() }" placeholder="Database name">
-                                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName' + $index(), foreach: searchResults">
+                                                    <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Database name">
+                                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                         <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                             <a role="menuitem" tabindex="-1" href="#">
                                                                 <span data-bind="text: $data"></span>
                                                             </a>
                                                         </li>
                                                     </ul>
-                                                    <!--<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                            <span data-bind="text: tenantIdOrDefault"></span> <span class="caret"></span>
-                                                        </button>
-                                                        <ul class="dropdown-menu" role="menu">-->
-                                                    <!-- ko foreach: $root.allDatabases -->
-                                                    <!--<li><a href="#" data-bind="text: $data, click: $parent.tenantId.bind($data)"></a></li>-->
-                                                    <!-- /ko -->
-                                                    <!--<li class="divider"></li>
-                                                        <li><a href="#" data-bind="click: tenantId.bind($data, '&lt;system&gt;')">&lt;system&gt;</a></li>
-                                                        <li><a href="#" data-bind="click: tenantId.bind($data, '*')">* (All)</a></li>
-                                                    </ul>-->
                                                 </div>
                                             </td>
                                             <td>
@@ -114,20 +114,17 @@
                                                     </button>
                                                     <ul class="dropdown-menu" role="menu">
                                                         <!-- ko foreach:getTypes() -->
-                                                        <li><a href="#" data-bind="text: $data, click:  $parent.currentAccessType.bind($parent)"></a></li>
+                                                        <li><a href="#" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
                                                         <!-- /ko -->
                                                     </ul>
                                                 </div>
                                             </td>
                                             <td>
-                                                <button type="button" class="close close glyphicon glyphicon-remove remove-icon" style="display: inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database"></button>
+                                                <button type="button" class="close glyphicon glyphicon-remove remove-icon" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data)" title="Remove this database"></button>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
-                                <button type="button" class="btn btn-default" data-bind="click: addEmptyApiKeyDatabase" title="Add a database">
-                                    <i class="fa fa-plus"></i> Add database
-                                </button>
                             </div>
                         </div>
                     </div>
