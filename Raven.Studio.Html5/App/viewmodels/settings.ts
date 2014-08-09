@@ -60,9 +60,16 @@ class settings extends viewModelBase {
     */
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {
         var db: database = this.activeDatabase();
+        var pathArr = instruction.fragment.split('/');
+        var bundelName = pathArr[pathArr.length - 1].toLowerCase();
+        var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
+        var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
 
         if (db.isSystem) {
             return appUrl.forDocuments(null, db);
+        }
+        else if (isLegalBundelName && isBundleExists == false) {
+            return appUrl.forCurrentDatabase().databaseSettings();
         }
 
         return true;

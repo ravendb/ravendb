@@ -75,8 +75,7 @@ class document implements documentBase {
 
     public static empty(): document {
         var emptyDto = {
-            '@metadata': {},
-            'Name': '...'
+            '@metadata': {}
         };
 
         return new document(<any>emptyDto);

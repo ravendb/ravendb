@@ -7,8 +7,9 @@ import document = require("models/document");
 class studioConfig extends viewModelBase {
 
     systemDatabase: database;
-    document = ko.observable<document>();
-    systemDatabasePrompt = ko.observable<boolean>(false);
+    systemDatabasePrompt = ko.observable<boolean>(true);
+    configDocument = ko.observable<document>();
+    private documentId = "Raven/StudioConfig";
 
     constructor() {
         super();
@@ -18,28 +19,33 @@ class studioConfig extends viewModelBase {
     canActivate(args): any {
         var deffered = $.Deferred();
 
-        new getDocumentWithMetadataCommand("Raven/StudioConfig", this.systemDatabase)
+        new getDocumentWithMetadataCommand(this.documentId, this.systemDatabase)
             .execute()
             .done((doc: document) => {
-                this.document(doc);
+                this.configDocument(doc);
                 this.systemDatabasePrompt(doc["WarnWhenUsingSystemDatabase"]);
             })
+            .fail(() => this.configDocument(document.empty()))
             .always(() => deffered.resolve({ can: true }));
 
         return deffered;
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-        
-    }
-
     saveStudioConfig() {
-        //var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, this.systemDatabase);
-        this.systemDatabasePrompt.toggle();
-        require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-
-        });
+        var db = this.activeDatabase();
+        if (db) {
+            var doc = this.configDocument();
+            var action = !this.systemDatabasePrompt();
+            doc["WarnWhenUsingSystemDatabase"] = action;
+            require(["commands/saveDocumentCommand"], saveDocumentCommand => {
+                var saveTask = new saveDocumentCommand(this.documentId, doc, this.systemDatabase).execute();
+                saveTask
+                    .done((saveResult: bulkDocumentDto[]) => {
+                        this.systemDatabasePrompt(action);
+                        this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
+                    });
+            });
+        }
     }
 }
 
