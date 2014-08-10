@@ -15,25 +15,47 @@ namespace Raven.Bundles.Replication.Impl
 {
 	internal class ReplicationHiLo
 	{
+		public static long NextId(DocumentDatabase database)
+		{
+			var replicationHiLo = (ReplicationHiLo)database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo(database));
+			return replicationHiLo.NextId();
+		}
+
 		private readonly object generatorLock = new object();
-		private volatile Hodler currentMax = new Hodler(0);
+		private volatile Holder currentMax;
 		private long capacity = 256;
 		private long current;
 		private DateTime lastRequestedUtc;
-		private string RavenReplicationHilo;
 
-		public ReplicationHiLo()
+		private ReplicationHiLo(DocumentDatabase database)
 		{
-			RavenReplicationHilo = "Raven/Replication/Hilo";
+			Database = database;
+
+			// backward compatability, read the hilo max then delete it, storing the value in the identity val
+
+			var document = database.Documents.Get(RavenReplicationVersionHiLo, null);
+			if (document == null)
+			{
+				currentMax = new Holder(0);
+				current = 0;
+				return;
+			}
+			var max = document.DataAsJson.Value<long>("Max");
+			currentMax = new Holder(max);
+			current = max;
+			GetNextMax(); // this saved the new max limit as part of its work
+			database.Documents.Delete(RavenReplicationVersionHiLo, null, null);
 		}
 
+		private const string RavenReplicationHilo = "Raven/Replication/Hilo";
+		private const string RavenReplicationVersionHiLo = "Raven/Replication/VersionHilo";
 		public DocumentDatabase Database { get; set; }
 
-		private class Hodler
+		private class Holder
 		{
 			public readonly long Value;
 
-			public Hodler(long value)
+			public Holder(long value)
 			{
 				Value = value;
 			}
@@ -51,7 +73,7 @@ namespace Raven.Bundles.Replication.Impl
 					return incrementedCurrent;
 				if (current > currentMax.Value)
 				{
-					currentMax = new Hodler(GetNextMax());
+					currentMax = new Holder(GetNextMax());
 				}
 				return Interlocked.Increment(ref current);
 			}
