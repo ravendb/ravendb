@@ -284,7 +284,7 @@ namespace Raven.Client.Connection.Async
 		/// Gets the attachments asynchronously
 		/// </summary>
 		/// <returns></returns>
-		Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize);
+		Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize);
 
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet

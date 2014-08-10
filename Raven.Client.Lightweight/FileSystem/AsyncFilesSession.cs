@@ -12,10 +12,9 @@ using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
+    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
     {
-
-        private IDisposable sessionChangesSubscription;
+        private IDisposable conflictCacheRemoval; 
 
         /// <summary>
 		/// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
@@ -27,7 +26,9 @@ namespace Raven.Client.FileSystem
 			: base(filesStore, listeners, id)
 		{
             Commands = asyncFilesCommands;
-            sessionChangesSubscription = filesStore.Changes(null, this).ForConflicts().Subscribe();
+            conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
+                                             .ForConflicts()
+                                             .Subscribe<ConflictNotification>(this.OnFileConflict);
 		}
 
         /// <summary>
@@ -136,65 +137,25 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        void IObserver<ConflictNotification>.OnNext(ConflictNotification notification)
+        internal void OnFileConflict(ConflictNotification notification)
         {
-            if (!conflicts.Contains(notification.FileName))
-                conflicts.Add(notification.FileName);
-
-            // IMPORTANT: Going async here will break the &4.2 reactive extension guideline and more importantly
-            //            introduce a race condition in the handling of conflict listeners at the client side.
-            //            http://go.microsoft.com/fwlink/?LinkID=205219
-            var localHeader = this.LoadFileAsync(notification.FileName).Result;
-
-            if (notification.Status == ConflictStatus.Detected) 
-            {                               
-                int actionableListenersCount = 0;
-                var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
-                foreach( var listener in Listeners.ConflictListeners)
-                {
-                    var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
-                    if (strategy != ConflictResolutionStrategy.NoResolution )
-                    {
-                        if (actionableListenersCount > 0)
-                            return;
-                        
-                        if (actionableListenersCount == 0) 
-                        {
-                            actionableListenersCount++;
-                            resolutionStrategy = strategy;
-                        }
-                    }
-                }
-
-                Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resolutionStrategy).Wait();
+            if ( notification.Status == ConflictStatus.Detected)
+            {
+                conflicts.Add(notification.FileName);                
             }
             else
             {
-                if (entitiesByKey.ContainsKey(notification.FileName))
-                    entitiesByKey.Remove(notification.FileName);
-
-                if (conflicts.Contains(notification.FileName))
-                    conflicts.Remove(notification.FileName);
-
-                foreach (var listener in Listeners.ConflictListeners)
-                    listener.ConflictResolved(localHeader);
-            }
-        }
-
-        void IObserver<ConflictNotification>.OnError(Exception error)
-        {
-        }
-
-        void IObserver<ConflictNotification>.OnCompleted()
-        {
+                entitiesByKey.Remove(notification.FileName);
+                conflicts.Remove(notification.FileName);
+            }            
         }
 
         public override void Dispose ()
         {
             base.Dispose();
 
-            if (sessionChangesSubscription != null)
-                sessionChangesSubscription.Dispose();
+            if (this.conflictCacheRemoval != null)
+                this.conflictCacheRemoval.Dispose();
         }
     }
 }

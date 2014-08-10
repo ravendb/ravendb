@@ -24,7 +24,6 @@ class exportDatabase extends viewModelBase {
     constructor() {
         super();
         aceEditorBindingHandler.install();
-        
     }
 
     activate(args: any) {

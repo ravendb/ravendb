@@ -83,13 +83,13 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi {SmugglerOptions = {ShouldExcludeExpired = true}};
+	                var smuggler = new SmugglerApi(new SmugglerOptions { ShouldExcludeExpired = true });
 	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-	                var smuggler = new SmugglerApi {SmugglerOptions = {ShouldExcludeExpired = true}};
+					var smuggler = new SmugglerApi(new SmugglerOptions { ShouldExcludeExpired = true });
 					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())

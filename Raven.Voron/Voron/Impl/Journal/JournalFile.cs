@@ -52,6 +52,7 @@ namespace Voron.Impl.Journal
             public long JournalPos;
             public long TransactionId;
 	        public long JournalNumber;
+	        public bool OverwrittenByOverflowPage;
 
             public override bool Equals(object obj)
             {
@@ -207,16 +208,33 @@ namespace Voron.Impl.Journal
 		    {
 			    var txPage = txPages[index];
 			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
-			    var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
+			    var pageNumber = scratchPage.PageNumber;
 
-			    PagePosition value;
-			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-				    unused.Add(value);
+				for (int i = 0; i < txPage.NumberOfPages; i++)
+				{
+					PagePosition value;
+					if (_pageTranslationTable.TryGetValue(tx, pageNumber + i, out value))
+					{
+						if(i == 0)
+							unused.Add(value);
+						else if (i > 0)
+						{
+							value.OverwrittenByOverflowPage = true;
 
-			    PagePosition pagePosition;
-			    if (ptt.TryGetValue(pageNumber, out pagePosition))
-				    unused.Add(pagePosition);
-				
+							// unused.Add(value) - intentionally not adding it here, it will be released in FreeScratchPagesOlderThan 
+						}
+					}
+
+					PagePosition pagePosition;
+					if (ptt.TryGetValue(pageNumber + i, out pagePosition))
+					{
+						unused.Add(pagePosition);
+
+						if (i > 0)
+							ptt.Remove(pageNumber + i); // page currently taken by overflow, need to delete to make sure it won't be copied to the data file
+					}
+				}
+
 				ptt[pageNumber] = new PagePosition
 				{
 					ScratchPos = txPage.PositionInScratchBuffer,

@@ -1114,8 +1114,6 @@ namespace Raven.Database.Config
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 
             DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
-            DefaultStorageTypeName = defaultConfiguration.DefaultStorageTypeName;
-
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 

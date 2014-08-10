@@ -233,6 +233,7 @@
     <Compile Include="Server\Connections\LogPushContent.cs" />
     <Compile Include="Server\Connections\OnDemandLogConnectionState.cs" />
     <Compile Include="Server\Connections\OnDemandLogTarget.cs" />
+    <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />

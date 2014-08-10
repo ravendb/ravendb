@@ -10,8 +10,20 @@ import messagePublisher = require("common/messagePublisher");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
+
+    static detectAppUrl() {
+        var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
+        var suffix = "studio/index.html";
+        console.log("ends2?");
+
+        if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
+            return path.substring(0, path.length - suffix.length - 1);
+        }
+        return "";
+    }
+
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);

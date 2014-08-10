@@ -332,7 +332,7 @@ class logs extends viewModelBase {
     switchToHttpTraceMode() {
         var tracedDB = appUrl.getResource();
         this.disposeOnDemandLogsClient();
-        this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
+        this.logHttpTraceClient= new httpTraceClient(tracedDB);
         this.logHttpTraceClient.connectToChangesApiTask
             .done(() => {
                 this.logsMode("Http Trace");
@@ -425,7 +425,7 @@ class logs extends viewModelBase {
 
 
     formatLogRecord(logRecord: logNotificationDto) {
-        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.EllapsedMiliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
+        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.ElapsedMilliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
     }
     
     onLogMessage(entry: logDto) {

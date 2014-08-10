@@ -35,6 +35,11 @@ namespace Raven.Database.Server.Controllers
 
 		private string queryFromPostRequest;
 
+		public override LogTenantType TenantType
+		{
+			get { return LogTenantType.Database; }
+		}
+
 		public void SetPostRequestQuery(string query)
 		{
 			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
