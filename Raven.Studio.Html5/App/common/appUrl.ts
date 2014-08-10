@@ -352,7 +352,7 @@ class appUrl {
     }
 
     static forPeriodicExport(db: database): string {
-        return "#databases/settings/periodicExports?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicExport?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {

@@ -19,7 +19,7 @@
                     </ul>
                 </div>
 
-                <div data-bind="visible: appUrls.isAreaActive('databases'), css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
+                <div data-bind="visible: canShowDatabaseNavbar, css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -170,7 +170,7 @@
                                 <img style="height: 24px" src="content/images/raven.png" />
                             </a>
                         </li>
-                        <li class="dropdown navbar-right" data-bind="visible: appUrls.isAreaActive('databases')">
+                        <li class="dropdown navbar-right" data-bind="visible: canShowDatabaseNavbar">
                             <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: activeDatabase, css: { 'resource-link-disabled': $root.listedDatabases().length == 0 }">
                                 <span data-bind="text: name"></span>
                                 <b class="caret" data-bind="visible: $root.listedDatabases().length > 0"></b>
@@ -209,7 +209,7 @@
                                     <li class="vertical-navbar-menu-item">
                                         <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: getCurrentActiveFeatureHref() }">
                                             <span data-bind="text: getCurrentActiveFeatureName()"></span>&nbsp;
-                                            <i class="fa fa-caret-right" data-bind="visible: appUrls.isAreaActive('databases')() || canShowFileSystemNavbar() || canShowCountersNavbar()"></i>&nbsp;
+                                            <i class="fa fa-caret-right" data-bind="visible: canShowDatabaseNavbar() || canShowFileSystemNavbar() || canShowCountersNavbar()"></i>&nbsp;
                                         </a>
                                     </li>
                                     <li class="dropdown vertical-navbar-menu-item">
@@ -265,7 +265,7 @@
                 <li><a class="navbar-link" data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
                 <li><a class="navbar-link" data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
                 <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
-                <li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <!--<li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>-->
                 <li class="raw-url hidden-sm" data-bind="visible:$root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}" style="max-width: 180px; text-overflow: ellipsis; overflow-x: hidden; white-space:nowrap;"></a>
                 </li>

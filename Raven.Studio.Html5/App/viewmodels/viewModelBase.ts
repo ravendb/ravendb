@@ -26,7 +26,7 @@ class viewModelBase {
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
-    private static isConfirmedUsingSystemDatabase: boolean = false;
+    public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
     /*
@@ -241,16 +241,16 @@ class viewModelBase {
         return deferred;
     }
 
-    public promptNavSystemDb(): any {
+    public promptNavSystemDb(forceRejectWithResolve: boolean = false): any {
         var canNavTask = $.Deferred<any>();
 
         if (!appUrl.warnWhenUsingSystemDatabase || viewModelBase.isConfirmedUsingSystemDatabase) {
-            canNavTask.resolve(true);
+            canNavTask.resolve({ can: true });
         }
         else {
             var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
             systemDbConfirm.viewTask
-                .fail(() => canNavTask.resolve({ redirect: appUrl.forDatabases() }))
+                .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forDatabases() }) : canNavTask.reject())
                 .done(() => {
                     viewModelBase.isConfirmedUsingSystemDatabase = true;
                     canNavTask.resolve({ can: true });

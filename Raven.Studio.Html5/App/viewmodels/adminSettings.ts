@@ -49,10 +49,12 @@ class adminSettings extends viewModelBase {
     }
 
     navigateToSystemDatabase() {
-        var db: database = appUrl.getSystemDatabase()
-        db.activate();
-        var url = appUrl.forDocuments(null, db);
-        this.navigate(url);
+        this.promptNavSystemDb(true).done(() => {
+            var db: database = appUrl.getSystemDatabase();
+            db.activate();
+            var url = appUrl.forDocuments(null, db);
+            this.navigate(url);
+        });
     }
 }
 
