@@ -59,6 +59,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
         var canDeactivate = this.canDeactivate();
         canDeactivate.done((answer) => {
             if (answer.can) {
+                this.currentModel.dirtyFlag().reset();
                 this.activeScreen(moduleId);
             }
         });

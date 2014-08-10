@@ -100,7 +100,7 @@
                                                     <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Database name">
                                                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                         <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
-                                                            <a role="menuitem" tabindex="-1" href="#">
+                                                            <a role="menuitem" tabindex="-1" href="#" class="nounderline">
                                                                 <span data-bind="text: $data"></span>
                                                             </a>
                                                         </li>
@@ -114,7 +114,7 @@
                                                     </button>
                                                     <ul class="dropdown-menu" role="menu">
                                                         <!-- ko foreach:getTypes() -->
-                                                        <li><a href="#" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
+                                                        <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
                                                         <!-- /ko -->
                                                     </ul>
                                                 </div>

@@ -7006,6 +7006,9 @@ body {
   text-align: left;
   color: black;
 }
+.nounderline {
+  text-decoration: none !important;
+}
 .document-collections li {
   outline: none;
 }
