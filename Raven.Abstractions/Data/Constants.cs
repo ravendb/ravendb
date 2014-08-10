@@ -104,7 +104,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";
-		public const string RavenReplicationVersionHiLo = "Raven/Replication/VersionHilo";
 		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
 		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
