@@ -48,15 +48,12 @@ class databaseAccess {
     constructor(dto: databaseAccessDto) {
         this.admin(dto.Admin);
         this.readOnly(dto.ReadOnly);
-        this.tenantId(dto.TenantId);
+        this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
         this.databaseNames = ko.computed(() => shell.databases().map((db: database) => db.name).concat("*"));
 
         this.searchResults = ko.computed(() => {
-            var newDatabaseName = this.tenantId();
-            if (!newDatabaseName || newDatabaseName.length < 2) {
-                return [];
-            }
+            var newDatabaseName: string = this.tenantId();
             return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
