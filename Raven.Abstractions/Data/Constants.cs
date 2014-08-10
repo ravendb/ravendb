@@ -161,5 +161,8 @@ namespace Raven.Abstractions.Data
         public const string MetadataEtagField = "ETag";
 
 		public const string TempUploadsDirectoryName = "RavenTempUploads";
+
+		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
+
 	}
 }
