@@ -1,0 +1,123 @@
+﻿<style>
+    .column {
+        display: inline-block;
+        cursor: pointer;
+        overflow: hidden;
+        white-space: nowrap;
+        word-wrap: break-word;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #ddd;
+        margin: 0px;
+        padding: 5px;
+        height: 30px;
+    }
+
+    .log-table-row {
+    }
+
+    .selected .column {
+        background-color: #ffffcc;
+    }
+</style>
+<section id="watchTrafficContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div>
+        <div class="btn-group">
+            <button data-bind="click:configureConnection">Configure Connection</button>
+            <button data-bind="click:reconnect">Reconnect</button>
+            <button data-bind="click:disconnect">Disconnect</button>
+            <button>Clear</button>
+            <button>Export</button>
+            <button>KeepDown</button>
+        </div>
+        <div style="background-color: aliceblue;">
+            <label class="col-sm-12">Stats:</label>
+            <div class="small col-sm-12" data-bind="visible:!!logConfig()">
+                <label data-bind="text:'Watched Resource: ' + logConfig().ResourceName"></label>
+                <label data-bind="text:'Trace Start Time'"></label>
+                <label data-bind="text:'Requests: ' + recentEntries.length"></label>
+                <label>Avg Request Time:44s</label>
+                <label>Min Request Time: 100ms</label>
+                <label>Max Request Time: 30s</label>
+            </div>
+        </div>
+        
+        <div id="logTableContainer">
+            <span style="white-space: nowrap">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                    <span class="column-handle" column="0"></span>
+                    <span>Time</span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                    <span class="column-handle" column="1"></span>
+                    <span>Duration</span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                    <span class="column-handle" column="2"></span>
+                    <span>Resource</span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                    <span class="column-handle" column="4"></span>
+                    <span>Method</span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                    <span class="column-handle" column="5"></span>
+                    <span>Url</span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
+                    <span class="column-handle" column="6"></span>
+                    <span>Has Additional Data</span>
+                </div>
+            </span>
+            <div style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
+                <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="'selected': $data === $parent.selectedLog()">
+                    <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Time"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Duration, attr: { title: Duration }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: Resource, attr: { title: Resource }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: Method, attr: { title: Method }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: Url"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: !!CustomInfo?'Y':'N'"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="log-details panel panel-default" style="height: 30%">
+        <div class="col-md-11">
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Time</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Time"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Duration</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Duration"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Resource Name</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Resource"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Method</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Method"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Url</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Url"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">CustomInfo</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: CustomInfo"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

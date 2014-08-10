@@ -12,14 +12,14 @@ import shell = require("viewmodels/shell");
 import changesApi = require("common/changesApi");
 
 class httpTraceClient {
-
-    private resourcePath: string;
-    public connectToChangesApiTask: JQueryDeferred<any>;
+    
+    public connectionOpeningTask: JQueryDeferred<any>;
+    public connectionClosingTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
     static isServerSupportingWebSockets: boolean = true;
     private eventSource: EventSource;
     private readyStateOpen = 1;
-
+    private eventsId:string;
     private isCleanClose: boolean = false;
     private normalClosureCode = 1000;
     private normalClosureMessage = "CLOSE_NORMAL";
@@ -29,42 +29,26 @@ class httpTraceClient {
     private commandBase = new commandBase();
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private rs?: resource, private token?:string) {
-        
-        this.resourcePath = !!rs ? appUrl.forResourceQuery(rs) : "";
-        this.connectToChangesApiTask = $.Deferred();
+    constructor(private resourcePath: string, private token:string) {
+        this.connectionOpeningTask = $.Deferred();
+        this.connectionClosingTask = $.Deferred();
+        this.eventsId = this.makeId();
+    }
 
+
+
+    public connect() {
+        var connectionString = 'singleUseAuthToken=' + this.token + '&id=' + this.eventsId;
         if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
-            this.connect(this.connectWebSocket);
+            this.connectWebSocket(connectionString);
         } else if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
+            this.connectEventSource(connectionString);
         } else {
             //The browser doesn't support nor websocket nor eventsource
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
             //Anyway, at this point a warning message was already shown. 
-            this.connectToChangesApiTask.reject();
+            this.connectionOpeningTask.reject();
         }
-    }
-
-    private connect(action: Function, needToReconnect: boolean = false) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath, !this.rs).execute();
-
-        getTokenTask
-            .done((tokenObject: singleAuthToken) => {
-                var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token;
-
-                action.call(this, connectionString);
-            })
-            .fail((e) => {
-
-                if (e.status == 401) {
-                    this.connectToChangesApiTask.reject(e);
-                } else {
-                    // Connection has closed so try to reconnect every 3 seconds.
-                    setTimeout(() => this.connect(action), 3 * 1000);    
-                }
-            });
     }
 
     private connectWebSocket(connectionString: string) {
@@ -75,23 +59,19 @@ class httpTraceClient {
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
             if (connectionOpened == false) {
-                this.serverNotSupportingWebsocketsErrorHandler();
+                this.connectionOpeningTask.reject();
             } else {
-                this.onError(e);
+                this.connectionClosingTask.resolve({Error:e});
             }
         };
         this.webSocket.onclose = (e: CloseEvent) => {
-            if (this.isCleanClose == false && changesApi.isServerSupportingWebSockets) {
-                // Connection has closed uncleanly, so try to reconnect.
-                this.connect(this.connectWebSocket);
-            }
+                this.connectionClosingTask.resolve();
         }
         this.webSocket.onopen = () => {
-            console.log("Connected to WebSockets HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
-            this.reconnect();
+            console.log("Connected to WebSockets HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
-            this.connectToChangesApiTask.resolve();
+            this.connectionOpeningTask.resolve();
         }
     }
 
@@ -103,66 +83,20 @@ class httpTraceClient {
         this.eventSource.onmessage = (e) => this.onMessage(e);
         this.eventSource.onerror = (e) => {
             if (connectionOpened == false) {
-                this.connectToChangesApiTask.reject();
+                this.connectionOpeningTask.reject();
             } else {
-                this.onError(e);
                 this.eventSource.close();
-                this.connect(this.connectEventSource);
+                this.connectionClosingTask.resolve(e);
             }
         };
         this.eventSource.onopen = () => {
-            console.log("Connected to EventSource HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
-            this.reconnect();
+            console.log("Connected to EventSource HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
-            this.connectToChangesApiTask.resolve();
+            this.connectionOpeningTask.resolve();
         }
     }
-
-    private reconnect() {
-        if (this.successfullyConnectedOnce) {
-            ko.postbox.publish("HttpTraceReconnected", this.rs);
-
-            if (changesApi.messageWasShownOnce) {
-                this.commandBase.reportSuccess("Successfully reconnected to HTTP Trace stream!");
-                changesApi.messageWasShownOnce = false;
-            }
-        }
-    }
-
-    private onError(e: Event) {
-        if (changesApi.messageWasShownOnce == false) {
-            this.commandBase.reportError('HTTP Trace stream was disconnected.', "Retrying connection shortly.");
-            changesApi.messageWasShownOnce = true;
-        }
-    }
-
-    private serverNotSupportingWebsocketsErrorHandler() {
-        var warningMessage;
-        var details;
-
-        if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
-            warningMessage = "Your server doesn't support the WebSocket protocol!";
-            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported. " +
-                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent.";
-        } else {
-            this.connectToChangesApiTask.reject();
-            warningMessage = "Changes API is Disabled!";
-            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API. " +
-                "In order to use it, please use a browser that supports the EventSource API.";
-        }
-
-        this.showWarning(warningMessage, details);
-    }
-
-    private showWarning(message: string, details: string) {
-        if (changesApi.isServerSupportingWebSockets) {
-            changesApi.isServerSupportingWebSockets = false;
-            this.commandBase.reportWarning(message, details);
-        }
-    }
-
+    
     private fireEvents<T>(events: Array<any>, param: T, filter: (T) => boolean) {
         for (var i = 0; i < events.length; i++) {
             if (filter(param)) {
@@ -186,7 +120,7 @@ class httpTraceClient {
         }
     }
 
-    watchLogs(onChange: (e: logNotificationDto) => void) {
+    watchTraffic(onChange: (e: logNotificationDto) => void) {
         var callback = new changesCallback<logNotificationDto>(onChange);
         this.adminLogsHandlers.push(callback);
         return new changeSubscription(() => {
@@ -194,17 +128,18 @@ class httpTraceClient {
         });
     }
     
-    dispose() {
-        this.connectToChangesApiTask.done(() => {
+    disconnect() {
+        this.connectionOpeningTask.done(() => {
             if (this.webSocket && this.webSocket.readyState == this.readyStateOpen){
-                console.log("Disconnecting from WebSocket HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
+                console.log("Disconnecting from WebSocket HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
                 this.isCleanClose = true;
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
             }
             else if (this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
-                console.log("Disconnecting from EventSource HTTP Trace " + ((!!this.rs && !!this.rs.name) ? ("for (rs = " + this.rs.name + ")") : "admin"));
+                console.log("Disconnecting from EventSource HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
                 this.isCleanClose = true;
                 this.eventSource.close();
+                this.connectionClosingTask.resolve();
             }
         });
     }

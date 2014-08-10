@@ -332,7 +332,7 @@ class logs extends viewModelBase {
     switchToHttpTraceMode() {
         var tracedDB = appUrl.getResource();
         this.disposeOnDemandLogsClient();
-        this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
+       /* this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
         this.logHttpTraceClient.connectToChangesApiTask
             .done(() => {
                 this.logsMode("Http Trace");
@@ -346,7 +346,7 @@ class logs extends viewModelBase {
                 } else {
                     app.showMessage("Could not open connection", "Http-Trace failed to start");
                 }
-            });
+            });*/
     }
 
     switchToCustomLogsMode() {
@@ -400,15 +400,15 @@ class logs extends viewModelBase {
     }
 
     disposeHttpTraceClient() {
-        if (!!this.httpTraceSubscription) {
-            this.httpTraceSubscription.off();
-            this.httpTraceSubscription = null;
-        }
-
-        if (!!this.logHttpTraceClient) {
-            this.logHttpTraceClient.dispose();
-            this.logHttpTraceClient = null;
-        }
+//        if (!!this.httpTraceSubscription) {
+//            this.httpTraceSubscription.off();
+//            this.httpTraceSubscription = null;
+//        }
+//
+//        if (!!this.logHttpTraceClient) {
+//            this.logHttpTraceClient.dispose();
+//            this.logHttpTraceClient = null;
+//        }
     }
 
     disposeOnDemandLogsClient() {

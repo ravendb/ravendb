@@ -504,6 +504,7 @@
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewSystemDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\watchTraffic.ts" />
+    <TypeScriptCompile Include="App\viewmodels\watchTrafficConfigDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
@@ -511,6 +512,7 @@
     <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\watchTraffic.html" />
+    <Content Include="App\views\watchTrafficConfigDialog.html" />
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>

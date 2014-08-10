@@ -12,7 +12,7 @@ import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand")
 import appUrl = require('common/appUrl');
 
 class watchTrafficConfigDialog extends dialogViewModelBase {
-    configurationTask = $.Deferred();
+    public configurationTask = $.Deferred();
     
     watchedResourceMode = ko.observable("SingleResourceView");
     resourceName = ko.observable<string>();
@@ -47,11 +47,14 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 }
                 if (!!filesystems && filesystems.length > 0) {
                     filesystems.forEach((x) => {
-                        if (!this.allResources.first(y=>y.name == x.name))
+                        if (!this.allResources.first(y => y.name == x.name))
                             this.allResources.push(x);
                     });
+
+
                 }
-        });
+                loadDialogDeferred.resolve({ can: true });
+            });
         return loadDialogDeferred;
     }
 
@@ -59,9 +62,11 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
       
         
     }
-
+    enterKeyPressed() {
+        
+    }
     fetchResourcesAutocompletes(search: string) {
-        if (search.length >= 2) {
+        /*if (search.length >= 2) {
            
             if (this.resourceName() === search) {
                 if (this.resourceAutocompletes.length == 1 && this.resourceName() == this.resourceAutocompletes()[0]) {
@@ -73,6 +78,13 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 
         } else if (search.length == 0) {
             this.resourceAutocompletes.removeAll();
+        }*/
+        if (this.resourceName() === search) {
+            if (this.resourceAutocompletes.length == 1 && this.resourceName() == this.resourceAutocompletes()[0]) {
+                this.resourceAutocompletes.removeAll();
+                return;
+            }
+            this.resourceAutocompletes(this.allResources().filter(x=> x.name.indexOf(search) == 0).map(x=> x.name));
         }
     }
     
@@ -85,11 +97,11 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     }
 
     confirmConfig() {
-        if (this.resourceName().trim() == "" && this.watchedResourceMode() == "SingleResourceView") {
+        if ((!this.resourceName() || this.resourceName().trim() == "") && this.watchedResourceMode() == "SingleResourceView") {
             app.showMessage("Resource name should be chosen", "Validation Error");
             return;
         }
-        if (this.watchedResourceMode() == "SingleResourceView" && !!this.allResources.first(x=>x.name == this.resourceName())) {
+        if (this.watchedResourceMode() == "SingleResourceView" && !this.allResources.first(x=>x.name == this.resourceName())) {
             app.showMessage("Resource name is not recognized", "Validation Error");
             return;
         }
@@ -101,6 +113,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
             .done((tokenObject: singleAuthToken) => {
                 this.configurationTask.resolve({
                     ResourceName: this.resourceName(),
+                    ResourcePath: resourcePath,
                     MaxEntries: this.maxEntries(),
                     WatchedResourceMode: this.watchedResourceMode(),
                     SingleAuthToken:tokenObject
