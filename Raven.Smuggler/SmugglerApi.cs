@@ -22,9 +22,9 @@ namespace Raven.Smuggler
 	public class SmugglerApi : SmugglerApiBase
 	{
 		public SmugglerApi(SmugglerOptions options = null)
+			: base(options ?? new SmugglerOptions())
 		{
-			SmugglerOptions = options ?? new SmugglerOptions();
-			Operations = new RemoteSmugglerOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, SmugglerOptions);
+			Operations = new RemoteSmugglerOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported);
 		}
 
 		private BulkInsertOperation operation;
@@ -36,7 +36,7 @@ namespace Raven.Smuggler
 			return SmugglerBetweenOperation.Between(betweenOptions, SmugglerOptions);
 		}
 
-		public override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+		protected override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			if (maxEtag != null)
 				throw new ArgumentException("We don't support maxEtag in SmugglerApi", maxEtag);

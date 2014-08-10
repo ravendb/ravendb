@@ -27,10 +27,9 @@ namespace Raven.Database.Smuggler
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		public EmbeddedSmugglerOperations(DocumentDatabase database, SmugglerOptions options)
+		public EmbeddedSmugglerOperations(DocumentDatabase database)
 		{
 			this.database = database;
-			Options = options;
 		}
 
 		public Action<string> Progress { get; set; }
@@ -227,6 +226,11 @@ namespace Raven.Database.Smuggler
 		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
 			return new CompletedTask<RavenJObject>(document);
+		}
+
+		public void Initialize(SmugglerOptions options)
+		{
+			Options = options;
 		}
 
 		public void ShowProgress(string format, params object[] args)

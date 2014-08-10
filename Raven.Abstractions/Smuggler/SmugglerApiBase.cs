@@ -30,12 +30,19 @@ namespace Raven.Abstractions.Smuggler
 
 		public ISmugglerOperations Operations { get; protected set; }
 
-		public SmugglerOptions SmugglerOptions { get; protected set; }
+		public SmugglerOptions SmugglerOptions { get; private set; }
 
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
+		protected SmugglerApiBase(SmugglerOptions options)
+		{
+			SmugglerOptions = options;
+		}
+
 		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions)
 		{
+			Operations.Initialize(SmugglerOptions);
+
 			var result = new ExportDataResult
 			{
 				FilePath = exportOptions.ToFile,
@@ -257,7 +264,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public abstract Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch);
 
-		public virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+		protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var totalCount = 0;
 			var maxEtagReached = false;
@@ -313,7 +320,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		protected virtual async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+		protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var now = SystemTime.UtcNow;
 			var totalCount = 0;
@@ -500,6 +507,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public async virtual Task ImportData(SmugglerImportOptions importOptions, Stream stream)
 		{
+			Operations.Initialize(SmugglerOptions);
 			await DetectServerSupportedFeatures(importOptions.To);
 
 			Stream sizeStream;
@@ -825,7 +833,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		protected async Task ExportIndexes(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
+		private async Task ExportIndexes(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
 		{
 			int totalCount = 0;
 			while (true)

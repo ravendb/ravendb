@@ -75,7 +75,7 @@
     <Compile Include="ServerSupportedFeatures.cs" />
     <Compile Include="SmugglerApi.cs" />
     <Compile Include="SmugglerExportIncremental.cs" />
-    <Compile Include="SmugglerOperations.cs" />
+    <Compile Include="RemoteSmugglerOperations.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">
