@@ -33,20 +33,17 @@ class studioConfig extends viewModelBase {
     }
 
     saveStudioConfig() {
-        var db = this.activeDatabase();
-        if (db) {
-            var doc = this.configDocument();
-            var action = !this.systemDatabasePrompt();
-            doc["WarnWhenUsingSystemDatabase"] = action;
-            require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-                var saveTask = new saveDocumentCommand(this.documentId, doc, this.systemDatabase).execute();
-                saveTask
-                    .done((saveResult: bulkDocumentDto[]) => {
-                        this.systemDatabasePrompt(action);
-                        this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
-                    });
-            });
-        }
+        var doc = this.configDocument();
+        var action = !this.systemDatabasePrompt();
+        doc["WarnWhenUsingSystemDatabase"] = action;
+        require(["commands/saveDocumentCommand"], saveDocumentCommand => {
+            var saveTask = new saveDocumentCommand(this.documentId, doc, this.systemDatabase).execute();
+            saveTask
+                .done((saveResult: bulkDocumentDto[]) => {
+                    this.systemDatabasePrompt(action);
+                    this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
+                });
+        });
     }
 }
 

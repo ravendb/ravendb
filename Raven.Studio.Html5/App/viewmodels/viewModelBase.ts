@@ -103,12 +103,15 @@ class viewModelBase {
     /*
      * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
      */
-    canDeactivate(isClose): any {
-        var isDirty = this.dirtyFlag().isDirty();
-        if (isDirty) {
-            return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?', undefined, true);
+    canDeactivate(isClose: boolean): any {
+        if (isClose == false) {
+            var isDirty = this.dirtyFlag().isDirty();
+            if (isDirty) {
+                return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?', undefined, true);
+            }
         }
-        return true;
+
+        return $.Deferred().resolve({ can: true });
     }
     
     /*

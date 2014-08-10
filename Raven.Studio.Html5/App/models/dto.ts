@@ -423,6 +423,11 @@ interface bulkDocumentDto {
     Deleted?: any;
 }
 
+interface databaseDocumentSaveDto {
+    Key: string;
+    ETag: string
+}
+
 interface backupRequestDto {
     BackupLocation: string;
     DatabaseDocument: databaseDocumentDto;

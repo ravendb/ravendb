@@ -21,6 +21,7 @@ class adminSettings extends viewModelBase {
         var restoreDatabaseRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: appUrl.forRestoreDatabase() };
         var adminLogsRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
+        var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
         var studioConfigRoute = { route: 'admin/settings/studioConfig', moduleId: 'viewmodels/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig() };
 
         this.router = durandalRouter.createChildRouter()
@@ -31,6 +32,7 @@ class adminSettings extends viewModelBase {
                 restoreDatabaseRoute,
                 adminLogsRoute,
                 trafficWatchRoute,
+                debugInfoRoute,
                 studioConfigRoute
             ])
             .buildNavigationModel();

@@ -11,24 +11,23 @@ class databaseSettingsDialog extends dialogViewModelBase {
     activeScreen: KnockoutObservable<string> = ko.observable<string>("");
     content: DurandalActivator<any>;
     currentModel: viewModelBase;
-    dirtyFlag = new ko.DirtyFlag([]);
 
     constructor(bundles: Array<string>) {
         super();
 
         this.content = activator.create();
 
-        var quotasRoute = { moduleId: 'viewmodels/quotas', title: 'Quotas', activate: true};
-        var versioningRoute = { moduleId: 'viewmodels/versioning', title: 'Versioning', activate: true};
-        var sqlReplicationConnectionRoute = { moduleId: 'viewmodels/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', activate: true};
+        var quotasRoute = { moduleId: 'viewmodels/quotas', title: 'Quotas', activate: true };
+        var versioningRoute = { moduleId: 'viewmodels/versioning', title: 'Versioning', activate: true };
+        var sqlReplicationConnectionRoute = { moduleId: 'viewmodels/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', activate: true };
 
         // when the activeScreen name changes - load the viewmodel
-        this.activeScreen.subscribe((newValue) => 
+        this.activeScreen.subscribe((newValue) =>
             require([newValue], (model) => {
                 this.currentModel = new model();
                 this.content.activateItem(this.currentModel);
             })
-        );
+            );
 
         this.routes = [];
         if (bundles.contains("Quotas")) {
@@ -44,8 +43,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
 
     attached() {
         super.attached();
-        this.dirtyFlag().reset();
-        this.showView(this.routes[0].moduleId);
+        this.activeScreen(this.routes[0].moduleId);
     }
 
     detached() {
@@ -54,34 +52,16 @@ class databaseSettingsDialog extends dialogViewModelBase {
     }
 
     canDeactivate(): any {
-        var isDirty = this.currentModel.dirtyFlag().isDirty();
-        
-        if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['No', 'Yes']);
-        }
-
-        return true;
-    }
-
-    checkDirtyFlag(yesCallback: Function, noCallback?: Function) {
-        var deferred: JQueryPromise<string>;
-        if (this.dirtyFlag().isDirty()) {
-            deferred = app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['Yes', 'No']);
-        } else {
-            deferred = $.Deferred().resolve("Yes");
-        }
-
-        deferred.done((canDo: string) => {
-            if (canDo === "Yes" && yesCallback) {
-                yesCallback();
-            } else if (canDo === "No" && noCallback) {
-                noCallback();
-            }
-        });
+        return this.currentModel.canDeactivate(false);
     }
 
     showView(moduleId: string) {
-        this.checkDirtyFlag(() => this.activeScreen(moduleId));
+        var canDeactivate = this.canDeactivate();
+        canDeactivate.done((answer) => {
+            if (answer.can) {
+                this.activeScreen(moduleId);
+            }
+        });
     }
 
     isActive(moduleId: string) {
@@ -89,7 +69,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
     }
 
     close() {
-        this.checkDirtyFlag(() => dialog.close(this));
+        dialog.close(this);
     }
 }
 

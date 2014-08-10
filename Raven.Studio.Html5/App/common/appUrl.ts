@@ -168,6 +168,10 @@ class appUrl {
         return "#admin/settings/trafficWatch";
     }
 
+    static forDebugInfo(): string {
+        return "#admin/settings/debugInfo";
+    }
+
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
     }

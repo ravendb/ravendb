@@ -61,15 +61,17 @@ class quotas extends viewModelBase {
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-            var doc = new document(this.settingsDocument().toDto(true));
+            var settingsDocument = this.settingsDocument();
+            settingsDocument['@metadata'] = this.settingsDocument().__metadata;
+            settingsDocument['@metadata']['@etag'] = this.settingsDocument().__metadata['@etag'];
+            var doc = new document(settingsDocument.toDto(true));
             doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = this.maximumSize() * 1024;
             doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = this.warningLimitThreshold() * 1024;
             doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs();
             doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs();
             var saveTask = new saveDatabaseSettingsCommand(db, doc).execute();
-            saveTask.done((saveResult: bulkDocumentDto[]) => {
-                var savedDocumentDto: bulkDocumentDto = saveResult[0];
-                this.settingsDocument().__metadata['@etag'] = savedDocumentDto.Etag;
+            saveTask.done((saveResult: databaseDocumentSaveDto) => {
+                this.settingsDocument().__metadata['@etag'] = saveResult.ETag;
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }
