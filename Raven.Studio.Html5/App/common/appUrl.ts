@@ -125,7 +125,7 @@ class appUrl {
     }
 
     static forAdminSettings(): string {
-        return "#admin/settings/adminSettings";
+        return "#admin/settings";
     }
 
     static forApiKeys(): string {
@@ -738,12 +738,16 @@ class appUrl {
             var fragment = instruction.fragment;
             var appUrls: computedAppUrls = appUrl.currentDbComputeds;
             var newLoationHref;
-            if (fragment.indexOf("filesystems/") == 0) {
+            if (fragment.indexOf("filesystems/") == 0) { //file systems section
                 newLoationHref = appUrls.filesystemsManagement();
             }
-            else if (fragment.indexOf("counterstorages/") == 0) {
+            else if (fragment.indexOf("counterstorages/") == 0) { //counter storages section
                 newLoationHref = appUrls.counterStorageManagement();
-            } else {
+            }
+            else if (fragment.indexOf("admin/settings") == 0) { //admin settings section
+                newLoationHref = appUrls.adminSettings();
+            }
+            else { // databases section
                 newLoationHref = appUrls.databasesManagement();
             }
             location.href = newLoationHref;

@@ -84,7 +84,7 @@ class shell extends viewModelBase {
 
     private globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
-    private changeSubscriptionArray: changeSubscription[];
+    private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
         super();
@@ -202,7 +202,7 @@ class shell extends viewModelBase {
         window.addEventListener("beforeunload", () => {
             this.cleanupNotifications();
             this.globalChangesApi.dispose();
-            this.disconnectFromResourceChangesApi();
+            shell.disconnectFromResourceChangesApi();
         });
     }
 
@@ -319,7 +319,7 @@ class shell extends viewModelBase {
                 resourceObservableArray().first().activate();
             } else if (resourceObservableArray().length == 0) {
                 //if we are in file systems or counter storages page
-                this.disconnectFromResourceChangesApi();
+                shell.disconnectFromResourceChangesApi();
                 activeResourceObservable(null);
             }
 
@@ -444,17 +444,14 @@ class shell extends viewModelBase {
             .done(() => {
                 var locationHash = window.location.hash;
 
-                if (locationHash.indexOf("#filesystems") == 0) {
+                if (locationHash.indexOf("#filesystems") == 0) { //filesystems section
 
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
-                else if (locationHash.indexOf("#counterstorages") == 0) {
+                else if (locationHash.indexOf("#counterstorages") == 0) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
                 }
-                else if (locationHash.indexOf("#admin/settings") == 0) {
-                    this.systemDatabase.activate();
-                }
-                else {
+                else if (locationHash.indexOf("#admin/settings") == -1) { //databases section
                     this.activateResource(appUrl.getDatabase(), shell.databases);
                 }
             });
@@ -475,7 +472,7 @@ class shell extends viewModelBase {
     }
 
     navigateToResourceGroup(resourceHash) {
-        this.disconnectFromResourceChangesApi();
+        shell.disconnectFromResourceChangesApi();
 
         if (resourceHash == this.appUrls.databases()) {
             this.activateResource(appUrl.getDatabase(), shell.databases);
@@ -534,11 +531,11 @@ class shell extends viewModelBase {
         } else {
             this.currentAlert(alert);
             var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
+/*            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
                 fadeTime = 100000000;
-            }
-            else if (alert.type === alertType.danger || alert.type === alertType.warning) {
-                fadeTime = 4000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
+            }*/
+            if (alert.type === alertType.danger || alert.type === alertType.warning) {
+                fadeTime = 5000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
             }
             setTimeout(() => {
                 this.closeAlertAndShowNext(alert);
@@ -587,7 +584,7 @@ class shell extends viewModelBase {
     private updateDbChangesApi(db: database) {
         if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && db.disabled()) {
             // disconnect from the current database changes api and set the current connected database
-            this.disconnectFromResourceChangesApi();
+            shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = db;
         }
 
@@ -595,7 +592,7 @@ class shell extends viewModelBase {
                 db.name == "<system>" && this.currentConnectedResource.name == db.name) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(db, 5000));
-            this.changeSubscriptionArray = [
+            shell.changeSubscriptionArray = [
                 shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
                 shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
@@ -606,14 +603,14 @@ class shell extends viewModelBase {
     private updateFsChangesApi(fs: filesystem) {
         if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && fs.disabled()) {
             // disconnect from the current filesystem changes api and set the current connected filesystem
-            this.disconnectFromResourceChangesApi();
+            shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = fs;
         }
 
         if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
-            this.changeSubscriptionArray = [
+            shell.changeSubscriptionArray = [
                 shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs))
             ];
         }
@@ -622,20 +619,20 @@ class shell extends viewModelBase {
     private updateCsChangesApi(cs: counterStorage) {
         if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
             // disconnect from the current filesystem changes api and set the current connected filesystem
-            this.disconnectFromResourceChangesApi();
+            shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = cs;
         }
 
         if (!cs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('counterstorages')())) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(cs, 5000));
-            this.changeSubscriptionArray = [
+            shell.changeSubscriptionArray = [
                 //TODO: enable changes api for counter storages, server side
             ];
         }
     }
 
-    private disconnectFromResourceChangesApi() {
+    public static disconnectFromResourceChangesApi() {
         if (shell.currentResourceChangesApi()) {
             this.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
             this.changeSubscriptionArray = [];
@@ -670,22 +667,32 @@ class shell extends viewModelBase {
     }
 
     getCurrentActiveFeatureName() {
-        if (this.appUrls.isAreaActive('filesystems')() === true) {
+        if (this.appUrls.isAreaActive('filesystems')()) {
             return 'File Systems';
-        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+        }
+        else if (this.appUrls.isAreaActive('counterstorages')()) {
             return 'Counter Storages';
-        } else {
+        }
+        else if (this.appUrls.isAreaActive('admin')()) {
+            return 'Manage Your Server';
+        }
+        else {
             return 'Databases';
         }
     }
 
     getCurrentActiveFeatureHref() {
-        if (this.appUrls.isAreaActive('filesystems')() === true) {
-            return this.appUrls.filesystems();
-        } else if (this.appUrls.isAreaActive('counterstorages')() === true) {
+        if (this.appUrls.isAreaActive('filesystems')()) {
+            return this.appUrls.filesystemsManagement();
+        }
+        else if (this.appUrls.isAreaActive('counterstorages')()) {
             return this.appUrls.counterStorageManagement();
-        } else {
-            return this.appUrls.databases();
+        }
+        else if (this.appUrls.isAreaActive('admin')()) {
+            return this.appUrls.adminSettings();
+        }
+        else {
+            return this.appUrls.databasesManagement();
         }
     }
 

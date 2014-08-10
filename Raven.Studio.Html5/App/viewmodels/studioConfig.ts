@@ -9,6 +9,7 @@ class studioConfig extends viewModelBase {
     systemDatabase: database;
     systemDatabasePrompt = ko.observable<boolean>(true);
     configDocument = ko.observable<document>();
+    
     private documentId = "Raven/StudioConfig";
 
     constructor() {

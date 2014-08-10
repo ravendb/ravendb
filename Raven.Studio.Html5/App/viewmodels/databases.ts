@@ -15,12 +15,14 @@ class databases extends viewModelBase {
     allCheckedDatabasesDisabled: KnockoutComputed<boolean>;
     systemDb: database;
     optionsClicked = ko.observable<boolean>(false);
+    appUrls: computedAppUrls;
 
     constructor() {
         super();
         
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
+        this.appUrls = appUrl.forCurrentDatabase();
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
 
         var currentDatabse = this.activeDatabase();
@@ -58,11 +60,6 @@ class databases extends viewModelBase {
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
-        var db: database = this.activeDatabase();
-        if (!!db && db.isSystem == false) {
-            viewModelBase.isConfirmedUsingSystemDatabase = false;
-        }
-
         return true;
     }
 
@@ -323,9 +320,9 @@ class databases extends viewModelBase {
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
     }
 
-    showRestoreDatabase() {
-        this.navigate("#admin/settings");
-        //this.systemDb.activate();
+    navigateToAdminSettings() {
+        shell.disconnectFromResourceChangesApi();
+        this.navigate(this.appUrls.adminSettings());
     }
 
 }
