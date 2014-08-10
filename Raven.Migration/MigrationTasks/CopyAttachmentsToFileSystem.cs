@@ -39,7 +39,7 @@ namespace Raven.Migration.MigrationTasks
 
 				while (true)
 				{
-					var batchInfo = commands.GetAttachments(startEtag, batchSize);
+					var batchInfo = commands.GetAttachments(0, startEtag, batchSize);
 
 					if(batchInfo == null || batchInfo.Length == 0)
 						break;

@@ -56,7 +56,7 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		public static RavenJObject ToJObject(this Stream self)
 		{
-            var streamWithCachedHeader = new StreamWithCachedHeader(self, 3);
+            var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
             if (IsJson(streamWithCachedHeader))
 			{
                 using (var streamReader = new StreamReader(streamWithCachedHeader, Encoding.UTF8, false, 1024, true))
@@ -186,24 +186,23 @@ namespace Raven.Abstractions.Extensions
 			return jsonSerializer;
 		}
 
-        private static bool IsJson(StreamWithCachedHeader stream)
-        {
-            var header = stream.Header;
-
-            if (header[0] == '{')
-                return true;
-
-            if (header[0] == 239 && header[1] == 187 && header[2] == 191)
-                return true;
-
-            return false;
+	    private static bool IsJson(StreamWithCachedHeader stream)
+	    {
+            // in BSON first four bytes are int32 which represents content length
+            // as result we can't distigush between json and bson based on first 4 bytes
+            // in bson 5-th byte is value type
+	        var bsonType = stream.Header[4];
+	        return stream.ActualHeaderSize < 5 || bsonType > 0x12;
+	    }
 	}
-}
+
     internal class StreamWithCachedHeader : Stream
     {
         private readonly Stream inner;
 
-        private readonly int headerSize;
+        public int ActualHeaderSize { get; private set; }
+
+        private int headerSizePosition;
 
         public byte[] Header { get; private set; }
 
@@ -215,14 +214,13 @@ namespace Raven.Abstractions.Extensions
         {
             inner = stream;
             Header = new byte[headerSize];
-            this.headerSize = headerSize;
 
             CacheHeader(stream, Header, headerSize);
         }
 
-        private static void CacheHeader(Stream stream, byte[] buffer, int headerSize)
+        private void CacheHeader(Stream stream, byte[] buffer, int headerSize)
         {
-            stream.Read(buffer, 0, headerSize);
+            ActualHeaderSize = stream.Read(buffer, 0, headerSize);
         }
 
         public override void Flush()
@@ -245,17 +243,23 @@ namespace Raven.Abstractions.Extensions
             if (passedHeader)
                 return inner.Read(buffer, offset, count);
 
-            Buffer.BlockCopy(Header, 0, buffer, 0, headerSize);
-            if (count <= headerSize)
+            if (count <= ActualHeaderSize - headerSizePosition)
+            {
+                Buffer.BlockCopy(Header, headerSizePosition, buffer, 0, count);
+                headerSizePosition += count;
+                passedHeader = headerSizePosition >= ActualHeaderSize;
                 return count;
+            }
+            Buffer.BlockCopy(Header, headerSizePosition, buffer, 0, ActualHeaderSize - headerSizePosition);
 
-            var newCount = count - headerSize;
-            var r = inner.Read(buffer, offset + headerSize, newCount);
+            var newCount = count - ActualHeaderSize + headerSizePosition;
+            var r = inner.Read(buffer, offset + ActualHeaderSize, newCount);
 
-            var currentRead = headerSize + r;
+            var currentRead = ActualHeaderSize - headerSizePosition + r;
 
             read += currentRead;
-            passedHeader = read >= headerSize;
+            headerSizePosition += currentRead;
+            passedHeader = read >= ActualHeaderSize;
 
             return currentRead;
         }

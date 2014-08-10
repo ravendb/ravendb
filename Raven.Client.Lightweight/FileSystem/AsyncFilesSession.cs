@@ -12,9 +12,11 @@ using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
+    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
     {
-        	/// <summary>
+        private IDisposable conflictCacheRemoval; 
+
+        /// <summary>
 		/// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
 		/// </summary>
         public AsyncFilesSession(FilesStore filesStore,
@@ -24,7 +26,9 @@ namespace Raven.Client.FileSystem
 			: base(filesStore, listeners, id)
 		{
             Commands = asyncFilesCommands;
-            filesStore.Changes().ForConflicts().Subscribe(this);
+            conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
+                                             .ForConflicts()
+                                             .Subscribe<ConflictNotification>(this.OnFileConflict);
 		}
 
         /// <summary>
@@ -133,54 +137,25 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        async void IObserver<ConflictNotification>.OnNext(ConflictNotification notification)
+        internal void OnFileConflict(ConflictNotification notification)
         {
-            if (!conflicts.Contains(notification.FileName))
-                conflicts.Add(notification.FileName);
-
-            var localHeader = await this.LoadFileAsync(notification.FileName);
-
-            if (notification.Status == ConflictStatus.Detected) 
-            {                               
-                int actionableListenersCount = 0;
-                var resolutionStrategy = ConflictResolutionStrategy.NoResolution;
-                foreach( var listener in Listeners.ConflictListeners)
-                {
-                    var strategy = listener.ConflictDetected(localHeader, notification.RemoteFileHeader, notification.SourceServerUrl);
-                    if (strategy != ConflictResolutionStrategy.NoResolution )
-                    {
-                        if (actionableListenersCount > 0)
-                            return;
-                        
-                        if (actionableListenersCount == 0) 
-                        {
-                            actionableListenersCount++;
-                            resolutionStrategy = strategy;
-                        }
-                    }
-                }
-
-                await Commands.Synchronization.ResolveConflictAsync(localHeader.Name, resolutionStrategy);
+            if ( notification.Status == ConflictStatus.Detected)
+            {
+                conflicts.Add(notification.FileName);                
             }
             else
             {
-                if (entitiesByKey.ContainsKey(notification.FileName))
-                    entitiesByKey.Remove(notification.FileName);
-
-                if (conflicts.Contains(notification.FileName))
-                    conflicts.Remove(notification.FileName);
-
-                foreach (var listener in Listeners.ConflictListeners)
-                    listener.ConflictResolved(localHeader);
-            }
+                entitiesByKey.Remove(notification.FileName);
+                conflicts.Remove(notification.FileName);
+            }            
         }
 
-        void IObserver<ConflictNotification>.OnError(Exception error)
+        public override void Dispose ()
         {
-        }
+            base.Dispose();
 
-        void IObserver<ConflictNotification>.OnCompleted()
-        {
+            if (this.conflictCacheRemoval != null)
+                this.conflictCacheRemoval.Dispose();
         }
     }
 }

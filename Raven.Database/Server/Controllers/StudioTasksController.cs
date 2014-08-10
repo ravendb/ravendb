@@ -95,14 +95,13 @@ namespace Raven.Database.Server.Controllers
 				}
 				catch (Exception e)
 				{
-					status.ExceptionDetails = e.Message + e.StackTrace;
+					status.ExceptionDetails = e.ToString();
 					if (cts.Token.IsCancellationRequested)
 					{
 						status.ExceptionDetails = "Task was cancelled";
-					
+						cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
 					}
 					throw;
-					
 				}
 				finally
 				{
@@ -153,7 +152,7 @@ namespace Raven.Database.Server.Controllers
 			{
 			    try
 			    {
-				    var dataDumper = new DataDumper(Database) {SmugglerOptions = smugglerOptions};
+				    var dataDumper = new DataDumper(Database, smugglerOptions);
 				    await dataDumper.ExportData(
 					    new SmugglerExportOptions
 					    {

@@ -273,7 +273,7 @@ namespace Raven.Imports.Newtonsoft.Json
       _stack = new List<JsonPosition>(4);
       _dateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind;
       _dateParseHandling = DateParseHandling.DateTime;
-      _floatParseHandling = FloatParseHandling.DecimalWithNaN;
+      _floatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble;
 
       CloseInput = true;
     }

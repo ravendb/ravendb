@@ -1,5 +1,7 @@
 ﻿using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -9,6 +11,7 @@ using Raven.Client.FileSystem.Connection;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -17,9 +20,11 @@ namespace Raven.Client.FileSystem.Changes
 {
 
     public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>,
-                                        IFilesChanges, IFilesChangesImpl,
+                                        IFilesChanges,
                                         IHoldProfilingInformation
     {
+        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
         private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>();
 
         private bool watchAllConfigurations;
@@ -27,15 +32,19 @@ namespace Raven.Client.FileSystem.Changes
         private bool watchAllSynchronizations;
         private bool watchAllCancellations;
 
+        private readonly Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+
         public ProfilingInformation ProfilingInformation { get; private set; }
 
         public FilesChangesClient(string url, string apiKey,
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory, FilesConvention conventions,
                                        IReplicationInformerBase replicationInformer,
+                                       Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync,
                                        Action onDispose)
             : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
         {
+            this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }
 
         public IObservableWithTask<ConfigurationChangeNotification> ForConfiguration()
@@ -212,6 +221,8 @@ namespace Raven.Client.FileSystem.Changes
             }
         }
 
+        private ConcurrentDictionary<string, ConflictNotification> delayedConflictNotifications = new ConcurrentDictionary<string, ConflictNotification>();
+
         protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, FilesConnectionState>> connections)
         {
             switch (type)
@@ -247,41 +258,68 @@ namespace Raven.Client.FileSystem.Changes
 
                 case "ConflictNotification":
                     var conflictNotification = value.JsonDeserialization<ConflictNotification>();
-
-                    foreach (var observer in this.conflictObservers)
-                        observer.OnNext(conflictNotification);
-
-                    foreach (var counter in connections)
+                    if (conflictNotification.Status == ConflictStatus.Detected)
                     {
-                        counter.Value.Send(conflictNotification);
-                    }
-                    break;
-                case "ConflictDetectedNotification":
-                    var conflictDetectedNotification = value.JsonDeserialization<ConflictNotification>();
-                    
-                    foreach (var observer in this.conflictObservers)
-                        observer.OnNext(conflictDetectedNotification);
+                        // We don't care about this one (this can happen concurrently). 
+                        delayedConflictNotifications.AddOrUpdate(conflictNotification.FileName, conflictNotification, (x, y) => conflictNotification);
 
-                    foreach (var counter in connections)
+                        tryResolveConflictByUsingRegisteredConflictListenersAsync(conflictNotification.FileName, 
+                                                                                  conflictNotification.RemoteFileHeader, 
+                                                                                  conflictNotification.SourceServerUrl,
+                                                                                  () => NotifyConflictSubscribers(connections, conflictNotification))                             
+                            .ContinueWith(t =>
+                            {
+                                t.AssertNotFailed();
+
+                                // We need the lock to avoid a race conditions where a Detected happens and also a Resolved happen before the continuation can take control.. 
+                                lock ( delayedConflictNotifications )
+                                {
+                                    ConflictNotification notification;
+                                    if (delayedConflictNotifications.TryRemove(conflictNotification.FileName, out notification))
+                                    {
+                                        if (notification.Status == ConflictStatus.Resolved)
+                                            NotifyConflictSubscribers(connections, notification);
+                                    }
+                                }
+
+                                if (t.Result)
+                                {
+                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
+                                }
+                            }).ConfigureAwait(false);
+                    }
+                    else if (conflictNotification.Status == ConflictStatus.Resolved )
                     {
-                        counter.Value.Send(conflictDetectedNotification);
-                    }
-                    break;
-                case "ConflictResolvedNotification":
-                    var conflictResolvedNotification = value.JsonDeserialization<ConflictNotification>();
+                        // We need the lock to avoid race conditions. 
+                        lock ( delayedConflictNotifications )
+                        {
+                            if (delayedConflictNotifications.ContainsKey(conflictNotification.FileName))
+                            {
+                                delayedConflictNotifications.AddOrUpdate(conflictNotification.FileName, conflictNotification, (x, y) => conflictNotification);
 
-                    foreach (var observer in this.conflictObservers)
-                        observer.OnNext(conflictResolvedNotification);
-
-                    foreach (var counter in connections)
-                    {
-                        counter.Value.Send(conflictResolvedNotification);
+                                // We are delaying broadcasting.
+                                conflictNotification = null;
+                            }
+                            else NotifyConflictSubscribers(connections, conflictNotification);
+                        }
                     }
+
                     break;
                 default:
                     break;
             }
         }
+
+        private static void NotifyConflictSubscribers(IEnumerable<KeyValuePair<string, FilesConnectionState>> connections, ConflictNotification conflictNotification)
+        {
+            // Check if we are delaying the broadcast.
+            if (conflictNotification != null)
+            {
+                foreach (var counter in connections)
+                    counter.Value.Send(conflictNotification);
+            }
+        }
+
 
         private Task AfterConnection(Func<Task> action)
         {
@@ -294,11 +332,11 @@ namespace Raven.Client.FileSystem.Changes
         }
 
 
-        private List<IObserver<ConflictNotification>> conflictObservers = new List<IObserver<ConflictNotification>>();
+        //private List<IObserver<ConflictNotification>> conflictObservers = new List<IObserver<ConflictNotification>>();
 
-        void IFilesChangesImpl.AddObserver(IObserver<ConflictNotification> observer)
-        {
-            conflictObservers.Add(observer);
-        }
+        //void IFilesChangesImpl.AddObserver(IObserver<ConflictNotification> observer)
+        //{
+        //    conflictObservers.Add(observer);
+        //}
     }
 }

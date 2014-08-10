@@ -485,7 +485,8 @@ namespace Raven.Client.Connection
 	    /// </summary>
 	    void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
-	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
+	    AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
+
         IndexMergeResults GetIndexMergeSuggestions();
 	}
 

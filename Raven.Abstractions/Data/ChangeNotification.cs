@@ -131,9 +131,9 @@ namespace Raven.Abstractions.Data
         public string Level { get; set; }
         public DateTime TimeStamp { get; set; }
         public string LoggerName { get; set; }
-        public int RequestId { get; set; }
+        public long RequestId { get; set; }
         public string HttpMethod { get; set; }
-        public long EllapsedMiliseconds { get; set; }
+        public long ElapsedMilliseconds { get; set; }
         public int ResponseStatusCode { get; set; }
         public string RequestUri { get; set; }
         public string TenantName { get; set; }

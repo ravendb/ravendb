@@ -787,8 +787,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 						                        };
 
 					localMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] = JsonExtensions.ToJObject(conflictResolution);
-					accessor.UpdateFileMetadata(fileName, localMetadata);
+					accessor.UpdateFileMetadata(fileName, localMetadata); 
 				});
+
+            Task.Run(() => SynchronizationTask.SynchronizeDestinationsAsync(true));
 		}
 
 		private FileStatus CheckSynchronizedFileStatus(Tuple<string, Guid> fileInfo)

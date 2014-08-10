@@ -12,6 +12,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler.Data;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Embedded;
@@ -34,6 +35,7 @@ namespace Raven.Tests.Issues
         {
             configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
         }
+
         public class User
         {
             public string Name { get; set; }
@@ -608,18 +610,22 @@ namespace Raven.Tests.Issues
 
             public Task<Etag> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
+				Operations.Initialize(SmugglerOptions);
+
+                return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
             public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
+				Operations.Initialize(SmugglerOptions);
+
+                return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-            public new void ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtags)
-            {
-                base.ExportDeletions(jsonWriter, result, maxEtags);
-            }
+			public override Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtags)
+			{
+				return base.ExportDeletions(jsonWriter, result, maxEtags);
+			}
         }
 
         [Fact]
@@ -774,7 +780,7 @@ namespace Raven.Tests.Issues
 
                     lastEtags.LastDocDeleteEtag = user9DeletionEtag;
                     lastEtags.LastAttachmentsDeleteEtag = attach7DeletionEtag;
-                    dumper.ExportDeletions(writer, exportResult, lastEtags);
+                    dumper.ExportDeletions(writer, exportResult, lastEtags).Wait();
                     writer.WriteEndObject();
                     writer.Flush();
 

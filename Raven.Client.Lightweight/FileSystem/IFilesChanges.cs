@@ -16,9 +16,4 @@ namespace Raven.Client.FileSystem
         IObservableWithTask<CancellationNotification> ForCancellations();
         IObservableWithTask<SynchronizationUpdateNotification> ForSynchronization();
     }
-
-    internal interface IFilesChangesImpl
-    {
-        void AddObserver(IObserver<ConflictNotification> observer);
-    }
 }

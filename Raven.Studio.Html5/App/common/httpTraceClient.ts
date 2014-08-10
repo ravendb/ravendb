@@ -47,7 +47,7 @@ class httpTraceClient {
     }
 
     private connect(action: Function, needToReconnect: boolean = false) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath, !this.rs).execute();
+        var getTokenTask = new getSingleAuthTokenCommand(this.rs, !this.rs).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {

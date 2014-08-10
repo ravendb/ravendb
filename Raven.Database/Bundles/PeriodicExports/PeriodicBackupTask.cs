@@ -162,7 +162,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
                             if (fullBackup == false)
                             {
-                                var currentEtags = dataDumper.FetchCurrentMaxEtags();
+                                var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
 							// No-op if nothing has changed
                                 if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
                                     currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&

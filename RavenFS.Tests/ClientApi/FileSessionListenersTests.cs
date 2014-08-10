@@ -18,25 +18,16 @@ namespace RavenFS.Tests.ClientApi
 {
     public class FileSessionListenersTests : RavenFsTestBase
     {
-
-        private readonly IFilesStore filesStore;
-        private readonly IFilesStore anotherStore;
-
-        public FileSessionListenersTests()
-        {
-            filesStore = this.NewStore(1);
-            anotherStore = this.NewStore(2);
-
-        }
-
         [Fact]
         public async void DoNotDeleteReadOnlyFiles()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var deleteListener = new DeleteNotReadOnlyFilesListener();
             store.Listeners.RegisterListener(deleteListener);
 
-            using (var session = filesStore.OpenAsyncSession())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
                 session.RegisterUpload("/b/test2.file", CreateUniformFileStream(128));
@@ -63,11 +54,13 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void NoOpDeleteListener()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var noOpListener = new NoOpDeleteFilesListener();
             store.Listeners.RegisterListener(noOpListener);
 
-            using (var session = filesStore.OpenAsyncSession())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
                 session.RegisterUpload("/b/test2.file", CreateUniformFileStream(128));
@@ -90,13 +83,15 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void MultipleDeleteListeners()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var deleteListener = new DeleteNotReadOnlyFilesListener();
             var noOpListener = new NoOpDeleteFilesListener();
             store.Listeners.RegisterListener(deleteListener);
             store.Listeners.RegisterListener(noOpListener);
 
-            using (var session = filesStore.OpenAsyncSession())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
                 session.RegisterUpload("/b/test2.file", CreateUniformFileStream(128));
@@ -118,11 +113,13 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void ConflictListeners_LocalVersion()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var conflictsListener = new TakeLocalConflictListener();
             anotherStore.Listeners.RegisterListener(conflictsListener);
 
-            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
@@ -131,7 +128,7 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictNotifications(2, 10);
+                var notificationTask = WaitForConflictResolved(anotherStore, 1, 10);
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
@@ -153,11 +150,13 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void ConflictListeners_RemoteVersion()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var conflictsListener = new TakeNewestConflictsListener();
             anotherStore.Listeners.RegisterListener(conflictsListener);
 
-            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
 
@@ -172,20 +171,18 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(128, file.TotalSize);
                 Assert.Equal(130, file2.TotalSize);
 
-                var notificationTask = WaitForConflictNotifications(2, 10);
+                var notificationTask = WaitForConflictResolved(anotherStore, 1, 10);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
-
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
-
-                Assert.Equal(1, conflictsListener.DetectedCount);
 
                 //We need to sync again after conflict resolution because strategy was to resolve with remote
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
 
+                Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
                 file = await sessionDestination1.LoadFileAsync("test1.file");
@@ -197,37 +194,37 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
-        public async void MultipleConflictListeners_OnlyOneWithResolution()
+        public async void MultipleConflictListeners_OnlyOneWithShortCircuitResolution()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var conflictsListener = new TakeLocalConflictListener();
             var noOpListener = new NoOpConflictListener();
             anotherStore.Listeners.RegisterListener(conflictsListener);
-            anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(noOpListener);            
 
-            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
-
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictNotifications(2, 5);
+                var notificationTask = WaitForConflictResolved(anotherStore, 1, 5);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
-                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
-                Assert.Equal(1, noOpListener.DetectedCount);
+                Assert.Equal(0, noOpListener.DetectedCount);
                 Assert.Equal(1, noOpListener.ResolvedCount);
             }
         }
@@ -235,13 +232,15 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void MultipleConflictListeners_MultipleResolutionListeners()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var conflictsListener = new TakeLocalConflictListener();
             var noOpListener = new NoOpConflictListener();
-            anotherStore.Listeners.RegisterListener(conflictsListener);
             anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(conflictsListener);            
 
-            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
 
@@ -251,14 +250,13 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictNotifications(2, 5);
+                var notificationTask = WaitForConflictResolved(anotherStore, 1, 5);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
-                Thread.Sleep(200);
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
@@ -271,37 +269,35 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void MultipleConflictListeners_ConflictNotResolved()
         {
-            var store = (FilesStore)filesStore;
-            var takeLocalConflictListener = new TakeLocalConflictListener();
-            var takeNewestConflictListener = new TakeNewestConflictsListener();
-            var noOpListener = new NoOpConflictListener();
-            anotherStore.Listeners.RegisterListener(takeLocalConflictListener);
-            anotherStore.Listeners.RegisterListener(noOpListener);
-            anotherStore.Listeners.RegisterListener(takeNewestConflictListener);
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
 
-            using (var sessionDestination1 = filesStore.OpenAsyncSession())
+            var takeLocalConflictListener = new TakeLocalConflictListener();
+            var noOpListener = new NoOpConflictListener();
+            anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(takeLocalConflictListener);
+
+            using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
-
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictNotifications(1, 5);
+                var notificationTask = WaitForConflictDetected(anotherStore, 1, 10);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
-                Thread.Sleep(200);
-
-                Assert.Equal(1, takeLocalConflictListener.DetectedCount);
-                Assert.Equal(1, takeNewestConflictListener.DetectedCount);
+                               
                 Assert.Equal(1, noOpListener.DetectedCount);
-                Assert.Equal(0, takeLocalConflictListener.ResolvedCount + takeNewestConflictListener.ResolvedCount + noOpListener.ResolvedCount);
+                Assert.Equal(1, takeLocalConflictListener.DetectedCount);
+
+                Assert.Equal(0, takeLocalConflictListener.ResolvedCount + noOpListener.ResolvedCount);
 
                 // try to change content of file in destination2
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(140));
@@ -322,7 +318,9 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void MetadataUpdateListeners()
         {
-            var store = (FilesStore)filesStore;
+            var store = this.NewStore(1);
+            var anotherStore = this.NewStore(2);
+
             var metadataListener = new DoNotUpdateEtagListener();
             var alwaysUpdateListener = new NoOpUpdateMetadataListener();
 
@@ -481,11 +479,23 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
-        private Task<ConflictNotification> WaitForConflictNotifications(int notificationsNumber, int time)
+        private Task<ConflictNotification> WaitForConflictResolved(IFilesStore store, int notificationsNumber, int time)
         {
-            return anotherStore.Changes()
+            return store.Changes()
                             .ForConflicts()
                             .OfType<ConflictNotification>()
+                            .Where(x => x.Status == ConflictStatus.Resolved)
+                            .Timeout(TimeSpan.FromSeconds(time))
+                            .Take(notificationsNumber)
+                            .ToTask();
+        }
+
+        private Task<ConflictNotification> WaitForConflictDetected(IFilesStore store, int notificationsNumber, int time)
+        {
+            return store.Changes()
+                            .ForConflicts()
+                            .OfType<ConflictNotification>()
+                            .Where(x => x.Status == ConflictStatus.Detected)
                             .Timeout(TimeSpan.FromSeconds(time))
                             .Take(notificationsNumber)
                             .ToTask();

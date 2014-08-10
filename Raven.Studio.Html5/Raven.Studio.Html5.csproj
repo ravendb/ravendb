@@ -364,11 +364,13 @@
     <TypeScriptCompile Include="App\viewmodels\infoPackage.ts" />
     <TypeScriptCompile Include="App\viewmodels\infoPackageImport.ts" />
     <TypeScriptCompile Include="App\viewmodels\customLogging.ts" />
+    <TypeScriptCompile Include="App\viewmodels\upgrade.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\upgrade.html" />
     <Content Include="App\views\customLogging.html" />
     <Content Include="App\views\infoPackageImport.html" />
     <Content Include="App\views\infoPackage.html" />

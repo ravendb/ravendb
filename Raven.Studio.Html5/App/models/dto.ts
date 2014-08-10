@@ -30,7 +30,7 @@ interface logNotificationDto {
     LoggerName :string;
     RequestId: number;
     HttpMethod: string;
-    EllapsedMiliseconds: number;
+    ElapsedMilliseconds: number;
     ResponseStatusCode: number;
     RequestUri: string;
     TenantName: string;
