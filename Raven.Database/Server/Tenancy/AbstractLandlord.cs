@@ -37,7 +37,7 @@ namespace Raven.Database.Server.Tenancy
 
 	    protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
-        public abstract string ResourcePrefix { get; }
+	    public abstract string ResourcePrefix { get; }
 
         public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
@@ -51,8 +51,8 @@ namespace Raven.Database.Server.Tenancy
 
         public string[] GetUserAllowedResourcesByPrefix( IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
-            List<string> approvedResources = null;
-            var nextPageStart = 0;
+	        List<string> approvedResources = null;
+	        var nextPageStart = 0;
             var resources = systemDatabase.Documents
                 .GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
                 systemDatabase.Configuration.MaxPageSize, CancellationToken.None, ref nextPageStart);
@@ -65,20 +65,11 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (user == null)
                     return null;
-                bool isAdministrator=false;
-                
-                if (user is MixedModeRequestAuthorizer.OneTimetokenPrincipal)
-                {
-                    var oneTimePrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-                    if (oneTimePrincipal != null)
-                    {
-                        isAdministrator = oneTimePrincipal.IsAdministratorInAnonymouseMode;
-                    }
-                }
-                else
-                {
-                    isAdministrator = user.IsAdministrator(annonymouseUserAccessMode);
-                }
+
+	            var oneTimePrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+				bool isAdministrator = oneTimePrincipal != null ?
+					oneTimePrincipal.IsAdministratorInAnonymouseMode :
+					user.IsAdministrator(annonymouseUserAccessMode);
 
                 if (isAdministrator == false)
                 {
@@ -117,7 +108,7 @@ namespace Raven.Database.Server.Tenancy
                 catch (Exception e)
                 {
                     Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
+	                databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
                 }
             }
         }
