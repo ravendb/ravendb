@@ -5,6 +5,7 @@ class windowsAuthData {
     name = ko.observable<string>();
     enabled = ko.observable<boolean>();
     databases = ko.observableArray<databaseAccess>();
+    nameCustomValidity = ko.observable<string>('');
 
     constructor(dto: windowsAuthDataDto) {
         this.name(dto.Name);
@@ -22,9 +23,9 @@ class windowsAuthData {
 
     static empty(): windowsAuthData {
         return new windowsAuthData({
-            Name: "[new settings]",
+            Name: "",
             Enabled: false,
-            Databases: []
+            Databases: [databaseAccess.empty().toDto()]
         });
     }
 
@@ -36,7 +37,7 @@ class windowsAuthData {
         this.enabled(false);
     }
 
-    addDatabase() {
+    addEmptyDatabase() {
         this.databases.push(databaseAccess.empty());
     }
 

@@ -67,7 +67,7 @@ class changesApi {
     private connect(action: Function, needToReconnect: boolean = false) {
         this.connectToChangesApiTask = $.Deferred();
         var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
-       
+
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
@@ -153,7 +153,7 @@ class changesApi {
 
     private onError(e: Event) {
         if (changesApi.messageWasShownOnce == false) {
-            this.commandBase.reportError('Changes stream was disconnected.', "Retrying connection shortly.");
+            this.commandBase.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
             changesApi.messageWasShownOnce = true;
         }
     }

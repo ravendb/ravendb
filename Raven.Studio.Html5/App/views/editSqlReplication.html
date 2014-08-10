@@ -1,10 +1,8 @@
 ﻿<section id="editSQLReplication">
     <form class="form-horizontal" role="form" data-bind="submit: save">
         <div class="btn-toolbar">
-
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse edit-sql-replication-actions btn-toolbar">
-
                     <div class="btn-group">
                         <button type="submit" class="btn btn-primary" data-bind="enable: $root.isSaveEnabled()" title="Save the index (Alt+S)" accesskey="S">
                             <i class="fa fa-save"></i>
@@ -40,9 +38,6 @@
                     <div class="btn-group pull-right advanced-toggle">
                         <a class="btn btn-default" data-bind="text:'Advanced mode', attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}"></a>
                     </div>
-
-
-
                 </div>
             </nav>
         </div>
@@ -91,7 +86,7 @@
                                             <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'afterkeydown'" />
                                         </div>
                                     </td>
-                                    <td><button type="button" style="display: inline-block;" class="close glyphicon glyphicon-remove remove-icon" data-bind="if: $parent.sqlReplicationTables().length > 1,click: $parent.removeTable.bind($parent)" title="Remove this table"></button></td>
+                                    <td><button type="button" style="display: inline-block;" class="close glyphicon glyphicon-remove remove-icon" data-bind="visible: $parent.sqlReplicationTables().length > 1, click: $parent.removeTable.bind($parent)" title="Remove this table"></button></td>
                                 </tr>
                             </tbody>
                         </table>

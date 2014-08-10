@@ -42,11 +42,25 @@ namespace Raven.Database.Server.Controllers
 
 			var databasesData = databases
 				.Select(database =>
-					new
+				{
+					var bundles = new string[]{};
+					var settings = database.Value<RavenJObject>("Settings");
+					if (settings != null)
+					{
+						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+						if (activeBundles != null)
+						{
+							bundles = activeBundles.Split(';');
+						}
+					}
+
+					return new
 					{
 						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
-						Disabled = database.Value<bool>("Disabled")
-					}).ToList();
+						Disabled = database.Value<bool>("Disabled"),
+						Bundles = bundles
+					};
+				}).ToList();
 
 			var databasesNames = databasesData.Select(databaseObject => databaseObject.Name).ToArray();
 

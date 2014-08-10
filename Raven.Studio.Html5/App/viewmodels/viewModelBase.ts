@@ -26,7 +26,7 @@ class viewModelBase {
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
-    private static isConfirmedUsingSystemDatabase: boolean;
+    private static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
     /*
@@ -60,10 +60,6 @@ class viewModelBase {
 
             // we only want to prompt warning to system db if we are in the databases section
             if (!!db && db.isSystem) {
-                if (viewModelBase.isConfirmedUsingSystemDatabase) {
-                    return true;
-                }
-
                 return this.promptNavSystemDb();
             }
             else if (!!db && db.disabled()) {
@@ -245,21 +241,22 @@ class viewModelBase {
         return deferred;
     }
 
-    private promptNavSystemDb(): any {
-        if (!appUrl.warnWhenUsingSystemDatabase) {
-            return true;
-        }
-
+    public promptNavSystemDb(): any {
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
-        systemDbConfirm.viewTask
-            .fail(() => canNavTask.resolve({ redirect: 'databases' }))
-            .done(() => {
-                viewModelBase.isConfirmedUsingSystemDatabase = true;
-                canNavTask.resolve(true);
-            });
-        app.showDialog(systemDbConfirm);
+        if (!appUrl.warnWhenUsingSystemDatabase || viewModelBase.isConfirmedUsingSystemDatabase) {
+            canNavTask.resolve(true);
+        }
+        else {
+            var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
+            systemDbConfirm.viewTask
+                .fail(() => canNavTask.resolve({ redirect: appUrl.forDatabases() }))
+                .done(() => {
+                    viewModelBase.isConfirmedUsingSystemDatabase = true;
+                    canNavTask.resolve({ can: true });
+                });
+            app.showDialog(systemDbConfirm);
+        }
 
         return canNavTask;
     }

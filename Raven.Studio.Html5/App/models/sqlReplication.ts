@@ -38,7 +38,6 @@ class sqlReplication extends document {
     collections = ko.observableArray<string>();
     searchResults: KnockoutComputed<string[]>;
     
-
     showReplicationConfiguration = ko.observable<boolean>(false);
 
     constructor(dto: sqlReplicationDto) {
@@ -70,14 +69,11 @@ class sqlReplication extends document {
         });
 
         this.searchResults = ko.computed(() => {
-            var newRavenEntityName = this.ravenEntityName();
-            if (newRavenEntityName === "" || !newRavenEntityName) {
-                return this.collections();
-            } else {
-                return this.collections().filter((name) => {
-                    return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
-                });
+            var newRavenEntityName: string = this.ravenEntityName();
+            if (!newRavenEntityName || newRavenEntityName.length < 2) {
+                return [];
             }
+            return this.collections().filter((name) => name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1);
         });
         
         this.script.subscribe((newValue) => {
@@ -130,9 +126,6 @@ class sqlReplication extends document {
     }
 
     static empty(): sqlReplication {
-        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
-        var sqlReplicationTables = [];
-        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
@@ -144,7 +137,7 @@ class sqlReplication extends document {
             PredefinedConnectionStringSettingName:null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: sqlReplicationTables,
+            SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
             PerformTableQuatation:true
         });
