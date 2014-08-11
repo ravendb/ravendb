@@ -37,8 +37,8 @@ namespace Raven.Client.Connection
 				if (disableRequestCompression == false)
 					stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
 
-				await data.CopyToAsync(stream);
-				await stream.FlushAsync();
+			    await data.CopyToAsync(stream).ConfigureAwait(false);
+			    await stream.FlushAsync().ConfigureAwait(false);
 			}
 			finally
 			{

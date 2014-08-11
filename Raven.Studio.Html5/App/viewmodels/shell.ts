@@ -84,6 +84,7 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
+    hasReplicationSupport = ko.computed(() => this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);

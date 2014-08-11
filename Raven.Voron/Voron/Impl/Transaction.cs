@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Trees;
-using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -23,6 +21,7 @@ namespace Voron.Impl
 		private readonly WriteAheadJournal _journal;
 		private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
 		private readonly HashSet<long> _dirtyPages = new HashSet<long>();
+		private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
@@ -54,6 +53,8 @@ namespace Voron.Impl
 		private int _overflowPagesInTransaction;
 		private TransactionHeader* _txHeader;
 		private readonly List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
+		private readonly HashSet<long> _freedPages = new HashSet<long>();
+		private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
 	    private readonly PagerState _scratchPagerState;
 
@@ -126,6 +127,9 @@ namespace Voron.Impl
 				
 				_dirtyPages.Add(page.PageNumber);
                 page.Dirty = true;
+
+				if (numberOfPages > 1)
+					_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
 			    
 			    _scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
 				_transactionPages.Add(pageFromScratchBuffer);
@@ -291,6 +295,10 @@ namespace Voron.Impl
 			page.Dirty = true;
 
 			_dirtyPages.Add(page.PageNumber);
+
+			if (numberOfPages > 1)
+				_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
+
 			return page;
 		}
 
@@ -414,8 +422,30 @@ namespace Voron.Impl
 		internal void FreePage(long pageNumber)
 		{
 			Debug.Assert(pageNumber >= 2);
-			_dirtyPages.Remove(pageNumber);
 			_freeSpaceHandling.FreePage(this, pageNumber);
+
+			_freedPages.Add(pageNumber);
+
+			PageFromScratchBuffer scratchPage;
+			if (_scratchPagesTable.TryGetValue(pageNumber, out scratchPage))
+			{
+				_transactionPages.Remove(scratchPage);
+				_unusedScratchPages.Add(scratchPage);
+			}
+
+			long numberOfOverflowPages;
+
+			if (_dirtyPages.Remove(pageNumber))
+			{
+				_allocatedPagesInTransaction--;
+			}
+			else if (_dirtyOverflowPages.TryGetValue(pageNumber, out numberOfOverflowPages))
+			{
+				_overflowPagesInTransaction--;
+
+				_dirtyOverflowPages.Remove(pageNumber);
+				_dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
+			}
 		}
 
 		internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
@@ -477,6 +507,16 @@ namespace Voron.Impl
 		{
 			return _transactionPages;
 		}
+
+		internal List<PageFromScratchBuffer> GetUnusedScratchPages()
+		{
+			return _unusedScratchPages;
+		}
+
+		internal HashSet<long> GetFreedPagesNumbers()
+		{
+			return _freedPages;
+		} 
 
 		internal RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
 		{

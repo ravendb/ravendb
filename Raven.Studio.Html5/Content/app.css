@@ -1,4 +1,4 @@
-﻿@import url("//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic");
+@import url("//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic");
 /*!
  * Bootswatch v3.2.0
  * Homepage: http://bootswatch.com
@@ -7755,7 +7755,7 @@ footer ul {
 #recentErrorsDialog .http-status {
   width: 100%;
 }
-#recentErrorsDialog .recentErrorsResizer {
+.dialogResizer {
   width: 20px;
   height: 20px;
   position: absolute;
@@ -7985,4 +7985,3 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
-/*# sourceMappingURL=app.css.map */
