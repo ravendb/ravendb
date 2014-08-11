@@ -1,25 +1,12 @@
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 //-----------------------------------------------------------------------
 // <copyright file="ReplicationTask.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Formatting;
-using System.Threading;
-using System.Threading.Tasks;
 
-using Lucene.Net.Documents;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -28,13 +15,24 @@ using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Raven.Database.Extensions;
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -645,15 +643,18 @@ namespace Raven.Bundles.Replication.Tasks
 						  UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
-				var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
+				{
+					var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
-				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x => x.Value<string>("@id"))));
+					request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x => x.Value<string>("@id"))));
 
-				request.WriteBson(jsonAttachments);
-				request.ExecuteRequest();
-				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
-				errorMessage = "";
-				return true;
+					request.WriteBson(jsonAttachments);
+					request.ExecuteRequest();
+					log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
+					errorMessage = "";
+					return true;
+				}
 			}
 			catch (WebException e)
 			{
@@ -704,12 +705,15 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var sp = Stopwatch.StartNew();
 
-				var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
-				request.Write(jsonDocuments);
-				request.ExecuteRequest();
-				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
-				lastError = "";
-				return true;
+				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
+				{
+					var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+					request.Write(jsonDocuments);
+					request.ExecuteRequest();
+					log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
+					lastError = "";
+					return true;
+				}		
 			}
 			catch (WebException e)
 			{
