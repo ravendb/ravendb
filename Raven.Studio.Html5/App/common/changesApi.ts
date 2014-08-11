@@ -29,6 +29,7 @@ class changesApi {
     private successfullyConnectedOnce: boolean = false;
     private sentMessages = [];
 
+    private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
@@ -239,6 +240,8 @@ class changesApi {
                 this.fireEvents(this.allBulkInsertsHandlers(), value, (e) => true);
             } else if (type === "SynchronizationUpdateNotification") {
                 this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
+            } else if (type === "ReplicationConflictNotification") {
+                this.fireEvents(this.allReplicationConflicts(), value, (e) => true);
             } else if (type === "ConflictNotification") {
                 this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
             } else if (type === "FileChangeNotification") {
@@ -306,6 +309,20 @@ class changesApi {
             this.allTransformersHandlers.remove(callback);
             if (this.allTransformersHandlers().length == 0) {
                 this.send('unwatch-transformers');
+            }
+        });
+    }
+
+    watchAllReplicationConflicts(onChange: (e: replicationConflictNotificationDto) => void) {
+        var callback = new changesCallback<replicationConflictNotificationDto>(onChange);
+        if (this.allReplicationConflicts().length == 0) {
+            this.send('watch-replication-conflicts');
+        }
+        this.allReplicationConflicts.push(callback);
+        return new changeSubscription(() => {
+            this.allReplicationConflicts.remove(callback);
+            if (this.allReplicationConflicts().length == 0) {
+                this.send('unwatch-replication-conflicts');
             }
         });
     }
