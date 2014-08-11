@@ -33,7 +33,7 @@ namespace Voron.Impl.Journal
         {
             protected bool Equals(PagePosition other)
             {
-                return ScratchPos == other.ScratchPos && JournalPos == other.JournalPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber;
+	            return ScratchPos == other.ScratchPos && JournalPos == other.JournalPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber && IsFreedPageMarker == other.IsFreedPageMarker;
             }
 
             public override int GetHashCode()
@@ -44,6 +44,7 @@ namespace Voron.Impl.Journal
                     hashCode = (hashCode * 397) ^ JournalPos.GetHashCode();
                     hashCode = (hashCode * 397) ^ TransactionId.GetHashCode();
                     hashCode = (hashCode * 397) ^ JournalNumber.GetHashCode();
+					hashCode = (hashCode * 397) ^ IsFreedPageMarker.GetHashCode();
                     return hashCode;
                 }
             }
@@ -52,7 +53,7 @@ namespace Voron.Impl.Journal
             public long JournalPos;
             public long TransactionId;
 	        public long JournalNumber;
-	        public bool OverwrittenByOverflowPage;
+	        public bool IsFreedPageMarker;
 
             public override bool Equals(object obj)
             {
@@ -68,7 +69,7 @@ namespace Voron.Impl.Journal
 
 	        public override string ToString()
 	        {
-		        return string.Format("ScratchPos: {0}, JournalPos: {1}, TransactionId: {2}, JournalNumber: {3}", ScratchPos, JournalPos, TransactionId, JournalNumber);
+		        return string.Format("ScratchPos: {0}, JournalPos: {1}, TransactionId: {2}, JournalNumber: {3}, IsFreedPageMarker: {4}", ScratchPos, JournalPos, TransactionId, JournalNumber, IsFreedPageMarker);
 	        }
         }
 
@@ -179,13 +180,11 @@ namespace Voron.Impl.Journal
 		/// </summary>
 		public long Write(Transaction tx, byte*[] pages)
 		{
-			var txPages = tx.GetTransactionPages();
-
 			var ptt = new Dictionary<long, PagePosition>();
 			var unused = new HashSet<PagePosition>();
 			var pageWritePos = _writePage;
 
-			UpdatePageTranslationTable(tx, txPages, unused, ptt);
+			UpdatePageTranslationTable(tx, unused, ptt);
 
 			lock (_locker)
 			{
@@ -202,38 +201,37 @@ namespace Voron.Impl.Journal
 			return pageWritePos;
 		}      
 
-	    private void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
+	    private void UpdatePageTranslationTable(Transaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 	    {
+		    var txPages = tx.GetTransactionPages();
+
+			foreach (var freedPageNumber in tx.GetFreedPagesNumbers())
+			{
+				// set freed page marker - note it can be overwritten below by later allocation
+
+				ptt[freedPageNumber] = new PagePosition
+				{
+					ScratchPos = -1,
+					JournalPos = -1,
+					TransactionId = tx.Id,
+					JournalNumber = Number,
+					IsFreedPageMarker = true
+				};
+			}
+
 		    for (int index = 1; index < txPages.Count; index++)
 		    {
 			    var txPage = txPages[index];
 			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
 			    var pageNumber = scratchPage.PageNumber;
 
-				for (int i = 0; i < txPage.NumberOfPages; i++)
-				{
-					PagePosition value;
-					if (_pageTranslationTable.TryGetValue(tx, pageNumber + i, out value))
-					{
-						if(i == 0)
-							unused.Add(value);
-						else if (i > 0)
-						{
-							value.OverwrittenByOverflowPage = true;
+				PagePosition value;
+				if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+					unused.Add(value);
 
-							// unused.Add(value) - intentionally not adding it here, it will be released in FreeScratchPagesOlderThan 
-						}
-					}
-
-					PagePosition pagePosition;
-					if (ptt.TryGetValue(pageNumber + i, out pagePosition))
-					{
-						unused.Add(pagePosition);
-
-						if (i > 0)
-							ptt.Remove(pageNumber + i); // page currently taken by overflow, need to delete to make sure it won't be copied to the data file
-					}
-				}
+				PagePosition pagePosition;
+				if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
+					unused.Add(pagePosition);
 
 				ptt[pageNumber] = new PagePosition
 				{
@@ -243,6 +241,17 @@ namespace Voron.Impl.Journal
 					JournalNumber = Number
 				};
 			}
+
+		    foreach (var freedPage in tx.GetUnusedScratchPages())
+		    {
+			    unused.Add(new PagePosition
+			    {
+				    ScratchPos = freedPage.PositionInScratchBuffer,
+				    JournalPos = -1, // needed only during recovery and calculated there
+				    TransactionId = tx.Id,
+				    JournalNumber = Number
+			    });
+		    }
 	    }
 
         public void InitFrom(JournalReader journalReader)

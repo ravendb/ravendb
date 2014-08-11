@@ -96,6 +96,9 @@ namespace Voron.Util
 				if (it.Transaction > tx.Id)
 					continue;
 
+				if (it.Value.IsFreedPageMarker)
+					break;
+
 				value = it.Value;
 				Debug.Assert(value != null);
 				return true;
@@ -118,7 +121,7 @@ namespace Voron.Util
 			return _values.Where(x =>
 			{
 				var val = x.Value[x.Value.Count - 1];
-				return val.Value.TransactionId < oldestActiveTransaction;
+				return val.Value.TransactionId < oldestActiveTransaction && val.Value.IsFreedPageMarker == false;
 			}).Select(x => new KeyValuePair<long, JournalFile.PagePosition>(x.Key, x.Value[x.Value.Count - 1].Value))
 				.ToList();
 		}
@@ -137,6 +140,9 @@ namespace Voron.Util
 					var val = value.Value[i];
 					if (val.Transaction > latestTxId)
 						continue;
+
+					if(val.Value.IsFreedPageMarker)
+						break;
 
 					yield return new KeyValuePair<long, JournalFile.PagePosition>(value.Key, val.Value);
 					break;
