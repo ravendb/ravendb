@@ -587,6 +587,29 @@ html, body {
     }
 }
 
+.watchTrafficContainer{
+.column {
+        display: inline-block;
+        cursor: pointer;
+        overflow: hidden;
+        white-space: nowrap;
+        word-wrap: break-word;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #ddd;
+        margin: 0px;
+        padding: 5px;
+        height: 30px;
+    }
+
+    .log-table-row {
+    }
+
+    .selected .column {
+        background-color: #ffffcc;
+    }
+
+}
+
 #logNotificationsContainer{
     background-color:black;
     height:80vh;
@@ -1111,12 +1134,7 @@ html, body {
     width: 400px;
 }
 
-#editDocumentContainer {
-    .isActive{
-        background-color:#73c773!important;
-        border-color:#61b261!important;
-    }
-    
+#editDocumentContainer {    
     &:focus {
         outline: 0;
     }
@@ -1705,4 +1723,8 @@ footer {
      -webkit-background-clip: padding-box;
      -moz-background-clip: padding-box;
      background-clip: padding-box;
+}
+.pressed{    
+        background-color:#73c773!important;
+        border-color:#61b261!important;    
 }
