@@ -619,6 +619,10 @@ namespace Raven.Client.FileSystem
                     resolvingConflict = false;
                 }
             }
+            else // No resolution listeners, therefore we notify the subscribers.
+            {                
+                beforeConflictResolution();
+            }
 
             return false;
         }
