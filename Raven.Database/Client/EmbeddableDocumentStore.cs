@@ -164,8 +164,12 @@ namespace Raven.Client.Embedded
             get; set;
         }
 
-        public string DataDirectory { get; set; }
-        public string Url
+	    public string DataDirectory
+	    {
+		    get { return Configuration.DataDirectory; }
+			set { Configuration.DataDirectory = value; }
+	    }
+	    public string Url
         {
             get; set;
         }
