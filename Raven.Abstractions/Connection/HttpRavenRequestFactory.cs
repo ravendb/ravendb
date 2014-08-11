@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
@@ -87,6 +88,13 @@ namespace Raven.Abstractions.Connection
 				});
 
 			return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);
+		}
+
+		public static IDisposable Expect100Continue(string url)
+		{
+			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+			servicePoint.Expect100Continue = true;
+			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
 	}
 }
