@@ -113,7 +113,7 @@
                                                         <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
                                                     </button>
                                                     <ul class="dropdown-menu" role="menu">
-                                                        <!-- ko foreach:getTypes() -->
+                                                        <!-- ko foreach: getTypes() -->
                                                         <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
                                                         <!-- /ko -->
                                                     </ul>

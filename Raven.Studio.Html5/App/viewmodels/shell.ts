@@ -32,6 +32,7 @@ import messagePublisher = require("common/messagePublisher");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
+import getLatestServerBuildVersionCommand = require("commands/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
@@ -43,6 +44,7 @@ import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
+import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
 
 class shell extends viewModelBase {
@@ -715,7 +717,38 @@ class shell extends viewModelBase {
     fetchServerBuildVersion() {
         new getServerBuildVersionCommand()
             .execute()
-            .done((result: serverBuildVersionDto) => { this.serverBuildVersion(result); });
+            .done((serverBuildResult: serverBuildVersionDto) => {
+                this.serverBuildVersion(serverBuildResult);
+
+                var lastBuildCheck = localStorage.getObject("LastServerBuildCheck");
+                var timestamp = Date.parse(lastBuildCheck);
+                var difference = 0;
+
+                if (!isNaN(timestamp)) {
+                    var lastBuildCheckMoment = moment(lastBuildCheck);
+                    var currentDateMoment = moment(new Date());
+                    difference = currentDateMoment.diff(lastBuildCheckMoment, 'days');
+                }
+
+                if (isNaN(timestamp) || difference > 7) { //more than a week
+                    localStorage.removeItem("LastServerBuildCheck");
+
+                    var currentBuildVersion = serverBuildResult.BuildVersion;
+                    var stableOnly = true;
+                    if (currentBuildVersion.indexOf("Unstable") > -1) {
+                        stableOnly = false;
+                    }
+
+                    new getLatestServerBuildVersionCommand(stableOnly)
+                        .execute()
+                        .done((latestServerBuildResult: latestServerBuildVersionDto) => {
+                            if (latestServerBuildResult.LatestBuild != currentBuildVersion) {
+                                var latestBuildReminderViewModel = new latestBuildReminder(latestServerBuildResult);
+                                app.showDialog(latestBuildReminderViewModel);
+                            }
+                        });
+                }
+        });
     }
 
     fetchClientBuildVersion() {

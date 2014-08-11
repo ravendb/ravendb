@@ -7,8 +7,9 @@ import document = require("models/document");
 class studioConfig extends viewModelBase {
 
     systemDatabase: database;
-    systemDatabasePrompt = ko.observable<boolean>(true);
     configDocument = ko.observable<document>();
+    warnWhenUsingSystemDatabase = ko.observable<boolean>(true);
+    remindToUpgrade = ko.observable<boolean>(false);
     
     private documentId = "Raven/StudioConfig";
 
@@ -24,7 +25,8 @@ class studioConfig extends viewModelBase {
             .execute()
             .done((doc: document) => {
                 this.configDocument(doc);
-                this.systemDatabasePrompt(doc["WarnWhenUsingSystemDatabase"]);
+                this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                this.remindToUpgrade(localStorage.getObject("LastServerBuildCheck") != null);
             })
             .fail(() => this.configDocument(document.empty()))
             .always(() => deffered.resolve({ can: true }));
@@ -32,18 +34,39 @@ class studioConfig extends viewModelBase {
         return deffered;
     }
 
-    saveStudioConfig() {
-        var doc = this.configDocument();
-        var action = !this.systemDatabasePrompt();
-        doc["WarnWhenUsingSystemDatabase"] = action;
+    warnWhenUsingSystemDatabaseToggle() {
+        var newDocument = this.configDocument();
+        var action = !this.warnWhenUsingSystemDatabase();
+        newDocument["WarnWhenUsingSystemDatabase"] = action;
+        var saveTask = this.saveStudioConfig(newDocument);
+        saveTask.done(() => this.warnWhenUsingSystemDatabase(action));
+    }
+
+    remingToUpgradeToggle() {
+        var action = !this.remindToUpgrade();
+        if (action) {
+            localStorage.setObject("LastServerBuildCheck", new Date());
+        } else {
+            localStorage.removeItem("LastServerBuildCheck");
+        }
+        this.remindToUpgrade(action);
+    }
+
+    saveStudioConfig(newDocument: document) {
+        var deferred = $.Deferred();
+
         require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-            var saveTask = new saveDocumentCommand(this.documentId, doc, this.systemDatabase).execute();
+            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
             saveTask
                 .done((saveResult: bulkDocumentDto[]) => {
-                    this.systemDatabasePrompt(action);
+                    this.configDocument(newDocument);
                     this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
-                });
+                    deferred.resolve();
+                })
+                .fail(() => deferred.reject());
         });
+
+        return deferred;
     }
 }
 

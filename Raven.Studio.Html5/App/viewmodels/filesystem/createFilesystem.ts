@@ -8,18 +8,41 @@ class createFilesystem extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
-    private emptyNameMessage = "Please fill out the file system name field!";
 
     public fileSystemName = ko.observable('');
-    nameCustomValidity = ko.observable<string>(this.emptyNameMessage);
-    public fileSystemPath = ko.observable('');
-    pathCustomValidity = ko.observable<string>('');
-    public fileSystemLogsPath = ko.observable('');
-    logsCustomValidity = ko.observable<string>('');
-    public fileSystemNameFocus = ko.observable(true);
+    nameCustomValidityError: KnockoutComputed<string>;
+    fileSystemPath = ko.observable('');
+    pathCustomValidityError: KnockoutComputed<string>;
+    fileSystemLogsPath = ko.observable('');
+    logsCustomValidityError: KnockoutComputed<string>;
+    fileSystemNameFocus = ko.observable(true);
 
     constructor(private filesystems: KnockoutObservableArray<filesystem>) {
         super();
+
+        this.nameCustomValidityError = ko.computed(() => {
+            var errorMessage: string = '';
+            var newFileSystemName = this.fileSystemName();
+
+            if (this.isFilesystemNameExists(newFileSystemName, this.filesystems()) == true) {
+                errorMessage = "File system name already exists!";
+            }
+            else if ((errorMessage = this.checkName(newFileSystemName)) != '') { }
+
+            return errorMessage;
+        });
+
+        this.pathCustomValidityError = ko.computed(() => {
+            var newPath = this.fileSystemPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Path");
+            return errorMessage;
+        });
+
+        this.logsCustomValidityError = ko.computed(() => {
+            var newPath = this.fileSystemLogsPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Logs");
+            return errorMessage;
+        });
     }
 
     cancel() {
@@ -28,20 +51,6 @@ class createFilesystem extends dialogViewModelBase {
 
     attached() {
         super.attached();
-
-        this.fileSystemName.subscribe((newFileSystemName) => {
-            var errorMessage: string = '';
-            if (this.isFilesystemNameExists(newFileSystemName, this.filesystems()) === true) {
-                errorMessage = "File system name already exists!";
-            }
-            else if ((errorMessage = this.checkName(newFileSystemName)) != '') { }
-
-            this.nameCustomValidity(errorMessage);
-        });
-
-        this.subscribeToPath(this.fileSystemPath, this.pathCustomValidity, "Path");
-        this.subscribeToPath(this.fileSystemLogsPath, this.logsCustomValidity, "Logs");
-
         this.fileSystemNameFocus(true);
     }
 
@@ -76,9 +85,9 @@ class createFilesystem extends dialogViewModelBase {
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var maxLength = 260 - 30;
 
-        var message = '';
+        var message = "";
         if (!$.trim(name)) {
-            message = this.emptyNameMessage;
+            message = "Please fill out the file system name field!";
         }
         else if (name.length > maxLength) {
             message = "The file system length can't exceed " + maxLength + " characters!";
@@ -95,17 +104,10 @@ class createFilesystem extends dialogViewModelBase {
         return message;       
     }
 
-    private subscribeToPath(element, validityObservable: KnockoutObservable<string>, pathName) {
-        element.subscribe((path) => {
-            var errorMessage: string = this.isPathLegal(path, pathName);
-            validityObservable(errorMessage);
-        });
-    }
-
     private isPathLegal(name: string, pathName: string): string {
         var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
         var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        var errorMessage = null;
+        var errorMessage = "";
 
         if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
             if (name.length > 248) {

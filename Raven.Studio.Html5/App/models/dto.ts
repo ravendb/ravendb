@@ -130,6 +130,11 @@ interface serverBuildVersionDto {
     BuildVersion: string;
 }
 
+interface latestServerBuildVersionDto {
+    LatestBuild: string;
+    Exception: string;
+}
+
 interface clientBuildVersionDto {
     BuildVersion: string;
 }

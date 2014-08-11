@@ -64,6 +64,7 @@
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getLatestServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
@@ -241,6 +242,7 @@
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
+    <TypeScriptCompile Include="App\viewmodels\latestBuildReminder.ts" />
     <TypeScriptCompile Include="App\viewmodels\showDataDialog.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
@@ -416,7 +418,7 @@
     <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\quotas.html" />
     <Content Include="App\views\sqlReplicationStatsDialog.html" />
-    <Content Include="App\views\showDataDialog.html" />
+    <Content Include="App\views\latestBuildReminder.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
     <Content Include="App\views\filesystem\createConfigurationKey.html" />
     <Content Include="App\views\filesystem\deleteConfigurationKeys.html" />
