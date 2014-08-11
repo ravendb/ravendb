@@ -15,6 +15,15 @@ interface dictionary<TValue> {
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
+
+interface replicationConflictNotificationDto {
+    ItemType: replicationConflictTypes;
+    Id: string;
+    Etag: string;
+    OperationType: replicationOperationTypes;
+    Conflicts: string[];
+}
+
 interface documentChangeNotificationDto {
     Type: documentChangeType;
     Id: string;
@@ -756,6 +765,20 @@ interface debugDocumentStatsDto {
 interface collectionStats {
     Quantity: number;
     Size: number;
+}
+
+enum replicationConflictTypes {
+    None = 0,
+
+    DocumentReplicationConflict = 1,
+    AttachmentReplicationConflict = 2,
+}
+
+enum replicationOperationTypes {
+    None = 0,
+
+    Put = 1,
+    Delete = 2,
 }
 
 enum documentChangeType {
