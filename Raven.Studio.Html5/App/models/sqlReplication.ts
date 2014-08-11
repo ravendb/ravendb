@@ -38,7 +38,6 @@ class sqlReplication extends document {
     collections = ko.observableArray<string>();
     searchResults: KnockoutComputed<string[]>;
     
-
     showReplicationConfiguration = ko.observable<boolean>(false);
 
     constructor(dto: sqlReplicationDto) {
@@ -47,7 +46,7 @@ class sqlReplication extends document {
         this.name(dto.Name);
         this.disabled(dto.Disabled);
         this.factoryName(dto.FactoryName);
-        this.ravenEntityName(dto.RavenEntityName);
+        this.ravenEntityName(dto.RavenEntityName != null ? dto.RavenEntityName : '');
         this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
@@ -70,14 +69,8 @@ class sqlReplication extends document {
         });
 
         this.searchResults = ko.computed(() => {
-            var newRavenEntityName = this.ravenEntityName();
-            if (newRavenEntityName === "" || !newRavenEntityName) {
-                return this.collections();
-            } else {
-                return this.collections().filter((name) => {
-                    return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
-                });
-            }
+            var newRavenEntityName: string = this.ravenEntityName();
+            return this.collections().filter((name) => name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1);
         });
         
         this.script.subscribe((newValue) => {
@@ -130,9 +123,6 @@ class sqlReplication extends document {
     }
 
     static empty(): sqlReplication {
-        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
-        var sqlReplicationTables = [];
-        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
@@ -144,7 +134,7 @@ class sqlReplication extends document {
             PredefinedConnectionStringSettingName:null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: sqlReplicationTables,
+            SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
             PerformTableQuatation:true
         });

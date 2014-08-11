@@ -1,4 +1,4 @@
-﻿@import url("//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic");
+@import url("//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic");
 /*!
  * Bootswatch v3.2.0
  * Homepage: http://bootswatch.com
@@ -6952,6 +6952,9 @@ body {
   box-shadow: 0 0 5px 0 #106a8c;
 }
 #resources-page .resources-container .resource .fa-cogs {
+  color: grey;
+}
+#resources-page .resources-container .resource .fa-cogs:hover {
   color: black;
 }
 #resources-page .resources-container .resource:hover {
@@ -7002,6 +7005,14 @@ body {
   padding-left: 10px;
   text-align: left;
   color: black;
+}
+.nounderline {
+  text-decoration: none !important;
+}
+div.btn-group[data-toggle=buttons-radio] button.active {
+  background-color: #2F96B4;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 .document-collections li {
   outline: none;
@@ -7744,7 +7755,7 @@ footer ul {
 #recentErrorsDialog .http-status {
   width: 100%;
 }
-#recentErrorsDialog .recentErrorsResizer {
+.dialogResizer {
   width: 20px;
   height: 20px;
   position: absolute;
@@ -7974,4 +7985,3 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
-/*# sourceMappingURL=app.css.map */

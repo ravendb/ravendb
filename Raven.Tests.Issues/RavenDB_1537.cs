@@ -610,12 +610,16 @@ namespace Raven.Tests.Issues
 
             public Task<Etag> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
+				Operations.Initialize(SmugglerOptions);
+
+                return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
             public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
+				Operations.Initialize(SmugglerOptions);
+
+                return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
 			public override Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtags)

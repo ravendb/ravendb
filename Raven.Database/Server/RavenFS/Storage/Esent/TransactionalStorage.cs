@@ -53,7 +53,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             path = configuration.FileSystemDataDirectory.ToFullPath();
             database = Path.Combine(path, "Data.ravenfs");
 
-            new StorageConfigurator(settings).LimitSystemCache();
+			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
             Api.JetCreateInstance(out instance, database + Guid.NewGuid());
         }
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 		{
 			try
 			{
-				new StorageConfigurator(settings).ConfigureInstance(instance, path);
+				new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 
 				Api.JetInit(ref instance);
 
@@ -162,7 +162,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 								recoverInstance.Init();
 								using (var recoverSession = new Session(recoverInstance))
 								{
-									new StorageConfigurator(settings).ConfigureInstance(recoverInstance.JetInstance, path);
+									new TransactionalStorageConfigurator(configuration).ConfigureInstance(recoverInstance.JetInstance, path);
 									Api.JetAttachDatabase(recoverSession, database,
 														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);

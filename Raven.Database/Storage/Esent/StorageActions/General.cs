@@ -220,23 +220,28 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public long GetNextIdentityValue(string name)
+		public long GetNextIdentityValue(string name, int val)
 		{
 			Api.JetSetCurrentIndex(session, Identity, "by_key");
 			Api.MakeKey(session, Identity, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Identity, SeekGrbit.SeekEQ) == false)
 			{
+				if (val == 0)
+					return 0;
+			
 				using (var update = new Update(session, Identity, JET_prep.Insert))
 				{
 					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["key"], name, Encoding.Unicode);
-					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["val"], 1);
+					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["val"], val);
 
 					update.Save();
 				}
-				return 1;
+				return val;
 			}
 
-			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], 1) + 1;
+
+
+			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], val) + val;
 		}
 
 		public IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount)

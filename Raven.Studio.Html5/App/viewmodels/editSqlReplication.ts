@@ -72,9 +72,7 @@ class editSqlReplication extends viewModelBase {
             placement:"right"
         };
         $('body').popover(popOverSettings);
-        $('form :input[name="ravenEntityName"]').on("keypress", (e) => {
-            return e.which != 13;
-        });
+        $('form :input[name="ravenEntityName"]').on("keypress", (e) => e.which != 13);
     }
 
     loadSqlReplicationConnections() :JQueryPromise<any> {
@@ -112,9 +110,7 @@ class editSqlReplication extends viewModelBase {
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
         this.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
-        this.isSaveEnabled = ko.computed(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
     providerChanged(obj, event) {

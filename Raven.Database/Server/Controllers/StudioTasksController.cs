@@ -271,19 +271,6 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
-        [Route("studio-tasks/new-encryption-key")]
-        public HttpResponseMessage GetNewEncryption(string path = null)
-        {
-            RandomNumberGenerator randomNumberGenerator = new RNGCryptoServiceProvider();
-            var byteStruct = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
-            randomNumberGenerator.GetBytes(byteStruct);
-            var result = Convert.ToBase64String(byteStruct);
-
-            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
-            return response;
-        }
-
-        [HttpGet]
         [Route("studio-tasks/get-sql-replication-stats")]
         [Route("databases/{databaseName}/studio-tasks/get-sql-replication-stats")]
         public HttpResponseMessage GetSQLReplicationStats(string sqlReplicationName)
@@ -328,6 +315,39 @@ namespace Raven.Database.Server.Controllers
 
             return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
         }
+
+		[HttpGet]
+		[Route("studio-tasks/latest-server-build-version")]
+		public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true)
+		{
+			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?stableOnly=" + stableOnly);
+			try
+			{
+				using (var response = request.GetResponse())
+				using (var stream = response.GetResponseStream())
+				{
+					var result = new StreamReader(stream).ReadToEnd();
+					return GetMessageWithObject(new {LatestBuild = result});
+				}
+			}
+			catch (Exception e)
+			{
+				return GetMessageWithObject(new { Exception = e.Message });
+			}
+		}
+
+		[HttpGet]
+		[Route("studio-tasks/new-encryption-key")]
+		public HttpResponseMessage GetNewEncryption(string path = null)
+		{
+			RandomNumberGenerator randomNumberGenerator = new RNGCryptoServiceProvider();
+			var byteStruct = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
+			randomNumberGenerator.GetBytes(byteStruct);
+			var result = Convert.ToBase64String(byteStruct);
+
+			HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+			return response;
+		}
 
         [HttpPost]
         [Route("studio-tasks/is-base-64-key")]

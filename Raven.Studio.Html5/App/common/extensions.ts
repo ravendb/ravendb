@@ -291,7 +291,7 @@ class extensions {
         };
 
         String.prototype.contains = String.prototype.contains || function (str) {
-            return this.indexOf(str) > 0;
+            return this.indexOf(str) > -1;
         }
 
         String.prototype.multiply = function (amount: number) {

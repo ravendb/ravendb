@@ -144,7 +144,7 @@ namespace Raven.Database.Counters
                 Resets = metrics.Resets.GetMeterData(3),
                 Increments = metrics.Increments.GetMeterData(3),
                 Decrements = metrics.Decrements.GetMeterData(3),
-                ClientRuqeusts = metrics.ClientRuqeusts.GetMeterData(3),
+                ClientRuqeusts = metrics.ClientRequests.GetMeterData(3),
                 IncomingReplications =  metrics.IncomingReplications.GetMeterData(3),
                 OutgoingReplications = metrics.OutgoingReplications.GetMeterData(3),
 

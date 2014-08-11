@@ -90,24 +90,24 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         con.name.subscribe((previousName: string) => {
                 //Get the previous value of 'name' here before it's set to newValue
             var nameInputArray = $('input[name="name"]')
-                .each((index, inputField: any) => {
-                inputField.setCustomValidity("");
-            });
-            }, this, "beforeChange");
-            con.name.subscribe((newName) => {
-                var message = "";
-                if (newName === "") {
-                    message = "Please fill out this field.";
-                }
-                else if (this.isSqlPredefinedConnectionNameExists(newName)) {
-                    message = "SQL Replication Connection name already exists.";
-                }
-                $('input[name="name"]')
-                    .filter(function () { return this.value === newName; })
-                    .each((index, element: any) => {
-                        element.setCustomValidity(message);
-                    });
-            });
+                    .each((index, inputField: any) => {
+                    inputField.setCustomValidity("");
+                });
+        }, this, "beforeChange");
+        con.name.subscribe((newName) => {
+            var message = "";
+            if (newName === "") {
+                message = "Please fill out this field.";
+            }
+            else if (this.isSqlPredefinedConnectionNameExists(newName)) {
+                message = "SQL Replication Connection name already exists.";
+            }
+            $('input[name="name"]')
+                .filter(function () { return this.value === newName; })
+                .each((index, element: any) => {
+                    element.setCustomValidity(message);
+                });
+        });
     }
 
     isSqlPredefinedConnectionNameExists(connectionName: string) :boolean {

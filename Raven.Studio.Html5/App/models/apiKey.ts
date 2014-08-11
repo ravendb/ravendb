@@ -53,7 +53,7 @@ class apiKey extends document {
 
     static empty(): apiKey {
         return new apiKey({
-            Databases: [],
+            Databases: [databaseAccess.empty().toDto()],
             Enabled: false,
             Name: "",
             Secret: ""
@@ -94,12 +94,12 @@ class apiKey extends document {
         this.secret(randomSecret);
     }
 
-    addEmptyApiKeyDatabase() {
+    addEmptyDatabase() {
         var newItem: databaseAccessDto = { TenantId: '', Admin: false, ReadOnly: false };
         this.databases.push(new databaseAccess(newItem));
     }
 
-    removeApiKeyDatabase(database) {
+    removeDatabase(database) {
         this.databases.remove(database);
     }
 

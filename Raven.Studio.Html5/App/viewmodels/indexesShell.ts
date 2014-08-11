@@ -1,10 +1,13 @@
 import durandalRouter = require("plugins/router");
 import appUrl = require("common/appUrl");
+import viewModelBase = require("viewmodels/viewModelBase");
 
-class indexesShell {
+class indexesShell extends viewModelBase {
     router: DurandalRootRouter;
 
     constructor() {
+        super();
+
         this.router = durandalRouter.createChildRouter()
             .map([
                 { route: 'databases/indexes', moduleId: 'viewmodels/indexes', title: 'Indexes', nav: true },

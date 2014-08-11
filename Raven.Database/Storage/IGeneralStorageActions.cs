@@ -9,7 +9,7 @@ namespace Raven.Database.Storage
 {
 	public interface IGeneralStorageActions
 	{
-		long GetNextIdentityValue(string name);
+		long GetNextIdentityValue(string name, int val = 1);
 		void SetIdentityValue(string name, long value);
 		IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount);
 
