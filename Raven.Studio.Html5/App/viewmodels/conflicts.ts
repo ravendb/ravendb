@@ -20,7 +20,8 @@ import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand")
 import getSingleTransformerCommand = require("commands/getSingleTransformerCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import saveTransformerCommand = require("commands/saveTransformerCommand");
-
+import changeSubscription = require('models/changeSubscription');
+import shell = require("viewmodels/shell");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
@@ -29,18 +30,36 @@ class conflicts extends viewModelBase {
     displayName = "conflicts";
     sourcesLookup: dictionary<string> = {};
 
+    private refreshConflictsObservable = ko.observable<number>();
+    private conflictsSubscription: KnockoutSubscription;
     currentColumns = ko.observable(customColumns.empty());
 
     static performedIndexChecks: Array<string> = [];
     static conflictsIndexName = "Raven/ConflictDocuments";
     static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
 
-
-    //TODO: cache for replication sources
     currentConflictsPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
 
     static gridSelector = "#conflictsGrid";
+
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
+        ];
+    }
+
+    attached() {
+        this.conflictsSubscription = this.refreshConflictsObservable.throttle(3000).subscribe((e) => this.fetchConflicts(this.activeDatabase()));
+    }
+
+    detached() {
+        super.detached();
+
+        if (this.conflictsSubscription != null) {
+            this.conflictsSubscription.dispose();
+        }
+    }
 
     activate(args) {
         super.activate(args);
