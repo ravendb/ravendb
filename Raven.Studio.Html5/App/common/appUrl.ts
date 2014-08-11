@@ -168,6 +168,10 @@ class appUrl {
         return "#admin/settings/trafficWatch";
     }
 
+    static forDebugInfo(): string {
+        return "#admin/settings/debugInfo";
+    }
+
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
     }
@@ -352,7 +356,7 @@ class appUrl {
     }
 
     static forPeriodicExport(db: database): string {
-        return "#databases/settings/periodicExports?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicExport?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {

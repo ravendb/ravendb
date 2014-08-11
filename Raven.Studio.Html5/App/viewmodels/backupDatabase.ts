@@ -10,7 +10,7 @@ class backupDatabase extends viewModelBase {
     isBusy = ko.observable<boolean>();
     databaseNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
-    customValidityError: KnockoutComputed<string>;
+    nameCustomValidityError: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -19,13 +19,10 @@ class backupDatabase extends viewModelBase {
 
         this.searchResults = ko.computed(() => {
             var newDatabaseName = this.databaseName();
-            if (!newDatabaseName || newDatabaseName.length < 2) {
-                return [];
-            }
             return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
-        this.customValidityError = ko.computed(() => {
+        this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newDatabaseName = this.databaseName();
             var foundDb = shell.databases.first((db: database) => newDatabaseName == db.name);

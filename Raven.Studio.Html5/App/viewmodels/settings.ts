@@ -8,7 +8,8 @@ class settings extends viewModelBase {
     router: DurandalRootRouter = null;
     appUrls: computedAppUrls;
 
-    bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index"};
+    private bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index" };
+    private sqlSubBundles = ["sqlreplicationconnectionstringsmanagement", "editsqlreplication"];
     userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
     activeSubViewTitle: KnockoutComputed<string>;
 
@@ -24,7 +25,7 @@ class settings extends viewModelBase {
         var editsqlReplicationsRoute = { route: 'databases/settings/editSqlReplication(/:sqlReplicationName)', moduleId: 'viewmodels/editSqlReplication', title: 'Edit SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().editSqlReplication };
         var sqlReplicationsConnectionsRoute = { route: 'databases/settings/sqlReplicationConnectionStringsManagement', moduleId: 'viewmodels/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', nav: true, hash: appUrl.forCurrentDatabase().sqlReplicationsConnections};
         var versioningRoute = { route: 'databases/settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
-        var periodicExportRoute = { route: 'databases/settings/periodicExports', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
+        var periodicExportRoute = { route: 'databases/settings/periodicExport', moduleId: 'viewmodels/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         //var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
         var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
 
@@ -63,12 +64,14 @@ class settings extends viewModelBase {
         var pathArr = instruction.fragment.split('/');
         var bundelName = pathArr[pathArr.length - 1].toLowerCase();
         var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
-        var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
-
+        var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) > -1;
+        var isSqlSubBundle = this.sqlSubBundles.indexOf(bundelName) > -1;
+        var isSqlBundleExists = this.userDatabasePages.indexOf("SQL Replication") > -1;
+        
         if (db.isSystem) {
             return appUrl.forDocuments(null, db);
         }
-        else if (isLegalBundelName && isBundleExists == false) {
+        else if ((isLegalBundelName && isBundleExists == false) || (isSqlSubBundle && isSqlBundleExists == false)) {
             return appUrl.forCurrentDatabase().databaseSettings();
         }
 

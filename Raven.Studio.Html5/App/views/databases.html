@@ -1,5 +1,8 @@
 ﻿<section id="resources-page">
-    <ul class="breadcrumb">
+    <div class="text-center" data-bind="visible: databases().length == 1">
+        <h2 class="page-header text-info">No databases are available. <small>Go ahead and <a href="#" data-bind="click: newDatabase">create a database</a>.</small></h2>
+    </div>
+    <ul class="breadcrumb" data-bind="visible: databases().length > 1">
         <li>
             <h3>
                 <a href="#databases">
@@ -8,13 +11,9 @@
             </h3>
         </li>
     </ul>
-    
+
     <div class="pull-right">
         <button class="btn btn-warning" data-bind="click: navigateToAdminSettings">Manage Your Server</button>
-    </div>
-    
-    <div class="text-center" data-bind="visible: databases().length == 1">
-        <h3 class="page-header text-info">No databases are available. <small>Go ahead and <a href="#" data-bind="click: newDatabase">create a database</a>.</small></h3>
     </div>
 
     <div class="btn-toolbar" data-bind="visible: databases().length > 1">

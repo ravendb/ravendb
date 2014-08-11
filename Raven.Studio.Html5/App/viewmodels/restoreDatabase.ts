@@ -1,4 +1,6 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require("viewmodels/shell");
+import database = require("models/database");
 
 class restoreDatabase extends viewModelBase {
 
@@ -6,9 +8,26 @@ class restoreDatabase extends viewModelBase {
     backupLocation = ko.observable<string>('');
     databaseLocation = ko.observable<string>();
     databaseName = ko.observable<string>();
+    nameCustomValidityError: KnockoutComputed<string>;
 
     restoreStatusMessages = ko.observableArray<string>();
     isBusy = ko.observable<boolean>();
+
+    constructor() {
+        super();
+
+        this.nameCustomValidityError = ko.computed(() => {
+            var errorMessage: string = '';
+            var newDatabaseName = this.databaseName();
+            var foundDb = shell.databases.first((db: database) => newDatabaseName == db.name);
+
+            if (!!foundDb && newDatabaseName.length > 0) {
+                errorMessage = "Database name already exists!";
+            }
+
+            return errorMessage;
+        });
+    }
 
     canActivate(args): any {
         return true;

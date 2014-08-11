@@ -46,7 +46,7 @@ class sqlReplication extends document {
         this.name(dto.Name);
         this.disabled(dto.Disabled);
         this.factoryName(dto.FactoryName);
-        this.ravenEntityName(dto.RavenEntityName);
+        this.ravenEntityName(dto.RavenEntityName != null ? dto.RavenEntityName : '');
         this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
@@ -70,9 +70,6 @@ class sqlReplication extends document {
 
         this.searchResults = ko.computed(() => {
             var newRavenEntityName: string = this.ravenEntityName();
-            if (!newRavenEntityName || newRavenEntityName.length < 2) {
-                return [];
-            }
             return this.collections().filter((name) => name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1);
         });
         

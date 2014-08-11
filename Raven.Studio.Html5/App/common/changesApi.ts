@@ -471,6 +471,9 @@ class changesApi {
         return text;
     }
 
+    public getResourceName() {
+        return this.rs.name;
+    }
 }
 
 export = changesApi;

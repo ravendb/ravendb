@@ -90,7 +90,19 @@ class infoPackage extends viewModelBase {
     hasSaveAsPngSupport = ko.computed(() => {
         return !(navigator && navigator.msSaveBlob);
     });
-    stackDumpEnabled = ko.computed(() => this.activeDatabase().isSystem);
+    appUrls: computedAppUrls;
+    stackDumpEnabled: KnockoutComputed<boolean>;
+
+    constructor() {
+        super();
+
+        this.appUrls = appUrl.forCurrentDatabase();
+        this.stackDumpEnabled = ko.computed(() => {
+            var activeDb = this.activeDatabase();
+            var appUrls = this.appUrls;
+            return (!!activeDb && activeDb.isSystem || !!appUrls && appUrls.isAreaActive('admin')());
+        });
+    }
 
     attached() {
         var self = this;
@@ -332,7 +344,8 @@ class infoPackage extends viewModelBase {
     createPackage(includeStacks: boolean) {
         this.showLoadingIndicator(true); 
         this.cleanup();
-        new getInfoPackage(this.activeDatabase(), includeStacks)
+        var activeDb = !!this.activeDatabase() ? this.activeDatabase() : appUrl.getSystemDatabase();
+        new getInfoPackage(activeDb, includeStacks)
             .execute()
             .done((data) => {
                 this.infoPackage(data);
