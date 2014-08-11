@@ -21,7 +21,7 @@ namespace Raven.Database.Counters.Controllers
 				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
 				writer.Store(Storage.CounterStorageUrl, counterFullName, delta);
 				writer.Commit(delta != 0);
-                Storage.MetricsCounters.ClientRuqeusts.Mark();
+                Storage.MetricsCounters.ClientRequests.Mark();
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}

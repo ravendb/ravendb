@@ -18,7 +18,7 @@ namespace Raven.Database.Counters
         public MeterMetric Resets { get; private set; }
         public MeterMetric Increments { get; private set; }
         public MeterMetric Decrements { get; private set; }
-        public MeterMetric ClientRuqeusts { get; private set; }
+        public MeterMetric ClientRequests { get; private set; }
         public MeterMetric IncomingReplications { get; private set; }
         public MeterMetric OutgoingReplications { get; private set; }
 
@@ -36,10 +36,10 @@ namespace Raven.Database.Counters
             Resets = counterMetrics.Meter("counterMetrics", "reset/min", "resets", TimeUnit.Minutes);
             Increments = counterMetrics.Meter("counterMetrics", "inc/min", "increments", TimeUnit.Minutes);
             Decrements = counterMetrics.Meter("counterMetrics", "dec/min", "decrements", TimeUnit.Minutes);
-            ClientRuqeusts = counterMetrics.Meter("counterMetrics", "client/min", "client requests", TimeUnit.Minutes);
+            ClientRequests = counterMetrics.Meter("counterMetrics", "client/min", "client requests", TimeUnit.Minutes);
 
-            IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replicaitons", TimeUnit.Minutes);
-            OutgoingReplications = counterMetrics.Meter("counterMetrics", "RepOut/min", "replicaitons", TimeUnit.Minutes);
+			IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
+			OutgoingReplications = counterMetrics.Meter("counterMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
 
 
 
@@ -47,7 +47,6 @@ namespace Raven.Database.Counters
 
             IncSizeMetrics = counterMetrics.Histogram("counterMetrics", "inc delta sizes");
             DecSizeMetrics = counterMetrics.Histogram("counterMetrics", "dec delta sizes");
-            RequestDuationMetric = counterMetrics.Histogram("counterMetrics", "inc/dec request durations");
             RequestDuationMetric = counterMetrics.Histogram("counterMetrics", "inc/dec request durations");
             
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
