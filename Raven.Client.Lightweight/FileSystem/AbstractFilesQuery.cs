@@ -320,12 +320,38 @@ namespace Raven.Client.FileSystem
 
         private string EnsureValidFieldName(WhereParams whereParams)
         {
-            throw new NotImplementedException();
+            // For now we do not check if the field name is valid.
+            return whereParams.FieldName;
         }
+
+        private bool UsesRangeType(object o)
+		{
+			if (o == null)
+				return false;
+
+			var type = o as Type ?? o.GetType();
+			var nonNullable = Nullable.GetUnderlyingType(type);
+			if (nonNullable != null)
+				type = nonNullable;
+
+			if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
+			    type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
+				return true;
+
+			return false;
+		}
 
         private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
         {
-            throw new NotImplementedException();
+            fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+
+            if (fieldName == Constants.DocumentIdFieldName)
+                return fieldName;
+
+            var val = (start ?? end);
+            if (UsesRangeType(val) && !fieldName.EndsWith("_Range"))
+                fieldName = fieldName + "_Range";
+            return fieldName;
         }
 
         public string GetMemberQueryPath(Expression expression)
@@ -335,12 +361,95 @@ namespace Raven.Client.FileSystem
 
         private string TransformToEqualValue(WhereParams whereParams)
         {
-            throw new NotImplementedException();            
+            if (whereParams.Value == null)
+                return Constants.NullValueNotAnalyzed;
+
+            if (Equals(whereParams.Value, string.Empty))
+                return Constants.EmptyStringNotAnalyzed;
+
+            var type = TypeSystem.GetNonNullableType(whereParams.Value.GetType());
+
+            if (type == typeof(bool))
+                return (bool)whereParams.Value ? "true" : "false";
+
+            if (type == typeof(DateTime))
+            {
+                var val = (DateTime)whereParams.Value;
+                var s = val.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+                if (val.Kind == DateTimeKind.Utc)
+                    s += "Z";
+                return s;
+            }
+            
+            if (type == typeof(DateTimeOffset))
+            {
+                var val = (DateTimeOffset)whereParams.Value;
+                return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
+            }
+
+            if (type == typeof(decimal))
+                return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
+
+            if (type == typeof(double))
+                return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
+
+            var strValue = whereParams.Value as string;
+            if (strValue != null)
+            {
+                strValue = RavenQuery.Escape(strValue,
+                        whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+
+                return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
+            }
+
+            if (whereParams.Value is ValueType)
+            {
+                var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+                                                whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+
+                return escaped;
+            }
+
+            throw new NotSupportedException();    
         }
 
         private string TransformToRangeValue(WhereParams whereParams)
         {
-            throw new NotImplementedException();
+            if (whereParams.Value == null)
+                return Constants.NullValueNotAnalyzed;
+            if (Equals(whereParams.Value, string.Empty))
+                return Constants.EmptyStringNotAnalyzed;
+
+            if (whereParams.Value is DateTime)
+            {
+                var dateTime = (DateTime)whereParams.Value;
+                var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+                if (dateTime.Kind == DateTimeKind.Utc)
+                    dateStr += "Z";
+                return dateStr;
+            }
+            if (whereParams.Value is DateTimeOffset)
+                return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
+
+            if (whereParams.Value is int)
+                return NumberUtil.NumberToString((int)whereParams.Value);
+            if (whereParams.Value is long)
+                return NumberUtil.NumberToString((long)whereParams.Value);
+            if (whereParams.Value is decimal)
+                return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
+            if (whereParams.Value is double)
+                return NumberUtil.NumberToString((double)whereParams.Value);
+            if (whereParams.Value is TimeSpan)
+                return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
+            if (whereParams.Value is float)
+                return NumberUtil.NumberToString((float)whereParams.Value);
+            if (whereParams.Value is string)
+                return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+
+            if (whereParams.Value is ValueType)
+                return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture), false, true);
+
+            throw new NotSupportedException();
         }
 
         private IEnumerable<object> UnpackEnumerable(IEnumerable items)

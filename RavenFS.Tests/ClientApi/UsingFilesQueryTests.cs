@@ -17,7 +17,7 @@ namespace RavenFS.Tests.ClientApi
             var q = ((IFilesQuery<FileHeader>)new FilesQuery<FileHeader>())
                 .WhereEquals("Name", "file.test");
 
-            Assert.Equal("Name:[[file.test]]", q.ToString());
+            Assert.Equal("Name:file.test", q.ToString());
         }
 
         [Fact]
@@ -26,7 +26,7 @@ namespace RavenFS.Tests.ClientApi
             var file = "file.test" + 1;
             var q = ((IFilesQuery<FileHeader>)new FilesQuery<FileHeader>())
                 .WhereEquals("Name", file);
-            Assert.Equal("Name:[[file.test1]]", q.ToString());
+            Assert.Equal("Name:file.test1", q.ToString());
         }
 
         [Fact]
@@ -178,7 +178,7 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public void CanUnderstandGreaterThanOnInt()
         {
-            // should DocumentQuery<T> understand how to generate range field names?
+            // should FilesQuery<T> understand how to generate range field names?
             var q = ((IFilesQuery<FileHeader>)new FilesQuery<FileHeader>())
                 .WhereGreaterThan("Age_Range", 3);
             Assert.Equal("Age_Range:{Ix3 TO NULL}", q.ToString());
