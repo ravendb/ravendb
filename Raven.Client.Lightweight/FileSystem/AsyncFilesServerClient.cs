@@ -564,7 +564,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri)
+        internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
         {
             var files = await this.GetAsync(new[] { filename });
             FileHeader local = files.FirstOrDefault();
@@ -589,9 +589,12 @@ namespace Raven.Client.FileSystem
                         }
                     }
 
+                    // We execute an external action before conflict resolution starts.
+                    beforeConflictResolution();
+
                     if (resolutionStrategy == ConflictResolutionStrategy.NoResolution)
                         return false;
-                    
+
                     // We resolve the conflict.
                     try
                     {

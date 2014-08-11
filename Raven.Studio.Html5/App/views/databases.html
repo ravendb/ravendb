@@ -8,9 +8,16 @@
             </h3>
         </li>
     </ul>
+    
+    <div class="pull-right">
+        <button class="btn btn-warning" data-bind="click: navigateToAdminSettings">Manage Your Server</button>
+    </div>
+    
+    <div class="text-center" data-bind="visible: databases().length == 1">
+        <h3 class="page-header text-info">No databases are available. <small>Go ahead and <a href="#" data-bind="click: newDatabase">create a database</a>.</small></h3>
+    </div>
 
-    <a class="btn btn-warning pull-right" data-bind="attr: { href: docsForSystemUrl }">System Database</a>
-    <div class="btn-toolbar">
+    <div class="btn-toolbar" data-bind="visible: databases().length > 1">
         <div class="btn-group">
             <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
         </div>

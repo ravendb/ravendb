@@ -11,6 +11,14 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
+                <div data-bind="visible: appUrls.isAreaActive('admin')">
+                    <ul class="nav navbar-nav">
+                        <li class="navbar-splitbutton active">
+                            <h3>Manage Your Server</h3>
+                        </li>
+                    </ul>
+                </div>
+
                 <div data-bind="visible: appUrls.isAreaActive('databases'), css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
@@ -70,7 +78,7 @@
                             <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
                         </li>
 
-                        <li data-bind="css: { active: appUrls.isActive('Settings') }">
+                        <li data-bind="css: { active: appUrls.isActive('Settings') }, visible: $root.isSystemConnected">
                             <a data-bind="attr: { href: appUrls.settings }">Settings</a>
                         </li>
 
@@ -209,15 +217,15 @@
                                             <b class="caret"></b>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            <li><!-- click: function () { navigateToResourceGroup.bind($root, appUrls.databases()); return true; }-->
+                                            <li>
                                                 <a href="#databases" data-bind="click: navigateToResourceGroup.bind($root, appUrls.databases()), visible: !appUrls.isAreaActive('databases')()">Databases</a>
                                             </li>
                                             <li>
                                                 <a href="#filesystems" data-bind="click: navigateToResourceGroup.bind($root, appUrls.filesystems()), visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
                                             </li>
                                             <!--<li>
-                                                <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.couterStorages()), visible: !appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
-                                            </li>-->
+                                                    <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.couterStorages()), visible: !appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
+                                                </li>-->
                                         </ul>
                                     </li>
                                 </ul>

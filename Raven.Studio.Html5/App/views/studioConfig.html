@@ -1,0 +1,18 @@
+﻿<div class="panel panel-default form-horizontal" role="form">
+    <div class="panel-heading"></div>
+    <div class="panel-body">
+        <div class="form-group">
+            <div class="col-md-4 control-label">Warn When Using System Database</div>
+            <div class="col-md-8">
+                <div class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-primary" data-bind="click: saveStudioConfig, css: { active: systemDatabasePrompt }, attr: { title: systemDatabasePrompt() ? 'Disable' : 'Enable' }">
+                        <input type="checkbox">
+                        <i class="fa" data-bind="css: { 'fa-play': systemDatabasePrompt(), 'fa-stop text-danger': !systemDatabasePrompt() }"></i>
+                        <span data-bind="text: systemDatabasePrompt() ? 'Enabled': 'Disabled'"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

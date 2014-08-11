@@ -14,15 +14,15 @@ class databases extends viewModelBase {
     isAnyDatabaseSelected: KnockoutComputed<boolean>;
     allCheckedDatabasesDisabled: KnockoutComputed<boolean>;
     systemDb: database;
-    docsForSystemUrl: string;
     optionsClicked = ko.observable<boolean>(false);
+    appUrls: computedAppUrls;
 
     constructor() {
         super();
         
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
-        this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
+        this.appUrls = appUrl.forCurrentDatabase();
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
 
         var currentDatabse = this.activeDatabase();
@@ -72,6 +72,14 @@ class databases extends viewModelBase {
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.databases().length === 1) {
             this.newDatabase();
+        } else {
+            // If we have just a few databases, grab the db stats for all of them.
+            // (Otherwise, we'll grab them when we click them.)
+            var few = 20;
+            var enabledDatabases: database[] = this.databases().filter((db: database) => !db.disabled());
+            if (enabledDatabases.length < few) {
+                enabledDatabases.forEach(db => shell.fetchDbStats(db));
+            }
         }
     }
 
@@ -99,10 +107,13 @@ class databases extends viewModelBase {
             var createDatabaseViewModel = new createDatabase(this.databases, shell.licenseStatus);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string) => {
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
+                    if (storageEngine) {
+                        settings["Raven/StorageEngine"] = storageEngine;
+                    }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
                         settings["Raven/Esent/LogsPath"] = databaseLogs;
@@ -194,7 +205,8 @@ class databases extends viewModelBase {
     private createDefaultSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
         require(["commands/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
-            deferred = new createDefaultSettingsCommand(db, bundles).execute();
+            new createDefaultSettingsCommand(db, bundles).execute()
+                .always(() => deferred.resolve());
         });
         return deferred;
     }
@@ -309,6 +321,11 @@ class databases extends viewModelBase {
         });
 
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
+    }
+
+    navigateToAdminSettings() {
+        shell.disconnectFromResourceChangesApi();
+        this.navigate(this.appUrls.adminSettings());
     }
 }
 

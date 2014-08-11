@@ -16,23 +16,24 @@ using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.PeriodicExports
 {
-    [InheritedExport(typeof(IStartupTask))]
+	[InheritedExport(typeof(IStartupTask))]
 	[ExportMetadata("Bundle", "PeriodicExport")]
 	public class PeriodicExportTask : IStartupTask, IDisposable
 	{
 		public DocumentDatabase Database { get; set; }
-        private Timer incrementalBackupTimer;
-        private Timer fullBackupTimer;
+		private Timer incrementalBackupTimer;
+		private Timer fullBackupTimer;
 
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
-        private string azureStorageAccount, azureStorageKey;
+		private string azureStorageAccount, azureStorageKey;
 
 		private volatile PeriodicExportStatus exportStatus;
 		private volatile PeriodicExportSetup exportConfigs;
@@ -41,7 +42,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 		{
 			Database = database;
 
-            Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
+			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
@@ -49,11 +50,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 					PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
-                if (incrementalBackupTimer != null)
-                    incrementalBackupTimer.Dispose();
+				if (incrementalBackupTimer != null)
+					incrementalBackupTimer.Dispose();
 
-                if (fullBackupTimer != null)
-                    fullBackupTimer.Dispose();
+				if (fullBackupTimer != null)
+					fullBackupTimer.Dispose();
 
 				ReadSetupValuesFromDocument();
 			};
@@ -68,7 +69,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic exports
-                    var document = Database.Documents.Get(PeriodicExportSetup.RavenDocumentKey, null);
+					var document = Database.Documents.Get(PeriodicExportSetup.RavenDocumentKey, null);
 					if (document == null)
 					{
 						exportConfigs = null;
@@ -76,7 +77,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 						return;
 					}
 
-                    var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
+					var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
 
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
 					exportConfigs = document.DataAsJson.JsonDeserialization<PeriodicExportSetup>();
@@ -84,36 +85,36 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
-                    azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
-                    azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
+					azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
+					azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
 
-                    if (exportConfigs.IntervalMilliseconds > 0)
-                    {
-					var interval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds);
-                        logger.Info("Incremental periodic export started, will export every" + interval.TotalMinutes + "minutes");
+					if (exportConfigs.IntervalMilliseconds > 0)
+					{
+						var interval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds);
+						logger.Info("Incremental periodic export started, will export every" + interval.TotalMinutes + "minutes");
 
-                        var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
-                        var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                        incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
-                    }
-                    else
-                    {
-                        logger.Warn("Incremental periodic export interval is set to zero or less, incremental periodic export is now disabled");
-                    }
+						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
+						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
+						incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
+					}
+					else
+					{
+						logger.Warn("Incremental periodic export interval is set to zero or less, incremental periodic export is now disabled");
+					}
 
-                    if (exportConfigs.FullBackupIntervalMilliseconds > 0)
-                    {
-                        var interval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds);
-                        logger.Info("Full periodic export started, will export every" + interval.TotalMinutes + "minutes");
+					if (exportConfigs.FullBackupIntervalMilliseconds > 0)
+					{
+						var interval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds);
+						logger.Info("Full periodic export started, will export every" + interval.TotalMinutes + "minutes");
 
-                        var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
-					var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                        fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
-                    }
-                    else
-                    {
-                        logger.Warn("Full periodic export interval is set to zero or less, full periodic export is now disabled");
-                    }
+						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
+						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
+						fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
+					}
+					else
+					{
+						logger.Warn("Full periodic export interval is set to zero or less, full periodic export is now disabled");
+					}
 
 
 				}
@@ -135,12 +136,12 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 
 
-        private void TimerCallback(bool fullBackup)
+		private void TimerCallback(bool fullBackup)
 		{
 			if (currentTask != null)
 				return;
 
-            // we have shared lock for both incremental and full backup.
+			// we have shared lock for both incremental and full backup.
 			lock (this)
 			{
 				if (currentTask != null)
@@ -154,44 +155,44 @@ namespace Raven.Database.Bundles.PeriodicExports
 					{
 						try
 						{
-                            var dataDumper = new DataDumper(documentDatabase);
+							var dataDumper = new DataDumper(documentDatabase);
 							var localBackupConfigs = exportConfigs;
 							var localBackupStatus = exportStatus;
 							if (localBackupConfigs == null)
 								return;
 
-                            if (fullBackup == false)
-                            {
-                                var currentEtags = dataDumper.FetchCurrentMaxEtags();
-							// No-op if nothing has changed
-                                if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-                                    currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-                                    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-                                    currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+							if (fullBackup == false)
 							{
-								return;
+								var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
+								// No-op if nothing has changed
+								if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+									currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+									currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+									currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+								{
+									return;
+								}
 							}
-                            }
 
 							var backupPath = localBackupConfigs.LocalFolderName ??
-							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-                            if (fullBackup)
-                            {
-                                // create filename for full dump
-                                backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
-                                if (File.Exists(backupPath))
+											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							if (fullBackup)
 							{
-                                    var counter = 1;
-                                    while (true)
-						    {
-                                        backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
+								// create filename for full dump
+								backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
+								if (File.Exists(backupPath))
+								{
+									var counter = 1;
+									while (true)
+									{
+										backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
 
-                                        if (File.Exists(backupPath) == false)
-                                            break;
-                                        counter++;
-                                    }
-                                }
-						    }
+										if (File.Exists(backupPath) == false)
+											break;
+										counter++;
+									}
+								}
+							}
 
 							var smugglerOptions = dataDumper.SmugglerOptions;
 							if (fullBackup == false)
@@ -203,21 +204,20 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions {ToFile = backupPath});
+							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
 
-                            if (fullBackup == false)
-                                {
-						    // No-op if nothing has changed
-                                if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-                                    exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-                                    exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-                                    exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+							if (fullBackup == false)
 							{
-                                    logger.Info(
-                                        "Periodic export returned prematurely, nothing has changed since last export");
-								return;
+								// No-op if nothing has changed
+								if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+									exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+									exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+									exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+								{
+									logger.Info("Periodic export returned prematurely, nothing has changed since last export");
+									return;
+								}
 							}
-                            }
 
 							try
 							{
@@ -228,30 +228,30 @@ namespace Raven.Database.Bundles.PeriodicExports
 							}
 							finally
 							{
-                                // if user did not specify local folder we delete temporary file.
-                                if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
-                                {
-                                    IOExtensions.DeleteFile(exportResult.FilePath);
-                                }
+								// if user did not specify local folder we delete temporary file.
+								if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
+								{
+									IOExtensions.DeleteFile(exportResult.FilePath);
+								}
 							}
 
-                            if (fullBackup)
-                            {
-                                localBackupStatus.LastFullBackup = SystemTime.UtcNow;
-                            }
-                            else
-                            {
-                                localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
-                                localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
-                                localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
-                                localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
-							localBackupStatus.LastBackup = SystemTime.UtcNow;
-                            }
-                            
+							if (fullBackup)
+							{
+								localBackupStatus.LastFullBackup = SystemTime.UtcNow;
+							}
+							else
+							{
+								localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
+								localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+								localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
+								localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
+								localBackupStatus.LastBackup = SystemTime.UtcNow;
+							}
+
 
 							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
 							ravenJObject.Remove("Id");
-                            var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
+							var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
 								new RavenJObject(), null);
 
 							// this result in exportStatus being refreshed
@@ -290,8 +290,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 			}
 		}
 
-        private void UploadToServer(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
-	    {
+		private void UploadToServer(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+		{
 			if (!string.IsNullOrWhiteSpace(localExportConfigs.GlacierVaultName))
 			{
 				UploadToGlacier(backupPath, localExportConfigs, isFullBackup);
@@ -304,27 +304,37 @@ namespace Raven.Database.Bundles.PeriodicExports
 			{
 				UploadToAzure(backupPath, localExportConfigs, isFullBackup);
 			}
-	    }
+		}
 
-        private void UploadToS3(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+		private void UploadToS3(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
 		{
-	        using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
-		    using (var fileStream = File.OpenRead(backupPath))
-		    {
-			    var key = Path.GetFileName(backupPath);
-			    client.PutObject(localExportConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
+			if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
+				awsSecretKey == Constants.DataCouldNotBeDecrypted)
+			{
+				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
+			}
+			using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+			using (var fileStream = File.OpenRead(backupPath))
+			{
+				var key = Path.GetFileName(backupPath);
+				client.PutObject(localExportConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
 			                                                                       {
 				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
 			                                                                       }, 60 * 60);
 
 				logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
 											  Path.GetFileName(backupPath), localExportConfigs.S3BucketName, key));
-		    }
+			}
 		}
 
-        private void UploadToGlacier(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+		private void UploadToGlacier(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
 		{
-	        using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+			if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
+			    awsSecretKey == Constants.DataCouldNotBeDecrypted)
+			{
+				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
+			}
+			using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 			using (var fileStream = File.OpenRead(backupPath))
 			{
 				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
@@ -334,6 +344,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private void UploadToAzure(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
 		{
+			if (azureStorageAccount == Constants.DataCouldNotBeDecrypted ||
+				azureStorageKey == Constants.DataCouldNotBeDecrypted)
+			{
+				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
+			}
 			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, true))
 			{
 				client.PutContainer(localExportConfigs.AzureStorageContainer);
@@ -354,17 +369,17 @@ namespace Raven.Database.Bundles.PeriodicExports
 			}
 		}
 
-        private string GetArchiveDescription(bool isFullBackup)
+		private string GetArchiveDescription(bool isFullBackup)
 		{
-            return (isFullBackup ? "Full" : "Incremental") + "periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
+			return (isFullBackup ? "Full" : "Incremental") + "periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
 		}
 
 		public void Dispose()
 		{
-            if (incrementalBackupTimer != null)
-                incrementalBackupTimer.Dispose();
-            if (fullBackupTimer != null)
-                fullBackupTimer.Dispose();
+			if (incrementalBackupTimer != null)
+				incrementalBackupTimer.Dispose();
+			if (fullBackupTimer != null)
+				fullBackupTimer.Dispose();
 			var task = currentTask;
 			if (task != null)
 				task.Wait();

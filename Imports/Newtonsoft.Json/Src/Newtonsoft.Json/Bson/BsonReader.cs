@@ -510,7 +510,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         case BsonType.Number:
           double d = ReadDouble();
 
-          if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.DecimalWithNaN)
+          if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
             SetToken(JsonToken.Float, Convert.ToDecimal(d, CultureInfo.InvariantCulture));
           else
             SetToken(JsonToken.Float, d);

@@ -500,10 +500,10 @@ namespace Raven.Client.Connection
             return asyncServerClient.GetIndexMergeSuggestionsAsync().ResultUnwrap();
 			}
 
-		public AttachmentInformation[] GetAttachments(Etag startEtag, int pageSize)
-			{
-			return asyncServerClient.GetAttachmentsAsync(startEtag, pageSize).ResultUnwrap();
-				}
+		public AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize)
+		{
+			return asyncServerClient.GetAttachmentsAsync(start, startEtag, pageSize).ResultUnwrap();
+		}
 
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials

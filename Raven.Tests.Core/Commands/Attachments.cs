@@ -24,7 +24,7 @@ namespace Raven.Tests.Core.Commands
                 Assert.NotNull(await store.AsyncDatabaseCommands.GetAttachmentAsync("items/1"));
                 Assert.NotNull(await store.AsyncDatabaseCommands.GetAttachmentAsync("items/2"));
 
-                var attachments = await store.AsyncDatabaseCommands.GetAttachmentsAsync(Etag.Empty, 10);
+                var attachments = await store.AsyncDatabaseCommands.GetAttachmentsAsync(0, Etag.Empty, 10);
                 Assert.Equal(2, attachments.Length);
 
                 await store.AsyncDatabaseCommands.UpdateAttachmentMetadataAsync("items/1", null, new RavenJObject() { { "attachment_key", "value" } });

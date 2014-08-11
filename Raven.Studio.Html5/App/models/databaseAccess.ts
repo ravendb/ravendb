@@ -1,18 +1,20 @@
+import shell = require("viewmodels/shell");
+import database = require("models/database");
+
 class databaseAccess {
 
     admin = ko.observable<boolean>();
     tenantId = ko.observable<string>();
     readOnly = ko.observable<boolean>();
-    tenantIdOrDefault: KnockoutComputed<string>;
+    databaseNames: KnockoutComputed<string[]>;
+    searchResults: KnockoutComputed<string[]>;
+    tenantCustomValidityError: KnockoutComputed<string>;
 
     static adminAccessType = 'Admin';
-    static readWriteAccessType = 'Read,Write';
+    static readWriteAccessType = 'Read, Write';
     static readOnlyAccessType = 'Read Only';
     static databaseAccessTypes =
         ko.observableArray<string>([databaseAccess.adminAccessType, databaseAccess.readWriteAccessType, databaseAccess.readOnlyAccessType]);
-
-
-    
 
     currentAccessType = ko.computed({
         read:()=> {
@@ -48,7 +50,27 @@ class databaseAccess {
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId);
 
-        this.tenantIdOrDefault = ko.computed(() => this.tenantId() ? this.tenantId() : "Select a database");
+        this.databaseNames = ko.computed(() => shell.databases().map((db: database) => db.name).concat("*"));
+
+        this.searchResults = ko.computed(() => {
+            var newDatabaseName = this.tenantId();
+            if (!newDatabaseName || newDatabaseName.length < 2) {
+                return [];
+            }
+            return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
+        });
+
+        this.tenantCustomValidityError = ko.computed(() => {
+            var errorMessage: string = '';
+            var newTenantId = this.tenantId();
+            var foundDb = this.databaseNames().first(name => newTenantId == name);
+
+            if (!foundDb && newTenantId.length > 0) {
+                errorMessage = "Database name doesn't exist!";
+            }
+
+            return errorMessage;
+        });
     }
 
     toDto(): databaseAccessDto {
@@ -62,7 +84,7 @@ class databaseAccess {
     static empty(): databaseAccess {
         return new databaseAccess({
             Admin: false,
-            TenantId: null,
+            TenantId: "",
             ReadOnly: false
         });
     }

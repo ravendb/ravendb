@@ -6952,6 +6952,9 @@ body {
   box-shadow: 0 0 5px 0 #106a8c;
 }
 #resources-page .resources-container .resource .fa-cogs {
+  color: grey;
+}
+#resources-page .resources-container .resource .fa-cogs:hover {
   color: black;
 }
 #resources-page .resources-container .resource:hover {
