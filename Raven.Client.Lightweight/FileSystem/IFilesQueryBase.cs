@@ -68,6 +68,65 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
+        /// <summary>
+        ///   Matches fields which starts with the specified value.
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "value">The value.</param>
+        TSelf WhereStartsWith(string fieldName, object value);
+
+        /// <summary>
+        ///   Matches fields which starts with the specified value.
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "value">The value.</param>
+        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+
+        /// <summary>
+        ///   Matches fields which ends with the specified value.
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "value">The value.</param>
+        TSelf WhereEndsWith(string fieldName, object value);
+
+        /// <summary>
+        ///   Matches fields which ends with the specified value.
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "value">The value.</param>
+        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, exclusive
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        TSelf WhereBetween(string fieldName, object start, object end);
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, exclusive
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, inclusive
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        TSelf WhereBetweenOrEqual(string fieldName, object start, object end);
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, inclusive
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        TSelf WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
 
         /// <summary>
         ///   Matches fields where the value is greater than the specified value

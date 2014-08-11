@@ -12,7 +12,9 @@ namespace Raven.Client.FileSystem
     public class FilesQuery<T> : AbstractFilesQuery<T, FilesQuery<T>>, IFilesQuery<T>
     {
   
-
+        public FilesQuery( InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands ) : base ( theSession, commands )
+        {
+        }
 
 
         #region IFilesQuery operations
@@ -84,6 +86,98 @@ If you really want to do in memory filtering on the data returned from the query
         IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
         {
             WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        /// <summary>
+        /// Matches fields which starts with the specified value.
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="value">The value.</param>
+         IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereStartsWith(string fieldName, object value)
+        {
+            WhereStartsWith(fieldName, value);
+            return this;
+        }
+
+        /// <summary>
+        ///   Matches fields which starts with the specified value.
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "value">The value.</param>
+         IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        {
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
+            return this;
+        }
+
+        /// <summary>
+        /// Matches fields which ends with the specified value.
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="value">The value.</param>
+         IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereEndsWith(string fieldName, object value)
+        {
+            WhereEndsWith(fieldName, value);
+            return this;
+        }
+
+        /// <summary>
+        ///   Matches fields which ends with the specified value.
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "value">The value.</param>
+         IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        {
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
+            return this;
+        }
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, exclusive
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereBetween(string fieldName, object start, object end)
+        {
+            WhereBetween(fieldName, start, end);
+            return this;
+        }
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, exclusive
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+        {
+            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end);
+            return this;
+        }
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, inclusive
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereBetweenOrEqual(string fieldName, object start, object end)
+        {
+            WhereBetweenOrEqual(fieldName, start, end);
+            return this;
+        }
+
+        /// <summary>
+        ///   Matches fields where the value is between the specified start and end, inclusive
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "start">The start.</param>
+        /// <param name = "end">The end.</param>
+        IFilesQuery<T> IFilesQueryBase<T, IFilesQuery<T>>.WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+        {
+            WhereBetweenOrEqual(GetMemberQueryPath(propertySelector.Body), start, end);
             return this;
         }
 

@@ -20,6 +20,7 @@ namespace Raven.Client.FileSystem
 {
     public class AbstractFilesQuery<T, TSelf> : IAbstractFilesQuery<T> where TSelf : AbstractFilesQuery<T, TSelf>
     {
+        private readonly LinqPathProvider linqPathProvider;
         protected readonly FilesConvention conventions;
 
         /// <summary>
@@ -48,6 +49,11 @@ namespace Raven.Client.FileSystem
         /// </summary>
         protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
 
+        public AbstractFilesQuery(InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands)
+        {
+            this.conventions = theSession == null ? new FilesConvention() : theSession.Conventions;
+            this.linqPathProvider = new LinqPathProvider(conventions);
+        }
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -106,6 +112,46 @@ namespace Raven.Client.FileSystem
             queryText.Append(":");
             queryText.Append(transformToEqualValue);
         }
+
+        /// <summary>
+        ///   Matches fields which starts with the specified value.
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "value">The value.</param>
+        public void WhereStartsWith(string fieldName, object value)
+        {
+            // NOTE: doesn't fully match StartsWith semantics
+            WhereEquals(
+                new WhereParams
+                {
+                    FieldName = fieldName,
+                    Value = String.Concat(value, "*"),
+                    IsAnalyzed = true,
+                    AllowWildcards = true
+                });
+        }
+
+        /// <summary>
+        ///   Matches fields which ends with the specified value.
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "value">The value.</param>
+        public void WhereEndsWith(string fieldName, object value)
+        {
+            // http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
+            // You cannot use a * or ? symbol as the first character of a search
+
+            // NOTE: doesn't fully match EndsWith semantics
+            WhereEquals(
+                new WhereParams
+                {
+                    FieldName = fieldName,
+                    Value = String.Concat("*", value),
+                    AllowWildcards = true,
+                    IsAnalyzed = true
+                });
+        }
+
 
         public void WhereIn(string fieldName, IEnumerable<object> values)
         {
@@ -356,7 +402,13 @@ namespace Raven.Client.FileSystem
 
         public string GetMemberQueryPath(Expression expression)
         {
-            throw new NotImplementedException();
+            var result = linqPathProvider.GetPath(expression);
+			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				result.Path += ".Length";
+
+            return result.Path;
         }
 
         private string TransformToEqualValue(WhereParams whereParams)
