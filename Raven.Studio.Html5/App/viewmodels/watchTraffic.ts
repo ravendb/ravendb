@@ -24,7 +24,7 @@ class watchTraffic extends viewModelBase {
     startTraceTime = ko.observable<Moment>();
     startTraceTimeHumanized :KnockoutComputed<string>;
     showLogDetails=ko.observable<boolean>(false);
-
+    logRecordsElement:Element;
 
     constructor() {
         super();
@@ -55,6 +55,7 @@ class watchTraffic extends viewModelBase {
                 $(".logRecords").toggleClass("logRecords-small");
         });
         this.updateCurrentNowTime();
+        this.logRecordsElement = document.getElementById("logRecords");
     }
 
     registerColumnResizing() {
@@ -186,9 +187,16 @@ class watchTraffic extends viewModelBase {
             CustomInfo: e.CustomInfo,
             TimeStampText: this.createHumanReadableTime(e.TimeStamp, true, false)
         };
+        if (this.recentEntries().length == this.logConfig().MaxEntries) {
+            this.recentEntries.shift();
+        }
         this.recentEntries.push(logObject);
+
+        if (this.keepDown() == true) {
+            this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
+        }
+
         this.watchedRequests(this.watchedRequests() + 1);
-        
         this.summedRequestsDuration += e.EllapsedMiliseconds;
         this.averageRequestDuration((this.summedRequestsDuration / this.watchedRequests()).toFixed(2));
         this.minRequestDuration(this.minRequestDuration() > e.EllapsedMiliseconds ? e.EllapsedMiliseconds : this.minRequestDuration());
@@ -244,12 +252,19 @@ class watchTraffic extends viewModelBase {
         this.startTraceTime(null);
     }
 
-    saveLogs() {
+    exportTraffic() {
         fileDownloader.downloadAsJson(this.recentEntries(), "traffic.json");
     }
 
     clearLogs() {
         this.recentEntries.removeAll();
+    }
+
+    toggleKeepDown() {
+        this.keepDown.toggle();
+        if (this.keepDown() == true) {
+            this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
+        }
     }
 }
 

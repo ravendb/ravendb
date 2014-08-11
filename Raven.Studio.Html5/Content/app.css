@@ -7084,9 +7084,14 @@ body {
   max-height: 80vh;
   overflow-y: auto;
 }
+#watchTrafficContainer #logTableContainer .logHeaders {
+  max-width: 95vw;
+  width: 95vw;
+}
 #watchTrafficContainer #logTableContainer .logRecords {
   max-height: 60vh;
   max-width: 95vw;
+  width: 95vw;
   overflow-y: auto;
 }
 #watchTrafficContainer #logTableContainer .logRecords-small {

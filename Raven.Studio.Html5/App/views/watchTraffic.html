@@ -7,27 +7,29 @@
                 <button type="button" class="btn btn-warning" data-bind="click:disconnect">Disconnect</button>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default" data-bind="css:{'pressed':keepDown}, click:function(){this.keepDown.toggle()}">KeepDown</button>
+                <button type="button" class="btn btn-default" data-bind="css:{'pressed':keepDown}, click:function(){this.toggleKeepDown()}">KeepDown</button>
                 <button type="button" class="btn btn-default" data-bind="click:resetStats">Reset Stats</button>
                 <button type="button" class="btn btn-default" data-bind="click:clearLogs">Clear</button>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default">Export</button>
+                <button type="button" class="btn btn-default" data-bind="click:exportTraffic">Export</button>
             </div>
         </div>
         <div class="row statsBar">
             <strong class="col-sm-12">Stats:</strong>
             <div class="small col-sm-offset-1 col-sm-11" data-bind="with:logConfig">
-                <strong>Watched Resource: </strong><label data-bind="text:ResourceName"></label>
+                <strong>Status: </strong><label data-bind="text:($root.isConnected()==true?'Connected':'Disconnected'), css:{'text-danger':$root.isConnected() == false, 'text-success':$root.isConnected()==true}"></label>
+                <strong>; Watched Resource: </strong><label data-bind="text:ResourceName"></label>
                 <strong>; Trace Start Time :</strong><label data-bind="text:$root.startTraceTimeHumanized()"></label>
                 <strong>; Requests: </strong><label data-bind="text:$root.watchedRequests()"></label>
                 <strong>; Avg Request Duration: </strong><label data-bind="text:$root.averageRequestDuration()"></label>
                 <strong>; Min Request Duration: </strong><label data-bind="text:$root.minRequestDuration()"></label>
                 <strong>; Max Request Duration: </strong><label data-bind="text:$root.maxRequestDuration()"></label>
+                <strong>; Buffer Size: </strong><label data-bind="text:MaxEntries"></label>
             </div>
         </div>
         <div id="logTableContainer">
-            <span>
+            <div class="logHeaders">
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
                     <span class="column-handle" column="0"></span>
                     <span>Time</span>
@@ -52,8 +54,8 @@
                     <span class="column-handle" column="5"></span>
                     <span>Has Additional Data</span>
                 </div>
-            </span>
-            <div class="logRecords" style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
+            </div>
+            <div id="logRecords" class="logRecords" style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
                 <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="'selected': $data === $parent.selectedLog()">
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: TimeStampText, attr: {title:Time}"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Duration, attr: { title: Duration }"></div>
@@ -63,7 +65,7 @@
                     <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: !!CustomInfo?'Y':'N'"></div>
                 </div>
             </div>
-            <div class="row log-details panel panel-default" data-bind="visible:showLogDetails">
+            <div class="log-details panel panel-default" data-bind="visible:showLogDetails">
                 <div class="col-md-10">
                     <div class="row">
                         <label class="col-md-2 text-right control-label">Time</label>

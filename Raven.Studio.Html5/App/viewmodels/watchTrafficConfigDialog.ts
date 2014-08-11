@@ -1,5 +1,4 @@
 ﻿import app = require("durandal/app");
-import document = require("models/document");
 import dialog = require("plugins/dialog");
 import resource = require("models/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
@@ -62,7 +61,9 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
       
         
     }
-
+    bindingComplete() {
+        document.getElementById("watchedResource").focus();
+    }
     
     enterKeyPressed() {
         return true;
@@ -73,7 +74,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 this.resourceAutocompletes.removeAll();
                 return;
             }
-            this.resourceAutocompletes(this.allResources().filter(x=> x.name.indexOf(search) == 0).map(x=> x.name));
+            this.resourceAutocompletes(this.allResources().filter(x=> x.name.toLowerCase().indexOf(search.toLowerCase()) == 0).map(x=> x.name));
         }
     }
     

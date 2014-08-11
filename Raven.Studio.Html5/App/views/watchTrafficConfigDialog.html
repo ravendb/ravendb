@@ -31,9 +31,9 @@
                                 <div data-bind="visible:isAutoCompleteVisible">
                                     <ul class="dropdown-menu" role="menu" style="display: none;"
                                         data-bind="autoComplete: '#watchedResource', foreach: resourceAutocompletes">
-                                        <li role="presentation">
-                                            <span role="menuitem" tabindex="-1">
-                                                <span data-bind="text: $data"></span>
+                                        <li role="presentation" data-bind="click:function(){$root.resourceName($data); }">
+                                            <span role=" menuitem" tabindex="-1">
+                                            <span data-bind="text: $data"></span>
                                             </span>
                                         </li>
                                     </ul>
