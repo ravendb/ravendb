@@ -587,18 +587,18 @@ html, body {
     }
 }
 
-.watchTrafficContainer{
-.column {
-        display: inline-block;
-        cursor: pointer;
-        overflow: hidden;
-        white-space: nowrap;
-        word-wrap: break-word;
-        text-overflow: ellipsis;
-        border-bottom: 1px solid #ddd;
-        margin: 0px;
-        padding: 5px;
-        height: 30px;
+#watchTrafficContainer{
+    .column {
+            display: inline-block;
+            cursor: pointer;
+            overflow: hidden;
+            white-space: nowrap;
+            word-wrap: break-word;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid #ddd;
+            margin: 0px;
+            padding: 5px;
+            height: 30px;
     }
 
     .log-table-row {
@@ -607,6 +607,38 @@ html, body {
     .selected .column {
         background-color: #ffffcc;
     }
+    .statsBar{        
+        margin-top:1%;
+        padding-left:5%;
+        background-color: aliceblue;
+    }
+    #logTableContainer{
+        max-height:80vh;
+        overflow-y:auto;
+        .logRecords{            
+            max-height:60vh;                        
+            max-width:95vw;
+            overflow-y:auto;
+        }
+        .logRecords-small{
+            max-height:30vh;                        
+        }        
+        .log-details{
+            max-height:30vh;
+            height:30vh;
+            overflow-y:auto;
+            border-top-width: 2px;
+            margin-top: 1%;
+            padding-top: 1%;
+            border-style: dashed;
+            border-width: thin;
+            border-color: black;
+            width: 90vw;
+            margin-left: 1%;
+        }
+
+    }
+    
 
 }
 

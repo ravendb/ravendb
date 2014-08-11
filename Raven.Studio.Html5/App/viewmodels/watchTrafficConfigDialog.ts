@@ -62,23 +62,12 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
       
         
     }
+
+    
     enterKeyPressed() {
-        
+        return true;
     }
     fetchResourcesAutocompletes(search: string) {
-        /*if (search.length >= 2) {
-           
-            if (this.resourceName() === search) {
-                if (this.resourceAutocompletes.length == 1 && this.resourceName() == this.resourceAutocompletes()[0]) {
-                    this.resourceAutocompletes.removeAll();
-                    return;
-                }
-                this.resourceAutocompletes(this.allResources().filter(x=> x.name.indexOf(search) ==0).map(x=>x.name));
-            }
-                
-        } else if (search.length == 0) {
-            this.resourceAutocompletes.removeAll();
-        }*/
         if (this.resourceName() === search) {
             if (this.resourceAutocompletes.length == 1 && this.resourceName() == this.resourceAutocompletes()[0]) {
                 this.resourceAutocompletes.removeAll();

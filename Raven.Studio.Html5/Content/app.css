@@ -7060,7 +7060,7 @@ body {
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
 }
-.watchTrafficContainer .column {
+#watchTrafficContainer .column {
   display: inline-block;
   cursor: pointer;
   overflow: hidden;
@@ -7072,8 +7072,38 @@ body {
   padding: 5px;
   height: 30px;
 }
-.watchTrafficContainer .selected .column {
+#watchTrafficContainer .selected .column {
   background-color: #ffffcc;
+}
+#watchTrafficContainer .statsBar {
+  margin-top: 1%;
+  padding-left: 5%;
+  background-color: aliceblue;
+}
+#watchTrafficContainer #logTableContainer {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+#watchTrafficContainer #logTableContainer .logRecords {
+  max-height: 60vh;
+  max-width: 95vw;
+  overflow-y: auto;
+}
+#watchTrafficContainer #logTableContainer .logRecords-small {
+  max-height: 30vh;
+}
+#watchTrafficContainer #logTableContainer .log-details {
+  max-height: 30vh;
+  height: 30vh;
+  overflow-y: auto;
+  border-top-width: 2px;
+  margin-top: 1%;
+  padding-top: 1%;
+  border-style: dashed;
+  border-width: thin;
+  border-color: black;
+  width: 90vw;
+  margin-left: 1%;
 }
 #logNotificationsContainer {
   background-color: black;
