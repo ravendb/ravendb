@@ -159,7 +159,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		    if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
 		        restoreRequest.Defrag = defrag;
 
-            await Task.Factory.StartNew(() =>
+			//TODO: add task to pending task list like in ImportDatabase
+            Task.Factory.StartNew(() =>
             {
                 MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
                     msg =>
