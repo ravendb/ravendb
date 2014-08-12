@@ -7,13 +7,13 @@ namespace Raven.Database.Server
 	public class LogHttpRequestStatsParams
 	{
 		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode,
-		                                 Uri requestUri, string customInfo = null)
+		                                 string requestUri, string customInfo = null)
 		{
 			Stopwatch = sw;
 			Headers = headers;
 			HttpMethod = httpMethod;
 			ResponseStatusCode = responseStatusCode;
-			RequestUri = requestUri.ToString();
+			RequestUri = requestUri;
 			CustomInfo = customInfo;
 		}
 
