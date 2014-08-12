@@ -278,8 +278,8 @@ namespace Raven.Abstractions.Smuggler
 						return lastEtag;
 					}
 					var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
-					var array = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
-					if (array.Length == 0)
+					var attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
+					if (attachments.Count == 0)
 					{
 						var databaseStatistics = await Operations.GetStats();
 						if (lastEtag == null) lastEtag = Etag.Empty;
@@ -293,19 +293,29 @@ namespace Raven.Abstractions.Smuggler
 						Operations.ShowProgress("Done with reading attachments, total: {0}", totalCount);
 						return lastEtag;
 					}
-					totalCount += array.Length;
-					Operations.ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length, totalCount);
-					foreach (var item in array)
+					totalCount += attachments.Count;
+					Operations.ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachments.Count, totalCount);
+					foreach (var attachment in attachments)
 					{
-						var tempLastEtag = item.Value<string>("Etag");
-						if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+						if (maxEtag != null && attachment.Etag.CompareTo(maxEtag) > 0)
 						{
 							maxEtagReached = true;
 							break;
 						}
 
-						item.WriteTo(jsonWriter);
-						lastEtag = tempLastEtag;
+						var attachmentData = await Operations.GetAttachmentData(attachment);
+						if (attachmentData == null)
+							continue;
+
+						new RavenJObject
+						{
+							{ "Data", attachmentData }, 
+							{ "Metadata", attachment.Metadata }, 
+							{ "Key", attachment.Key }, 
+							{ "Etag", new RavenJValue(attachment.Etag.ToString()) }
+						}.WriteTo(jsonWriter);
+
+						lastEtag = attachment.Etag;
 					}
 				}
 				catch (Exception e)
