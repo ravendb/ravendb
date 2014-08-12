@@ -19,9 +19,7 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public void WhereEqualsSameAsUntypedCounterpart()
         {
-            Assert.Equal(CreateUserQuery().WhereEquals("Name", "file.test").ToString(),
-                         CreateUserQuery().WhereEquals(x => x.Name, "file.test").ToString());
-            Assert.Equal(CreateUserQuery().WhereEquals("Name", "file.test").ToString(), 
+            Assert.Equal(CreateUserQuery().WhereEquals("__fileName", "file.test").ToString(),
                          CreateUserQuery().WhereEquals(x => x.Name, "file.test").ToString());
         }
 
@@ -65,8 +63,8 @@ namespace RavenFS.Tests.ClientApi
         {
             var value = DateTimeOffset.UtcNow;
 
-            Assert.Equal(CreateUserQuery().WhereGreaterThan("CreationDate", value).ToString(),
-                         CreateUserQuery().WhereGreaterThan(x => x.CreationDate, value).ToString());
+            Assert.Equal(CreateUserQuery().WhereGreaterThan("LastModified", value).ToString(),
+                         CreateUserQuery().WhereGreaterThan(x => x.LastModified, value).ToString());
         }
 
         [Fact]
@@ -74,8 +72,8 @@ namespace RavenFS.Tests.ClientApi
         {
             var value = DateTimeOffset.UtcNow;
 
-            Assert.Equal(CreateUserQuery().WhereGreaterThanOrEqual("CreationDate", value).ToString(),
-                         CreateUserQuery().WhereGreaterThanOrEqual(x => x.CreationDate, value).ToString());
+            Assert.Equal(CreateUserQuery().WhereGreaterThanOrEqual("LastModified", value).ToString(),
+                         CreateUserQuery().WhereGreaterThanOrEqual(x => x.LastModified, value).ToString());
         }
 
         [Fact]
@@ -83,8 +81,8 @@ namespace RavenFS.Tests.ClientApi
         {
             var value = DateTimeOffset.UtcNow;
 
-            Assert.Equal(CreateUserQuery().WhereLessThan("CreationDate", value).ToString(),
-                         CreateUserQuery().WhereLessThan(x => x.CreationDate, value).ToString());
+            Assert.Equal(CreateUserQuery().WhereLessThan("LastModified", value).ToString(),
+                         CreateUserQuery().WhereLessThan(x => x.LastModified, value).ToString());
         }
 
         [Fact]
@@ -92,8 +90,22 @@ namespace RavenFS.Tests.ClientApi
         {
             var value = DateTimeOffset.UtcNow;
 
-            Assert.Equal(CreateUserQuery().WhereLessThanOrEqual("CreationDate", value).ToString(),
-                         CreateUserQuery().WhereLessThanOrEqual(x => x.CreationDate, value).ToString());
+            Assert.Equal(CreateUserQuery().WhereLessThanOrEqual("LastModified", value).ToString(),
+                         CreateUserQuery().WhereLessThanOrEqual(x => x.LastModified, value).ToString());
+        }
+
+        [Fact]
+        public void WhereEqualsOnMetadataKey ()
+        {
+            Assert.Equal(CreateUserQuery().WhereEquals("Kiss", "true").ToString(),
+                         CreateUserQuery().WhereEquals(x => x.Metadata["Kiss"], "true").ToString());
+        }
+
+        [Fact]
+        public void WhereEqualsOnMetadataOnKnownKey()
+        {
+            Assert.Equal(CreateUserQuery().WhereEquals("__fileName", "file.test").ToString(),
+                         CreateUserQuery().WhereEquals(x => x.Metadata["Name"], "file.test").ToString());
         }
 
     }

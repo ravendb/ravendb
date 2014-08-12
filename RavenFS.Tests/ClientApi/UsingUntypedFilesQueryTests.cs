@@ -21,7 +21,7 @@ namespace RavenFS.Tests.ClientApi
         {
             var q = CreateUserQuery().WhereEquals("Name", "file.test");
 
-            Assert.Equal("Name:file.test", q.ToString());
+            Assert.Equal("__fileName:file.test", q.ToString());
         }
 
         [Fact]
@@ -29,21 +29,21 @@ namespace RavenFS.Tests.ClientApi
         {
             var file = "file.test" + 1;
             var q = CreateUserQuery().WhereEquals("Name", file);
-            Assert.Equal("Name:file.test1", q.ToString());
+            Assert.Equal("__fileName:file.test1", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandSimpleContains()
         {
             var q = CreateUserQuery().WhereIn("Name", new[] { "file.test" });
-            Assert.Equal("@in<Name>:(file.test)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.test)", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandParamArrayContains()
         {
             var q = CreateUserQuery().WhereIn("Name", new[] { "file.csv", "file.txt" });
-            Assert.Equal("@in<Name>:(file.csv,file.txt)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv,file.txt)", q.ToString());
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace RavenFS.Tests.ClientApi
         {
             var array = new[] { "file.csv", "file.txt" };
             var q = CreateUserQuery().WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(file.csv,file.txt)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv,file.txt)", q.ToString());
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace RavenFS.Tests.ClientApi
         {
             var array = new[] { "file.csv" };
             var q = CreateUserQuery().WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(file.csv)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv)", q.ToString());
         }
 
         [Fact]
@@ -67,7 +67,7 @@ namespace RavenFS.Tests.ClientApi
         {
             var array = new string[0];
             var q = CreateUserQuery().WhereIn("Name", array);
-            Assert.Equal("@emptyIn<Name>:(no-results)", q.ToString());
+            Assert.Equal("@emptyIn<__fileName>:(no-results)", q.ToString());
         }
 
         [Fact]
@@ -75,14 +75,14 @@ namespace RavenFS.Tests.ClientApi
         {
             IEnumerable<string> list = new[] { "file.csv", "file.txt" };
             var q = CreateUserQuery().WhereIn("Name", list);
-            Assert.Equal("@in<Name>:(file.csv,file.txt)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv,file.txt)", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandSimpleContainsWithVariable()
         {
             var q = CreateUserQuery().WhereIn("Name", new[] { "file.test1" });
-            Assert.Equal("@in<Name>:(file.test1)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.test1)", q.ToString());
         }
 
         [Fact]
@@ -98,7 +98,7 @@ namespace RavenFS.Tests.ClientApi
             var q = CreateUserQuery().WhereEquals("Name", "file.test")
                                      .AndAlso()
                                      .WhereEquals("Extension", "test");
-            Assert.Equal("Name:file.test AND Extension:test", q.ToString());
+            Assert.Equal("__fileName:file.test AND Extension:test", q.ToString());
         }
 
         [Fact]
@@ -107,42 +107,42 @@ namespace RavenFS.Tests.ClientApi
             var q = CreateUserQuery().WhereEquals("Name", "file.test")
                                      .OrElse()
                                      .WhereEquals("Extension", "test");
-            Assert.Equal("Name:file.test OR Extension:test", q.ToString());
+            Assert.Equal("__fileName:file.test OR Extension:test", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandLessThan()
         {
-            var q = CreateUserQuery().WhereLessThan("CreationDate", new DateTime(2010, 05, 15));
-            Assert.Equal("CreationDate:{* TO 2010-05-15T00:00:00.0000000}", q.ToString());
+            var q = CreateUserQuery().WhereLessThan("LastModified", new DateTime(2010, 05, 15));
+            Assert.Equal("__modified:{* TO 2010-05-15T00:00:00.0000000}", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandEqualOnDate()
         {
-            var q = CreateUserQuery().WhereEquals("CreationDate", new DateTime(2010, 05, 15));
-            Assert.Equal("CreationDate:2010-05-15T00:00:00.0000000", q.ToString());
+            var q = CreateUserQuery().WhereEquals("LastModified", new DateTime(2010, 05, 15));
+            Assert.Equal("__modified:2010-05-15T00:00:00.0000000", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandLessThanOrEqual()
         {
-            var q = CreateUserQuery().WhereLessThanOrEqual("CreationDate", new DateTime(2010, 05, 15));
-            Assert.Equal("CreationDate:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
+            var q = CreateUserQuery().WhereLessThanOrEqual("LastModified", new DateTime(2010, 05, 15));
+            Assert.Equal("__modified:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandGreaterThan()
         {
-            var q = CreateUserQuery().WhereGreaterThan("CreationDate", new DateTime(2010, 05, 15));
-            Assert.Equal("CreationDate:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
+            var q = CreateUserQuery().WhereGreaterThan("LastModified", new DateTime(2010, 05, 15));
+            Assert.Equal("__modified:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandGreaterThanOrEqual()
         {
-            var q = CreateUserQuery().WhereGreaterThanOrEqual("CreationDate", new DateTime(2010, 05, 15));
-            Assert.Equal("CreationDate:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
+            var q = CreateUserQuery().WhereGreaterThanOrEqual("LastModified", new DateTime(2010, 05, 15));
+            Assert.Equal("__modified:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
         }
 
 
@@ -150,15 +150,15 @@ namespace RavenFS.Tests.ClientApi
         public void CanUnderstandSimpleEqualityOnInt()
         {
             var q = CreateUserQuery().WhereEquals("TotalSize", 3);
-            Assert.Equal("TotalSize:3", q.ToString());
+            Assert.Equal("__size_numeric:3", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandGreaterThanOnInt()
         {
             // should FilesQuery<T> understand how to generate range field names?
-            var q = CreateUserQuery().WhereGreaterThan("TotalSize_Range", 3);
-            Assert.Equal("TotalSize_Range:{Ix3 TO NULL}", q.ToString());
+            var q = CreateUserQuery().WhereGreaterThan("TotalSize", 3);
+            Assert.Equal("__size_numeric:{Ix3 TO NULL}", q.ToString());
         }
     }
 }

@@ -101,14 +101,14 @@ namespace Raven.Client.FileSystem
 
         public void WhereEquals(WhereParams whereParams)
         {
-            EnsureValidFieldName(whereParams);
+            var fieldName = EnsureValidFieldName(whereParams);
             var transformToEqualValue = TransformToEqualValue(whereParams);
-            lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
+            lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
 
             AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
             NegateIfNeeded();
 
-            queryText.Append(RavenQuery.EscapeField(whereParams.FieldName));
+            queryText.Append(RavenQuery.EscapeField(fieldName));
             queryText.Append(":");
             queryText.Append(transformToEqualValue);
         }
@@ -366,8 +366,23 @@ namespace Raven.Client.FileSystem
 
         private string EnsureValidFieldName(WhereParams whereParams)
         {
-            // For now we do not check if the field name is valid.
-            return whereParams.FieldName;
+            var term = whereParams.FieldName;
+            if (term.StartsWith("Metadata."))
+                term = term.Substring(9);
+
+            switch (term)
+            {
+                case "Name": return "__fileName";
+                case "TotalSize": return "__size_numeric";
+                case "LastModified": return "__modified";
+                case "CreationDate": return "__created";
+                case "Etag": return "__etag";
+                case "Path": return "__directory";
+                case "HumaneTotalSize": throw new NotSupportedException("Query over HumaneTotalSize is not supported, use TotalSize instead.");
+                case "OriginalMetadata": throw new NotSupportedException("Query over OriginalMetadata is not supported, use current Metadata instead.");
+            }
+
+            return term;
         }
 
         private bool UsesRangeType(object o)
@@ -395,8 +410,8 @@ namespace Raven.Client.FileSystem
                 return fieldName;
 
             var val = (start ?? end);
-            if (UsesRangeType(val) && !fieldName.EndsWith("_Range"))
-                fieldName = fieldName + "_Range";
+            if (UsesRangeType(val) && fieldName.EndsWith("_Range"))
+                fieldName = fieldName.Substring(0, fieldName.Length - 6);
             return fieldName;
         }
 
@@ -460,6 +475,21 @@ namespace Raven.Client.FileSystem
                                                 whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
                 return escaped;
+            }
+
+            var value = whereParams.Value as RavenJToken;
+            if (value != null)
+            {
+                var term = value.ToString(Formatting.None).Trim('"');
+
+                switch( value.Type )
+                {
+                    case JTokenType.Object:
+                    case JTokenType.Array:
+                        return "[[" + RavenQuery.Escape(term, false, false) + "]]";
+                    default:
+                        return RavenQuery.Escape(term, false, false);
+                }
             }
 
             throw new NotSupportedException();    
