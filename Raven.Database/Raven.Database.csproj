@@ -229,6 +229,7 @@
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Plugins\IServerStartupTask.cs" />
     <Compile Include="Plugins\Builtins\CustomFunctionsPutTrigger.cs" />
+    <Compile Include="Server\Abstractions\IResourceStore.cs" />
     <Compile Include="Server\Connections\HttpTracePushContent.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />

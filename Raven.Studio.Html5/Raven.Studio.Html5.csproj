@@ -129,7 +129,7 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\httpTraceClient.ts" />
+    <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
     <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
@@ -511,12 +511,16 @@
     <Content Include="App\views\userInfo.html" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewSystemDatabaseConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\trafficWatch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\watchTrafficConfigDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
+    <Content Include="App\views\trafficWatch.html" />
+    <Content Include="App\views\watchTrafficConfigDialog.html" />
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
