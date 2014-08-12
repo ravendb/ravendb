@@ -9,7 +9,6 @@ class saveDocumentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<bulkDocumentDto[]> {
-
         if (this.reportSaveProgress) {
             this.reportInfo("Saving " + this.id + "...");
         }

@@ -6,7 +6,6 @@ import onDemandLogsConfigureCommand = require("commands/onDemandLogsConfigureCom
 import database = require("models/database");
 import moment = require("moment");
 import appUrl = require("common/appUrl");
-import httpTraceClient = require("common/httpTraceClient");
 import changeSubscription = require('models/changeSubscription');
 import copyDocuments = require("viewmodels/copyDocuments");
 import fileDownloader = require("common/fileDownloader");
@@ -44,8 +43,6 @@ class logs extends viewModelBase {
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
     columnWidths: Array<KnockoutObservable<number>>;
     logsMode = ko.observable<string>("Regular");
-    logHttpTraceClient: httpTraceClient;
-    httpTraceSubscription: changeSubscription;
 
     constructor() {
         super();
@@ -325,35 +322,12 @@ class logs extends viewModelBase {
         this.logsMode("Regular");
         this.allLogs.removeAll();
         this.fetchLogs();
-        this.disposeHttpTraceClient();
         this.disposeOnDemandLogsClient();
-    }
-
-    switchToHttpTraceMode() {
-        var tracedDB = appUrl.getResource();
-        this.disposeOnDemandLogsClient();
-       /* this.logHttpTraceClient= new httpTraceClient(tracedDB.name!=="<system>"?tracedDB:null);
-        this.logHttpTraceClient.connectToChangesApiTask
-            .done(() => {
-                this.logsMode("Http Trace");
-                this.allLogs.removeAll();
-                this.httpTraceSubscription =
-                    this.logHttpTraceClient.watchLogs((e: logNotificationDto) => this.processHttpTraceMessage(e));
-            })
-            .fail((e) => {
-                if (!!e && !!e.status && e.status == 401) {
-                    app.showMessage("You do not have the sufficient permissions", "Http-Trace failed to start");
-                } else {
-                    app.showMessage("Could not open connection", "Http-Trace failed to start");
-                }
-            });*/
     }
 
     switchToCustomLogsMode() {
         this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
         this.allLogs.removeAll();
-        this.disposeHttpTraceClient();
-        
 
         var logConfig = new customLogConfig();
         logConfig.maxEntries(10000);
@@ -383,32 +357,7 @@ class logs extends viewModelBase {
 
     detached() {
         super.detached();
-        this.disposeHttpTraceClient();
         this.disposeOnDemandLogsClient();
-    }
-
-    processHttpTraceMessage(e: logNotificationDto) {
-        var logObject: logDto;
-        logObject = {
-            Exception: null,
-            Level: e.Level,
-            TimeStamp: e.TimeStamp,
-            LoggerName: e.LoggerName,
-            Message: !e.CustomInfo ? this.formatLogRecord(e) : e.CustomInfo
-        };
-        this.processLogResults([logObject], true);
-    }
-
-    disposeHttpTraceClient() {
-//        if (!!this.httpTraceSubscription) {
-//            this.httpTraceSubscription.off();
-//            this.httpTraceSubscription = null;
-//        }
-//
-//        if (!!this.logHttpTraceClient) {
-//            this.logHttpTraceClient.dispose();
-//            this.logHttpTraceClient = null;
-//        }
     }
 
     disposeOnDemandLogsClient() {
@@ -421,11 +370,6 @@ class logs extends viewModelBase {
         this.rawLogs([]);
         this.pendingLogs = [];
         $("#rawLogsContainer pre").empty();
-    }
-
-
-    formatLogRecord(logRecord: logNotificationDto) {
-        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.EllapsedMiliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
     }
     
     onLogMessage(entry: logDto) {

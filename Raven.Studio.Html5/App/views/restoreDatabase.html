@@ -1,50 +1,44 @@
-﻿<div class="panel panel-default">
-    <div class="panel-heading">
-        <h3 class="panel-title">Restore Database</h3>
-    </div>
-    <div class="panel-body">
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-info-sign"></div>
-                Restore a database.
-            </div>
-            <div class="panel-body">
-                <div>
-                    <label>
-                        <span>Backup Location</span>
-                        <input type="text" data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <span>Database Location</span>
-                        <input type="text" data-bind="value: databaseLocation">
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <span>Database Name</span>
-                        <input type="text" data-bind="value: databaseName">
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <span>Defrag</span>
-                        <input type="checkbox" data-bind="value: defrag">
-                    </label>
-                </div>
-            </div>
+﻿<form class="form-horizontal" role="form" data-bind="submit: startRestore">
+    <div class="panel panel-default">
+        <div class="panel-heading panel-info">
+            <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: isBusy">
+                <span class="glyphicon glyphicon-floppy-save"></span>
+                <span>Restore Database</span>
+            </button>
         </div>
-
-        <button class="btn btn-primary" data-bind="click: startRestore, disable: isBusy">
-            <span class="glyphicon glyphicon-floppy-save"></span>
-            <span>Restore Database</span>
-        </button>
-        
         <div class="panel-body">
-            <div data-bind="foreach: restoreStatusMessages">
-                <div data-bind="text: $data"></div>
+            <div class="form-group">
+                <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
+                <div class="col-sm-5">
+                    <input data-bind="value: backupLocation" type="text" required class="form-control" id="backupLocation" placeholder="C:\path-to-your-backup-folder">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="databaseLocation" class="col-sm-2 control-label">Database Location</label>
+                <div class="col-sm-5">
+                    <input data-bind="value: databaseLocation" type="text" required class="form-control" id="databaseLocation" placeholder="C:\path-to-your-restored-database-folder">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="databaseName" class="col-sm-2 control-label">Database Name</label>
+                <div class="col-sm-3">
+                    <input data-bind="value: databaseName, customValidity: nameCustomValidityError" type="text" required class="form-control" id="databaseName" placeholder="Restored database name" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-5">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" data-bind="checked: defrag"> Defrag
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group col-sm-7">
+                <div data-bind="foreach: restoreStatusMessages">
+                    <div data-bind="text: $data"></div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</form>

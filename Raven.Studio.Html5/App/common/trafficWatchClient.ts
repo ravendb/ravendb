@@ -11,7 +11,7 @@ import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand")
 import shell = require("viewmodels/shell");
 import changesApi = require("common/changesApi");
 
-class httpTraceClient {
+class trafficWatchClient {
     
     public connectionOpeningTask: JQueryDeferred<any>;
     public connectionClosingTask: JQueryDeferred<any>;
@@ -54,7 +54,7 @@ class httpTraceClient {
     private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/http-trace/websocket?' + connectionString);
+        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/traffic-watch/websocket?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -78,7 +78,7 @@ class httpTraceClient {
     private connectEventSource(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        this.eventSource = new EventSource(this.resourcePath + '/http-trace/events?' + connectionString);
+        this.eventSource = new EventSource(this.resourcePath + '/traffic-watch/events?' + connectionString);
 
         this.eventSource.onmessage = (e) => this.onMessage(e);
         this.eventSource.onerror = (e) => {
@@ -156,4 +156,4 @@ class httpTraceClient {
 
 }
 
-export = httpTraceClient;
+export = trafficWatchClient;

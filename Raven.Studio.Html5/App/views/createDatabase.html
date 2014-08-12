@@ -9,7 +9,7 @@
                 <div class="col-md-7">
                     <div class="form-group">
                         <label for="databaseName">Name</label>
-                        <input data-bind="value: databaseName, customValidity: nameCustomValidity, valueUpdate: 'afterkeydown', hasfocus: databaseNameFocus" type="text" class="form-control" id="databaseName" autocomplete="off" placeholder="Database Name">
+                        <input data-bind="value: databaseName, customValidity: nameCustomValidityError, valueUpdate: 'afterkeydown', hasfocus: databaseNameFocus" type="text" class="form-control" id="databaseName" autocomplete="off" placeholder="Database Name">
                     </div>
                     <div class="panel-group" id="accordion">
                         <div class="panel panel-default">
@@ -24,15 +24,23 @@
                                 <div class="panel-body">
                                     <div class="form-group">
                                         <label for="databasePath">Path</label>
-                                        <input data-bind="value: databasePath, customValidity: pathCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
+                                        <input data-bind="value: databasePath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseLogs">Logs</label>
-                                        <input data-bind="value: databaseLogsPath, customValidity: logsCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
+                                        <input data-bind="value: databaseLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseIndexes">Indexes</label>
-                                        <input data-bind="value: databaseIndexesPath, customValidity: indexesCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
+                                        <input data-bind="value: databaseIndexesPath, customValidity: indexesCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Databases/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="storageEngine">Storage Engine</label>
+                                        <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+                                            <option value="">Default</option>
+                                            <option value="esent">Esent</option>
+                                            <option value="voron">Voron</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>

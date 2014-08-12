@@ -9,8 +9,16 @@ import dialog = require("plugins/dialog");
 class dialogViewModelBase {
     static dialogSelector = ".messageBox";
     dialogSelectorName = "";
+    width = ko.observable<number>(600);
+    height = ko.observable<number>(500);
+    left: KnockoutComputed<number>;
+    top: KnockoutComputed<number>;
+    bodyHeight: KnockoutComputed<number>;
 
     constructor(private elementToFocusOnDismissal?: string) {
+        this.left = ko.computed<number>(() => -this.width() * 0.5);
+        this.top = ko.computed<number>(() => -this.height() * 0.5);
+        this.bodyHeight = ko.computed<number>(() => this.height() - 150);
     }
 
     attached() {
@@ -39,6 +47,50 @@ class dialogViewModelBase {
             acceptButton.click();
         }
         return true;
+    }
+
+    unregisterResizing(id:string) {
+        $(document).off("mousedown." + id);
+        $(document).off("mouseup." + id);
+        $(document).off("mousemove." + id);
+    }
+
+    registerResizing(id: string, resizerSelector = ".dialogResizer") {
+        var w = 0;
+        var h = 0;
+        var startX = 0;
+        var startY = 0;
+        var resizing = false;
+        $(document).on("mousedown." + id, resizerSelector, (e: any) => {
+            w = this.width();
+            h = this.height();
+            startX = e.pageX;
+            startY = e.pageY;
+            resizing = true;
+        });
+
+        $(document).on("mouseup." + id, "", (e: any) => {
+            resizing = false;
+        });
+
+        $(document).on("mousemove." + id, "", (e: any) => {
+            if (resizing) {
+                var targetWidth = w + 2*(e.pageX - startX);
+                var targetHeight = h + 2*(e.pageY - startY);
+
+                if (targetWidth < 600) targetWidth = 600;
+                if (targetHeight < 500) targetHeight = 500;
+
+                this.width(targetWidth);
+                this.height(targetHeight);
+
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+                return false;
+            }
+        });
     }
 }
 

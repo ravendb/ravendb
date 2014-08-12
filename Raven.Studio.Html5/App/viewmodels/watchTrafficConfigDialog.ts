@@ -87,6 +87,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     }
 
     confirmConfig() {
+        var tracedResource: resource;
         if ((!this.resourceName() || this.resourceName().trim() == "") && this.watchedResourceMode() == "SingleResourceView") {
             app.showMessage("Resource name should be chosen", "Validation Error");
             return;
@@ -95,14 +96,19 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
             app.showMessage("Resource name is not recognized", "Validation Error");
             return;
         }
-        var resourcePath = (!!this.resourceName() && this.resourceName().trim() != "") ? appUrl.forResourceQuery(this.allResources.first(x=> x.name == this.resourceName())) : "";
+        if (this.watchedResourceMode() == "SingleResourceView")
+            tracedResource = this.allResources.first(x => x.name == this.resourceName());
+
+        tracedResource = !!tracedResource ? tracedResource : appUrl.getSystemDatabase();
+        var resourcePath = appUrl.forResourceQuery(tracedResource);
         
-        var getTokenTask = new getSingleAuthTokenCommand(resourcePath, this.watchedResourceMode() == "AdminView").execute();
+        var getTokenTask = new getSingleAuthTokenCommand(tracedResource, this.watchedResourceMode() == "AdminView").execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 this.configurationTask.resolve({
-                    ResourceName: this.resourceName(),
+                    Resource: tracedResource,
+                    ResourceName: tracedResource.name,
                     ResourcePath: resourcePath,
                     MaxEntries: this.maxEntries(),
                     WatchedResourceMode: this.watchedResourceMode(),

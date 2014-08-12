@@ -54,6 +54,9 @@ namespace Raven.Database.Server.WebApi
         private bool initialized;
         private CancellationToken cancellationToken;
 
+        private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
+        private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
+
         public int NumberOfRequests
         {
             get { return Thread.VolatileRead(ref physicalRequestsCount); }
@@ -323,7 +326,6 @@ namespace Raven.Database.Server.WebApi
 
                 logHttpRequestStatsParam = new LogHttpRequestStatsParams(
                     sw,
-
                     GetHeaders(controller.InnerHeaders),
                     controller.InnerRequest.Method.Method,
                     response != null ? (int)response.StatusCode : 500,
@@ -353,7 +355,7 @@ namespace Raven.Database.Server.WebApi
 
             LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
 
-            TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
+            TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);
 
             RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
 
@@ -407,14 +409,20 @@ namespace Raven.Database.Server.WebApi
             if (HasAnyHttpTraceEventTransport() == false)
                 return;
 
+
+            
+
             NotifyTrafficWatch(
-                SystemTime.UtcNow,
-                logHttpRequestStatsParams.HttpMethod,
-                logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-                logHttpRequestStatsParams.ResponseStatusCode,
-                logHttpRequestStatsParams.RequestUri,
-                databaseName ?? "<system>",
-                logHttpRequestStatsParams.CustomInfo
+            new TrafficWatchNotification()
+            {
+                RequestUri = logHttpRequestStatsParams.RequestUri,
+                ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                CustomInfo = logHttpRequestStatsParams.CustomInfo,
+                HttpMethod = logHttpRequestStatsParams.HttpMethod,
+                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
+                TenantName = databaseName ?? "<system>",
+                TimeStamp = SystemTime.UtcNow
+            }
             );
         }
         private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
@@ -450,26 +458,16 @@ namespace Raven.Database.Server.WebApi
         {
             return serverHttpTrace.Count > 0 || resourceHttpTraces.Count > 0;
         }
-        private void NotifyTrafficWatch(DateTime timestamp, string httpMethod, long ellapsedMiliseconds, int responseStatusCode, string requestUri, string resourceName, string customInfo)
+        private void NotifyTrafficWatch(TrafficWatchNotification trafficWatchNotification)
         {
-            object notificationMessage = null;
+            object notificationMessage = new
+            {
+                Type = "LogNotification",
+                Value = trafficWatchNotification
+            };
 
             if (serverHttpTrace.Count > 0)
             {
-                notificationMessage = new
-                {
-                    Type = "LogNotification",
-                    Value = new TrafficWatchNotification()
-                    {
-                        RequestUri = requestUri,
-                        EllapsedMiliseconds = ellapsedMiliseconds,
-                        CustomInfo = customInfo,
-                        HttpMethod = httpMethod,
-                        ResponseStatusCode = responseStatusCode,
-                        TenantName = resourceName,
-                        TimeStamp = timestamp
-                    }
-                };
                 foreach (var eventsTransport in serverHttpTrace)
                 {
                     eventsTransport.SendAsync(notificationMessage);
@@ -480,32 +478,15 @@ namespace Raven.Database.Server.WebApi
             {
                 ConcurrentSet<IEventsTransport> resourceEventTransports;
 
-                if (!resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports) || resourceEventTransports.Count == 0)
+                if (!resourceHttpTraces.TryGetValue(trafficWatchNotification.TenantName, out resourceEventTransports) || resourceEventTransports.Count == 0)
                     return;
-
-                notificationMessage = notificationMessage ?? new
-                {
-                    Type = "LogNotification",
-                    Value = new TrafficWatchNotification()
-                    {
-                        RequestUri = requestUri,
-                        EllapsedMiliseconds = ellapsedMiliseconds,
-                        CustomInfo = customInfo,
-                        HttpMethod = httpMethod,
-                        ResponseStatusCode = responseStatusCode,
-                        TenantName = resourceName,
-                        TimeStamp = timestamp
-                    }
-                };
+                
                 foreach (var eventTransport in resourceEventTransports)
                 {
                     eventTransport.SendAsync(notificationMessage);
                 }
             }
         }
-
-        private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
-        private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
 
         public void RegisterServerHttpTraceTransport(IEventsTransport transport)
         {

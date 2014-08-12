@@ -15,6 +15,15 @@ interface dictionary<TValue> {
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
+
+interface replicationConflictNotificationDto {
+    ItemType: replicationConflictTypes;
+    Id: string;
+    Etag: string;
+    OperationType: replicationOperationTypes;
+    Conflicts: string[];
+}
+
 interface documentChangeNotificationDto {
     Type: documentChangeType;
     Id: string;
@@ -30,7 +39,7 @@ interface logNotificationDto {
     LoggerName :string;
     RequestId: number;
     HttpMethod: string;
-    EllapsedMiliseconds: number;
+    ElapsedMilliseconds: number;
     ResponseStatusCode: number;
     RequestUri: string;
     TenantName: string;
@@ -128,6 +137,11 @@ interface apiKeyDto extends documentDto {
 interface serverBuildVersionDto {
     ProductVersion: string;
     BuildVersion: string;
+}
+
+interface latestServerBuildVersionDto {
+    LatestBuild: string;
+    Exception: string;
 }
 
 interface clientBuildVersionDto {
@@ -421,6 +435,11 @@ interface bulkDocumentDto {
     Etag?: string; // Often is null on sending to server, non-null when returning from server.
     PatchResult?: any;
     Deleted?: any;
+}
+
+interface databaseDocumentSaveDto {
+    Key: string;
+    ETag: string
 }
 
 interface backupRequestDto {
@@ -753,6 +772,20 @@ interface collectionStats {
     Size: number;
 }
 
+enum replicationConflictTypes {
+    None = 0,
+
+    DocumentReplicationConflict = 1,
+    AttachmentReplicationConflict = 2,
+}
+
+enum replicationOperationTypes {
+    None = 0,
+
+    Put = 1,
+    Delete = 2,
+}
+
 enum documentChangeType {
     None = 0,
     Put = 1,
@@ -853,6 +886,7 @@ interface changesApiEventDto {
 interface databaseDto {
     Name: string;
     Disabled: boolean;
+    Bundles: string[];
 }
 
 interface customFunctionsDto {

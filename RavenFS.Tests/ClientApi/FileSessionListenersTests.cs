@@ -128,7 +128,7 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictResolved(anotherStore, 1, 1000);
+                var notificationTask = WaitForConflictResolved(anotherStore, 1, 10);
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
@@ -194,7 +194,7 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
-        public async void MultipleConflictListeners_OnlyOneWithResolution()
+        public async void MultipleConflictListeners_OnlyOneWithShortCircuitResolution()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -202,12 +202,11 @@ namespace RavenFS.Tests.ClientApi
             var conflictsListener = new TakeLocalConflictListener();
             var noOpListener = new NoOpConflictListener();
             anotherStore.Listeners.RegisterListener(conflictsListener);
-            anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(noOpListener);            
 
             using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
-
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
@@ -225,7 +224,7 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
-                Assert.Equal(1, noOpListener.DetectedCount);
+                Assert.Equal(0, noOpListener.DetectedCount);
                 Assert.Equal(1, noOpListener.ResolvedCount);
             }
         }
@@ -238,8 +237,8 @@ namespace RavenFS.Tests.ClientApi
 
             var conflictsListener = new TakeLocalConflictListener();
             var noOpListener = new NoOpConflictListener();
-            anotherStore.Listeners.RegisterListener(conflictsListener);
             anotherStore.Listeners.RegisterListener(noOpListener);
+            anotherStore.Listeners.RegisterListener(conflictsListener);            
 
             using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
@@ -274,11 +273,9 @@ namespace RavenFS.Tests.ClientApi
             var anotherStore = this.NewStore(2);
 
             var takeLocalConflictListener = new TakeLocalConflictListener();
-            var takeNewestConflictListener = new TakeNewestConflictsListener();
             var noOpListener = new NoOpConflictListener();
-            anotherStore.Listeners.RegisterListener(takeLocalConflictListener);
             anotherStore.Listeners.RegisterListener(noOpListener);
-            anotherStore.Listeners.RegisterListener(takeNewestConflictListener);
+            anotherStore.Listeners.RegisterListener(takeLocalConflictListener);
 
             using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
@@ -289,19 +286,18 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictDetected(anotherStore, 1, 30);
+                var notificationTask = WaitForConflictDetected(anotherStore, 1, 10);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 await notificationTask;
-                
-                Assert.Equal(1, takeLocalConflictListener.DetectedCount);
-                Assert.Equal(1, takeNewestConflictListener.DetectedCount);
+                               
                 Assert.Equal(1, noOpListener.DetectedCount);
+                Assert.Equal(1, takeLocalConflictListener.DetectedCount);
 
-                Assert.Equal(0, takeLocalConflictListener.ResolvedCount + takeNewestConflictListener.ResolvedCount + noOpListener.ResolvedCount);
+                Assert.Equal(0, takeLocalConflictListener.ResolvedCount + noOpListener.ResolvedCount);
 
                 // try to change content of file in destination2
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(140));

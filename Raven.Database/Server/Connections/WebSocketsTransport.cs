@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Connections
     public class WebSocketTransportFactory
     {
         public const string CHANGES_API_WEBSOCKET_SUFFIX = "/changes/websocket";
-        public const string WATCH_TRAFFIC_WEBSOCKET_SUFFIX = "/http-trace/websocket";
+        public const string WATCH_TRAFFIC_WEBSOCKET_SUFFIX = "/traffic-watch/websocket";
         public const string CUSTOM_LOGGING_WEBSOCKET_SUFFIX = "/admin/logs/events";
 
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)

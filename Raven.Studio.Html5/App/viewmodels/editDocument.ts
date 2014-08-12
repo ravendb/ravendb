@@ -342,7 +342,9 @@ class editDocument extends viewModelBase {
 
     editNewDocument() {
         this.isCreatingNewDocument(true);
-        this.document(document.empty());
+        var newDocument = document.empty();
+        newDocument["Name"] = "...";
+        this.document(newDocument);
     }
 
     failedToLoadDoc(docId, errorResponse) {

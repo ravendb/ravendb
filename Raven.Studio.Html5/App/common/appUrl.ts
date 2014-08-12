@@ -10,19 +10,34 @@ import messagePublisher = require("common/messagePublisher");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
+
+    static detectAppUrl() {
+        var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
+        var suffix = "studio/index.html";
+        console.log("ends2?");
+
+        if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
+            return path.substring(0, path.length - suffix.length - 1);
+        }
+        return "";
+    }
+
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
     
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
+        adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+
         databases: ko.computed(() => appUrl.forDatabases()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        upgrade: ko.computed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
@@ -90,11 +105,9 @@ class appUrl {
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
-
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
-
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
         var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
         return isThereAny;
@@ -124,7 +137,44 @@ class appUrl {
         return "#counterstorages/configuration?" + counterStroragePart;
     }
 
-    
+    static forUpgrade(db: database) {
+        return "#databases/upgrade?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forAdminSettings(): string {
+        return "#admin/settings";
+    }
+    static forApiKeys(): string {
+        return "#admin/settings/apiKeys";
+    }
+
+    static forWindowsAuth(): string {
+        return "#admin/settings/windowsAuth";
+    }
+
+    static forBackupDatabase(): string {
+        return "#admin/settings/backupDatabase";
+    }
+
+    static forRestoreDatabase(): string {
+        return "#admin/settings/restoreDatabase";
+    }
+
+    static forAdminLogs(): string {
+        return "#admin/settings/adminLogs";
+    }
+
+    static forTrafficWatch(): string {
+        return "#admin/settings/trafficWatch";
+    }
+
+    static forDebugInfo(): string {
+        return "#admin/settings/debugInfo";
+    }
+
+    static forStudioConfig(): string {
+        return "#admin/settings/studioConfig";
+    }
 
     static forDatabases(): string {
         return "#databases";
@@ -297,16 +347,6 @@ class appUrl {
         return url;
     }
 
-    static forApiKeys(): string {
-        // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
-    }
-
-    static forWindowsAuth(): string {
-        // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/windowsAuth?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
-    }
-
     static forDatabaseSettings(db: database): string {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
@@ -316,7 +356,7 @@ class appUrl {
     }
 
     static forPeriodicExport(db: database): string {
-        return "#databases/settings/periodicExports?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicExport?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {
@@ -449,16 +489,6 @@ class appUrl {
             return null;
         }
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName?format=excel&download=true&query=Tag:" + encodeURIComponent(collection.name);
-    }
-
-    static forBackupDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/backupDatabase?" + databasePart;
-    }
-
-    static forRestoreDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/restoreDatabase?" + databasePart;
     }
 
     static forToggleIndexing(db: database): string {
@@ -728,12 +758,16 @@ class appUrl {
             var fragment = instruction.fragment;
             var appUrls: computedAppUrls = appUrl.currentDbComputeds;
             var newLoationHref;
-            if (fragment.indexOf("filesystems/") == 0) {
+            if (fragment.indexOf("filesystems/") == 0) { //file systems section
                 newLoationHref = appUrls.filesystemsManagement();
             }
-            else if (fragment.indexOf("counterstorages/") == 0) {
+            else if (fragment.indexOf("counterstorages/") == 0) { //counter storages section
                 newLoationHref = appUrls.counterStorageManagement();
-            } else {
+            }
+            else if (fragment.indexOf("admin/settings") == 0) { //admin settings section
+                newLoationHref = appUrls.adminSettings();
+            }
+            else { // databases section
                 newLoationHref = appUrls.databasesManagement();
             }
             location.href = newLoationHref;

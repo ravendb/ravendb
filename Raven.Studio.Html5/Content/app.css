@@ -6952,6 +6952,9 @@ body {
   box-shadow: 0 0 5px 0 #106a8c;
 }
 #resources-page .resources-container .resource .fa-cogs {
+  color: grey;
+}
+#resources-page .resources-container .resource .fa-cogs:hover {
   color: black;
 }
 #resources-page .resources-container .resource:hover {
@@ -7002,6 +7005,14 @@ body {
   padding-left: 10px;
   text-align: left;
   color: black;
+}
+.nounderline {
+  text-decoration: none !important;
+}
+div.btn-group[data-toggle=buttons-radio] button.active {
+  background-color: #2F96B4;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 .document-collections li {
   outline: none;
@@ -7060,6 +7071,20 @@ body {
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
 }
+#watchTrafficContainer .logButtons {
+  margin-left: 0;
+}
+#watchTrafficContainer .form-group {
+  margin-left: 1%;
+}
+#watchTrafficContainer .selected .column {
+  background-color: #ffffcc;
+}
+#watchTrafficContainer .statsBar {
+  margin-top: 1%;
+  padding-left: 5%;
+  background-color: aliceblue;
+}
 #watchTrafficContainer .column {
   display: inline-block;
   cursor: pointer;
@@ -7072,26 +7097,19 @@ body {
   padding: 5px;
   height: 30px;
 }
-#watchTrafficContainer .selected .column {
-  background-color: #ffffcc;
-}
-#watchTrafficContainer .statsBar {
-  margin-top: 1%;
-  padding-left: 5%;
-  background-color: aliceblue;
-}
 #watchTrafficContainer #logTableContainer {
   max-height: 80vh;
   overflow-y: auto;
+  overflow-x: visible;
 }
 #watchTrafficContainer #logTableContainer .logHeaders {
-  max-width: 95vw;
-  width: 95vw;
+  max-width: 80vw;
+  width: 80vw;
 }
 #watchTrafficContainer #logTableContainer .logRecords {
   max-height: 60vh;
-  max-width: 95vw;
-  width: 95vw;
+  max-width: 80vw;
+  width: 80vw;
   overflow-y: auto;
 }
 #watchTrafficContainer #logTableContainer .logRecords-small {
@@ -7107,7 +7125,7 @@ body {
   border-style: dashed;
   border-width: thin;
   border-color: black;
-  width: 90vw;
+  width: 60vw;
   margin-left: 1%;
 }
 #logNotificationsContainer {
@@ -7790,7 +7808,7 @@ footer ul {
 #recentErrorsDialog .http-status {
   width: 100%;
 }
-#recentErrorsDialog .recentErrorsResizer {
+.dialogResizer {
   width: 20px;
   height: 20px;
   position: absolute;

@@ -1,6 +1,6 @@
 ﻿<section id="watchTrafficContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <div class="row">
-        <div class="row btn-group">
+    <div class="form-horizontal">
+        <div class="form-group logButtons btn-group">
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" data-bind="click:configureConnection">Configure Connection</button>
                 <button type="button" class="btn btn-success" data-bind="click:reconnect">Reconnect</button>
@@ -15,7 +15,7 @@
                 <button type="button" class="btn btn-default" data-bind="click:exportTraffic">Export</button>
             </div>
         </div>
-        <div class="row statsBar">
+        <div class="form-group statsBar">
             <strong class="col-sm-12">Stats:</strong>
             <div class="small col-sm-offset-1 col-sm-11" data-bind="with:logConfig">
                 <strong>Status: </strong><label data-bind="text:($root.isConnected()==true?'Connected':'Disconnected'), css:{'text-danger':$root.isConnected() == false, 'text-success':$root.isConnected()==true}"></label>
@@ -28,8 +28,8 @@
                 <strong>; Buffer Size: </strong><label data-bind="text:MaxEntries"></label>
             </div>
         </div>
-        <div id="logTableContainer">
-            <div class="logHeaders">
+        <div class="form-group" id="logTableContainer">
+            <div class="form-group logHeaders">
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
                     <span class="column-handle" column="0"></span>
                     <span>Time</span>
@@ -55,7 +55,7 @@
                     <span>Has Additional Data</span>
                 </div>
             </div>
-            <div id="logRecords" class="logRecords" style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
+            <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
                 <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="'selected': $data === $parent.selectedLog()">
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: TimeStampText, attr: {title:Time}"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Duration, attr: { title: Duration }"></div>
@@ -65,7 +65,7 @@
                     <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: !!CustomInfo?'Y':'N'"></div>
                 </div>
             </div>
-            <div class="log-details panel panel-default" data-bind="visible:showLogDetails">
+            <div class="form-group log-details panel panel-default" data-bind="visible:showLogDetails">
                 <div class="col-md-10">
                     <div class="row">
                         <label class="col-md-2 text-right control-label">Time</label>

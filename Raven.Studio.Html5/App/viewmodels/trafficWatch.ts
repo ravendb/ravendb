@@ -1,14 +1,15 @@
 ﻿import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/watchTrafficConfigDialog");
-import httpTraceClient = require("common/httpTraceClient");
+import trafficWatchClient = require("common/trafficWatchClient");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
+import resource = require("models/resource");
 
-class watchTraffic extends viewModelBase {
-    logConfig = ko.observable<{ ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
-    traceClient: httpTraceClient;
+class trafficWatch extends viewModelBase {
+    logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
+    watchClient: trafficWatchClient;
     isConnected = ko.observable(false);
     recentEntries = ko.observableArray<any>([]);
     now = ko.observable<Moment>();
@@ -104,7 +105,7 @@ class watchTraffic extends viewModelBase {
     }
 
     reconnect() {
-        if (!this.traceClient) {
+        if (!this.watchClient) {
             if (!this.logConfig) {
                 app.showMessage("Cannot reconnect, please configure connection properly", "Connection Error");
                 return;
@@ -120,7 +121,7 @@ class watchTraffic extends viewModelBase {
     }
 
     connect() {
-        if (!!this.traceClient) {
+        if (!!this.watchClient) {
             this.reconnect();
             return;
         }
@@ -132,7 +133,7 @@ class watchTraffic extends viewModelBase {
         var tokenDeferred = $.Deferred();
 
         if (!this.logConfig().SingleAuthToken) {
-            new getSingleAuthTokenCommand(this.logConfig().ResourcePath, this.logConfig().WatchedResourceMode == "AdminView")
+            new getSingleAuthTokenCommand(this.logConfig().Resource, this.logConfig().WatchedResourceMode == "AdminView")
                 .execute()
                 .done((tokenObject: singleAuthToken) => {
                     this.logConfig().SingleAuthToken = tokenObject;
@@ -146,11 +147,11 @@ class watchTraffic extends viewModelBase {
         }
 
         tokenDeferred.done(() => {
-            this.traceClient = new httpTraceClient(this.logConfig().ResourcePath, this.logConfig().SingleAuthToken.Token);
-            this.traceClient.connect();
-            this.traceClient.connectionOpeningTask.done(() => {
+            this.watchClient = new trafficWatchClient(this.logConfig().ResourcePath, this.logConfig().SingleAuthToken.Token);
+            this.watchClient.connect();
+            this.watchClient.connectionOpeningTask.done(() => {
                 this.isConnected(true);
-                this.traceClient.watchTraffic((event: logNotificationDto) => {
+                this.watchClient.watchTraffic((event: logNotificationDto) => {
                     this.processHttpTraceMessage(event);
                 });
                 if (!this.startTraceTime()) {
@@ -164,10 +165,10 @@ class watchTraffic extends viewModelBase {
     }
     
     disconnect(): JQueryPromise<any> {
-        if (!!this.traceClient) {
-            this.traceClient.disconnect();
-            return this.traceClient.connectionClosingTask.done(() => {
-                this.traceClient = null;
+        if (!!this.watchClient) {
+            this.watchClient.disconnect();
+            return this.watchClient.connectionClosingTask.done(() => {
+                this.watchClient = null;
                 this.isConnected(false);
             });
         } else {
@@ -176,11 +177,17 @@ class watchTraffic extends viewModelBase {
         }
     }
 
+    deactivate() {
+        super.deactivate();
+        if (this.isConnected()==true)
+            this.disconnect();
+    }
+
     processHttpTraceMessage(e: logNotificationDto) {
         var logObject;
         logObject = {
             Time: this.createHumanReadableTime(e.TimeStamp, false, true),
-            Duration: e.EllapsedMiliseconds,
+            Duration: e.ElapsedMilliseconds,
             Resource: e.TenantName,
             Method: e.HttpMethod,
             Url: e.RequestUri,
@@ -197,10 +204,10 @@ class watchTraffic extends viewModelBase {
         }
 
         this.watchedRequests(this.watchedRequests() + 1);
-        this.summedRequestsDuration += e.EllapsedMiliseconds;
+        this.summedRequestsDuration += e.ElapsedMilliseconds;
         this.averageRequestDuration((this.summedRequestsDuration / this.watchedRequests()).toFixed(2));
-        this.minRequestDuration(this.minRequestDuration() > e.EllapsedMiliseconds ? e.EllapsedMiliseconds : this.minRequestDuration());
-        this.maxRequestDuration(this.maxRequestDuration() < e.EllapsedMiliseconds ? e.EllapsedMiliseconds : this.maxRequestDuration());
+        this.minRequestDuration(this.minRequestDuration() > e.ElapsedMilliseconds ? e.ElapsedMilliseconds : this.minRequestDuration());
+        this.maxRequestDuration(this.maxRequestDuration() < e.ElapsedMilliseconds ? e.ElapsedMilliseconds : this.maxRequestDuration());
     }
 
 
@@ -240,7 +247,7 @@ class watchTraffic extends viewModelBase {
 }
 
     formatLogRecord(logRecord: logNotificationDto) {
-        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.EllapsedMiliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
+        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.ElapsedMilliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
     }
 
     resetStats() {
@@ -268,4 +275,4 @@ class watchTraffic extends viewModelBase {
     }
 }
 
-export =watchTraffic;
+export =trafficWatch;

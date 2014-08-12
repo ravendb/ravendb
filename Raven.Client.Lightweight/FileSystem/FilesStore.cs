@@ -70,20 +70,10 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filesystem))
                 filesystem = this.DefaultFileSystem;
 
-            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x, null) );
+            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x) );
         }
 
-        internal IFilesChanges Changes(string filesystem, IObserver<ConflictNotification> notificationObserver)
-        {
-            AssertInitialized();
-
-            if (string.IsNullOrWhiteSpace(filesystem))
-                filesystem = this.DefaultFileSystem;
-
-            return fileSystemChanges.GetOrAdd(filesystem, x => CreateFileSystemChanges(x, notificationObserver));
-        }
-
-        protected virtual IFilesChanges CreateFileSystemChanges(string filesystem, IObserver<ConflictNotification> notificationObserver)
+        protected virtual IFilesChanges CreateFileSystemChanges(string filesystem)
         {
             if (string.IsNullOrEmpty(Url))
                 throw new InvalidOperationException("Changes API requires usage of server/client");
@@ -100,19 +90,12 @@ namespace Raven.Client.FileSystem
                     jsonRequestFactory,
                     Conventions,
                     commands.ReplicationInformer,
+                    ((AsyncFilesServerClient) this.AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
                     () =>
                     {
                         fileSystemChanges.Remove(filesystem);
                         fileSystemCommands.Remove(filesystem);
                     });
-
-                // We add a priority observer to dispatch listeners before making a notification. This solves a race condition between notifications and listeners
-                // introducing an artificial barrier. The order of execution is: Listeners, Notifications.
-                if ( notificationObserver != null )
-                {
-                    var changesImpl = (IFilesChangesImpl)client;
-                    changesImpl.AddObserver(notificationObserver);
-                }
 
                 return client;
             }
@@ -244,7 +227,7 @@ namespace Raven.Client.FileSystem
         {
             asyncFilesCommandsGenerator = () =>
             {
-                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId);
+                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, this.Listeners.ConflictListeners);
             };
         }
 

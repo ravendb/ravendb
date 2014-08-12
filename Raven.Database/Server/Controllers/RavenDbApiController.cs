@@ -34,7 +34,7 @@ namespace Raven.Database.Server.Controllers
 		public string DatabaseName { get; private set; }
 
 		private string queryFromPostRequest;
-
+		
 		public void SetPostRequestQuery(string query)
 		{
 			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
@@ -51,7 +51,17 @@ namespace Raven.Database.Server.Controllers
 				{
                     RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
-				}, httpException => GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable));
+				}, httpException =>
+				{
+				    var response = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
+
+				    var timeout = httpException.InnerException as TimeoutException;
+                    if (timeout != null)
+                    {
+                        response.Headers.Add("Raven-Database-Load-In-Progress", DatabaseName);
+                    }
+				    return response;
+				});
 			}
 
 			RequestManager.AddAccessControlHeaders(this, result);
@@ -506,7 +516,7 @@ namespace Raven.Database.Server.Controllers
                         var msg = "The database " + tenantId +
                                   " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
                         Logger.Warn(msg);
-                        throw new HttpException(503, msg);
+                        throw new TimeoutException(msg);
                     }
                     var args = new BeforeRequestWebApiEventArgs()
                     {

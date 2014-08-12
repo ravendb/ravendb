@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Controllers
     public abstract class RavenBaseApiController : ApiController
 	{
 		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
-
+        
 		private HttpRequestMessage request;
 
 		public HttpRequestMessage InnerRequest
@@ -445,9 +445,14 @@ namespace Raven.Database.Server.Controllers
 			var filePath = Path.Combine(ravenPath, docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
-			filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
+			filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio.Html5/", docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
+
+            filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
+
 
 			if (string.IsNullOrEmpty(zipPath) == false)
 			{

@@ -131,7 +131,7 @@ namespace Raven.Abstractions.Data
         public DateTime TimeStamp { get; set; }
         public int RequestId { get; set; }
         public string HttpMethod { get; set; }
-        public long EllapsedMiliseconds { get; set; }
+        public long ElapsedMilliseconds { get; set; }
         public int ResponseStatusCode { get; set; }
         public string RequestUri { get; set; }
         public string AbsoluteUri { get; set; }

@@ -58,7 +58,7 @@ class onDemandLogs {
     }
 
     private connect(action: Function) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath,true).execute();
+        var getTokenTask = new getSingleAuthTokenCommand(this.db, true).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
