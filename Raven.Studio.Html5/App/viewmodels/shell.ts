@@ -11,7 +11,7 @@ import resource = require("models/resource");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import document = require("models/document");
+import documentClass = require("models/document");
 import collection = require("models/collection");
 import uploadItem = require("models/uploadItem");
 import changeSubscription = require("models/changeSubscription");
@@ -46,6 +46,7 @@ import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
 import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
+import serverBuildReminder = require("common/serverBuildReminder");
 
 class shell extends viewModelBase {
     private router = router;
@@ -496,7 +497,7 @@ class shell extends viewModelBase {
     fetchStudioConfig() {
         new getDocumentWithMetadataCommand("Raven/StudioConfig", this.systemDatabase)
             .execute()
-            .done((doc: document) => {
+            .done((doc: documentClass) => {
                 appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             });
     }
@@ -721,19 +722,7 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
-                var lastBuildCheck = localStorage.getObject("LastServerBuildCheck");
-                var timestamp = Date.parse(lastBuildCheck);
-                var difference = 0;
-
-                if (!isNaN(timestamp)) {
-                    var lastBuildCheckMoment = moment(lastBuildCheck);
-                    var currentDateMoment = moment(new Date());
-                    difference = currentDateMoment.diff(lastBuildCheckMoment, 'days');
-                }
-
-                if (isNaN(timestamp) || difference > 7) { //more than a week
-                    localStorage.removeItem("LastServerBuildCheck");
-
+                if (serverBuildReminder.isReminderNeeded()) {
                     var currentBuildVersion = serverBuildResult.BuildVersion;
                     var stableOnly = true;
                     if (currentBuildVersion.indexOf("Unstable") > -1) {

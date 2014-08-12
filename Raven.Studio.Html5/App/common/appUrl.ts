@@ -739,7 +739,7 @@ class appUrl {
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
     }
-
+    
     private static getEncodedFsPart(fs?: filesystem) {
         return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
     }
@@ -754,7 +754,7 @@ class appUrl {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
             messagePublisher.reportError("Invalid route!", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
-
+            
             var fragment = instruction.fragment;
             var appUrls: computedAppUrls = appUrl.currentDbComputeds;
             var newLoationHref;
