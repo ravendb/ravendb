@@ -842,11 +842,10 @@ namespace Raven.SlowTests.Issues
                 }
 
                 Assert.Equal(2000, allAttachments.Count());
-
-                IOExtensions.DeleteDirectory(backupPath);
             }
             finally
             {
+                IOExtensions.DeleteDirectory(backupPath);
                 forwarder.Dispose();
                 server.Dispose();
             }
