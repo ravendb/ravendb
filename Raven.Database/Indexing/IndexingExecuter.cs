@@ -228,7 +228,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-				Log.WarnException("Failed to index " + batchForIndex.IndexId, e);
+				Log.WarnException("Failed to index " + batchForIndex.Index.PublicName, e);
 			}
 			finally
 			{
@@ -237,7 +237,7 @@ namespace Raven.Database.Indexing
 					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
 							  batchForIndex.Batch.Docs.Count,
 							  lastEtag,
-							  batchForIndex.IndexId);
+							  batchForIndex.Index.PublicName);
 				}
 
 				transactionalStorage.Batch(actions =>
