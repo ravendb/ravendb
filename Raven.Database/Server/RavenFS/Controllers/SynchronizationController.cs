@@ -229,10 +229,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
         private void AssertConflictDetection(string fileName, RavenJObject localMetadata, RavenJObject sourceMetadata, ServerInfo sourceServer, out bool isConflictResolved)
 		{
 			var conflict = ConflictDetector.Check(fileName, localMetadata, sourceMetadata, sourceServer.FileSystemUrl);
-			isConflictResolved = ConflictResolver.IsResolved(localMetadata, conflict);
+			isConflictResolved = ConflictResolver.CheckIfMetadataContainsResolution(localMetadata, conflict);
 
 			if (conflict != null && !isConflictResolved)
 			{
+				if (ConflictResolver.TryResolveConflict(fileName, conflict, localMetadata, sourceMetadata))
+					return;
+
 				ConflictArtifactManager.Create(fileName, conflict);
 
                 Publisher.Publish(new ConflictNotification
@@ -609,18 +612,54 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Log.Debug("Resolving conflict of a file '{0}' by using {1} strategy", fileName, strategy);
 
-			if (strategy == ConflictResolutionStrategy.CurrentVersion)
+			switch (strategy)
 			{
-				StrategyAsGetCurrent(fileName);
+				case ConflictResolutionStrategy.CurrentVersion:
+
+					Storage.Batch(accessor =>
+					{
+						var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
+						var conflict = accessor.GetConfigurationValue<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile(fileName));
+
+						ConflictResolver.ApplyCurrentStrategy(fileName, conflict, localMetadata);
+
+						accessor.UpdateFileMetadata(fileName, localMetadata);
+
+						ConflictArtifactManager.Delete(fileName, accessor);
+					});
+
+					Publisher.Publish(new ConflictNotification
+					{
+						FileName = fileName,
+						Status = ConflictStatus.Resolved
+					});
+
+					break;
+				case ConflictResolutionStrategy.RemoteVersion:
+
+					Storage.Batch(accessor =>
+					{
+						var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
+						var conflict = accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)).JsonDeserialization<ConflictItem>();
+
+						ConflictResolver.ApplyRemoteStrategy(fileName, conflict, localMetadata);
+
+						accessor.UpdateFileMetadata(fileName, localMetadata);
+
+						// ConflictArtifactManager.Delete(fileName, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
+					});
+
+					Publisher.Publish(new ConflictNotification
+					{
+						FileName = fileName,
+						Status = ConflictStatus.Resolved
+					});
+
+					Task.Run(() => SynchronizationTask.SynchronizeDestinationsAsync(true));
+					break;
+				default:
+					throw new NotSupportedException(string.Format("{0} is not the valid strategy to resolve a conflict", strategy));
 			}
-            else if (strategy == ConflictResolutionStrategy.RemoteVersion)
-			{
-				StrategyAsGetRemote(fileName);
-			}
-            else
-            {
-                throw new NotSupportedException("NoOperation conflict resolution strategy, is not supported.");
-            }
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -740,57 +779,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Action = action,
 				Direction = SynchronizationDirection.Incoming
 			});
-		}
-
-		private void StrategyAsGetCurrent(string fileName)
-		{
-			Storage.Batch(accessor =>
-			{
-                var conflict = accessor.GetConfigurationValue<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile(fileName));
-
-                var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
-                var localHistory = Historian.DeserializeHistory(localMetadata);
-
-                // incorporate remote version history into local
-                foreach (var remoteHistoryItem in conflict.RemoteHistory.Where(remoteHistoryItem => !localHistory.Contains(remoteHistoryItem)))
-                {
-                    localHistory.Add(remoteHistoryItem);
-                }
-
-                localMetadata[SynchronizationConstants.RavenSynchronizationHistory] = Historian.SerializeHistory(localHistory);
-
-                accessor.UpdateFileMetadata(fileName, localMetadata);
-
-                ConflictArtifactManager.Delete(fileName, accessor);
-                Publisher.Publish(new ConflictNotification 
-                { 
-                    FileName = fileName,
-                    Status = ConflictStatus.Resolved
-                });
-			});
-		}
-
-		private void StrategyAsGetRemote(string fileName)
-		{
-			Storage.Batch(
-				accessor =>
-				{
-					var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
-					var conflictConfigName = RavenFileNameHelper.ConflictConfigNameForFile(fileName);
-                    var conflictItem = accessor.GetConfig(conflictConfigName).JsonDeserialization<ConflictItem>();
-
-					var conflictResolution = new ConflictResolution
-						                        {
-							                        Strategy = ConflictResolutionStrategy.RemoteVersion,
-							                        RemoteServerId = conflictItem.RemoteHistory.Last().ServerId,
-							                        Version = conflictItem.RemoteHistory.Last().Version,
-						                        };
-
-					localMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] = JsonExtensions.ToJObject(conflictResolution);
-					accessor.UpdateFileMetadata(fileName, localMetadata); 
-				});
-
-            Task.Run(() => SynchronizationTask.SynchronizeDestinationsAsync(true));
 		}
 
 		private FileStatus CheckSynchronizedFileStatus(Tuple<string, Guid> fileInfo)

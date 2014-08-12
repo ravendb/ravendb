@@ -39,7 +39,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			};
 
 			conflictDetector = new ConflictDetector();
-			conflictResolver = new ConflictResolver();
+			conflictResolver = new ConflictResolver(null, null); //TODO arek
 		}
 
 		protected ITransactionalStorage Storage { get; private set; }
@@ -81,7 +81,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                                                             RavenJObject destinationMetadata, string localServerUrl)
 		{
             var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
-            var isConflictResolved = conflictResolver.IsResolved(destinationMetadata, conflict);
+            var isConflictResolved = conflictResolver.CheckIfMetadataContainsResolution(destinationMetadata, conflict);
 
             // optimization - conflict checking on source side before any changes pushed
             if (conflict != null && !isConflictResolved)
