@@ -16,6 +16,7 @@ using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server.Tenancy;
@@ -162,6 +163,37 @@ namespace Raven.Database.Util
                 jsonSerializer.Serialize(streamWriter, GetTasksForDebug(database));
                 streamWriter.Flush();
             }
+
+			var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", compressionLevel);
+
+			using (var systemUtilizationStream = systemUtilization.Open())
+			using (var streamWriter = new StreamWriter(systemUtilizationStream))
+			{
+				var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
+
+				long totalPhysicalMemory = -1;
+				long availableMemory = -1;
+				float currentCpuUsage = -1;
+
+				try
+				{
+					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
+					availableMemory = MemoryStatistics.AvailableMemory;
+					currentCpuUsage = cpuCounter.NextValue();
+				}
+				catch (Exception)
+				{
+				}
+
+				jsonSerializer.Serialize(streamWriter, new
+				{
+					TotalPhysicalMemory = string.Format("{0:#,#.##;;0} MB", totalPhysicalMemory),
+					AvailableMemory = string.Format("{0:#,#.##;;0} MB", availableMemory),
+					CurrentCpuUsage = string.Format("{0} %", currentCpuUsage)
+				});
+
+				streamWriter.Flush();
+			}
         }
 
         internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
