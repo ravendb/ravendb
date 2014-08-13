@@ -385,6 +385,11 @@ namespace Voron.Impl
 				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
 			}
 
+			foreach (var pageFromScratch in _unusedScratchPages)
+			{
+				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
+			}
+
 			RolledBack = true;
 		}
 
