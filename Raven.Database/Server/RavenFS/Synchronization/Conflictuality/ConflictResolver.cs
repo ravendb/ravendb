@@ -45,14 +45,14 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 				switch (config.FileConflictResolution)
 				{
 					case StraightforwardConflictResolution.ResolveToLocal:
-					//	withConfiguredResolvers.Add(LocalDocumentReplicationConflictResolver.Instance);
-					//	break;
-					//case StraightforwardConflictResolution.ResolveToRemote:
-					//	withConfiguredResolvers.Add(RemoteDocumentReplicationConflictResolver.Instance);
-					//	break;
-					//case StraightforwardConflictResolution.ResolveToLatest:
-					//	withConfiguredResolvers.Add(LatestDocumentReplicationConflictResolver.Instance);
-					//	break;
+						withConfiguredResolvers.Add(LocalFileSynchronizationConflictResolver.Instance);
+						break;
+					case StraightforwardConflictResolution.ResolveToRemote:
+						withConfiguredResolvers.Add(RemoveFileSynchronizationConflictResolver.Instance);
+						break;
+					case StraightforwardConflictResolution.ResolveToLatest:
+						withConfiguredResolvers.Add(LatestFileSynchronizationConflictResolver.Instance);
+						break;
 					default:
 						throw new ArgumentOutOfRangeException("config.FileConflictResolution");
 				}
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 				storage.Batch(
 					accessor =>
 					{
-						if (accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationDestinations) == false)
+						if (accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationConfig) == false)
 							return;
 
 						configDoc = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationConfig).JsonDeserialization<SynchronizationConfig>();
@@ -85,12 +85,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 			}
 		}
 
-		public bool TryResolveConflict(string fileName, ConflictItem conflict, RavenJObject localMetadata, RavenJObject remoteMetadata)
+		public bool TryResolveConflict(string fileName, ConflictItem conflict, RavenJObject localMetadata, RavenJObject remoteMetadata, out ConflictResolutionStrategy strategy)
 		{
 			foreach (var resolver in Resolvers)
 			{
-				ConflictResolutionStrategy strategy;
-
 				if (resolver.TryResolve(fileName, localMetadata, remoteMetadata, out strategy) == false)
 					continue;
 
@@ -105,10 +103,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 				}
 			}
 
+			strategy = ConflictResolutionStrategy.NoResolution;
 			return false;
 		}
 
-		public bool CheckIfMetadataContainsResolution(RavenJObject destinationMetadata, ConflictItem conflict)
+		public bool CheckIfResolvedByRemoteStrategy(RavenJObject destinationMetadata, ConflictItem conflict)
 		{
 			var conflictResolutionMetadata = destinationMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] as RavenJObject;
 			if (conflictResolutionMetadata == null)

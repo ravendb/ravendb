@@ -81,7 +81,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                                                             RavenJObject destinationMetadata, string localServerUrl)
 		{
             var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
-            var isConflictResolved = conflictResolver.CheckIfMetadataContainsResolution(destinationMetadata, conflict);
+            var isConflictResolved = conflictResolver.CheckIfResolvedByRemoteStrategy(destinationMetadata, conflict);
 
             // optimization - conflict checking on source side before any changes pushed
             if (conflict != null && !isConflictResolved)

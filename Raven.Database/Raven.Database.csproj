@@ -233,7 +233,11 @@
     <Compile Include="Server\Connections\LogPushContent.cs" />
     <Compile Include="Server\Connections\OnDemandLogConnectionState.cs" />
     <Compile Include="Server\Connections\OnDemandLogTarget.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\AbstractFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
     <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
