@@ -199,8 +199,9 @@ namespace Raven.Database.Bundles.SqlReplication
             // first, delete all the rows that might already exist there
             foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
             {
-                var commands = DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
-                    identifiers,true);
+                var commands = new List<DbCommand>();
+                DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
+                    identifiers, commands.Add);
                 yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
 
             }
@@ -210,13 +211,14 @@ namespace Raven.Database.Bundles.SqlReplication
                 List<ItemToReplicate> dataForTable;
                 if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
                     continue;
-
-                var commands = InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, true);
+                var commands = new List<DbCommand>();
+                InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, commands.Add);
 
                 yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
             }
 
             Rollback();
+
         }
 
 		public bool Commit()
@@ -231,7 +233,7 @@ namespace Raven.Database.Bundles.SqlReplication
             return true;
         }
 
-        private IEnumerable<DbCommand> InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, bool exportCommands = false)
+        private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand>commandCallback =null)
 		{
 
             var sqlReplicationMetricsCounters = database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
@@ -295,9 +297,9 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					cmd.CommandText = sb.ToString();
 
-				    if (exportCommands)
+                    if (commandCallback!= null)
 				    {
-				        yield return cmd;
+                        commandCallback(cmd);
 				    }
 				    try
 				    {
@@ -327,7 +329,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 
 
-	    public IEnumerable<DbCommand> DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, bool exportCommands=false)
+        public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, Action<DbCommand> commandCallback = null)
 		{
 			const int maxParams = 1000;
             var sqlReplicationMetricsCounters = database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
@@ -379,9 +381,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				    }
 					cmd.CommandText = sb.ToString();
 
-				    if (exportCommands)
+                    if (commandCallback != null)
 				    {
-				        yield return cmd;
+                        commandCallback(cmd);
 				    }
 
 				    try
