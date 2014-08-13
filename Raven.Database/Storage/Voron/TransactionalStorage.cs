@@ -322,7 +322,11 @@ namespace Raven.Storage.Voron
 				UsedDataFileSizeInBytes = stats.UsedDataFileSizeInBytes,
 				AllocatedDataFileSizeInBytes = stats.AllocatedDataFileSizeInBytes,
 				NextWriteTransactionId = stats.NextWriteTransactionId,
-				ActiveTransactions = stats.ActiveTransactions
+				ActiveTransactions = stats.ActiveTransactions.Select(x => new VoronActiveTransaction
+				{
+					Id = x.Id,
+					Flags = x.Flags.ToString()
+				}).ToList()
 			};
 		}
 
