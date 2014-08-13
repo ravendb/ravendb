@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
-	public class VoronStorageStats : StorageStats
+	public class VoronStorageStats
 	{
 		public long FreePagesOverhead;
 		public long RootPages;
