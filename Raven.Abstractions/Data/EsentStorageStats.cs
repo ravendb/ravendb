@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Abstractions.Data
 {
-	public class EsentStorageStats : StorageStats
+	public class EsentStorageStats
 	{
 
 	}

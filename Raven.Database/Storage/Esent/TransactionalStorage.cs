@@ -257,7 +257,10 @@ namespace Raven.Storage.Esent
 
 	    public StorageStats GetStorageStats()
 	    {
-		    return new EsentStorageStats();
+		    return new StorageStats()
+		    {
+			    EsentStats = new EsentStorageStats()
+		    };
 	    }
 
         public string FriendlyName

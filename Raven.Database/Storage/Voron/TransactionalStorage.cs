@@ -314,19 +314,22 @@ namespace Raven.Storage.Voron
 		{
 			var stats = tableStorage.Environment.Stats();
 
-			return new VoronStorageStats()
+			return new StorageStats()
 			{
-				FreePagesOverhead = stats.FreePagesOverhead,
-				RootPages = stats.RootPages,
-				UnallocatedPagesAtEndOfFile = stats.UnallocatedPagesAtEndOfFile,
-				UsedDataFileSizeInBytes = stats.UsedDataFileSizeInBytes,
-				AllocatedDataFileSizeInBytes = stats.AllocatedDataFileSizeInBytes,
-				NextWriteTransactionId = stats.NextWriteTransactionId,
-				ActiveTransactions = stats.ActiveTransactions.Select(x => new VoronActiveTransaction
+				VoronStats = new VoronStorageStats()
 				{
-					Id = x.Id,
-					Flags = x.Flags.ToString()
-				}).ToList()
+					FreePagesOverhead = stats.FreePagesOverhead,
+					RootPages = stats.RootPages,
+					UnallocatedPagesAtEndOfFile = stats.UnallocatedPagesAtEndOfFile,
+					UsedDataFileSizeInBytes = stats.UsedDataFileSizeInBytes,
+					AllocatedDataFileSizeInBytes = stats.AllocatedDataFileSizeInBytes,
+					NextWriteTransactionId = stats.NextWriteTransactionId,
+					ActiveTransactions = stats.ActiveTransactions.Select(x => new VoronActiveTransaction
+					{
+						Id = x.Id,
+						Flags = x.Flags.ToString()
+					}).ToList()
+				}
 			};
 		}
 

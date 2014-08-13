@@ -7,5 +7,7 @@ namespace Raven.Abstractions.Data
 {
 	public class StorageStats
 	{
+		public VoronStorageStats VoronStats { get; set; }
+		public EsentStorageStats EsentStats { get; set; }
 	}
 }
