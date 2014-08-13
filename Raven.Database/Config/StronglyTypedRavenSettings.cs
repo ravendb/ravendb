@@ -182,6 +182,8 @@ namespace Raven.Database.Config
             Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 			Voron.MaxScratchBufferSize = new IntegerSetting(settings["Raven/Voron/MaxScratchBufferSize"], 512);
+			Voron.AllowIncrementalBackups = new BooleanSetting(settings["Raven/Voron/AllowIncrementalBackups"], false);
+			Voron.TempPath = new StringSetting(settings["Raven/Voron/TempPath"], (string) null);
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 
@@ -334,6 +336,10 @@ namespace Raven.Database.Config
 			public NullableIntegerSetting InitialFileSize { get; set; }
 
 			public IntegerSetting MaxScratchBufferSize { get; set; }
+
+			public BooleanSetting AllowIncrementalBackups { get; set; }
+
+			public StringSetting TempPath { get; set; }
 		}
 
 		public class PrefetcherConfiguration

@@ -267,6 +267,8 @@ namespace Raven.Database.Config
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
 			Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
+			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
+			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
@@ -1151,6 +1153,17 @@ namespace Raven.Database.Config
 				/// Default: 512.
 				/// </summary>
 				public int MaxScratchBufferSize { get; set; }
+
+				/// <summary>
+				/// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
+				/// Default: false.
+				/// </summary>
+				public bool AllowIncrementalBackups { get; set; }
+
+				/// <summary>
+				/// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
+				/// </summary>
+				public string TempPath { get; set; }
 			}
 		}
 

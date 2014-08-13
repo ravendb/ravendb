@@ -131,6 +131,11 @@ namespace Voron.Impl
         {
             return _scratchPager.AcquirePagePointer(p);
         }
+
+	    public void GetAllocationDetails()
+	    {
+		    
+	    }
     }
 
     public class PageFromScratchBuffer
