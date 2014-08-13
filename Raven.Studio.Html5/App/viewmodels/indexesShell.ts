@@ -18,18 +18,6 @@ class indexesShell extends viewModelBase {
 
         appUrl.mapUnknownRoutes(this.router);
     }
-
-    static getRecentQueries(localStorageObjectName: string): storedQueryDto[] {
-        var recentQueriesFromLocalStorage: storedQueryDto[] = localStorage.getObject(localStorageObjectName);
-        var isArray = recentQueriesFromLocalStorage instanceof Array;
-
-        if (recentQueriesFromLocalStorage == null || isArray == false) {
-            localStorage.setObject(localStorageObjectName, []);
-            recentQueriesFromLocalStorage = [];
-        }
-
-        return recentQueriesFromLocalStorage;
-    }
 }
 
 export = indexesShell;

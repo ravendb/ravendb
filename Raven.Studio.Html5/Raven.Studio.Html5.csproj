@@ -71,6 +71,7 @@
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\formatIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
@@ -131,6 +132,8 @@
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
+    <TypeScriptCompile Include="App\common\recentQueriesStorage.ts" />
+    <TypeScriptCompile Include="App\common\serverBuildReminder.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
     <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\generalUtils.ts" />

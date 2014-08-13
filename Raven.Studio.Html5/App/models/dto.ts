@@ -137,6 +137,12 @@ interface apiKeyDto extends documentDto {
 interface serverBuildVersionDto {
     ProductVersion: string;
     BuildVersion: string;
+    BuildType: buildType;
+}
+
+enum buildType {
+    Stable = 0,
+    Unstable = 1,
 }
 
 interface latestServerBuildVersionDto {
