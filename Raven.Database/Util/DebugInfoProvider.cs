@@ -5,21 +5,17 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-
+using System.Management;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Tasks;
 using Raven.Imports.Newtonsoft.Json;
@@ -169,20 +165,24 @@ namespace Raven.Database.Util
 			using (var systemUtilizationStream = systemUtilization.Open())
 			using (var streamWriter = new StreamWriter(systemUtilizationStream))
 			{
-				var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
-
 				long totalPhysicalMemory = -1;
 				long availableMemory = -1;
-				float currentCpuUsage = -1;
+				object cpuTimes = null;
 
 				try
 				{
 					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
 					availableMemory = MemoryStatistics.AvailableMemory;
-					
-					cpuCounter.NextValue();
-					System.Threading.Thread.Sleep(1000); // wait a second to get a valid reading
-					currentCpuUsage = cpuCounter.NextValue();
+
+					var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor");
+
+					cpuTimes = searcher.Get()
+						.Cast<ManagementObject>()
+						.Select(mo => new
+						{
+							Name = mo["Name"],
+							Usage = string.Format("{0} %", mo["PercentProcessorTime"])
+						}).ToArray();
 				}
 				catch (Exception)
 				{
@@ -192,7 +192,7 @@ namespace Raven.Database.Util
 				{
 					TotalPhysicalMemory = string.Format("{0:#,#.##;;0} MB", totalPhysicalMemory),
 					AvailableMemory = string.Format("{0:#,#.##;;0} MB", availableMemory),
-					CurrentCpuUsage = string.Format("{0} %", currentCpuUsage)
+					CurrentCpuUsage = cpuTimes
 				});
 
 				streamWriter.Flush();
