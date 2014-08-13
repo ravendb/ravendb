@@ -81,11 +81,13 @@ namespace RavenFS.Tests.Synchronization
 
 			(await sourceClient.DownloadAsync("test")).CopyTo(sourceStream);
 
+			var metadata = await sourceClient.GetMetadataForAsync("test");
+
 			var request = new SynchronizationMultipartRequest(destinationClient.Synchronization, new ServerInfo()
 			{
 				FileSystemUrl = sourceClient.UrlFor(),
 				Id = sourceClient.GetServerIdAsync().Result
-			}, "test", await sourceClient.GetMetadataForAsync("test"), sourceStream, new[]
+			}, "test", metadata, sourceStream, new[]
 			{
 				new RdcNeed()
 				{

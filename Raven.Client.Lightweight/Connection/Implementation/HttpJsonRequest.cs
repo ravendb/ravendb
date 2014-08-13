@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Replication;
@@ -805,6 +806,9 @@ namespace Raven.Client.Connection
                     case JTokenType.Array:
                         AddHeader(item.Key, item.Value.ToString(Formatting.None));
                         break;
+					case JTokenType.Date:
+						AddHeader(item.Key, item.Value.Value<DateTimeOffset>().ToString(Default.DateTimeOffsetFormatsToWrite));
+						break;
                     default:
                         AddHeader(item.Key, item.Value.Value<string>());
                         break;

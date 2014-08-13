@@ -5,10 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
-using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality.Resolvers
