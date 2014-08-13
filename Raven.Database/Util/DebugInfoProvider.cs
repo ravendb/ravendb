@@ -179,6 +179,9 @@ namespace Raven.Database.Util
 				{
 					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
 					availableMemory = MemoryStatistics.AvailableMemory;
+					
+					cpuCounter.NextValue();
+					System.Threading.Thread.Sleep(1000); // wait a second to get a valid reading
 					currentCpuUsage = cpuCounter.NextValue();
 				}
 				catch (Exception)
