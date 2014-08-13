@@ -38,5 +38,6 @@ namespace Raven.Abstractions.Data
         public long CountOfAttachments { get; set; }
         public decimal DatabaseTransactionVersionSizeInMB { get; set; }
         public DatabaseMetrics Metrics { get; set; }
+		public StorageStats StorageStats { get; set; }
     }
 }

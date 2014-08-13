@@ -293,11 +293,11 @@ namespace Raven.Storage.Voron
 	    {
 	        var stats = tableStorage.Environment.Stats();
 
-            return new DatabaseSizeInformation
-                   {
-                       AllocatedSizeInBytes = stats.AllocatedDataFileSizeInBytes,
-                       UsedSizeInBytes = stats.UsedDataFileSizeInBytes
-                   };
+		    return new DatabaseSizeInformation
+		    {
+			    AllocatedSizeInBytes = stats.AllocatedDataFileSizeInBytes,
+			    UsedSizeInBytes = stats.UsedDataFileSizeInBytes
+		    };
 	    }
 
 	    public long GetDatabaseCacheSizeInBytes()
@@ -308,6 +308,22 @@ namespace Raven.Storage.Voron
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
 			return -1;
+		}
+
+		public StorageStats GetStorageStats()
+		{
+			var stats = tableStorage.Environment.Stats();
+
+			return new VoronStorageStats()
+			{
+				FreePagesOverhead = stats.FreePagesOverhead,
+				RootPages = stats.RootPages,
+				UnallocatedPagesAtEndOfFile = stats.UnallocatedPagesAtEndOfFile,
+				UsedDataFileSizeInBytes = stats.UsedDataFileSizeInBytes,
+				AllocatedDataFileSizeInBytes = stats.AllocatedDataFileSizeInBytes,
+				NextWriteTransactionId = stats.NextWriteTransactionId,
+				ActiveTransactions = stats.ActiveTransactions
+			};
 		}
 
 		public string FriendlyName
