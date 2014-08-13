@@ -13,6 +13,7 @@ import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import indexesShell = require("viewmodels/indexesShell");
+import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class indexes extends viewModelBase {
 
@@ -20,7 +21,6 @@ class indexes extends viewModelBase {
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
-    localStorageObjectName: string;
     recentQueries = ko.observableArray<storedQueryDto>();
     indexMutex = true;
     appUrls: computedAppUrls;
@@ -49,7 +49,6 @@ class indexes extends viewModelBase {
 
         var deferred = $.Deferred();
 
-        this.localStorageObjectName = 'ravenDB-recentQueries.' + this.activeDatabase().name;
         this.fetchRecentQueries();
 
         $.when(this.fetchIndexes())
@@ -84,10 +83,7 @@ class indexes extends viewModelBase {
     }
 
     private fetchRecentQueries() {
-        var recentQueriesFromLocalStorage: storedQueryDto[] = indexesShell.getRecentQueries(this.localStorageObjectName);
-        if (recentQueriesFromLocalStorage.length > 0) {
-            this.recentQueries(recentQueriesFromLocalStorage);
-        }
+        this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
     }
 
     getRecentQueryUrl(query: storedQueryDto) {

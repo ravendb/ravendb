@@ -132,6 +132,7 @@
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\httpTraceClient.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
+    <TypeScriptCompile Include="App\common\recentQueriesStorage.ts" />
     <TypeScriptCompile Include="App\common\serverBuildReminder.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
     <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
