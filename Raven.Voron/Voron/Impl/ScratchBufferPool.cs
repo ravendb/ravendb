@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Voron.Exceptions;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
@@ -23,6 +25,7 @@ namespace Voron.Impl
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>();
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>();
         private long _lastUsedPage;
+	    private long _sizeLimit;
 
         private class PendingPage
         {
@@ -34,6 +37,7 @@ namespace Voron.Impl
         {
             _scratchPager = env.Options.CreateScratchPager("scratch.buffers");
             _scratchPager.AllocateMorePages(null, env.Options.InitialFileSize.HasValue ? Math.Max(env.Options.InitialFileSize.Value, env.Options.InitialLogFileSize) : env.Options.InitialLogFileSize);
+	        _sizeLimit = env.Options.MaxScratchBufferSize;
         }
 
         public PagerState PagerState { get { return _scratchPager.PagerState; } }
@@ -45,6 +49,11 @@ namespace Voron.Impl
             PageFromScratchBuffer result;
             if (TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
+
+	        if ((_lastUsedPage + size)*AbstractPager.PageSize > _sizeLimit)
+	        {
+		        throw new ScratchBufferSizeLimitException(string.Format("Cannot allocate more space for the scratch buffer. Its current size is {0} bytes. The limit is {1} bytes, while one tried to increase the size to {2} bytes.", _scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize, _sizeLimit, (_lastUsedPage + size)*AbstractPager.PageSize));
+	        }
 
             // we don't have free pages to give out, need to allocate some
             _scratchPager.EnsureContinuous(tx, _lastUsedPage, (int)size);

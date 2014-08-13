@@ -266,6 +266,7 @@ namespace Raven.Database.Config
 
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
+			Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
 
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
@@ -1144,6 +1145,12 @@ namespace Raven.Database.Config
 				/// You can use this setting to specify an initial file size for data file (in bytes).
 				/// </summary>
 				public int? InitialFileSize { get; set; }
+
+				/// <summary>
+				/// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
+				/// Default: 512.
+				/// </summary>
+				public int MaxScratchBufferSize { get; set; }
 			}
 		}
 
