@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
 {
-    public class FilesQuery<T> : AbstractFilesQuery<T, FilesQuery<T>>, IFilesQuery<T>
+    public class FilesQuery<T> : AbstractFilesQuery<T, FilesQuery<T>>, IFilesQuery<T> where T : class
     {
   
         public FilesQuery( InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands ) : base ( theSession, commands )
@@ -312,10 +312,10 @@ If you really want to do in memory filtering on the data returned from the query
             get { throw new NotImplementedException(); }
         }
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
+        //IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        //{
+        //    throw new NotImplementedException();
+        //}
 
         SearchResults IFilesQuery<T>.QueryResult
         {
@@ -329,13 +329,15 @@ If you really want to do in memory filtering on the data returned from the query
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            throw new NotImplementedException();
+            return GetEnumerator();
         }
 
 
         #endregion 
 
-
-   
+        public IFilesQuery<T> OnDirectory(string path, bool recursive = false)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

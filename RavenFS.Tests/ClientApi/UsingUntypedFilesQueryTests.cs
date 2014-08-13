@@ -97,8 +97,8 @@ namespace RavenFS.Tests.ClientApi
         {
             var q = CreateUserQuery().WhereEquals("Name", "file.test")
                                      .AndAlso()
-                                     .WhereEquals("Extension", "test");
-            Assert.Equal("__fileName:file.test AND Extension:test", q.ToString());
+                                     .WhereEquals("Metadata-Item", "test");
+            Assert.Equal("__fileName:file.test AND Metadata-Item:test", q.ToString());
         }
 
         [Fact]
@@ -106,8 +106,8 @@ namespace RavenFS.Tests.ClientApi
         {
             var q = CreateUserQuery().WhereEquals("Name", "file.test")
                                      .OrElse()
-                                     .WhereEquals("Extension", "test");
-            Assert.Equal("__fileName:file.test OR Extension:test", q.ToString());
+                                     .WhereEquals("Metadata-Item", "test");
+            Assert.Equal("__fileName:file.test OR Metadata-Item:test", q.ToString());
         }
 
         [Fact]
@@ -150,7 +150,7 @@ namespace RavenFS.Tests.ClientApi
         public void CanUnderstandSimpleEqualityOnInt()
         {
             var q = CreateUserQuery().WhereEquals("TotalSize", 3);
-            Assert.Equal("__size_numeric:3", q.ToString());
+            Assert.Equal("__size_numeric:[3 TO 3]", q.ToString());
         }
 
         [Fact]
@@ -158,7 +158,7 @@ namespace RavenFS.Tests.ClientApi
         {
             // should FilesQuery<T> understand how to generate range field names?
             var q = CreateUserQuery().WhereGreaterThan("TotalSize", 3);
-            Assert.Equal("__size_numeric:{Ix3 TO NULL}", q.ToString());
+            Assert.Equal("__size_numeric:{3 TO NULL}", q.ToString());
         }
     }
 }

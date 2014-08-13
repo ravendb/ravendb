@@ -16,5 +16,7 @@ namespace Raven.Client.FileSystem
         /// <value>The query result.</value>
         SearchResults QueryResult { get; }
         bool IsDistinct { get; }
+
+        IFilesQuery<T> OnDirectory(string path, bool recursive = false);
     }
 }

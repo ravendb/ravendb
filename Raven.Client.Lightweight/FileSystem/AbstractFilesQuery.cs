@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Linq;
@@ -14,12 +15,17 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
 {
-    public class AbstractFilesQuery<T, TSelf> : IAbstractFilesQuery<T> where TSelf : AbstractFilesQuery<T, TSelf>
+    public class AbstractFilesQuery<T, TSelf> : IAbstractFilesQuery<T>
+        where TSelf : AbstractFilesQuery<T, TSelf>
+        where T : class
     {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
         private readonly LinqPathProvider linqPathProvider;
         protected readonly FilesConvention conventions;
 
@@ -49,10 +55,26 @@ namespace Raven.Client.FileSystem
         /// </summary>
         protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
 
+
+        protected InMemoryFilesSessionOperations Session
+        {
+            get;
+            private set;
+        }
+
+        protected IAsyncFilesCommands Commands
+        {
+            get;
+            private set;
+        }
+
         public AbstractFilesQuery(InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands)
         {
             this.conventions = theSession == null ? new FilesConvention() : theSession.Conventions;
             this.linqPathProvider = new LinqPathProvider(conventions);
+
+            this.Session = theSession;
+            this.Commands = commands;
         }
 
         /// <summary>
@@ -97,12 +119,13 @@ namespace Raven.Client.FileSystem
                 FieldName = fieldName,
                 Value = value
             });
-        }
+        }       
 
-        public void WhereEquals(WhereParams whereParams)
+        private void WhereEquals(WhereParams whereParams, bool isReversed)        
         {
-            var fieldName = EnsureValidFieldName(whereParams);
-            var transformToEqualValue = TransformToEqualValue(whereParams);
+            var fieldName = EnsureValidFieldName(whereParams, isReversed);
+            var transformToEqualValue = TransformToEqualValue(whereParams, isReversed);
+
             lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
 
             AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
@@ -110,7 +133,24 @@ namespace Raven.Client.FileSystem
 
             queryText.Append(RavenQuery.EscapeField(fieldName));
             queryText.Append(":");
-            queryText.Append(transformToEqualValue);
+
+            if (fieldName.EndsWith("_numeric"))
+            {
+                queryText.Append("[");
+                queryText.Append(transformToEqualValue);
+                queryText.Append(" TO ");
+                queryText.Append(transformToEqualValue);
+                queryText.Append("]");
+            }
+            else
+            {
+                queryText.Append(transformToEqualValue);
+            }
+        }
+
+        public void WhereEquals(WhereParams whereParams)        
+        {
+            WhereEquals(whereParams, false);
         }
 
         /// <summary>
@@ -149,7 +189,7 @@ namespace Raven.Client.FileSystem
                     Value = String.Concat("*", value),
                     AllowWildcards = true,
                     IsAnalyzed = true
-                });
+                }, true );
         }
 
 
@@ -364,25 +404,39 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        private string EnsureValidFieldName(WhereParams whereParams)
+        private string EnsureValidFieldName(WhereParams whereParams, bool isReversed = false)
         {
-            var term = whereParams.FieldName;
+            var prefix = "__";
+
+            var term = whereParams.FieldName;                 
             if (term.StartsWith("Metadata."))
+            {
                 term = term.Substring(9);
+                if (isReversed)
+                    throw new NotSupportedException("StartWith and EndWith is not supported for metadata content.");
+            }
 
             switch (term)
             {
-                case "Name": return "__fileName";
-                case "TotalSize": return "__size_numeric";
-                case "LastModified": return "__modified";
-                case "CreationDate": return "__created";
-                case "Etag": return "__etag";
-                case "Path": return "__directory";
+                case "Name": term = "fileName"; break;
+                case "TotalSize": term = "size"; break;
+                case "LastModified": term = "modified"; break;
+                case "CreationDate": term = "created"; break;
+                case "Etag": term = "etag"; break;
+                case "Path": term = "directory"; break;
+                case "Extension": throw new NotSupportedException("Query over Extension is not supported yet, use Name instead.");
                 case "HumaneTotalSize": throw new NotSupportedException("Query over HumaneTotalSize is not supported, use TotalSize instead.");
                 case "OriginalMetadata": throw new NotSupportedException("Query over OriginalMetadata is not supported, use current Metadata instead.");
+                default: prefix = string.Empty; break;
             }
 
-            return term;
+            if (whereParams.Value is int || whereParams.Value is long || whereParams.Value is decimal)
+                term = term + "_numeric";
+
+            if (isReversed)
+                prefix = prefix + "r";
+
+            return prefix + term;
         }
 
         private bool UsesRangeType(object o)
@@ -404,12 +458,12 @@ namespace Raven.Client.FileSystem
 
         private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
         {
-            fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+            var val = (start ?? end);
+            fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName, Value = val });
 
             if (fieldName == Constants.DocumentIdFieldName)
                 return fieldName;
-
-            var val = (start ?? end);
+           
             if (UsesRangeType(val) && fieldName.EndsWith("_Range"))
                 fieldName = fieldName.Substring(0, fieldName.Length - 6);
             return fieldName;
@@ -424,6 +478,16 @@ namespace Raven.Client.FileSystem
 				result.Path += ".Length";
 
             return result.Path;
+        }
+
+        private string TransformToEqualValue(WhereParams whereParams, bool isReversed)
+        {
+            var result = TransformToEqualValue(whereParams);
+
+            if (isReversed)
+                return new string(result.Reverse().ToArray());
+            else
+                return result;
         }
 
         private string TransformToEqualValue(WhereParams whereParams)
@@ -512,19 +576,23 @@ namespace Raven.Client.FileSystem
             }
             if (whereParams.Value is DateTimeOffset)
                 return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
-
-            if (whereParams.Value is int)
-                return NumberUtil.NumberToString((int)whereParams.Value);
-            if (whereParams.Value is long)
-                return NumberUtil.NumberToString((long)whereParams.Value);
-            if (whereParams.Value is decimal)
-                return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
-            if (whereParams.Value is double)
-                return NumberUtil.NumberToString((double)whereParams.Value);
             if (whereParams.Value is TimeSpan)
                 return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
+
+
             if (whereParams.Value is float)
                 return NumberUtil.NumberToString((float)whereParams.Value);
+            if (whereParams.Value is double)
+                return NumberUtil.NumberToString((double)whereParams.Value);
+            
+            //TODO Change the server to recognize the different types.
+            if (whereParams.Value is int)
+                return whereParams.Value.ToString();
+            if (whereParams.Value is long)
+                return whereParams.Value.ToString();
+            if (whereParams.Value is decimal)
+                return whereParams.Value.ToString();
+
             if (whereParams.Value is string)
                 return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
 
@@ -553,6 +621,23 @@ namespace Raven.Client.FileSystem
             }
         }
 
+
+        protected virtual IEnumerator<T> ExecuteActualQuery()
+        {
+            Session.IncrementRequestCount();
+
+            log.Debug("Executing query on file system '{1}' in '{2}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
+
+            var result = Commands.SearchAsync(this.queryText.ToString()).Result;
+
+            foreach (var item in result.Files)
+                yield return item as T;
+        }
+
+        public virtual IEnumerator<T> GetEnumerator()
+        {
+            return ExecuteActualQuery();
+        }
 
     }
 }
