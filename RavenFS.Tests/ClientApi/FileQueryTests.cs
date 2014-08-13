@@ -97,17 +97,9 @@ namespace RavenFS.Tests.ClientApi
                 await session.SaveChangesAsync();
 
                 var query = session.Query()
-                                   .OnDirectory("dir", recursive: true)
+                                   .OnDirectory("dir")
                                    .WhereEquals(x => x.Name, "test.file")
                                    .ToList();
-
-                Assert.True(query.Any());
-                Assert.Equal(1, query.Count());
-
-                var queryDefaults = session.Query()
-                                           .OnDirectory("dir")
-                                           .WhereEquals(x => x.Name, "test.file")
-                                           .ToList();
 
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());

@@ -351,7 +351,14 @@ namespace Raven.Client.FileSystem
             if (currentClauseDepth != 0)
                 throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", currentClauseDepth));
 
-            return queryText.ToString().Trim();
+            var queryString = queryText.ToString().Trim();
+
+            if ( queryString.EndsWith("OR") )
+                queryString.Substring(0, queryString.Length - 2);
+            else if ( queryString.EndsWith("AND"))
+                queryString.Substring(0, queryString.Length - 3);
+            
+            return queryString;
         }
 
 
@@ -416,17 +423,18 @@ namespace Raven.Client.FileSystem
                     throw new NotSupportedException("StartWith and EndWith is not supported for metadata content.");
             }
 
-            switch (term)
+            switch (term.ToLower())
             {
-                case "Name": term = "fileName"; break;
-                case "TotalSize": term = "size"; break;
-                case "LastModified": term = "modified"; break;
-                case "CreationDate": term = "created"; break;
-                case "Etag": term = "etag"; break;
-                case "Path": term = "directory"; break;
-                case "Extension": throw new NotSupportedException("Query over Extension is not supported yet, use Name instead.");
-                case "HumaneTotalSize": throw new NotSupportedException("Query over HumaneTotalSize is not supported, use TotalSize instead.");
-                case "OriginalMetadata": throw new NotSupportedException("Query over OriginalMetadata is not supported, use current Metadata instead.");
+                case "name": term = "fileName"; break;
+                case "directory": term = "directory"; break;   
+                case "totalsize": term = "size"; break;
+                case "lastmodified": term = "modified"; break;
+                case "creationdate": term = "created"; break;
+                case "etag": term = "etag"; break;
+                case "path": term = "directory"; break;                
+                case "extension": throw new NotSupportedException("Query over Extension is not supported yet, use Name instead.");
+                case "humanetotalsize": throw new NotSupportedException("Query over HumaneTotalSize is not supported, use TotalSize instead.");
+                case "originalmetadata": throw new NotSupportedException("Query over OriginalMetadata is not supported, use current Metadata instead.");
                 default: prefix = string.Empty; break;
             }
 

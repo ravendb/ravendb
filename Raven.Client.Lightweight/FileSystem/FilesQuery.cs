@@ -337,7 +337,29 @@ If you really want to do in memory filtering on the data returned from the query
 
         public IFilesQuery<T> OnDirectory(string path, bool recursive = false)
         {
-            throw new NotImplementedException();
+            var normalizedPath = path;
+            if (!path.StartsWith("/"))
+                normalizedPath = "/" + path.TrimEnd('/');
+
+            if (recursive)
+            {
+                this.WhereEquals("directory", normalizedPath);
+                this.AndAlso();
+            }
+            else
+            {                
+                this.OpenSubclause();
+                {
+                    this.WhereEquals("directory", normalizedPath);
+                    this.AndAlso();
+                    this.NegateNext();
+                    this.WhereStartsWith("directory", normalizedPath + "/");
+                }
+                this.CloseSubclause();
+                this.AndAlso();
+            }
+
+            return this;
         }
     }
 }
