@@ -3,12 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-
-namespace Raven.Database.Storage.Esent
+namespace Raven.Abstractions.Data
 {
 	public class EsentStorageStats : StorageStats
 	{
-		 
+
 	}
 }
