@@ -1,14 +1,13 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="EsentStorageStats.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="VoronActiveTransaction.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-
-namespace Raven.Database.Storage.Esent
+namespace Raven.Abstractions.Data
 {
-	public class EsentStorageStats : StorageStats
+	public class VoronActiveTransaction
 	{
-		 
+		public long Id;
+		public string Flags; 
 	}
 }

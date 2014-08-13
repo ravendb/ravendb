@@ -75,6 +75,7 @@ namespace Raven.Tests.Core.Commands
                 Assert.True(adminStatistics.LoadedDatabases.Any());
                 Assert.True(adminStatistics.TotalNumberOfRequests > 0);
                 Assert.NotNull(adminStatistics.Memory);
+				Assert.NotNull(adminStatistics.LoadedDatabases.First().StorageStats);
             }
         }
 	}

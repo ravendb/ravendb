@@ -4,12 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Voron.Debugging;
 
-namespace Raven.Database.Storage.Voron
+namespace Raven.Abstractions.Data
 {
-	public class VoronStorageStats : StorageStats
+	public class VoronStorageStats
 	{
 		public long FreePagesOverhead;
 		public long RootPages;
@@ -17,6 +15,6 @@ namespace Raven.Database.Storage.Voron
 		public long UsedDataFileSizeInBytes;
 		public long AllocatedDataFileSizeInBytes;
 		public long NextWriteTransactionId;
-		public List<ActiveTransaction> ActiveTransactions;
+		public List<VoronActiveTransaction> ActiveTransactions;
 	}
 }
