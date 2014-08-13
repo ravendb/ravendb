@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -22,7 +23,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS
 {
-	public class RavenFileSystem : IDisposable
+    public class RavenFileSystem : IResourceStore, IDisposable
 	{
 		private readonly ConflictArtifactManager conflictArtifactManager;
 		private readonly ConflictDetector conflictDetector;

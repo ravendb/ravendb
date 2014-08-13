@@ -14,8 +14,6 @@ class appUrl {
     static detectAppUrl() {
         var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
         var suffix = "studio/index.html";
-        console.log("ends2?");
-
         if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
             return path.substring(0, path.length - suffix.length - 1);
         }

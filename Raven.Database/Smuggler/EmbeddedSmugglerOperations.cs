@@ -16,6 +16,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -241,36 +242,33 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		public Task<RavenJArray> GetAttachments(int start, Etag etag, int maxRecords)
+
+		public Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
 		{
-			var array = new RavenJArray();
-			var attachmentInfos = database.Attachments.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10);
+			var attachments = database
+				.Attachments
+				.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10)
+				.ToList();
 
-			foreach (var attachmentInfo in attachmentInfos)
+			return new CompletedTask<List<AttachmentInformation>>(attachments);
+		}
+
+		public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
+		{
+			var attachment = database.Attachments.GetStatic(attachmentInformation.Key);
+			if (attachment == null) 
+				return null;
+
+			var data = attachment.Data;
+			attachment.Data = () =>
 			{
-				var attachment = database.Attachments.GetStatic(attachmentInfo.Key);
-				if (attachment == null)
-					return null;
-				var data = attachment.Data;
-				attachment.Data = () =>
-				{
-					var memoryStream = new MemoryStream();
-					database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
-					memoryStream.Position = 0;
-					return memoryStream;
-				};
+				var memoryStream = new MemoryStream();
+				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+				memoryStream.Position = 0;
+				return memoryStream;
+			};
 
-				var bytes = attachment.Data().ReadData();
-				array.Add(
-					new RavenJObject
-					{
-						{"Data", bytes},
-						{"Metadata", attachmentInfo.Metadata},
-						{"Key", attachmentInfo.Key},
-						{"Etag", new RavenJValue(attachmentInfo.Etag.ToString())}
-					});
-			}
-			return new CompletedTask<RavenJArray>(array);
+			return new CompletedTask<byte[]>(attachment.Data().ReadData());
 		}
 	}
 }
