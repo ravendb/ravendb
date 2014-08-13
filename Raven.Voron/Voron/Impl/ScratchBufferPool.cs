@@ -68,11 +68,11 @@ namespace Voron.Impl
             LinkedList<PendingPage> list;
             if (!_freePagesBySize.TryGetValue(size, out list) || list.Count <= 0)
                 return false;
-            var val = list.First.Value;
+            var val = list.Last.Value;
             if (val.ValidAfterTransactionId >= tx.Environment.OldestTransaction)
                 return false;
 
-            list.RemoveFirst();
+            list.RemoveLast();
             var pageFromScratchBuffer = new PageFromScratchBuffer
             {
                 PositionInScratchBuffer = val.Page,
