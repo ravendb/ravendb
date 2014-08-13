@@ -228,12 +228,12 @@ class viewModelBase {
         return viewTask;
     }
 
-    canContinueIfNotDirty(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No']) {
+    canContinueIfNotDirty(title: string, confirmationMessage: string) {
         var deferred = $.Deferred();
 
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage, options);
+            var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage);
             confirmationMessageViewModel.done(() => deferred.resolve());
         } else {
             deferred.resolve();

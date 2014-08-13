@@ -61,18 +61,20 @@ namespace Raven.Database.Indexing
 				// and fix them, either by adding a degenerate select, or by combining them with another query.
 				foreach (QueryExpression query in compilationUnit.Descendants.OfType<QueryExpression>())
 				{
-					QueryFromClause fromClause = (QueryFromClause)query.Clauses.First();
+					if (query.Clauses.First().GetType() != typeof (QueryFromClause)) continue;
+
+					QueryFromClause fromClause = (QueryFromClause) query.Clauses.First();
 					if (IsDegenerateQuery(query))
 					{
 						// introduce select for degenerate query
-						query.Clauses.Add(new QuerySelectClause { Expression = new IdentifierExpression(fromClause.Identifier) });
+						query.Clauses.Add(new QuerySelectClause {Expression = new IdentifierExpression(fromClause.Identifier)});
 					}
 					// See if the data source of this query is a degenerate query,
 					// and combine the queries if possible.
 					QueryExpression innerQuery = fromClause.Expression as QueryExpression;
 					while (IsDegenerateQuery(innerQuery))
 					{
-						QueryFromClause innerFromClause = (QueryFromClause)innerQuery.Clauses.First();
+						QueryFromClause innerFromClause = (QueryFromClause) innerQuery.Clauses.First();
 						if (fromClause.Identifier != innerFromClause.Identifier)
 							break;
 						// Replace the fromClause with all clauses from the inner query
@@ -369,7 +371,9 @@ namespace Raven.Database.Indexing
 				QueryExpression query = node as QueryExpression;
 				if (query != null)
 				{
-					QueryFromClause fromClause = (QueryFromClause)query.Clauses.First();
+					if (query.Clauses.First().GetType() != typeof (QueryFromClause)) return;
+
+					QueryFromClause fromClause = (QueryFromClause) query.Clauses.First();
 					QueryExpression innerQuery = fromClause.Expression as QueryExpression;
 					if (innerQuery != null)
 					{

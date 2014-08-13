@@ -403,6 +403,38 @@ class editIndex extends viewModelBase {
         });
     }
 
+    formatIndex() {
+        require(["commands/formatIndexCommand"], formatIndexCommand => {
+            var index: indexDefinition = this.editedIndex();
+            var mapReduceArray = new Array<string>();
+            index.maps().forEach(mapObservable => mapReduceArray.push(mapObservable()));
+            if (!!index.reduce()) {
+                mapReduceArray.push(index.reduce());
+            }
+
+            new formatIndexCommand(this.activeDatabase(), mapReduceArray, this.activeDatabase())
+                .execute()
+                .done((formatedMapReduceArray: string[]) => {
+                    for (var i = 0; i < formatedMapReduceArray.length; i++) {
+                        var element: string = formatedMapReduceArray[i];
+                        var isReduce = index.reduce() != null && i == formatedMapReduceArray.length - 1;
+                        if (element.indexOf("Could not format:") == -1) {
+                            if (isReduce) {
+                                index.reduce(element);
+                            }
+                            else {
+                                index.maps()[i](element);
+                            }
+                        }
+                        else {
+                            var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map '" + i + "'!";
+                            messagePublisher.reportError(errorMessage, element);
+                        }
+                    }
+            });
+        });
+    }
+
     checkIfScriptedIndexBundleIsActive() {
         new getDatabaseSettingsCommand(this.activeDatabase())
             .execute()
