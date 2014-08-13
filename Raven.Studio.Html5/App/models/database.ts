@@ -5,6 +5,7 @@ class database extends resource {
     activeBundles = ko.observableArray<string>();
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>('');
+    recentQueriesLocalStorageName: string;
     static type = 'database';
 
     constructor(public name: string, isDisabled: boolean = false, bundles: Array<string> = []) {
@@ -20,6 +21,7 @@ class database extends resource {
             }
             return text;
         });
+        this.recentQueriesLocalStorageName = 'ravenDB-recentQueries.' + name;
     }
 
 	activate() {

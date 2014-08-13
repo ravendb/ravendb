@@ -113,7 +113,7 @@ class appUrl {
         return isThereAny;
     }
 
-    static getEncodedCounterStoragePart(counterStorage:counterStorage): string {
+    static getEncodedCounterStoragePart(counterStorage: counterStorage): string {
         return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
     }
 
@@ -311,8 +311,7 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
-        return path;
+        return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
     
     static forLogs(db: database): string {
@@ -504,6 +503,11 @@ class appUrl {
     static forCsvImport(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
+    }
+
+    static forDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases?" + databasePart;
     }
 
     static forFilesystem(fs: filesystem): string {

@@ -70,6 +70,12 @@ class filesystems extends viewModelBase {
         this.appUrls = appUrl.forCurrentFilesystem();
     }
 
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.selectedFileSystem(fs))
+        ];
+    }
+
     private fileSystemsLoaded() {
         // If we have no file systems, show the "create a new file system" screen.
         if (this.fileSystems().length === 0) {
@@ -106,6 +112,9 @@ class filesystems extends viewModelBase {
                 fs.activate();
             }
             this.selectedFileSystem(fs);
+
+            var updatedUrl = appUrl.forFilesystem(fs);
+            this.navigate(updatedUrl);
         }
 
         this.optionsClicked(false);
