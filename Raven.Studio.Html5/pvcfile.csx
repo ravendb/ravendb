@@ -13,7 +13,8 @@ pvc.Task("optimized-build", () => {
 		"Content/**/*",
 		"Scripts/**/*.js",
 		"Scripts/**/*.css",
-		"index.html"
+		"index.html",
+		"version.json"
 	)
 
 	// Compile all the TypeScript files into JavaScript.
