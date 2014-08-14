@@ -22,9 +22,9 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(10));
                 await session.SaveChangesAsync();
 
-                var query = session.Query()
-                                   .WhereEquals(x => x.Name, "test.fil")
-                                   .ToList();
+                var query = await session.Query()
+                                       .WhereEquals(x => x.Name, "test.fil")
+                                       .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());
@@ -45,11 +45,11 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(10));
                 await session.SaveChangesAsync();
 
-                var query = session.Query()
-                                   .WhereEquals (x => x.Name, "test.fil")
-                                   .OrElse()
-                                   .WhereEquals (x => x.Name, "test.file")
-                                   .ToList();
+                var query = await session.Query()
+                                           .WhereEquals (x => x.Name, "test.fil")
+                                           .OrElse()
+                                           .WhereEquals (x => x.Name, "test.file")
+                                           .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(2, query.Count());
@@ -72,10 +72,10 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("dir/another/test.file1", CreateUniformFileStream(10));
                 await session.SaveChangesAsync();
 
-                var query = session.Query()
+                var query = await session.Query()
                                    .OnDirectory("dir", recursive: true)
                                    .WhereEquals(x => x.Name, "test.file")
-                                   .ToList();
+                                   .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(2, query.Count());
@@ -96,10 +96,10 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("dir/another/test.file1", CreateUniformFileStream(10));
                 await session.SaveChangesAsync();
 
-                var query = session.Query()
+                var query = await session.Query()
                                    .OnDirectory("dir")
                                    .WhereEquals(x => x.Name, "test.file")
-                                   .ToList();
+                                   .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());
@@ -122,8 +122,7 @@ namespace RavenFS.Tests.ClientApi
 
                 Assert.Throws<NotSupportedException>(() => session.Query().WhereEquals(x => x.Extension, "fil"));
 
-                var query = session.Query().WhereEndsWith(x => x.Name, ".fil")
-                                   .ToList();
+                var query = await session.Query().WhereEndsWith(x => x.Name, ".fil").ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());
@@ -144,9 +143,9 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                var query = session.Query()
-                                   .WhereGreaterThan(x => x.TotalSize, 150)
-                                   .ToList();
+                var query = await session.Query()
+                                        .WhereGreaterThan(x => x.TotalSize, 150)
+                                        .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(2, query.Count());
@@ -154,17 +153,17 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Contains("test.f", query.Select(x => x.Name));
 
 
-                query = session.Query()
-                               .WhereEquals(x => x.TotalSize, 150)
-                               .ToList();
+                query = await session.Query()
+                                       .WhereEquals(x => x.TotalSize, 150)
+                                       .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());
                 Assert.Contains("test.fil", query.Select(x => x.Name));
 
-                query = session.Query()
-                               .WhereLessThan(x => x.TotalSize, 150)
-                               .ToList();
+                query = await session.Query()
+                                       .WhereLessThan(x => x.TotalSize, 150)
+                                       .ToListAsync();
 
                 Assert.Equal(1, query.Count());
                 Assert.Contains("test.fi", query.Select(x => x.Name));
@@ -184,13 +183,13 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                var value = session.Query()
-                                   .WhereGreaterThan(x => x.TotalSize, 150)
-                                   .First();
+                var value = await session.Query()
+                                         .WhereGreaterThan(x => x.TotalSize, 150)
+                                         .FirstAsync();
 
-                var query = session.Query()
-                                   .WhereGreaterThan(x => x.TotalSize, 150)
-                                   .ToList();
+                var query = await session.Query()
+                                         .WhereGreaterThan(x => x.TotalSize, 150)
+                                         .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(value.Name, query[0].Name);
@@ -210,8 +209,8 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 10).FirstOrDefault());
-                Assert.Null(session.Query().WhereGreaterThan(x => x.TotalSize, 700).FirstOrDefault());
+                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 10).FirstOrDefaultAsync().Result);
+                Assert.Null(session.Query().WhereGreaterThan(x => x.TotalSize, 700).FirstOrDefaultAsync().Result);
             }
         }
 
@@ -228,9 +227,9 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 550).Single());
-                Assert.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 150).Single());
-                Assert.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 700).Single());
+                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 550).SingleAsync().Result);
+                TaskAssert.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 150).SingleAsync());
+                TaskAssert.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 700).SingleAsync());
             }
         }
 
@@ -247,9 +246,9 @@ namespace RavenFS.Tests.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 550).SingleOrDefault());
-                Assert.Null(session.Query().WhereGreaterThan(x => x.TotalSize, 700).SingleOrDefault());
-                Assert.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 150).SingleOrDefault());
+                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 550).SingleOrDefaultAsync().Result);
+                Assert.Null(session.Query().WhereGreaterThan(x => x.TotalSize, 700).SingleOrDefaultAsync().Result);
+                TaskAssert.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 150).SingleOrDefaultAsync());
                 
             }
         }

@@ -198,24 +198,24 @@ If you really want to do in memory filtering on the data returned from the query
         ///   Returns first element or default value for type if sequence is empty.
         /// </summary>
         /// <returns></returns>
-        T FirstOrDefault();
+        Task<T> FirstOrDefaultAsync();
 
         /// <summary>
         ///   Returns first element or throws if sequence is empty.
         /// </summary>
         /// <returns></returns>
-        T First();
+        Task<T> FirstAsync();
 
         /// <summary>
         ///   Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than one element.
         /// </summary>
         /// <returns></returns>
-        T SingleOrDefault();
+        Task<T> SingleOrDefaultAsync();
 
         /// <summary>
         ///   Returns first element or throws if sequence is empty or contains more than one element.
         /// </summary>
         /// <returns></returns>
-        T Single();
+        Task<T> SingleAsync();
     }
 }

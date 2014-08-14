@@ -298,12 +298,6 @@ If you really want to do in memory filtering on the data returned from the query
             get { return this.isDistinct; }
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-
         #endregion 
 
         public IFilesQuery<T> OnDirectory(string path, bool recursive = false)

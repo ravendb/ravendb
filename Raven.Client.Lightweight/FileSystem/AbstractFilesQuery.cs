@@ -633,21 +633,15 @@ namespace Raven.Client.FileSystem
         }
 
 
-        protected virtual IEnumerable<T> ExecuteActualQuery()
+        protected async virtual Task<IEnumerable<T>> ExecuteActualQueryAsync()
         {
             Session.IncrementRequestCount();
 
             log.Debug("Executing query on file system '{1}' in '{2}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
-            var result = Commands.SearchAsync(this.queryText.ToString(), null, start, pageSize).Result;
+            var result = await Commands.SearchAsync(this.queryText.ToString(), null, start, pageSize);
 
-            foreach (var item in result.Files)
-                yield return item as T;
-        }
-
-        public virtual IEnumerator<T> GetEnumerator()
-        {
-            return ExecuteActualQuery().GetEnumerator();
+            return result.Files.ConvertAll<T>(x => x as T);
         }
 
         /// <summary>
@@ -671,28 +665,42 @@ namespace Raven.Client.FileSystem
         }
 
 
-        public T FirstOrDefault()
+        public async Task<T> FirstOrDefaultAsync()
         {
             Take(1);
-            return ExecuteActualQuery().FirstOrDefault() as T;
+
+            var collection = await ExecuteActualQueryAsync();
+            return collection.FirstOrDefault();
         }
 
-        public T First()
+        public async Task<T> FirstAsync()
         {
             Take(1);
-            return ExecuteActualQuery().First() as T;
+
+            var collection = await ExecuteActualQueryAsync();
+            return collection.First();
         }
 
-        public T SingleOrDefault()
+        public async Task<T> SingleOrDefaultAsync()
         {
             Take(2);
-            return ExecuteActualQuery().SingleOrDefault() as T;
+
+            var collection = await ExecuteActualQueryAsync();
+            return collection.SingleOrDefault();
         }
 
-        public T Single()
+        public async Task<T> SingleAsync()
         {
             Take(2);
-            return ExecuteActualQuery().Single() as T;
+
+            var collection = await ExecuteActualQueryAsync();
+            return collection.Single();
+        }
+
+        public async Task<List<T>> ToListAsync()
+        {
+            var collection = await ExecuteActualQueryAsync();
+            return collection.ToList();
         }
     }
 }
