@@ -1154,6 +1154,26 @@ namespace Raven.Client.FileSystem
                 }
             }
 
+			public async Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata)
+	        {
+		        var requestUriString = string.Format("{0}/synchronization/ResolutionStrategyFromServerResolvers", client.BaseUrl);
+
+				var request = client.RequestFactory.CreateHttpJsonRequest(
+									new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention))
+								 .AddOperationHeaders(client.OperationsHeaders);
+
+		        try
+		        {
+			        await request.WriteWithObjectAsync(conflict);
+					var response = (RavenJObject)await request.ReadResponseJsonAsync();
+					return response.JsonDeserialization<ConflictResolutionStrategy>();
+		        }
+		        catch (Exception e)
+		        {
+					throw e.SimplifyException();
+		        }
+	        }
+
             public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, page,

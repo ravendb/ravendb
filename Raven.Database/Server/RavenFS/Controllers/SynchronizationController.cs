@@ -706,6 +706,28 @@ namespace Raven.Database.Server.RavenFS.Controllers
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
+		[HttpPost]
+		[Route("fs/{fileSystemName}/synchronization/ResolutionStrategyFromServerResolvers")]
+		public async Task<HttpResponseMessage> ResolutionStrategyFromServerResolvers()
+		{
+			var conflict = await ReadJsonObjectAsync<ConflictItem>();
+
+			var localMetadata = GetLocalMetadata(conflict.FileName);
+            if (localMetadata == null)
+				throw new InvalidOperationException(string.Format("Could not find the medatada of the file: {0}", conflict.FileName));
+
+			var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+
+			ConflictResolutionStrategy strategy;
+
+			if (ConflictResolver.TryResolveConflict(conflict.FileName, conflict, localMetadata, sourceMetadata, out strategy))
+			{
+				return GetMessageWithObject(strategy);
+			}
+
+			return GetMessageWithObject(ConflictResolutionStrategy.NoResolution);
+		}
+
 		[HttpPatch]
         [Route("fs/{fileSystemName}/synchronization/applyConflict/{*fileName}")]
 		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId, string remoteServerUrl)
