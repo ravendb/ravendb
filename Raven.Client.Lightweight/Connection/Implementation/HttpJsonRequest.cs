@@ -807,7 +807,11 @@ namespace Raven.Client.Connection
                         AddHeader(item.Key, item.Value.ToString(Formatting.None));
                         break;
 					case JTokenType.Date:
-						AddHeader(item.Key, item.Value.Value<DateTimeOffset>().ToString(Default.DateTimeOffsetFormatsToWrite));
+							var rfc1123 = GetDateString(item.Value, "r");
+							var iso8601 = GetDateString(item.Value, "o");
+							AddHeader(item.Key, rfc1123);
+							if (item.Key.StartsWith("Raven-") == false)
+								AddHeader("Raven-" + item.Key, iso8601);
 						break;
                     default:
                         AddHeader(item.Key, item.Value.Value<string>());
@@ -815,6 +819,23 @@ namespace Raven.Client.Connection
                 }                
             }
         }
+
+		private string GetDateString(RavenJToken token, string format)
+		{
+			var value = token as RavenJValue;
+			if (value == null)
+				return token.ToString();
+
+			var obj = value.Value;
+
+			if (obj is DateTime)
+				return ((DateTime)obj).ToString(format);
+
+			if (obj is DateTimeOffset)
+				return ((DateTimeOffset)obj).ToString(format);
+
+			return obj.ToString();
+		}
 
 		public void AddHeaders(NameValueCollection nameValueHeaders)
 		{

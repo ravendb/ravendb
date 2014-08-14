@@ -14,6 +14,7 @@ using Raven.Client.FileSystem;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace RavenFS.Tests.Synchronization
@@ -21,7 +22,7 @@ namespace RavenFS.Tests.Synchronization
 	public class AutomaticConflictResolutions : RavenFsTestBase
 	{
 		[Fact]
-		public async Task ShouldAutomaticallyResolveInFavourOfLocal()
+		public async Task ShouldAutomaticallyResolveInFavourOfLocal_ContentUpdate()
 		{
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
@@ -37,7 +38,7 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public async Task ShouldAutomaticallyResolveInFavourOfRemote()
+		public async Task ShouldAutomaticallyResolveInFavourOfRemote_ContentUpdate()
 		{
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
@@ -53,7 +54,7 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public async Task ShouldAutomaticallyResolveInFavourOfLatest()
+		public async Task ShouldAutomaticallyResolveInFavourOfLatest_ContentUpdate()
 		{
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
@@ -104,6 +105,268 @@ namespace RavenFS.Tests.Synchronization
 			var stream = await destinationClient.DownloadAsync("test");
 
 			return StreamToString(stream);
+		}
+
+		private static async Task<string> RunContentSynchronization(IAsyncFilesCommands sourceClient, IAsyncFilesCommands destinationClient, Action action = null)
+		{
+			await destinationClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("destination")));
+
+			if (action != null)
+				action();
+
+			await sourceClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("source")));
+
+			var report = await sourceClient.Synchronization.StartAsync("test", destinationClient);
+
+			Assert.Null(report.Exception);
+			Assert.Equal(SynchronizationType.ContentUpdate, report.Type);
+
+			var stream = await destinationClient.DownloadAsync("test");
+
+			return StreamToString(stream);
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLocal_DuringSynchronization_ContentUpdate()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLocal
+			});
+
+			var content = await RunContentSynchronization(sourceClient, destinationClient);
+
+			Assert.Equal("destination", content);
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfRemote_DuringSynchronization_ContentUpdate()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToRemote
+			});
+
+			var content = await RunContentSynchronization(sourceClient, destinationClient);
+
+			Assert.Equal("source", content);
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLatest_DuringSynchronization_ContentUpdate()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLatest
+			});
+
+			var content = await RunContentSynchronization(sourceClient, destinationClient, () => Thread.Sleep(1000));
+
+			Assert.Equal("source", content);
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLocal_DuringSynchronization_Rename()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLocal
+			});
+
+			await RunRenameSynchronization(sourceClient, destinationClient);
+
+			Assert.NotNull(await destinationClient.GetMetadataForAsync("test"));
+			Assert.Null(await destinationClient.GetMetadataForAsync("renamed"));
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfRemote_DuringSynchronization_Rename()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToRemote
+			});
+
+			await RunRenameSynchronization(sourceClient, destinationClient);
+
+			Assert.Null(await destinationClient.GetMetadataForAsync("test"));
+			Assert.NotNull(await destinationClient.GetMetadataForAsync("renamed"));
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLatest_DuringSynchronization_Rename()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLatest
+			});
+
+			await RunRenameSynchronization(sourceClient, destinationClient, () => Thread.Sleep(1000));
+
+			Assert.Null(await destinationClient.GetMetadataForAsync("test"));
+			Assert.NotNull(await destinationClient.GetMetadataForAsync("renamed"));
+		}
+
+		private static async Task RunRenameSynchronization(IAsyncFilesCommands sourceClient, IAsyncFilesCommands destinationClient, Action action = null)
+		{
+			await destinationClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("rename-test")));
+
+			if (action != null)
+				action();
+
+			await sourceClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("rename-test")));
+
+			await sourceClient.RenameAsync("test", "renamed");
+
+			var report = await sourceClient.Synchronization.StartAsync("test", destinationClient);
+
+			Assert.Null(report.Exception);
+			Assert.Equal(SynchronizationType.Rename, report.Type);
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLocal_DuringSynchronization_MetadataUpdate()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLocal
+			});
+
+			await RunMetadataSynchronization(sourceClient, destinationClient);
+
+			Assert.Equal("destination", (await destinationClient.GetMetadataForAsync("test")).Value<string>("Sample-Header"));
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfRemote_DuringSynchronization_MetadataUpdate()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToRemote
+			});
+
+			await RunMetadataSynchronization(sourceClient, destinationClient);
+
+			Assert.Equal("source", (await destinationClient.GetMetadataForAsync("test")).Value<string>("Sample-Header"));
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLatest_DuringSynchronization_MetadataUpdate()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLatest
+			});
+
+			await RunMetadataSynchronization(sourceClient, destinationClient, () => Thread.Sleep(1000));
+
+			Assert.Equal("source", (await destinationClient.GetMetadataForAsync("test")).Value<string>("Sample-Header"));
+		}
+
+		private static async Task RunMetadataSynchronization(IAsyncFilesCommands sourceClient, IAsyncFilesCommands destinationClient, Action action = null)
+		{
+			await destinationClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("metadata-test")), new RavenJObject { { "Sample-Header", "destination" } });
+
+			if (action != null)
+				action();
+
+			await sourceClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("metadata-test")), new RavenJObject { { "Sample-Header", "source" } });
+
+			var report = await sourceClient.Synchronization.StartAsync("test", destinationClient);
+
+			Assert.Null(report.Exception);
+			Assert.Equal(SynchronizationType.MetadataUpdate, report.Type);
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLocal_DuringSynchronization_Delete()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLocal
+			});
+
+			await RunDeleteSynchronization(sourceClient, destinationClient);
+
+			Assert.NotNull(await destinationClient.GetMetadataForAsync("test"));
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfRemote_DuringSynchronization_Delete()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToRemote
+			});
+
+			await RunDeleteSynchronization(sourceClient, destinationClient);
+
+			Assert.Null(await destinationClient.GetMetadataForAsync("test"));
+		}
+
+		[Fact]
+		public async Task ShouldAutomaticallyResolveInFavourOfLatest_DuringSynchronization_Delete()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = NewAsyncClient(1);
+
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig()
+			{
+				FileConflictResolution = StraightforwardConflictResolution.ResolveToLatest
+			});
+
+			await RunDeleteSynchronization(sourceClient, destinationClient);
+
+			Assert.Null(await destinationClient.GetMetadataForAsync("test"));
+		}
+
+		private static async Task RunDeleteSynchronization(IAsyncFilesCommands sourceClient, IAsyncFilesCommands destinationClient, Action action = null)
+		{
+			await destinationClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("delete-test")));
+
+			if (action != null)
+				action();
+
+			await sourceClient.UploadAsync("test", new MemoryStream(Encoding.UTF8.GetBytes("delete-test")));
+			await sourceClient.DeleteAsync("test");
+
+			var report = await sourceClient.Synchronization.StartAsync("test", destinationClient);
+
+			Assert.Null(report.Exception);
+			Assert.Equal(SynchronizationType.Delete, report.Type);
 		}
 	}
 }

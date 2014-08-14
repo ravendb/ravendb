@@ -36,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			};
 
 			conflictDetector = new ConflictDetector();
-			conflictResolver = new ConflictResolver(null, null); //TODO arek
+			conflictResolver = new ConflictResolver(null, null);
 		}
 
 		protected ITransactionalStorage Storage { get; private set; }
@@ -124,10 +124,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				case ConflictResolutionStrategy.CurrentVersion:
 					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
 					await destination.Commands.Synchronization.ResolveConflictAsync(FileName, conflictResolutionStrategy);
-					return new SynchronizationReport(FileName, FileETag, SynchronizationType)
-					{
-						Exception = new SynchronizationException(string.Format("File {0} was conflicted, but conflict resolvers of the destination server resolved it in favour of the current (destination) version", FileName)),
-					};
+					return new SynchronizationReport(FileName, FileETag, SynchronizationType);
 				case ConflictResolutionStrategy.RemoteVersion:
 					// we can push the file even though it conflicted, the conflict will be automatically resolved on the destination side
 					return null;

@@ -1162,10 +1162,12 @@ namespace Raven.Client.FileSystem
 									new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention))
 								 .AddOperationHeaders(client.OperationsHeaders);
 
+				request.AddHeaders(localMetadata);
+
 		        try
 		        {
 			        await request.WriteWithObjectAsync(conflict);
-					var response = (RavenJObject)await request.ReadResponseJsonAsync();
+					var response = await request.ReadResponseJsonAsync();
 					return response.JsonDeserialization<ConflictResolutionStrategy>();
 		        }
 		        catch (Exception e)
