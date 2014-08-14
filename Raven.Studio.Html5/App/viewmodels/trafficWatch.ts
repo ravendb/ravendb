@@ -116,7 +116,6 @@ class trafficWatch extends viewModelBase {
             this.disconnect().done(() => {
                 this.connect();
             });
-
         }
     }
 
@@ -172,7 +171,7 @@ class trafficWatch extends viewModelBase {
                 this.isConnected(false);
             });
         } else {
-            app.showMessage("Cannot disconnet, connection does not exist", "Disconnect");
+            app.showMessage("Cannot disconnect, connection does not exist", "Disconnect");
             return $.Deferred().reject();
         }
     }

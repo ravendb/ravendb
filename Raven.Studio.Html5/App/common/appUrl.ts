@@ -163,6 +163,10 @@ class appUrl {
         return "#admin/settings/adminLogs";
     }
 
+    static forServerLogs(): string {
+        return "#admin/settings/serverLogs";
+    }
+
     static forTrafficWatch(): string {
         return "#admin/settings/trafficWatch";
     }

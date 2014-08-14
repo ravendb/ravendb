@@ -5,12 +5,12 @@ import dialog = require("plugins/dialog");
 import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
-import customLogConfig = require("models/customLogConfig");
-import customLogEntry = require("models/customLogEntry");
+import serverLogsConfig = require("models/serverLogsConfig");
+import serverLogsConfigEntry = require("models/serverLogsConfigEntry");
 
-class customLogging extends dialogViewModelBase {
+class serverLogsConfigureDialog extends dialogViewModelBase {
 
-    private nextTask = $.Deferred<customLogConfig>();
+    private nextTask = $.Deferred<serverLogsConfig>();
     nextTaskStarted = false;
     private form: JQuery;
 
@@ -20,7 +20,7 @@ class customLogging extends dialogViewModelBase {
     lineHeight: number = 51;
     isScrollNeeded: KnockoutComputed<boolean>;
 
-    constructor(private logConfig: customLogConfig) {
+    constructor(private logConfig: serverLogsConfig) {
         super();
         this.maxTableHeight(Math.floor($(window).height() * 0.43));
         
@@ -62,21 +62,21 @@ class customLogging extends dialogViewModelBase {
         return this.nextTask.promise();
     }
 
-    startCustomLogging() {
+    startServerLogging() {
         this.nextTaskStarted = true;
         this.nextTask.resolve(this.logConfig);
         dialog.close(this);
     }
 
     insertNewRow() {
-        this.logConfig.entries.push(new customLogEntry("", "Info"));
+        this.logConfig.entries.push(new serverLogsConfigEntry("", "Info"));
 
         if (!this.isScrollNeeded()) {
             this.alignBoxVertically();
         }
     }
 
-    deleteRow(row: customLogEntry) {
+    deleteRow(row: serverLogsConfigEntry) {
         this.logConfig.entries.remove(row);
 
         if (!this.isScrollNeeded()) {
@@ -84,7 +84,7 @@ class customLogging extends dialogViewModelBase {
         }
     }
 
-    moveUp(row: customLogEntry) {
+    moveUp(row: serverLogsConfigEntry) {
         var i = this.logConfig.entries.indexOf(row);
         if (i >= 1) {
             var array = this.logConfig.entries();
@@ -92,7 +92,7 @@ class customLogging extends dialogViewModelBase {
         }
     }
 
-    moveDown(row: customLogEntry) {
+    moveDown(row: serverLogsConfigEntry) {
         var i = this.logConfig.entries.indexOf(row);
         if (i >= 0 && i < this.logConfig.entries.length - 1) {
             var array = this.logConfig.entries();
@@ -114,4 +114,4 @@ class customLogging extends dialogViewModelBase {
     }
 }
 
-export = customLogging;
+export = serverLogsConfigureDialog;

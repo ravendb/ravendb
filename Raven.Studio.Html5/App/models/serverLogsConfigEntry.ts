@@ -1,4 +1,4 @@
-class customLogEntry {
+class serverLogsConfigEntry {
 
     category = ko.observable<string>();
     level = ko.observable<string>();
@@ -9,10 +9,10 @@ class customLogEntry {
     }
 
     static empty() {
-        return new customLogEntry(null, null);
+        return new serverLogsConfigEntry(null, null);
     }
 
-    toDto(): customLogEntryDto {
+    toDto(): serverLogsConfigEntryDto {
         return {
             category: this.category(),
             level: this.level()
@@ -20,4 +20,4 @@ class customLogEntry {
     }
 }
 
-export = customLogEntry;
+export = serverLogsConfigEntry;

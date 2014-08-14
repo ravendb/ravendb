@@ -1067,7 +1067,7 @@ interface runningTaskDto {
 }
 
 
-interface customLogEntryDto {
+interface serverLogsConfigEntryDto {
     category: string;
     level: string;
 }

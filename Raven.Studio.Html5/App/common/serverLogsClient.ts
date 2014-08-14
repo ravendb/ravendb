@@ -10,10 +10,12 @@ import folder = require("models/filesystem/folder");
 import changesApi = require("common/changesApi");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import shell = require("viewmodels/shell");
-import onDemandLogsConfigureCommand = require("commands/onDemandLogsConfigureCommand");
 import idGenerator = require("common/idGenerator");
+import serverLogsConfigureCommand = require("commands/serverLogsConfigureCommand");
 
-class onDemandLogs {
+class serverLogsClient {
+
+    public connectionClosingTask: JQueryDeferred<any>;
 
     private eventsId: string;
     private resourcePath: string;
@@ -34,9 +36,10 @@ class onDemandLogs {
 
     private commandBase = new commandBase();
 
-    constructor(private db: database, private onMessageCallback: Function) {
+    constructor(private onMessageCallback: Function) {
+
         this.eventsId = idGenerator.generateId();
-        this.resourcePath = appUrl.forResourceQuery(this.db);
+        this.resourcePath = appUrl.forResourceQuery(appUrl.getSystemDatabase());
         this.connectToLogsTask = $.Deferred();
 
         if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
@@ -59,7 +62,7 @@ class onDemandLogs {
     }
 
     private connect(action: Function) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.db, true).execute();
+        var getTokenTask = new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
@@ -134,7 +137,7 @@ class onDemandLogs {
             }
 
             //TODO: exception handling?
-            this.commandBase.query('/admin/logs/configure', args, this.db);
+            this.commandBase.query('/admin/logs/configure', args, appUrl.getSystemDatabase());
         });
     }
 
@@ -154,8 +157,8 @@ class onDemandLogs {
         this.onMessageCallback(eventDto);
     }
 
-    configureCategories(categoriesConfig: customLogEntryDto[]) {
-        new onDemandLogsConfigureCommand(this.db, categoriesConfig, this.eventsId).execute();
+    configureCategories(categoriesConfig: serverLogsConfigEntryDto[]) {
+        new serverLogsConfigureCommand(appUrl.getSystemDatabase(), categoriesConfig, this.eventsId).execute();
     }
 
     dispose() {
@@ -179,4 +182,4 @@ class onDemandLogs {
     }
 }
 
-export = onDemandLogs;
+export = serverLogsClient;
