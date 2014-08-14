@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
+using Match = ICSharpCode.NRefactory.PatternMatching.Match;
 
 namespace Raven.Database.Indexing
 {
@@ -24,6 +26,8 @@ namespace Raven.Database.Indexing
 			// Unwrap expression
 			expr = ((ParenthesizedExpression)expr).Expression;
 			var format = expr.GetText(FormattingOptionsFactory.CreateAllman());
+			format = format.Remove(0, 3);
+			format = format.Replace("\r\n\t", "\n");
 			return format;
 		}
 
@@ -61,9 +65,9 @@ namespace Raven.Database.Indexing
 				// and fix them, either by adding a degenerate select, or by combining them with another query.
 				foreach (QueryExpression query in compilationUnit.Descendants.OfType<QueryExpression>())
 				{
-					if (query.Clauses.First().GetType() != typeof (QueryFromClause)) continue;
+					var fromClause  = query.Clauses.First() as QueryFromClause;
+					if (fromClause == null) continue;
 
-					QueryFromClause fromClause = (QueryFromClause) query.Clauses.First();
 					if (IsDegenerateQuery(query))
 					{
 						// introduce select for degenerate query
