@@ -743,17 +743,12 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
-                if (serverBuildReminder.isReminderNeeded()) {
-                    var currentBuildVersion = serverBuildResult.BuildVersion;
-                    var stableOnly = true;
-                    if (currentBuildVersion.indexOf("Unstable") > -1) {
-                        stableOnly = false;
-                    }
-
-                    new getLatestServerBuildVersionCommand(stableOnly)
+                var currentBuildVersion = serverBuildResult.BuildVersion;
+                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
+                    new getLatestServerBuildVersionCommand() //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
-                            if (latestServerBuildResult.LatestBuild != currentBuildVersion) {
+                            if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //
                                 var latestBuildReminderViewModel = new latestBuildReminder(latestServerBuildResult);
                                 app.showDialog(latestBuildReminderViewModel);
                             }
