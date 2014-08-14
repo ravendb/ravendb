@@ -1,5 +1,4 @@
 ﻿using Raven.Abstractions.Connection;
-using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.FileSystem.Changes;
@@ -9,10 +8,8 @@ using Raven.Client.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 

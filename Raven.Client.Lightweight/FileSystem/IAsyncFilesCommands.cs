@@ -75,13 +75,13 @@ namespace Raven.Client.FileSystem
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
-        Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25);
+        Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 1024);
 
-        Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25);
-        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25);
-        Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 25);
+        Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 1024);
+        Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 1024);
+        Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 1024);
 
-        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25);
+        Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
     }

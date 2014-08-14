@@ -1,8 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
-using Raven.Client.Document;
 using Raven.Client.FileSystem.Impl;
 using Raven.Client.Util;
 using Raven.Json.Linq;
@@ -10,9 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Pipes;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -1,14 +1,12 @@
-﻿using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Client.FileSystem
 {
@@ -45,6 +43,11 @@ namespace Raven.Client.FileSystem
         public IAsyncAdvancedFilesSessionOperations Advanced
         {
             get { return this; }
+        }
+
+        public IAsyncFilesQuery<FileHeader> Query()
+        {
+            return new AsyncFilesQuery<FileHeader>(this, this.Commands);
         }
 
         public async Task<FileHeader> LoadFileAsync(string filename)
