@@ -353,9 +353,12 @@ namespace Voron.Debugging
             }
         }
 
-        public static DebugJournal FromFile(string journalName, StorageEnvironment env)
+        public static DebugJournal FromFile(string journalName, StorageEnvironment env, bool onlyValueLength = false)
         {
-            var newJournal = new DebugJournal(journalName, env);
+            var newJournal = new DebugJournal(journalName, env)
+                             {
+                                 RecordOnlyValueLength = onlyValueLength
+                             };
             newJournal.Load(journalName);
 
             return newJournal;
