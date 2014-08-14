@@ -287,44 +287,15 @@ If you really want to do in memory filtering on the data returned from the query
             return this;
         }
 
-        T IFilesQueryBase<T, IFilesQuery<T>>.FirstOrDefault()
-        {
-            throw new NotImplementedException();
-        }
-
-        T IFilesQueryBase<T, IFilesQuery<T>>.First()
-        {
-            throw new NotImplementedException();
-        }
-
-        T IFilesQueryBase<T, IFilesQuery<T>>.SingleOrDefault()
-        {
-            throw new NotImplementedException();
-        }
-
-        T IFilesQueryBase<T, IFilesQuery<T>>.Single()
-        {
-            throw new NotImplementedException();
-        }
-
         FilesConvention IFilesQueryBase<T, IFilesQuery<T>>.Conventions
         {
-            get { throw new NotImplementedException(); }
+            get { return this.Conventions; }
         }
 
-        //IEnumerator<T> IEnumerable<T>.GetEnumerator()
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-        SearchResults IFilesQuery<T>.QueryResult
-        {
-            get { throw new NotImplementedException(); }
-        }
 
         bool IFilesQuery<T>.IsDistinct
         {
-            get { throw new NotImplementedException(); }
+            get { return this.isDistinct; }
         }
 
         IEnumerator IEnumerable.GetEnumerator()

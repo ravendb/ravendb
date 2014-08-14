@@ -68,6 +68,9 @@ namespace Raven.Client.FileSystem
             private set;
         }
 
+        private int pageSize = 1024;
+        private int start = 0;
+
         public AbstractFilesQuery(InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands)
         {
             this.conventions = theSession == null ? new FilesConvention() : theSession.Conventions;
@@ -630,13 +633,13 @@ namespace Raven.Client.FileSystem
         }
 
 
-        protected virtual IEnumerator<T> ExecuteActualQuery()
+        protected virtual IEnumerable<T> ExecuteActualQuery()
         {
             Session.IncrementRequestCount();
 
             log.Debug("Executing query on file system '{1}' in '{2}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
-            var result = Commands.SearchAsync(this.queryText.ToString()).Result;
+            var result = Commands.SearchAsync(this.queryText.ToString(), null, start, pageSize).Result;
 
             foreach (var item in result.Files)
                 yield return item as T;
@@ -644,8 +647,52 @@ namespace Raven.Client.FileSystem
 
         public virtual IEnumerator<T> GetEnumerator()
         {
-            return ExecuteActualQuery();
+            return ExecuteActualQuery().GetEnumerator();
         }
 
+        /// <summary>
+        ///   Takes the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        /// <returns></returns>
+        public void Take(int count)
+        {
+            pageSize = count;
+        }
+
+        /// <summary>
+        ///   Skips the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        /// <returns></returns>
+        public void Skip(int count)
+        {
+            start = count;
+        }
+
+
+        public T FirstOrDefault()
+        {
+            Take(1);
+            return ExecuteActualQuery().FirstOrDefault() as T;
+        }
+
+        public T First()
+        {
+            Take(1);
+            return ExecuteActualQuery().First() as T;
+        }
+
+        public T SingleOrDefault()
+        {
+            Take(2);
+            return ExecuteActualQuery().SingleOrDefault() as T;
+        }
+
+        public T Single()
+        {
+            Take(2);
+            return ExecuteActualQuery().Single() as T;
+        }
     }
 }

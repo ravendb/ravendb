@@ -24,6 +24,19 @@ namespace Raven.Client.FileSystem
         /// <returns></returns>
         void CloseSubclause();
 
+        /// <summary>
+        ///   Takes the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        /// <returns></returns>
+        void Take(int count);
+
+        /// <summary>
+        ///   Skips the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        /// <returns></returns>
+        void Skip(int count);
 
         /// <summary>
         ///   Filter the results from the index using the specified where clause.
