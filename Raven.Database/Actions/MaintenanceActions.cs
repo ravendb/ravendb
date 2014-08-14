@@ -76,7 +76,7 @@ namespace Raven.Database.Actions
 
             if (incrementalBackup &&
                 TransactionalStorage is Raven.Storage.Voron.TransactionalStorage &&
-                bool.TryParse(Database.Configuration.Settings["Raven/Voron/AllowIncrementalBackups"], out enableIncrementalBackup) == false)
+                Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }

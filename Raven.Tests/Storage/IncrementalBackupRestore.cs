@@ -40,7 +40,7 @@ namespace Raven.Tests.Storage
 	                {"Raven/Esent/CircularLog", "false"},
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
-	        });
+	        }.Initialize());
 	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 	    }
 
