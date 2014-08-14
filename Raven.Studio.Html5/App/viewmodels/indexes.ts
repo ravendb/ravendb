@@ -179,9 +179,11 @@ class indexes extends viewModelBase {
     pasteIndex() {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
+
+    showMergeSuggestions() {
+        //app.showDialog(new copyIndexDialog(this.activeDatabase()));
+    }
     
-    
-   
     toggleExpandAll() {
        if (this.btnState() === true) {
            $(".index-group-content").collapse('show');
