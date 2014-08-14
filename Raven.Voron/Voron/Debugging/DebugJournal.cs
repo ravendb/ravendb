@@ -5,18 +5,126 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+
 using Voron.Impl;
-using Voron.Trees;
+using Voron.Util.Conversion;
 
 namespace Voron.Debugging
 {
     public class DebugJournal : IDisposable
     {
-        public class ActivityEntry
+        public abstract class BaseActivityEntry
         {
-            public DebugActionType ActionType { get; private set; }
+            public DebugActionType ActionType { get; protected set; }
 
+            public abstract string ToCsvLine(bool recordOnlyValueLength);
+
+            public static BaseActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
+            {
+                var firstToken = csvLine.Substring(0, csvLine.IndexOf(",", StringComparison.Ordinal));
+                if (firstToken.StartsWith("Flush"))
+                {
+                    return FlushActivityEntry.FromCsvLine(csvLine);
+                }
+                if (firstToken.StartsWith("Transaction"))
+                {
+                    return TransactionActivityEntry.FromCsvLine(csvLine, recordOnlyValueLength);
+                }
+                return WriteActivityEntry.FromCsvLine(csvLine, recordOnlyValueLength);
+            }
+        }
+
+        public abstract class TransactionAwareActivityEntry : BaseActivityEntry
+        {
+            public long? TransactionId { get; protected set; }
+        }
+
+        public class FlushActivityEntry : TransactionAwareActivityEntry
+        {
+            public FlushActivityEntry(DebugActionType actionType, long? transactionId)
+            {
+                ActionType = actionType;
+                TransactionId = transactionId;
+            }
+
+            public override string ToCsvLine(bool recordOnlyValueLength)
+            {
+                return string.Format("{0},{1}", ActionType, TransactionId);
+            }
+
+            public static BaseActivityEntry FromCsvLine(string csvLine)
+            {
+                var columnArray = csvLine.Split(new[] { ',' }).ToList();
+                if (columnArray.Count != 2)
+                {
+                    throw new ArgumentException("invalid csv data - check that you do not have commas in data");
+                }
+
+                try
+                {
+                    var actionType = GenericUtil.ParseEnum<DebugActionType>(columnArray[0]);
+                    var transactionId = string.IsNullOrEmpty(columnArray[1]) ? null : (long?)long.Parse(columnArray[1]);
+                    return new FlushActivityEntry(actionType, transactionId);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException("Unable to parse the argument", e);
+                }
+            }
+        }
+
+        public class TransactionActivityEntry : TransactionAwareActivityEntry
+        {
+            public TransactionFlags Flags { get; private set; }
+
+            public bool StartedByFlusher { get; private set; }
+
+            public TransactionActivityEntry(Transaction tx, DebugActionType actionType)
+            {
+                TransactionId = tx.Id;
+                Flags = tx.Flags;
+                ActionType = actionType;
+                StartedByFlusher = tx.StartedByFlusher;
+            }
+
+            public TransactionActivityEntry(long transactionId, TransactionFlags flags, DebugActionType actionType, bool startedByFlusher)
+            {
+                TransactionId = transactionId;
+                Flags = flags;
+                ActionType = actionType;
+                StartedByFlusher = startedByFlusher;
+            }
+
+            public override string ToCsvLine(bool recordOnlyValueLength)
+            {
+                return string.Format("{0},{1},{2},{3}", ActionType, TransactionId, Flags, StartedByFlusher);
+            }
+
+            public new static TransactionActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
+            {
+                var columnArray = csvLine.Split(new[] { ',' }).ToList();
+                if (columnArray.Count != 4)
+                {
+                    throw new ArgumentException("invalid csv data - check that you do not have commas in data");
+                }
+
+                try
+                {
+                    var actionType = GenericUtil.ParseEnum<DebugActionType>(columnArray[0]);
+                    var transactionId = long.Parse(columnArray[1]);
+                    var flags = GenericUtil.ParseEnum<TransactionFlags>(columnArray[2]);
+                    var startedByFlusher = bool.Parse(columnArray[3]);
+                    return new TransactionActivityEntry(transactionId, flags, actionType, startedByFlusher);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException("Unable to parse the argument", e);
+                }
+            }
+        }
+
+        public class WriteActivityEntry : TransactionAwareActivityEntry
+        {
             public string TreeName { get; private set; }
 
             public Slice Key { get; private set; }
@@ -29,26 +137,24 @@ namespace Voron.Debugging
                 {
                     if (Value == null)
                         return null;
-
                     if (Value is Slice)
-                        return new MemoryStream(Encoding.UTF8.GetBytes(Value.ToString().Replace("|,|",",")));
-
+                        return new MemoryStream(Encoding.UTF8.GetBytes(Value.ToString()));
                     if (Value is Stream)
                         return Value as Stream;
-
-                    throw new InvalidOperationException("Value of activity entry is of unsupported type");
+                    throw new InvalidOperationException("Value of activity activityEntry is of unsupported type");
                 }
             }
 
-            public ActivityEntry(DebugActionType actionType, Slice key, string treeName, object value)
+            public WriteActivityEntry(DebugActionType actionType, long transactionId, Slice key, string treeName, object value)
             {
                 ActionType = actionType;
+                TransactionId = transactionId;
                 Key = key;
                 TreeName = treeName;
                 Value = value;
             }
 
-            public string ToCsvLine(bool recordOnlyValueLength)
+            public override string ToCsvLine(bool recordOnlyValueLength)
             {
                 if (recordOnlyValueLength)
                     return ToCsvWithValueLengthOnly();
@@ -58,7 +164,7 @@ namespace Voron.Debugging
 
             private string ToCsv()
             {
-                string entryValue = null;
+                var entryValue = new byte[0];
 
                 if (Value is Stream && Value != Stream.Null)
                 {
@@ -75,7 +181,7 @@ namespace Voron.Debugging
                         ownsStream = true;
                     }
 
-                    entryValue = Encoding.UTF8.GetString(ms.ToArray()).Replace(",","|");
+                    entryValue = ms.ToArray();
 
                     if (ownsStream)
                     {
@@ -91,11 +197,11 @@ namespace Voron.Debugging
                         var array = new byte[slice.Size];
                         slice.CopyTo(array);
 
-						entryValue = Encoding.UTF8.GetString(array).Replace(",", "|");
+                        entryValue = array;
                     }
 					else if (Value != null && (Value.GetType().IsPrimitive || Value is String))
 					{
-						entryValue = Value.ToString().Replace(",", "|");
+					    entryValue = Encoding.UTF8.GetBytes(Value.ToString());
 					}
 					else if (Value == Stream.Null || Value == null)
                     {
@@ -107,8 +213,8 @@ namespace Voron.Debugging
                     }
                 }
 
-                var line = string.Format("{0},{1},{2},{3}", ActionType, TreeName, Key, entryValue);
-				Debug.Assert(line.Count(x => x == ',') == 3);
+                var line = string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
+				Debug.Assert(line.Count(x => x == ',') == 4);
 	            
 				return line;
             }
@@ -120,66 +226,74 @@ namespace Voron.Debugging
                     length = ((Stream)Value).Length;
                 else return ToCsv();
 
-                return string.Format("{0},{1},{2},{3}", ActionType, TreeName, Key, length);
+                return string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, length);
             }
 
-            public static ActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
+            public static WriteActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
             {
                 var columnArray = csvLine.Split(new[] { ',' }).ToList();
-                if (columnArray.Count != 4)
+                if (columnArray.Count != 5)
                     throw new ArgumentException("invalid csv data - check that you do not have commas in data");
 
-	            columnArray[3] = columnArray[3].Replace('|', ',');
                 try
                 {
-                    if (columnArray[0] == DebugActionType.CreateTree.ToString())
+                    var type = GenericUtil.ParseEnum<DebugActionType>(columnArray[0]);
+
+                    if (type == DebugActionType.CreateTree)
                     {
-                        var activityEntry = new ActivityEntry(
-                            GenericUtil.ParseEnum<DebugActionType>(columnArray[0]),
+                        var activityEntry = new WriteActivityEntry(
+                            type,
+                            long.Parse(columnArray[1]),
                             Slice.Empty,
-                            columnArray[1],
+                            columnArray[2],
                             null);
                         return activityEntry;
                     }
 
-                    if (columnArray[0] == DebugActionType.Delete.ToString())
+                    if (type == DebugActionType.Delete)
                     {
-                        var activityEntry = new ActivityEntry(
-                            GenericUtil.ParseEnum<DebugActionType>(columnArray[0]),
+                        var activityEntry = new WriteActivityEntry(
+                            type,
+                            long.Parse(columnArray[1]),
+                            columnArray[3],
                             columnArray[2],
-                            columnArray[1],
                             null);
 
                         return activityEntry;
                     }
 
                     var random = new Random();
-
-                    var type = GenericUtil.ParseEnum<DebugActionType>(columnArray[0]);
+                    
                     object value;
                     switch (type)
                     {
+                        case DebugActionType.Increment:
+                            var delta = long.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(columnArray[4])));
+                            value = new MemoryStream(EndianBitConverter.Little.GetBytes(delta));
+                            break;
                         case DebugActionType.MultiAdd:
                         case DebugActionType.MultiDelete:
-                               value = new Slice(Encoding.UTF8.GetBytes(columnArray[3]));
+                               value = new Slice(Convert.FromBase64String(columnArray[4]));
                             break;
                         default:
                             if (recordOnlyValueLength)
                             {
-                                var length = long.Parse(columnArray[3]);
+                                var length = long.Parse(columnArray[4]);
                                 var bytes = new byte[length];
                                 random.NextBytes(bytes);
 
                                 value = new MemoryStream(bytes);
                             }
                             else
-                                value = new MemoryStream(Encoding.UTF8.GetBytes(columnArray[3]));
+                                value = new MemoryStream(Convert.FromBase64String(columnArray[4]));
                             break;
                     }
 
-                    var entry = new ActivityEntry(type,
+                    var entry = new WriteActivityEntry(
+                        type,
+                        long.Parse(columnArray[1]),
+                        columnArray[3],
                         columnArray[2],
-                        columnArray[1],
                         value);
 
                     return entry;
@@ -201,7 +315,7 @@ namespace Voron.Debugging
 
         public bool RecordOnlyValueLength { get; set; }
 
-        public ConcurrentQueue<ActivityEntry> WriteQueue { get; private set; }
+        public ConcurrentQueue<BaseActivityEntry> WriteQueue { get; private set; }
 
         public DebugJournal(string journalName, StorageEnvironment env, bool isRecordingByDefault = false)
         {
@@ -221,7 +335,7 @@ namespace Voron.Debugging
 
             _journalFileStream = new FileStream(journalName + FileExtension, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             _journalWriter = new StreamWriter(_journalFileStream, Encoding.UTF8);
-            WriteQueue = new ConcurrentQueue<ActivityEntry>();
+            WriteQueue = new ConcurrentQueue<BaseActivityEntry>();
         }
 
         public void Load(string journalName)
@@ -233,13 +347,11 @@ namespace Voron.Debugging
 	                var csvLine = journalReader.ReadLine();
 	                if (!string.IsNullOrWhiteSpace(csvLine))
 	                {
-						WriteQueue.Enqueue(ActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength));
+						WriteQueue.Enqueue(BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength));
 					}
                 }
             }
-
         }
-
 
         public static DebugJournal FromFile(string journalName, StorageEnvironment env)
         {
@@ -249,23 +361,46 @@ namespace Voron.Debugging
             return newJournal;
         }
 
-        [Conditional("DEBUG")]
-        public void RecordAction(DebugActionType actionType, Slice key, string treeName, object value)
+        private void WriteAndFlush(TransactionAwareActivityEntry activityEntry)
+        {
+            lock (_journalWriteSyncObject)
+                if (!_isDisposed)
+                {
+                    _journalWriter.WriteLine(activityEntry.ToCsvLine(RecordOnlyValueLength));
+                    _journalWriter.Flush();
+                }
+        }
+
+        public void RecordFlushAction(DebugActionType actionType, Transaction tx)
         {
             if (IsRecording)
             {
-                var newAction = new ActivityEntry(actionType, key, treeName, value);
-                WriteQueue.Enqueue(newAction);
-				lock(_journalWriteSyncObject)
-					if (!_isDisposed)
-					{
-						_journalWriter.WriteLine(newAction.ToCsvLine(RecordOnlyValueLength));
-						_journalWriter.Flush();
-					}
+                var action = new FlushActivityEntry(actionType, tx != null ? (long?)tx.Id : null);
+                WriteQueue.Enqueue(action);
+                WriteAndFlush(action);
             }
         }
 
-        [Conditional("DEBUG")]
+        public void RecordWriteAction(DebugActionType actionType, Transaction tx, Slice key, string treeName, object value)
+        {
+            if (IsRecording)
+            {
+                var newAction = new WriteActivityEntry(actionType, tx.Id, key, treeName, value);
+                WriteQueue.Enqueue(newAction);
+				WriteAndFlush(newAction);
+            }
+        }
+
+        public void RecordTransactionAction(Transaction tx, DebugActionType actionType)
+        {
+            if (IsRecording)
+            {
+                var txAction = new TransactionActivityEntry(tx, actionType);
+                WriteQueue.Enqueue(txAction);
+                WriteAndFlush(txAction);
+            }
+        }
+
         public void Flush()
         {
             try
@@ -284,45 +419,167 @@ namespace Voron.Debugging
             var wasDebugRecording = _env.IsDebugRecording;
             _env.IsDebugRecording = false;
 
-            using (var writeBatch = new WriteBatch())
+            Transaction currentWriteTransaction = null;
+            var readTransactions = new Dictionary<long, Queue<Transaction>>();
+
+            BaseActivityEntry activityEntry;
+            while (WriteQueue.TryDequeue(out activityEntry))
             {
-                ActivityEntry entry;
-                while (WriteQueue.TryDequeue(out entry))
+                var transactionEntry = activityEntry as TransactionActivityEntry;
+                if (transactionEntry != null)
                 {
-                    switch (entry.ActionType)
-                    {
-                        case DebugActionType.Add:
-                            writeBatch.Add(entry.Key, entry.ValueStream, entry.TreeName);
-                            break;
-                        case DebugActionType.Delete:
-                            writeBatch.Delete(entry.Key, entry.TreeName);
-                            break;
-                        case DebugActionType.MultiAdd:
-                            writeBatch.MultiAdd(entry.Key, new Slice(Encoding.UTF8.GetBytes(entry.Value.ToString())), entry.TreeName);
-                            break;
-                        case DebugActionType.MultiDelete:
-                            writeBatch.MultiDelete(entry.Key, new Slice(Encoding.UTF8.GetBytes(entry.Value.ToString())), entry.TreeName);
-                            break;
-                        case DebugActionType.CreateTree:
-                            using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-                            {
-                                _env.CreateTree(tx, entry.TreeName);
-                                tx.Commit();
-                            }
-                            break;
-						case DebugActionType.Increment:
-							//TODO : make sure this is correct here
-							writeBatch.Increment(entry.Key, entry.ValueStream.ReadByte(), entry.TreeName);
-							break;
-                        default: //precaution against newly added action types
-                            throw new InvalidOperationException("unsupported tree action type");
-                    }
+                    ReplayTransactionEntry(transactionEntry, ref currentWriteTransaction, readTransactions);
+                    continue;
                 }
 
-                _env.Writer.Write(writeBatch);
+                var actionEntry = activityEntry as WriteActivityEntry;
+                if (actionEntry != null)
+                {
+                    if (currentWriteTransaction != null)
+                    {
+                        ReplayWriteAction(actionEntry, ref currentWriteTransaction);
+                    }
+                    continue;
+                }
+
+                var flushEntry = activityEntry as FlushActivityEntry;
+                if (flushEntry != null)
+                {
+                    ReplayFlushAction(flushEntry, currentWriteTransaction);
+                    continue;
+                }
+                throw new InvalidOperationException("unsupported tree action type: " + activityEntry);
+            }
+
+
+            if (currentWriteTransaction != null)
+            {
+                currentWriteTransaction.Dispose();
+            }
+
+
+            foreach (var transactions in readTransactions.Values)
+            foreach (var t in transactions)
+            {
+                t.Dispose();
             }
 
             _env.IsDebugRecording = wasDebugRecording; //restore the state as it was
+        }
+
+        private void ReplayFlushAction(FlushActivityEntry flushEntry, Transaction currentWriteTransaction)
+        {
+            if (flushEntry.ActionType == DebugActionType.FlushStart)
+            {
+                using (_env.Options.AllowManualFlushing())
+                {
+                    _env.FlushLogToDataFile(currentWriteTransaction);
+                }    
+            }
+        }
+
+        private void ReplayTransactionEntry(TransactionActivityEntry transactionAwareActivityEntry, ref Transaction currentWriteTransaction, Dictionary<long, Queue<Transaction>> readTransactions)
+        {
+            var isReadTx = transactionAwareActivityEntry.Flags == TransactionFlags.Read;
+            if (isReadTx)
+            {
+                ReplayReadTransaction(transactionAwareActivityEntry, readTransactions);
+            }
+            else
+            {
+                ReplayWriteTransaction(transactionAwareActivityEntry, ref currentWriteTransaction);
+            }
+        }
+
+        private void ReplayWriteTransaction(TransactionActivityEntry transactionAwareActivityEntry, ref Transaction currentWriteTransaction)
+        {
+            Transaction tx;
+            switch (transactionAwareActivityEntry.ActionType)
+            {
+                case DebugActionType.TransactionStart:
+                    tx = _env.NewTransaction(transactionAwareActivityEntry.Flags);
+                    currentWriteTransaction = tx;
+                    break;
+                case DebugActionType.TransactionCommit:
+                    currentWriteTransaction.Commit();
+                    break;
+                case DebugActionType.TransactionRollback:
+                    currentWriteTransaction.Rollback();
+                    break;
+                case DebugActionType.TransactionDisposed:
+                    currentWriteTransaction.Dispose();
+                    currentWriteTransaction = null;
+                    break;
+                default:
+                    throw new InvalidOperationException("unsupported action type for readWrite transaction: " + transactionAwareActivityEntry.ActionType);
+            }
+        }
+
+        private void ReplayReadTransaction(TransactionActivityEntry transactionTransactionAwareActivityEntry, Dictionary<long, Queue<Transaction>> readTransactions)
+        {
+            var txId = transactionTransactionAwareActivityEntry.TransactionId.Value;
+            Queue<Transaction> transactionGroup;
+
+            switch (transactionTransactionAwareActivityEntry.ActionType)
+            {
+                case DebugActionType.TransactionStart:
+                    var tx = _env.NewTransaction(transactionTransactionAwareActivityEntry.Flags);
+
+                    if (readTransactions.TryGetValue(txId, out transactionGroup))
+                    {
+                        transactionGroup.Enqueue(tx);
+                    }
+                    else
+                    {
+                        var queue = new Queue<Transaction>();
+                        queue.Enqueue(tx);
+                        readTransactions[txId] = queue;
+                    }
+                    break;
+                case DebugActionType.TransactionDisposed:
+                    if (readTransactions.TryGetValue(txId, out transactionGroup) && transactionGroup.Count > 0)
+                    {
+                        var txAboutToDestroy = transactionGroup.Dequeue();
+                        txAboutToDestroy.Dispose();
+                        if (transactionGroup.Count == 0)
+                        {
+                            readTransactions.Remove(txId);
+                        }
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException("unsupported action type for readOnly transaction: " + transactionTransactionAwareActivityEntry.ActionType);
+            }
+        }
+
+        private void ReplayWriteAction(WriteActivityEntry activityEntry, ref Transaction tx)
+        {
+            switch (activityEntry.ActionType)
+            {
+                case DebugActionType.Add:
+                    tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
+                    break;
+                case DebugActionType.Delete:
+                    tx.ReadTree(activityEntry.TreeName).Delete(activityEntry.Key);
+                    break;
+                case DebugActionType.MultiAdd:
+                    tx.ReadTree(activityEntry.TreeName).MultiAdd(activityEntry.Key, new Slice(Encoding.UTF8.GetBytes(activityEntry.Value.ToString())));
+                    break;
+                case DebugActionType.MultiDelete:
+                    tx.ReadTree(activityEntry.TreeName).MultiDelete(activityEntry.Key, new Slice(Encoding.UTF8.GetBytes(activityEntry.Value.ToString())));
+                    break;
+                case DebugActionType.CreateTree:
+                    _env.CreateTree(tx, activityEntry.TreeName);
+                    break;
+                case DebugActionType.Increment:
+                    var buffer = new byte[sizeof(long)];
+                    activityEntry.ValueStream.Read(buffer, 0, buffer.Length);
+                    var delta = EndianBitConverter.Little.ToInt64(buffer, 0);
+                    tx.ReadTree(activityEntry.TreeName).Increment(activityEntry.Key, delta);
+                    break;
+                default: //precaution against newly added action types
+                    throw new InvalidOperationException("unsupported tree action type");
+            }
         }
 
         public void Dispose()

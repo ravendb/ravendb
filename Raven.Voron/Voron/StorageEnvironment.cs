@@ -271,7 +271,7 @@ namespace Voron
             tx.AddTree(name, tree);
 
 			if(IsDebugRecording)
-				DebugJournal.RecordAction(DebugActionType.CreateTree, Slice.Empty,name,Stream.Null);
+				DebugJournal.RecordWriteAction(DebugActionType.CreateTree, tx, Slice.Empty,name,Stream.Null);
 
             return tree;
         }
@@ -338,6 +338,11 @@ namespace Voron
 
         public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
+            return NewTransaction(flags, timeout, false);
+        }
+
+        internal Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout, bool startedByFlusher)
+        {
             bool txLockTaken = false;
             try
             {
@@ -371,6 +376,12 @@ namespace Voron
                 {
 	                long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
 	                tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+                    tx.StartedByFlusher = startedByFlusher;
+                    if (IsDebugRecording)
+                    {
+                        RecordTransactionState(tx, DebugActionType.TransactionStart);
+                        tx.RecordTransactionState = RecordTransactionState;
+                    }
                 }
                 finally
                 {
@@ -396,7 +407,12 @@ namespace Voron
             }
         }
 
-	    public long NextWriteTransactionId
+        private void RecordTransactionState(Transaction tx, DebugActionType state)
+        {
+            DebugJournal.RecordTransactionAction(tx, state);
+        }
+
+        public long NextWriteTransactionId
 	    {
 		    get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
 	    }
@@ -518,10 +534,20 @@ namespace Voron
 
         public void FlushLogToDataFile(Transaction tx = null)
         {
+            if (IsDebugRecording)
+            {
+                _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
+            }
+
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
+
+           if (IsDebugRecording)
+           {
+               _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, tx);
+           }
         }
 
         public void AssertFlushingNotFailed()

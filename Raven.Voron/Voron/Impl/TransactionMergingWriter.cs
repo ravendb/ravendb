@@ -114,6 +114,8 @@ namespace Voron.Impl
 			try
 			{
 				writes = BuildBatchGroup(mine);
+			    var complatedSuccessfully = false;
+
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					HandleOperations(tx, writes, _cancellationToken);
@@ -124,8 +126,7 @@ namespace Voron.Impl
 						if (ShouldRecordToDebugJournal)
 							_debugJournal.Flush();
 
-						foreach (var write in writes)
-							write.Completed();
+					    complatedSuccessfully = true;
 					}
 					catch (Exception e)
 					{
@@ -136,6 +137,12 @@ namespace Voron.Impl
 						}
 					}
 				}
+
+                if (complatedSuccessfully)
+                {
+                    foreach (var write in writes)
+                        write.Completed();
+                }
 			}
 			catch (Exception e)
 			{
@@ -205,7 +212,7 @@ namespace Voron.Impl
 										throw new ArgumentOutOfRangeException();
 								}
 
-								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.GetValueForDebugJournal());
+								_debugJournal.RecordWriteAction(actionType, tx, operation.Key, treeName, operation.GetValueForDebugJournal());
 							}
 
 							switch (operation.Type)

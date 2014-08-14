@@ -1,5 +1,7 @@
 ﻿using System.IO;
 using System.Text;
+using System.Threading;
+
 using Voron.Debugging;
 using Voron.Impl;
 using Xunit;
@@ -23,7 +25,6 @@ namespace Voron.Tests
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
-
 				env.DebugJournal = new DebugJournal(debugJouralName, env, true);
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
@@ -46,9 +47,32 @@ namespace Voron.Tests
 					env.Writer.Write(writeBatch);
 				}
 
-				using (var writeBatch = new WriteBatch())
+                using (var writeBatch = new WriteBatch())
+                {
+                    writeBatch.Increment("incr-key", 5, "test-tree");
+                    env.Writer.Write(writeBatch);
+                }
+
+                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                {
+                    Assert.Equal(5, tx.ReadTree("test-tree").Read("incr-key").Reader.ReadLittleEndianInt64());
+
+                    using (var writeBatch = new WriteBatch())
+                    {
+                        writeBatch.Increment("incr-key", 5, "test-tree");
+                        env.Writer.Write(writeBatch);
+                    }
+
+                    Assert.Equal(5, tx.ReadTree("test-tree").Read("incr-key").Reader.ReadLittleEndianInt64());
+                }
+
+			    using (var tx = env.NewTransaction(TransactionFlags.Read))
+			    {
+                    Assert.Equal(10, tx.ReadTree("test-tree").Read("incr-key").Reader.ReadLittleEndianInt64());
+			    }
+
+			    using (var writeBatch = new WriteBatch())
 				{
-		
 					writeBatch.MultiAdd("multi-foo", "BB", "test-tree");
 					writeBatch.MultiAdd("multi-foo", "CC", "test-tree");
 
@@ -90,6 +114,7 @@ namespace Voron.Tests
 				    Assert.Equal("testing testing 1 2!", snapshot.Read("test-tree2", "bar").Reader.ToStringValue());
 				    Assert.Equal("testing testing 1 2 3!", snapshot.Read("test-tree2", "foo-bar").Reader.ToStringValue());
 
+                    Assert.Equal(10, snapshot.Read("test-tree", "incr-key").Reader.ReadLittleEndianInt64());
 
 					Assert.Equal(0,snapshot.ReadVersion("test-tree","foo-bar"));
 
@@ -107,6 +132,49 @@ namespace Voron.Tests
 
 		}
 
-		
+        [Fact]
+        public void Record_debug_journal_and_replay_it_with_manual_flushing()
+        {
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                env.DebugJournal = new DebugJournal(debugJouralName, env, true);
+                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    env.CreateTree(tx, "test-tree");
+                    tx.Commit();
+                }
+
+                using (var writeBatch = new WriteBatch())
+                {
+                    var valueBuffer = new MemoryStream(Encoding.UTF8.GetBytes("{ \"title\": \"foo\",\"name\":\"bar\"}"));
+                    writeBatch.Add("foo", valueBuffer, "test-tree");
+                    env.Writer.Write(writeBatch);
+                }
+
+                using (env.Options.AllowManualFlushing())
+                {
+                    env.FlushLogToDataFile();
+                }
+
+                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (env.Options.AllowManualFlushing())
+                {
+                    env.FlushLogToDataFile(tx);
+                    tx.Commit();
+                }
+            }
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                env.DebugJournal = DebugJournal.FromFile(debugJouralName, env);
+                env.DebugJournal.Replay();
+
+                using (var snapshot = env.CreateSnapshot())
+                {
+                    Assert.Equal("{ \"title\": \"foo\",\"name\":\"bar\"}", snapshot.Read("test-tree", "foo").Reader.ToStringValue());
+                }
+            }
+
+        }
 	}
 }
