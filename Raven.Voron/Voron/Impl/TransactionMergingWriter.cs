@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -114,7 +109,7 @@ namespace Voron.Impl
 			try
 			{
 				writes = BuildBatchGroup(mine);
-			    var complatedSuccessfully = false;
+			    var completedSuccessfully = false;
 
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
@@ -126,7 +121,7 @@ namespace Voron.Impl
 						if (ShouldRecordToDebugJournal)
 							_debugJournal.Flush();
 
-					    complatedSuccessfully = true;
+					    completedSuccessfully = true;
 					}
 					catch (Exception e)
 					{
@@ -138,7 +133,7 @@ namespace Voron.Impl
 					}
 				}
 
-                if (complatedSuccessfully)
+                if (completedSuccessfully)
                 {
                     foreach (var write in writes)
                         write.Completed();
