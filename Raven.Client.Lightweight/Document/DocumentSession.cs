@@ -3,25 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Threading;
 
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document.Batches;
+using Raven.Client.Document.SessionOperations;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
+using Raven.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System;
-using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Client.Document.Batches;
-using Raven.Client.Connection;
-using Raven.Client.Document.SessionOperations;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
 
-using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {

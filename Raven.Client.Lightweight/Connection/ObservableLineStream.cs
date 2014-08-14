@@ -3,14 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Abstractions.Extensions;
+using Raven.Database.Util;
 using System;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
-using Raven.Database.Util;
 
 namespace Raven.Client.Connection
 {
