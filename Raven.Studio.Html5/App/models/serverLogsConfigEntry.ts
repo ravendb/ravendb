@@ -8,6 +8,10 @@ class serverLogsConfigEntry {
         this.level(level);
     }
 
+    clone() {
+        return new serverLogsConfigEntry(this.category(), this.level());
+    }
+
     static empty() {
         return new serverLogsConfigEntry(null, null);
     }

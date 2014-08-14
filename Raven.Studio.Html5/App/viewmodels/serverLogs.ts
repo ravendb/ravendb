@@ -20,6 +20,14 @@ class serverLogs extends viewModelBase {
     entriesCount = ko.computed(() => this.rawLogs().length);
     serverLogsConfig = ko.observable<serverLogsConfig>();
 
+    constructor() {
+        super();
+        var logConfig = new serverLogsConfig();
+        logConfig.maxEntries(10000);
+        logConfig.entries.push(new serverLogsConfigEntry("Raven.", "Info"));
+        this.serverLogsConfig(logConfig);
+    }
+
     redraw() {
         if (this.pendingLogs.length > 0) {
             var pendingCopy = this.pendingLogs;
@@ -110,10 +118,8 @@ class serverLogs extends viewModelBase {
     configureConnection() {
         this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
 
-        var logConfig = new serverLogsConfig();
-        logConfig.maxEntries(10000);
-        logConfig.entries.push(new serverLogsConfigEntry("Raven.", "Info"));
-        var serverLogsConfigViewModel = new serverLogsConfigureDialog(logConfig);
+        
+        var serverLogsConfigViewModel = new serverLogsConfigureDialog(this.serverLogsConfig().clone());
         app.showDialog(serverLogsConfigViewModel);
         serverLogsConfigViewModel.onExit().done((config: serverLogsConfig) => {
             this.serverLogsConfig(config);

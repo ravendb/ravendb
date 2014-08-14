@@ -367,6 +367,7 @@
     <TypeScriptCompile Include="App\common\fileDownloader.ts" />
     <TypeScriptCompile Include="App\common\serverLogsClient.ts" />
     <TypeScriptCompile Include="App\models\serverLogsConfig.ts" />
+    <Content Include="App\models\serverLogsConfigEntry.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
