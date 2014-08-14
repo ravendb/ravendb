@@ -445,6 +445,12 @@ namespace Raven.Database.Server.Controllers
 			return stale;
 		}
 
+		protected bool GetSkipOverwriteIfUnchanged()
+		{
+			bool result;
+			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
+			return result;
+		}
 	
 
 		protected void HandleReplication(HttpResponseMessage msg)

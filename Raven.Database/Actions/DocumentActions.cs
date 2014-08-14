@@ -283,7 +283,16 @@ namespace Raven.Database.Actions
                                 {
                                     trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
                                 }
-                                var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
+
+	                            if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
+	                            {
+		                            var existingDoc = accessor.Documents.DocumentByKey(doc.Key, null);
+
+									if(existingDoc != null && RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson))
+										continue;
+	                            }
+
+	                            var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
                                 if (result.Updated == false)
                                     inserts++;
 
