@@ -24,7 +24,7 @@ namespace Raven.Client.FileSystem
 
         IAsyncFilesCommands Commands { get; }
 
-        IFilesQuery<FileHeader> Query();
+        IAsyncFilesQuery<FileHeader> Query();
 
 
         Task<FileHeader> LoadFileAsync(string path);

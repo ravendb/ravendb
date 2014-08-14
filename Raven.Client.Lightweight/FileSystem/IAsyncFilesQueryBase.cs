@@ -11,7 +11,7 @@ namespace Raven.Client.FileSystem
     /// <summary>
     /// A query against a file system.
     /// </summary>
-    public interface IFilesQueryBase<T, out TSelf> where TSelf : IFilesQueryBase<T, TSelf>
+    public interface IAsyncFilesQueryBase<T, out TSelf> where TSelf : IAsyncFilesQueryBase<T, TSelf>
     {
         /// <summary>
         /// Gets the files convention from the query session
@@ -25,8 +25,8 @@ namespace Raven.Client.FileSystem
         /// </summary>
         [Obsolete(@"You cannot issue an in memory filter - such as Where(x=>x.Name == ""Test.file"") - on IFilesQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
-Consider using session.Query<T>() instead of session.FilesQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.FilesQuery<T>() is intended for lower level API access.
-If you really want to do in memory filtering on the data returned from the query, you can use: session.FilesQuery<T>().ToList().Where(x=>x.Name == ""Test.file"")
+Consider using session.Query<T>() instead of session.Query. The session.Query() method fully supports Linq queries, while session.Query() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.Query<T>().ToList().Where(x=>x.Name == ""Test.file"")
 ", true)]
         IEnumerable<T> Where(Func<T, bool> predicate);
 

@@ -47,9 +47,9 @@ namespace Raven.Client.FileSystem
             get { return this; }
         }
 
-        public IFilesQuery<FileHeader> Query()
+        public IAsyncFilesQuery<FileHeader> Query()
         {
-            return new FilesQuery<FileHeader>(this, this.Commands);
+            return new AsyncFilesQuery<FileHeader>(this, this.Commands);
         }
 
         public async Task<FileHeader> LoadFileAsync(string filename)

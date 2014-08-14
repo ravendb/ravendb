@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
 {
-    public interface IFilesQuery<T> : IFilesQueryBase<T, IFilesQuery<T>>
+    public interface IAsyncFilesQuery<T> : IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>
     {
         bool IsDistinct { get; }
 
-        IFilesQuery<T> OnDirectory(string path, bool recursive = false);
+        IAsyncFilesQuery<T> OnDirectory(string path, bool recursive = false);
 
         Task<List<T>> ToListAsync();
     }

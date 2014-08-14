@@ -11,9 +11,9 @@ namespace RavenFS.Tests.ClientApi
 {
     public class UsingStronglyTypedFilesQueryTests
     {
-        private IFilesQuery<FileHeader> CreateUserQuery()
+        private IAsyncFilesQuery<FileHeader> CreateUserQuery()
         {
-            return new FilesQuery<FileHeader>(null, null);
+            return new AsyncFilesQuery<FileHeader>(null, null);
         }
 
         [Fact]

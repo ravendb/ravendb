@@ -122,10 +122,10 @@
     <Compile Include="FileSystem\Connection\IFilesReplicationInformer.cs" />
     <Compile Include="FileSystem\Extensions\FilesSynchronizationExtensions.cs" />
     <Compile Include="FileSystem\Extensions\FilesTenancyExtensions.cs" />
-    <Compile Include="FileSystem\FilesQuery.cs" />
+    <Compile Include="FileSystem\AsyncFilesQuery.cs" />
     <Compile Include="FileSystem\IAbstractFilesQuery.cs" />
-    <Compile Include="FileSystem\IFilesQuery.cs" />
-    <Compile Include="FileSystem\IFilesQueryBase.cs" />
+    <Compile Include="FileSystem\IAsyncFilesQuery.cs" />
+    <Compile Include="FileSystem\IAsyncFilesQueryBase.cs" />
     <Compile Include="FileSystem\Impl\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Impl\IFilesOperation.cs" />
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
