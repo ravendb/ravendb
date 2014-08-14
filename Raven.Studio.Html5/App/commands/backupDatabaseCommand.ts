@@ -44,6 +44,7 @@ class backupDatabaseCommand extends commandBase {
                 if (backupStatus.IsRunning) {
                     setTimeout(() => this.getBackupStatus(result), 1000);
                 } else {
+                    this.reportSuccess("Database backup was successfully created!");
                     result.resolve();
                 }
             });

@@ -464,7 +464,13 @@ namespace Voron
 				RootPages = State.Root.State.PageCount,
 				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
 				UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
-				AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize
+				AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
+				NextWriteTransactionId = _transactionsCounter + 1,
+				ActiveTransactions = _activeTransactions.Select(x => new ActiveTransaction()
+				{
+					Id = x.Id,
+					Flags = x.Flags
+				}).ToList()
 			};
 		}
 

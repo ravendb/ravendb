@@ -52,6 +52,8 @@ namespace Voron
 			}
 		}
 
+		public long MaxScratchBufferSize { get; set; }
+
 		public bool OwnsPagers { get; set; }
 
 		public bool ManualFlushing { get; set; }
@@ -82,6 +84,8 @@ namespace Voron
 			MaxLogFileSize = 64 * 1024 * 1024;
 
 			InitialLogFileSize = 64 * 1024;
+
+			MaxScratchBufferSize = 512 * 1024 * 1024;
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;

@@ -5,20 +5,17 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-
+using System.Management;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Indexing;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Tasks;
 using Raven.Imports.Newtonsoft.Json;
@@ -26,11 +23,11 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Util
 {
-    public static class DebugInfoProvider
-    {
-        const CompressionLevel compressionLevel = CompressionLevel.Optimal;
+	public static class DebugInfoProvider
+	{
+		const CompressionLevel compressionLevel = CompressionLevel.Optimal;
 
-        public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, string zipEntryPrefix = null)
+		public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, string zipEntryPrefix = null)
         {
             zipEntryPrefix = zipEntryPrefix ?? string.Empty;
 
@@ -162,100 +159,139 @@ namespace Raven.Database.Util
                 jsonSerializer.Serialize(streamWriter, GetTasksForDebug(database));
                 streamWriter.Flush();
             }
+
+			var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", compressionLevel);
+
+			using (var systemUtilizationStream = systemUtilization.Open())
+			using (var streamWriter = new StreamWriter(systemUtilizationStream))
+			{
+				long totalPhysicalMemory = -1;
+				long availableMemory = -1;
+				object cpuTimes = null;
+
+				try
+				{
+					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
+					availableMemory = MemoryStatistics.AvailableMemory;
+
+					var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor");
+
+					cpuTimes = searcher.Get()
+						.Cast<ManagementObject>()
+						.Select(mo => new
+						{
+							Name = mo["Name"],
+							Usage = string.Format("{0} %", mo["PercentProcessorTime"])
+						}).ToArray();
+				}
+				catch (Exception e)
+				{
+					cpuTimes = "Could not get CPU times" + Environment.NewLine + e;
+				}
+
+				jsonSerializer.Serialize(streamWriter, new
+				{
+					TotalPhysicalMemory = string.Format("{0:#,#.##;;0} MB", totalPhysicalMemory),
+					AvailableMemory = string.Format("{0:#,#.##;;0} MB", availableMemory),
+					CurrentCpuUsage = cpuTimes
+				});
+
+				streamWriter.Flush();
+			}
         }
 
-        internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
-        {
-            return requestManager.GetRecentRequests(databaseName).Select(x => new
-            {
-                Uri = x.RequestUri,
-                Method = x.HttpMethod,
-                StatusCode = x.ResponseStatusCode,
-                RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k) }),
-                ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-                AdditionalInfo = x.CustomInfo ?? string.Empty
-            });
-        }
+		internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
+		{
+			return requestManager.GetRecentRequests(databaseName).Select(x => new
+			{
+				Uri = x.RequestUri,
+				Method = x.HttpMethod,
+				StatusCode = x.ResponseStatusCode,
+				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k) }),
+				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
+				AdditionalInfo = x.CustomInfo ?? string.Empty
+			});
+		}
 
-        internal static RavenJObject GetConfigForDebug(DocumentDatabase database)
-        {
-            var cfg = RavenJObject.FromObject(database.Configuration);
-            cfg["OAuthTokenKey"] = "<not shown>";
-            var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+		internal static RavenJObject GetConfigForDebug(DocumentDatabase database)
+		{
+			var cfg = RavenJObject.FromObject(database.Configuration);
+			cfg["OAuthTokenKey"] = "<not shown>";
+			var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
 
-            if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-                cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
+			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
+				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
 
-            return cfg;
-        }
+			return cfg;
+		}
 
-        internal static IList<TaskMetadata> GetTasksForDebug(DocumentDatabase database)
-        {
-            IList<TaskMetadata> tasks = null;
-            database.TransactionalStorage.Batch(accessor =>
-            {
-                tasks = accessor.Tasks
-                    .GetPendingTasksForDebug()
-                    .ToList();
-            });
+		internal static IList<TaskMetadata> GetTasksForDebug(DocumentDatabase database)
+		{
+			IList<TaskMetadata> tasks = null;
+			database.TransactionalStorage.Batch(accessor =>
+			{
+				tasks = accessor.Tasks
+					.GetPendingTasksForDebug()
+					.ToList();
+			});
 
-            foreach (var taskMetadata in tasks)
-            {
-                var indexInstance = database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
-                if (indexInstance != null)
-                    taskMetadata.IndexName = indexInstance.PublicName;
-            }
-            return tasks;
-        }
+			foreach (var taskMetadata in tasks)
+			{
+				var indexInstance = database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
+				if (indexInstance != null)
+					taskMetadata.IndexName = indexInstance.PublicName;
+			}
+			return tasks;
+		}
 
-        internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
-        {
-            var indexingWork = database.IndexingExecuter.GetCurrentlyProcessingIndexes();
-            var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
+		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
+		{
+			var indexingWork = database.IndexingExecuter.GetCurrentlyProcessingIndexes();
+			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
-            var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
+			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
 
-            return new
-            {
-                NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-                Indexes = uniqueIndexesBeingProcessed.Select(x => new
-                {
-                    IndexName = x.PublicName,
-                    IsMapReduce = x.IsMapReduce,
-                    CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount }),
-                    Priority = x.Priority,
-                    OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
-                    {
-                        Operation = g.Key,
-                        Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
-                    })
-                })
-            };
-        }
+			return new
+			{
+				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
+				Indexes = uniqueIndexesBeingProcessed.Select(x => new
+				{
+					IndexName = x.PublicName,
+					IsMapReduce = x.IsMapReduce,
+					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount }),
+					Priority = x.Priority,
+					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
+					{
+						Operation = g.Key,
+						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
+					})
+				})
+			};
+		}
 
-        internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
-        {
-            var prefetcherDocs = database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
-            var compareToCollection = new Dictionary<Etag, int>();
+		internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
+		{
+			var prefetcherDocs = database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+			var compareToCollection = new Dictionary<Etag, int>();
 
-            for (int i = 1; i < prefetcherDocs.Length; i++)
-                compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
+			for (int i = 1; i < prefetcherDocs.Length; i++)
+				compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
 
-            if (compareToCollection.Any(x => x.Value < 0))
-            {
-                return new
-                {
-                    HasCorrectlyOrderedEtags = true,
-                    EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-                };
-            }
+			if (compareToCollection.Any(x => x.Value < 0))
+			{
+				return new
+				{
+					HasCorrectlyOrderedEtags = true,
+					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+				};
+			}
 
-            return new
-            {
-                HasCorrectlyOrderedEtags = false,
-                IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-                EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-            };
-        }
-    }
+			return new
+			{
+				HasCorrectlyOrderedEtags = false,
+				IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
+				EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+			};
+		}
+	}
 }

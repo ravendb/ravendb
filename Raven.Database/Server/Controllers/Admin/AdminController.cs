@@ -159,7 +159,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		    if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
 		        restoreRequest.Defrag = defrag;
 
-            await Task.Factory.StartNew(() =>
+			//TODO: add task to pending task list like in ImportDatabase
+            Task.Factory.StartNew(() =>
             {
                 MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
                     msg =>
@@ -349,7 +350,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         TotalDatabaseHumaneSize = SizeHelper.Humane(totalDatabaseSize),
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
-
+						StorageStats = documentDatabase.TransactionalStorage.GetStorageStats(),
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
                         Metrics = documentDatabase.CreateMetrics()
                     },

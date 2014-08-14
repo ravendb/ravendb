@@ -44,7 +44,7 @@ class synchronizationDestinations extends viewModelBase {
                     if (e.Name.indexOf("Raven/Synchronization/Destinations") < 0)
                         return;
                     if (!this.saveIssued && (e.Action == filesystemConfigurationChangeAction.Set || e.Action == filesystemConfigurationChangeAction.Delete)) {
-                        var canContinue = this.canContinueIfNotDirty('Data has changed', 'Data has changed in the server. Do you want to refresh and overwrite your changes?', ['No', 'Yes']);
+                        var canContinue = this.canContinueIfNotDirty('Data has changed', 'Data has changed in the server. Do you want to refresh and overwrite your changes?');
                         canContinue.done(() => {
                             this.fetchDestinations().done(x => {
                                 this.dirtyFlag().reset();

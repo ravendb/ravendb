@@ -255,6 +255,14 @@ namespace Raven.Storage.Esent
             }
         }
 
+	    public StorageStats GetStorageStats()
+	    {
+		    return new StorageStats()
+		    {
+			    EsentStats = new EsentStorageStats()
+		    };
+	    }
+
         public string FriendlyName
         {
             get { return "Esent"; }
