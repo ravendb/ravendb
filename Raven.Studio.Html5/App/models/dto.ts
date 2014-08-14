@@ -136,7 +136,7 @@ interface apiKeyDto extends documentDto {
 
 interface serverBuildVersionDto {
     ProductVersion: string;
-    BuildVersion: string;
+    BuildVersion: number;
     BuildType: buildType;
 }
 
@@ -146,7 +146,7 @@ enum buildType {
 }
 
 interface latestServerBuildVersionDto {
-    LatestBuild: string;
+    LatestBuild: number;
     Exception: string;
 }
 
@@ -247,6 +247,16 @@ interface replicationStatsDto {
     LastFailureTimestamp: string;
     FailureCount: number;
     LastError: string;
+}
+
+interface indexMergeSuggestionsDto {
+    Suggestions: suggestionDto[];
+    Unmergables: Object;
+}
+
+interface suggestionDto {
+    CanMerge: string[];
+    MergedIndex: indexDefinitionDto;
 }
 
 interface indexDefinitionContainerDto {
