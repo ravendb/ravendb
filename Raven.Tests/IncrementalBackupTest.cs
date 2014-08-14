@@ -65,6 +65,7 @@ namespace Raven.Tests
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
 			configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+			configuration.Initialize();
 		}
 
 		public override void Dispose()

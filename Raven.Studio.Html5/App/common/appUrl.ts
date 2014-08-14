@@ -14,8 +14,6 @@ class appUrl {
     static detectAppUrl() {
         var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
         var suffix = "studio/index.html";
-        console.log("ends2?");
-
         if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
             return path.substring(0, path.length - suffix.length - 1);
         }
@@ -113,7 +111,7 @@ class appUrl {
         return isThereAny;
     }
 
-    static getEncodedCounterStoragePart(counterStorage:counterStorage): string {
+    static getEncodedCounterStoragePart(counterStorage: counterStorage): string {
         return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
     }
 
@@ -311,8 +309,7 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
-        return path;
+        return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
     
     static forLogs(db: database): string {
@@ -504,6 +501,11 @@ class appUrl {
     static forCsvImport(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
+    }
+
+    static forDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases?" + databasePart;
     }
 
     static forFilesystem(fs: filesystem): string {
@@ -739,7 +741,7 @@ class appUrl {
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
     }
-
+    
     private static getEncodedFsPart(fs?: filesystem) {
         return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
     }
@@ -754,7 +756,7 @@ class appUrl {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
             messagePublisher.reportError("Invalid route!", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
-
+            
             var fragment = instruction.fragment;
             var appUrls: computedAppUrls = appUrl.currentDbComputeds;
             var newLoationHref;

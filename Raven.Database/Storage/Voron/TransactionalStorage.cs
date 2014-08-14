@@ -246,26 +246,24 @@ namespace Raven.Storage.Voron
 		{
 			var options = StorageEnvironmentOptions.CreateMemoryOnly();
 			options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
+			options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024 * 1024;
 
 			return options;
 		}
 
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
-            bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(configuration.Settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
-
             var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
 
-            var tempPath = configuration.Settings["Raven/Voron/TempPath"];
+		    var tempPath = configuration.Storage.Voron.TempPath;
 	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
 		    options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
+		    options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024 * 1024;
 
             return options;
         }
@@ -295,11 +293,11 @@ namespace Raven.Storage.Voron
 	    {
 	        var stats = tableStorage.Environment.Stats();
 
-            return new DatabaseSizeInformation
-                   {
-                       AllocatedSizeInBytes = stats.AllocatedDataFileSizeInBytes,
-                       UsedSizeInBytes = stats.UsedDataFileSizeInBytes
-                   };
+		    return new DatabaseSizeInformation
+		    {
+			    AllocatedSizeInBytes = stats.AllocatedDataFileSizeInBytes,
+			    UsedSizeInBytes = stats.UsedDataFileSizeInBytes
+		    };
 	    }
 
 	    public long GetDatabaseCacheSizeInBytes()
@@ -310,6 +308,29 @@ namespace Raven.Storage.Voron
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
 			return -1;
+		}
+
+		public StorageStats GetStorageStats()
+		{
+			var stats = tableStorage.Environment.Stats();
+
+			return new StorageStats()
+			{
+				VoronStats = new VoronStorageStats()
+				{
+					FreePagesOverhead = stats.FreePagesOverhead,
+					RootPages = stats.RootPages,
+					UnallocatedPagesAtEndOfFile = stats.UnallocatedPagesAtEndOfFile,
+					UsedDataFileSizeInBytes = stats.UsedDataFileSizeInBytes,
+					AllocatedDataFileSizeInBytes = stats.AllocatedDataFileSizeInBytes,
+					NextWriteTransactionId = stats.NextWriteTransactionId,
+					ActiveTransactions = stats.ActiveTransactions.Select(x => new VoronActiveTransaction
+					{
+						Id = x.Id,
+						Flags = x.Flags.ToString()
+					}).ToList()
+				}
+			};
 		}
 
 		public string FriendlyName

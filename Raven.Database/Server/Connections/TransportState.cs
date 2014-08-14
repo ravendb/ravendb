@@ -121,16 +121,7 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-        public event Action<object, LogNotification> OnLogNotification = delegate { };
-
-	    public void Send(LogNotification logNotification)
-	    {
-	        OnLogNotification(this,logNotification);
-	        foreach (var connectionState in connections)
-	        {
-	            connectionState.Value.Send(logNotification);
-	        }
-	    }
+        public event Action<object, TrafficWatchNotification> OnLogNotification = delegate { };
 
         public ConnectionState For(string id, RavenBaseApiController controller = null)
 		{

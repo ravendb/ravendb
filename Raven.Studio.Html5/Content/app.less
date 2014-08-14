@@ -601,6 +601,76 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
+#watchTrafficContainer{
+
+    .logButtons{
+            margin-left:0;
+        }
+        .form-group{
+            margin-left:1%;
+        }   
+
+    .log-table-row {
+    }
+
+    .selected .column {
+        background-color: #ffffcc;
+    }
+    .statsBar{        
+        margin-top:1%;
+        padding-left:5%;
+        background-color: aliceblue;
+    }
+
+    .column {
+            display: inline-block;
+            cursor: pointer;
+            overflow: hidden;
+            white-space: nowrap;
+            word-wrap: break-word;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid #ddd;
+            margin: 0px;
+            padding: 5px;
+            height: 30px;
+    }
+    #logTableContainer{
+        max-height:80vh;
+        overflow-y:auto;        
+        overflow-x:visible;
+                
+        .logHeaders{                                    
+            max-width:80vw;
+            width:80vw;            
+        }
+        .logRecords{            
+            max-height:60vh;                        
+            max-width:80vw;
+            width:80vw;
+            overflow-y:auto;
+        }
+        .logRecords-small{
+            max-height:30vh;                        
+        }        
+        .log-details{
+            max-height:30vh;
+            height:30vh;
+            overflow-y:auto;
+            border-top-width: 2px;
+            margin-top: 1%;
+            padding-top: 1%;
+            border-style: dashed;
+            border-width: thin;
+            border-color: black;
+            width: 60vw;
+            margin-left: 1%;
+        }
+
+    }
+    
+
+}
+
 #logNotificationsContainer{
     background-color:black;
     height:80vh;
@@ -1124,12 +1194,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     width: 400px;
 }
 
-#editDocumentContainer {
-    .isActive{
-        background-color:#73c773!important;
-        border-color:#61b261!important;
-    }
-    
+#editDocumentContainer {    
     &:focus {
         outline: 0;
     }
@@ -1718,4 +1783,8 @@ footer {
      -webkit-background-clip: padding-box;
      -moz-background-clip: padding-box;
      background-clip: padding-box;
+}
+.pressed{    
+        background-color:#73c773!important;
+        border-color:#61b261!important;    
 }

@@ -2,6 +2,7 @@
 import dialog = require("plugins/dialog");
 import viewModelBase = require("viewmodels/viewModelBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import serverBuildReminder = require("common/serverBuildReminder");
 
 class latestBuildReminder extends dialogViewModelBase {
 
@@ -12,11 +13,7 @@ class latestBuildReminder extends dialogViewModelBase {
         super(elementToFocusOnDismissal);
 
         this.mute.subscribe(() => {
-            if (this.mute()) {
-                localStorage.setObject("LastServerBuildCheck", new Date());
-            } else {
-                localStorage.removeItem("LastServerBuildCheck");
-            }
+            serverBuildReminder.mute(this.mute());
         });
     }
 

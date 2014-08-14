@@ -4,11 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -28,7 +30,9 @@ namespace Raven.Abstractions.Smuggler
 
 		LastEtagsInfo FetchCurrentMaxEtags();
 
-		Task<RavenJArray> GetAttachments(int start, Etag etag, int maxRecords);
+		Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords);
+
+		Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation);
 
 		JsonDocument GetDocument(string key);
 
