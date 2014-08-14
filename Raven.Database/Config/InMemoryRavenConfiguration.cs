@@ -85,7 +85,7 @@ namespace Raven.Database.Config
 			SetupGC();
 		}
 
-		public void Initialize()
+		public InMemoryRavenConfiguration Initialize()
 		{			
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
@@ -280,6 +280,8 @@ namespace Raven.Database.Config
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			PostInit();
+
+			return this;
 		}
 
 		public int MaxConcurrentServerRequests { get; set; }
