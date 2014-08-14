@@ -27,6 +27,9 @@ class filesystems extends viewModelBase {
             this.selectFileSystem(currentFileSystem, false);
         }
 
+        var updatedUrl = appUrl.forFilesystems();
+        this.updateUrl(updatedUrl);
+
         this.isAnyFileSystemSelected = ko.computed(() => {
             for (var i = 0; i < this.fileSystems().length; i++) {
                 var fs: filesystem = this.fileSystems()[i];
@@ -70,12 +73,6 @@ class filesystems extends viewModelBase {
         this.appUrls = appUrl.forCurrentFilesystem();
     }
 
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.selectedFileSystem(fs))
-        ];
-    }
-
     private fileSystemsLoaded() {
         // If we have no file systems, show the "create a new file system" screen.
         if (this.fileSystems().length === 0) {
@@ -107,14 +104,10 @@ class filesystems extends viewModelBase {
 
     selectFileSystem(fs: filesystem, activateFileSystem: boolean = true) {
         if (this.optionsClicked() == false) {
-            this.fileSystems().forEach((f: filesystem) => f.isSelected(f.name === fs.name));
             if (activateFileSystem) {
                 fs.activate();
             }
             this.selectedFileSystem(fs);
-
-            var updatedUrl = appUrl.forFilesystem(fs);
-            this.navigate(updatedUrl);
         }
 
         this.optionsClicked(false);

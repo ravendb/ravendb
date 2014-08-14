@@ -102,9 +102,9 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateDbChangesApi(db); shell.fetchDbStats(db); });
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => { this.updateFsChangesApi(fs); shell.fetchFsStats(fs); });
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => { this.updateCsChangesApi(cs); shell.fetchCsStats(cs); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
+        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.activateFileSystem(fs));
+        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
@@ -234,6 +234,24 @@ class shell extends viewModelBase {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
         };
+    }
+
+    private activateDatabase(db: database) {
+        this.updateDbChangesApi(db);
+        shell.fetchDbStats(db);
+        shell.databases().forEach((d: database) => d.isSelected(d.name === db.name));
+    }
+
+    private activateFileSystem(fs: filesystem) {
+        this.updateFsChangesApi(fs);
+        shell.fetchFsStats(fs);
+        shell.fileSystems().forEach((f: filesystem) => f.isSelected(f.name === fs.name));
+    }
+
+    private activateCounterStorage(cs: counterStorage) {
+        this.updateCsChangesApi(cs);
+        shell.fetchCsStats(cs);
+        shell.counterStorages().forEach((c: counterStorage) => c.isSelected(c.name === cs.name));
     }
 
     setupApiKey() {
@@ -403,8 +421,12 @@ class shell extends viewModelBase {
     selectResource(rs) {
         rs.activate();
 
-        var updatedUrl = appUrl.forCurrentPage(rs);
-        this.navigate(updatedUrl);
+        var locationHash = window.location.hash;
+        var isMainPage = locationHash == appUrl.forDatabases() || locationHash == appUrl.forFilesystems() || locationHash == appUrl.forCounterStorages();
+        if (isMainPage == false) {
+            var updatedUrl = appUrl.forCurrentPage(rs);
+            this.navigate(updatedUrl);
+        }
     }
 
     private databasesLoaded(databases: database[]) {
@@ -451,15 +473,13 @@ class shell extends viewModelBase {
         $.when(this.databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
             .done(() => {
                 var locationHash = window.location.hash;
-
-                if (locationHash.indexOf("#filesystems") == 0) { //filesystems section
-
+                if (locationHash.indexOf(appUrl.forFilesystems()) == 0) { //filesystems section
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
                 }
-                else if (locationHash.indexOf("#counterstorages") == 0) { //counter storages section
+                else if (locationHash.indexOf(appUrl.forCounterStorages()) == 0) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
                 }
-                else if ((locationHash.indexOf("#admin/settings") == -1) && (shell.databases().length > 1)) { //databases section
+                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1) && (shell.databases().length > 1)) { //databases section
                     this.activateResource(appUrl.getDatabase(), shell.databases);
                 }
             });
@@ -482,12 +502,13 @@ class shell extends viewModelBase {
     navigateToResourceGroup(resourceHash) {
         shell.disconnectFromResourceChangesApi();
 
-        if (resourceHash == this.appUrls.databases()) {
+        if (resourceHash == appUrl.forDatabases()) {
             this.activateResource(appUrl.getDatabase(), shell.databases);
         }
-        else if (resourceHash == this.appUrls.filesystems()) {
+        else if (resourceHash == appUrl.forFilesystems()) {
             this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
-        } else {
+        }
+        else {
             this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
         }
 
@@ -694,16 +715,16 @@ class shell extends viewModelBase {
 
     getCurrentActiveFeatureHref() {
         if (this.appUrls.isAreaActive('filesystems')()) {
-            return this.appUrls.filesystemsManagement();
+            return this.appUrls.filesystems();
         }
         else if (this.appUrls.isAreaActive('counterstorages')()) {
-            return this.appUrls.counterStorageManagement();
+            return this.appUrls.filesystems();
         }
         else if (this.appUrls.isAreaActive('admin')()) {
             return this.appUrls.adminSettings();
         }
         else {
-            return this.appUrls.databasesManagement();
+            return this.appUrls.databases();
         }
     }
 

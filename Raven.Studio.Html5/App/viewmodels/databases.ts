@@ -19,7 +19,7 @@ class databases extends viewModelBase {
 
     constructor() {
         super();
-        
+
         this.databases = shell.databases;
         this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase();
@@ -29,6 +29,8 @@ class databases extends viewModelBase {
         if (!!currentDatabse) {
             this.selectDatabase(currentDatabse, false);
         }
+        var updatedUrl = appUrl.forDatabases();
+        this.updateUrl(updatedUrl);
 
         this.isAnyDatabaseSelected = ko.computed(() => {
             for (var i = 0; i < this.databases().length; i++) {
@@ -68,12 +70,6 @@ class databases extends viewModelBase {
         this.databasesLoaded();
     }
 
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe("ActivateDatabase", (db: database) => this.selectedDatabase(db))
-        ];
-    }
-
     private databasesLoaded() {
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.databases().length === 1) {
@@ -95,14 +91,13 @@ class databases extends viewModelBase {
 
     selectDatabase(db: database, activateDatabase: boolean = true) {
         if (this.optionsClicked() == false) {
-            this.databases().forEach((d: database) => d.isSelected(d.name === db.name));
             if (activateDatabase) {
                 db.activate();
             }
             this.selectedDatabase(db);
 
-            var updatedUrl = appUrl.forDatabase(db);
-            this.navigate(updatedUrl);
+ /*           var updatedUrl = appUrl.forDatabase(db);
+            this.navigate(updatedUrl);*/
         }
 
         this.optionsClicked(false);
