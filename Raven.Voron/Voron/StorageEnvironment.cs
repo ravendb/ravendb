@@ -339,12 +339,6 @@ namespace Voron
 
         public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
-            return NewTransaction(flags, timeout, false);
-        }
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout, bool startedByFlusher)
-        {
             bool txLockTaken = false;
             try
             {
@@ -378,7 +372,7 @@ namespace Voron
                 {
 	                long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
 	                tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-                    tx.StartedByFlusher = startedByFlusher;
+
                     if (IsDebugRecording)
                     {
                         RecordTransactionState(tx, DebugActionType.TransactionStart);

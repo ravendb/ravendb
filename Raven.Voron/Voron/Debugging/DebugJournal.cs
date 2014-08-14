@@ -77,27 +77,27 @@ namespace Voron.Debugging
         {
             public TransactionFlags Flags { get; private set; }
 
-            public bool StartedByFlusher { get; private set; }
+            public bool CreatedByJournalApplicator { get; private set; }
 
             public TransactionActivityEntry(Transaction tx, DebugActionType actionType)
             {
                 TransactionId = tx.Id;
                 Flags = tx.Flags;
                 ActionType = actionType;
-                StartedByFlusher = tx.StartedByFlusher;
+                CreatedByJournalApplicator = tx.CreatedByJournalApplicator;
             }
 
-            public TransactionActivityEntry(long transactionId, TransactionFlags flags, DebugActionType actionType, bool startedByFlusher)
+            public TransactionActivityEntry(long transactionId, TransactionFlags flags, DebugActionType actionType, bool createdByJournalApplicator)
             {
                 TransactionId = transactionId;
                 Flags = flags;
                 ActionType = actionType;
-                StartedByFlusher = startedByFlusher;
+                CreatedByJournalApplicator = createdByJournalApplicator;
             }
 
             public override string ToCsvLine(bool recordOnlyValueLength)
             {
-                return string.Format("{0},{1},{2},{3}", ActionType, TransactionId, Flags, StartedByFlusher);
+                return string.Format("{0},{1},{2},{3}", ActionType, TransactionId, Flags, CreatedByJournalApplicator);
             }
 
             public new static TransactionActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)

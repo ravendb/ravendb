@@ -51,7 +51,7 @@ namespace Voron.Impl
 
 		internal Action<Transaction> AfterCommit = delegate { };
 	    internal Action<Transaction, DebugActionType> RecordTransactionState = delegate { };
-	    internal bool StartedByFlusher;
+	    internal bool CreatedByJournalApplicator;
 		private readonly StorageEnvironmentState _state;
 		private int _allocatedPagesInTransaction;
 		private int _overflowPagesInTransaction;
@@ -572,5 +572,11 @@ namespace Voron.Impl
 	        }
 	        _trees[name] = tree;
 	    }
+
+		internal Transaction JournalApplicatorTransaction()
+		{
+			CreatedByJournalApplicator = true;
+			return this;
+		}
 	}
 }
