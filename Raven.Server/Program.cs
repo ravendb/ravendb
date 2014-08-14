@@ -132,7 +132,6 @@ namespace Raven.Server
 			string backupLocation = null;
 			string restoreLocation = null;
 			bool defrag = false;
-			string theUser = null;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			bool noLog = false;
@@ -149,8 +148,6 @@ namespace Raven.Server
 				{"nolog", "Don't use the default log", s => noLog=true},
 				{"config=", "The config {0:file} to use", ravenConfiguration.LoadFrom},
 				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart)},
-				{"user=", "Which user will be used", user=> theUser = user},
-				{"setup-perf-counters", "Setup the performance counters and the related permissions", key => actionToTake = ()=> AdminRequired(()=>SetupPerfCounters(theUser))},
 				{"allow-blank-password-use", "Allow to log on by using a Windows account that has a blank password", key => actionToTake = () => AdminRequired(() => SetLimitBlankPasswordUseRegValue(0))},
 				{"deny-blank-password-use", "Deny to log on by using a Windows account that has a blank password", key => actionToTake = () =>  AdminRequired(() => SetLimitBlankPasswordUseRegValue(1))},
 				{"service-name=", "The {0:service name} to use when installing or uninstalling the service, default to RavenDB", name => ProjectInstaller.SERVICE_NAME = name},
@@ -287,18 +284,6 @@ namespace Raven.Server
                 return true;
             }, false);
         }
-
-
-
-		private static void SetupPerfCounters(string user)
-		{
-			user = user ?? WindowsIdentity.GetCurrent().Name;
-			PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(user);
-
-			var actionToTake = user.StartsWith("IIS") ? "restart IIS service" : "log in the user again";
-
-			Console.Write("User {0} has been added to Performance Monitoring Users group. Please {1} to take an effect.", user, actionToTake);
-		}
 
 		private static void SetLimitBlankPasswordUseRegValue(int value)
 		{
