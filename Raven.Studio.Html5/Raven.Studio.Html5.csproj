@@ -62,6 +62,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLatestServerBuildVersionCommand.ts" />
@@ -176,6 +177,7 @@
     <TypeScriptCompile Include="App\viewmodels\adminSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestionsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyIndexDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageCounters.ts" />
@@ -375,6 +377,7 @@
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\indexMergeSuggestionsDialog.html" />
     <Content Include="App\views\upgrade.html" />
     <Content Include="App\views\customLogging.html" />
     <Content Include="App\views\infoPackageImport.html" />

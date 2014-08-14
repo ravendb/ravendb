@@ -249,6 +249,16 @@ interface replicationStatsDto {
     LastError: string;
 }
 
+interface indexMergeSuggestionsDto {
+    Suggestions: suggestionDto[];
+    Unmergables: Object;
+}
+
+interface suggestionDto {
+    CanMerge: string[];
+    MergedIndex: indexDefinitionDto;
+}
+
 interface indexDefinitionContainerDto {
     Index: indexDefinitionDto;
 }

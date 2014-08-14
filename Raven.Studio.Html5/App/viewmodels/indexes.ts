@@ -11,7 +11,6 @@ import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
 import router = require("plugins/router"); 
 import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
-import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import indexesShell = require("viewmodels/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 
@@ -173,15 +172,21 @@ class indexes extends viewModelBase {
     }
 
     copyIndex(i: index) {
-        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
+        require(["viewmodels/copyIndexDialog"], copyIndexDialog => {
+            app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
+        });
     }
 
     pasteIndex() {
-        app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
+        require(["viewmodels/copyIndexDialog"], copyIndexDialog => {
+            app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
+        });
     }
 
     showMergeSuggestions() {
-        //app.showDialog(new copyIndexDialog(this.activeDatabase()));
+        require(["viewmodels/indexMergeSuggestionsDialog"], indexMergeSuggestionsDialog => {
+            app.showDialog(new indexMergeSuggestionsDialog(this.activeDatabase()));
+        });
     }
     
     toggleExpandAll() {
