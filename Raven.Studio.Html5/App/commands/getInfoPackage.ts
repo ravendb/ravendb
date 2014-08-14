@@ -3,6 +3,7 @@ import database = require("models/database");
 import zip = require('jszip/jszip');
 import zipUtils = require('jszip/jszip-utils.min');
 import appUrl = require('common/appUrl');
+import d3 = require("d3/d3");
 
 class getInfoPackage extends commandBase {
 
@@ -19,11 +20,14 @@ class getInfoPackage extends commandBase {
         if (this.withStackTrace && this.db.isSystem) {
             url += "?stacktrace";
         }
+        var now = d3.time.format("%Y-%m-%d_%H:%M:%S")(new Date());
+        var filename = this.db.isSystem ? "Admin-Debug-Info-" + now + ".zip" : "Debug-Info-" + this.db.name + "-" + now + ".zip";
+
         zipUtils.getBinaryContent(url, function (err, data) {
             if (err) {
                 task.reject(err);
             } else {
-                task.resolve(data);
+                task.resolve(data, filename);
             }            
         });
 

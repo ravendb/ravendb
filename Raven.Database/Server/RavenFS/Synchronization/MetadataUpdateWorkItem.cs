@@ -28,16 +28,21 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.MetadataUpdate; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
+        public override async Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
 			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
-			if (conflict != null)
-                return ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
+	        if (conflict != null)
+	        {
+				var report = await HandleConflict(destination, conflict, log);
 
-            return destination.UpdateMetadataAsync(FileName, FileMetadata, ServerInfo);
+				if (report != null)
+					return report;
+	        }
+
+            return await destination.UpdateMetadataAsync(FileName, FileMetadata, ServerInfo);
 		}
 
 		public override bool Equals(object obj)

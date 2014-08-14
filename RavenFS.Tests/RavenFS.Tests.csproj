@@ -111,6 +111,7 @@
     <Compile Include="Storage\PageTests.cs" />
     <Compile Include="Storage\SignatureTests.cs" />
     <Compile Include="Storage\StorageAccessorTestBase.cs" />
+    <Compile Include="Synchronization\AutomaticConflictResolutions.cs" />
     <Compile Include="Synchronization\ConflictNotificationTests.cs" />
     <Compile Include="Synchronization\FailoverTests.cs" />
     <Compile Include="Synchronization\NeedListParserTest.cs" />
