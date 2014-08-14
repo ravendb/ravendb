@@ -245,34 +245,6 @@ namespace Raven.Database.Server.Connections
 			Enqueue(value);
 		}
 
-        public void Send(LogNotification logNotification)
-        {
-            var value = new { Value = logNotification, Type = "LogNotification" };
-            if (watchAdminLog > 0)
-            {
-                Enqueue(value);
-                return;
-            }
-
-            if (logNotification.TenantType == LogTenantType.Database && 
-                matchingDbLogs.Any(x=>  string.Equals(x,logNotification.TenantName,StringComparison.InvariantCultureIgnoreCase)))
-            {
-                Enqueue(value);
-                return;
-            }
-            if (logNotification.TenantType == LogTenantType.Filesystem && 
-                matchingFsLogs.Any(x => string.Equals(x, logNotification.TenantName, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                Enqueue(value);
-                return;
-            }
-            if (logNotification.TenantType == LogTenantType.CounterStorage && 
-                matchingCountersLogs.Any(x => string.Equals(x, logNotification.TenantName, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                Enqueue(value);
-            }
-        }
-
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
 		    if (watchAllIndexes > 0)

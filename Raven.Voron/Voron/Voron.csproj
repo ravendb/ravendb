@@ -54,6 +54,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\DebugActionType.cs" />
     <Compile Include="Debugging\DebugJournal.cs" />

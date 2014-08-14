@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
+using System.Web.UI;
 using Microsoft.Owin;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Logging;
@@ -89,85 +90,17 @@ namespace Owin
                 await next();
                 return;
             }
-
-            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket"))
+            
+            WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
+            
+            if (webSocketsTrasport != null)
             {
-                var webSocketsTrasport = new WebSocketsTransport(options, context);
-                if (await webSocketsTrasport.TrySetupRequest())
-                    accept(null, webSocketsTrasport.Run);
-            }
-            else if (context.Request.Uri.LocalPath.EndsWith("http-trace/websocket"))
-            {
-                var webSocketsTrasport = new WebSocketsTransport(options, context,  (resourceName, currentWebsocketTransport, user) =>
-                {
-                    if (resourceName != null)
-                    {
-                        options.RequestManager.RegisterResourceHttpTraceTransport(currentWebsocketTransport, resourceName);
-                    }
-                    else
-                    {
-                        var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-
-                        if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) ||
-                            options.SystemDatabase.Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin)
-                        {
-                            options.RequestManager.RegisterServerHttpTraceTransport(currentWebsocketTransport);
-                        }
-                        else
-                        {
-                            context.Response.StatusCode = 403;
-                            context.Response.ReasonPhrase = "Forbidden";
-                            context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
-                            return false;
-                        }
-                    }
-                    return true;
-                });
-                if (await webSocketsTrasport.TrySetupRequest())
-                    accept(null, webSocketsTrasport.Run);
-            }
-            else if (context.Request.Uri.LocalPath.EndsWith("admin/logs/events"))
-            {
-                var webSocketsTrasport = new WebSocketsTransport(options, context, (resourceName, currentWebsocketTransport, user) =>
-                {
-                    try
-                    {
-                        var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-
-                        if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-                            options.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-                        {
-                            context.Response.StatusCode = 403;
-                            context.Response.ReasonPhrase = "Forbidden";
-                            context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
-                            return false;
-                        }
-
-                        var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
-                        logTarget.Register(currentWebsocketTransport);
-                        return true;
-                    }
-                    catch 
-                    {
-
-                        return false;
-                    }
-                    
-                }, (message) =>
-                {
-                    var typedMessage = message as LogEventInfo;
-                    if (typedMessage != null)
-                    {
-                        var formattedMessage = new LogEventInfoFormatted(typedMessage);
-                        return formattedMessage;
-                    }
-                    return message;
-                    
-                });
                 if (await webSocketsTrasport.TrySetupRequest())
                     accept(null, webSocketsTrasport.Run);
             }
         }
+        
+
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();

@@ -40,6 +40,7 @@ task Init -depends Verify40, Clean {
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
 		Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
 		Foreach-Object { $_ -replace "{commit}", $commit } |
+		Foreach-Object { $_ -replace "{stable}", $global:uploadMode } |
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null

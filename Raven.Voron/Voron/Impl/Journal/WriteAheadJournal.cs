@@ -499,7 +499,7 @@ namespace Voron.Impl.Journal
 						_journalsToDelete.Add(unused.Number, unused);
 					}
 
-					using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+					using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
 					{
 						_lastSyncedJournal = lastProcessedJournal;
 						_lastSyncedTransactionId = lastFlushedTransactionId;
@@ -597,7 +597,7 @@ namespace Voron.Impl.Journal
 				}
 				else
 				{
-					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
 					{
 						_waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
 

@@ -36,6 +36,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -44,7 +45,7 @@ using metrics.Core;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IDisposable
+	public class DocumentDatabase : IResourceStore,IDisposable
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 

@@ -1,4 +1,4 @@
-@import url("//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic");
+﻿@import url("//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic");
 /*!
  * Bootswatch v3.2.0
  * Homepage: http://bootswatch.com
@@ -7071,6 +7071,63 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
 }
+#watchTrafficContainer .logButtons {
+  margin-left: 0;
+}
+#watchTrafficContainer .form-group {
+  margin-left: 1%;
+}
+#watchTrafficContainer .selected .column {
+  background-color: #ffffcc;
+}
+#watchTrafficContainer .statsBar {
+  margin-top: 1%;
+  padding-left: 5%;
+  background-color: aliceblue;
+}
+#watchTrafficContainer .column {
+  display: inline-block;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  word-wrap: break-word;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #ddd;
+  margin: 0px;
+  padding: 5px;
+  height: 30px;
+}
+#watchTrafficContainer #logTableContainer {
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: visible;
+}
+#watchTrafficContainer #logTableContainer .logHeaders {
+  max-width: 80vw;
+  width: 80vw;
+}
+#watchTrafficContainer #logTableContainer .logRecords {
+  max-height: 60vh;
+  max-width: 80vw;
+  width: 80vw;
+  overflow-y: auto;
+}
+#watchTrafficContainer #logTableContainer .logRecords-small {
+  max-height: 30vh;
+}
+#watchTrafficContainer #logTableContainer .log-details {
+  max-height: 30vh;
+  height: 30vh;
+  overflow-y: auto;
+  border-top-width: 2px;
+  margin-top: 1%;
+  padding-top: 1%;
+  border-style: dashed;
+  border-width: thin;
+  border-color: black;
+  width: 60vw;
+  margin-left: 1%;
+}
 #logNotificationsContainer {
   background-color: black;
   height: 80vh;
@@ -7486,10 +7543,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   left: 40%;
   z-index: 2000;
   width: 400px;
-}
-#editDocumentContainer .isActive {
-  background-color: #73c773!important;
-  border-color: #61b261!important;
 }
 #editDocumentContainer:focus {
   outline: 0;
@@ -7985,3 +8038,8 @@ footer ul {
   -moz-background-clip: padding-box;
   background-clip: padding-box;
 }
+.pressed {
+  background-color: #73c773!important;
+  border-color: #61b261!important;
+}
+/*# sourceMappingURL=app.css.map */

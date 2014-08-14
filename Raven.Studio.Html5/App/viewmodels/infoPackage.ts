@@ -80,6 +80,7 @@ class infoPackage extends viewModelBase {
     graph: any = null;
 
     infoPackage = ko.observable<any>();
+    infoPackageFilename = ko.observable<string>();
     fetchException = ko.observable<string>();
     showLoadingIndicator = ko.observable(false);
     private stacksJson = ko.observable<stackInfo[]>(null);
@@ -329,6 +330,7 @@ class infoPackage extends viewModelBase {
         nv.tooltip.cleanup();
         $("#parallelStacks").empty();
         this.infoPackage(null);
+        this.infoPackageFilename(null);
         this.fetchException(null);
         this.stacksJson(null);
     }
@@ -347,8 +349,9 @@ class infoPackage extends viewModelBase {
         var activeDb = !!this.activeDatabase() ? this.activeDatabase() : appUrl.getSystemDatabase();
         new getInfoPackage(activeDb, includeStacks)
             .execute()
-            .done((data) => {
+            .done((data, filename) => {
                 this.infoPackage(data);
+                this.infoPackageFilename(filename);
                 var zip = new jszip(data); 
                 var stacks = zip.file("stacktraces.txt");
                 if (stacks) {
@@ -387,7 +390,7 @@ class infoPackage extends viewModelBase {
     }
 
     saveAsZip() { 
-        fileDownloader.downloadAsZip(this.infoPackage(), "infoPackage.zip");
+        fileDownloader.downloadAsZip(this.infoPackage(), this.infoPackageFilename());
     }
 
     saveAsJson() {

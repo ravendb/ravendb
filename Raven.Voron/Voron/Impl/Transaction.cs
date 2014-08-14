@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+
+using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
@@ -48,6 +50,8 @@ namespace Voron.Impl
 		}
 
 		internal Action<Transaction> AfterCommit = delegate { };
+	    internal Action<Transaction, DebugActionType> RecordTransactionState = delegate { };
+	    internal bool CreatedByJournalApplicator;
 		private readonly StorageEnvironmentState _state;
 		private int _allocatedPagesInTransaction;
 		private int _overflowPagesInTransaction;
@@ -372,6 +376,11 @@ namespace Voron.Impl
 
 			Committed = true;
 			AfterCommit(this);
+
+            if (Environment.IsDebugRecording)
+            {
+                RecordTransactionState(this, DebugActionType.TransactionCommit);
+            }
 		}
 
 
@@ -385,7 +394,16 @@ namespace Voron.Impl
 				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
 			}
 
+			foreach (var pageFromScratch in _unusedScratchPages)
+			{
+				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
+			}
+
 			RolledBack = true;
+            if (Environment.IsDebugRecording)
+            {
+                RecordTransactionState(this, DebugActionType.TransactionRollback);
+            }
 		}
 
 
@@ -417,6 +435,10 @@ namespace Voron.Impl
 			{
 				pagerState.Release();
 			}
+            if (Environment.IsDebugRecording)
+            {
+                RecordTransactionState(this, DebugActionType.TransactionDisposed);
+            }
 		}
 
 		internal void FreePage(long pageNumber)
@@ -550,5 +572,11 @@ namespace Voron.Impl
 	        }
 	        _trees[name] = tree;
 	    }
+
+		internal Transaction JournalApplicatorTransaction()
+		{
+			CreatedByJournalApplicator = true;
+			return this;
+		}
 	}
 }

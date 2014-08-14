@@ -17,7 +17,7 @@ class startRestoreCommand extends commandBase {
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to delete resotre status document!", response.responseText, response.statusText);
-                this.logError(response, result);
+                result.reject();
             })
             .done(_=> {
             this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
@@ -42,8 +42,7 @@ class startRestoreCommand extends commandBase {
         new getDocumentWithMetadataCommand("Raven/Restore/Status", this.db)
             .execute()
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to fetch restore backup status!", response.responseText, response.statusText);
-                this.logError(response, result);
+                setTimeout(() => this.getRestoreStatus(result), 1000);
             })
             .done((restoreStatus: restoreStatusDto)=> {
                 var lastMessage = restoreStatus.Messages.last();
@@ -60,6 +59,7 @@ class startRestoreCommand extends commandBase {
                 if (!isRestoreFinished) {
                     setTimeout(() => this.getRestoreStatus(result), 1000);
                 } else {
+                    this.reportSuccess("Database was successfully restored!");
                     result.resolve();
                 }
             });

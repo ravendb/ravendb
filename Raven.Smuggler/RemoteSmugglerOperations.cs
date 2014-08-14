@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -14,6 +16,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Smuggler.Imports;
@@ -93,27 +96,20 @@ namespace Raven.Smuggler
 			};
 		}
 
-		public async Task<RavenJArray> GetAttachments(int start, Etag etag, int maxRecords)
+		public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
 		{
-			var results = new RavenJArray();
-
 			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
-			foreach (var attachmentInformation in attachments)
-			{
-				var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-				var attachmentData = attachment.Data().ReadData();
 
-				results.Add(
-					new RavenJObject
-					{
-						{"Data", attachmentData},
-						{"Metadata", attachmentInformation.Metadata},
-						{"Key", attachmentInformation.Key},
-						{"Etag", new RavenJValue(attachmentInformation.Etag.ToString())}
-					});
-			}
+			return attachments.ToList();
+		}
 
-			return results;
+		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
+		{
+			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
+			if (attachment == null) 
+				return null;
+
+			return attachment.Data().ReadData();
 		}
 
 		public JsonDocument GetDocument(string key)

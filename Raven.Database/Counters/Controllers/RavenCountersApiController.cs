@@ -38,12 +38,7 @@ namespace Raven.Database.Counters.Controllers
 
 		private CountersLandlord landlord;
 		private RequestManager requestManager;
-
-		public override LogTenantType TenantType
-		{
-			get { return LogTenantType.CounterStorage; }
-		}
-
+        
 		public RequestManager RequestManager
 		{
 			get

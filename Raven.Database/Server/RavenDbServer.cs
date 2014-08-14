@@ -11,6 +11,7 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Embedded;
+using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.WebApi;
@@ -84,6 +85,12 @@ namespace Raven.Server
 	        documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
 	        documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 	        documentStore.Initialize();
+
+			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
+			{
+				task.Execute(this);
+			}
+
 	        return this;
 	    }
 

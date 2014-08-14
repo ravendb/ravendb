@@ -68,6 +68,12 @@ class databases extends viewModelBase {
         this.databasesLoaded();
     }
 
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("ActivateDatabase", (db: database) => this.selectedDatabase(db))
+        ];
+    }
+
     private databasesLoaded() {
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.databases().length === 1) {
@@ -94,6 +100,9 @@ class databases extends viewModelBase {
                 db.activate();
             }
             this.selectedDatabase(db);
+
+            var updatedUrl = appUrl.forDatabase(db);
+            this.navigate(updatedUrl);
         }
 
         this.optionsClicked(false);
