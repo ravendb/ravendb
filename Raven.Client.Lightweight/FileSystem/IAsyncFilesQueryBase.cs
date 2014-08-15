@@ -185,6 +185,38 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        TSelf OrderBy(params string[] fields);
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        TSelf OrderByDescending(params string[] fields);
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        TSelf OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+
+        /// <summary>
         ///   Add an AND to the query
         /// </summary>
         TSelf AndAlso();
@@ -193,6 +225,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///   Add an OR to the query
         /// </summary>
         TSelf OrElse();
+
 
         /// <summary>
         ///   Returns first element or default value for type if sequence is empty.
@@ -217,5 +250,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <returns></returns>
         Task<T> SingleAsync();
+
+
     }
 }

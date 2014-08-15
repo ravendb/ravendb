@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Raven.Abstractions.FileSystem;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -252,5 +253,163 @@ namespace RavenFS.Tests.ClientApi
                 
             }
         }
+
+        [Fact]
+        public async void CanUseOrderBySize()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(600));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(150));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(16));
+                session.RegisterUpload("test.f", CreateUniformFileStream(330));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderBy(x => x.TotalSize)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderBy(x => x.TotalSize);
+
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
+        [Fact]
+        public async void CanUseOrderByDescendingSize()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(600));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(150));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(16));
+                session.RegisterUpload("test.f", CreateUniformFileStream(330));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderByDescending(x => x.TotalSize)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderByDescending(x => x.TotalSize);
+
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
+
+        [Fact]
+        public async void CanUseOrderByName()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("d.file", CreateUniformFileStream(100));
+                session.RegisterUpload("c.file", CreateUniformFileStream(101));
+                session.RegisterUpload("a.file", CreateUniformFileStream(102));
+                session.RegisterUpload("b.file", CreateUniformFileStream(103));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderBy(x => x.Name)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderBy(x => x.Name);
+
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
+        [Fact]
+        public async void CanUseOrderByDescendingName()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("a.file", CreateUniformFileStream(100));
+                session.RegisterUpload("b.file", CreateUniformFileStream(101));
+                session.RegisterUpload("c.file", CreateUniformFileStream(102));
+                session.RegisterUpload("d.file", CreateUniformFileStream(103));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderByDescending(x => x.Name)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderByDescending(x => x.Name);
+
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
+        [Fact]
+        public async void CanUseOrderByMultipleConditions()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("a.file", CreateUniformFileStream(100));
+                session.RegisterUpload("b.file", CreateUniformFileStream(101));
+                session.RegisterUpload("c.file", CreateUniformFileStream(101));
+                session.RegisterUpload("d.file", CreateUniformFileStream(102));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderBy(x => x.TotalSize)
+                                         .OrderByDescending(x => x.Name)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderBy(x => x.TotalSize)
+                                              .ThenByDescending(x => x.Name);
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
     }
 }

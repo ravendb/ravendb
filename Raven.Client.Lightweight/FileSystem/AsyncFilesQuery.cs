@@ -280,6 +280,56 @@ If you really want to do in memory filtering on the data returned from the query
             return this;
         }
 
+        /// <summary>
+        /// Order the results by the specified fields
+        /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name="fields">The fields.</param>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderBy(params string[] fields)
+        {
+            OrderBy(fields);
+            return this;
+        }
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        {
+            var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
+            OrderBy(orderByfields);
+            return this;
+        }
+
+        /// <summary>
+        /// Order the results by the specified fields
+        /// The fields are the names of the fields to sort, defaulting to sorting by descending.
+        /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name="fields">The fields.</param>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderByDescending(params string[] fields)
+        {
+            OrderByDescending(fields);
+            return this;
+        }
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        {
+            var orderByfields = propertySelectors.Select(expression => GetMemberQueryPathForOrderBy(expression)).ToArray();
+            OrderByDescending(orderByfields);
+            return this;
+        }
+
         FilesConvention IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Conventions
         {
             get { return this.Conventions; }

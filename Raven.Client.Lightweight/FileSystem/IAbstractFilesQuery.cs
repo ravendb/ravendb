@@ -119,6 +119,21 @@ namespace Raven.Client.FileSystem
         void OrElse();
 
         /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        void OrderBy(params string[] fields);
+
+        /// <summary>
+        ///   Adds an ordering for a specific field to the query
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "descending">if set to <c>true</c> [descending].</param>
+        void AddOrder(string fieldName, bool descending);
+
+        /// <summary>
         ///   Returns a <see cref = "System.String" /> that represents this instance.
         /// </summary>
         /// <returns>

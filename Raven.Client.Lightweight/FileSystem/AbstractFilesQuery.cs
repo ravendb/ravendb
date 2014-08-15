@@ -48,12 +48,6 @@ namespace Raven.Client.FileSystem
 
         protected KeyValuePair<string, string> lastEquality;
 
-        /// <summary>
-        ///   The types to sort the fields by (NULL if not specified)
-        /// </summary>
-        protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
-
-
         protected InMemoryFilesSessionOperations Session
         {
             get;
@@ -77,6 +71,11 @@ namespace Raven.Client.FileSystem
             this.Session = theSession;
             this.Commands = commands;
         }
+
+        /// <summary>
+        ///   The fields to order the results by
+        /// </summary>
+        protected string[] orderByFields = new string[0];
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -235,9 +234,6 @@ namespace Raven.Client.FileSystem
         {
             AppendSpaceIfNeeded(queryText.Length > 0);
 
-            if ((start ?? end) != null)
-                sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
-
             NegateIfNeeded();
 
             fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
@@ -259,8 +255,6 @@ namespace Raven.Client.FileSystem
         public void WhereBetweenOrEqual(string fieldName, object start, object end)
         {
             AppendSpaceIfNeeded(queryText.Length > 0);
-            if ((start ?? end) != null)
-                sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
 
             NegateIfNeeded();
 
@@ -340,6 +334,54 @@ namespace Raven.Client.FileSystem
             isDistinct = true;
         }
 
+        /// <summary>
+        ///   Adds an ordering for a specific field to the query
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name = "descending">if set to <c>true</c> [descending].</param>
+        public void AddOrder(string fieldName, bool descending)
+        {
+            fieldName = EnsureValidFieldName(new WhereParams
+            {
+                FieldName = fieldName,
+            });
+            fieldName = descending ? MakeFieldSortDescending(fieldName) : fieldName;
+            orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
+        }
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        public void OrderBy(params string[] fields)
+        {
+            foreach (var field in fields)
+                AddOrder(field, false);
+        }
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        public void OrderByDescending(params string[] fields)
+        {
+            foreach (var field in fields)
+                AddOrder(field, true);
+        }
+
+        protected string MakeFieldSortDescending(string field)
+        {
+            if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
+            {
+                return field;
+            }
+
+            return "-" + field;
+        }
 
         /// <summary>
         ///   Returns a <see cref = "System.String" /> that represents the query for this instance.
@@ -476,6 +518,12 @@ namespace Raven.Client.FileSystem
             if (UsesRangeType(val) && fieldName.EndsWith("_Range"))
                 fieldName = fieldName.Substring(0, fieldName.Length - 6);
             return fieldName;
+        }
+
+
+        public string GetMemberQueryPathForOrderBy(Expression expression)
+        {
+            return GetMemberQueryPath(expression);
         }
 
         public string GetMemberQueryPath(Expression expression)
@@ -637,7 +685,7 @@ namespace Raven.Client.FileSystem
 
             log.Debug("Executing query on file system '{1}' in '{2}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
-            var result = await Commands.SearchAsync(this.queryText.ToString(), null, start, pageSize);
+            var result = await Commands.SearchAsync(this.queryText.ToString(), this.orderByFields, start, pageSize);
 
             return result.Files.ConvertAll<T>(x => x as T);
         }
