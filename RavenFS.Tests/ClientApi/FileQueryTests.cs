@@ -380,7 +380,71 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
+        public async void CanUseOrderByMultipleConditionsOnDescending()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("b.file", CreateUniformFileStream(100));
+                session.RegisterUpload("a.file", CreateUniformFileStream(101));
+                session.RegisterUpload("d.file", CreateUniformFileStream(101));
+                session.RegisterUpload("c.file", CreateUniformFileStream(102));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderBy(x => x.TotalSize)
+                                         .ThenByDescending(x => x.Name)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderBy(x => x.TotalSize)
+                                              .ThenByDescending(x => x.Name);
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
+        [Fact]
         public async void CanUseOrderByMultipleConditions()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("b.file", CreateUniformFileStream(100));
+                session.RegisterUpload("a.file", CreateUniformFileStream(101));
+                session.RegisterUpload("d.file", CreateUniformFileStream(101));
+                session.RegisterUpload("c.file", CreateUniformFileStream(102));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OrderBy(x => x.TotalSize)
+                                         .ThenBy(x => x.Name)
+                                         .ToListAsync();
+
+                var queryAll = await session.Query()
+                                            .ToListAsync();
+                var queryOrderAfter = queryAll.OrderBy(x => x.TotalSize)
+                                              .ThenBy(x => x.Name);
+
+                var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
+                foreach (var pair in inPairs)
+                {
+                    Assert.Equal(pair.Item1.Name, pair.Item2.Name);
+                    Assert.Equal(pair.Item1.TotalSize, pair.Item2.TotalSize);
+                }
+            }
+        }
+
+        [Fact]
+        public async void CanUseOrderByMultipleGroupConditions()
         {
             var store = this.NewStore();
 
@@ -397,10 +461,8 @@ namespace RavenFS.Tests.ClientApi
                                          .OrderByDescending(x => x.Name)
                                          .ToListAsync();
 
-                var queryAll = await session.Query()
-                                            .ToListAsync();
-                var queryOrderAfter = queryAll.OrderBy(x => x.TotalSize)
-                                              .ThenByDescending(x => x.Name);
+                var queryAll = await session.Query().ToListAsync();
+                var queryOrderAfter = queryAll.OrderByDescending(x => x.Name);
 
                 var inPairs = query.Zip(queryOrderAfter, (x, y) => new Tuple<FileHeader, FileHeader>(x, y));
                 foreach (var pair in inPairs)

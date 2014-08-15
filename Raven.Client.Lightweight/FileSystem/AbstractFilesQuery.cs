@@ -357,6 +357,7 @@ namespace Raven.Client.FileSystem
         /// <param name = "fields">The fields.</param>
         public void OrderBy(params string[] fields)
         {
+            orderByFields = new string[0];
             foreach (var field in fields)
                 AddOrder(field, false);
         }
@@ -369,6 +370,7 @@ namespace Raven.Client.FileSystem
         /// <param name = "fields">The fields.</param>
         public void OrderByDescending(params string[] fields)
         {
+            orderByFields = new string[0];
             foreach (var field in fields)
                 AddOrder(field, true);
         }

@@ -7,17 +7,48 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
 {
+    public interface IAsyncFilesOrderedQueryBase<T, out TSelf> : IAsyncFilesQueryBase<T,TSelf> where TSelf : IAsyncFilesQueryBase<T, TSelf>
+    {
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort.
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        IAsyncFilesOrderedQuery<T> ThenBy(params string[] fields);
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort.
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        IAsyncFilesOrderedQuery<T> ThenBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort.
+        /// </summary>
+        /// <param name = "fields">The fields.</param>
+        IAsyncFilesOrderedQuery<T> ThenByDescending(params string[] fields);
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort.
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        IAsyncFilesOrderedQuery<T> ThenByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+    }
+
 
     /// <summary>
     /// A query against a file system.
     /// </summary>
-    public interface IAsyncFilesQueryBase<T, out TSelf> where TSelf : IAsyncFilesQueryBase<T, TSelf>
+    public interface IAsyncFilesQueryBase<T, out TSelf>
+        where TSelf : IAsyncFilesQueryBase<T, TSelf> 
     {
         /// <summary>
         /// Gets the files convention from the query session
         /// </summary>
         FilesConvention Conventions { get; }
-
 
         /// <summary>
         ///   This function exists solely to forbid in memory where clause on IFilesQuery, because
@@ -187,34 +218,30 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        TSelf OrderBy(params string[] fields);
+        IAsyncFilesOrderedQuery<T> OrderBy(params string[] fields);
 
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
-        TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+        IAsyncFilesOrderedQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        TSelf OrderByDescending(params string[] fields);
+        IAsyncFilesOrderedQuery<T> OrderByDescending(params string[] fields);
 
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
-        TSelf OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+        IAsyncFilesOrderedQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
         /// <summary>
         ///   Add an AND to the query

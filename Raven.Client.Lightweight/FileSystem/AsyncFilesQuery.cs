@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesQuery<T> : AbstractFilesQuery<T, AsyncFilesQuery<T>>, IAsyncFilesQuery<T> where T : class
+    public class AsyncFilesQuery<T> : AbstractFilesQuery<T, AsyncFilesQuery<T>>, IAsyncFilesQuery<T>, IAsyncFilesOrderedQuery<T> where T : class
     {
         public AsyncFilesQuery( InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands ) : base ( theSession, commands )
         {}
@@ -283,51 +283,101 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Order the results by the specified fields
         /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderBy(params string[] fields)
+        IAsyncFilesOrderedQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderBy(params string[] fields)
         {
             OrderBy(fields);
-            return this;
+            return (IAsyncFilesOrderedQuery<T>)this;
         }
 
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
-        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        IAsyncFilesOrderedQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
             var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
             OrderBy(orderByfields);
-            return this;
+            return (IAsyncFilesOrderedQuery<T>)this;
         }
 
         /// <summary>
         /// Order the results by the specified fields
         /// The fields are the names of the fields to sort, defaulting to sorting by descending.
-        /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderByDescending(params string[] fields)
+        IAsyncFilesOrderedQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderByDescending(params string[] fields)
         {
             OrderByDescending(fields);
-            return this;
+            return (IAsyncFilesOrderedQuery<T>)this;
         }
 
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
-        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        IAsyncFilesOrderedQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
             var orderByfields = propertySelectors.Select(expression => GetMemberQueryPathForOrderBy(expression)).ToArray();
             OrderByDescending(orderByfields);
-            return this;
+            return (IAsyncFilesOrderedQuery<T>)this;
+        }
+
+        /// <summary>
+        /// Order the results by the specified fields
+        /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        /// </summary>
+        /// <param name="fields">The fields.</param>
+        IAsyncFilesOrderedQuery<T> IAsyncFilesOrderedQueryBase<T, IAsyncFilesQuery<T>>.ThenBy(params string[] fields)
+        {
+            foreach (var field in fields)
+                AddOrder(field, false);
+
+            return (IAsyncFilesOrderedQuery<T>)this;
+        }
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        IAsyncFilesOrderedQuery<T> IAsyncFilesOrderedQueryBase<T, IAsyncFilesQuery<T>>.ThenBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        {
+            var orderByfields = propertySelectors.Select(expression => GetMemberQueryPathForOrderBy(expression)).ToArray();
+            foreach (var field in orderByfields)
+                AddOrder(field, false);
+
+            return (IAsyncFilesOrderedQuery<T>)this;
+        }
+
+        /// <summary>
+        /// Order the results by the specified fields
+        /// The fields are the names of the fields to sort, defaulting to sorting by descending.
+        /// </summary>
+        /// <param name="fields">The fields.</param>
+        IAsyncFilesOrderedQuery<T> IAsyncFilesOrderedQueryBase<T, IAsyncFilesQuery<T>>.ThenByDescending(params string[] fields)
+        {
+            foreach (var field in fields)
+                AddOrder(field, true);
+
+            return (IAsyncFilesOrderedQuery<T>)this;
+        }
+
+        /// <summary>
+        ///   Order the results by the specified fields
+        ///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+        /// </summary>
+        /// <param name = "propertySelectors">Property selectors for the fields.</param>
+        IAsyncFilesOrderedQuery<T> IAsyncFilesOrderedQueryBase<T, IAsyncFilesQuery<T>>.ThenByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        {
+            var orderByfields = propertySelectors.Select(expression => GetMemberQueryPathForOrderBy(expression)).ToArray();
+            foreach (var field in orderByfields)
+                AddOrder(field, true);
+
+            return (IAsyncFilesOrderedQuery<T>)this;
         }
 
         FilesConvention IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Conventions
