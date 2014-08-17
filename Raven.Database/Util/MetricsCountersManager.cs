@@ -158,19 +158,19 @@ namespace Raven.Database.Util
             public MeterMetric GetSqlReplicationBatchSizeMetric(SqlReplicationConfig sqlReplicationConfig)
             {
                 return SqlReplicationBatchSizeMeter.GetOrAdd(sqlReplicationConfig.Name,
-                    s => dbMetrics.Meter("metrics", "docs/min for " + s, "SQLReplication docs/min Counter", TimeUnit.Minutes));
+                    s => dbMetrics.Meter("metrics", "SqlReplication Batch docs/min for " + s, "SQLReplication docs/min Counter", TimeUnit.Minutes));
             }
 
             public HistogramMetric GetSqlReplicationBatchSizeHistogram(SqlReplicationConfig sqlReplicationConfig)
             {
                 return SqlReplicationBatchSizeHistogram.GetOrAdd(sqlReplicationConfig.Name,
-                    s => dbMetrics.Histogram("metrics", "SQLReplication docs/min Histogram for " + s));
+                    s => dbMetrics.Histogram("metrics", "SqlReplication Batch histogram for " + s));
             }
 
             public MeterMetric GetSqlReplicationDurationMetric(SqlReplicationConfig sqlReplicationConfig)
             {
                 return SqlReplicationDurationMeter.GetOrAdd(sqlReplicationConfig.Name,
-                    s => dbMetrics.Meter("metrics", "duration for " + s, "SQLReplication duration Counter", TimeUnit.Minutes));
+                    s => dbMetrics.Meter("metrics", "SqlReplication duration metrics for " + s, "SQLReplication duration Counter", TimeUnit.Minutes));
             }
             
 
@@ -184,48 +184,48 @@ namespace Raven.Database.Util
             public MeterMetric GetSqlReplicationDeletesAmountMetrics(Tuple<string,string> replicationNameReplicationTableKey)
             {
                 return SqlReplicationDeleteActionsMeter.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Meter("metrics", "docs/min for " + s, "SQLReplication Delete Commands/min Counter", TimeUnit.Minutes));
+                    s => dbMetrics.Meter("metrics", "SqlReplication Deletes/min for table :" + s.Item2 + " in replication: " + s.Item1, "SQLReplication Delete Commands/min Counter", TimeUnit.Minutes));
             }
             public HistogramMetric GetSqlReplicationDeletesAmountHistogram(Tuple<string, string> replicationNameReplicationTableKey)
             {
-                return SqlReplicationInsertActionsHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "SQLReplication Delete Commands/min Histogram for " + s));
+                return SqlReplicationDeleteActionsHistogram.GetOrAdd(replicationNameReplicationTableKey,
+                    s => dbMetrics.Histogram("metrics", "SQLReplication Deletes Commands/min Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
             }
 
             public MeterMetric GetSqlReplicationInsertsAmountMetrics(Tuple<string, string> replicationNameReplicationTableKey)
             {
                 return SqlReplicationInsertActionsMeter.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Meter("metrics", "docs/min for " + s, "SQLReplication Insert Commands/min Counter", TimeUnit.Minutes));
+                    s => dbMetrics.Meter("metrics", "SqlReplication Inserts/min for table :" + s.Item2 + " in replication: " + s.Item1, "SQLReplication Insert Commands/min Counter", TimeUnit.Minutes));
             }
 
             public HistogramMetric GetSqlReplicationInsertsAmountHistogram(Tuple<string, string> replicationNameReplicationTableKey)
             {
-                return SqlReplicationDeleteActionsHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "SQLReplication Inser Commands/min Histogram for " + s));
+                return SqlReplicationInsertActionsHistogram.GetOrAdd(replicationNameReplicationTableKey,
+                    s => dbMetrics.Histogram("metrics", "SQLReplication Insert Commands Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
             }
 
             public MeterMetric GetSqlReplicationDeleteDurationMetrics(Tuple<string, string> replicationNameReplicationTableKey)
             {
                 return SqlReplicationDeleteActionsDurationMeter.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Meter("metrics", "docs/min for " + s, "SQLReplication Delete Command duration Counter", TimeUnit.Minutes));
+                    s => dbMetrics.Meter("metrics", "SqlReplication Deletes Command Duration for table :" + s.Item2 + " in replication: " + s.Item1, "SQLReplication Delete Command duration Counter", TimeUnit.Minutes));
             }
 
             public HistogramMetric GetSqlReplicationDeleteDurationHistogram(Tuple<string, string> replicationNameReplicationTableKey)
             {
                 return SqlReplicationDeleteActionsDurationHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "Replication Delete Command duration Histogram for " + s));
+                    s => dbMetrics.Histogram("metrics", "SqlReplication Delete Command duration Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
             }
 
             public MeterMetric GetSqlReplicationInsertDurationMetrics(Tuple<string, string> replicationNameReplicationTableKey)
             {
                 return SqlReplicationInsertActionsDurationMeter.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes));
+                    s => dbMetrics.Meter("metrics", "SqlReplicaiton Insert Command Duration for table :" + s.Item2 + " in replication: " + s.Item1, "Replication docs/min Counter", TimeUnit.Minutes));
             }
 
             public HistogramMetric GetSqlReplicationInsertDurationHistogram(Tuple<string, string> replicationNameReplicationTableKey)
             {
                 return SqlReplicationInsertActionsDurationHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "Replication docs/min Histogram for " + s));
+                    s => dbMetrics.Histogram("metrics", "SqlReplication Insert Commands Duration Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
             }
             
         }

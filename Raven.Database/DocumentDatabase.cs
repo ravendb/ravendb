@@ -588,7 +588,7 @@ namespace Raven.Database
                 SqlReplicationBatchSizeHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
                 SqlReplicationDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
                 SqlReplicationDeleteActionsDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationDeleteActionsDurationMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
+                SqlReplicationDeleteActionsDurationMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
                 SqlReplicationDeleteActionsHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
                 SqlReplicationDeleteActionsMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
                 SqlReplicationInsertActionsDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),

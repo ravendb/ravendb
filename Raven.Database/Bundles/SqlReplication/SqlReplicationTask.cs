@@ -250,10 +250,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
-                            
 
+						    int countOfReplicatedItems = 0;
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
+                                ReplicateChangesToDestination(replicationConfig, docsToReplicate, out countOfReplicatedItems))
 							{
 								if (deletedDocs.Count > 0)
 								{
@@ -264,12 +264,12 @@ namespace Raven.Database.Bundles.SqlReplication
 							}
 
                             spRepTime.Stop();
-
+                            var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
                             var sqlReplicationMetricsCounters = Database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
-                            sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(docsToReplicate.Count);
-                            sqlReplicationMetricsCounters.GetSqlReplicationDurationMetric(replicationConfig).Mark(spRepTime.ElapsedMilliseconds);
-                            sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(docsToReplicate.Count);
-                            sqlReplicationMetricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(spRepTime.ElapsedMilliseconds);
+                            sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(countOfReplicatedItems);
+                            sqlReplicationMetricsCounters.GetSqlReplicationDurationMetric(replicationConfig).Mark(elapsedMicroseconds);
+                            sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(countOfReplicatedItems);
+                            sqlReplicationMetricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(elapsedMicroseconds);
 
 						}
 						catch (Exception e)
@@ -430,13 +430,14 @@ namespace Raven.Database.Bundles.SqlReplication
 			return leastReplicatedEtag;
 		}
 
-		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs, out int countOfReplicatedItems)
 		{
+		    countOfReplicatedItems = 0;
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
 				return true;
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-			var countOfItems = scriptResult.Data.Sum(x => x.Value.Count);
+            countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
 			try
 			{
 				using (var writer = new RelationalDatabaseWriter(Database, cfg, replicationStats))
@@ -444,12 +445,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					if (writer.Execute(scriptResult))
 					{
 						log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
-						replicationStats.CompleteSuccess(countOfItems);
+                        replicationStats.CompleteSuccess(countOfReplicatedItems);
 					}
 					else
 					{
 						log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
-						replicationStats.Success(countOfItems);
+                        replicationStats.Success(countOfReplicatedItems);
 					}
 				}
 				return true;
@@ -468,7 +469,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
 					newTime = SystemTime.UtcNow.AddSeconds(Math.Max(60 * 15, Math.Min(5, totalSeconds + 5)));
 				}
-				replicationStats.RecordWriteError(e, Database, countOfItems, newTime);
+                replicationStats.RecordWriteError(e, Database, countOfReplicatedItems, newTime);
 				return false;
 			}
 		}
