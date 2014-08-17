@@ -323,7 +323,7 @@ namespace Raven.Tests.Helpers
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && (runInMemory ?? true),
 			};
 
-			ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;
+			ravenConfiguration.Storage.Voron.TempPath = tempDir;
 
 			if (storageType == "voron")
 				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
