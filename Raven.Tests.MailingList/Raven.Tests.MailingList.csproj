@@ -153,6 +153,7 @@
     <Compile Include="chad.cs" />
     <Compile Include="ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="Chirea.cs" />
+    <Compile Include="Chirea2.cs" />
     <Compile Include="ChrisDNF.cs" />
     <Compile Include="ChrisH.cs" />
     <Compile Include="ChrisMarisic.cs" />
