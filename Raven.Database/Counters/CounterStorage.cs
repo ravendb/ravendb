@@ -136,25 +136,24 @@ namespace Raven.Database.Counters
 	    public CountersStorageMetrics CreateMetrics()
 	    {
             var metrics = metricsCounters;
-            var percentiles = new double[]{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999};
 
             return new CountersStorageMetrics
             {
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-                Resets = metrics.Resets.GetMeterData(3),
-                Increments = metrics.Increments.GetMeterData(3),
-                Decrements = metrics.Decrements.GetMeterData(3),
-                ClientRuqeusts = metrics.ClientRuqeusts.GetMeterData(3),
-                IncomingReplications =  metrics.IncomingReplications.GetMeterData(3),
-                OutgoingReplications = metrics.OutgoingReplications.GetMeterData(3),
+                Resets = metrics.Resets.CreateMeterData(),
+                Increments = metrics.Increments.CreateMeterData(),
+                Decrements = metrics.Decrements.CreateMeterData(),
+                ClientRuqeusts = metrics.ClientRuqeusts.CreateMeterData(),
+                IncomingReplications = metrics.IncomingReplications.CreateMeterData(),
+                OutgoingReplications = metrics.OutgoingReplications.CreateMeterData(),
 
-                RequestsDuration = metrics.RequestDuationMetric.GetHistogramData(percentiles),
-                IncSizes = metrics.IncSizeMetrics.GetHistogramData(percentiles),
-                DecSizes = metrics.DecSizeMetrics.GetHistogramData(percentiles),
+                RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+                IncSizes = metrics.IncSizeMetrics.CreateHistogramData(),
+                DecSizes = metrics.DecSizeMetrics.CreateHistogramData(),
                 
-                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
-                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles)),
-                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles))
+                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
             };
 	    }
 

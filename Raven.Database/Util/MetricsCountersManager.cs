@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-
+using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Tasks;
 
 using metrics;
@@ -14,6 +14,7 @@ using metrics.Core;
 
 using System.Linq;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Util
 {
@@ -43,8 +44,6 @@ namespace Raven.Database.Util
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
 
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
-
-        public SqlReplicationMetricsCountersManager SqlReplicationMetricsCounters { get; private set; }
         
         public MetricsCountersManager()
         {
@@ -64,7 +63,6 @@ namespace Raven.Database.Util
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
-            SqlReplicationMetricsCounters = new SqlReplicationMetricsCountersManager(dbMetrics);
             
 
         }
@@ -107,93 +105,6 @@ namespace Raven.Database.Util
         {
             return ReplicationDurationHistogram.GetOrAdd(destination.ConnectionStringOptions.Url,
                 s => dbMetrics.Histogram("metrics", "Replication duration Histogram for " + s));
-        }
-
-
-
-
-        public class SqlReplicationMetricsCountersManager
-        {
-            readonly Metrics dbMetrics;
-
-            public ConcurrentDictionary<string, MeterMetric> SqlReplicationBatchSizeMeter { get; private set; }
-            public ConcurrentDictionary<string, HistogramMetric> SqlReplicationBatchSizeHistogram { get; private set; }
-            public ConcurrentDictionary<string, HistogramMetric> SqlReplicationDurationHistogram { get; private set; }
-            public ConcurrentDictionary<Tuple<string, string>, MeterMetric> SqlReplicationDeleteActionsMeter { get; private set; }
-            public ConcurrentDictionary<Tuple<string, string>, MeterMetric> SqlReplicationInsertActionsMeter { get; private set; }
-            public ConcurrentDictionary<Tuple<string, string>, HistogramMetric> SqlReplicationDeleteActionsHistogram { get; private set; }
-            public ConcurrentDictionary<Tuple<string, string>, HistogramMetric> SqlReplicationInsertActionsHistogram { get; private set; }
-            public ConcurrentDictionary<Tuple<string, string>, HistogramMetric> SqlReplicationDeleteActionsDurationHistogram { get; private set; }
-            public ConcurrentDictionary<Tuple<string, string>, HistogramMetric> SqlReplicationInsertActionsDurationHistogram { get; private set; }
-
-            public SqlReplicationMetricsCountersManager(Metrics dbMetrics)
-            {
-                this.dbMetrics = dbMetrics;
-                SqlReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
-                SqlReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
-                SqlReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
-                SqlReplicationDeleteActionsMeter = new ConcurrentDictionary<Tuple<string, string>, MeterMetric>();
-                SqlReplicationInsertActionsMeter = new ConcurrentDictionary<Tuple<string, string>, MeterMetric>();
-                SqlReplicationDeleteActionsHistogram = new ConcurrentDictionary<Tuple<string, string>, HistogramMetric>();
-                SqlReplicationInsertActionsHistogram = new ConcurrentDictionary<Tuple<string, string>, HistogramMetric>();
-                SqlReplicationDeleteActionsDurationHistogram = new ConcurrentDictionary<Tuple<string, string>, HistogramMetric>();
-                SqlReplicationInsertActionsDurationHistogram = new ConcurrentDictionary<Tuple<string, string>, HistogramMetric>();
-            }
-
-            public MeterMetric GetSqlReplicationBatchSizeMetric(SqlReplicationConfig sqlReplicationConfig)
-            {
-                return SqlReplicationBatchSizeMeter.GetOrAdd(sqlReplicationConfig.Name,
-                    s => dbMetrics.Meter("metrics", "SqlReplication Batch docs/min for " + s, "SQLReplication docs/min Counter", TimeUnit.Minutes));
-            }
-
-            public HistogramMetric GetSqlReplicationBatchSizeHistogram(SqlReplicationConfig sqlReplicationConfig)
-            {
-                return SqlReplicationBatchSizeHistogram.GetOrAdd(sqlReplicationConfig.Name,
-                    s => dbMetrics.Histogram("metrics", "SqlReplication Batch histogram for " + s));
-            }
-
-            public HistogramMetric GetSqlReplicationDurationHistogram(SqlReplicationConfig sqlReplicationConfig)
-            {
-                return SqlReplicationDurationHistogram.GetOrAdd(sqlReplicationConfig.Name,
-                    s => dbMetrics.Histogram("metrics", "SQLReplication duration Histogram for " + s));
-            }
-
-
-            public MeterMetric GetSqlReplicationDeletesAmountMetrics(Tuple<string,string> replicationNameReplicationTableKey)
-            {
-                return SqlReplicationDeleteActionsMeter.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Meter("metrics", "SqlReplication Deletes/min for table :" + s.Item2 + " in replication: " + s.Item1, "SQLReplication Delete Commands/min Counter", TimeUnit.Minutes));
-            }
-            public HistogramMetric GetSqlReplicationDeletesAmountHistogram(Tuple<string, string> replicationNameReplicationTableKey)
-            {
-                return SqlReplicationDeleteActionsHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "SQLReplication Deletes Commands/min Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
-            }
-
-            public MeterMetric GetSqlReplicationInsertsAmountMetrics(Tuple<string, string> replicationNameReplicationTableKey)
-            {
-                return SqlReplicationInsertActionsMeter.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Meter("metrics", "SqlReplication Inserts/min for table :" + s.Item2 + " in replication: " + s.Item1, "SQLReplication Insert Commands/min Counter", TimeUnit.Minutes));
-            }
-
-            public HistogramMetric GetSqlReplicationInsertsAmountHistogram(Tuple<string, string> replicationNameReplicationTableKey)
-            {
-                return SqlReplicationInsertActionsHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "SQLReplication Insert Commands Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
-            }
-
-            public HistogramMetric GetSqlReplicationDeleteDurationHistogram(Tuple<string, string> replicationNameReplicationTableKey)
-            {
-                return SqlReplicationDeleteActionsDurationHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "SqlReplication Delete Command duration Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
-            }
-
-            public HistogramMetric GetSqlReplicationInsertDurationHistogram(Tuple<string, string> replicationNameReplicationTableKey)
-            {
-                return SqlReplicationInsertActionsDurationHistogram.GetOrAdd(replicationNameReplicationTableKey,
-                    s => dbMetrics.Histogram("metrics", "SqlReplication Insert Commands Duration Histogram for table :" + s.Item2 + " in replication: " + s.Item1));
-            }
-            
         }
     }
 }

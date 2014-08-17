@@ -573,63 +573,18 @@ namespace Raven.Database
 			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
 			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
 			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-			RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
-			Requests = CreateMeterData(metrics.ConcurrentRequests),
+            RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+            Requests = metrics.ConcurrentRequests.CreateMeterData(),
 			Gauges = metrics.Gauges,
-			StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
-			StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
-			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-
-			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-            SQLReplicationMetrics = new SQLReplicationMetrics(){
-                SqlReplicationBatchSizeMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-                SqlReplicationBatchSizeHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationDeleteActionsDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationDeleteActionsHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationDeleteActionsMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationDeleteActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-                SqlReplicationInsertActionsDurationHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationInsertActionsHistogram = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-                SqlReplicationInsertActionsMeter = metrics.SqlReplicationMetricsCounters.SqlReplicationInsertActionsMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value))
-            }
+            StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+            StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+            ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
 		};
 		}
 
-		private static HistogramData CreateHistogramData(HistogramMetric histogram)
-		{
-			double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
-
-			return new HistogramData
-			{
-				Counter = histogram.Count,
-				Max = histogram.Max,
-				Mean = histogram.Mean,
-				Min = histogram.Min,
-				Stdev = histogram.StdDev,
-				Percentiles = new Dictionary<string, double>
-                {
-                        {"50%", percentiles[0]},
-                        {"75%", percentiles[1]},
-                        {"95%", percentiles[2]},
-                        {"99%", percentiles[3]},
-                        {"99.9%", percentiles[4]},
-                        {"99.99%", percentiles[5]},
-                }
-			};
-		}
-
-		private static MeterData CreateMeterData(MeterMetric metric)
-		{
-			return new MeterData
-				   {
-					   Count = metric.Count,
-					   FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, 3),
-					   FiveMinuteRate = Math.Round(metric.FiveMinuteRate, 3),
-					   MeanRate = Math.Round(metric.MeanRate, 3),
-					   OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
-				   };
-		}
+		
 
 		/// <summary>
 		///     This API is provided solely for the use of bundles that might need to run

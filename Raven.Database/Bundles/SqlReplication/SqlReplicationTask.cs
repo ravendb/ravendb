@@ -13,6 +13,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.NRefactory.PatternMatching;
+using metrics;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -42,6 +43,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
+        readonly Metrics sqlReplicationMetrics = new Metrics();
 
 		public DocumentDatabase Database { get; set; }
 
@@ -54,7 +56,9 @@ namespace Raven.Database.Bundles.SqlReplication
 		private PrefetchingBehavior prefetchingBehavior;
 
 		private Etag lastLatestEtag;
-
+        public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters = 
+            new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
+        
 		public void Execute(DocumentDatabase database)
 		{
 			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
@@ -127,6 +131,13 @@ namespace Raven.Database.Bundles.SqlReplication
 									? new SqlReplicationStatus()
 									: jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
 		}
+
+        public SqlReplicationMetricsCountersManager GetSqlReplicationMetricsManager(SqlReplicationConfig cfg)
+        {
+            return SqlReplicationMetricsCounters.GetOrAdd(cfg.Name,
+                s => new SqlReplicationMetricsCountersManager(sqlReplicationMetrics, cfg)
+                );
+        }
 
 		private void BackgroundSqlReplication()
 		{
@@ -265,10 +276,11 @@ namespace Raven.Database.Bundles.SqlReplication
 
                             spRepTime.Stop();
                             var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
-                            var sqlReplicationMetricsCounters = Database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
-                            sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(countOfReplicatedItems);
-                            sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(countOfReplicatedItems);
-                            sqlReplicationMetricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(elapsedMicroseconds);
+
+                            var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
+                            sqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
+                            sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
+                            sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
 
 						}
 						catch (Exception e)

@@ -39,7 +39,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbTransaction tx;
 		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
         private bool IsSqlServerFactoryType = false;
-        
+        private SqlReplicationMetricsCountersManager sqlReplicationMetrics;
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -96,6 +96,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			tx = connection.BeginTransaction();
 
             stringParserList = GenerateStringParsers();
+            sqlReplicationMetrics = database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault().GetSqlReplicationMetricsManager(cfg);
 		}
 
 	    public List<Func<DbParameter, string, bool>> GenerateStringParsers()
@@ -237,11 +238,10 @@ namespace Raven.Database.Bundles.SqlReplication
         private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand>commandCallback =null)
 		{
 
-            var sqlReplicationMetricsCounters = database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
-            var tableReplicationTuple = new Tuple<string, string>(cfg.Name, tableName);
-            var replicationInsertAmountMetrics = sqlReplicationMetricsCounters.GetSqlReplicationInsertsAmountMetrics(tableReplicationTuple);
-            var replicationInsertAmountHistogram = sqlReplicationMetricsCounters.GetSqlReplicationInsertsAmountHistogram(tableReplicationTuple);
-            var replicationInsertDurationHistogram = sqlReplicationMetricsCounters.GetSqlReplicationInsertDurationHistogram(tableReplicationTuple);
+
+            var replicationInsertActionsMetrics = sqlReplicationMetrics.GetSqlReplicationInsertsActionMetrics(tableName);
+            var replicationInsertActionsHistogram = sqlReplicationMetrics.GetSqlReplicationInsertsActionsHistogram(tableName);
+            var replicationInsertDurationHistogram = sqlReplicationMetrics.GetSqlReplicationInsertDurationHistogram(tableName);
 
             var sp = new Stopwatch();
 			foreach (var itemToReplicate in dataForTable)
@@ -317,8 +317,8 @@ namespace Raven.Database.Bundles.SqlReplication
                         sp.Stop();
 				        var elapsedMicroseconds = (long)(sp.ElapsedTicks*SystemTime.MicroSecPerTick);
                         replicationInsertDurationHistogram.Update(elapsedMicroseconds);
-                        replicationInsertAmountMetrics.Mark(1);
-                        replicationInsertAmountHistogram.Update(1);
+                        replicationInsertActionsMetrics.Mark(1);
+                        replicationInsertActionsHistogram.Update(1);
 				    }
 				}
 			}
@@ -331,11 +331,10 @@ namespace Raven.Database.Bundles.SqlReplication
         public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, Action<DbCommand> commandCallback = null)
 		{
 			const int maxParams = 1000;
-            var sqlReplicationMetricsCounters = database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
-	        var tableReplicationTuple = new Tuple<string, string>(cfg.Name, tableName);
-            var replicationDeleteDurationHistogram = sqlReplicationMetricsCounters.GetSqlReplicationDeleteDurationHistogram(tableReplicationTuple);
-            var replicationDeletesAmountMetrics = sqlReplicationMetricsCounters.GetSqlReplicationDeletesAmountMetrics(tableReplicationTuple);
-            var replicationDeletesAmountHistogram = sqlReplicationMetricsCounters.GetSqlReplicationDeletesAmountHistogram(tableReplicationTuple);
+
+            var replicationDeleteDurationHistogram = sqlReplicationMetrics.GetSqlReplicationDeleteDurationHistogram(tableName);
+            var replicationDeletesActionsMetrics = sqlReplicationMetrics.GetSqlReplicationDeletesActionsMetrics(tableName);
+            var replicationDeletesActionsHistogram = sqlReplicationMetrics.GetSqlReplicationDeletesActionsHistogram(tableName);
             
 	        var sp = new Stopwatch();
 			using (var cmd = connection.CreateCommand())
@@ -400,8 +399,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				        sp.Stop();
                         var elapsedMicroseconds = (long)(sp.ElapsedTicks * SystemTime.MicroSecPerTick);
                         replicationDeleteDurationHistogram.Update(elapsedMicroseconds);
-                        replicationDeletesAmountHistogram.Update(1);
-                        replicationDeletesAmountMetrics.Mark(1);
+                        replicationDeletesActionsHistogram.Update(1);
+                        replicationDeletesActionsMetrics.Mark(1);
 				    }
 				}
 			}
