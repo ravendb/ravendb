@@ -262,8 +262,9 @@ namespace Voron.Impl.Journal
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 	    
 	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
-        {
-            List<KeyValuePair<long, PagePosition>> unusedPages;
+	    {
+		    if (tx == null) throw new ArgumentNullException("tx");
+		    List<KeyValuePair<long, PagePosition>> unusedPages;
 
             List<PagePosition> unusedAndFree;
             lock (_locker)

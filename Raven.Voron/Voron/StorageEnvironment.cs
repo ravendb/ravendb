@@ -340,61 +340,61 @@ namespace Voron
         public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
-            try
-            {
-                if (flags == (TransactionFlags.ReadWrite))
-                {
-                    var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-                    if (_txWriter.Wait(wait) == false)
-                    {
-                        throw new TimeoutException("Waited for " + wait +
-                                                   " for transaction write lock, but could not get it");
-                    }
-                    txLockTaken = true;
+	        try
+	        {
+		        if (flags == (TransactionFlags.ReadWrite))
+		        {
+			        var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
+			        if (_txWriter.Wait(wait) == false)
+			        {
+				        throw new TimeoutException("Waited for " + wait +
+				                                   " for transaction write lock, but could not get it");
+			        }
+			        txLockTaken = true;
 
-					if (_endOfDiskSpace != null)
-					{
-						if (_endOfDiskSpace.CanContinueWriting)
-						{
-							var flushingTask = _flushingTask;
-							Debug.Assert(flushingTask != null && (flushingTask.Status == TaskStatus.Canceled || flushingTask.Status == TaskStatus.RanToCompletion));
-							_cancellationTokenSource = new CancellationTokenSource();
-							_flushingTask = FlushWritesToDataFileAsync();
-							_endOfDiskSpace = null;
-						}
-                    }
-                }
+			        if (_endOfDiskSpace != null)
+			        {
+				        if (_endOfDiskSpace.CanContinueWriting)
+				        {
+					        var flushingTask = _flushingTask;
+					        Debug.Assert(flushingTask != null && (flushingTask.Status == TaskStatus.Canceled || flushingTask.Status == TaskStatus.RanToCompletion));
+					        _cancellationTokenSource = new CancellationTokenSource();
+					        _flushingTask = FlushWritesToDataFileAsync();
+					        _endOfDiskSpace = null;
+				        }
+			        }
+		        }
 
-	            Transaction tx;
+		        Transaction tx;
 
-                _txCommit.EnterReadLock();
-                try
-                {
-	                long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-	                tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+		        _txCommit.EnterReadLock();
+		        try
+		        {
+			        long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+			        tx = new Transaction(this, txId, flags, _freeSpaceHandling);
 
-                    if (IsDebugRecording)
-                    {
-                        RecordTransactionState(tx, DebugActionType.TransactionStart);
-                        tx.RecordTransactionState = RecordTransactionState;
-                    }
-                }
-                finally
-                {
-                    _txCommit.ExitReadLock();
-                }
+			        if (IsDebugRecording)
+			        {
+				        RecordTransactionState(tx, DebugActionType.TransactionStart);
+				        tx.RecordTransactionState = RecordTransactionState;
+			        }
+		        }
+		        finally
+		        {
+			        _txCommit.ExitReadLock();
+		        }
 
-                _activeTransactions.Add(tx);
-                var state = _dataPager.TransactionBegan();
-                tx.AddPagerState(state);
+		        _activeTransactions.Add(tx);
+		        var state = _dataPager.TransactionBegan();
+		        tx.AddPagerState(state);
 
-                if (flags == TransactionFlags.ReadWrite)
-                {
-                    tx.AfterCommit = TransactionAfterCommit;
-                }
+		        if (flags == TransactionFlags.ReadWrite)
+		        {
+			        tx.AfterCommit = TransactionAfterCommit;
+		        }
 
-                return tx;
-            }
+		        return tx;
+	        }
             catch (Exception)
             {
                 if (txLockTaken)
@@ -530,23 +530,28 @@ namespace Voron
 
         public void FlushLogToDataFile(Transaction tx = null)
         {
-            if (IsDebugRecording)
-            {
-                _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
-            }
+	        if (_options.ManualFlushing == false)
+				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-            if (_options.ManualFlushing == false)
-                throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
-
-           _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
-
-           if (IsDebugRecording)
-           {
-               _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, tx);
-           }
+	        ForceLogFlushToDataFile(tx);
         }
 
-        public void AssertFlushingNotFailed()
+	    internal void ForceLogFlushToDataFile(Transaction tx)
+	    {
+		    if (IsDebugRecording)
+		    {
+			    _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
+		    }
+
+		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
+
+		    if (IsDebugRecording)
+		    {
+			    _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, tx);
+		    }
+	    }
+
+	    public void AssertFlushingNotFailed()
         {
 	        var flushingTaskCopy = _flushingTask;
 	        if (flushingTaskCopy == null || flushingTaskCopy.IsFaulted == false)

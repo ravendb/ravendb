@@ -87,9 +87,13 @@ namespace Voron
 
 			MaxScratchBufferSize = 512 * 1024 * 1024;
 
+			ScratchBufferOverflowTimeout = 5000;
+
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
 		}
+
+		public int ScratchBufferOverflowTimeout { get; set; }
 
 		public static StorageEnvironmentOptions CreateMemoryOnly()
 		{
