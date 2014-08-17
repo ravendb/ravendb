@@ -14,14 +14,15 @@ import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
 import scriptedIndexModel = require("models/scriptedIndex");
 import autoCompleterSupport = require("common/autoCompleterSupport");
+import mergedIndexesStorage = require("common/mergedIndexesStorage");
 
 class editIndex extends viewModelBase { 
 
-    isEditingExistingIndex = ko.observable(false);
+    isEditingExistingIndex = ko.observable<boolean>(false);
+    isMergedIndex = ko.observable<boolean>(false);
     priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
@@ -79,41 +80,50 @@ class editIndex extends viewModelBase {
             this.editedIndex().name.valueHasMutated();
         });
 
+        this.editedIndex(this.createNewIndexDefinition());
     }
-    
+
     canActivate(indexToEditName: string) {
         super.canActivate(indexToEditName);
-
-        if (indexToEditName) {
+        
+        var db = this.activeDatabase();
+        var mergedIndex = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
+        if (mergedIndex != null) {
+            this.isMergedIndex(true);
+            this.editedIndex(mergedIndex);
+            mergedIndexesStorage.removeMergedIndex(indexToEditName);
+        }
+        else if (indexToEditName) {
+            this.isEditingExistingIndex(true);
             var canActivateResult = $.Deferred();
             this.fetchIndexData(indexToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
                     messagePublisher.reportError("Could not find " + decodeURIComponent(indexToEditName) + " index");
-                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) });
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
                 });
             return canActivateResult;
-        } else {
-            return $.Deferred().resolve({ can: true });
         }
+
+        return $.Deferred().resolve({ can: true });
     }
 
     activate(indexToEditName: string) {
         super.activate(indexToEditName);
         
-        this.isEditingExistingIndex(indexToEditName != null);
-
-        if (indexToEditName) {
+        if (this.isEditingExistingIndex()) {
             this.editExistingIndex(indexToEditName);
-        } else {
+        }
+        else {
             this.priority(indexPriority.normal);
-            this.editedIndex(this.createNewIndexDefinition());
+        }
+
+        if (this.isMergedIndex()) {
+            this.loadedIndexName("Merged Index");
         }
 
         this.initializeDirtyFlag();
-
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
-
         this.checkIfScriptedIndexBundleIsActive();
     }
 
@@ -163,7 +173,7 @@ class editIndex extends viewModelBase {
     private editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.loadedIndexName(indexName);
-        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
+        this.termsUrl(appUrl.forTerms(unescapedIndexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
@@ -431,12 +441,9 @@ class editIndex extends viewModelBase {
     }
 
     checkIfScriptedIndexBundleIsActive() {
-        new getDatabaseSettingsCommand(this.activeDatabase())
-            .execute()
-            .done(document => {
-                var documentSettings = document.Settings["Raven/ActiveBundles"];
-                this.isScriptedIndexBundleActive(documentSettings.indexOf("ScriptedIndex") !== -1);
-            });
+        var db = this.activeDatabase();
+        var activeBundles = db.activeBundles();
+        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
     }
 
     fetchOrCreateScriptedIndex() {
@@ -485,4 +492,4 @@ class editIndex extends viewModelBase {
     }
 }
 
-export = editIndex; 
+export = editIndex;

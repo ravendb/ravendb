@@ -256,6 +256,7 @@ interface indexMergeSuggestionsDto {
 
 interface suggestionDto {
     CanMerge: string[];
+    Collection: string;
     MergedIndex: indexDefinitionDto;
 }
 

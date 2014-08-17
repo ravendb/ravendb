@@ -26,7 +26,6 @@ class indexes extends viewModelBase {
     btnState = ko.observable<boolean>(false);
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "ExpandAll" : "CollapseAll");
-
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
 
     constructor() {
@@ -182,20 +181,14 @@ class indexes extends viewModelBase {
             app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
         });
     }
-
-    showMergeSuggestions() {
-        require(["viewmodels/indexMergeSuggestionsDialog"], indexMergeSuggestionsDialog => {
-            app.showDialog(new indexMergeSuggestionsDialog(this.activeDatabase()));
-        });
-    }
     
     toggleExpandAll() {
-       if (this.btnState() === true) {
-           $(".index-group-content").collapse('show');
-       } else {
-           $(".index-group-content").collapse('hide');
+        if (this.btnState() === true) {
+            $(".index-group-content").collapse('show');
         }
-        
+        else {
+            $(".index-group-content").collapse('hide');
+        }
         
         this.btnState.toggle();
     }
@@ -249,7 +242,6 @@ class indexes extends viewModelBase {
         app.showDialog(resetIndexVm);
     }
     
-
     removeIndexesFromAllGroups(indexes: index[]) {
         this.indexGroups().forEach(g => {
             g.indexes.removeAll(indexes);

@@ -61,13 +61,13 @@
             </div>
         </div>
         <div class="btn-group">
-             <a class="btn btn-default" data-bind="click: toggleExpandAll , attr: {state: btnState, title: btnTitle }" accesskey="="><i data-bind="css: { 'fa-plus-square-o': btnState, 'fa-minus-square-o': !btnState() }" class="fa"></i></a>
+             <a class="btn btn-default" data-bind="click: toggleExpandAll , attr: { state: btnState, title: btnTitle }" accesskey="="><i data-bind="css: { 'fa-plus-square-o': btnState, 'fa-minus-square-o': !btnState() }" class="fa"></i></a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default" data-bind="click: pasteIndex" title="Paste Index Definition From JSON (Alt+v)" accesskey="v"><i class="fa fa-paste"></i></a>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default" data-bind="click: showMergeSuggestions" title="Show Merge Suggestions" accesskey="v"><i class="fa fa-compress"></i></a>
+            <a class="btn btn-default" title="Show Merge Suggestions" data-bind="attr: { href: appUrls.megeSuggestions }"><i class="fa fa-compress"></i></a>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">

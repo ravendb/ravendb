@@ -6,6 +6,7 @@ class database extends resource {
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>('');
     recentQueriesLocalStorageName: string;
+    mergedIndexLocalStoragePrefix: string;
     static type = 'database';
 
     constructor(public name: string, isDisabled: boolean = false, bundles: Array<string> = []) {
@@ -22,6 +23,7 @@ class database extends resource {
             return text;
         });
         this.recentQueriesLocalStorageName = 'ravenDB-recentQueries.' + name;
+        this.mergedIndexLocalStoragePrefix = 'ravenDB-mergedIndex.' + name;
     }
 
 	activate() {

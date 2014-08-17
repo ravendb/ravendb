@@ -2,7 +2,6 @@ import durandalRouter = require("plugins/router");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 
 class adminSettings extends viewModelBase {
 

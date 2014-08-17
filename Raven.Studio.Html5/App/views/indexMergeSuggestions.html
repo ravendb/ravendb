@@ -1,0 +1,66 @@
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li class="active">
+        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+    </li>
+    <li class="active">
+        <span>Merge Suggestions</span>
+    </li>
+</ul>
+
+<div id="index-merge-suggestions" class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title text-info">Suggestions</h4>
+        </div>
+        <div class="panel-body">
+            <div class="text-center" data-bind="visible: suggestions().length == 0">
+                <h3 class="page-header text-info">No merge suggestions are availiable :)</h3>
+            </div>
+        </div>
+        
+        <div class="panel-group" id="accordion" data-bind="foreach: suggestions">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" data-parent="#accordion" data-bind="text: 'Merge Suggestion for ' + collection + ' Collection', attr: { href: '#collapse' + $index() }"></a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse" data-bind="attr: { id: 'collapse' + $index() }">
+                    <div class="panel-body">
+                        <div>Indexes to merge:</div>
+                        <ul data-bind="foreach: canMerge">
+                            <li data-bind="text: $data"></li>
+                        </ul>
+                        
+                        <a href="#" target="_blank" data-bind="attr: { href: $root.mergedIndexUrl(mergedIndex, $index()) }">Show Merged Index</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title text-info">Unmergable</h4>
+        </div>
+        <div class="panel-body">
+            <ul data-bind="foreach: unmergables">
+                <li>
+                    <span class="index-name" data-bind="text: indexName"></span>
+                    <span>: </span>
+                    <span data-bind="text: reason"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

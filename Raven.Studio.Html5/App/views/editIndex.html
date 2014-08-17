@@ -54,6 +54,12 @@
                 <li data-bind="click: abandonedPriority"><a href="#">Abandoned</a></li>
             </ul>
         </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-default" title="Format maps and reduce" data-bind="click: formatIndex">
+                <i class="fa fa-magic"></i>
+            </button>
+        </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
                 <a class="btn btn-default" title="Query the index (Alt+Q)" accesskey="Q"   data-bind="attr: { href: queryUrl }">
@@ -68,9 +74,6 @@
             </button>
             <button class="btn btn-default" title="Generate C# index definition" data-bind="click: createCSharpCode">
                 <i class="fa">C#</i>
-            </button>
-            <button class="btn btn-default" title="Format maps and reduce" data-bind="click: formatIndex">
-                <i class="fa fa-magic"></i>
             </button>
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
                 <i class="fa fa-refresh"></i>

@@ -488,7 +488,10 @@ class shell extends viewModelBase {
     private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResource: resource = null) {
         var arrayLength = resourceObservableArray().length;
 
-        if (arrayLength > 0 && (activeResource == null || activeResource.name == '<system>')) {
+        if (activeResource != null && activeResource.name != '<system>') {
+            activeResource.activate();
+        }
+        else if (arrayLength > 0) {
             var newResource;
 
             if (resource != null && (newResource = resourceObservableArray.first(rs => rs.name == resource.name)) != null) {
