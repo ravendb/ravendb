@@ -153,7 +153,6 @@ namespace Raven.Database.Counters
                 DecSizes = metrics.DecSizeMetrics.GetHistogramData(percentiles),
                 
                 ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
-                ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => x.Value.GetMeterData(3)),
                 ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles)),
                 ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => x.Value.GetHistogramData(percentiles))
             };

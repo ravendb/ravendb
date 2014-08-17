@@ -267,7 +267,6 @@ namespace Raven.Database.Bundles.SqlReplication
                             var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
                             var sqlReplicationMetricsCounters = Database.WorkContext.MetricsCounters.SqlReplicationMetricsCounters;
                             sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeMetric(replicationConfig).Mark(countOfReplicatedItems);
-                            sqlReplicationMetricsCounters.GetSqlReplicationDurationMetric(replicationConfig).Mark(elapsedMicroseconds);
                             sqlReplicationMetricsCounters.GetSqlReplicationBatchSizeHistogram(replicationConfig).Update(countOfReplicatedItems);
                             sqlReplicationMetricsCounters.GetSqlReplicationDurationHistogram(replicationConfig).Update(elapsedMicroseconds);
 

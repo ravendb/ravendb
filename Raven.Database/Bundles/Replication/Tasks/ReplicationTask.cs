@@ -404,8 +404,8 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 					}
 
-                    docDb.WorkContext.MetricsCounters.GetReplicationDurationMetric(destination).Mark((long)stats.ElapsedTime.TotalMilliseconds);
-                    docDb.WorkContext.MetricsCounters.GetReplicationDurationHistogram(destination).Update((long)stats.ElapsedTime.TotalMilliseconds);
+				    var elapsedMicroseconds = (long) (stats.ElapsedTime.Ticks*SystemTime.MicroSecPerTick);
+                    docDb.WorkContext.MetricsCounters.GetReplicationDurationHistogram(destination).Update(elapsedMicroseconds);
 					return replicated ?? false;
 				}
 			}
