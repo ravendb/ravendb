@@ -515,7 +515,7 @@ namespace Voron.Impl.Journal
 						if (_waj._files.Count == 0)
 							_waj.CurrentFile = null;
 
-						FreeScratchPages(unusedJournals, txw);
+						FreeScratchPages(unusedJournals, txw ?? transaction);
 
 						if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
 							DateTime.Now - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
