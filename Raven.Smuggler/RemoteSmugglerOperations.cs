@@ -15,6 +15,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
@@ -265,6 +266,23 @@ namespace Raven.Smuggler
 		{
 			Options = options;
 			jintHelper.Initialize(options);
+		}
+
+		public void Configure(SmugglerOptions options)
+		{
+			if (Store.HasJsonRequestFactory == false)
+				return;
+
+			var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/config";
+			var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions));
+			var configuration = (RavenJObject)request.ReadResponseJson();
+
+			var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+			if (maxNumberOfItemsToProcessInSingleBatch <= 0)
+				return;
+
+			var current = options.BatchSize;
+			options.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
 		}
 	}
 }

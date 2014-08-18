@@ -41,6 +41,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions)
 		{
+			Operations.Configure(SmugglerOptions);
 			Operations.Initialize(SmugglerOptions);
 
 			var result = new ExportDataResult
@@ -517,6 +518,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public async virtual Task ImportData(SmugglerImportOptions importOptions, Stream stream)
 		{
+			Operations.Configure(SmugglerOptions);
 			Operations.Initialize(SmugglerOptions);
 			await DetectServerSupportedFeatures(importOptions.To);
 
