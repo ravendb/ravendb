@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
@@ -179,6 +180,21 @@ namespace Raven.Bundles.Versioning.Triggers
 				return;
 
 			Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
+		}
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					VersioningUtil.RavenDocumentRevisionStatus,
+					VersioningUtil.RavenDocumentRevision,
+					VersioningUtil.RavenDocumentParentRevision,
+					Constants.RavenReadOnly,
+					Constants.RavenCreateVersion
+				};
+			}
 		}
 	}
 }

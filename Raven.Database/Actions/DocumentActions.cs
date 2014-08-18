@@ -279,18 +279,19 @@ namespace Raven.Database.Actions
                                 documents++;
                                 batch++;
                                 AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
-                                foreach (var trigger in Database.PutTriggers)
+
+								if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
+								{
+									var existingDoc = accessor.Documents.DocumentByKey(doc.Key, null);
+
+									if (IsTheSameDocument(doc, existingDoc)) 
+										continue;
+								}
+
+	                            foreach (var trigger in Database.PutTriggers)
                                 {
                                     trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
                                 }
-
-	                            if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
-	                            {
-		                            var existingDoc = accessor.Documents.DocumentByKey(doc.Key, null);
-
-									if(existingDoc != null && RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson))
-										continue;
-	                            }
 
 	                            var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
                                 if (result.Updated == false)
@@ -353,7 +354,34 @@ namespace Raven.Database.Actions
             return documents;
         }
 
-        public TouchedDocumentInfo GetRecentTouchesFor(string key)
+	    private bool IsTheSameDocument(JsonDocument doc, JsonDocument existingDoc)
+	    {
+		    if (existingDoc == null)
+			    return false;
+
+		    if (RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson) == false)
+			    return false;
+
+			var existingMetadata = (RavenJObject) existingDoc.Metadata.CloneToken();
+
+			// in order to compare metadata we need to remove metadata records created by triggers
+			foreach (var trigger in Database.PutTriggers)
+			{
+				var metadataToIgnore = trigger.Value.GeneratedMetadataNames;
+
+				if (metadataToIgnore == null)
+					continue;
+
+				foreach (var toIgnore in metadataToIgnore)
+				{
+					existingMetadata.Remove(toIgnore);
+				}
+			}
+
+			return RavenJToken.DeepEquals(doc.Metadata, existingMetadata);
+	    }
+
+	    public TouchedDocumentInfo GetRecentTouchesFor(string key)
         {
             TouchedDocumentInfo info;
             RecentTouches.TryGetValue(key, out info);
