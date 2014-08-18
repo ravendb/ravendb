@@ -68,7 +68,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void CanIncludeUsingTransfromerForLoad()
+        public void CanIncludeUsingTransformerForLoad()
         {
             using (var store = NewDocumentStore())
             {
@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void CanIncludeUsingTransfromerForIndex()
+        public void CanIncludeUsingTransformerForIndex()
         {
             using (var store = NewDocumentStore())
             {

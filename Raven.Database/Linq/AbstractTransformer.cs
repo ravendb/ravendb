@@ -23,16 +23,16 @@ namespace Raven.Database.Linq
 		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
 
 
-		public IEnumerable<dynamic> TransfromWith(IEnumerable<string> transformers, dynamic maybeItems)
+		public IEnumerable<dynamic> TransformWith(IEnumerable<string> transformers, dynamic maybeItems)
 		{
 			return Enumerable.Aggregate(transformers, maybeItems, 
-				(Func<dynamic, string, dynamic>)((items, transformer) => TransfromWith(transformer, items)));
+				(Func<dynamic, string, dynamic>)((items, transformer) => TransformWith(transformer, items)));
 		}
 
-		public IEnumerable<dynamic> TransfromWith(string transformer, dynamic maybeItems)
+		public IEnumerable<dynamic> TransformWith(string transformer, dynamic maybeItems)
 		{
 			if (CurrentTransformationScope.Current == null)
-				throw new InvalidOperationException("TransfromWith was accessed without CurrentTransformationScope.Current being set");
+				throw new InvalidOperationException("TransformWith was accessed without CurrentTransformationScope.Current being set");
 
 			var storedTransformer = CurrentTransformationScope.Current.Database.IndexDefinitionStorage.GetTransformer(transformer);
 			if (storedTransformer == null)
