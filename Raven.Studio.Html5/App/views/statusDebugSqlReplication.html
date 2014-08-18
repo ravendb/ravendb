@@ -1,15 +1,18 @@
 ﻿<section>
-    <div class="panel-group" data-bind="foreach: data">
-        <div class="panel panel-default">
+    <div id="sqlReplicationStats" class="panel-group" data-bind="foreach: data">
+        <div class="panel panel-default" >
             <div class="panel-heading">
                 <h4 class="panel-title">
-                    <a data-toggle="collapse"  data-bind="text: Name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
+                    <a data-toggle="collapse" data-bind="text: Name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
                 </h4>
             </div>
             <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugSqlRepCollapse' + $index() }">
                 <div class="panel-body">
-                    <div class="form-horizontal" role="form">
-                        <div class="form-group">
+                    <div class="form-horizontal" role="form" data-bind="with:Statistics">
+                        <div class="form-group sectionTitle">
+                            <strong class="control-label">Statistics:</strong>
+                        </div>
+                        <div class="form-group col-sm-12">
                             <label class="col-md-2 control-label">Last error time</label>
                             <div class="col-md-10">
                                 <p class="form-control-static" data-bind="text: LastErrorTime"></p>
@@ -90,6 +93,93 @@
                             </div>
                         </div>
                         <!-- /ko -->
+                    </div>
+                    <div class="form-horizontal" role="form" data-bind="with:Metrics">
+                        <div class="form-group sectionTitle">
+                            <strong class="control-label">Metrics:</strong>
+                        </div>
+                        <div from-group>
+                            <div class="form-group sectionTitle">
+                                <strong class="control-label">Rate Metrics:</strong>
+                            </div>
+                            <div class="meterTable">
+                                <span class="headers">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="1"></span>
+                                        <span>Metric Name</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="2"></span>
+                                        <span>Count</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>MeanRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>OneMinuteRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>FiveMinuteRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>FifteenMinuteRate</span>
+                                    </div>
+                                </span>
+                                <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
+                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: Level"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: Message, attr: { title: Message }"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: Exception, attr: { title: Exception }"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }, text: LoggerName"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group sectionTitle">
+                                <strong class="control-label">Histograms:</strong>
+                            </div>
+                            <div class="meterTable">
+                                <span class="headers">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="1"></span>
+                                        <span>Metric Name</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="2"></span>
+                                        <span>Count</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>MeanRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>OneMinuteRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>FiveMinuteRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>FifteenMinuteRate</span>
+                                    </div>
+                                </span>
+                                <div style="white-space: nowrap" data-bind="foreach: $root.data().Metrics">
+                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: Level"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: Message, attr: { title: Message }"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: Exception, attr: { title: Exception }"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }, text: LoggerName"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

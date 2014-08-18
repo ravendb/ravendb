@@ -6678,6 +6678,18 @@ body {
 .replicationError {
   color: red;
 }
+#sqlReplicationStats .sectionTitle {
+  text-align: left;
+  padding-left: 5%;
+  text-decoration: underline;
+}
+#sqlReplicationStats .meterTable {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+#sqlReplicationStats .meterTable .headers {
+  white-space: nowrap;
+}
 #sqlReplications .replications-container {
   margin-top: 10px;
 }

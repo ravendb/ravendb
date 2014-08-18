@@ -607,7 +607,7 @@ namespace Raven.Database.Bundles.SqlReplication
             return resutls;
         }
 
-		private List<SqlReplicationConfig> GetConfiguredReplicationDestinations()
+		public List<SqlReplicationConfig> GetConfiguredReplicationDestinations()
 		{
 			var sqlReplicationConfigs = replicationConfigs;
 			if (sqlReplicationConfigs != null)

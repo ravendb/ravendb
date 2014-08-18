@@ -77,7 +77,20 @@ html, body {
 .replicationError {
     color: red;
 }
-
+#sqlReplicationStats{
+    .sectionTitle{
+        text-align:left;
+        padding-left:5%;
+        text-decoration:underline;
+    }
+    .meterTable{
+        overflow-x:auto;
+        overflow-y:auto;
+        .headers{
+            white-space: nowrap;
+        }
+    }
+}
 #sqlReplications {
     .replications-container {
         margin-top: 10px;

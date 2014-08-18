@@ -33,6 +33,7 @@ namespace Raven.Abstractions.Data
         public double Mean { get; set; }
         public double Stdev { get; set; }
         public Dictionary<string, double> Percentiles { get; set; }
+        public MetricType Type = MetricType.Historgram;
     }
 
     public class MeterData
@@ -42,6 +43,13 @@ namespace Raven.Abstractions.Data
         public double OneMinuteRate { get; set; }
         public double FiveMinuteRate { get; set; }
         public double FifteenMinuteRate { get; set; }
+        public MetricType Type = MetricType.Meter;
     }
+
+    public enum MetricType
+        {
+            Meter=1,
+            Historgram=2
+        }
     
 }

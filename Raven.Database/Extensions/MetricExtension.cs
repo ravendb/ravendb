@@ -45,7 +45,7 @@ namespace Raven.Database.Extensions
                 OneMinuteRate = Math.Round(self.OneMinuteRate, 3),
             };
         }
-
+        
         public static Dictionary<string, HistogramData> ToHistogramDataDictionary(this ConcurrentDictionary<string, HistogramMetric> self)
         {
             return self.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value));

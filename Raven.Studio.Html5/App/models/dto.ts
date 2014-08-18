@@ -702,6 +702,11 @@ interface requestHeaderDto {
     Values: string[];
 }
 
+interface sqlReplicationStatsDto {
+    Name: string;
+    Statistics: sqlReplicationStatisticsDto;
+    Metrics:any;
+}
 interface sqlReplicationStatisticsDto {
     Name: string;
     LastErrorTime: string;

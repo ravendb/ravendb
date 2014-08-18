@@ -236,12 +236,11 @@ namespace Raven.Database.Bundles.SqlReplication
         }
 
         private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand>commandCallback =null)
-		{
-
-
-            var replicationInsertActionsMetrics = sqlReplicationMetrics.GetSqlReplicationInsertsActionMetrics(tableName);
-            var replicationInsertActionsHistogram = sqlReplicationMetrics.GetSqlReplicationInsertsActionsHistogram(tableName);
-            var replicationInsertDurationHistogram = sqlReplicationMetrics.GetSqlReplicationInsertDurationHistogram(tableName);
+        {
+            var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
+            var replicationInsertActionsMetrics = sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter;
+            var replicationInsertActionsHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsHistogram;
+            var replicationInsertDurationHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsDurationHistogram;
 
             var sp = new Stopwatch();
 			foreach (var itemToReplicate in dataForTable)
@@ -331,10 +330,10 @@ namespace Raven.Database.Bundles.SqlReplication
         public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, Action<DbCommand> commandCallback = null)
 		{
 			const int maxParams = 1000;
-
-            var replicationDeleteDurationHistogram = sqlReplicationMetrics.GetSqlReplicationDeleteDurationHistogram(tableName);
-            var replicationDeletesActionsMetrics = sqlReplicationMetrics.GetSqlReplicationDeletesActionsMetrics(tableName);
-            var replicationDeletesActionsHistogram = sqlReplicationMetrics.GetSqlReplicationDeletesActionsHistogram(tableName);
+            var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
+            var replicationDeleteDurationHistogram = sqlReplicationTableMetrics.SqlReplicationDeleteActionsDurationHistogram;
+            var replicationDeletesActionsMetrics = sqlReplicationTableMetrics.SqlReplicationDeleteActionsMeter;
+            var replicationDeletesActionsHistogram = sqlReplicationTableMetrics.SqlReplicationDeleteActionsHistogram;
             
 	        var sp = new Stopwatch();
 			using (var cmd = connection.CreateCommand())
