@@ -363,7 +363,7 @@ namespace Raven.Database.Actions
 			    return false;
 
 			var existingMetadata = (RavenJObject) existingDoc.Metadata.CloneToken();
-
+		    var newMetadata = (RavenJObject) doc.Metadata.CloneToken();
 			// in order to compare metadata we need to remove metadata records created by triggers
 			foreach (var trigger in Database.PutTriggers)
 			{
@@ -375,10 +375,11 @@ namespace Raven.Database.Actions
 				foreach (var toIgnore in metadataToIgnore)
 				{
 					existingMetadata.Remove(toIgnore);
+					newMetadata.Remove(toIgnore);
 				}
 			}
 
-			return RavenJToken.DeepEquals(doc.Metadata, existingMetadata);
+			return RavenJToken.DeepEquals(newMetadata, existingMetadata);
 	    }
 
 	    public TouchedDocumentInfo GetRecentTouchesFor(string key)
