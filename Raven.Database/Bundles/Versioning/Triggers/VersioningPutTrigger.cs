@@ -191,7 +191,6 @@ namespace Raven.Bundles.Versioning.Triggers
 					VersioningUtil.RavenDocumentRevisionStatus,
 					VersioningUtil.RavenDocumentRevision,
 					VersioningUtil.RavenDocumentParentRevision,
-					Constants.RavenReadOnly,
 					Constants.RavenCreateVersion
 				};
 			}
