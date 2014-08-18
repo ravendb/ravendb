@@ -4,13 +4,13 @@ import database = require("models/database");
 import indexMergeSuggestion = require("models/indexMergeSuggestion");
 
 class mergedIndexesStorage {
-    public static getMergedIndex(db: database, mergedIndexFullName: string): indexMergeSuggestion {
+    public static getMergedIndex(db: database, mergedIndexName: string): indexMergeSuggestion {
         var newSuggestion: indexMergeSuggestion = null;
 
         try {
-            if (!!mergedIndexFullName && mergedIndexFullName.indexOf(db.mergedIndexLocalStoragePrefix) == 0) {
-                var suggestion: suggestionDto = localStorage.getObject(mergedIndexFullName);
-                localStorage.removeItem(mergedIndexFullName);
+            if (!!mergedIndexName && mergedIndexName.indexOf(db.mergedIndexLocalStoragePrefix) == 0) {
+                var suggestion: suggestionDto = localStorage.getObject(mergedIndexName);
+                localStorage.removeItem(mergedIndexName);
                 newSuggestion = new indexMergeSuggestion(suggestion);
             }
         }
@@ -21,14 +21,13 @@ class mergedIndexesStorage {
         return newSuggestion;
     }
 
-    public static saveMergedIndex(db: database, mergedIndexName: string, suggestion: indexMergeSuggestion): string {
-        var localStorageName = mergedIndexesStorage.getLocalStorageName(db, mergedIndexName);
+    public static saveMergedIndex(db: database, id: string, suggestion: indexMergeSuggestion) {
+        var localStorageName = mergedIndexesStorage.getMergedIndexName(db, id);
         localStorage.setObject(localStorageName, suggestion.toDto());
-        return localStorageName;
     }
 
-    public static getLocalStorageName(db: database, mergedIndexName: string) {
-        return db.mergedIndexLocalStoragePrefix + '.' + mergedIndexName;
+    public static getMergedIndexName(db: database, id: string) {
+        return db.mergedIndexLocalStoragePrefix + '.' + id;
     }
 }
 

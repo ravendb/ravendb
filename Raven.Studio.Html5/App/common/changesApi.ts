@@ -9,6 +9,7 @@ import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import shell = require("viewmodels/shell");
+import idGenerator = require("common/idGenerator");
 
 class changesApi {
 
@@ -45,7 +46,7 @@ class changesApi {
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
     constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
-        this.eventsId = this.makeId();
+        this.eventsId = idGenerator.generateId();
         this.coolDownWithDataLoss = coolDownWithDataLoss;
         this.isMultyTenantTransport = isMultyTenantTransport;
         this.resourcePath = appUrl.forResourceQuery(this.rs);
@@ -476,16 +477,6 @@ class changesApi {
                 this.isCleanClose = true;
             }
         });
-    }
-
-    private makeId() {
-        var text = "";
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (var i = 0; i < 5; i++)
-            text += chars.charAt(Math.floor(Math.random() * chars.length));
-
-        return text;
     }
 
     public getResourceName() {

@@ -42,7 +42,7 @@
                             <li data-bind="text: $data"></li>
                         </ul>
 
-                        <a href="#" target="_blank" data-bind="attr: { id: $root.makeId(), href: $root.mergedIndexUrl($element.id, $data, $index()) }, click: $root.saveMergedIndex.bind($root, $element.id, $data)">Show Merged Index</a>
+                        <a href="#" target="_blank" data-bind="attr: { id: id, href: $root.mergedIndexUrl(id()) }, click: $root.saveMergedIndex.bind($root, id(), $data)">Show Merged Index</a>
                     </div>
                 </div>
             </div>

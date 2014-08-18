@@ -11,6 +11,7 @@ import changesApi = require("common/changesApi");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import shell = require("viewmodels/shell");
 import onDemandLogsConfigureCommand = require("commands/onDemandLogsConfigureCommand");
+import idGenerator = require("common/idGenerator");
 
 class onDemandLogs {
 
@@ -34,7 +35,7 @@ class onDemandLogs {
     private commandBase = new commandBase();
 
     constructor(private db: database, private onMessageCallback: Function) {
-        this.eventsId = this.makeId();
+        this.eventsId = idGenerator.generateId();
         this.resourcePath = appUrl.forResourceQuery(this.db);
         this.connectToLogsTask = $.Deferred();
 
@@ -176,17 +177,6 @@ class onDemandLogs {
             }
         });
     }
-
-    private makeId() {
-        var text = "";
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (var i = 0; i < 5; i++)
-            text += chars.charAt(Math.floor(Math.random() * chars.length));
-
-        return text;
-    }
-
 }
 
 export = onDemandLogs;

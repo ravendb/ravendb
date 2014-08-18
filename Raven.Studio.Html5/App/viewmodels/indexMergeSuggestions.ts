@@ -7,11 +7,6 @@ import indexMergeSuggestion = require("models/indexMergeSuggestion");
 import changeSubscription = require('models/changeSubscription');
 import shell = require("viewmodels/shell");
 
-
-import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
-import indexPriority = require("models/indexPriority");
-import messagePublisher = require("common/messagePublisher");
-
 class indexMergeSuggestions extends viewModelBase {
     
     appUrls: computedAppUrls;
@@ -68,10 +63,9 @@ class indexMergeSuggestions extends viewModelBase {
         return parseInt(index) + 1;
     }
 
-    mergedIndexUrl(e, suggestion: indexMergeSuggestion, index: number) {
+    mergedIndexUrl(id: string) {
         var db: database = this.activeDatabase();
-
-        var mergedIndexName = mergedIndexesStorage.saveMergedIndex(db, this.makeId(), suggestion);
+        var mergedIndexName = mergedIndexesStorage.getMergedIndexName(db, id);
 
         return this.appUrls.editIndex(mergedIndexName);
     }
@@ -81,16 +75,6 @@ class indexMergeSuggestions extends viewModelBase {
         mergedIndexesStorage.saveMergedIndex(db, id, suggestion);
 
         return true;
-    }
-
-    private makeId() {
-        var text = "";
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (var i = 0; i < 5; i++)
-            text += chars.charAt(Math.floor(Math.random() * chars.length));
-
-        return text;
     }
 }
 
