@@ -2,44 +2,46 @@ import getStatusDebugSqlReplicationCommand = require("commands/getStatusDebugSql
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
+import sqlReplicationStats = require("common/sqlReplicationStats");
 
 
 class statusDebugSqlReplication extends viewModelBase {
-    data = ko.observable<sqlReplicationStatsDto[]>();
-    rateMetrics: KnockoutComputed<any[]>;
-    metricsTables: KnockoutComputed<string[]>;
-
+    data = ko.observable<sqlReplicationStats[]>();
+    columnWidths: Array<KnockoutObservable<number>>;
     constructor() {
         super();
-       /* this.metricsTables = ko.computed<string[]>(() => {
-            var tables = ['All Tables'];
-            var metricsData = this.data().Metrics;
-            if (!!metricsData) {
-                
-            }
-
-            return tables;
-        });
-        this.rateMetrics = ko.computed<any[]>(() => {
-            var a = [];
-
-            return a;
-        });*/
     }
+    
     activate(args) {
+        var widthUnit = 8;
+        this.columnWidths = [
+            ko.observable<number>(3*widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(3* widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(widthUnit),
+            ko.observable<number>(4*widthUnit)
+        ];
         super.activate(args);
 
         this.activeDatabase.subscribe(() => this.fetchSqlReplicationStats());
         return this.fetchSqlReplicationStats();
     }
 
-    fetchSqlReplicationStats(): JQueryPromise<sqlReplicationStatisticsDto[]> {
+    fetchSqlReplicationStats(): JQueryPromise<sqlReplicationStatsDto[]> {
         var db = this.activeDatabase();
         if (db) {
             return new getStatusDebugSqlReplicationCommand(db)
                 .execute()
-                .done((results: sqlReplicationStatisticsDto[]) => {
-                this.data(results);
+                .done((results: sqlReplicationStatsDto[]) => {
+                    this.data(results.map((x: sqlReplicationStatsDto)=> new sqlReplicationStats(x)));
             });
         }
 

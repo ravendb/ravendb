@@ -705,7 +705,15 @@ interface requestHeaderDto {
 interface sqlReplicationStatsDto {
     Name: string;
     Statistics: sqlReplicationStatisticsDto;
-    Metrics:any;
+    Metrics: sqlReplicaitonMetricsDto;
+}
+interface sqlReplicaitonMetricsDto {
+    GeneralMetrics: dictionary<metricsDataDto>;
+    TablesMetrics: dictionary<dictionary<metricsDataDto>>;
+}
+interface metricsDataDto {
+    Type: string;
+    Name:string;
 }
 interface sqlReplicationStatisticsDto {
     Name: string;

@@ -6680,12 +6680,21 @@ body {
 }
 #sqlReplicationStats .sectionTitle {
   text-align: left;
-  padding-left: 5%;
+  padding-left: 1%;
+  text-decoration: underline;
+}
+#sqlReplicationStats .subSectionTitle {
+  text-align: left;
+  padding-left: 6%;
   text-decoration: underline;
 }
 #sqlReplicationStats .meterTable {
   overflow-x: auto;
   overflow-y: auto;
+  padding-left: 10%;
+}
+#sqlReplicationStats .meterTable .column {
+  display: inline-block;
 }
 #sqlReplicationStats .meterTable .headers {
   white-space: nowrap;

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
+    public interface IMetricsData
+    {
+    }
     public class DatabaseMetrics
     {
         public double DocsWritesPerSecond { get; set; }
@@ -20,7 +23,7 @@ namespace Raven.Abstractions.Data
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
     }
 
-    public class HistogramData
+    public class HistogramData : IMetricsData
     {
         public HistogramData()
         {
@@ -36,7 +39,7 @@ namespace Raven.Abstractions.Data
         public MetricType Type = MetricType.Historgram;
     }
 
-    public class MeterData
+    public class MeterData : IMetricsData
     {
         public long Count { get; set; }
         public double MeanRate { get; set; }

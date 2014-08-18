@@ -40,10 +40,14 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             return new SqlReplicationMetricsData()
             {
-                SqlReplicationBatchSizeHistogram = SqlReplicationBatchSizeHistogram.CreateHistogramData(),
-                SqlReplicationBatchSizeMeter = SqlReplicationBatchSizeMeter.CreateMeterData(),
-                SqlReplicationDurationHistogram = SqlReplicationDurationHistogram.CreateHistogramData(),
-                SqlReplicationTablesMetrics = TablesMetrics.ToDictionary(x=>x.Key, x=>x.Value.ToSqlReplicationTableMetricsData())
+                GeneralMetrics = new Dictionary<string, IMetricsData>()
+                {
+                    {"SqlReplicationBatchSizeMeter", SqlReplicationBatchSizeMeter.CreateMeterData()},
+                    {"SqlReplicationBatchSizeHistogram", SqlReplicationBatchSizeHistogram.CreateHistogramData()},
+                    {"SqlReplicationDurationHistogram", SqlReplicationDurationHistogram.CreateHistogramData()}
+                },
+                TablesMetrics = TablesMetrics.ToDictionary(x=>x.Key, x=>x.Value.ToSqlReplicationTableMetricsDataDictionary())
+                
             };
         }
 
@@ -110,16 +114,16 @@ namespace Raven.Database.Bundles.SqlReplication
                 }
             }
 
-            public SqlReplicationMetricsData.SqlReplicationTableMetricsData ToSqlReplicationTableMetricsData()
+            public Dictionary<string, IMetricsData> ToSqlReplicationTableMetricsDataDictionary()
             {
-                return new SqlReplicationMetricsData.SqlReplicationTableMetricsData()
+                return new Dictionary<string, IMetricsData>()
                 {
-                    SqlReplicationDeleteActionsMeter = SqlReplicationDeleteActionsMeter.CreateMeterData(),
-                    SqlReplicationInsertActionsMeter = SqlReplicationInsertActionsMeter.CreateMeterData(),
-                    SqlReplicationDeleteActionsHistogram = SqlReplicationDeleteActionsHistogram.CreateHistogramData(),
-                    SqlReplicationInsertActionsDurationHistogram = SqlReplicationInsertActionsDurationHistogram.CreateHistogramData(),
-                    SqlReplicationInsertActionsHistogram = SqlReplicationInsertActionsHistogram.CreateHistogramData(),
-                    SqlReplicationDeleteActionsDurationHistogram = SqlReplicationDeleteActionsDurationHistogram.CreateHistogramData()
+                    {"SqlReplicationDeleteActionsMeter",SqlReplicationDeleteActionsMeter.CreateMeterData()},
+                    {"SqlReplicationInsertActionsMeter",SqlReplicationInsertActionsMeter.CreateMeterData()},
+                    {"SqlReplicationDeleteActionsHistogram",SqlReplicationDeleteActionsHistogram.CreateHistogramData()},
+                    {"SqlReplicationInsertActionsDurationHistogram",SqlReplicationInsertActionsDurationHistogram.CreateHistogramData()},
+                    {"SqlReplicationInsertActionsHistogram",SqlReplicationInsertActionsHistogram.CreateHistogramData()},
+                    {"SqlReplicationDeleteActionsDurationHistogram",SqlReplicationDeleteActionsDurationHistogram.CreateHistogramData()}
                 };
             }
         }
@@ -127,19 +131,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
     public class SqlReplicationMetricsData
     {
-        public MeterData SqlReplicationBatchSizeMeter { get; set; }
-        public HistogramData SqlReplicationBatchSizeHistogram { get; set; }
-        public HistogramData SqlReplicationDurationHistogram { get; set; }
-        public Dictionary<string, SqlReplicationTableMetricsData> SqlReplicationTablesMetrics { get; set; }
-
-        public class SqlReplicationTableMetricsData
-        {
-            public MeterData SqlReplicationDeleteActionsMeter { get; set; }
-            public HistogramData SqlReplicationDeleteActionsHistogram { get; set; }
-            public HistogramData SqlReplicationDeleteActionsDurationHistogram { get; set; }
-            public MeterData SqlReplicationInsertActionsMeter { get; set; }
-            public HistogramData SqlReplicationInsertActionsHistogram { get; set; }
-            public HistogramData SqlReplicationInsertActionsDurationHistogram { get; set; }
-        }
+        public Dictionary<string, IMetricsData> GeneralMetrics { get; set; }
+        public Dictionary<string, Dictionary<string, IMetricsData>> TablesMetrics { get; set; }
     }
 }

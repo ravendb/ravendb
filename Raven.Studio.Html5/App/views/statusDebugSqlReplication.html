@@ -3,12 +3,12 @@
         <div class="panel panel-default" >
             <div class="panel-heading">
                 <h4 class="panel-title">
-                    <a data-toggle="collapse" data-bind="text: Name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
+                    <a data-toggle="collapse" data-bind="text: name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
                 </h4>
             </div>
             <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugSqlRepCollapse' + $index() }">
                 <div class="panel-body">
-                    <div class="form-horizontal" role="form" data-bind="with:Statistics">
+                    <div class="form-horizontal" role="form" data-bind="with:statistics">
                         <div class="form-group sectionTitle">
                             <strong class="control-label">Statistics:</strong>
                         </div>
@@ -94,88 +94,99 @@
                         </div>
                         <!-- /ko -->
                     </div>
-                    <div class="form-horizontal" role="form" data-bind="with:Metrics">
+                    <div class="form-horizontal" role="form">
                         <div class="form-group sectionTitle">
                             <strong class="control-label">Metrics:</strong>
                         </div>
                         <div from-group>
-                            <div class="form-group sectionTitle">
+                            <div class="form-group subSectionTitle">
+                                <strong class="control-label">Table Filter:</strong>
+                                <select data-bind="options:tables, value:filteredTable"></select>
+                            </div>
+                            <div class="form-group subSectionTitle">
                                 <strong class="control-label">Rate Metrics:</strong>
                             </div>
-                            <div class="meterTable">
+                            <div class="meterTable col-sm-12">
                                 <span class="headers">
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="1"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                                        <span class="column-handle" column="0"></span>
                                         <span>Metric Name</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="2"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                                        <span class="column-handle" column="1"></span>
                                         <span>Count</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                                        <span class="column-handle" column="2"></span>
                                         <span>MeanRate</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
                                         <span class="column-handle" column="3"></span>
                                         <span>OneMinuteRate</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                                        <span class="column-handle" column="4"></span>
                                         <span>FiveMinuteRate</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                        <span class="column-handle" column="5"></span>
                                         <span>FifteenMinuteRate</span>
                                     </div>
                                 </span>
-                                <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
-                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: Level"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: Message, attr: { title: Message }"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: Exception, attr: { title: Exception }"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }, text: LoggerName"></div>
+                                <div style="white-space: nowrap" data-bind="foreach: rateMetrics">
+                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row">
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Name"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Count"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: MeanRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: OneMinuteRate.toFixed(2)"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: FiveMinuteRate.toFixed(2)"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: FifteenMinuteRate.toFixed(2)"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group sectionTitle">
+                            <div class="form-group subSectionTitle">
                                 <strong class="control-label">Histograms:</strong>
                             </div>
-                            <div class="meterTable">
+                            <div class="meterTable col-sm-12">
                                 <span class="headers">
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="1"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                                        <span class="column-handle" column="6"></span>
                                         <span>Metric Name</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="2"></span>
-                                        <span>Count</span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                                        <span class="column-handle" column="7"></span>
+                                        <span>Counter</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
-                                        <span>MeanRate</span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                                        <span class="column-handle" column="8"></span>
+                                        <span>Max</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
-                                        <span>OneMinuteRate</span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
+                                        <span class="column-handle" column="9"></span>
+                                        <span>Min</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
-                                        <span>FiveMinuteRate</span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                                        <span class="column-handle" column="10"></span>
+                                        <span>Mean</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
-                                        <span class="column-handle" column="3"></span>
-                                        <span>FifteenMinuteRate</span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                        <span class="column-handle" column="11"></span>
+                                        <span>Stdev</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                        <span class="column-handle" column="12"></span>
+                                        <span>Percentiles</span>
                                     </div>
                                 </span>
-                                <div style="white-space: nowrap" data-bind="foreach: $root.data().Metrics">
-                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: Level"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: Message, attr: { title: Message }"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: Exception, attr: { title: Exception }"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }, text: LoggerName"></div>
+                                <div style="white-space: nowrap" data-bind="foreach: histogramMetrics">
+                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row">
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[6]() + '%' }, text: Name"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[7]() + '%' }, text: Counter"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[8]() + '%' }, text: Max"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[9]() + '%' }, text: Min"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[10]() + '%' }, text: Min"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[11]() + '%' }, text: Stdev.toFixed(2)"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[12]() + '%' }, text: Percentiles"></div>
                                     </div>
                                 </div>
                             </div>
