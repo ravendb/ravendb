@@ -52,15 +52,33 @@
                         <label>Bundles:</label>
                     </div>
                     <div class="btn-group-vertical" data-toggle="buttons-checkbox">
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleCompressionBundle, css: { licenseInactive: !isBundleActive('compression') }">Compression</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleEncryptionBundle, css: { licenseInactive: !isBundleActive('encryption') }">Encryption</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleExpirationBundle, css: { licenseInactive: !isBundleActive('documentExpiration') }">Expiration</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleQuotasBundle, css: { licenseInactive: !isBundleActive('quotas') }">Quotas</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleReplicationBundle, css: { licenseInactive: !isBundleActive('replication') }">Replication</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle">Sql Replication</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleVersioningBundle, css: { licenseInactive: !isBundleActive('versioning') }">Versioning</button>
-                        <button type="button" class="btn btn-primary active" data-bind="click: togglePeriodicExportBundle, css: { licenseInactive: !isBundleActive('periodicBackup') }">Periodic Export</button>
-                        <button type="button" class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">Scripted Index</button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleCompressionBundle, css: { 'license-inactive': !isBundleActive('compression') }">
+                            <i data-bind="css: {'fa-check': isCompressionBundleEnabled }" class="fa fa-fw"></i> Compression
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleEncryptionBundle, css: { 'license-inactive': !isBundleActive('encryption') }">
+                            <i data-bind="css: {'fa-check': isEncryptionBundleEnabled }" class="fa fa-fw"></i> Encryption
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleExpirationBundle, css: { 'license-inactive': !isBundleActive('documentExpiration') }">
+                            <i data-bind="css: {'fa-check': isExpirationBundleEnabled }" class="fa fa-fw"></i> Expiration
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleQuotasBundle, css: { 'license-inactive': !isBundleActive('quotas') }">
+                            <i data-bind="css: {'fa-check': isQuotasBundleEnabled }" class="fa fa-fw"></i> Quotas
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleReplicationBundle, css: { 'license-inactive': !isBundleActive('replication') }">
+                            <i data-bind="css: {'fa-check': isReplicationBundleEnabled }" class="fa fa-fw"></i> Replication
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleSqlReplicationBundle">
+                            <i data-bind="css: {'fa-check': isSqlReplicationBundleEnabled }" class="fa fa-fw"></i> Sql Replication
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleVersioningBundle, css: { 'license-inactive': !isBundleActive('versioning') }">
+                            <i data-bind="css: {'fa-check': isVersioningBundleEnabled }" class="fa fa-fw"></i> Versioning
+                        </button>
+                        <button type="button" class="btn btn-default active" data-bind="click: togglePeriodicExportBundle, css: { 'license-inactive': !isBundleActive('periodicBackup') }">
+                            <i data-bind="css: {'fa-check': isPeriodicExportBundleEnabled }" class="fa fa-fw"></i> Periodic Export
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleScriptedIndexBundle">
+                            <i data-bind="css: {'fa-check': isScriptedIndexBundleEnabled }" class="fa fa-fw"></i> Scripted Index
+                        </button>
                     </div>
                 </div>
             </div>

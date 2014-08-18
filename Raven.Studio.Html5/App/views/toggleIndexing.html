@@ -5,10 +5,10 @@
     <div class="panel-body">
 
         <div class="btn-group" data-toggle="buttons">
-            <label class="btn btn-primary" data-bind="click: enableIndexing, css: { active: indexingStatus() !== 'Paused' }">
+            <label class="btn btn-default" data-bind="click: enableIndexing, css: { active: indexingStatus() !== 'Paused' }">
                 <input type="checkbox"> <i class="fa fa-play"></i> Enable indexing
             </label>
-            <label class="btn btn-primary" data-bind="click: disableIndexing, css: { active: indexingStatus() !== 'Indexing' && indexingStatus() !== 'Started' }">
+            <label class="btn btn-default" data-bind="click: disableIndexing, css: { active: indexingStatus() !== 'Indexing' && indexingStatus() !== 'Started' }">
                 <input type="checkbox"> <i class="fa fa-stop text-danger"></i> Disable indexing
             </label>
         </div>

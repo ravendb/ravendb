@@ -1,4 +1,4 @@
-﻿@import "bootstrap.less";
+@import "bootstrap.less";
 
 @selectionColor: #ffc;
 /*@selectionColor: black;*/
@@ -8,19 +8,19 @@ html, body {
 }
 
 .not-implemented-yet {
-  position: relative;
+    position: relative;
 }
 
 .not-implemented-yet:after {
-  content: " ";
-  z-index: 10;
-  display: block;
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  top: 0;
-  left: 0; 
-  right: 0;
+    content: " ";
+    z-index: 10;
+    display: block;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
 }
 
 .alert-text {
@@ -28,7 +28,7 @@ html, body {
     white-space: nowrap !important;
     -ms-text-overflow: ellipsis !important;
     -o-text-overflow: ellipsis !important;
-    text-overflow: ellipsis !important;    
+    text-overflow: ellipsis !important;
 }
 
 .table-no-borders td {
@@ -82,7 +82,7 @@ html, body {
     .replications-container {
         margin-top: 10px;
 
-        .replication {            
+        .replication {
             border-radius: 10px;
             -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
@@ -151,17 +151,17 @@ html, body {
     .edit-sql-replication-actions {
         padding-top: 0.5%;
     }
-        }
-        
+}
+
 .sqlReplication-Stats {
     width: 60vw;
 
-     @media(max-width: 767px) {
+    @media(max-width: 767px) {
         width: 80vw;
-         }
-    
+    }
+
     max-height: 60vh !important;
-    
+
 
     .modal-header {
         max-height: 20%;
@@ -174,74 +174,72 @@ html, body {
     }
 }
 
-.replicationSimulation{            
-    max-height:90vh!important;
-    overflow-x:hidden!important;
-    overflow-y:hidden!important;
-        
+.replicationSimulation {
+    max-height: 90vh !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+
     label {
         text-align: left;
-        font-size:large;
-    }    
+        font-size: large;
+    }
 
 
-    .replicationSimulationData
-    {
-        width:90vw!important;    
-        max-height:70vh!important;
-        height:70vh!important;
-        overflow-x:hidden;
-        overflow-y:hidden;
+    .replicationSimulationData {
+        width: 90vw !important;
+        max-height: 70vh !important;
+        height: 70vh !important;
+        overflow-x: hidden;
+        overflow-y: hidden;
 
-        .form-group{
-            max-height:55vh!important;
-            height:55vh!important;
-            overflow-x:hidden;
-            overflow-y:auto;
-        }
-        .additional-action{
-            margin-left:50%;
-            padding:0;
+        .form-group {
+            max-height: 55vh !important;
+            height: 55vh !important;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
-        .sqlQuery{
-            padding-bottom:1%;
+        .additional-action {
+            margin-left: 50%;
+            padding: 0;
         }
-        
-        .parametrizedQuery{
+
+        .sqlQuery {
+            padding-bottom: 1%;
+        }
+
+        .parametrizedQuery {
             cursor: pointer;
         }
 
-        .sqlQuery:hover{            
-            opacity: 0.8;        
-            text-decoration:underline;
-        }        
-
-        .simulationResultContainer{                             
-           .simulationResult
-            {
-                font-weight:bold;
-                font-size:medium;
-                margin-bottom:2.5%;
-            }    
+        .sqlQuery:hover {
+            opacity: 0.8;
+            text-decoration: underline;
         }
 
-         nav{
-                .btn-toolbar{
-                    padding-top: 0.5%;
-                    padding-bottom: 0.5%;
-                }
+        .simulationResultContainer {
+            .simulationResult {
+                font-weight: bold;
+                font-size: medium;
+                margin-bottom: 2.5%;
             }
+        }
 
-     }
+        nav {
+            .btn-toolbar {
+                padding-top: 0.5%;
+                padding-bottom: 0.5%;
+            }
+        }
+    }
 }
-    
+
 
 
 
 .query-stats {
-    width: 600px; 
-	margin: -250px 0 0 -450px; 
+    width: 600px;
+    margin: -250px 0 0 -450px;
 
     ul {
         li {
@@ -250,12 +248,12 @@ html, body {
             strong {
                 padding: 0 10px 0 10px;
                 display: inline-block;
-            }                
+            }
 
             span {
                 padding: 0 10px 0 10px;
                 display: inline-block;
-            }                
+            }
 
             border-bottom: 0 !important;
             border-top: 0 !important;
@@ -305,7 +303,7 @@ html, body {
 .fullScreen .fullScreen-editor {
     height: auto !important;
     width: auto !important;
-	border: 0;
+    border: 0;
     margin: 0;
     position: fixed !important;
     top: 0;
@@ -321,17 +319,17 @@ html, body {
 
 .vertical-bottom-container {
     width: 10% !important;
-    padding: 0 40% 0 40% !important;    
+    padding: 0 40% 0 40% !important;
 }
 
 .vertical-navbar-menu-item {
     float: none !important;
-        display: block;
+    display: block;
     padding: 0 0 0 0;
 
     a {
         padding: 0 0 0 0;
-        }
+    }
 }
 
 .panel span {
@@ -348,6 +346,12 @@ html, body {
     width: 98%;
 }
 
+.btn-group-vertical {
+    label, button {
+        text-align: left;
+    }
+}
+
 #resources-page {
     .btn-toolbar {
         margin-bottom: 20px;
@@ -355,9 +359,9 @@ html, body {
 
     .resources-container {
         margin-top: 10px;
-        
-        .resource:hover .checkbox{
-            display : block;
+
+        .resource:hover .checkbox {
+            display: block;
         }
 
         .resource {
@@ -371,13 +375,13 @@ html, body {
             padding: 8px;
             margin: 0 10px 14px 0;
             position: relative;
-            
+
             @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
             @enabledColor: #3A822D;
             @disabledColor: #d9534f;
 
-            .checkbox{
+            .checkbox {
                 display: none;
                 position: absolute;
                 top: 0;
@@ -385,7 +389,7 @@ html, body {
                 margin: 0;
                 padding: 0;
 
-                img{
+                img {
                     height: 25px;
                 }
             }
@@ -398,15 +402,15 @@ html, body {
                     float: left;
                 }
 
-                .disabled{
+                .disabled {
                     pointer-events: none;
                 }
 
-                .stats{
+                .stats {
                     color: @enabledColor;
                 }
 
-                .stats-disabled{
+                .stats-disabled {
                     color: @disabledColor;
                 }
             }
@@ -416,7 +420,7 @@ html, body {
                 margin-left: 39.3px;
                 margin-top: 45.3px;
 
-                .dropdown-menu{
+                .dropdown-menu {
                     .fa-trash-o {
                         color: lighten(@disabledColor, 20%);
                     }
@@ -475,7 +479,7 @@ html, body {
 }
 
 .menu-item-disabled {
-    a{
+    a {
         pointer-events: none;
         cursor: default;
         text-decoration: line-through;
@@ -523,15 +527,15 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 .document-collections {
-        
+
     li {
-        outline: none;                             
-    }      
+        outline: none;
+    }
 
     .collection-color-strip {
         margin-right: 5px;
     }
-   
+
     .collection-text {
         overflow: hidden;
         white-space: nowrap;
@@ -548,8 +552,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
         max-width: 90%;
-    }             
-    
+    }
+
     li:not(:first-child) {
         // All collections except the first one ("All Documents") are indented.
         padding-left: 15px;
@@ -565,7 +569,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     left: auto;
 
     li > a {
-        text-align: left;      
+        text-align: left;
     }
 
     li > a.active {
@@ -578,7 +582,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
 .indexes-container {
     margin-top: 10px;
-        
+
     .index-group {
         .panel-heading {
             padding-top: 0;
@@ -601,14 +605,15 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
-#watchTrafficContainer{
+#watchTrafficContainer {
 
-    .logButtons{
-            margin-left:0;
-        }
-        .form-group{
-            margin-left:1%;
-        }   
+    .logButtons {
+        margin-left: 0;
+    }
+
+    .form-group {
+        margin-left: 1%;
+    }
 
     .log-table-row {
     }
@@ -616,46 +621,51 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     .selected .column {
         background-color: #ffffcc;
     }
-    .statsBar{        
-        margin-top:1%;
-        padding-left:5%;
+
+    .statsBar {
+        margin-top: 1%;
+        padding-left: 5%;
         background-color: aliceblue;
     }
 
     .column {
-            display: inline-block;
-            cursor: pointer;
-            overflow: hidden;
-            white-space: nowrap;
-            word-wrap: break-word;
-            text-overflow: ellipsis;
-            border-bottom: 1px solid #ddd;
-            margin: 0px;
-            padding: 5px;
-            height: 30px;
+        display: inline-block;
+        cursor: pointer;
+        overflow: hidden;
+        white-space: nowrap;
+        word-wrap: break-word;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #ddd;
+        margin: 0px;
+        padding: 5px;
+        height: 30px;
     }
-    #logTableContainer{
-        max-height:80vh;
-        overflow-y:auto;        
-        overflow-x:visible;
-                
-        .logHeaders{                                    
-            max-width:80vw;
-            width:80vw;            
+
+    #logTableContainer {
+        max-height: 80vh;
+        overflow-y: auto;
+        overflow-x: visible;
+
+        .logHeaders {
+            max-width: 80vw;
+            width: 80vw;
         }
-        .logRecords{            
-            max-height:60vh;                        
-            max-width:80vw;
-            width:80vw;
-            overflow-y:auto;
+
+        .logRecords {
+            max-height: 60vh;
+            max-width: 80vw;
+            width: 80vw;
+            overflow-y: auto;
         }
-        .logRecords-small{
-            max-height:30vh;                        
-        }        
-        .log-details{
-            max-height:30vh;
-            height:30vh;
-            overflow-y:auto;
+
+        .logRecords-small {
+            max-height: 30vh;
+        }
+
+        .log-details {
+            max-height: 30vh;
+            height: 30vh;
+            overflow-y: auto;
             border-top-width: 2px;
             margin-top: 1%;
             padding-top: 1%;
@@ -665,20 +675,18 @@ div.btn-group[data-toggle=buttons-radio] button.active {
             width: 60vw;
             margin-left: 1%;
         }
-
     }
-    
-
 }
 
-#logNotificationsContainer{
-    background-color:black;
-    height:80vh;
-    max-height:80vh;
-    overflow-y:auto;
-    div{
-        padding-left:2%;
-        color:white;
+#logNotificationsContainer {
+    background-color: black;
+    height: 80vh;
+    max-height: 80vh;
+    overflow-y: auto;
+
+    div {
+        padding-left: 2%;
+        color: white;
     }
 }
 
@@ -695,7 +703,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 .settings-container {
-    margin-top: 10px;    
+    margin-top: 10px;
 
     .api-key-card, .win-auth-card {
         display: inline-block;
@@ -756,7 +764,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
             height: 100px;
         }
     }
-        }
+}
 
 .collection-style-0 {
     background-color: rgb(0, 199, 0);
@@ -906,21 +914,21 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     z-index: 9999;
 
     .bar {
-        background-color: black;
-    position: fixed;
-    z-index: 100;
-        top: 58px;
-    left: 0;
+        background-color: darken(@gray-lighter, 12%);
+        position: fixed;
+        z-index: 100;
+        top: 55px;
+        left: 0;
         opacity: .7;
-    width: 100%;
-        height: 5px;
-        box-shadow: 0 0 13px 2px silver;
+        width: 100%;
+        height: 3px;
+        /*box-shadow: 0 0 10px 0 @gray-light;*/
     }
 
-    .spinner-icon {     
+    .spinner-icon {
         opacity: 0;
-      border-top-color: rgba(2,255,27,1);
-      border-left-color: rgba(2,255,27,1);
+        border-top-color: rgba(2,255,27,1);
+        border-left-color: rgba(2,255,27,1);
     }
 
     .peg {
@@ -942,14 +950,14 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         }
     }
 
-    .documents-select{
+    .documents-select {
         text-align: center;
         background-color: #ffffcc;
         margin-top: 5px;
         border: 1px solid;
         border-radius: 25px;
 
-        .select-link{
+        .select-link {
             text-decoration: underline;
             cursor: pointer;
         }
@@ -975,7 +983,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     height: 20px;
     width: 4px;
     display: inline-block;
-    vertical-align: middle;    
+    vertical-align: middle;
 }
 
 #editIndex {
@@ -992,7 +1000,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 .popover {
-            max-width: 30%;     
+    max-width: 30%;
 }
 
 #queryContainer {
@@ -1081,13 +1089,13 @@ div.btn-group[data-toggle=buttons-radio] button.active {
             .ko-grid-column-handle {
                 display: none;
                 width: 4px;
-              height: 20px;
-              float: right;
-              cursor: col-resize;
-              position: relative;
-              z-index: 1;
-              background-color: hsl(0, 0%, 80%);
-              box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
+                height: 20px;
+                float: right;
+                cursor: col-resize;
+                position: relative;
+                z-index: 1;
+                background-color: hsl(0, 0%, 80%);
+                box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
             }
         }
     }
@@ -1116,7 +1124,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         &.checked {
             box-shadow: 5px 0 0 0 @brand-primary inset, -5px 0 0 0 @brand-primary inset;
             background-color: @selectionColor;
-            
         }
     }
 
@@ -1156,7 +1163,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         -o-text-overflow: ellipsis !important;
         text-overflow: ellipsis !important;
         max-width: 50% !important;
-    }   
+    }
 
     h3 {
         margin-bottom: 0;
@@ -1194,7 +1201,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     width: 400px;
 }
 
-#editDocumentContainer {    
+#editDocumentContainer {
     &:focus {
         outline: 0;
     }
@@ -1281,10 +1288,9 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
         .navbar-nav {
             padding-left: 10px;
+        }
     }
-    }
-    
-    /* When the screen width < 1150, shrink down the padding between the nav bar items. */ 
+    /* When the screen width < 1150, shrink down the padding between the nav bar items. */
     @media (max-width: 1150px) {
         .nav {
             li {
@@ -1305,7 +1311,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
             #goToDocInput {
                 width: 8em;
-            } 
+            }
         }
     }
     /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
@@ -1393,7 +1399,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer, #requestTracingContainer {
-	@media(max-device-height:1024px) {
+    @media(max-device-height:1024px) {
         button {
             max-height: 50% !important;
         }
@@ -1420,7 +1426,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
             font-weight: bold;
         }
     }
-
 }
 
 #databaseSettingsContainer {
@@ -1480,39 +1485,39 @@ footer {
 }
 
 #recentErrorsDialog {
-	height: 500px;
-	width: 600px;
+    height: 500px;
+    width: 600px;
 
-	.modal-body {
-		height: 350px;
-		overflow-y: auto;
-	}
+    .modal-body {
+        height: 350px;
+        overflow-y: auto;
+    }
 
-	.error-details, .http-status {
-		width: 100%;
-	}
+    .error-details, .http-status {
+        width: 100%;
+    }
 }
 
 .dialogResizer {
-        //background-color: red;
-        width: 20px;
-        height: 20px;
-        position: absolute;
-        bottom: 0px;
-        right: 0px;
-        display: inline-block;
-        cursor: se-resize;
-        border-radius: 0 0 6px 0;
-        /* IE9 SVG, needs conditional override of 'filter' to 'none' */
-        /* IE9 SVG, needs conditional override of 'filter' to 'none' */
-        background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDxzdG9wIG9mZnNldD0iNTMlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);
-        background: -moz-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%, hsla(0,0%,0%,0) 53%, hsla(0,0%,0%,1) 100%); /* FF3.6+ */
-        background: -webkit-gradient(linear, left top, right bottom, color-stop(0%,hsla(0,0%,0%,0)), color-stop(53%,hsla(0,0%,0%,0)), color-stop(100%,hsla(0,0%,0%,1))); /* Chrome,Safari4+ */
-        background: -webkit-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* Chrome10+,Safari5.1+ */
-        background: -o-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* Opera 11.10+ */
-        background: -ms-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* IE10+ */
-        background: linear-gradient(135deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* W3C */
-        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#000000',GradientType=1 ); /* IE6-8 fallback on horizontal gradient */
+    //background-color: red;
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    display: inline-block;
+    cursor: se-resize;
+    border-radius: 0 0 6px 0;
+    /* IE9 SVG, needs conditional override of 'filter' to 'none' */
+    /* IE9 SVG, needs conditional override of 'filter' to 'none' */
+    background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDxzdG9wIG9mZnNldD0iNTMlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);
+    background: -moz-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%, hsla(0,0%,0%,0) 53%, hsla(0,0%,0%,1) 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, right bottom, color-stop(0%,hsla(0,0%,0%,0)), color-stop(53%,hsla(0,0%,0%,0)), color-stop(100%,hsla(0,0%,0%,1))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(-45deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* IE10+ */
+    background: linear-gradient(135deg, hsla(0,0%,0%,0) 0%,hsla(0,0%,0%,0) 53%,hsla(0,0%,0%,1) 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#000000',GradientType=1 ); /* IE6-8 fallback on horizontal gradient */
 }
 
 #scriptedIndex {
@@ -1526,7 +1531,7 @@ footer {
 }
 
 #status-debug > ul.nav {
-	margin-bottom: 15px;
+    margin-bottom: 15px;
 }
 
 .popover-lg {
@@ -1534,34 +1539,32 @@ footer {
     width: 600px;
 }
 
-.licenseInactive {
+.license-inactive {
     pointer-events: none;
     cursor: default;
     color: hsl(0, 0%, 80%) !important;
-    background-color: hsl(208, 25%, 53%) !important;
     box-shadow: none !important;
-    border: 1px solid rgb(53, 126, 189) !important;
+    background-color: #eeeeee !important;
+    border-color: #e2e2e2 !important;
 }
 
-.licensing-Status{
+.licensing-status {
+    max-height: 60vh !important;
 
-    max-height:60vh!important;
-
-    .form-group{
-            max-height:30vh!important;            
-            overflow-x:hidden;
-            overflow-y:auto;
-        }    
-    .license-error {
-        color: #d2322d;
+    .form-group {
+        max-height: 30vh !important;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 
-    
+    .license-error {
+        color: @brand-danger !important;
+    }
 }
 
 :invalid {
     box-shadow: none; /* FF */
-    outline: 0;       /* IE 10 */
+    outline: 0; /* IE 10 */
 }
 
 .versioning-inner-margin {
@@ -1581,13 +1584,13 @@ footer {
     color: #ac2925;
 }
 
-.fa-plus {
+/*.fa-plus {
     color: #58cc46;
-}
+}*/
 // End of icons
 
 // Start of Filesystems
-#fileSystemFilesPage{
+#fileSystemFilesPage {
     .files-select {
         text-align: center;
         background-color: #ffffcc;
@@ -1678,7 +1681,7 @@ footer {
     }
 
     .input-group {
-      max-width: 300px;
+        max-width: 300px;
     }
 }
 
@@ -1720,19 +1723,19 @@ footer {
 
 .metricsContainer {
 
-	.nv-point {
-		stroke-linecap: round;
-		stroke-width: 5px;
-	}
+    .nv-point {
+        stroke-linecap: round;
+        stroke-width: 5px;
+    }
 
-	svg {
-	  overflow: hidden;
-	}
+    svg {
+        overflow: hidden;
+    }
 
-	div {
-	  border: 0;
-	  margin: 0;
-	}
+    div {
+        border: 0;
+        margin: 0;
+    }
 }
 
 
@@ -1770,21 +1773,22 @@ footer {
 }
 
 .messageBox {
-     background-color: white;
-     border: 1px solid #999;
-     border: 1px solid rgba(0, 0, 0, 0.3);
-     -webkit-border-radius: 6px;
-     -moz-border-radius: 6px;
-     border-radius: 6px;
-     outline: none;
-     -webkit-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
-     -moz-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
-     box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
-     -webkit-background-clip: padding-box;
-     -moz-background-clip: padding-box;
-     background-clip: padding-box;
+    background-color: white;
+    border: 1px solid #999;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+    outline: none;
+    -webkit-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+    -moz-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+    -webkit-background-clip: padding-box;
+    -moz-background-clip: padding-box;
+    background-clip: padding-box;
 }
-.pressed{    
-        background-color:#73c773!important;
-        border-color:#61b261!important;    
+
+.pressed {
+    background-color: #73c773 !important;
+    border-color: #61b261 !important;
 }

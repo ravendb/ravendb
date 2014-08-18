@@ -1,4 +1,4 @@
-﻿ import commandBase = require("commands/commandBase");
+﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 
 class getFileSystemsCommand extends commandBase {
@@ -16,4 +16,4 @@ class getFileSystemsCommand extends commandBase {
     }
 }
 
-export = getFileSystemsCommand;
+export = getFileSystemsCommand; 

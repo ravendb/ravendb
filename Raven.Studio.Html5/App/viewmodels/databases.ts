@@ -96,7 +96,7 @@ class databases extends viewModelBase {
             }
             this.selectedDatabase(db);
 
- /*           var updatedUrl = appUrl.forDatabase(db);
+            /*var updatedUrl = appUrl.forDatabase(db);
             this.navigate(updatedUrl);*/
         }
 
