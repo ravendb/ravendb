@@ -429,23 +429,35 @@ namespace Raven.Database
 					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
-					{
-						Index indexInstance = IndexStorage.GetIndexInstance(indexId);
-						return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
-					}).Select(indexId =>
-					{
-						Index index = IndexStorage.GetIndexInstance(indexId);
-						return index == null ? null : index.PublicName;
-					}).ToArray();
+		{
+			Index indexInstance = IndexStorage.GetIndexInstance(indexId);
+						
+						var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+
+						if (isStale && actions.Staleness.IsReduceStale(indexId) == false)
+						{
+							var forEntityNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+							var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+
+							if (IndexingExecuter.IsIndexingStaleForCollections(forEntityNames, lastIndexedEtag) == false)
+								return false;
+						}
+
+						return isStale;
+		}).Select(indexId =>
+		{
+			Index index = IndexStorage.GetIndexInstance(indexId);
+			return index == null ? null : index.PublicName;
+		}).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-					{
-						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+			{
+				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
 						if (indexInstance == null)
 							return null;
-						x.PublicName = indexInstance.PublicName;
+					x.PublicName = indexInstance.PublicName;
 
-						return x;
+				return x;
 					})
 					.Where(x => x != null)
 					.ToArray();

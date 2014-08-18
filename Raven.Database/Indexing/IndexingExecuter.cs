@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -25,12 +26,14 @@ namespace Raven.Database.Indexing
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
 		private readonly PrefetchingBehavior prefetchingBehavior;
+		private readonly ConcurrentDictionary<string, Etag> highestDocumentEtagPerCollection;
 
 		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			highestDocumentEtagPerCollection = new ConcurrentDictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public PrefetchingBehavior PrefetchingBehavior
@@ -414,6 +417,34 @@ namespace Raven.Database.Indexing
 			exceptionAggregator.Execute(PrefetchingBehavior.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
+		}
+
+		public bool IsIndexingStaleForCollections(List<string> indexedEntities, Etag lastIndexedEtag)
+		{
+			var isStaleForAnyRelevantCollection = true;
+
+			foreach (var forEntityName in indexedEntities)
+			{
+				Etag highestEtagForCollection;
+				if (highestDocumentEtagPerCollection.TryGetValue(forEntityName, out highestEtagForCollection))
+				{
+					if (highestEtagForCollection.CompareTo(lastIndexedEtag) > 0)
+						return true;
+
+					isStaleForAnyRelevantCollection = false;
+				}
+				else
+				{
+					return true;
+				}
+			}
+
+			return isStaleForAnyRelevantCollection;
+		}
+
+		public void UpdateHighestEtagForCollection(string collectionName, Etag etag)
+		{
+			highestDocumentEtagPerCollection.AddOrUpdate(collectionName, etag, (existingEntity, existingEtag) => etag.CompareTo(existingEtag) > 0 ? etag : existingEtag);
 		}
     }
 }

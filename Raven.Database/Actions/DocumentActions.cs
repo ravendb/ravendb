@@ -261,6 +261,7 @@ namespace Raven.Database.Actions
                         var inserts = 0;
                         var batch = 0;
                         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+						var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
                         var docsToInsert = docs.ToArray();
 
@@ -304,6 +305,14 @@ namespace Raven.Database.Actions
                                 doc.DataAsJson.EnsureSnapshot(
                                 "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
+	                            var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+
+	                            Etag highestEtagInCollection;
+	                            if (entityName != null && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false || 
+									result.Etag.CompareTo(highestEtagInCollection) > 0))
+	                            {
+		                            collectionsAndEtags[entityName] = result.Etag;
+	                            }
 
                                 foreach (var trigger in Database.PutTriggers)
                                 {
@@ -335,6 +344,11 @@ namespace Raven.Database.Actions
 
                         accessor.Documents.IncrementDocumentCount(inserts);
                         accessor.General.PulseTransaction();
+
+	                    foreach (var collectionEtagPair in collectionsAndEtags)
+	                    {
+		                    Database.IndexingExecuter.UpdateHighestEtagForCollection(collectionEtagPair.Key, collectionEtagPair.Value);
+	                    }
 
                         WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                         WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away

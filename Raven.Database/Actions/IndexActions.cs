@@ -118,7 +118,12 @@ namespace Raven.Database.Actions
                 Etag afterTouchEtag = null;
                 try
                 {
-                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+	                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+					var entityName = actions.Documents.DocumentMetadataByKey(referencing, null).Metadata.Value<string>(Constants.RavenEntityName);
+
+					if(entityName != null)
+						Database.IndexingExecuter.UpdateHighestEtagForCollection(entityName, afterTouchEtag);
                 }
                 catch (ConcurrencyException)
                 {
