@@ -23,7 +23,7 @@ import indexMergeSuggestion = require("models/indexMergeSuggestion");
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable<boolean>(false);
-    mergeSuggestion: indexMergeSuggestion = null;
+    mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
@@ -37,6 +37,7 @@ class editIndex extends viewModelBase {
     indexErrorsList = ko.observableArray<string>();
     appUrls: computedAppUrls;
     indexName: KnockoutComputed<string>;
+    currentIndexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
@@ -61,7 +62,8 @@ class editIndex extends viewModelBase {
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
         this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
-        
+        this.currentIndexName = ko.computed(() => this.isEditingExistingIndex() ? this.editedIndex().name() : (this.mergeSuggestion() != null) ? "Merged Index" : "New Index");
+
         this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
             if (active) {
                 this.fetchOrCreateScriptedIndex();
@@ -90,7 +92,7 @@ class editIndex extends viewModelBase {
         var db = this.activeDatabase();
         var mergeSuggestion: indexMergeSuggestion = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
         if (mergeSuggestion != null) {
-            this.mergeSuggestion = mergeSuggestion;
+            this.mergeSuggestion(mergeSuggestion);
             this.editedIndex(mergeSuggestion.mergedIndexDefinition);
         }
         else if (indexToEditName) {
@@ -116,10 +118,6 @@ class editIndex extends viewModelBase {
         }
         else {
             this.priority(indexPriority.normal);
-        }
-
-        if (this.mergeSuggestion != null) {
-            this.loadedIndexName("Merged Index");
         }
 
         this.initializeDirtyFlag();
@@ -259,32 +257,38 @@ class editIndex extends viewModelBase {
                 jQuery.when(commands).done(() => {
                     this.initializeDirtyFlag();
                     this.editedIndex().name.valueHasMutated();
+                    var isSavingMergedIndex = this.mergeSuggestion() != null;
 
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
                     }
-                    if (this.mergeSuggestion != null) {
-                        this.deleteMergedIndexes();
+                    if (isSavingMergedIndex) {
+                        this.deleteMergedIndexes(this.mergeSuggestion().canMerge);
+                        this.mergeSuggestion(null);
                     }
 
-                    this.updateUrl(index.Name);
+                    this.updateUrl(index.Name, isSavingMergedIndex);
                 });
             }); 
         }
     }
 
-    private deleteMergedIndexes() {
+    private deleteMergedIndexes(indexesToDelete: string[]) {
         require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
             var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm(this.mergeSuggestion.canMerge, db, "Delete Merged Indexes?");
+            var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
             dialog.show(deleteViewModel);
         });
     }
 
-    updateUrl(indexName: string) {
-        if (indexName != null && this.loadedIndexName() !== indexName) {
-            router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
+    updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
+        var url = appUrl.forEditIndex(indexName, this.activeDatabase());
+        if (this.loadedIndexName() !== indexName) {
+            super.navigate(url);
+        }
+        else if (isSavingMergedIndex) {
+            super.updateUrl(url);
         }
     }
 
