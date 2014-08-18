@@ -35,6 +35,7 @@ class appUrl {
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        megeSuggestions: ko.computed(() => appUrl.forMegeSuggestions(appUrl.currentDatabase())),
         upgrade: ko.computed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
@@ -416,6 +417,12 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
+    static forEditMerged(indexName: string, db: database): string {
+        return appUrl.forEditIndex(indexName, db) + "&"
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
+    }
+
     static forNewTransformer(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers/edit?" + databasePart;
@@ -466,9 +473,14 @@ class appUrl {
         return this.baseUrl;
     }
 
-    static forTerms(index: string, db: database): string {
+    static forTerms(indexName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
+        return "#databases/indexes/terms/" + encodeURIComponent(indexName) + "?" + databasePart;
+    }
+
+    static forMegeSuggestions(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/indexes/mergeSuggestions?" + databasePart;
     }
 
     static forImportDatabase(db: database): string {
@@ -522,7 +534,7 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
 
-    static forIndexQueryRawData(db:database,indexName:string){
+    static forIndexQueryRawData(db:database, indexName:string){
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
     }
 

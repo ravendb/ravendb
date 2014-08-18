@@ -126,11 +126,14 @@
     <TypeScriptCompile Include="App\commands\testSqlConnectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\idGenerator.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
     <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
     <TypeScriptCompile Include="App\common\recentQueriesStorage.ts" />
@@ -152,8 +155,8 @@
     <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
     <TypeScriptCompile Include="App\models\filesystem\file.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileMetadata.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
     <TypeScriptCompile Include="App\models\facet.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
     <TypeScriptCompile Include="App\models\filesystem\folder.ts" />
     <TypeScriptCompile Include="App\models\filesystem\searchResults.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
@@ -177,7 +180,7 @@
     <TypeScriptCompile Include="App\viewmodels\adminSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
-    <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestionsDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyIndexDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageCounters.ts" />
@@ -245,7 +248,6 @@
     <TypeScriptCompile Include="App\viewmodels\reporting.ts" />
     <TypeScriptCompile Include="App\viewmodels\saveTransformerWithNewNameConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
-    <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <TypeScriptCompile Include="App\viewmodels\latestBuildReminder.ts" />
     <TypeScriptCompile Include="App\viewmodels\showDataDialog.ts">
@@ -377,7 +379,7 @@
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
-    <Content Include="App\views\indexMergeSuggestionsDialog.html" />
+    <Content Include="App\views\indexMergeSuggestions.html" />
     <Content Include="App\views\upgrade.html" />
     <Content Include="App\views\customLogging.html" />
     <Content Include="App\views\infoPackageImport.html" />
@@ -782,6 +784,7 @@
     <Content Include="Scripts\durandal\binder.js" />
     <Content Include="Scripts\durandal\composition.js" />
     <Content Include="Scripts\durandal\events.js" />
+    <Content Include="Scripts\durandal\plugins\dialog.js" />
     <Content Include="Scripts\durandal\plugins\history.js" />
     <Content Include="Scripts\durandal\plugins\http.js" />
     <Content Include="Scripts\durandal\plugins\observable.js" />
@@ -789,6 +792,7 @@
     <Content Include="Scripts\durandal\plugins\serializer.js" />
     <Content Include="Scripts\durandal\plugins\widget.js" />
     <Content Include="Scripts\durandal\system.js" />
+    <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Scripts\jquery.fullscreen.js" />
@@ -796,7 +800,6 @@
     <Content Include="Scripts\jszip\jszip.js" />
     <Content Include="Scripts\knockout.mapping-2.4.1.js" />
     <Content Include="Scripts\nvd3\d3.js" />
-    <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
@@ -901,7 +904,6 @@
     <Content Include="Content\images\glyphicons-halflings.png" />
     <Content Include="Content\images\unchecked.png" />
     <Content Include="Scripts\bootstrap-contextmenu-2.1.js" />
-    <Content Include="Scripts\durandal\plugins\dialog.js" />
     <Content Include="Content\app.less" />
     <Content Include="Scripts\text.js" />
     <TypeScriptCompile Include="Scripts\typings\durandal\durandal.d.ts" />

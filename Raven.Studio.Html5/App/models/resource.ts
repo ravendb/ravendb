@@ -10,6 +10,10 @@
     constructor(public name: string, public type: string) {
     }
 
+    activate() {
+        throw new Error("Activate must be overridden.");
+    }
+
     checkboxToggle() {
         this.isChecked.toggle();
     }

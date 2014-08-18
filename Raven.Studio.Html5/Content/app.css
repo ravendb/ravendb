@@ -7033,6 +7033,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .document-collections li:not(:first-child) {
   padding-left: 15px;
 }
+#index-merge-suggestions .index-name {
+  text-decoration: underline;
+  font-weight: bold;
+}
 .index-panel {
   overflow: visible !important;
 }

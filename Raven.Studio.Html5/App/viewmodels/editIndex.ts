@@ -14,14 +14,16 @@ import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/indexAceAutoCompleteProvider");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
 import scriptedIndexModel = require("models/scriptedIndex");
 import autoCompleterSupport = require("common/autoCompleterSupport");
+import mergedIndexesStorage = require("common/mergedIndexesStorage");
+import indexMergeSuggestion = require("models/indexMergeSuggestion");
 
 class editIndex extends viewModelBase { 
 
-    isEditingExistingIndex = ko.observable(false);
+    isEditingExistingIndex = ko.observable<boolean>(false);
+    mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
@@ -35,6 +37,7 @@ class editIndex extends viewModelBase {
     indexErrorsList = ko.observableArray<string>();
     appUrls: computedAppUrls;
     indexName: KnockoutComputed<string>;
+    currentIndexName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
@@ -59,7 +62,8 @@ class editIndex extends viewModelBase {
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
         this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
-        
+        this.currentIndexName = ko.computed(() => this.isEditingExistingIndex() ? this.editedIndex().name() : (this.mergeSuggestion() != null) ? "Merged Index" : "New Index");
+
         this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
             if (active) {
                 this.fetchOrCreateScriptedIndex();
@@ -79,41 +83,45 @@ class editIndex extends viewModelBase {
             this.editedIndex().name.valueHasMutated();
         });
 
+        this.editedIndex(this.createNewIndexDefinition());
     }
-    
+
     canActivate(indexToEditName: string) {
         super.canActivate(indexToEditName);
-
-        if (indexToEditName) {
+        
+        var db = this.activeDatabase();
+        var mergeSuggestion: indexMergeSuggestion = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
+        if (mergeSuggestion != null) {
+            this.mergeSuggestion(mergeSuggestion);
+            this.editedIndex(mergeSuggestion.mergedIndexDefinition);
+        }
+        else if (indexToEditName) {
+            this.isEditingExistingIndex(true);
             var canActivateResult = $.Deferred();
             this.fetchIndexData(indexToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
                     messagePublisher.reportError("Could not find " + decodeURIComponent(indexToEditName) + " index");
-                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) });
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
                 });
             return canActivateResult;
-        } else {
-            return $.Deferred().resolve({ can: true });
         }
+
+        return $.Deferred().resolve({ can: true });
     }
 
     activate(indexToEditName: string) {
         super.activate(indexToEditName);
         
-        this.isEditingExistingIndex(indexToEditName != null);
-
-        if (indexToEditName) {
+        if (this.isEditingExistingIndex()) {
             this.editExistingIndex(indexToEditName);
-        } else {
+        }
+        else {
             this.priority(indexPriority.normal);
-            this.editedIndex(this.createNewIndexDefinition());
         }
 
         this.initializeDirtyFlag();
-
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
-
         this.checkIfScriptedIndexBundleIsActive();
     }
 
@@ -163,7 +171,7 @@ class editIndex extends viewModelBase {
     private editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.loadedIndexName(indexName);
-        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
+        this.termsUrl(appUrl.forTerms(unescapedIndexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
@@ -246,23 +254,41 @@ class editIndex extends viewModelBase {
                     commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
                 }
 
-                jQuery.when(commands).then(() => {
+                jQuery.when(commands).done(() => {
                     this.initializeDirtyFlag();
                     this.editedIndex().name.valueHasMutated();
+                    var isSavingMergedIndex = this.mergeSuggestion() != null;
 
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
                     }
-                    this.updateUrl(index.Name);
+                    if (isSavingMergedIndex) {
+                        this.deleteMergedIndexes(this.mergeSuggestion().canMerge);
+                        this.mergeSuggestion(null);
+                    }
+
+                    this.updateUrl(index.Name, isSavingMergedIndex);
                 });
             }); 
         }
     }
 
-    updateUrl(indexName: string) {
-        if (indexName != null && this.loadedIndexName() !== indexName) {
-            router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
+    private deleteMergedIndexes(indexesToDelete: string[]) {
+        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+            var db = this.activeDatabase();
+            var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
+            dialog.show(deleteViewModel);
+        });
+    }
+
+    updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
+        var url = appUrl.forEditIndex(indexName, this.activeDatabase());
+        if (this.loadedIndexName() !== indexName) {
+            super.navigate(url);
+        }
+        else if (isSavingMergedIndex) {
+            super.updateUrl(url);
         }
     }
 
@@ -431,12 +457,9 @@ class editIndex extends viewModelBase {
     }
 
     checkIfScriptedIndexBundleIsActive() {
-        new getDatabaseSettingsCommand(this.activeDatabase())
-            .execute()
-            .done(document => {
-                var documentSettings = document.Settings["Raven/ActiveBundles"];
-                this.isScriptedIndexBundleActive(documentSettings.indexOf("ScriptedIndex") !== -1);
-            });
+        var db = this.activeDatabase();
+        var activeBundles = db.activeBundles();
+        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
     }
 
     fetchOrCreateScriptedIndex() {
@@ -485,4 +508,4 @@ class editIndex extends viewModelBase {
     }
 }
 
-export = editIndex; 
+export = editIndex;

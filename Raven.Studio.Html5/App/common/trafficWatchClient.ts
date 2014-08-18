@@ -10,6 +10,7 @@ import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import shell = require("viewmodels/shell");
 import changesApi = require("common/changesApi");
+import idGenerator = require("common/idGenerator");
 
 class trafficWatchClient {
     
@@ -32,10 +33,8 @@ class trafficWatchClient {
     constructor(private resourcePath: string, private token:string) {
         this.connectionOpeningTask = $.Deferred();
         this.connectionClosingTask = $.Deferred();
-        this.eventsId = this.makeId();
+        this.eventsId = idGenerator.generateId();
     }
-
-
 
     public connect() {
         var connectionString = 'singleUseAuthToken=' + this.token + '&id=' + this.eventsId;
@@ -143,17 +142,6 @@ class trafficWatchClient {
             }
         });
     }
-
-    private makeId() {
-        var text = "";
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (var i = 0; i < 5; i++)
-            text += chars.charAt(Math.floor(Math.random() * chars.length));
-
-        return text;
-    }
-
 }
 
 export = trafficWatchClient;

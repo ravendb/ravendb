@@ -485,10 +485,13 @@ class shell extends viewModelBase {
             });
     }
 
-    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>) {
+    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResource: resource = null) {
         var arrayLength = resourceObservableArray().length;
 
-        if (arrayLength > 0) {
+        if (activeResource != null && activeResource.name != '<system>') {
+            activeResource.activate();
+        }
+        else if (arrayLength > 0) {
             var newResource;
 
             if (resource != null && (newResource = resourceObservableArray.first(rs => rs.name == resource.name)) != null) {
@@ -503,13 +506,13 @@ class shell extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
 
         if (resourceHash == appUrl.forDatabases()) {
-            this.activateResource(appUrl.getDatabase(), shell.databases);
+            this.activateResource(appUrl.getDatabase(), shell.databases, this.activeDatabase());
         }
         else if (resourceHash == appUrl.forFilesystems()) {
-            this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
+            this.activateResource(appUrl.getFileSystem(), shell.fileSystems, this.activeFilesystem());
         }
-        else {
-            this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
+        else if (resourceHash == appUrl.forCounterStorages()) {
+            this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, this.activeCounterStorage());
         }
 
         this.navigate(resourceHash);

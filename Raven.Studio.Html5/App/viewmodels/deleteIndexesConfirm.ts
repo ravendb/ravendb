@@ -3,20 +3,21 @@ import deleteIndexCommand = require("commands/deleteIndexCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import messagePublisher = require("common/messagePublisher");
 
 class deleteIndexesConfirm extends dialogViewModelBase {
 
     deleteTask = $.Deferred();
     title: string;
 
-    constructor(private indexNames: string[], private db: database) {
+    constructor(private indexNames: string[], private db: database, title?) {
         super();
 
         if (!indexNames || indexNames.length === 0) {
             throw new Error("Indexes must not be null or empty.");
         }
 
-        this.title = indexNames.length === 1 ? 'Delete index?' : 'Delete indexes?';
+        this.title = !!title ? title : indexNames.length == 1 ? 'Delete index?' : 'Delete indexes?';
     }
 
     deleteIndexes() {
@@ -25,6 +26,9 @@ class deleteIndexesConfirm extends dialogViewModelBase {
 
         $.when.apply($, deleteTasks)
             .done(() => {
+                if (this.indexNames.length > 1) {
+                    messagePublisher.reportSuccess("Successfully deleted " + this.indexNames.length + " indexes!");
+                }
                 myDeleteTask.resolve({ closedWithoutDeletion: false });
             })
             .fail(()=> {
