@@ -4,20 +4,18 @@
         <h3 class="panel-title">Csv Import</h3>
     </div>
     <div class="panel-body">
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-info-sign"></div>
-                Import a csv file into a collection. Each column will be treated as a property.
-            </div>
-        </div>
+        <p>
+            <i class="fa fa-info-circle text-info"></i>
+            Import a csv file into a collection. Each column will be treated as a property.
+        </p>
         <div id="addfileContainer">
             <input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />
             <br />
             <div class="btn-toolbar" data-bind="visible: hasFileSelected">
                 <div class="btn-group">
                     <button class="btn btn-primary" data-bind="click: importCsv">
-                        <div class="glyphicon glyphicon-floppy-save"></div>
-                        Csv Import
+                        <i class="fa fa-save"></i>
+                        CSV Import
                     </button>
                 </div>
             </div>

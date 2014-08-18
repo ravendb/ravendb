@@ -283,7 +283,9 @@
 
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
-                <li data-bind="with: localLicenseStatus"><a class="navbar-link" href="#" data-bind="style:{ color:Error===true?'red':'green'},text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a></li>
+                <li class="licensing-status" data-bind="with: localLicenseStatus">
+                    <a class="navbar-link" href="#" data-bind="css: { 'license-error': Error }, text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a>
+                </li>
                 <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
                 <!-- /ko -->

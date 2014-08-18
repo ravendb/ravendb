@@ -26,8 +26,8 @@ namespace Voron.Impl
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>();
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>();
         private long _lastUsedPage;
-	    private readonly long _sizeLimit;
-		
+        private readonly long _sizeLimit;
+
         private class PendingPage
         {
             public long Page;
@@ -38,53 +38,53 @@ namespace Voron.Impl
         {
             _scratchPager = env.Options.CreateScratchPager("scratch.buffers");
             _scratchPager.AllocateMorePages(null, env.Options.InitialFileSize.HasValue ? Math.Max(env.Options.InitialFileSize.Value, env.Options.InitialLogFileSize) : env.Options.InitialLogFileSize);
-	        _sizeLimit = env.Options.MaxScratchBufferSize;
+            _sizeLimit = env.Options.MaxScratchBufferSize;
         }
 
         public PagerState PagerState { get { return _scratchPager.PagerState; } }
 
         public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages)
         {
-	        if (tx == null) throw new ArgumentNullException("tx");
-	        var size = Utils.NearestPowerOfTwo(numberOfPages);
+            if (tx == null) throw new ArgumentNullException("tx");
+            var size = Utils.NearestPowerOfTwo(numberOfPages);
 
             PageFromScratchBuffer result;
             if (TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
 
-	        if ((_lastUsedPage + size)*AbstractPager.PageSize > _sizeLimit)
-	        {
-		        var sp = Stopwatch.StartNew();
-		        // Our problem is that we don't have any available free pages, probably because
-		        // there are read transactions that are holding things open. We are going to see if
-		        // there are any free pages that _might_ be freed for us if we wait for a bit. The idea
-		        // is that we let the read transactions time to complete and do their work, at which point
-		        // we can continue running. 
-		        // We start this by forcing a flush, then we are waiting up to the timeout for we are waiting
-		        // for the read tranasactions to complete. It is possible that a long running read transaction
-		        // would in fact generate enough work for us to timeout, but hopefully we can avoid that.
+            if ((_lastUsedPage + size) * AbstractPager.PageSize > _sizeLimit)
+            {
+                var sp = Stopwatch.StartNew();
+                // Our problem is that we don't have any available free pages, probably because
+                // there are read transactions that are holding things open. We are going to see if
+                // there are any free pages that _might_ be freed for us if we wait for a bit. The idea
+                // is that we let the read transactions time to complete and do their work, at which point
+                // we can continue running. 
+                // We start this by forcing a flush, then we are waiting up to the timeout for we are waiting
+                // for the read tranasactions to complete. It is possible that a long running read transaction
+                // would in fact generate enough work for us to timeout, but hopefully we can avoid that.
 
-		        tx.Environment.ForceLogFlushToDataFile(tx);
-		        while (sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
-		        {
-			        if (TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
-				        return result;
-			        Thread.Sleep(32);
-		        }
-		        string message = string.Format("Cannot allocate more space for the scratch buffer.\r\n" +
-		                                       "Current size is:\t{0:#,#;;0} kb.\r\n" +
-		                                       "Limit:\t\t\t{1:#,#;;0} kb.\r\n" +
-		                                       "Requested Size:\t{2:#,#;;0} kb.\r\n" +
-		                                       "Already flushed and waited for {3:#,#;;0} ms for read transactions to complete.\r\n" +
-		                                       "Do you have a long running read transaction executing?",
-			        (_scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize)/1024,
-			        _sizeLimit/1024,
-			        ((_lastUsedPage + size)*AbstractPager.PageSize)/1024,
-			        sp.ElapsedMilliseconds);
-		        throw new ScratchBufferSizeLimitException(message);
-	        }
+                tx.Environment.ForceLogFlushToDataFile(tx);
+                while (sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
+                {
+                    if (TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
+                        return result;
+                    Thread.Sleep(32);
+                }
+                string message = string.Format("Cannot allocate more space for the scratch buffer.\r\n" +
+                                               "Current size is:\t{0:#,#;;0} kb.\r\n" +
+                                               "Limit:\t\t\t{1:#,#;;0} kb.\r\n" +
+                                               "Requested Size:\t{2:#,#;;0} kb.\r\n" +
+                                               "Already flushed and waited for {3:#,#;;0} ms for read transactions to complete.\r\n" +
+                                               "Do you have a long running read transaction executing?",
+                    (_scratchPager.NumberOfAllocatedPages * AbstractPager.PageSize) / 1024,
+                    _sizeLimit / 1024,
+                    ((_lastUsedPage + size) * AbstractPager.PageSize) / 1024,
+                    sp.ElapsedMilliseconds);
+                throw new ScratchBufferSizeLimitException(message);
+            }
 
-	        // we don't have free pages to give out, need to allocate some
+            // we don't have free pages to give out, need to allocate some
             _scratchPager.EnsureContinuous(tx, _lastUsedPage, (int)size);
 
             result = new PageFromScratchBuffer
@@ -118,21 +118,21 @@ namespace Voron.Impl
                 NumberOfPages = numberOfPages
             };
 
-			_allocatedPages.Add(val.Page, pageFromScratchBuffer);
+            _allocatedPages.Add(val.Page, pageFromScratchBuffer);
             {
                 result = pageFromScratchBuffer;
-				return true;
+                return true;
             }
         }
 
         public void Free(long page, long asOfTxId)
         {
             PageFromScratchBuffer value;
-			if (_allocatedPages.TryGetValue(page, out value) == false)
-	        {
-		        throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
-	        }
-	        _allocatedPages.Remove(page);
+            if (_allocatedPages.TryGetValue(page, out value) == false)
+            {
+                throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+            }
+            _allocatedPages.Remove(page);
             LinkedList<PendingPage> list;
             if (_freePagesBySize.TryGetValue(value.Size, out list) == false)
             {
@@ -168,7 +168,7 @@ namespace Voron.Impl
         public long Size;
         public int NumberOfPages;
 
-	    public override bool Equals(object obj)
+        public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -190,9 +190,9 @@ namespace Voron.Impl
             }
         }
 
-	    public override string ToString()
-	    {
-		    return string.Format("PositionInScratchBuffer: {0}, Size: {1}, NumberOfPages: {2}", PositionInScratchBuffer, Size, NumberOfPages);
-	    }
+        public override string ToString()
+        {
+            return string.Format("PositionInScratchBuffer: {0}, Size: {1}, NumberOfPages: {2}", PositionInScratchBuffer, Size, NumberOfPages);
+        }
     }
 }

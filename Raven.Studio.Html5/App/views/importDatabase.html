@@ -33,20 +33,20 @@
         </ul>
         <br />
         <div class="btn-group-vertical" data-bind="visible: !showAdvancedOptions()">
-            <label class="btn btn-primary" data-bind="click: includeDocuments.toggle.bind(includeDocuments), css: { active: includeDocuments }">
-                Include documents
+            <label class="btn btn-default" style="" data-bind="click: includeDocuments.toggle.bind(includeDocuments), css: { active: includeDocuments }">
+                <i data-bind="css: {'fa-check': includeDocuments }" class="fa fa-fw"></i> Include documents
             </label>
-            <label class="btn btn-primary" data-bind="click: includeIndexes.toggle.bind(includeIndexes), css: { active: includeIndexes }">
-                Include indexes
+            <label class="btn btn-default" style=""  data-bind="click: includeIndexes.toggle.bind(includeIndexes), css: { active: includeIndexes }">
+                <i data-bind="css: {'fa-check': includeIndexes }" class="fa fa-fw"></i> Include indexes
             </label>
-            <label class="btn btn-primary" data-bind="click: includeAttachments.toggle.bind(includeAttachments), css: { active: includeAttachments }">
-                Include attachments
+            <label class="btn btn-default text-left" style="" data-bind="click: includeAttachments.toggle.bind(includeAttachments), css: { active: includeAttachments }">
+                <i data-bind="css: {'fa-check': includeAttachments }" class="fa fa-fw"></i> Include attachments
             </label>
-            <label class="btn btn-primary" data-bind="click: includeTransformers.toggle.bind(includeTransformers), css: { active: includeTransformers }">
-                Include transformers
+            <label class="btn btn-default text-left" style="" data-bind="click: includeTransformers.toggle.bind(includeTransformers), css: { active: includeTransformers }">
+                <i data-bind="css: {'fa-check': includeTransformers }" class="fa fa-fw"></i> Include transformers
             </label>
-            <label class="btn btn-primary" data-bind="click: removeAnalyzers.toggle.bind(removeAnalyzers), css: { active: removeAnalyzers }">
-                Remove analyzers
+            <label class="btn btn-default text-left" style="" data-bind="click: removeAnalyzers.toggle.bind(removeAnalyzers), css: { active: removeAnalyzers }">
+                <i data-bind="css: {'fa-check': removeAnalyzers }" class="fa fa-fw"></i> Remove analyzers
             </label>
         </div>
         <div data-bind="visible: showAdvancedOptions">
@@ -61,12 +61,15 @@
                     <label class="col-sm-2 control-label">Expired documents</label>
                     <div class="col-sm-10">
                         <div class="btn-group">
-                            <label class="btn btn-primary" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true), css: { active: includeExpiredDocuments }">
-                                Include
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false), css: { active: !includeExpiredDocuments() }">
-                                Exclude
-                            </label>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: includeExpiredDocuments">Include</span>
+                                <span data-bind="visible: !includeExpiredDocuments()">Exclude</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true)">Include</a></li>
+                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false)">Exclude</a></li>
+                            </ul>
                         </div>
                     </div>
                 </div>

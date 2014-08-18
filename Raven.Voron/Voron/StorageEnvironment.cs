@@ -30,7 +30,7 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
-		private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
 
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
@@ -41,11 +41,11 @@ namespace Voron
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
-	    private DebugJournal _debugJournal;
-	    private EndOfDiskSpaceEvent _endOfDiskSpace;
-	    private int _sizeOfUnflushedTransactionsInJournalFile;
+        private DebugJournal _debugJournal;
+        private EndOfDiskSpaceEvent _endOfDiskSpace;
+        private int _sizeOfUnflushedTransactionsInJournalFile;
 
-		private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>(); 
+        private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
 
         public TransactionMergingWriter Writer { get; private set; }
 
@@ -57,15 +57,15 @@ namespace Voron
         }
 
 #if DEBUG
-	    public StorageEnvironment(StorageEnvironmentOptions options,string debugJournalName)
-			: this(options)
-	    {
-			DebugJournal = new DebugJournal(debugJournalName,this);
-			
-			if(Writer != null)
-				Writer.Dispose();
+        public StorageEnvironment(StorageEnvironmentOptions options, string debugJournalName)
+            : this(options)
+        {
+            DebugJournal = new DebugJournal(debugJournalName, this);
+
+            if (Writer != null)
+                Writer.Dispose();
             Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token, DebugJournal);
-	    }
+        }
 #endif
 
         public StorageEnvironment(StorageEnvironmentOptions options)
@@ -80,9 +80,9 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
-				_journal = new WriteAheadJournal(this);
-				
-				if (isNew)
+                _journal = new WriteAheadJournal(this);
+
+                if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
@@ -101,7 +101,7 @@ namespace Voron
                 Dispose();
                 throw;
             }
-		}
+        }
 
         public ScratchBufferPool ScratchBufferPool
         {
@@ -137,8 +137,8 @@ namespace Voron
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
 
-			}
-		}
+            }
+        }
 
         private void CreateNewDatabase()
         {
@@ -154,9 +154,9 @@ namespace Voron
 
                 tx.Commit();
 
-				//since this transaction is never shipped, this is the first previous transaction
-				//when applying shipped logs
-			}
+                //since this transaction is never shipped, this is the first previous transaction
+                //when applying shipped logs
+            }
         }
 
         public IFreeSpaceHandling FreeSpaceHandling
@@ -192,52 +192,52 @@ namespace Voron
             get { return _journal; }
         }
 
-	    public bool IsDebugRecording
-	    {
-		    get
-		    {
-			    if (DebugJournal == null)
-				    return false;
-			    return DebugJournal.IsRecording;
-		    }
-		    set
-		    {
-			    if (DebugJournal != null)
-				    DebugJournal.IsRecording = value;
-		    }
-	    }
+        public bool IsDebugRecording
+        {
+            get
+            {
+                if (DebugJournal == null)
+                    return false;
+                return DebugJournal.IsRecording;
+            }
+            set
+            {
+                if (DebugJournal != null)
+                    DebugJournal.IsRecording = value;
+            }
+        }
 
-	    public DebugJournal DebugJournal
-	    {
-		    get { return _debugJournal; }
-		    set
-		    {
-			    _debugJournal = value;
+        public DebugJournal DebugJournal
+        {
+            get { return _debugJournal; }
+            set
+            {
+                _debugJournal = value;
 
-			    if (Writer != null && value != null)
-			    {
-				    Writer.Dispose();
+                if (Writer != null && value != null)
+                {
+                    Writer.Dispose();
                     Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token, _debugJournal);
-			    }
+                }
 
-		    }
-	    }
+            }
+        }
 
-	    public void DeleteTree(Transaction tx, string name)
+        public void DeleteTree(Transaction tx, string name)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
-	        Tree tree = tx.ReadTree(name);
-	        if (tree == null)
-	            return;
+            Tree tree = tx.ReadTree(name);
+            if (tree == null)
+                return;
 
             foreach (var page in tree.AllPages())
             {
                 tx.FreePage(page);
             }
 
-            tx.State.Root.Delete((Slice) name);
+            tx.State.Root.Delete((Slice)name);
 
             tx.RemoveTree(name);
         }
@@ -271,24 +271,24 @@ namespace Voron
             tree.State.IsModified = true;
             tx.AddTree(name, tree);
 
-			if(IsDebugRecording)
-				DebugJournal.RecordWriteAction(DebugActionType.CreateTree, tx, Slice.Empty,name,Stream.Null);
+            if (IsDebugRecording)
+                DebugJournal.RecordWriteAction(DebugActionType.CreateTree, tx, Slice.Empty, name, Stream.Null);
 
             return tree;
         }
 
         public void Dispose()
         {
-			if(DebugJournal != null)
-				DebugJournal.Dispose();
+            if (DebugJournal != null)
+                DebugJournal.Dispose();
 
             _cancellationTokenSource.Cancel();
             _flushWriter.Set();
 
             try
             {
-	            var flushingTaskCopy = _flushingTask;
-	            if (flushingTaskCopy != null)
+                var flushingTaskCopy = _flushingTask;
+                if (flushingTaskCopy != null)
                 {
                     switch (flushingTaskCopy.Status)
                     {
@@ -340,61 +340,61 @@ namespace Voron
         public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
-	        try
-	        {
-		        if (flags == (TransactionFlags.ReadWrite))
-		        {
-			        var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-			        if (_txWriter.Wait(wait) == false)
-			        {
-				        throw new TimeoutException("Waited for " + wait +
-				                                   " for transaction write lock, but could not get it");
-			        }
-			        txLockTaken = true;
+            try
+            {
+                if (flags == (TransactionFlags.ReadWrite))
+                {
+                    var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
+                    if (_txWriter.Wait(wait) == false)
+                    {
+                        throw new TimeoutException("Waited for " + wait +
+                                                   " for transaction write lock, but could not get it");
+                    }
+                    txLockTaken = true;
 
-			        if (_endOfDiskSpace != null)
-			        {
-				        if (_endOfDiskSpace.CanContinueWriting)
-				        {
-					        var flushingTask = _flushingTask;
-					        Debug.Assert(flushingTask != null && (flushingTask.Status == TaskStatus.Canceled || flushingTask.Status == TaskStatus.RanToCompletion));
-					        _cancellationTokenSource = new CancellationTokenSource();
-					        _flushingTask = FlushWritesToDataFileAsync();
-					        _endOfDiskSpace = null;
-				        }
-			        }
-		        }
+                    if (_endOfDiskSpace != null)
+                    {
+                        if (_endOfDiskSpace.CanContinueWriting)
+                        {
+                            var flushingTask = _flushingTask;
+                            Debug.Assert(flushingTask != null && (flushingTask.Status == TaskStatus.Canceled || flushingTask.Status == TaskStatus.RanToCompletion));
+                            _cancellationTokenSource = new CancellationTokenSource();
+                            _flushingTask = FlushWritesToDataFileAsync();
+                            _endOfDiskSpace = null;
+                        }
+                    }
+                }
 
-		        Transaction tx;
+                Transaction tx;
 
-		        _txCommit.EnterReadLock();
-		        try
-		        {
-			        long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-			        tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+                _txCommit.EnterReadLock();
+                try
+                {
+                    long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+                    tx = new Transaction(this, txId, flags, _freeSpaceHandling);
 
-			        if (IsDebugRecording)
-			        {
-				        RecordTransactionState(tx, DebugActionType.TransactionStart);
-				        tx.RecordTransactionState = RecordTransactionState;
-			        }
-		        }
-		        finally
-		        {
-			        _txCommit.ExitReadLock();
-		        }
+                    if (IsDebugRecording)
+                    {
+                        RecordTransactionState(tx, DebugActionType.TransactionStart);
+                        tx.RecordTransactionState = RecordTransactionState;
+                    }
+                }
+                finally
+                {
+                    _txCommit.ExitReadLock();
+                }
 
-		        _activeTransactions.Add(tx);
-		        var state = _dataPager.TransactionBegan();
-		        tx.AddPagerState(state);
+                _activeTransactions.Add(tx);
+                var state = _dataPager.TransactionBegan();
+                tx.AddPagerState(state);
 
-		        if (flags == TransactionFlags.ReadWrite)
-		        {
-			        tx.AfterCommit = TransactionAfterCommit;
-		        }
+                if (flags == TransactionFlags.ReadWrite)
+                {
+                    tx.AfterCommit = TransactionAfterCommit;
+                }
 
-		        return tx;
-	        }
+                return tx;
+            }
             catch (Exception)
             {
                 if (txLockTaken)
@@ -409,15 +409,15 @@ namespace Voron
         }
 
         public long NextWriteTransactionId
-	    {
-		    get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
-	    }
+        {
+            get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
+        }
 
         private void TransactionAfterCommit(Transaction tx)
         {
             if (_activeTransactions.Contains(tx) == false)
-		        return;
-	        
+                return;
+
             _txCommit.EnterWriteLock();
             try
             {
@@ -435,7 +435,7 @@ namespace Voron
                 return;
 
             Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
-			_flushWriter.Set();
+            _flushWriter.Set();
         }
 
         internal void TransactionCompleted(Transaction tx)
@@ -445,7 +445,7 @@ namespace Voron
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
-            
+
             _txWriter.Release();
         }
 
@@ -466,154 +466,154 @@ namespace Voron
             return results;
         }
 
-		public EnvironmentStats Stats()
-		{
-			var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+        public EnvironmentStats Stats()
+        {
+            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
-			return new EnvironmentStats
-			{
-				FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
-				RootPages = State.Root.State.PageCount,
-				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
-				UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
-				AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
-				NextWriteTransactionId = _transactionsCounter + 1,
-				ActiveTransactions = _activeTransactions.Select(x => new ActiveTransaction()
-				{
-					Id = x.Id,
-					Flags = x.Flags
-				}).ToList()
-			};
-		}
+            return new EnvironmentStats
+            {
+                FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
+                RootPages = State.Root.State.PageCount,
+                UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
+                UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
+                AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
+                NextWriteTransactionId = _transactionsCounter + 1,
+                ActiveTransactions = _activeTransactions.Select(x => new ActiveTransaction()
+                {
+                    Id = x.Id,
+                    Flags = x.Flags
+                }).ToList()
+            };
+        }
 
         private Task FlushWritesToDataFileAsync()
         {
-	        return Task.Factory.StartNew(() =>
-		        {
-			        while (_cancellationTokenSource.IsCancellationRequested == false)
-			        {
-				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return Task.Factory.StartNew(() =>
+            {
+                while (_cancellationTokenSource.IsCancellationRequested == false)
+                {
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-				        var hasWrites = _flushWriter.Wait(_options.IdleFlushTimeout);
+                    var hasWrites = _flushWriter.Wait(_options.IdleFlushTimeout);
 
-				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-				        if (hasWrites)
-					        _flushWriter.Reset();
+                    if (hasWrites)
+                        _flushWriter.Reset();
 
-				        var sizeOfUnflushedTransactionsInJournalFile =
-					        Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
-				        if (sizeOfUnflushedTransactionsInJournalFile == 0)
-					        continue;
+                    var sizeOfUnflushedTransactionsInJournalFile =
+                        Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
+                    if (sizeOfUnflushedTransactionsInJournalFile == 0)
+                        continue;
 
-				        if (hasWrites == false ||
-				            sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
-				        {
-					        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
+                    if (hasWrites == false ||
+                        sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
+                    {
+                        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
 
-					        // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
-					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
-					        // while there isn't any other activity going on.
+                        // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
+                        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
+                        // while there isn't any other activity going on.
 
-				            try
-				            {
-                                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
-				            }
-				            catch (TimeoutException)
-				            {
-                                // we can ignore this, we'll try next time
-				            }
-				        }
-			        }
-		        }, TaskCreationOptions.LongRunning);
+                        try
+                        {
+                            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
+                        }
+                        catch (TimeoutException)
+                        {
+                            // we can ignore this, we'll try next time
+                        }
+                    }
+                }
+            }, TaskCreationOptions.LongRunning);
         }
 
         public void FlushLogToDataFile(Transaction tx = null)
         {
-	        if (_options.ManualFlushing == false)
-				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
+            if (_options.ManualFlushing == false)
+                throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-	        ForceLogFlushToDataFile(tx);
+            ForceLogFlushToDataFile(tx);
         }
 
-	    internal void ForceLogFlushToDataFile(Transaction tx)
-	    {
-		    if (IsDebugRecording)
-		    {
-			    _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
-		    }
-
-		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
-
-		    if (IsDebugRecording)
-		    {
-			    _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, tx);
-		    }
-	    }
-
-	    public void AssertFlushingNotFailed()
+        internal void ForceLogFlushToDataFile(Transaction tx)
         {
-	        var flushingTaskCopy = _flushingTask;
-	        if (flushingTaskCopy == null || flushingTaskCopy.IsFaulted == false)
+            if (IsDebugRecording)
+            {
+                _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
+            }
+
+            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
+
+            if (IsDebugRecording)
+            {
+                _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, tx);
+            }
+        }
+
+        public void AssertFlushingNotFailed()
+        {
+            var flushingTaskCopy = _flushingTask;
+            if (flushingTaskCopy == null || flushingTaskCopy.IsFaulted == false)
                 return;
 
             flushingTaskCopy.Wait();// force re-throw of error
         }
 
-	    public void HandleDataDiskFullException(DiskFullException exception)
-	    {
-			if(_options.ManualFlushing)
-				return;
+        public void HandleDataDiskFullException(DiskFullException exception)
+        {
+            if (_options.ManualFlushing)
+                return;
 
-		    _cancellationTokenSource.Cancel();
-			_endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
-	    }
+            _cancellationTokenSource.Cancel();
+            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
+        }
 
-	    public IDisposable GetTemporaryPage(Transaction tx, out TemporaryPage tmp)
-	    {
-		    if (tx.Flags != TransactionFlags.ReadWrite)
-			    throw new ArgumentException("Temporary pages are only available for write transactions");
-		    if (_tempPagesPool.Count > 0)
-		    {
-			    tmp = _tempPagesPool.Dequeue();
-			    return tmp.ReturnTemporaryPageToPool;
-		    }
+        public IDisposable GetTemporaryPage(Transaction tx, out TemporaryPage tmp)
+        {
+            if (tx.Flags != TransactionFlags.ReadWrite)
+                throw new ArgumentException("Temporary pages are only available for write transactions");
+            if (_tempPagesPool.Count > 0)
+            {
+                tmp = _tempPagesPool.Dequeue();
+                return tmp.ReturnTemporaryPageToPool;
+            }
 
-			tmp = new TemporaryPage();
-		    try
-		    {
-			    return tmp.ReturnTemporaryPageToPool = new ReturnTemporaryPageToPool(this, tmp);
-		    }
-		    catch (Exception)
-		    {
-			    tmp.Dispose();
-			    throw;
-		    }
-	    }
+            tmp = new TemporaryPage();
+            try
+            {
+                return tmp.ReturnTemporaryPageToPool = new ReturnTemporaryPageToPool(this, tmp);
+            }
+            catch (Exception)
+            {
+                tmp.Dispose();
+                throw;
+            }
+        }
 
-	    private class ReturnTemporaryPageToPool : IDisposable
-	    {
-		    private readonly TemporaryPage _tmp;
-		    private readonly StorageEnvironment _env;
+        private class ReturnTemporaryPageToPool : IDisposable
+        {
+            private readonly TemporaryPage _tmp;
+            private readonly StorageEnvironment _env;
 
-		    public ReturnTemporaryPageToPool(StorageEnvironment env, TemporaryPage tmp)
-		    {
-			    _tmp = tmp;
-			    _env = env;
-		    }
+            public ReturnTemporaryPageToPool(StorageEnvironment env, TemporaryPage tmp)
+            {
+                _tmp = tmp;
+                _env = env;
+            }
 
-		    public void Dispose()
-		    {
-			    try
-			    {
-				    _env._tempPagesPool.Enqueue(_tmp);
-			    }
-			    catch (Exception)
-			    {
-					_tmp.Dispose();
-				    throw;
-			    }
-		    }
-	    }
+            public void Dispose()
+            {
+                try
+                {
+                    _env._tempPagesPool.Enqueue(_tmp);
+                }
+                catch (Exception)
+                {
+                    _tmp.Dispose();
+                    throw;
+                }
+            }
+        }
     }
 }
