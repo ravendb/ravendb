@@ -31,6 +31,9 @@ namespace Raven.Smuggler
 				SmugglerApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.From, exportStore);
 				SmugglerApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.To, importStore);
 
+				var exportBatchSize = GetBatchSize(exportStore, options);
+				var importBatchSize = GetBatchSize(importStore, options);
+
 				var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
 				var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
 
@@ -59,19 +62,19 @@ namespace Raven.Smuggler
 
 				if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
 				{
-					await ExportIndexes(exportStore, importStore, options.BatchSize);
+					await ExportIndexes(exportStore, importStore, exportBatchSize);
 				}
 				if (options.OperateOnTypes.HasFlag(ItemType.Transformers) && exportStoreSupportedFeatures.IsTransformersSupported && importStoreSupportedFeatures.IsTransformersSupported)
 				{
-					await ExportTransformers(exportStore, importStore, options.BatchSize);
+					await ExportTransformers(exportStore, importStore, exportBatchSize);
 				}
 				if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 				{
-					incremental.LastDocsEtag = await ExportDocuments(exportStore, importStore, options, exportStoreSupportedFeatures);
+					incremental.LastDocsEtag = await ExportDocuments(exportStore, importStore, options, exportStoreSupportedFeatures, exportBatchSize, importBatchSize);
 				}
 				if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
 				{
-					incremental.LastAttachmentsEtag = await ExportAttachments(exportStore, importStore, options);
+					incremental.LastAttachmentsEtag = await ExportAttachments(exportStore, importStore, options, exportBatchSize);
 				}
 
 				if (options.Incremental)
@@ -88,6 +91,22 @@ namespace Raven.Smuggler
 			}
 		}
 
+		private static int GetBatchSize(DocumentStore store, SmugglerOptions options)
+		{
+			if (store.HasJsonRequestFactory == false)
+				return options.BatchSize;
+
+			var url = store.Url.ForDatabase(store.DefaultDatabase) + "/debug/config";
+			var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+			var configuration = (RavenJObject)request.ReadResponseJson();
+
+			var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+			if (maxNumberOfItemsToProcessInSingleBatch <= 0)
+				return options.BatchSize;
+
+			return Math.Min(options.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
+		}
+
 		private static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)
 		{
 			if (string.IsNullOrWhiteSpace(connection.DefaultDatabase) == false)
@@ -100,12 +119,12 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private static async Task ExportIndexes(DocumentStore exportStore, DocumentStore importStore, int batchSize)
+		private static async Task ExportIndexes(DocumentStore exportStore, DocumentStore importStore, int exportBatchSize)
 		{
 			var totalCount = 0;
 			while (true)
 			{
-				var indexes = await exportStore.AsyncDatabaseCommands.GetIndexesAsync(totalCount, batchSize);
+				var indexes = await exportStore.AsyncDatabaseCommands.GetIndexesAsync(totalCount, exportBatchSize);
 				if (indexes.Length == 0)
 				{
 					ShowProgress("Done with reading indexes, total: {0}", totalCount);
@@ -121,7 +140,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, ServerSupportedFeatures exportStoreSupportedFeatures)
+		private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, ServerSupportedFeatures exportStoreSupportedFeatures, int exportBatchSize, int importBatchSize)
 		{
 			var now = SystemTime.UtcNow;
 
@@ -133,7 +152,7 @@ namespace Raven.Smuggler
 
 			var bulkInsertOperation = importStore.BulkInsert(null, new BulkInsertOptions
 			                                                       {
-				                                                       BatchSize = options.BatchSize,
+																	   BatchSize = importBatchSize,
 				                                                       OverwriteExisting = true,
 			                                                       });
 			bulkInsertOperation.Report += text => ShowProgress(text);
@@ -189,7 +208,7 @@ namespace Raven.Smuggler
 								try
 								{
 									ShowProgress("Get documents from " + lastEtag);
-									var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, options.BatchSize, operationMetadata);
+									var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, exportBatchSize, operationMetadata);
 									foreach (RavenJObject document in documents)
 									{
 										var metadata = document.Value<RavenJObject>("@metadata");
@@ -238,7 +257,7 @@ namespace Raven.Smuggler
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 					{
-						lastEtag = EtagUtil.Increment(lastEtag, options.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, exportBatchSize);
 						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -253,20 +272,20 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options)
+		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, int exportBatchSize)
 		{
 			Etag lastEtag = options.StartAttachmentsEtag;
 			int totalCount = 0;
 			while (true)
 			{
-				var attachments = await exportStore.AsyncDatabaseCommands.GetAttachmentsAsync(0, lastEtag, options.BatchSize);
+				var attachments = await exportStore.AsyncDatabaseCommands.GetAttachmentsAsync(0, lastEtag, exportBatchSize);
 				if (attachments.Length == 0)
 				{
 					var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = EtagUtil.Increment(lastEtag, options.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, exportBatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -288,12 +307,12 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private static async Task ExportTransformers(DocumentStore exportStore, DocumentStore importStore, int batchSize)
+		private static async Task ExportTransformers(DocumentStore exportStore, DocumentStore importStore, int exportBatchSize)
 		{
 			var totalCount = 0;
 			while (true)
 			{
-				var transformers = await exportStore.AsyncDatabaseCommands.GetTransformersAsync(totalCount, batchSize);
+				var transformers = await exportStore.AsyncDatabaseCommands.GetTransformersAsync(totalCount, exportBatchSize);
 				if (transformers.Length == 0)
 				{
 					ShowProgress("Done with reading transformers, total: {0}", totalCount);

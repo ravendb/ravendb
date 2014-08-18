@@ -61,5 +61,7 @@ namespace Raven.Abstractions.Smuggler
 		Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
 
 		void Initialize(SmugglerOptions options);
+
+		void Configure(SmugglerOptions options);
 	}
 }
