@@ -26,9 +26,9 @@
             <button type="button" class="btn btn-danger" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>
-    
+
     <div class="text-center" data-bind="visible: transformersGroups().length == 0">
-        <h3>No transformers have been created for this database. <small>Go ahead and <a href="#" data-bind="attr: { href: newTransformerUrl }">create a transformer</a>.</small></h3>
+        <h3 class="page-header text-info">No transformers have been created for this database. <small>Go ahead and <a href="#" data-bind="attr: { href: newTransformerUrl }">create a transformer</a>.</small></h3>
     </div>
 
     <br />

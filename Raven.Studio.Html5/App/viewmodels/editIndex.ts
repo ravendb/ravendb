@@ -18,11 +18,12 @@ import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand")
 import scriptedIndexModel = require("models/scriptedIndex");
 import autoCompleterSupport = require("common/autoCompleterSupport");
 import mergedIndexesStorage = require("common/mergedIndexesStorage");
+import indexMergeSuggestion = require("models/indexMergeSuggestion");
 
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable<boolean>(false);
-    isMergedIndex = ko.observable<boolean>(false);
+    mergeSuggestion: indexMergeSuggestion = null;
     priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
@@ -87,11 +88,10 @@ class editIndex extends viewModelBase {
         super.canActivate(indexToEditName);
         
         var db = this.activeDatabase();
-        var mergedIndex = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
-        if (mergedIndex != null) {
-            this.isMergedIndex(true);
-            this.editedIndex(mergedIndex);
-            mergedIndexesStorage.removeMergedIndex(indexToEditName);
+        var mergeSuggestion: indexMergeSuggestion = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
+        if (mergeSuggestion != null) {
+            this.mergeSuggestion = mergeSuggestion;
+            this.editedIndex(mergeSuggestion.mergedIndexDefinition);
         }
         else if (indexToEditName) {
             this.isEditingExistingIndex(true);
@@ -118,7 +118,7 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
         }
 
-        if (this.isMergedIndex()) {
+        if (this.mergeSuggestion != null) {
             this.loadedIndexName("Merged Index");
         }
 
@@ -256,7 +256,7 @@ class editIndex extends viewModelBase {
                     commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
                 }
 
-                jQuery.when(commands).then(() => {
+                jQuery.when(commands).done(() => {
                     this.initializeDirtyFlag();
                     this.editedIndex().name.valueHasMutated();
 
@@ -264,10 +264,22 @@ class editIndex extends viewModelBase {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
                     }
+                    if (this.mergeSuggestion != null) {
+                        this.deleteMergedIndexes();
+                    }
+
                     this.updateUrl(index.Name);
                 });
             }); 
         }
+    }
+
+    private deleteMergedIndexes() {
+        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+            var db = this.activeDatabase();
+            var deleteViewModel = new deleteIndexesConfirm(this.mergeSuggestion.canMerge, db, "Delete Merged Indexes?");
+            dialog.show(deleteViewModel);
+        });
     }
 
     updateUrl(indexName: string) {

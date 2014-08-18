@@ -1,32 +1,34 @@
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
 import database = require("models/database");
-import indexDefinition = require("models/indexDefinition");
+import indexMergeSuggestion = require("models/indexMergeSuggestion");
 
 class mergedIndexesStorage {
-    public static getMergedIndex(db: database, mergedIndexFullName: string): indexDefinition {
-        var newIndexDefinition = null;
+    public static getMergedIndex(db: database, mergedIndexFullName: string): indexMergeSuggestion {
+        var newSuggestion: indexMergeSuggestion = null;
 
         try {
             if (!!mergedIndexFullName && mergedIndexFullName.indexOf(db.mergedIndexLocalStoragePrefix) == 0) {
-                var indexFromLocalStorage: indexDefinitionDto = localStorage.getObject(mergedIndexFullName);
-                newIndexDefinition = new indexDefinition(indexFromLocalStorage);
+                var suggestion: suggestionDto = localStorage.getObject(mergedIndexFullName);
+                localStorage.removeItem(mergedIndexFullName);
+                newSuggestion = new indexMergeSuggestion(suggestion);
             }
-        } catch (e) {
+        }
+        catch (e) {
             return null;
         }
 
-        return newIndexDefinition;
+        return newSuggestion;
     }
 
-    public static saveMergedIndex(db: database, mergedIndexName: string, mergedIndex: indexDefinition): string {
-        var localStorageName = db.mergedIndexLocalStoragePrefix + '.' + mergedIndexName;
-        localStorage.setObject(localStorageName, mergedIndex.toDto());
+    public static saveMergedIndex(db: database, mergedIndexName: string, suggestion: indexMergeSuggestion): string {
+        var localStorageName = mergedIndexesStorage.getLocalStorageName(db, mergedIndexName);
+        localStorage.setObject(localStorageName, suggestion.toDto());
         return localStorageName;
     }
 
-    public static removeMergedIndex(mergedIndexFullName: string) {
-        localStorage.removeItem(mergedIndexFullName);
+    public static getLocalStorageName(db: database, mergedIndexName: string) {
+        return db.mergedIndexLocalStoragePrefix + '.' + mergedIndexName;
     }
 }
 

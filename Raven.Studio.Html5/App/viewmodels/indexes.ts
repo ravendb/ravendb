@@ -4,7 +4,6 @@ import index = require("models/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
 import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
-import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
@@ -141,7 +140,7 @@ class indexes extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
+        return [ shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)) ];
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
@@ -222,17 +221,19 @@ class indexes extends viewModelBase {
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
-            app.showDialog(deleteIndexesVm);
-            deleteIndexesVm.deleteTask
-                .done((closedWithoutDeletion: boolean) => {
-                    if (closedWithoutDeletion == false) {
+            require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+                var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+                app.showDialog(deleteIndexesVm);
+                deleteIndexesVm.deleteTask
+                    .done((closedWithoutDeletion: boolean) => {
+                        if (closedWithoutDeletion == false) {
+                            this.removeIndexesFromAllGroups(indexes);
+                        }
+                    })
+                    .fail(() => {
                         this.removeIndexesFromAllGroups(indexes);
-                    }
-                })
-                .fail(() => {
-                    this.removeIndexesFromAllGroups(indexes);
-                    this.fetchIndexes();
+                        this.fetchIndexes();
+                });
             });
         }
     }
