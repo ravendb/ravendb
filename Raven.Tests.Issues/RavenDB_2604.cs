@@ -11,12 +11,12 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2604 : RavenTest
+	public class RavenDB_2604 : ReplicationBase
 	{
 		[Fact]
 		public void BulkInsertShouldNotUpdateDocsIfTheyHaveTheSameContent()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = CreateStore())
 			{
 				var keyEtagCollection = new Dictionary<string, Etag>();
 				var entities = new List<User>();

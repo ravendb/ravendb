@@ -577,6 +577,9 @@
     <Content Include="Content\jquery.dynatree\skin-vista\loading.gif" />
     <Content Include="Content\jquery.dynatree\skin-vista\ui.dynatree.css" />
     <Content Include="Content\nv.d3.css" />
+    <Content Include="Content\variables.css">
+      <DependentUpon>variables.less</DependentUpon>
+    </Content>
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />

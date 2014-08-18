@@ -9,7 +9,7 @@
         <div class="btn-toolbar">
             <div >
                 <button class="btn btn-primary" data-bind="click: startExport">
-                    <div class="glyphicon glyphicon-import"></div>
+                    <i class="fa fa-download"></i>
                     Export Database
                 </button>
                 
@@ -20,26 +20,30 @@
         </div>
         <br />
         <ul class="nav nav-tabs">
-            <li class="active" data-bind="css: { active: !showAdvancedOptions()}"><a data-bind="click:function(){this.selectOptions()}">General</a></li>
-            <li data-bind="css: { active: showAdvancedOptions()}"><a data-bind="click:function(){this.selectAdvancedOptions()}">Advanced</a></li>
+            <li class="active" data-bind="css: { active: !showAdvancedOptions()}">
+                <a href="#" data-bind="click:function(){this.selectOptions()}">General</a>
+            </li>
+            <li data-bind="css: { active: showAdvancedOptions()}">
+                <a href="#" data-bind="click:function(){this.selectAdvancedOptions()}">Advanced</a>
+            </li>
         </ul>
         <br />
         <div class="btn-group btn-group-vertical" data-bind="visible:!showAdvancedOptions()">
 
             <label class="btn btn-default" data-bind="css:{active:includeDocuments() == true}, click: function(){$root.includeDocuments(!$root.includeDocuments()); return true;}, clickBubble: false">
-                Include Documents
+                <i data-bind="css: {'fa-check': includeDocuments }" class="fa fa-fw"></i> Include Documents
             </label>
             <label class="btn btn-default" data-bind="css:{active:includeIndexes() == true}, click: function(){$root.includeIndexes(!$root.includeIndexes()); return true;}, clickBubble: false">
-                Include Indexes
+                <i data-bind="css: {'fa-check': includeIndexes }" class="fa fa-fw"></i> Include Indexes
             </label>
             <label class="btn btn-default" data-bind="css:{active:includeAttachments() == true}, click: function(){$root.includeAttachments(!$root.includeAttachments()); return true;}, clickBubble: false">
-                Include Attachments
+                <i data-bind="css: {'fa-check': includeAttachments }" class="fa fa-fw"></i> Include Attachments
             </label>
             <label class="btn btn-default" data-bind="css:{active:includeTransformers() == true}, click: function(){$root.includeTransformers(!$root.includeTransformers()); return true;}, clickBubble: false">
-                Include Transformers
+                <i data-bind="css: {'fa-check': includeTransformers }" class="fa fa-fw"></i> Include Transformers
             </label>
             <label class="btn btn-default" data-bind="css:{active:removeAnalyzers() == true}, click: function(){$root.removeAnalyzers(!$root.removeAnalyzers()); return true; }, clickBubble: false">
-                Remove Analyzers
+                <i data-bind="css: {'fa-check': removeAnalyzers }" class="fa fa-fw"></i> Remove Analyzers
             </label>
 
         </div>
@@ -55,12 +59,15 @@
                     <label class="col-sm-2 control-label">Expired documents</label>
                     <div class="col-sm-10">
                         <div class="btn-group">
-                            <label class="btn btn-primary" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true), css: { active: includeExpiredDocuments }">
-                                Include
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false), css: { active: !includeExpiredDocuments() }">
-                                Exclude
-                            </label>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: includeExpiredDocuments">Include</span>
+                                <span data-bind="visible: !includeExpiredDocuments()">Exclude</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true)">Include</a></li>
+                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false)">Exclude</a></li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -68,17 +75,17 @@
                     <label class="col-sm-2 control-label">Collections</label>
                     <div class="col-sm-10">
                         <div class="btn-group">
-                            <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
+                            <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
                                 All collections
                             </label>
-                            <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
+                            <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
                                 Specified collections only
                             </label>
                         </div>
                         <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
                             <p class="form-control-static">Choose collections:</p>
                             <div class="btn-group-vertical" data-bind="foreach: includedCollections">
-                                <label class="btn btn-primary" data-bind="text: collection, click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }"></label>
+                                <label class="btn btn-default" data-bind="text: collection, click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }"></label>
                             </div>
                         </div>
                     </div>

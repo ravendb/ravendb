@@ -234,6 +234,14 @@ namespace Raven.Database.Smuggler
 			Options = options;
 		}
 
+		public void Configure(SmugglerOptions options)
+		{
+			var current = options.BatchSize;
+			var maxNumberOfItemsToProcessInSingleBatch = database.Configuration.MaxNumberOfItemsToProcessInSingleBatch;
+
+			options.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+		}
+
 		public void ShowProgress(string format, params object[] args)
 		{
 			if (Progress != null)

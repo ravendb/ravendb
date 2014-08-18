@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
@@ -81,6 +82,18 @@ namespace Raven.Bundles.Replication.Triggers
 				accessor.Lists.Remove(Constants.RavenReplicationDocsTombstones, key);
 			});
 			return result;
+		}
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					Constants.RavenReplicationVersion,
+					Constants.RavenReplicationSource
+				};
+			}
 		}
 	}
 }
