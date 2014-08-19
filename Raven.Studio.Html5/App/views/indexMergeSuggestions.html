@@ -32,7 +32,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h4 class="panel-title">
-                        <a data-toggle="collapse" data-parent="#accordion" data-bind="text: 'Merge Suggestion for ' + collection + ' Collection', attr: { href: '#collapse' + $index() }"></a>
+                        <a data-toggle="collapse" data-parent="#accordion" data-bind="text: 'Merge Suggestion for ' + collection, attr: { href: '#collapse' + $index() }"></a>
                     </h4>
                 </div>
                 <div class="panel-collapse collapse" data-bind="attr: { id: 'collapse' + $index() }">
@@ -42,7 +42,7 @@
                             <li data-bind="text: $data"></li>
                         </ul>
 
-                        <a href="#" target="_blank" data-bind="attr: { id: id, href: $root.mergedIndexUrl(id()) }, click: $root.saveMergedIndex.bind($root, id(), $data)">Show Merged Index</a>
+                        <a class="btn btn-primary" href="#" target="_blank" data-bind="attr: { id: id, href: $root.mergedIndexUrl(id()) }, click: $root.saveMergedIndex.bind($root, id(), $data)" title="Navigate to Save Merged Index"><i class="fa fa-external-link"></i> Show Merged Index</a>
                     </div>
                 </div>
             </div>

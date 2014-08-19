@@ -254,7 +254,7 @@ class editIndex extends viewModelBase {
                     commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
                 }
 
-                jQuery.when(commands).done(() => {
+                $.when.apply($, commands).done(() => {
                     this.initializeDirtyFlag();
                     this.editedIndex().name.valueHasMutated();
                     var isSavingMergedIndex = this.mergeSuggestion() != null;
@@ -264,7 +264,8 @@ class editIndex extends viewModelBase {
                         this.editExistingIndex(index.Name);
                     }
                     if (isSavingMergedIndex) {
-                        this.deleteMergedIndexes(this.mergeSuggestion().canMerge);
+                        var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                        this.deleteMergedIndexes(indexesToDelete);
                         this.mergeSuggestion(null);
                     }
 

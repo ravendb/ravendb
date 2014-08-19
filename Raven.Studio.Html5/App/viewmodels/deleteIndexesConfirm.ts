@@ -29,7 +29,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
                 if (this.indexNames.length > 1) {
                     messagePublisher.reportSuccess("Successfully deleted " + this.indexNames.length + " indexes!");
                 }
-                myDeleteTask.resolve({ closedWithoutDeletion: false });
+                myDeleteTask.resolve(false);
             })
             .fail(()=> {
                 myDeleteTask.reject();
@@ -38,7 +38,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     }
 
     cancel() {
-        this.deleteTask.resolve({ closedWithoutDeletion: true });
+        this.deleteTask.resolve(true);
         dialog.close(this);
     }
 }

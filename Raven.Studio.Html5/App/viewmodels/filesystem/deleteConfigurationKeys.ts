@@ -29,14 +29,12 @@ class deleteConfigurationKeys extends dialogViewModelBase {
             deletionTasks.push(new deleteConfigurationKeyCommand(this.fs, deleteItemsIds[i]).execute());
         }
 
-        var combinedTask = $.when(deletionTasks)
+        var combinedTask = $.when.apply($, deletionTasks);
 
-        var deleteCommandTask = combinedTask.done(() => {
-                this.deletionTask.resolve(this.keys())
-            })
-            .fail(response => {
-                this.deletionTask.reject(response)
-            });
+        combinedTask
+            .done(() => this.deletionTask.resolve(this.keys()))
+            .fail(response => this.deletionTask.reject(response));
+
         dialog.close(this);
     }
 

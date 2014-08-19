@@ -25,8 +25,12 @@ namespace Raven.Database.Indexing
 			new CombineQueryExpressions().Run(expr);
 			// Unwrap expression
 			expr = ((ParenthesizedExpression)expr).Expression;
+
 			var format = expr.GetText(FormattingOptionsFactory.CreateAllman());
-			format = format.Remove(0, 3);
+			if (format.Substring(0, 3) == "\r\n\t")
+			{
+				format = format.Remove(0, 3);
+			}
 			format = format.Replace("\r\n\t", "\n");
 			return format;
 		}
