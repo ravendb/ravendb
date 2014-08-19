@@ -202,6 +202,7 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+        router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
 
         appUrl.mapUnknownRoutes(router);
 
@@ -279,7 +280,6 @@ class shell extends viewModelBase {
         } else {
             NProgress.done();
             this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
-            $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
         }
     }
 

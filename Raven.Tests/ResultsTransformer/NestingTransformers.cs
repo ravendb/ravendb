@@ -66,7 +66,7 @@ namespace Raven.Tests.ResultsTransformer
 											   select new
 											   {
 												   Product = doc,
-												   AnotherResult = TransfromWith(Query("transformer").Value<string>(), doc)
+												   AnotherResult = TransformWith(Query("transformer").Value<string>(), doc)
 											   };
 			}
 		}
@@ -76,7 +76,7 @@ namespace Raven.Tests.ResultsTransformer
 			public CallAnotherTransformerPerAllItems()
 			{
 				TransformResults = products => from doc in products
-					from result in TransfromWith(Query("transformer").Value<string>(), doc)
+					from result in TransformWith(Query("transformer").Value<string>(), doc)
 					select result;
 			}
 		}
@@ -86,7 +86,7 @@ namespace Raven.Tests.ResultsTransformer
 			public CallMultipleTransformerPerAllItems()
 			{
 				TransformResults = products => from doc in products
-											   from result in TransfromWith(Query("transformers").Value<string>().Split(';'), doc)
+											   from result in TransformWith(Query("transformers").Value<string>().Split(';'), doc)
 											   select result;
 			}
 		}
