@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
@@ -107,9 +106,19 @@ namespace Raven.Database.Actions
                     {
                         try
                         {
-                            Database.Documents.Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+	                        var notModified = false;
 
-                            var docsCreatedInPatch = getDocsCreatedInPatch();
+	                        if (doc == null)
+		                        Database.Documents.Put(docId, null, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+	                        else
+	                        {
+		                        if (IsNotModified(jsonDoc.CloneToken(), doc.ToJson()))
+			                        notModified = true;
+		                        else
+			                        Database.Documents.Put(doc.Key, (doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+	                        }
+
+	                        var docsCreatedInPatch = getDocsCreatedInPatch();
                             if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
                             {
                                 foreach (var docFromPatch in docsCreatedInPatch)
@@ -119,7 +128,7 @@ namespace Raven.Database.Actions
                                 }
                             }
                             shouldRetry = false;
-                            result.PatchResult = PatchResult.Patched;
+							result.PatchResult = notModified ? PatchResult.NotModified : PatchResult.Patched;
                         }
                         catch (ConcurrencyException)
                         {
@@ -147,7 +156,15 @@ namespace Raven.Database.Actions
             return result;
         }
 
-		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
+		private static bool IsNotModified(RavenJToken patchedDocClone, RavenJToken existingDocClone)
+		{
+			patchedDocClone.Value<RavenJObject>(Constants.Metadata).Remove(Constants.LastModified);
+			existingDocClone.Value<RavenJObject>(Constants.Metadata).Remove(Constants.LastModified);
+
+		    return RavenJToken.DeepEquals(patchedDocClone, existingDocClone);
+	    }
+
+	    public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
 													   TransactionInformation transactionInformation, bool debugMode = false)
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
