@@ -1,14 +1,14 @@
 ﻿<section>
     <div id="sqlReplicationStats" class="panel-group" data-bind="foreach: data">
-        <div class="panel panel-default" >
+        <div class="sqlStatsPanel panel panel-default">
             <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-bind="text: name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
-                </h4>
+                <a data-toggle="collapse" data-bind="attr: { href: '#statsDebugSqlRepCollapse' + $index() }">
+                    <h4 class="panel-title" data-bind="text:name"></h4>
+                </a>
             </div>
             <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugSqlRepCollapse' + $index() }">
                 <div class="panel-body">
-                    <div class="form-horizontal" role="form" data-bind="with:statistics">
+                    <div class="form-horizontal statisticsSection" role="form" data-bind="with:statistics">
                         <div class="form-group sectionTitle">
                             <strong class="control-label">Statistics:</strong>
                         </div>
@@ -43,51 +43,57 @@
                             </div>
                         </div>
                         <!-- ko with: LastAlert -->
-                        <div class="panel panel-warning">
+                        <div class="panel panel-warning" data-bind="attr:{id:'statsAccordion' + $index()}">
                             <div class="panel-heading">
-                                <h3 class="panel-title">Last Alert</h3>
+                                <a data-toggle="collapse" data-bind="attr:{'data-parent':'#statsAccordion' + $index(), 'href':'#collapselasterror' + $index()}">
+                                    <h3 class="panel-title">
+                                        Last Alert
+                                    </h3>
+                                </a>
                             </div>
-                            <div class="panel-body">
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Title</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Title"></p>
+                            <div class="panel-collapse collapse" data-bind="attr:{id:'collapselasterror' + $index()}">
+                                <div class="panel-body">
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Title</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: Title"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Created at</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Created at</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Observed</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Observed"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Observed</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: Observed"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Message</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Message"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Message</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: Message"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Alert level</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Alert level</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Exception</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Exception"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Exception</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static"><span class="exceptionText" data-bind="text: Exception"></span></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Unique key</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Unique key</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -98,14 +104,10 @@
                         <div class="form-group sectionTitle">
                             <strong class="control-label">Metrics:</strong>
                         </div>
+                        <div class="form-group subSectionTitle">
+                            <strong class="control-label">Rate Metrics:</strong>
+                        </div>
                         <div from-group>
-                            <div class="form-group subSectionTitle">
-                                <strong class="control-label">Table Filter:</strong>
-                                <select data-bind="options:tables, value:filteredTable"></select>
-                            </div>
-                            <div class="form-group subSectionTitle">
-                                <strong class="control-label">Rate Metrics:</strong>
-                            </div>
                             <div class="meterTable col-sm-12">
                                 <span class="headers">
                                     <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
@@ -138,9 +140,9 @@
                                         <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Name"></div>
                                         <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Count"></div>
                                         <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: MeanRate"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: OneMinuteRate.toFixed(2)"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: FiveMinuteRate.toFixed(2)"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: FifteenMinuteRate.toFixed(2)"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: OneMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: FiveMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: FifteenMinuteRate"></div>
                                     </div>
                                 </div>
                             </div>
@@ -173,10 +175,35 @@
                                         <span class="column-handle" column="11"></span>
                                         <span>Stdev</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
                                         <span class="column-handle" column="12"></span>
                                         <span>Percentiles</span>
+                                        <div ><div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                                     <span class="column-handle" column="13"></span>
+                                                     <span>50%</span>
+                                                 </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                                <span class="column-handle" column="14"></span>
+                                                <span>75%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                                <span class="column-handle" column="15"></span>
+                                                <span>95%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                                <span class="column-handle" column="16"></span>
+                                                <span>99%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                                <span class="column-handle" column="17"></span>
+                                                <span>99.9%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                                <span class="column-handle" column="18"></span>
+                                                <span>99.99%</span>
+                                            </div></div>
                                     </div>
+
                                 </span>
                                 <div style="white-space: nowrap" data-bind="foreach: histogramMetrics">
                                     <div style="display: block; white-space: nowrap" class="logRecord log-table-row">
@@ -185,8 +212,12 @@
                                         <div class="column" data-bind="style: { width: $root.columnWidths[8]() + '%' }, text: Max"></div>
                                         <div class="column" data-bind="style: { width: $root.columnWidths[9]() + '%' }, text: Min"></div>
                                         <div class="column" data-bind="style: { width: $root.columnWidths[10]() + '%' }, text: Min"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[11]() + '%' }, text: Stdev.toFixed(2)"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[12]() + '%' }, text: Percentiles"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[11]() + '%' }, text: Stdev"></div>
+                                        <!--ko:foreach:Percentiles-->
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[13+$index()]() + '%' }, text: percentileValue"></div>
+                                        <!-- /ko -->​
+                                        
+                                        
                                     </div>
                                 </div>
                             </div>

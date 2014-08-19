@@ -15,19 +15,24 @@ class statusDebugSqlReplication extends viewModelBase {
     activate(args) {
         var widthUnit = 8;
         this.columnWidths = [
-            ko.observable<number>(3*widthUnit),
+            ko.observable<number>(3*widthUnit),  
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(3* widthUnit),
-            ko.observable<number>(widthUnit),
-            ko.observable<number>(widthUnit),
-            ko.observable<number>(widthUnit),
-            ko.observable<number>(widthUnit),
-            ko.observable<number>(widthUnit),
-            ko.observable<number>(4*widthUnit)
+            ko.observable<number>(widthUnit),//Name
+            ko.observable<number>(widthUnit),//Counter
+            ko.observable<number>(widthUnit),//Max
+            ko.observable<number>(widthUnit),//Min
+            ko.observable<number>(widthUnit),//Stdev
+            ko.observable<number>(10*widthUnit),//Percentiles
+            ko.observable<number>(widthUnit/2),
+            ko.observable<number>(widthUnit/2),
+            ko.observable<number>(widthUnit/2),
+            ko.observable<number>(widthUnit / 2),
+            ko.observable<number>(widthUnit / 2)
         ];
         super.activate(args);
 

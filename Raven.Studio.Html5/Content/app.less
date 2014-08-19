@@ -77,20 +77,48 @@ html, body {
 .replicationError {
     color: red;
 }
+.exceptionText{
+    white-space: pre-wrap!important;
+
+}
 #sqlReplicationStats{
+    .sqlStatsPanel
+    {
+        overflow-x:auto;
+        overflow-y:auto;
+        max-width:80vw;
+        
+    }
     .sectionTitle{
         text-align:left;
         padding-left:1%;
         text-decoration:underline;
+        margin-top:2%;
     }
     .subSectionTitle{
         text-align:left;
         padding-left:6%;
         text-decoration:underline;
+        margin-top:2%;
+        margin-right:10%;
+    }
+    .statisticsSection{
+        .form-group{
+            margin-bottom:0;
+            label{
+                padding-top:0;
+            }
+            p{
+                padding-top:0;
+                padding-bottom:0;
+            }
+        }
     }
     .meterTable{
-        overflow-x:auto;
-        overflow-y:auto;
+        overflow-x:visible;
+        overflow-y:visible;
+        margin-bottom:1%;
+        margin-top:1%;
         padding-left:10%;
         .column{
             display:inline-block;

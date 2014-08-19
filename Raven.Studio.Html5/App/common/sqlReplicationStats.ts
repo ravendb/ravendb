@@ -1,30 +1,21 @@
-﻿class sqlReplicationStats {
+﻿import genUtils = require("common/generalUtils");
+
+class sqlReplicationStats {
      public static ALL_TABLES = 'All Tables'
      statistics = ko.observable<sqlReplicationStatisticsDto>();
      metrics = ko.observable<sqlReplicaitonMetricsDto>();
-     filteredTable = ko.observable<string>(sqlReplicationStats.ALL_TABLES);
-     tables: KnockoutComputed<string[]>;
      rateMetrics: KnockoutComputed<metricsDataDto[]>;
      histogramMetrics: KnockoutComputed<metricsDataDto[]>;
      name=ko.observable<string>("");
 
      
     constructor(replicationStats: sqlReplicationStatsDto) {
+        if (!!replicationStats.Statistics.LastErrorTime && replicationStats.Statistics.LastErrorTime == "0001-01-01T00:00:00.0000000") {
+            replicationStats.Statistics.LastErrorTime = "No Errors";
+        }
         this.statistics(replicationStats.Statistics);
         this.name(replicationStats.Name);
         this.metrics(replicationStats.Metrics);
-         this.tables = ko.computed(() => {
-             var tableNames = [sqlReplicationStats.ALL_TABLES ];
-             var tablesMetrics = this.metrics().TablesMetrics;
-             if (!!tablesMetrics) {
-                 $.map(tablesMetrics, (value, key) => {
-                     tableNames.push(key);
-                     return;
-                 });
-             }
-             return tableNames;
-         });
-
          this.rateMetrics = ko.computed(() => {
              var computedRateMetrics = [];
              var generalMetrics = this.metrics().GeneralMetrics;
@@ -34,6 +25,11 @@
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type == "Meter") {
                          value["Name"] = key;
+                         $.map(value, (propertyValue, propertyName) => {
+                             if (!isNaN(propertyValue)) {
+                                 value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
+                             }
+                         });
                          computedRateMetrics.push(value);
                      }
                  });
@@ -41,15 +37,19 @@
 
              if (!!tablesMetrics) {
                  $.map(tablesMetrics, (tablesMetricsData: dictionary<metricsDataDto>, tableMetricsKey: string) => {
-                     if ((!this.filteredTable() || this.filteredTable() == sqlReplicationStats.ALL_TABLES) || tableMetricsKey == this.filteredTable()) {
-                         $.map(tablesMetricsData, (value, key) => {
-                             if (value.Type == "Meter") {
-                                 var newMetric = value;
-                                 newMetric["Name"] = tableMetricsKey + "." + key;
-                                 computedRateMetrics.push(newMetric);
-                             }
-                         });
-                     }
+                    $.map(tablesMetricsData, (value, key) => {
+                        if (value.Type == "Meter") {
+                            var newMetric = value;
+                            newMetric["Name"] = tableMetricsKey + "." + key;
+                            $.map(value, (propertyValue, propertyName) => {
+                                if (!isNaN(propertyValue)) {
+                                    value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
+                                }
+                            });
+                            computedRateMetrics.push(newMetric);
+                        }
+                    });
+                     
                  });
              }
              return computedRateMetrics;
@@ -64,12 +64,17 @@
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type == "Historgram") {
                          value["Name"] = key;
-
-                         if (!!value["Percentiles"]) {
-                             value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentileName) => {
-                                 return "[" + percentileName + ":" + percentileValue.toFixed(2)+"]";
-                             }).join(";");
-                         }
+                         value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
+                             return {
+                                 percentileValue: percentileValue,
+                                 percentile: percentile
+                             }
+                         });
+                         $.map(value, (propertyValue, propertyName) => {
+                             if (!isNaN(propertyValue)) {
+                                 value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
+                             }
+                         });
                          computedHistogramMetrics.push(value);
                      }
                  });
@@ -77,30 +82,22 @@
 
              if (!!tablesMetrics) {
                  $.map(tablesMetrics, (tablesMetricsData: dictionary<metricsDataDto>, tableMetricsKey: string) => {
-                     if ((!this.filteredTable() || this.filteredTable() == sqlReplicationStats.ALL_TABLES) || tableMetricsKey == this.filteredTable()) {
-                         $.map(tablesMetricsData, (value, key) => {
-                             if (value.Type == "Historgram") {
-                                 var newMetric = value;
-                                 newMetric["Name"] = tableMetricsKey + "." + key;
-                                 computedHistogramMetrics.push(newMetric);
-
-                                 if (!!newMetric["Percentiles"]) {
-                                     newMetric["Percentiles"] = $.map(newMetric["Percentiles"], (percentileValue, percentileName) => {
-                                         return "[" + percentileName + ":" + percentileValue.toFixed(2)+"]";
-                                     }).join(";");
-                                 }
-
-                             }
-                         });
-                     }
+                    $.map(tablesMetricsData, (value, key) => {
+                        if (value.Type == "Historgram") {
+                            value["Name"] = tableMetricsKey + "." + key;
+                            $.map(value, (propertyValue, propertyName) => {
+                                if (!isNaN(propertyValue)) {
+                                    value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
+                                }
+                            });
+                            computedHistogramMetrics.push(value);
+                        }
+                    });
                  });
              }
              return computedHistogramMetrics;
          });
-
-             
      }
-
 }
 
 export =sqlReplicationStats;
