@@ -2,11 +2,11 @@
      public static ALL_TABLES = 'All Tables'
      statistics = ko.observable<sqlReplicationStatisticsDto>();
      metrics = ko.observable<sqlReplicaitonMetricsDto>();
-    filteredTable = ko.observable<string>(sqlReplicationStats.ALL_TABLES);
+     filteredTable = ko.observable<string>(sqlReplicationStats.ALL_TABLES);
      tables: KnockoutComputed<string[]>;
      rateMetrics: KnockoutComputed<metricsDataDto[]>;
-    histogramMetrics: KnockoutComputed<metricsDataDto[]>;
-    name=ko.observable<string>("");
+     histogramMetrics: KnockoutComputed<metricsDataDto[]>;
+     name=ko.observable<string>("");
 
      
     constructor(replicationStats: sqlReplicationStatsDto) {
@@ -64,6 +64,12 @@
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type == "Historgram") {
                          value["Name"] = key;
+
+                         if (!!value["Percentiles"]) {
+                             value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentileName) => {
+                                 return "[" + percentileName + ":" + percentileValue.toFixed(2)+"]";
+                             }).join(";");
+                         }
                          computedHistogramMetrics.push(value);
                      }
                  });
@@ -77,6 +83,13 @@
                                  var newMetric = value;
                                  newMetric["Name"] = tableMetricsKey + "." + key;
                                  computedHistogramMetrics.push(newMetric);
+
+                                 if (!!newMetric["Percentiles"]) {
+                                     newMetric["Percentiles"] = $.map(newMetric["Percentiles"], (percentileValue, percentileName) => {
+                                         return "[" + percentileName + ":" + percentileValue.toFixed(2)+"]";
+                                     }).join(";");
+                                 }
+
                              }
                          });
                      }
