@@ -264,7 +264,8 @@ class editIndex extends viewModelBase {
                         this.editExistingIndex(index.Name);
                     }
                     if (isSavingMergedIndex) {
-                        this.deleteMergedIndexes(this.mergeSuggestion().canMerge);
+                        var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                        this.deleteMergedIndexes(indexesToDelete);
                         this.mergeSuggestion(null);
                     }
 
