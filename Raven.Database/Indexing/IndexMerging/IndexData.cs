@@ -100,7 +100,11 @@ namespace Raven.Database.Indexing.IndexMerging
             var printer = new StringWriter();
             var printerVisitor = new CSharpOutputVisitor(printer, FormattingOptionsFactory.CreateSharpDevelop());
             queryExpr.AcceptVisitor(printerVisitor);
-            return printer.GetStringBuilder().ToString();
+
+			var format = printer.GetStringBuilder().ToString();
+			format = format.Remove(0, 3);
+			format = format.Replace("\r\n\t", "\n");
+	        return format;
         }
     }
 }
