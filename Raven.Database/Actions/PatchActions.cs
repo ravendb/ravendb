@@ -88,9 +88,11 @@ namespace Raven.Database.Actions
                         ExpectedETag = etag,
                     };
                 }
+				var documentBeforePatching = doc != null ? doc.ToJson().CloneToken() : null;
 
                 var jsonDoc = (doc != null ? patcher(doc) : patcherIfMissing());
-                if (jsonDoc == null)
+
+	            if (jsonDoc == null)
                 {
                     Log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
                     result.PatchResult = PatchResult.DocumentDoesNotExists;
@@ -112,7 +114,7 @@ namespace Raven.Database.Actions
 		                        Database.Documents.Put(docId, null, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
 	                        else
 	                        {
-		                        if (IsNotModified(jsonDoc.CloneToken(), doc.ToJson()))
+		                        if (IsNotModified(jsonDoc.CloneToken(), documentBeforePatching))
 			                        notModified = true;
 		                        else
 			                        Database.Documents.Put(doc.Key, (doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
