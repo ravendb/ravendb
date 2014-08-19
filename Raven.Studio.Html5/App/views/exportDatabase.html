@@ -74,13 +74,24 @@
                 <div class="form-group">
                     <label class="col-sm-2 control-label">Collections</label>
                     <div class="col-sm-10">
-                        <div class="btn-group">
+                        <!--<div class="btn-group">
                             <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
                                 All collections
                             </label>
                             <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
                                 Specified collections only
                             </label>
+                        </div>-->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: includeAllCollections">All collections</span>
+                                <span data-bind="visible: !includeAllCollections()">Specified collections only</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: includeAllCollections.bind(includeAllCollections, true)">All collections</a></li>
+                                <li><a href="#" data-bind="click: includeAllCollections.bind(includeAllCollections, false)">Specified collections only</a></li>
+                            </ul>
                         </div>
                         <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
                             <p class="form-control-static">Choose collections:</p>
@@ -115,7 +126,7 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">×</button>
+                                            <button type="button" class="close close-ret" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">×</button>
                                         </td>
                                     </tr>
                                 </tbody>

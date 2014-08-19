@@ -60,17 +60,18 @@ class studioConfig extends viewModelBase {
         });
     }
 
-    warnWhenUsingSystemDatabaseToggle() {
-        var newDocument = this.configDocument();
-        var action = !this.warnWhenUsingSystemDatabase();
-        this.warnWhenUsingSystemDatabase(action);
-        newDocument["WarnWhenUsingSystemDatabase"] = action;
-        var saveTask = this.saveStudioConfig(newDocument);
-        saveTask.fail(() => this.warnWhenUsingSystemDatabase(!action));
+    setSystemDatabaseWarning(warnSetting: boolean) {
+        if (this.warnWhenUsingSystemDatabase() !== warnSetting) {
+            var newDocument = this.configDocument();
+            this.warnWhenUsingSystemDatabase(warnSetting);
+            newDocument["WarnWhenUsingSystemDatabase"] = warnSetting;
+            var saveTask = this.saveStudioConfig(newDocument);
+            saveTask.fail(() => this.warnWhenUsingSystemDatabase(!warnSetting));
+        }
     }
 
-    remingToUpgradeToggle() {
-        serverBuildReminder.mute(!this.mute());
+    setUpgradeReminder(upgradeSetting: boolean) {
+        serverBuildReminder.mute(upgradeSetting);
     }
 
     saveStudioConfig(newDocument: documentClass) {

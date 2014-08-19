@@ -365,7 +365,7 @@ class query extends viewModelBase {
                 callback(null, this.indexFields().map(curColumn => {
                     return { name: curColumn, value: curColumn, score: 10, meta: "field" };
                 }));
-            } else if (currentToken.type === "keyword" || currentToken.type === "value") { 
+            } else if (currentToken.type === "keyword" || currentToken.type === "value") {
                 // if right after, or a whitespace after keyword token ([column name]:)
 
                 // first, calculate and validate the column name
@@ -491,7 +491,7 @@ class query extends viewModelBase {
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
                     .done((result: pagedResultSet) => {
-                        if (!!result && result.totalResultCount > 0) {
+                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
                             if (!!dynamicIndexPattern) {
                                 this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
@@ -629,10 +629,10 @@ class query extends viewModelBase {
 
     getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
         if (queryParams.length > 0) {
-            return "(" + 
+            return "(" +
                 queryParams
-                .map((param: transformerParamDto) => param.name + "=" + param.value)
-                .join(", ") + ")";
+                    .map((param: transformerParamDto) => param.name + "=" + param.value)
+                    .join(", ") + ")";
         }
 
         return "";
@@ -652,7 +652,7 @@ class query extends viewModelBase {
 
         var queryFields: Array<queryFieldInfo> = [];
         var match: RegExpExecArray = null;
-        while ( (match = luceneSimpleFieldRegex.exec(query)) ) {
+        while ((match = luceneSimpleFieldRegex.exec(query))) {
             var value = match[3] || match[4] || match[5];
             queryFields.push({
                 FieldName: match[1],
@@ -682,7 +682,7 @@ class query extends viewModelBase {
     applySuggestion(suggestion: indexSuggestion) {
         var value = this.queryText();
         var startIndex = value.indexOf(suggestion.FieldValue, suggestion.Index);
-        this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex+suggestion.FieldValue.length));
+        this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex + suggestion.FieldValue.length));
         this.indexSuggestions([]);
         this.runQuery();
     }

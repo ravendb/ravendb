@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -32,15 +31,12 @@ namespace Raven.Database.Indexing
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
-			HighestDocumentEtagPerCollection = new ConcurrentDictionary<string, Etag>();
 		}
 
 		public PrefetchingBehavior PrefetchingBehavior
 		{
 			get { return prefetchingBehavior; }
 		}
-
-		public ConcurrentDictionary<string, Etag> HighestDocumentEtagPerCollection { get; set; }
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
@@ -418,29 +414,6 @@ namespace Raven.Database.Indexing
 			exceptionAggregator.Execute(PrefetchingBehavior.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
-		}
-
-		public bool IsIndexingStaleForCollections(List<string> indexedEntities, Etag lastIndexedEtag)
-		{
-			var isNonStaleForAllRelevantCollections = false;
-
-			foreach (var forEntityName in indexedEntities)
-			{
-				Etag highestEtagForCollection;
-				if (HighestDocumentEtagPerCollection.TryGetValue(forEntityName, out highestEtagForCollection))
-				{
-					if (highestEtagForCollection.CompareTo(lastIndexedEtag) > 0)
-						return false;
-
-					isNonStaleForAllRelevantCollections = true;
-				}
-				else
-				{
-					return false;
-				}
-			}
-
-			return isNonStaleForAllRelevantCollections;
 		}
     }
 }
