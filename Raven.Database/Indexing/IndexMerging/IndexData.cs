@@ -102,7 +102,10 @@ namespace Raven.Database.Indexing.IndexMerging
             queryExpr.AcceptVisitor(printerVisitor);
 
 			var format = printer.GetStringBuilder().ToString();
-			format = format.Remove(0, 3);
+			if (format.Substring(0, 3) == "\r\n\t")
+			{
+				format = format.Remove(0, 3);
+			}
 			format = format.Replace("\r\n\t", "\n");
 	        return format;
         }
