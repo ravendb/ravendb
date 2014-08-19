@@ -16,7 +16,10 @@ namespace Raven.Database.Data
 	{
 		public static ICommandData CreateCommand(RavenJObject jsonCommand, TransactionInformation transactionInformation)
 		{
-			var key = jsonCommand["Key"].Value<string>();
+			string key = String.Empty;
+			if (jsonCommand.ContainsKey("Key"))
+			    key = jsonCommand["Key"].Value<string>();
+			    
 			switch (jsonCommand.Value<string>("Method"))
 			{
 				case "PUT":
