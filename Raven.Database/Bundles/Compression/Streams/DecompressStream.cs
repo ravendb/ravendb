@@ -15,12 +15,14 @@ namespace Raven.Bundles.Compression.Streams
 		private readonly StreamReaderWithUnread underlyingStream;
 		private readonly bool compressed;
 		private readonly DeflateStream deflateStream;
+		private long pos;
 
 		public DecompressStream(Stream underlyingStream)
 		{
 			this.underlyingStream = new StreamReaderWithUnread(underlyingStream);
 			compressed = CheckMagicNumber();
 
+			pos = 4;
 			if (compressed)
 			{
 				deflateStream = new DeflateStream(underlyingStream, CompressionMode.Decompress, leaveOpen: true);
@@ -71,10 +73,14 @@ namespace Raven.Bundles.Compression.Streams
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
+			int read = 0;
 			if (compressed)
-				return deflateStream.Read(buffer, offset, count);
+				read = deflateStream.Read(buffer, offset, count);
 			else
-				return underlyingStream.Read(buffer, offset, count);
+				read = underlyingStream.Read(buffer, offset, count);
+
+			pos += read;
+			return read;
 		}
 
 		public override void Write(byte[] buffer, int offset, int count)
@@ -89,10 +95,7 @@ namespace Raven.Bundles.Compression.Streams
 
 		public override long Position
 		{
-			get
-			{
-				throw new NotSupportedException();
-			}
+			get { return pos; }
 			set
 			{
 				throw new NotSupportedException();
