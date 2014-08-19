@@ -1,4 +1,9 @@
-﻿using System;
+﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Imports.Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -7,11 +12,6 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.FileSystem;
 
 namespace Raven.Client.FileSystem
 {

@@ -1,6 +1,8 @@
 /// <amd-dependency path="ace/ext/language_tools" />
 /// <amd-dependency path="ace/mode/lucene" />
 /// <amd-dependency path="ace/theme/xcode" />
+/// <amd-dependency path="ace/mode/json_newline_friendly" />
+/// <amd-dependency path="ace/mode/json" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 import aceLang = require("ace/ext/language_tools");
@@ -180,7 +182,6 @@ class aceEditorBindingHandler {
             handles: "s, se",
             grid: [10000000000000000, 1],
             resize: function (event, ui) {
-                alert("b");
                 aceEditor.resize();
             }
         });

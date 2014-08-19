@@ -223,9 +223,29 @@
     <Compile Include="Bundles\Replication\Data\ReplicationTopology.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicatonNodeState.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationTopologyDiscoverer.cs" />
+    <Compile Include="Bundles\Replication\Utils\ReplicationUtils.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationMetricsCountersManager.cs" />
+    <Compile Include="Indexing\IndexPrettyPrinter.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
+    <Compile Include="Plugins\IServerStartupTask.cs" />
+    <Compile Include="Plugins\Builtins\CustomFunctionsPutTrigger.cs" />
+    <Compile Include="Server\Abstractions\IResourceStore.cs" />
+    <Compile Include="Server\Connections\HttpTracePushContent.cs" />
+    <Compile Include="Server\Controllers\HttpTraceController.cs" />
+    <Compile Include="Server\Connections\ILogsTransport.cs" />
+    <Compile Include="Server\Connections\LogPushContent.cs" />
+    <Compile Include="Server\Connections\OnDemandLogConnectionState.cs" />
+    <Compile Include="Server\Connections\OnDemandLogTarget.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\AbstractFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
+    <Compile Include="Storage\Esent\StorageConfigurator.cs" />
+    <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
@@ -421,7 +441,7 @@
     <Compile Include="Server\RavenFS\Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Server\RavenFS\Storage\SignatureReadOnlyStream.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\StorageActionsAccessor.cs" />
-    <Compile Include="Server\RavenFS\Storage\Esent\StorageConfigurator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorageConfigurator.cs" />
     <Compile Include="Server\RavenFS\Storage\StorageConstants.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\TableColumnsCache.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorage.cs" />
@@ -1063,8 +1083,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Util\StackDump\x64\StackDump.exe" />
-    <EmbeddedResource Include="Util\StackDump\x86\StackDump.exe" />
+    <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
+    <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
     <EmbeddedResource Include="Server\WebUI\studio.html" />
     <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />

@@ -50,12 +50,15 @@ namespace Raven.Database.Actions
             return pendingTasks.Select(x =>
             {
                 var ex = (x.Value.Task.IsFaulted || x.Value.Task.IsCanceled) ? x.Value.Task.Exception.ExtractSingleInnerException() : null;
+	            var taskStatus = x.Value.Task.Status;
+	            if (taskStatus == TaskStatus.WaitingForActivation)
+					taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
                 return new PendingTaskDescriptionAndStatus
                        {
                            Id = x.Key,
                            Payload = x.Value.Description.Payload,
                            StartTime = x.Value.Description.StartTime,
-                           TaskStatus = x.Value.Task.Status,
+						   TaskStatus = taskStatus,
                            TaskType = x.Value.Description.TaskType,
                            Exception = ex
                        };
@@ -106,12 +109,6 @@ namespace Raven.Database.Actions
             PendingTaskWithStateAndDescription value;
             if (pendingTasks.TryGetValue(id, out value))
             {
-                if (value.Task.IsFaulted || value.Task.IsCanceled)
-                {
-                    var ex = value.Task.Exception.ExtractSingleInnerException();
-                    throw ex;
-                }
-
                 return value.State;
             }
             return null;
@@ -173,7 +170,9 @@ namespace Raven.Database.Actions
 
             IndexBulkOperation,
 
-            IndexDeleteOperation
+            IndexDeleteOperation,
+
+			ImportDatabase
         }
 
       

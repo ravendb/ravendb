@@ -36,6 +36,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -44,7 +45,7 @@ using metrics.Core;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IDisposable
+	public class DocumentDatabase : IResourceStore,IDisposable
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -1077,12 +1078,12 @@ namespace Raven.Database
 				bool fips;
 				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
 				{
-					if (!fips && configuration.UseFips)
+					if (!fips && configuration.Encryption.UseFips)
 						throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
 				}
 
-				Encryptor.Initialize(configuration.UseFips);
-				Cryptography.FIPSCompliant = configuration.UseFips;
+				Encryptor.Initialize(configuration.Encryption.UseFips);
+				Cryptography.FIPSCompliant = configuration.Encryption.UseFips;
 			}
 
 			private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)

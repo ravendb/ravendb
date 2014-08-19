@@ -9,11 +9,13 @@ import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import shell = require("viewmodels/shell");
+import idGenerator = require("common/idGenerator");
 
 class changesApi {
 
     private eventsId: string;
     private coolDownWithDataLoss: number;
+    private isMultyTenantTransport:boolean;
     private resourcePath: string;
     private connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
@@ -28,6 +30,7 @@ class changesApi {
     private successfullyConnectedOnce: boolean = false;
     private sentMessages = [];
 
+    private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
@@ -36,12 +39,16 @@ class changesApi {
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
+    private allFsDestinationsHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
     private commandBase = new commandBase();
+    
+    private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private rs: resource, coolDownWithDataLoss: number = 0) {
-        this.eventsId = this.makeId();
+    constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
+        this.eventsId = idGenerator.generateId();
         this.coolDownWithDataLoss = coolDownWithDataLoss;
+        this.isMultyTenantTransport = isMultyTenantTransport;
         this.resourcePath = appUrl.forResourceQuery(this.rs);
         this.connectToChangesApiTask = $.Deferred();
 
@@ -60,18 +67,23 @@ class changesApi {
     }
 
     private connect(action: Function, needToReconnect: boolean = false) {
-        var getTokenTask = new getSingleAuthTokenCommand(this.resourcePath).execute();
+        this.connectToChangesApiTask = $.Deferred();
+        var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss;
+                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
 
                 action.call(this, connectionString);
             })
-            .fail(() => {
-                // Connection has closed so try to reconnect every 3 seconds.
-                setTimeout(() => this.connect(action), 3 * 1000);
+            .fail((e) => {
+                if (e.status == 0) {
+                    // Connection has closed so try to reconnect every 3 seconds.
+                    setTimeout(() => this.connect(action), 3 * 1000);
+                } else {
+                    this.connectToChangesApiTask.reject();
+                }
             });
     }
 
@@ -143,7 +155,7 @@ class changesApi {
 
     private onError(e: Event) {
         if (changesApi.messageWasShownOnce == false) {
-            this.commandBase.reportError('Changes stream was disconnected.', "Retrying connection shortly.");
+            this.commandBase.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
             changesApi.messageWasShownOnce = true;
         }
     }
@@ -229,6 +241,8 @@ class changesApi {
                 this.fireEvents(this.allBulkInsertsHandlers(), value, (e) => true);
             } else if (type === "SynchronizationUpdateNotification") {
                 this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
+            } else if (type === "ReplicationConflictNotification") {
+                this.fireEvents(this.allReplicationConflicts(), value, (e) => true);
             } else if (type === "ConflictNotification") {
                 this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
             } else if (type === "FileChangeNotification") {
@@ -244,11 +258,32 @@ class changesApi {
                     });
                 }
             } else if (type === "ConfigurationChangeNotification") {
+                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                    this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
+                }
                 this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
-            } else {
+            }
+            else if (type === "LogNotification") {
+                this.fireEvents(this.adminLogsHandlers(), value, (e) => true);
+            }
+            else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
         }
+    }
+
+    watchAdminLogs(onChange: (e: logNotificationDto) => void) {
+        var callback = new changesCallback<logNotificationDto>(onChange);
+        if (this.adminLogsHandlers().length == 0) {
+            this.send('watch-admin-log');
+        }
+        this.adminLogsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.adminLogsHandlers.remove(callback);
+            if (this.adminLogsHandlers().length == 0) {
+                this.send('unwatch-admin-log');
+            }
+        });
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
@@ -275,6 +310,20 @@ class changesApi {
             this.allTransformersHandlers.remove(callback);
             if (this.allTransformersHandlers().length == 0) {
                 this.send('unwatch-transformers');
+            }
+        });
+    }
+
+    watchAllReplicationConflicts(onChange: (e: replicationConflictNotificationDto) => void) {
+        var callback = new changesCallback<replicationConflictNotificationDto>(onChange);
+        if (this.allReplicationConflicts().length == 0) {
+            this.send('watch-replication-conflicts');
+        }
+        this.allReplicationConflicts.push(callback);
+        return new changeSubscription(() => {
+            this.allReplicationConflicts.remove(callback);
+            if (this.allReplicationConflicts().length == 0) {
+                this.send('unwatch-replication-conflicts');
             }
         });
     }
@@ -395,6 +444,20 @@ class changesApi {
             }
         });
     }
+
+    watchFsDestinations(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
+        var callback = new changesCallback<filesystemConfigNotification>(onChange);
+        if (this.allFsDestinationsHandlers().length == 0) {
+            this.send('watch-config');
+        }
+        this.allFsDestinationsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allFsDestinationsHandlers.remove(callback);
+            if (this.allFsDestinationsHandlers().length == 0) {
+                this.send('unwatch-config');
+            }
+        });
+    }
     
     dispose() {
         this.connectToChangesApiTask.done(() => {
@@ -416,16 +479,9 @@ class changesApi {
         });
     }
 
-    private makeId() {
-        var text = "";
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (var i = 0; i < 5; i++)
-            text += chars.charAt(Math.floor(Math.random() * chars.length));
-
-        return text;
+    public getResourceName() {
+        return this.rs.name;
     }
-
 }
 
 export = changesApi;

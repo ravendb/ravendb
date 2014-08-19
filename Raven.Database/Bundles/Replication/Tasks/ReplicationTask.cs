@@ -1,25 +1,12 @@
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 //-----------------------------------------------------------------------
 // <copyright file="ReplicationTask.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Formatting;
-using System.Threading;
-using System.Threading.Tasks;
 
-using Lucene.Net.Documents;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -28,13 +15,24 @@ using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Raven.Database.Extensions;
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -87,7 +85,8 @@ namespace Raven.Bundles.Replication.Tasks
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 			nonBufferedHttpRavenRequestFactory = new HttpRavenRequestFactory
 			{
-				RequestTimeoutInMs = replicationRequestTimeoutInMs, AllowWriteStreamBuffering = false
+				RequestTimeoutInMs = replicationRequestTimeoutInMs,
+				AllowWriteStreamBuffering = false
 			};
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
@@ -366,7 +365,12 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
+							{
+								destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
+
+								if (destinationsReplicationInformationForSource == null)
 								return false;
+							}
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 						}
@@ -467,6 +471,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 		    JsonDocumentsToReplicate documentsToReplicate = null;
             Stopwatch sp = Stopwatch.StartNew();
+			IDisposable removeBatch = null;
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
 				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, null));
@@ -503,6 +508,8 @@ namespace Raven.Bundles.Replication.Tasks
                 // if the db is idling in all respect except sending out replication, let us keep it that way.
                 docDb.WorkContext.UpdateFoundWork(); 
 
+				removeBatch = prefetchingBehavior.UpdateCurrentlyUsedBatches(documentsToReplicate.LoadedDocs);
+
 			using (var scope = recorder.StartRecording("Send"))
 			{
 				string lastError;
@@ -533,6 +540,9 @@ namespace Raven.Bundles.Replication.Tasks
 		    {
 		        if (documentsToReplicate != null && documentsToReplicate.LoadedDocs != null)
 		            prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
+
+				if(removeBatch != null)
+					removeBatch.Dispose();
 		    }
 
 			RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
@@ -633,6 +643,8 @@ namespace Raven.Bundles.Replication.Tasks
 						  UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
+				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
+				{
 				var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
 				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x => x.Value<string>("@id"))));
@@ -642,6 +654,7 @@ namespace Raven.Bundles.Replication.Tasks
 				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
 				errorMessage = "";
 				return true;
+			}
 			}
 			catch (WebException e)
 			{
@@ -692,12 +705,15 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var sp = Stopwatch.StartNew();
 
+				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
+				{
 				var request = nonBufferedHttpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				lastError = "";
 				return true;
+			}
 			}
 			catch (WebException e)
 			{

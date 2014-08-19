@@ -68,12 +68,12 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 				WaitForIndexing(store);
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 				using (var session = store.OpenSession())
 				{
 					var bankTotal = session.Query<BankTotal, DecimalAggregation_Map>()
 						.Customize(x=>x.WaitForNonStaleResults())
-						.AsProjection<BankTotal>()
+						.ProjectFromIndexFieldsInto<BankTotal>()
 						.Single();
 
 					Assert.Equal(321.412m, bankTotal.Total);

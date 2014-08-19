@@ -3,19 +3,18 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
-import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import createFilesystem = require("viewmodels/filesystem/createFilesystem");
-import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
-
 
 class filesystems extends viewModelBase {
 
     appUrls: computedAppUrls;
-    fileSystems = ko.observableArray<filesystem>();    
+    fileSystems = ko.observableArray<filesystem>();
+    isAnyFileSystemSelected: KnockoutComputed<boolean>;
+    allCheckedFileSystemsDisabled: KnockoutComputed<boolean>;
     searchText = ko.observable("");
-    selectedFilesystem = ko.observable<filesystem>();
+    selectedFileSystem = ko.observable<filesystem>();
+    optionsClicked = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -27,6 +26,36 @@ class filesystems extends viewModelBase {
         if (!!currentFileSystem) {
             this.selectFileSystem(currentFileSystem, false);
         }
+
+        var updatedUrl = appUrl.forFilesystems();
+        this.updateUrl(updatedUrl);
+
+        this.isAnyFileSystemSelected = ko.computed(() => {
+            for (var i = 0; i < this.fileSystems().length; i++) {
+                var fs: filesystem = this.fileSystems()[i];
+                if (fs.isChecked()) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        this.allCheckedFileSystemsDisabled = ko.computed(() => {
+            var disabledStatus = null;
+            for (var i = 0; i < this.fileSystems().length; i++) {
+                var fs: filesystem = this.fileSystems()[i];
+                if (fs.isChecked()) {
+                    if (disabledStatus == null) {
+                        disabledStatus = fs.disabled();
+                    } else if (disabledStatus != fs.disabled()) {
+                        return null;
+                    }
+                }
+            }
+
+            return disabledStatus;
+        });
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -47,7 +76,7 @@ class filesystems extends viewModelBase {
     private fileSystemsLoaded() {
         // If we have no file systems, show the "create a new file system" screen.
         if (this.fileSystems().length === 0) {
-            this.newFilesystem();
+            this.newFileSystem();
         } else {
             // If we have just a few file systems, grab the fs stats for all of them.
             // (Otherwise, we'll grab them when we click them.)
@@ -65,6 +94,8 @@ class filesystems extends viewModelBase {
             var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
             d.isVisible(isMatch);
         });
+
+        this.fileSystems().map((fs: filesystem) => fs.isChecked(!fs.isVisible() ? false : fs.isChecked()));
     }
 
     getFilesystemFilesUrl(fs: filesystem) {
@@ -72,41 +103,126 @@ class filesystems extends viewModelBase {
     }
 
     selectFileSystem(fs: filesystem, activateFileSystem: boolean = true) {
-        this.fileSystems().forEach((f: filesystem) => f.isSelected(f.name === fs.name));
-        if (activateFileSystem) {
-            fs.activate();
+        if (this.optionsClicked() == false) {
+            if (activateFileSystem) {
+                fs.activate();
+            }
+            this.selectedFileSystem(fs);
         }
-        this.selectedFilesystem(fs);
+
+        this.optionsClicked(false);
     }
 
-    newFilesystem() {
-        require(["viewmodels/filesystem/createFilesystem"], createFilesystem => {
-            var createFilesystemViewModel: createFilesystem = new createFilesystem(this.fileSystems);
-            createFilesystemViewModel
+    newFileSystem() {
+        require(["viewmodels/filesystem/createFilesystem"], createFileSystem => {
+            var createFileSystemViewModel = new createFileSystem(this.fileSystems);
+            createFileSystemViewModel
                 .creationTask
-                .done((filesystemName: string, filesystemPath: string) => this.showCreationAdvancedStepsIfNecessary(filesystemName, filesystemPath));
-            app.showDialog(createFilesystemViewModel);
+                .done((fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) => this.showCreationAdvancedStepsIfNecessary(fileSystemName, fileSystemPath, fileSystemLogsPath));
+            app.showDialog(createFileSystemViewModel);
         });
     }
 
-    showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string) {
-        new createFilesystemCommand(fileSystemName, fileSystemPath).execute()
-            .done(() => {
-                var newFileSystem = this.addNewFileSystem(fileSystemName);
-                this.selectFileSystem(newFileSystem);
+    showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) {
+        require(["commands/filesystem/createFilesystemCommand"], createFileSystemCommand => {
+            new createFileSystemCommand(fileSystemName, fileSystemPath).execute()
+                .done(() => {
+                    var newFileSystem = this.addNewFileSystem(fileSystemName);
+                    this.selectFileSystem(newFileSystem);
+                });
         });
     }
 
     private addNewFileSystem(fileSystemName: string): filesystem {
-        var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
+        var foundFileSystem = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
 
-        if (!fileSystemInArray) {
+        if (!foundFileSystem) {
             var newFileSystem = new filesystem(fileSystemName);
             this.fileSystems.unshift(newFileSystem);
             return newFileSystem;
         }
 
-        return fileSystemInArray;
+        return foundFileSystem;
+    }
+
+    deleteSelectedFileSystems(fileSystems: Array<filesystem>) {
+        if (fileSystems.length > 0) {
+            require(["viewmodels/deleteResourceConfirm"], deleteResourceConfirm => {
+                var confirmDeleteViewModel = new deleteResourceConfirm(fileSystems);
+
+                confirmDeleteViewModel.deleteTask.done((deletedFileSystemsNames: string[]) => {
+                    if (fileSystems.length == 1) {
+                        this.onFileSystemDeleted(fileSystems[0].name);
+                    } else {
+                        deletedFileSystemsNames.forEach(fileSystemName => {
+                            this.onFileSystemDeleted(fileSystemName);
+                        });
+                    }
+                });
+
+                app.showDialog(confirmDeleteViewModel);
+            });
+        }
+    }
+
+    deleteCheckedFileSystems() {
+        var checkedFileSystems: filesystem[] = this.fileSystems().filter((fs: filesystem) => fs.isChecked());
+        this.deleteSelectedFileSystems(checkedFileSystems);
+    }
+
+    private onFileSystemDeleted(fileSystemName: string) {
+        var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
+
+        if (!!fileSystemInArray) {
+            this.fileSystems.remove(fileSystemInArray);
+
+            if ((this.fileSystems().length > 0) && (this.fileSystems.contains(this.selectedFileSystem()) === false)) {
+                this.selectedFileSystem(this.fileSystems().first());
+            }
+        }
+    }
+
+    toggleSelectedFileSystems(fileSystems: Array<filesystem>) {
+        if (fileSystems.length > 0) {
+            var action = !fileSystems[0].disabled();
+
+            require(["viewmodels/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
+                var disableResourceToggleViewModel = new disableResourceToggleConfirm(fileSystems);
+
+                disableResourceToggleViewModel.disableToggleTask
+                    .done((toggledFileSystemsNames: string[]) => {
+                        var activeFileSystem: filesystem = this.activeFilesystem();
+
+                        if (fileSystems.length == 1) {
+                            this.onFileSystemDisabledToggle(fileSystems[0].name, action, activeFileSystem);
+                        } else {
+                            toggledFileSystemsNames.forEach(fileSystemName => {
+                                this.onFileSystemDisabledToggle(fileSystemName, action, activeFileSystem);
+                            });
+                        }
+                    });
+
+                app.showDialog(disableResourceToggleViewModel);
+            });
+        }
+    }
+
+    toggleCheckedFileSystems() {
+        var checkedFileSystems: filesystem[] = this.fileSystems().filter((fs: filesystem) => fs.isChecked());
+        this.toggleSelectedFileSystems(checkedFileSystems);
+    }
+
+    private onFileSystemDisabledToggle(fileSystemName: string, action: boolean, activeFileSystem: filesystem) {
+        var fs = this.fileSystems.first((foundFs: filesystem) => foundFs.name == fileSystemName);
+
+        if (!!fs) {
+            fs.disabled(action);
+            fs.isChecked(false);
+
+            if (!!activeFileSystem && fs.name == activeFileSystem.name) {
+                this.selectFileSystem(fs);
+            }
+        }
     }
 }
 

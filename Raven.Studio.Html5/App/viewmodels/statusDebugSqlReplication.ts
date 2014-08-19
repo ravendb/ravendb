@@ -15,19 +15,21 @@ class statusDebugSqlReplication extends viewModelBase {
     activate(args) {
         var widthUnit = 8;
         this.columnWidths = [
-            ko.observable<number>(12),  
+            ko.observable<number>(widthUnit),  
+            ko.observable<number>(12),
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(10),
-            ko.observable<number>(18),
-            ko.observable<number>(6),//Name
+            ko.observable<number>(6),//Table
+            ko.observable<number>(18),//Name
             ko.observable<number>(6),//Counter
             ko.observable<number>(6),//Max
             ko.observable<number>(6),//Min
             ko.observable<number>(6),//Stdev
-            ko.observable<number>(4*6),//Percentiles
+            ko.observable<number>(6),//Percentiles
+            ko.observable<number>(4*6),
             ko.observable<number>(6),
             ko.observable<number>(6),
             ko.observable<number>(6),

@@ -111,6 +111,7 @@ interface synchronizationDestinationDto {
     Domain: string;
     ApiKey: string;
     FileSystem: string;
+    Enabled: boolean;
 }
 
 interface folderNodeDto {
@@ -148,6 +149,7 @@ interface synchronizationConflictNotification {
     FileName: string;
     SourceServerUrl: string;
     Status: conflictStatus;
+    RemoteFileHeader: any;
 }
 
 enum conflictStatus {

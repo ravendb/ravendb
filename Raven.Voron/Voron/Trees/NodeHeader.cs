@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 
@@ -43,6 +44,10 @@ namespace Voron.Trees
 			if (node->Flags == (NodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+
+				Debug.Assert(overFlowPage.IsOverflow, "Requested oveflow page but got " + overFlowPage.Flags);
+				Debug.Assert(overFlowPage.OverflowSize > 0, "Overflow page cannot be size equal 0 bytes");
+
                 return new ValueReader(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
 			}
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);

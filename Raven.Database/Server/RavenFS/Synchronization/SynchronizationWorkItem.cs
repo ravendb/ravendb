@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection.Profiling;
-using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
@@ -39,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			};
 
 			conflictDetector = new ConflictDetector();
-			conflictResolver = new ConflictResolver();
+			conflictResolver = new ConflictResolver(null, null);
 		}
 
 		protected ITransactionalStorage Storage { get; private set; }
@@ -81,7 +78,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                                                             RavenJObject destinationMetadata, string localServerUrl)
 		{
             var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
-            var isConflictResolved = conflictResolver.IsResolved(destinationMetadata, conflict);
+            var isConflictResolved = conflictResolver.CheckIfResolvedByRemoteStrategy(destinationMetadata, conflict);
 
             // optimization - conflict checking on source side before any changes pushed
             if (conflict != null && !isConflictResolved)
@@ -114,6 +111,29 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			{
 				Exception = new SynchronizationException(string.Format("File {0} is conflicted", FileName)),
 			};
+		}
+
+		protected async Task<SynchronizationReport> HandleConflict(IAsyncFilesSynchronizationCommands destination, ConflictItem conflict, ILog log)
+		{
+			var conflictResolutionStrategy = await destination.Commands.Synchronization.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata);
+
+			switch (conflictResolutionStrategy)
+			{
+				case ConflictResolutionStrategy.NoResolution:
+					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
+				case ConflictResolutionStrategy.CurrentVersion:
+					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
+					await destination.Commands.Synchronization.ResolveConflictAsync(FileName, conflictResolutionStrategy);
+					return new SynchronizationReport(FileName, FileETag, SynchronizationType);
+				case ConflictResolutionStrategy.RemoteVersion:
+					// we can push the file even though it conflicted, the conflict will be automatically resolved on the destination side
+					return null;
+				default:
+					return new SynchronizationReport(FileName, FileETag, SynchronizationType)
+					{
+						Exception = new SynchronizationException(string.Format("Unknown resulution stragegy: {0}", conflictResolutionStrategy)),
+					};
+			}
 		}
 
 		public void RefreshMetadata()

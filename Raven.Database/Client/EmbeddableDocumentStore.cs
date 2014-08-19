@@ -96,6 +96,9 @@ namespace Raven.Client.Embedded
         {
             if (_inner != null)
                 return this;
+
+			AssertValidConfiguration();
+
             if (string.IsNullOrEmpty(Url) == false)
             {
                 _inner = new DocumentStore
@@ -129,26 +132,53 @@ namespace Raven.Client.Embedded
             return this;
         }
 
+	    private void AssertValidConfiguration()
+	    {
+		    if(string.IsNullOrEmpty(Url) == false && UseEmbeddedHttpServer)
+				throw new InvalidOperationException("You cannot set non empty Url and UseEmbeddedHttpServer = true at the same time. If you want to have HTTP access then you should use only UseEmbeddedHttpServer property, the listening port will be set according to configuration.");
+	    }
+
         public Guid ResourceManagerId { get; set; }
 
-        public DocumentDatabase DocumentDatabase
+		/// <summary>
+		/// Direct access to system database.
+		/// </summary>
+        public DocumentDatabase SystemDatabase
         {
             get
             {
                 var eds = Inner as EmbeddedDocumentStore;
                 if (eds != null)
-                    return eds.DocumentDatabase;
+                    return eds.SystemDatabase;
                 return null;
             }
         }
+
+		/// <summary>
+		/// Direct access to database configured in 'DefaultDatabase' property. If property value is 'null' then 'SystemDatabase' is returned. 
+		/// </summary>
+		public DocumentDatabase DocumentDatabase
+		{
+			get
+			{
+				var eds = Inner as EmbeddedDocumentStore;
+				if (eds != null)
+					return eds.DocumentDatabase;
+				return null;
+			}
+		}
 
         public DocumentConvention Conventions
         {
             get; set;
         }
 
-        public string DataDirectory { get; set; }
-        public string Url
+	    public string DataDirectory
+	    {
+		    get { return Configuration.DataDirectory; }
+			set { Configuration.DataDirectory = value; }
+	    }
+	    public string Url
         {
             get; set;
         }
@@ -199,7 +229,16 @@ namespace Raven.Client.Embedded
         {
             get { return Inner.JsonRequestFactory; }
         }
-        public string Identifier
+
+	    public bool HasJsonRequestFactory
+	    {
+		    get
+		    {
+			    return Inner.HasJsonRequestFactory;
+		    }
+	    }
+
+	    public string Identifier
         {
             get { return Inner.Identifier; }
             set { Inner.Identifier = value; }
@@ -298,14 +337,6 @@ namespace Raven.Client.Embedded
             Listeners.RegisterListener(listener);
             return this;
         }
-
-
-        public IDocumentStore RegisterListener(IExtendedDocumentConversionListener listener)
-        {
-            Listeners.RegisterListener(listener);
-            return this;
-        }
-
 
         public IDocumentStore RegisterListener(IDocumentQueryListener listener)
         {

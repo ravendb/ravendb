@@ -1,7 +1,7 @@
 ﻿<div class="messageBox" tabindex="-1">
     <form data-bind="submit: nextOrCreate">
         <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
             <h4 class="modal-title">Create Counter Storage</h4>
         </div>
         <div class="modal-body">
@@ -9,7 +9,7 @@
                 <div class="col-md-12">
                     <div class="form-group">
                         <label for="counterStorageName">Name</label>
-                        <input required type="text" class="form-control" id="counterStorageName" placeholder="Counter Storage Name" data-bind="value: counterStorageName, valueUpdate: 'keyup', hasfocus: counterStorageNameFocus">
+                        <input required type="text" class="form-control" id="counterStorageName" placeholder="Counter Storage Name" data-bind="value: counterStorageName, valueUpdate: 'afterkeydown', hasfocus: counterStorageNameFocus">
                     </div>
                     <div class="panel-group" id="accordion">
                         <div class="panel panel-default">
@@ -24,7 +24,7 @@
                                 <div class="panel-body">
                                     <div class="form-group">
                                         <label for="counterStoragePath">Path</label>
-                                        <input data-bind="value: counterStoragePath, valueUpdate: 'keyup', attr: { placeholder: '~/Counters/' + counterStorageName() }" type="text" class="form-control" id="databasePath">
+                                        <input data-bind="value: counterStoragePath, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Counters/' + counterStorageName() }" type="text" class="form-control" id="databasePath">
                                     </div>
                                 </div>
                             </div>

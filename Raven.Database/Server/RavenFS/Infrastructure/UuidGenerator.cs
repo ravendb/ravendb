@@ -26,7 +26,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			var bytes = new byte[16];
 			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
 			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
-			return bytes.TransfromToGuidWithProperSorting();
+			return bytes.TransformToGuidWithProperSorting();
 		}
 	}
 }

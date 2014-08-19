@@ -80,7 +80,7 @@ namespace Raven.Tests.MailingList
 						.As<Entity>()
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(results);
 				}

@@ -26,7 +26,7 @@ class viewModelBase {
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
-    private static isConfirmedUsingSystemDatabase: boolean;
+    public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
     /*
@@ -37,23 +37,39 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var db = this.activeDatabase();
+        var resource = appUrl.getResource();
 
-        // we only want to prompt warning to system db if we are in the databases section
-        if (!!db && db.isSystem) {
-            if (viewModelBase.isConfirmedUsingSystemDatabase) {
-                return true;
+        if (resource instanceof filesystem) {
+            var fs = this.activeFilesystem();
+
+            if (!!fs && fs.disabled()) {
+                messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system while it's disabled.");
+                return { redirect: appUrl.forFilesystems() };
+            }
+        }
+        else if (resource instanceof counterStorage) {
+            var cs = this.activeCounterStorage();
+
+            if (!!cs && cs.disabled()) {
+                messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
+                return { redirect: appUrl.forFilesystems() };
+            }
+        }
+        else { //it's a database
+            var db = this.activeDatabase();
+
+            // we only want to prompt warning to system db if we are in the databases section
+            if (!!db && db.isSystem) {
+                return this.promptNavSystemDb();
+            }
+            else if (!!db && db.disabled()) {
+                messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database while it's disabled.");
+                return { redirect: appUrl.forDatabases() };
             }
 
-            return this.promptNavSystemDb();
-        }
-        else if (!!db && db.disabled()) {
-            messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database when it's disabled.");
-            return { redirect: appUrl.forDatabases() };
+            viewModelBase.isConfirmedUsingSystemDatabase = false;
         }
 
-        viewModelBase.isConfirmedUsingSystemDatabase = false;
-        
         return true;
     }
 
@@ -87,18 +103,22 @@ class viewModelBase {
     /*
      * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
      */
-    canDeactivate(isClose): any {
+    canDeactivate(isClose: boolean): any {
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
             return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?', undefined, true);
         }
-        return true;
+
+        return $.Deferred().resolve({ can: true });
     }
     
     /*
      * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
      */
     detached() {
+        this.activeDatabase.unsubscribeFrom("ActivateDatabase");
+        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
+        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
@@ -108,9 +128,6 @@ class viewModelBase {
      * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
      */
     deactivate() {
-        this.activeDatabase.unsubscribeFrom("ActivateDatabase");
-        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
-        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
     }
@@ -211,12 +228,12 @@ class viewModelBase {
         return viewTask;
     }
 
-    canContinueIfNotDirty(title: string, confirmationMessage: string, options: string[]= ['Yes', 'No']) {
+    canContinueIfNotDirty(title: string, confirmationMessage: string) {
         var deferred = $.Deferred();
 
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage, options);
+            var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage);
             confirmationMessageViewModel.done(() => deferred.resolve());
         } else {
             deferred.resolve();
@@ -225,21 +242,22 @@ class viewModelBase {
         return deferred;
     }
 
-    private promptNavSystemDb(): any {
-        if (!appUrl.warnWhenUsingSystemDatabase) {
-            return true;
-        }
-
+    public promptNavSystemDb(forceRejectWithResolve: boolean = false): any {
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
-        systemDbConfirm.viewTask
-            .fail(() => canNavTask.resolve({ redirect: 'databases' }))
-            .done(() => {
-                viewModelBase.isConfirmedUsingSystemDatabase = true;
-                canNavTask.resolve(true);
-            });
-        app.showDialog(systemDbConfirm);
+        if (!appUrl.warnWhenUsingSystemDatabase || viewModelBase.isConfirmedUsingSystemDatabase) {
+            canNavTask.resolve({ can: true });
+        }
+        else {
+            var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
+            systemDbConfirm.viewTask
+                .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forDatabases() }) : canNavTask.reject())
+                .done(() => {
+                    viewModelBase.isConfirmedUsingSystemDatabase = true;
+                    canNavTask.resolve({ can: true });
+                });
+            app.showDialog(systemDbConfirm);
+        }
 
         return canNavTask;
     }
@@ -258,6 +276,14 @@ class viewModelBase {
             // For Safari
             return message;
         }
+    }
+
+    public AddNotification(subscription: changeSubscription) {
+        this.notifications.push(subscription);
+    }
+
+    public RemoveNotification(subscription: changeSubscription) {
+        this.notifications.remove(subscription);
     }
 }
 

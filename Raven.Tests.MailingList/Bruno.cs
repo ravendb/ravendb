@@ -82,7 +82,7 @@ namespace Raven.Tests.MailingList
 							.Customize(c => c.WaitForNonStaleResults())
 							.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.Equal(tasksForUserA, result.Single(s => s.OwnerId == userA.Id).Count);
 					Assert.Equal(tasksForUserB, result.Single(s => s.OwnerId == userB.Id).Count);

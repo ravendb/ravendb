@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 				 };
 
 				 Assert.Throws<OperationVetoedException>(
-					 () => store.DocumentDatabase.Documents.Put(@"somebadid\123", null, new RavenJObject(), new RavenJObject(), tx));
+					 () => store.SystemDatabase.Documents.Put(@"somebadid\123", null, new RavenJObject(), new RavenJObject(), tx));
 			 }
 		 }
 	}

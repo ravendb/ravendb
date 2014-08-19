@@ -30,6 +30,13 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingFolders =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+        private readonly ConcurrentSet<string> matchingDbLogs =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingFsLogs =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingCountersLogs =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        
 		private IEventsTransport eventsTransport;
 
 		private int watchAllDocuments;
@@ -40,6 +47,7 @@ namespace Raven.Database.Server.Connections
 		private int watchConfig;
 		private int watchConflicts;
 		private int watchSync;
+        private int watchAdminLog;
 
 		public ConnectionState(IEventsTransport eventsTransport)
 		{
@@ -69,6 +77,25 @@ namespace Raven.Database.Server.Connections
 				};
 			}
 		}
+
+	    public void WatchDBLog(string dbName)
+	    {
+	        matchingDbLogs.TryAdd(dbName);
+	    }
+        public void UnwatchDBLog(string dbName)
+        {
+            matchingDbLogs.TryRemove(dbName);
+        }
+
+        public void WatchAdminLog()
+        {
+            Interlocked.Increment(ref watchAdminLog);
+        }
+        public void UnwatchAdminLog()
+        {
+            Interlocked.Decrement(ref watchAdminLog);
+        }
+
 
 		public void WatchIndex(string name)
 		{

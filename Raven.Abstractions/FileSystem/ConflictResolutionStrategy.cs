@@ -2,8 +2,8 @@
 {
 	public enum ConflictResolutionStrategy
 	{
+		NoResolution,
 		RemoteVersion,
 		CurrentVersion,
-        NoResolution
 	}
 }

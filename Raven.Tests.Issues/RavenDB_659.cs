@@ -60,7 +60,7 @@ namespace Raven.Tests.Issues
 
 				AssertNumberOfDocuments(store, 2);
 
-				store.DocumentDatabase.StopBackgroundWorkers();
+				store.SystemDatabase.StopBackgroundWorkers();
 
 				using (var session = store.OpenSession())
 				{
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.Delete("users/1", null);
 				store.DatabaseCommands.Delete("users/4", null);
 
-				store.DocumentDatabase.SpinBackgroundWorkers();
+				store.SystemDatabase.SpinBackgroundWorkers();
 
 				AssertNumberOfDocuments(store, 2);
 

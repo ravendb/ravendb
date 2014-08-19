@@ -59,7 +59,8 @@ namespace Raven.Database.Server.Controllers
             var options = new BulkInsertOptions
             {
                 OverwriteExisting = GetOverwriteExisting(),
-                CheckReferencesInIndexes = GetCheckReferencesInIndexes()
+                CheckReferencesInIndexes = GetCheckReferencesInIndexes(),
+				SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged()
             };
 
             var operationId = ExtractOperationId();

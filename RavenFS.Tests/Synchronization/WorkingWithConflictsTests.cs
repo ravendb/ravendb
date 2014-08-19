@@ -407,6 +407,30 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
+		public async Task Source_should_remove_syncing_item_if_conflict_was_resolved_on_destination_by_remote()
+		{
+			var sourceClient = NewAsyncClient(0);
+			var destinationClient = (IAsyncFilesCommandsImpl)NewAsyncClient(1);
+
+			await sourceClient.UploadAsync("test", new MemoryStream(new byte[] { 1, 2, 3 }));
+			await destinationClient.UploadAsync("test", new MemoryStream(new byte[] { 1, 2 }));
+
+			var shouldBeConflict = await sourceClient.Synchronization.StartAsync("test", destinationClient);
+
+			Assert.Equal("File test is conflicted", shouldBeConflict.Exception.Message);
+
+			await destinationClient.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion);
+
+			await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
+
+			var report = await sourceClient.Synchronization.SynchronizeAsync();
+			Assert.Null(report.ToArray()[0].Exception);
+
+			var syncingItem = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
+			Assert.Null(syncingItem);
+		}
+
+		[Fact]
 		public void Conflict_item_should_have_remote_server_url()
 		{
             var source = (IAsyncFilesCommandsImpl) NewAsyncClient(0);

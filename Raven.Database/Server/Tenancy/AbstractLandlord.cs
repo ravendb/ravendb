@@ -5,7 +5,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -15,7 +17,9 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -32,7 +36,56 @@ namespace Raven.Database.Server.Tenancy
         public event Action<string> CleanupOccured;
 
 	    protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
-		
+
+	    public abstract string ResourcePrefix { get; }
+
+        public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
+        {
+            foreach (var resourceName in GetUserAllowedResourcesByPrefix(user, systemDatabase, annonymouseUserAccessMode, mixedModeRequestAuthorizer, authHeader))
+            {
+                TransportState curTransportState;
+                if (ResourseTransportStates.TryGetValue(resourceName, out curTransportState))
+                    yield return curTransportState;
+            }
+        }
+
+        public string[] GetUserAllowedResourcesByPrefix( IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
+        {
+	        List<string> approvedResources = null;
+	        var nextPageStart = 0;
+            var resources = systemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
+                systemDatabase.Configuration.MaxPageSize, CancellationToken.None, ref nextPageStart);
+
+            var reourcesNames = resources
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(ResourcePrefix, string.Empty)).ToArray();
+
+            if (annonymouseUserAccessMode == AnonymousUserAccessMode.None)
+            {
+                if (user == null)
+                    return null;
+
+	            var oneTimePrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+				bool isAdministrator = oneTimePrincipal != null ?
+					oneTimePrincipal.IsAdministratorInAnonymouseMode :
+					user.IsAdministrator(annonymouseUserAccessMode);
+
+                if (isAdministrator == false)
+                {
+                    var authorizer = mixedModeRequestAuthorizer;
+                    approvedResources = authorizer.GetApprovedResources(user, authHeader, reourcesNames);
+                }
+            }
+
+            if (approvedResources != null)
+            {
+                reourcesNames = reourcesNames.Where(resourceName => approvedResources.Contains(resourceName)).ToArray();
+            }
+
+            return reourcesNames;
+        }
+
         public void Unprotect(DatabaseDocument databaseDocument)
         {
             if (databaseDocument.SecuredSettings == null)
@@ -55,7 +108,7 @@ namespace Raven.Database.Server.Tenancy
                 catch (Exception e)
                 {
                     Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
+	                databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
                 }
             }
         }
@@ -157,6 +210,7 @@ namespace Raven.Database.Server.Tenancy
 
             config.CustomizeValuesForTenant(tenantId);
 
+            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {

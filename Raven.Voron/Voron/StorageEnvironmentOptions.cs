@@ -52,6 +52,8 @@ namespace Voron
 			}
 		}
 
+		public long MaxScratchBufferSize { get; set; }
+
 		public bool OwnsPagers { get; set; }
 
 		public bool ManualFlushing { get; set; }
@@ -83,9 +85,15 @@ namespace Voron
 
 			InitialLogFileSize = 64 * 1024;
 
+			MaxScratchBufferSize = 512 * 1024 * 1024;
+
+			ScratchBufferOverflowTimeout = 5000;
+
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
 		}
+
+		public int ScratchBufferOverflowTimeout { get; set; }
 
 		public static StorageEnvironmentOptions CreateMemoryOnly()
 		{

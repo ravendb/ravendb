@@ -25,15 +25,15 @@ namespace Raven.Tests.Issues
                
                 store.DatabaseCommands.Admin.StopIndexing();
                 store.DatabaseCommands.Admin.StartIndexing(7);
-                Assert.Equal(7, store.DocumentDatabase.Configuration.MaxNumberOfParallelIndexTasks);
+                Assert.Equal(7, store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks);
 
                 store.DatabaseCommands.Admin.StopIndexing();
                 store.AsyncDatabaseCommands.Admin.StartIndexingAsync(9).Wait();
-                Assert.Equal(9, store.DocumentDatabase.Configuration.MaxNumberOfParallelIndexTasks);
+                Assert.Equal(9, store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks);
 
                 store.DatabaseCommands.Admin.StopIndexing();
                 store.DatabaseCommands.Admin.StartIndexing();
-                Assert.Equal(9, store.DocumentDatabase.Configuration.MaxNumberOfParallelIndexTasks);
+                Assert.Equal(9, store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks);
             }
         }
     }

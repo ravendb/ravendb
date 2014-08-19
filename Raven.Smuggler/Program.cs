@@ -21,12 +21,14 @@ namespace Raven.Smuggler
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
 		private readonly RavenConnectionStringOptions connectionStringOptions2 = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
-		private readonly SmugglerOptions options = new SmugglerOptions();
+		//private readonly SmugglerOptions options = new SmugglerOptions();
+		private readonly SmugglerApi smugglerApi = new SmugglerApi();
 		private readonly OptionSet optionSet;
 		bool waitForIndexing;
 
 	    private Program()
 	    {
+		    var options = smugglerApi.SmugglerOptions;
 		    optionSet = new OptionSet
 		    {
 			    {
@@ -60,32 +62,35 @@ namespace Raven.Smuggler
 			    {
 				    "negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
 				                                    "Usage example: Raven-Entity-Name=Posts",
-				    (key, val) => options.Filters.Add(new FilterSetting
-				    {
-					    Path = "@metadata." + key,
-					    ShouldMatch = false,
-															   Values = FilterSetting.ParseValues(val)
-				    })
+				    (key, val) => options.Filters.Add(
+						new FilterSetting
+						{
+							Path = "@metadata." + key,
+							ShouldMatch = false,
+							Values = FilterSetting.ParseValues(val)
+						})
 			    },
 			    {
 				    "filter:{=}", "Filter documents by a document property" + Environment.NewLine +
 				                  "Usage example: Property-Name=Value",
-				    (key, val) => options.Filters.Add(new FilterSetting
-				    {
-					    Path = key,
-					    ShouldMatch = true,
-													  Values = FilterSetting.ParseValues(val)
-				    })
+				    (key, val) => options.Filters.Add(
+						new FilterSetting
+						{
+							Path = key,
+							ShouldMatch = true,
+							Values = FilterSetting.ParseValues(val)
+						})
 			    },
 			    {
 				    "negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
 				                           "Usage example: Property-Name=Value",
-				    (key, val) => options.Filters.Add(new FilterSetting
-				    {
-					    Path = key,
-					    ShouldMatch = false,
-													  Values = FilterSetting.ParseValues(val)
-				    })
+				    (key, val) => options.Filters.Add(
+						new FilterSetting
+						{
+							Path = key,
+							ShouldMatch = false,
+							Values = FilterSetting.ParseValues(val)
+						})
 			    },
 			    {
 				    "transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
@@ -162,7 +167,7 @@ namespace Raven.Smuggler
 
 			if (action != SmugglerAction.Between && Directory.Exists(backupPath))
 			{
-				options.Incremental = true;
+				smugglerApi.SmugglerOptions.Incremental = true;
 			}
 
 			try
@@ -174,23 +179,21 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-            var smugglerApi = new SmugglerApi();
-
 			try
 			{
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = connectionStringOptions }, options).Wait();
+						smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = connectionStringOptions }).Wait();
 						if (waitForIndexing)
-							smugglerApi.WaitForIndexing(options).Wait();
+							smugglerApi.WaitForIndexing().Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(new SmugglerExportOptions { From = connectionStringOptions, ToFile = backupPath }, options).Wait();
+						smugglerApi.ExportData(new SmugglerExportOptions { From = connectionStringOptions, ToFile = backupPath }).Wait();
 						break;
 					case SmugglerAction.Between:
 						connectionStringOptions2.Url = backupPath;
-						SmugglerOperation.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }, options).Wait();
+						smugglerApi.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }).Wait();
 						break;
 				}
 			}

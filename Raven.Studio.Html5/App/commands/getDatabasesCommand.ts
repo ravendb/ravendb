@@ -11,7 +11,7 @@ class getDatabasesCommand extends commandBase {
 
         var url = "/databases";
 
-        var resultsSelector = (databases: databaseDto[]) => databases.map(db => new database(db.Name, db.Disabled));
+        var resultsSelector = (databases: databaseDto[]) => databases.map(db => new database(db.Name, db.Disabled, db.Bundles));
         return this.query(url, args, null, resultsSelector);
     }
 }

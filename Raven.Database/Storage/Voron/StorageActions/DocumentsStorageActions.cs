@@ -218,7 +218,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return key;
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (string.IsNullOrEmpty(idPrefix))
 				throw new ArgumentNullException("idPrefix");
@@ -233,8 +233,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
 			{
 				iterator.RequiredPrefix = idPrefix.ToLowerInvariant();
-				if (iterator.Seek(iterator.RequiredPrefix) == false || !iterator.Skip(start))
+				var seekStart = skipAfter == null ? iterator.RequiredPrefix : skipAfter.ToLowerInvariant();
+				if (iterator.Seek(seekStart) == false || !iterator.Skip(start))
 					yield break;
+
+				if (skipAfter != null && !iterator.MoveNext())
+					yield break; // move to the _next_ one
+					
 
 				var fetchedDocumentCount = 0;
 				do
@@ -277,11 +282,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 			}
 
-			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata);
+			int sizeOnDisk;
+			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata,out sizeOnDisk);
 
 			logger.Debug("DocumentByKey() by key ='{0}'", key);
-
-			var docSize = tableStorage.Documents.GetDataSize(Snapshot, lowerKey);
 
 			var metadataSize = metadataIndex.GetDataSize(Snapshot, lowerKey);
 
@@ -291,7 +295,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				Etag = metadataDocument.Etag,
 				Key = metadataDocument.Key, //original key - with user specified casing, etc.
 				Metadata = metadataDocument.Metadata,
-				SerializedSizeOnDisk = docSize + metadataSize,
+				SerializedSizeOnDisk = sizeOnDisk + metadataSize,
 				LastModified = metadataDocument.LastModified
 			};
 		}
@@ -606,9 +610,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return isUpdated;
 		}
 
-		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
+		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata, out int size)
 		{
 			var loweredKey = CreateKey(key);
+
+			size = -1;
 
 			var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, existingEtag);
 			if (existingCachedDocument != null)
@@ -627,6 +633,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)stream.Length);
 
+
+					size = (int) Math.Max(stream.Position, decodedDocumentStream.Position);
 					return documentData;	
 				}
 			}

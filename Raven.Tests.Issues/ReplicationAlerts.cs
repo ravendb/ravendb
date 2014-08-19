@@ -50,27 +50,29 @@ namespace Raven.Tests.Issues
 
 	        var smuggler = new SmugglerApi();
 
-			smuggler.ExportData(new SmugglerExportOptions
-			{
-				ToFile = DumpFile,
-				From = new RavenConnectionStringOptions
-				{
-					Url = store1.Url,
-					DefaultDatabase = store1.DefaultDatabase
-				}
-			}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+	        smuggler.ExportData(
+		        new SmugglerExportOptions
+		        {
+			        ToFile = DumpFile,
+			        From = new RavenConnectionStringOptions
+			        {
+				        Url = store1.Url,
+				        DefaultDatabase = store1.DefaultDatabase
+			        }
+		        }).Wait(TimeSpan.FromSeconds(15));
             Assert.True(File.Exists(DumpFile));
 
 	        smuggler = new SmugglerApi();
-			smuggler.ImportData(new SmugglerImportOptions
-			{
-				FromFile = DumpFile,
-				To = new RavenConnectionStringOptions
-				{
-					Url = store3.Url,
-					DefaultDatabase = store3.DefaultDatabase
-				}
-			}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+	        smuggler.ImportData(
+		        new SmugglerImportOptions
+		        {
+			        FromFile = DumpFile,
+			        To = new RavenConnectionStringOptions
+			        {
+				        Url = store3.Url,
+				        DefaultDatabase = store3.DefaultDatabase
+			        }
+		        }).Wait(TimeSpan.FromSeconds(15));
 
             Assert.NotNull(store3.DatabaseCommands.Get("1"));
             Assert.NotNull(store3.DatabaseCommands.Get("2"));

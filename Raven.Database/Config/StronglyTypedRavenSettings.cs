@@ -22,12 +22,18 @@ namespace Raven.Database.Config
 
 		public PrefetcherConfiguration Prefetcher { get; private set; }
 
+        public FileSystemConfiguration FileSystem { get; private set; }
+
+		public EncryptionConfiguration Encryption { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
 			Voron = new VoronConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
-
+            FileSystem = new FileSystemConfiguration();
+			Encryption = new EncryptionConfiguration();
+			
 			this.settings = settings;
 		}
 
@@ -42,12 +48,10 @@ namespace Raven.Database.Config
 
 			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
 
-			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
+			MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
 				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
 
-		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
-		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -70,27 +74,27 @@ namespace Raven.Database.Config
                                     TimeSpanArgumentType.FromParse);
 			
 			
-			MaxIndexingRunLatency =
-				new TimeSpanSetting(settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
+			MaxProcessingRunLatency =
+				new TimeSpanSetting(settings["Raven/MaxProcessingRunLatency"] ?? settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
 			MaxIndexOutputsPerDocument = 
 				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
 
-			MaxNumberOfItemsToIndexInSingleBatch =
-				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
+			MaxNumberOfItemsToProcessInSingleBatch =
+				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToProcessInSingleBatch"] ?? settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
 				                          defaultMaxNumberOfItemsToIndexInSingleBatch, 128);
-			AvailableMemoryForRaisingIndexBatchSizeLimit =
-				new IntegerSetting(settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"],
+			AvailableMemoryForRaisingBatchSizeLimit =
+				new IntegerSetting(settings["Raven/AvailableMemoryForRaisingBatchSizeLimit"] ?? settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"],
 				                   Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2));
 			MaxNumberOfItemsToReduceInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToReduceInSingleBatch"],
 				                          defaultMaxNumberOfItemsToIndexInSingleBatch/2, 128);
 			NumberOfItemsToExecuteReduceInSingleStep =
 				new IntegerSetting(settings["Raven/NumberOfItemsToExecuteReduceInSingleStep"], 1024);
-			MaxNumberOfParallelIndexTasks =
-				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
+			MaxNumberOfParallelProcessingTasks =
+				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelProcessingTasks"] ?? settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
 
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024*1024);
@@ -117,8 +121,6 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
 				new StringSetting(settings["Raven/Port"], "*");
-			UseSsl = 
-				new BooleanSetting(settings["Raven/UseSsl"], false);
 			HttpCompression =
 				new BooleanSetting(settings["Raven/HttpCompression"], true);
 			AccessControlAllowOrigin =
@@ -131,10 +133,10 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/AccessControlRequestHeaders"], (string) null);
 			RedirectStudioUrl =
 				new StringSetting(settings["Raven/RedirectStudioUrl"], (string) null);
-			DisableDocumentPreFetchingForIndexing =
-				new BooleanSetting(settings["Raven/DisableDocumentPreFetchingForIndexing"], false);
-			MaxNumberOfItemsToPreFetchForIndexing =
-				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToPreFetchForIndexing"],
+			DisableDocumentPreFetching =
+				new BooleanSetting(settings["Raven/DisableDocumentPreFetching"] ?? settings["Raven/DisableDocumentPreFetchingForIndexing"], false);
+			MaxNumberOfItemsToPreFetch =
+				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToPreFetch"]?? settings["Raven/MaxNumberOfItemsToPreFetchForIndexing"],
 										  defaultMaxNumberOfItemsToIndexInSingleBatch, 128);
 			WebDir =
 				new StringSetting(settings["Raven/WebDir"], GetDefaultWebDir);
@@ -179,8 +181,17 @@ namespace Raven.Database.Config
 
             Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
+			Voron.MaxScratchBufferSize = new IntegerSetting(settings["Raven/Voron/MaxScratchBufferSize"], 512);
+			Voron.AllowIncrementalBackups = new BooleanSetting(settings["Raven/Voron/AllowIncrementalBackups"], false);
+			Voron.TempPath = new StringSetting(settings["Raven/Voron/TempPath"], (string) null);
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
+
+            FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
+
+			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
+			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
+			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 		}
 
 		private string GetDefaultWebDir()
@@ -203,7 +214,7 @@ namespace Raven.Database.Config
 			return val;
 		}
 
-		public IntegerSetting MemoryLimitForIndexing { get; private set; }
+		public IntegerSetting MemoryLimitForProcessing { get; private set; }
 
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
 
@@ -212,8 +223,6 @@ namespace Raven.Database.Config
 		public IntegerSetting PrefetchingDurationLimit { get; private set; }
 
 		public TimeSpanSetting BulkImportBatchTimeout { get; private set; }
-
-		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 
@@ -225,21 +234,21 @@ namespace Raven.Database.Config
 
 		public TimeSpanSetting MemoryCacheLimitCheckInterval { get; private set; }
 
-		public TimeSpanSetting MaxIndexingRunLatency { get; private set; }
+		public TimeSpanSetting MaxProcessingRunLatency { get; private set; }
 
         public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
 
         public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
 
-        public IntegerSettingWithMin MaxNumberOfItemsToIndexInSingleBatch { get; private set; }
+        public IntegerSettingWithMin MaxNumberOfItemsToProcessInSingleBatch { get; private set; }
 
-		public IntegerSetting AvailableMemoryForRaisingIndexBatchSizeLimit { get; private set; }
+		public IntegerSetting AvailableMemoryForRaisingBatchSizeLimit { get; private set; }
 
 		public IntegerSettingWithMin MaxNumberOfItemsToReduceInSingleBatch { get; private set; }
 
 		public IntegerSetting NumberOfItemsToExecuteReduceInSingleStep { get; private set; }
 
-		public IntegerSettingWithMin MaxNumberOfParallelIndexTasks { get; private set; }
+		public IntegerSettingWithMin MaxNumberOfParallelProcessingTasks { get; private set; }
 
 		public MultipliedIntegerSetting NewIndexInMemoryMaxMb { get; private set; }
 
@@ -265,12 +274,6 @@ namespace Raven.Database.Config
 
 		public StringSetting Port { get; private set; }
 
-		public StringSetting SslCertificatePath { get; private set; }
-
-		public StringSetting SslCertificatePassword { get; private set; }
-
-		public BooleanSetting UseSsl { get; private set; }
-
 		public BooleanSetting HttpCompression { get; private set; }
 
 		public StringSetting AccessControlAllowOrigin { get; private set; }
@@ -283,9 +286,9 @@ namespace Raven.Database.Config
 
 		public StringSetting RedirectStudioUrl { get; private set; }
 
-		public BooleanSetting DisableDocumentPreFetchingForIndexing { get; private set; }
+		public BooleanSetting DisableDocumentPreFetching { get; private set; }
 
-		public IntegerSettingWithMin MaxNumberOfItemsToPreFetchForIndexing { get; private set; }
+		public IntegerSettingWithMin MaxNumberOfItemsToPreFetch { get; private set; }
 
 		public StringSetting WebDir { get; private set; }
 
@@ -331,6 +334,12 @@ namespace Raven.Database.Config
 			public IntegerSetting MaxBufferPoolSize { get; set; }
 
 			public NullableIntegerSetting InitialFileSize { get; set; }
+
+			public IntegerSetting MaxScratchBufferSize { get; set; }
+
+			public BooleanSetting AllowIncrementalBackups { get; set; }
+
+			public StringSetting TempPath { get; set; }
 		}
 
 		public class PrefetcherConfiguration
@@ -344,5 +353,21 @@ namespace Raven.Database.Config
 		{
 			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 		}
+
+        public class FileSystemConfiguration
+        {
+            public TimeSpanSetting MaximumSynchronizationInterval { get; set; }
+        }
+
+		public class EncryptionConfiguration
+		{
+			public BooleanSetting UseFips { get; set; }
+
+			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
+
+			public BooleanSetting UseSsl { get; set; }
+		}
 	}
+
+	
 }

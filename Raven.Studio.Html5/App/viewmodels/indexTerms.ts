@@ -9,10 +9,14 @@ class indexTerms extends viewModelBase {
     appUrls: computedAppUrls;
     indexName: string;
 
+    constructor() {
+        super();
+        this.appUrls = appUrl.forCurrentDatabase();
+    }
+
     activate(indexName: any) {
         super.activate(indexName);
 
-        this.appUrls = appUrl.forCurrentDatabase();
         this.indexName = indexName;
         this.fetchIndexDefinition(indexName);
     }

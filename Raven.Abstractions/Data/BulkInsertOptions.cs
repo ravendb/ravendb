@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Raven.Abstractions.Data
+﻿namespace Raven.Abstractions.Data
 {
 	public class BulkInsertOptions
 	{
@@ -12,6 +10,7 @@ namespace Raven.Abstractions.Data
 
 		public bool OverwriteExisting { get; set; }
 		public bool CheckReferencesInIndexes { get; set; }
+		public bool SkipOverwriteIfUnchanged { get; set; }
 		
 		public int BatchSize { get; set; }
 

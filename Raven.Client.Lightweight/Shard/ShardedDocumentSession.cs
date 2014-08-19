@@ -117,7 +117,7 @@ namespace Raven.Client.Shard
 			var transformer = new TTransformer().TransformerName;
 			var configuration = new RavenLoadConfiguration();
 		    if (configure != null)
-		        configure(configuration);
+			configure(configuration);
 			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
 		}
 
@@ -203,7 +203,7 @@ namespace Raven.Client.Shard
 		}
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
-		{
+        {
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
@@ -237,9 +237,10 @@ namespace Raven.Client.Shard
         {
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
 
-			if (!idsToLoad.Any())
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
+
+			if (idsToLoad.Count == 0)
 				return results;
 
 			IncrementRequestCount();
@@ -339,7 +340,7 @@ namespace Raven.Client.Shard
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null);
 
 			if (!idsToLoad.Any())
 				return results;
@@ -531,33 +532,36 @@ namespace Raven.Client.Shard
 
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<TResult> onEval)
 		{
-			return Lazily.Load(id, typeof(TTransformer), onEval);
+			var lazy = Lazily.Load<TTransformer, TResult>(new[] {id});
+			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<TResult> onEval)
 		{
-			var cmds = GetCommandsToOperateOn(new ShardRequestData
-			{
-				Keys = { id },
-				EntityType = transformerType
-			});
-
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
-			{
-				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
-				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-			}, id), HandleInternalMetadata);
-			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
+			var lazy = Lazily.Load(new[] { id }, transformerType, onEval);
+			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
 		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<TResult> onEval)
 		{
-			throw new NotImplementedException();
+			return Lazily.Load(ids, typeof(TTransformer), onEval);
 		}
 
 		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<TResult> onEval)
 		{
-			throw new NotImplementedException();
+			var idsArray = ids.ToArray();
+			var cmds = GetCommandsToOperateOn(new ShardRequestData
+			{
+				Keys = idsArray,
+				EntityType = transformerType
+			});
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+			var op = new LoadTransformerOperation(this, transformer, idsArray);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, op, false);
+
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		}
 
 		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
@@ -620,7 +624,7 @@ namespace Raven.Client.Shard
                 var sw = Stopwatch.StartNew();
 				IncrementRequestCount();
                 var responseTimeDuration = new ResponseTimeInformation();
-                while (ExecuteLazyOperationsSingleStep())
+				while (ExecuteLazyOperationsSingleStep())
 				{
 					Thread.Sleep(100);
 				}
@@ -712,15 +716,15 @@ namespace Raven.Client.Shard
 
         [Obsolete("Use DocumentQuery instead.")]
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
+		{
             return DocumentQuery<T, TIndexCreator>();
         }
 
         public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
-            var indexName = new TIndexCreator().IndexName;
+			var indexName = new TIndexCreator().IndexName;
             return DocumentQuery<T>(indexName);
-        }
+		}
 
         [Obsolete("Use DocumentQuery instead")]
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
@@ -730,15 +734,15 @@ namespace Raven.Client.Shard
 
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
+			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
                                                theListeners.QueryListeners, isMapReduce);
-        }
+		}
 
         [Obsolete("Use DocumentQuery instead.")]
 		public IDocumentQuery<T> LuceneQuery<T>()
-        {
+		{
             return DocumentQuery<T>();
-        }
+		}
 
         public IDocumentQuery<T> DocumentQuery<T>()
         {
@@ -820,7 +824,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -832,7 +836,7 @@ namespace Raven.Client.Shard
 			{
 				EntityType = typeof(T),
 				Keys = { keyPrefix }
-			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude));
+			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, skipAfter: skipAfter));
 
 			return results.SelectMany(x => x).Select(TrackEntity<T>)
 						  .ToArray();
@@ -840,8 +844,9 @@ namespace Raven.Client.Shard
 
 		public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
 																 int pageSize = 25, string exclude = null,
-																 RavenPagingInformation pagingInformation = null, 
-																 Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+																 RavenPagingInformation pagingInformation = null,
+																 Action<ILoadConfiguration> configure = null, 
+																 string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -866,7 +871,8 @@ namespace Raven.Client.Shard
 			(dbCmd, i) =>
 			dbCmd.StartsWith(keyPrefix, matches, start, pageSize,
 							exclude: exclude, transformer: transformer,
-							transformerParameters: configuration.TransformerParameters));
+							transformerParameters: configuration.TransformerParameters,
+							skipAfter: skipAfter));
 
 			return results.SelectMany(x => x).Select(TrackEntity<TResult>)
 						  .ToArray();
@@ -877,7 +883,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Not supported for sharded session");
 		}
 
-		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
 		{
 			IncrementRequestCount();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
@@ -886,7 +892,7 @@ namespace Raven.Client.Shard
 				Keys = { keyPrefix }
 			});
 
-			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, null);
+			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, null, skipAfter);
 
 			return AddLazyOperation<T[]>(lazyLoadOperation, null, cmds);
 		}
@@ -936,7 +942,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
@@ -944,6 +950,6 @@ namespace Raven.Client.Shard
 		public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
 		{
 			throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
-		}
 	}
+}
 }

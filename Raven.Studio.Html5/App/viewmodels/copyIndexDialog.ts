@@ -4,24 +4,24 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
-import router = require("plugins/router"); 
+import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
 import messagePublisher = require("common/messagePublisher");
 
 class copyIndexDialog extends dialogViewModelBase {
-    
+
     indexJSON = ko.observable<string>("");
 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
     }
-    
-    canActivate(args: any):any {
+
+    canActivate(args: any): any {
         if (this.isPaste) {
             return true;
         }
-        else{
+        else {
             var canActivateResult = $.Deferred();
             new getIndexDefinitionCommand(this.indexName, this.db)
                 .execute()
@@ -31,10 +31,11 @@ class copyIndexDialog extends dialogViewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => canActivateResult.reject());
-                    canActivateResult.resolve({ can: true });
+            canActivateResult.resolve({ can: true });
             return canActivateResult;
         }
     }
+
     attached() {
         super.attached();
         this.selectText();
@@ -55,7 +56,7 @@ class copyIndexDialog extends dialogViewModelBase {
             try {
                 indexDto = JSON.parse(this.indexJSON());
                 var testIndex = new indexDefinition(indexDto);
-            } catch(e) {
+            } catch (e) {
                 indexDto = null;
                 messagePublisher.reportError("Index paste failed, invalid json string", e);
             }
@@ -77,9 +78,9 @@ class copyIndexDialog extends dialogViewModelBase {
                         }
                     })
                     .done(() => messagePublisher.reportError("Cannot paste index, error occured!", "Index with that name already exists!"));
-            } 
+            }
         } else {
-            this.close();    
+            this.close();
         }
     }
 

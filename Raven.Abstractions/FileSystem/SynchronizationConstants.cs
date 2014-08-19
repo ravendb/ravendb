@@ -16,5 +16,6 @@
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string RavenRenameFile = "Raven-Rename-File";
 		public const int ChangeHistoryLength = 50;
+		public const string RavenSynchronizationConfig = "Raven/Synchronization/Config";
 	}
 }

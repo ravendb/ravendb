@@ -24,25 +24,27 @@ namespace Raven.Database.Server.Connections
 		public bool Connected { get; set; }
 
 		public event Action Disconnected = delegate { };
-        public long CoolDownWithDataLossInMilisecods { get; set; }
+        public long CoolDownWithDataLossInMiliseconds { get; set; }
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
 
 		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
+        public string ResourceName { get; set; }
 
         public ChangesPushContent(RavenBaseApiController controller)
 		{
 			Connected = true;
+            ResourceName = controller.TenantName;
 			Id = controller.GetQueryStringValue("id");
             
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
 
-            long coolDownWithDataLossInMilisecods = 0;
-			long.TryParse(controller.GetQueryStringValue("coolDownWithDataLoss"), out coolDownWithDataLossInMilisecods);
-            CoolDownWithDataLossInMilisecods = coolDownWithDataLossInMilisecods;
+            long coolDownWithDataLossInMiliseconds = 0;
+			long.TryParse(controller.GetQueryStringValue("coolDownWithDataLoss"), out coolDownWithDataLossInMiliseconds);
+            CoolDownWithDataLossInMiliseconds = coolDownWithDataLossInMiliseconds;
 		}
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -77,7 +79,7 @@ namespace Raven.Database.Server.Connections
 						object message;
 						while (msgs.TryDequeue(out message))
 						{
-							if (CoolDownWithDataLossInMilisecods > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMilisecods)
+							if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
                             {
                                 lastMessageEnqueuedAndNotSent = message;
                                 continue;

@@ -95,17 +95,19 @@ namespace Raven.Database.Actions
 
         public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
                                                           int pageSize, CancellationToken token, ref int nextStart,
-                                                          string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+                                                          string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
+														  string skipAfter = null)
         {
             var list = new RavenJArray();
             GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
-                                           transformer, transformerParameters);
+                                           transformer, transformerParameters, skipAfter);
             return list;
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
                                                    CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
-                                                   string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+                                                   string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
+												   string skipAfter = null)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -133,7 +135,7 @@ namespace Raven.Database.Actions
                     do
                     {
                         docCount = 0;
-                        var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
+						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
                         var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)
@@ -277,11 +279,21 @@ namespace Raven.Database.Actions
                                 documents++;
                                 batch++;
                                 AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
-                                foreach (var trigger in Database.PutTriggers)
+
+								if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
+								{
+									var existingDoc = accessor.Documents.DocumentByKey(doc.Key, null);
+
+									if (IsTheSameDocument(doc, existingDoc)) 
+										continue;
+								}
+
+	                            foreach (var trigger in Database.PutTriggers)
                                 {
                                     trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
                                 }
-                                var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
+
+	                            var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
                                 if (result.Updated == false)
                                     inserts++;
 
@@ -342,7 +354,35 @@ namespace Raven.Database.Actions
             return documents;
         }
 
-        public TouchedDocumentInfo GetRecentTouchesFor(string key)
+	    private bool IsTheSameDocument(JsonDocument doc, JsonDocument existingDoc)
+	    {
+		    if (existingDoc == null)
+			    return false;
+
+		    if (RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson) == false)
+			    return false;
+
+			var existingMetadata = (RavenJObject) existingDoc.Metadata.CloneToken();
+		    var newMetadata = (RavenJObject) doc.Metadata.CloneToken();
+			// in order to compare metadata we need to remove metadata records created by triggers
+			foreach (var trigger in Database.PutTriggers)
+			{
+				var metadataToIgnore = trigger.Value.GeneratedMetadataNames;
+
+				if (metadataToIgnore == null)
+					continue;
+
+				foreach (var toIgnore in metadataToIgnore)
+				{
+					existingMetadata.Remove(toIgnore);
+					newMetadata.Remove(toIgnore);
+				}
+			}
+
+			return RavenJToken.DeepEquals(newMetadata, existingMetadata);
+	    }
+
+	    public TouchedDocumentInfo GetRecentTouchesFor(string key)
         {
             TouchedDocumentInfo info;
             RecentTouches.TryGetValue(key, out info);

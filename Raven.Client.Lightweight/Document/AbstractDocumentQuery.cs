@@ -244,7 +244,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention DocumentConvention
 		{
-			get { return conventions; }
+            get { return conventions; }
 		}
 
 		/// <summary>
@@ -1083,45 +1083,45 @@ If you really want to do in memory filtering on the data returned from the query
 			queryText.Append(whereClause);
 		}
 
-		private void AppendSpaceIfNeeded(bool shouldAppendSpace)
-		{
-			if (shouldAppendSpace)
-			{
-				queryText.Append(" ");
-			}
-		}
-			
-		/// <summary>
-		///   Matches exact value
-		/// </summary>
-		/// <remarks>
-		///   Defaults to NotAnalyzed
-		/// </remarks>
-		public void WhereEquals(string fieldName, object value)
-		{
-			WhereEquals(new WhereParams
-			{
-				FieldName = fieldName,
-				Value = value
-			});
-		}
+        private void AppendSpaceIfNeeded(bool shouldAppendSpace)
+        {
+            if (shouldAppendSpace)
+            {
+                queryText.Append(" ");
+            }
+        }
 
-		/// <summary>
-		///   Matches exact value
-		/// </summary>
-		/// <remarks>
-		///   Defaults to allow wildcards only if analyzed
-		/// </remarks>
-		public void WhereEquals(string fieldName, object value, bool isAnalyzed)
-		{
-			WhereEquals(new WhereParams
-			{
-				AllowWildcards = isAnalyzed,
-				IsAnalyzed = isAnalyzed,
-				FieldName = fieldName,
-				Value = value
-			});
-		}
+        /// <summary>
+        ///   Matches exact value
+        /// </summary>
+        /// <remarks>
+        ///   Defaults to NotAnalyzed
+        /// </remarks>
+        public void WhereEquals(string fieldName, object value)
+        {
+            WhereEquals(new WhereParams
+            {
+                FieldName = fieldName,
+                Value = value
+            });
+        }
+
+        /// <summary>
+        ///   Matches exact value
+        /// </summary>
+        /// <remarks>
+        ///   Defaults to allow wildcards only if analyzed
+        /// </remarks>
+        public void WhereEquals(string fieldName, object value, bool isAnalyzed)
+        {
+            WhereEquals(new WhereParams
+            {
+                AllowWildcards = isAnalyzed,
+                IsAnalyzed = isAnalyzed,
+                FieldName = fieldName,
+                Value = value
+            });
+        }
 
 
 		/// <summary>

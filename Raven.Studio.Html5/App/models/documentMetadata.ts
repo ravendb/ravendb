@@ -11,6 +11,9 @@ class documentMetadata {
     etag: string;
     nonStandardProps: Array<string>;
 
+    lastModifiedFullDate: KnockoutComputed<string>;
+    now = ko.observable(new Date());
+
     constructor(dto?: documentMetadataDto) {
         if (dto) {
             this.ravenEntityName = dto['Raven-Entity-Name'];
@@ -19,6 +22,18 @@ class documentMetadata {
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
             this.lastModified = dto['Last-Modified'];
+
+            this.lastModifiedFullDate = ko.computed(() => {
+                if (!!this.lastModified) {
+                    var lastModifiedMoment = moment(this.lastModified);
+                    var timeSince = lastModifiedMoment.from(this.now());
+                    var fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
+                    return timeSince + " (" + fullTimeSinceUtc + ")";
+                }
+                return "";
+            });
+            setInterval(() => this.now(new Date()), 60*1000);
+
             this.ravenLastModified = dto['Raven-Last-Modified'];
             this.etag = dto['@etag'];
 

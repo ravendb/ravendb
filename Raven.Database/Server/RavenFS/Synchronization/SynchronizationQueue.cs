@@ -66,13 +66,14 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
         public int NumberOfActiveSynchronizationTasksFor(string destinationFileSystemUrl)
 		{
-			return
-				activeSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>()).Count;
+			return activeSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>())
+                                         .Count;
 		}
 
         public bool EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
 		{
-			pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).EnterUpgradeableReadLock();
+			pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim())
+                              .EnterUpgradeableReadLock();
 
 			try
 			{
@@ -81,8 +82,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 				// if delete work is enqueued and there are other synchronization works for a given file then remove them from a queue
 				if (workItem.SynchronizationType == SynchronizationType.Delete &&
-					pendingForDestination.Any(
-						x => x.FileName == workItem.FileName && x.SynchronizationType != SynchronizationType.Delete))
+					pendingForDestination.Any(x => x.FileName == workItem.FileName && x.SynchronizationType != SynchronizationType.Delete))
 				{
 					pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim()).EnterWriteLock();
 

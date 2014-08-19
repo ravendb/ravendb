@@ -232,6 +232,7 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\CustomizingIndexQuery.cs" />
+    <Compile Include="Bugs\DocumentWithNaN.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
@@ -244,6 +245,7 @@
     <Compile Include="Bugs\DTC\NSB\DbShutDownMidTransaction.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
+    <Compile Include="Bugs\LazilyLoadWithTransformerWhileUsingSharding.cs" />
     <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
     <Compile Include="Bugs\PatchingWithDefault.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />

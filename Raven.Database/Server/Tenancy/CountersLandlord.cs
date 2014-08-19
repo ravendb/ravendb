@@ -23,6 +23,9 @@ namespace Raven.Database.Server.Tenancy
 		private readonly DocumentDatabase systemDatabase;
 		private bool initialized;
 
+        private const string COUNTERS_PREFIX = "Raven/Counters/";
+        public override string ResourcePrefix { get { return COUNTERS_PREFIX; } }
+
 		public CountersLandlord(DocumentDatabase systemDatabase)
 		{
 			this.systemDatabase = systemDatabase;

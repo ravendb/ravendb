@@ -113,6 +113,7 @@
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
+    <Compile Include="FileSystem\AbstractFilesQuery.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
     <Compile Include="FileSystem\Changes\FilesConnectionState.cs" />
@@ -121,6 +122,10 @@
     <Compile Include="FileSystem\Connection\IFilesReplicationInformer.cs" />
     <Compile Include="FileSystem\Extensions\FilesSynchronizationExtensions.cs" />
     <Compile Include="FileSystem\Extensions\FilesTenancyExtensions.cs" />
+    <Compile Include="FileSystem\AsyncFilesQuery.cs" />
+    <Compile Include="FileSystem\IAbstractFilesQuery.cs" />
+    <Compile Include="FileSystem\IAsyncFilesQuery.cs" />
+    <Compile Include="FileSystem\IAsyncFilesQueryBase.cs" />
     <Compile Include="FileSystem\Impl\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Impl\IFilesOperation.cs" />
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
@@ -169,7 +174,7 @@
     <Compile Include="Document\RavenLoadConfiguration.cs" />
     <Compile Include="ILoadConfiguration.cs" />
     <Compile Include="Indexes\AbstractResultsTransformer.cs" />
-    <Compile Include="Listeners\IExtendedDocumentConversionListener.cs" />
+    <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
@@ -194,7 +199,7 @@
     <Compile Include="Connection\RavenTransactionAccessor.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Connection\ReplicationInformerBase.cs" />
-    <Compile Include="Connection\ReplicationInformerCache.cs" />
+    <Compile Include="Connection\ReplicationInformerLocalCache.cs" />
     <Compile Include="Connection\SerializationHelper.cs" />
     <Compile Include="Connection\ServerClient.cs" />
     <Compile Include="Connection\ServerHash.cs" />
@@ -236,7 +241,6 @@
     <Compile Include="Document\DocumentSession.cs" />
     <Compile Include="Document\DocumentStore.cs" />
     <Compile Include="Document\DTC\PendingTransactionRecovery.cs" />
-    <Compile Include="Document\FailoverBehavior.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
     <Compile Include="Document\HiLoKeyGeneratorBase.cs" />
     <Compile Include="Document\IAbstractDocumentQuery.cs" />
@@ -277,7 +281,6 @@
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Listeners\IDocumentConflictListener.cs" />
     <Compile Include="PublicExtensions\SearchOptions.cs" />
-    <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentQueryBase.cs" />

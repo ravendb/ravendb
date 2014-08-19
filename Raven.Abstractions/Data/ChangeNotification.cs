@@ -125,4 +125,17 @@ namespace Raven.Abstractions.Data
 		Put = 1,
 		Delete = 2,
 	}
+    
+    public class TrafficWatchNotification : EventArgs
+    {
+        public DateTime TimeStamp { get; set; }
+        public int RequestId { get; set; }
+        public string HttpMethod { get; set; }
+        public long ElapsedMilliseconds { get; set; }
+        public int ResponseStatusCode { get; set; }
+        public string RequestUri { get; set; }
+        public string AbsoluteUri { get; set; }
+        public string TenantName { get; set; }
+        public string CustomInfo { get; set; }
+    }
 }

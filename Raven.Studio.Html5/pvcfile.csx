@@ -6,14 +6,15 @@ pvc.Task("optimized-build", () => {
 	pvc.Source(
 		"Scripts/typings/**/*.d.ts", 
 		"App/**/*.ts",
-		"App/views/*.html",
+		"App/views/**/*.html",
 		"App/widgets/**/*.html",
 		"App/main.js",
 		"fonts/*.woff",
 		"Content/**/*",
 		"Scripts/**/*.js",
 		"Scripts/**/*.css",
-		"index.html"
+		"index.html",
+		"version.json"
 	)
 
 	// Compile all the TypeScript files into JavaScript.

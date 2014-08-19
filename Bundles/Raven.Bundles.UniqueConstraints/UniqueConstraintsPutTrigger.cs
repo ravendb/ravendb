@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 using Raven.Abstractions.Data;
@@ -254,5 +255,17 @@ namespace Raven.Bundles.UniqueConstraints
 
             return null;
         }
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					Constants.IsConstraintDocument,
+					Constants.EnsureUniqueConstraints
+				};
+			}
+		}
 	}
 }

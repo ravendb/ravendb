@@ -33,6 +33,7 @@ import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand")
 import transformerType = require("models/transformer");
 import transformerQueryType = require("models/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand");
+import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class query extends viewModelBase {
 
@@ -56,7 +57,6 @@ class query extends viewModelBase {
     isDefaultOperatorOr = ko.observable(true);
     showFields = ko.observable(false);
     indexEntries = ko.observable(false);
-    localStorageObjectName: string;
     recentQueries = ko.observableArray<storedQueryDto>();
     rawJsonUrl = ko.observable<string>();
     exportUrl = ko.observable<string>();
@@ -154,7 +154,6 @@ class query extends viewModelBase {
         this.fetchAllTransformers();
         this.fetchCustomFunctions();
 
-        this.localStorageObjectName = 'ravenDB-recentQueries.' + this.activeDatabase().name;
         this.fetchRecentQueries();
 
         $.when(this.fetchAllCollections(), this.fetchAllIndexes())
@@ -264,10 +263,7 @@ class query extends viewModelBase {
     }
 
     fetchRecentQueries() {
-        var recentQueriesFromLocalStorage: storedQueryDto[] = indexesShell.getRecentQueries(this.localStorageObjectName);
-        if (recentQueriesFromLocalStorage.length > 0) {
-            this.recentQueries(recentQueriesFromLocalStorage);
-        }
+        this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
     }
 
     fetchAllTransformers() {
@@ -327,8 +323,9 @@ class query extends viewModelBase {
 
             var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
 
-            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + queryCommand.getUrl());
-            this.exportUrl(appUrl.forResourceQuery(this.activeDatabase()) + queryCommand.getCsvUrl());
+            var db = this.activeDatabase();
+            this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
+            this.exportUrl(appUrl.forResourceQuery(db) + queryCommand.getCsvUrl());
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
@@ -338,10 +335,14 @@ class query extends viewModelBase {
                         this.indexSuggestions([]);
                         if (queryResults.totalResultCount == 0) {
                             var queryFields = this.extractQueryFields();
-                            for(var i=0; i < queryFields.length; i++) {
+                            for (var i = 0; i < queryFields.length; i++) {
                                 this.getIndexSuggestions(selectedIndex, queryFields[i]);
                             }
                         }
+                    })
+                    .fail(() => {
+                        recentQueriesStorage.removeIndexFromRecentQueries(db, selectedIndex);
+                        location.hash = appUrl.forIndexes(db);
                     });
             };
             var resultsList = new pagedList(resultsFetcher);
@@ -364,7 +365,7 @@ class query extends viewModelBase {
                 callback(null, this.indexFields().map(curColumn => {
                     return { name: curColumn, value: curColumn, score: 10, meta: "field" };
                 }));
-            } else if (currentToken.type === "keyword" || currentToken.type === "value") { 
+            } else if (currentToken.type === "keyword" || currentToken.type === "value") {
                 // if right after, or a whitespace after keyword token ([column name]:)
 
                 // first, calculate and validate the column name
@@ -454,7 +455,7 @@ class query extends viewModelBase {
         }
 
         //save the recent queries to local storage
-        localStorage.setObject(this.localStorageObjectName, this.recentQueries());
+        recentQueriesStorage.saveRecentQueries(this.activeDatabase(), this.recentQueries());
     }
 
     getRecentQuerySortText(sorts: string[]) {
@@ -490,7 +491,7 @@ class query extends viewModelBase {
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
                     .done((result: pagedResultSet) => {
-                        if (!!result && result.totalResultCount > 0) {
+                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
                             if (!!dynamicIndexPattern) {
                                 this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
@@ -628,10 +629,10 @@ class query extends viewModelBase {
 
     getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
         if (queryParams.length > 0) {
-            return "(" + 
+            return "(" +
                 queryParams
-                .map((param: transformerParamDto) => param.name + "=" + param.value)
-                .join(", ") + ")";
+                    .map((param: transformerParamDto) => param.name + "=" + param.value)
+                    .join(", ") + ")";
         }
 
         return "";
@@ -651,7 +652,7 @@ class query extends viewModelBase {
 
         var queryFields: Array<queryFieldInfo> = [];
         var match: RegExpExecArray = null;
-        while ( (match = luceneSimpleFieldRegex.exec(query)) ) {
+        while ((match = luceneSimpleFieldRegex.exec(query))) {
             var value = match[3] || match[4] || match[5];
             queryFields.push({
                 FieldName: match[1],
@@ -681,7 +682,7 @@ class query extends viewModelBase {
     applySuggestion(suggestion: indexSuggestion) {
         var value = this.queryText();
         var startIndex = value.indexOf(suggestion.FieldValue, suggestion.Index);
-        this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex+suggestion.FieldValue.length));
+        this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex + suggestion.FieldValue.length));
         this.indexSuggestions([]);
         this.runQuery();
     }

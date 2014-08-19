@@ -11,6 +11,7 @@ using Raven.Abstractions.Counters;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Voron;
 using Voron.Impl;
@@ -22,7 +23,7 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Raven.Database.Counters
 {
-	public class CounterStorage : IDisposable
+	public class CounterStorage : IDisposable, IResourceStore
 	{
         public string CounterStorageUrl { get; private set; }
         private readonly StorageEnvironment storageEnvironment;
@@ -143,7 +144,7 @@ namespace Raven.Database.Counters
                 Resets = metrics.Resets.CreateMeterData(),
                 Increments = metrics.Increments.CreateMeterData(),
                 Decrements = metrics.Decrements.CreateMeterData(),
-                ClientRuqeusts = metrics.ClientRuqeusts.CreateMeterData(),
+                ClientRuqeusts = metrics.ClientRequests.CreateMeterData(),
                 IncomingReplications = metrics.IncomingReplications.CreateMeterData(),
                 OutgoingReplications = metrics.OutgoingReplications.CreateMeterData(),
 
@@ -752,5 +753,10 @@ namespace Raven.Database.Counters
 	        public int SourceId { get; set; }
 	        public long Etag { get; set; }
 	    }
-	}
+
+        string IResourceStore.Name
+        {
+            get { return Name; }
+        }
+    }
 }

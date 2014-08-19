@@ -60,27 +60,31 @@ namespace Raven.Database.Server.Controllers
 		        var startsWith = GetQueryStringValue("startsWith");
 		        HttpResponseMessage msg;
 		        int nextPageStart = GetNextPageStart();
-		        if (string.IsNullOrEmpty(startsWith))
-		            msg = GetMessageWithObject(
-		                Database.Documents.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), GetEtagFromQueryString(), cts.Token));
-		        else
-		        {
-			        var transformer = GetQueryStringValue("transformer");
-			        var transformerParameters = this.ExtractTransformerParameters();
+			    if (string.IsNullOrEmpty(startsWith))
+			    {
+				    var results = Database.Documents.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
+						GetEtagFromQueryString(), cts.Token);
+				    msg = GetMessageWithObject(results);
+			    }
+			    else
+			    {
+				    var transformer = GetQueryStringValue("transformer");
+				    var transformerParameters = this.ExtractTransformerParameters();
 
-		            msg =
-		                GetMessageWithObject(
-		                    Database.Documents.GetDocumentsWithIdStartingWith(
-		                        startsWith,
-		                        GetQueryStringValue("matches"),
-		                        GetQueryStringValue("exclude"),
-		                        GetStart(),
-		                        GetPageSize(Database.Configuration.MaxPageSize),
-		                        cts.Token,
-		                        ref nextPageStart, transformer, transformerParameters));
-		        }
+				    msg =
+					    GetMessageWithObject(
+						    Database.Documents.GetDocumentsWithIdStartingWith(
+							    startsWith,
+							    GetQueryStringValue("matches"),
+							    GetQueryStringValue("exclude"),
+							    GetStart(),
+							    GetPageSize(Database.Configuration.MaxPageSize),
+							    cts.Token,
+							    ref nextPageStart, transformer, transformerParameters,
+								skipAfter: GetQueryStringValue("skipAfter")));
+			    }
 
-		        WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);
+			    WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);
 
 		        return msg;
 		    }

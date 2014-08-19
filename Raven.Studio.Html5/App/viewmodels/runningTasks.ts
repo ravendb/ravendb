@@ -141,7 +141,7 @@ class runningTasks extends viewModelBase {
             .always(() => setTimeout(() => {
                 this.selectedTask(null);
                 this.fetchTasks();
-            }, 200));
+            }, 1000));
     }
 
     tableKeyDown(sender: any, e: KeyboardEvent) {

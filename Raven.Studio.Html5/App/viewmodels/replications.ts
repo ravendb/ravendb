@@ -13,15 +13,15 @@ import appUrl = require("common/appUrl");
 
 class replications extends viewModelBase {
 
+    prefixForHilo = ko.observable<string>('');
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
 
-    prefixForHilo = ko.observable<string>();
-    
+    serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
     replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
-    prefixHiloDirtyFlag = new ko.DirtyFlag([]);
-
+    
+    isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
@@ -29,7 +29,7 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
                 .done(() => deferred.resolve({ can: true }) )
                 .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
@@ -39,25 +39,26 @@ class replications extends viewModelBase {
     activate(args) {
         super.activate(args);
         
-        new getServerPrefixForHiLoCommand(this.activeDatabase())
-            .execute()
-            .done((result) => this.prefixForHilo(result));
-
-        var self = this;
+        this.serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([this.prefixForHilo]);
+        this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
-        this.isConfigSaveEnabled = ko.computed(() => {
-            return self.replicationConfigDirtyFlag().isDirty();
-        });
+        this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig]);
-        this.isSetupSaveEnabled = ko.computed(() => {
-            return self.replicationsSetupDirtyFlag().isDirty() ;
-        });
-        this.prefixHiloDirtyFlag = new ko.DirtyFlag([this.prefixForHilo]);
+        this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
         var combinedFlag = ko.computed(() => {
-            return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty() || self.prefixHiloDirtyFlag().isDirty());
+            return (this.replicationConfigDirtyFlag().isDirty() || this.replicationsSetupDirtyFlag().isDirty() || this.serverPrefixForHiLoDirtyFlag().isDirty());
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+    }
+
+    private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getServerPrefixForHiLoCommand(db)
+            .execute()
+            .done((result) => this.prefixForHilo(result))
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
     fetchAutomaticConflictResolution(db): JQueryPromise<any> {
@@ -129,9 +130,12 @@ class replications extends viewModelBase {
     }
 
     saveServerPrefixForHiLo() {
-        new updateServerPrefixHiLoCommand(this.prefixForHilo(), this.activeDatabase())
-            .execute()
-            .done(() => this.prefixHiloDirtyFlag().reset());
+        var db = this.activeDatabase();
+        if (db) {
+            new updateServerPrefixHiLoCommand(this.prefixForHilo(), db)
+                .execute()
+                .done(() => this.serverPrefixForHiLoDirtyFlag().reset());
+        }
     }
 
     saveAutomaticConflictResolutionSettings() {

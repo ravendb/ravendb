@@ -26,7 +26,7 @@ namespace Raven.Tests.Triggers
 		public AttachmentReadTrigger()
 		{
 			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (HideAttachmentByCaseReadTrigger))));
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

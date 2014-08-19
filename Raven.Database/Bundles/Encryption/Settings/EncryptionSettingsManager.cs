@@ -23,10 +23,10 @@ namespace Raven.Bundles.Encryption.Settings
 			var result = (EncryptionSettings)database.ExtensionsState.GetOrAdd(EncryptionSettingsKeyInExtensionsState, _ =>
 			{
 				var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
-				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting], database.Configuration.EncryptionKeyBitsPreference);
+				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting], database.Configuration.Encryption.EncryptionKeyBitsPreference);
 				var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
 
-				return new EncryptionSettings(key, type, encryptIndexes,database.Configuration.EncryptionKeyBitsPreference);
+				return new EncryptionSettings(key, type, encryptIndexes, database.Configuration.Encryption.EncryptionKeyBitsPreference);
 			});
 
 

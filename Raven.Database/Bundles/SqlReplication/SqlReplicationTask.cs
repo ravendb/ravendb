@@ -177,8 +177,10 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				List<JsonDocument> documents;
 
+				using (prefetchingBehavior.DocumentBatchFrom(leastReplicatedEtag, out documents))
+				{
 				Etag latestEtag = null, lastBatchEtag = null;
 				if (documents.Count != 0)
 					lastBatchEtag = documents[documents.Count - 1].Etag;
@@ -334,6 +336,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 				}
 			}
+		}
 		}
 
 		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
@@ -621,8 +624,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName, null);
                 var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
                 
-				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(
-								prefix, 0, 256))
+				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
 				{
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));

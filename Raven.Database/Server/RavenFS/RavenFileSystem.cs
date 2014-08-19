@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
 using Raven.Abstractions.Data;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -8,6 +9,7 @@ using System.Linq;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -23,7 +25,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS
 {
-	public class RavenFileSystem : IDisposable
+    public class RavenFileSystem : IResourceStore, IDisposable
 	{
 		private readonly ConflictArtifactManager conflictArtifactManager;
 		private readonly ConflictDetector conflictDetector;
@@ -76,7 +78,7 @@ namespace Raven.Database.Server.RavenFS
 			BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
 			conflictArtifactManager = new ConflictArtifactManager(storage, search);
 			conflictDetector = new ConflictDetector();
-			conflictResolver = new ConflictResolver();
+			conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
 			synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
 			storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher);
             metricsCounters = new MetricsCountersManager();

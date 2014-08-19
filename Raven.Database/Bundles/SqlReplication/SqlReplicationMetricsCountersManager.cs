@@ -42,9 +42,9 @@ namespace Raven.Database.Bundles.SqlReplication
             {
                 GeneralMetrics = new Dictionary<string, IMetricsData>()
                 {
-                    {"BatchSizeMeter", SqlReplicationBatchSizeMeter.CreateMeterData()},
-                    {"BatchSizeHistogram", SqlReplicationBatchSizeHistogram.CreateHistogramData()},
-                    {"DurationHistogram", SqlReplicationDurationHistogram.CreateHistogramData()}
+                    {"Batch Size Meter", SqlReplicationBatchSizeMeter.CreateMeterData()},
+                    {"Batch Size Histogram", SqlReplicationBatchSizeHistogram.CreateHistogramData()},
+                    {"Duration Histogram", SqlReplicationDurationHistogram.CreateHistogramData()}
                 },
                 TablesMetrics = TablesMetrics.ToDictionary(x=>x.Key, x=>x.Value.ToSqlReplicationTableMetricsDataDictionary())
                 
@@ -118,12 +118,12 @@ namespace Raven.Database.Bundles.SqlReplication
             {
                 return new Dictionary<string, IMetricsData>()
                 {
-                    {"DeleteActionsMeter",SqlReplicationDeleteActionsMeter.CreateMeterData()},
-                    {"InsertActionsMeter",SqlReplicationInsertActionsMeter.CreateMeterData()},
-                    {"DeleteActionsHistogram",SqlReplicationDeleteActionsHistogram.CreateHistogramData()},
-                    {"InsertActionsDurationHistogram",SqlReplicationInsertActionsDurationHistogram.CreateHistogramData()},
-                    {"InsertActionsHistogram",SqlReplicationInsertActionsHistogram.CreateHistogramData()},
-                    {"DeleteActionsDurationHistogram",SqlReplicationDeleteActionsDurationHistogram.CreateHistogramData()}
+                    {"Delete Actions Meter",SqlReplicationDeleteActionsMeter.CreateMeterData()},
+                    {"Insert Actions Meter",SqlReplicationInsertActionsMeter.CreateMeterData()},
+                    {"Delete Actions Histogram",SqlReplicationDeleteActionsHistogram.CreateHistogramData()},
+                    {"Insert Actions Duration Histogram",SqlReplicationInsertActionsDurationHistogram.CreateHistogramData()},
+                    {"Insert Actions Histogram",SqlReplicationInsertActionsHistogram.CreateHistogramData()},
+                    {"Delete Actions Duration Histogram",SqlReplicationDeleteActionsDurationHistogram.CreateHistogramData()}
                 };
             }
         }

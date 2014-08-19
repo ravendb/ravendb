@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs
 				{
 					Map = "from doc in docs select new { doc.Name }"
 				});
-			    var test = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
+			    var test = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
 
 
 				using(var session = store.OpenSession())
@@ -37,15 +37,15 @@ namespace Raven.Tests.Bugs
 					session.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				Assert.Equal(1, store.DocumentDatabase.Statistics.Indexes.First(x=>x.Id == test).IndexingAttempts);
+				Assert.Equal(1, store.SystemDatabase.Statistics.Indexes.First(x=>x.Id == test).IndexingAttempts);
 
-				store.DocumentDatabase.StopBackgroundWorkers();
+				store.SystemDatabase.StopBackgroundWorkers();
 
 				store.DatabaseCommands.PutIndex("test1", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }"
 				});
-			    var test1 = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("test1").IndexId;
+			    var test1 = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("test1").IndexId;
 
 				using (var session = store.OpenSession())
 				{
@@ -53,14 +53,14 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
-				store.DocumentDatabase.SpinBackgroundWorkers();
+				store.SystemDatabase.SpinBackgroundWorkers();
 
 				using (var session = store.OpenSession())
 				{
 					session.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				Assert.Equal(2, store.DocumentDatabase.Statistics.Indexes.First(x => x.Id == test1).IndexingAttempts);
+				Assert.Equal(2, store.SystemDatabase.Statistics.Indexes.First(x => x.Id == test1).IndexingAttempts);
 			}
 		}
 
@@ -74,7 +74,7 @@ namespace Raven.Tests.Bugs
 				{
 					Map = "from doc in docs.Users select new { doc.Name }"
 				});
-			    var test = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
+			    var test = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
 
 				using (var session = store.OpenSession())
 				{
@@ -87,7 +87,7 @@ namespace Raven.Tests.Bugs
 					session.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				Assert.Equal(1, store.DocumentDatabase.Statistics.Indexes.First(x => x.Id == test).IndexingAttempts);
+				Assert.Equal(1, store.SystemDatabase.Statistics.Indexes.First(x => x.Id == test).IndexingAttempts);
 
 				using (var session = store.OpenSession())
 				{
@@ -99,14 +99,14 @@ namespace Raven.Tests.Bugs
 				{
 					Map = "from doc in docs.Users select new { doc.Name }"
 				});
-			    var test2 = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("test2").IndexId;
+			    var test2 = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("test2").IndexId;
 
 				using (var session = store.OpenSession())
 				{
 					session.Query<object>("test2").Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				Assert.Equal(1, store.DocumentDatabase.Statistics.Indexes.First(x => x.Id == test2).IndexingAttempts);
+				Assert.Equal(1, store.SystemDatabase.Statistics.Indexes.First(x => x.Id == test2).IndexingAttempts);
 
 
 				using (var session = store.OpenSession())
@@ -114,14 +114,14 @@ namespace Raven.Tests.Bugs
 					session.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				Assert.Equal(1, store.DocumentDatabase.Statistics.Indexes.First(x => x.Id == test).IndexingAttempts);
+				Assert.Equal(1, store.SystemDatabase.Statistics.Indexes.First(x => x.Id == test).IndexingAttempts);
 
 				using (var session = store.OpenSession())
 				{
 					session.Query<object>("test2").Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				Assert.Equal(1, store.DocumentDatabase.Statistics.Indexes.First(x => x.Id == test2).IndexingAttempts);
+				Assert.Equal(1, store.SystemDatabase.Statistics.Indexes.First(x => x.Id == test2).IndexingAttempts);
 			}
 		}
 	}

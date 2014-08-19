@@ -1,10 +1,13 @@
 ﻿<div class="messageBox" tabindex="-1">
     <div class="modal-header">
-        <button type="button" class="close" data-bind="click: close" aria-hidden="true">&times;</button>
+        <button type="button" class="close" data-bind="click: close" aria-hidden="true"></button>
         <h4 class="modal-title" data-bind="text:isPaste === true?'Paste Index':'Copy Index'"></h4>
     </div>
     <div class="modal-body">
-        <h4><strong data-bind="text: isPaste === true ? 'CTRL+V, Enter ': 'CTRL+C, '"></strong><span data-bind="text: isPaste === true ? 'to save' : 'to copy'"></span></h4>
+        <h4>
+            <strong data-bind="text: isPaste === true ? 'CTRL+V, Enter ': 'CTRL+C '"></strong>
+            <span data-bind="text: isPaste === true ? 'to save' : 'to copy'"></span>
+        </h4>
         <div>
             <textarea id="indexJSON" rows="13" style="width: 600px;" class="form-control" autofocus="autofocus" data-bind="value: indexJSON, valueUpdate: 'afterkeydown', event: { focus: function () { $(this).select(); } }"></textarea>
         </div>

@@ -15,6 +15,15 @@ interface dictionary<TValue> {
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
+
+interface replicationConflictNotificationDto {
+    ItemType: replicationConflictTypes;
+    Id: string;
+    Etag: string;
+    OperationType: replicationOperationTypes;
+    Conflicts: string[];
+}
+
 interface documentChangeNotificationDto {
     Type: documentChangeType;
     Id: string;
@@ -24,6 +33,20 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface logNotificationDto {
+    Level :string;
+    TimeStamp :string;
+    LoggerName :string;
+    RequestId: number;
+    HttpMethod: string;
+    ElapsedMilliseconds: number;
+    ResponseStatusCode: number;
+    RequestUri: string;
+    TenantName: string;
+    CustomInfo: string;
+    TenantType: logTenantType;
+
+}
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
     OperationId: string;
 }
@@ -113,7 +136,18 @@ interface apiKeyDto extends documentDto {
 
 interface serverBuildVersionDto {
     ProductVersion: string;
-    BuildVersion: string;
+    BuildVersion: number;
+    BuildType: buildType;
+}
+
+enum buildType {
+    Stable = 0,
+    Unstable = 1,
+}
+
+interface latestServerBuildVersionDto {
+    LatestBuild: number;
+    Exception: string;
 }
 
 interface clientBuildVersionDto {
@@ -124,6 +158,7 @@ interface licenseStatusDto {
     Message: string;
     Status: string;
     Error: boolean;
+    Details?:string;
     IsCommercial: boolean;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
@@ -212,6 +247,17 @@ interface replicationStatsDto {
     LastFailureTimestamp: string;
     FailureCount: number;
     LastError: string;
+}
+
+interface indexMergeSuggestionsDto {
+    Suggestions: suggestionDto[];
+    Unmergables: Object;
+}
+
+interface suggestionDto {
+    CanMerge: string[];
+    Collection: string;
+    MergedIndex: indexDefinitionDto;
 }
 
 interface indexDefinitionContainerDto {
@@ -406,6 +452,11 @@ interface bulkDocumentDto {
     Etag?: string; // Often is null on sending to server, non-null when returning from server.
     PatchResult?: any;
     Deleted?: any;
+}
+
+interface databaseDocumentSaveDto {
+    Key: string;
+    ETag: string
 }
 
 interface backupRequestDto {
@@ -635,6 +686,11 @@ interface histogramDataDto {
     Percentiles: any;
 }
 
+interface fileSystemDto {
+    Name: string;
+    Disabled: boolean;
+}
+
 interface statusDebugDocrefsDto {
     TotalCount: number;
     Results: Array<string>;
@@ -746,6 +802,20 @@ interface collectionStats {
     Size: number;
 }
 
+enum replicationConflictTypes {
+    None = 0,
+
+    DocumentReplicationConflict = 1,
+    AttachmentReplicationConflict = 2,
+}
+
+enum replicationOperationTypes {
+    None = 0,
+
+    Put = 1,
+    Delete = 2,
+}
+
 enum documentChangeType {
     None = 0,
     Put = 1,
@@ -778,6 +848,12 @@ enum transformerChangeType {
     None = 0,
     TransformerAdded = 1,
     TransformerRemoved = 2
+}
+
+enum logTenantType {
+    Database= 0,
+    Filesystem= 1,
+    CounterStorage=2
 }
 
 interface filterSettingDto {
@@ -840,6 +916,7 @@ interface changesApiEventDto {
 interface databaseDto {
     Name: string;
     Disabled: boolean;
+    Bundles: string[];
 }
 
 interface customFunctionsDto {
@@ -927,12 +1004,20 @@ interface operationIdDto {
 
 interface operationStatusDto {
     Completed: boolean;
+}
+
+interface bulkOperationStatusDto extends operationStatusDto{
     State: documentStateDto[];
 }
 
 interface documentStateDto {
     Document: string;
     Deleted: boolean;
+}
+
+interface importOperationStatusDto extends operationStatusDto{
+    LastProgress: string;
+    ExceptionDetails: string;
 }
 
 interface replicationTopologyDto {
@@ -973,4 +1058,10 @@ interface runningTaskDto {
     Payload: string;
     TaskType: string;
     StartTime: string;
+}
+
+
+interface customLogEntryDto {
+    category: string;
+    level: string;
 }

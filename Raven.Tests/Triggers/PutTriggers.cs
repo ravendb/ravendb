@@ -24,7 +24,7 @@ namespace Raven.Tests.Triggers
 		public PutTriggers()
 		{
 			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (VetoCapitalNamesPutTrigger), typeof(AuditPutTrigger))));
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

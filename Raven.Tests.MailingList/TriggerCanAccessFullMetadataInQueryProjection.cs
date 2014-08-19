@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
 		{
 			this.store = this.NewDocumentStore(catalog: (new TypeCatalog(typeof(FullMetadataReadTrigger))));
 			new Index().Execute(this.store);
-			this.db = this.store.DocumentDatabase;
+			this.db = this.store.SystemDatabase;
 		}
 
 		public class Index : AbstractIndexCreationTask<Data>

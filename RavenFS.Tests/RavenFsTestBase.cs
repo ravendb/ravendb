@@ -25,6 +25,8 @@ using Raven.Database.Server.Security;
 using Raven.Server;
 using Raven.Client.FileSystem;
 
+using RavenFS.Tests.Tools;
+
 namespace RavenFS.Tests
 {
     public class RavenFsTestBase : WithNLog, IDisposable
@@ -34,6 +36,13 @@ namespace RavenFS.Tests
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
         public static readonly int[] Ports = { 19067, 19068, 19069 };
+
+        public TimeSpan SynchronizationInterval { get; protected set; }
+
+        protected RavenFsTestBase()
+        {
+            this.SynchronizationInterval = TimeSpan.FromMinutes(10);
+        }
 
         protected RavenDbServer CreateRavenDbServer(int port,
                                                     string dataDirectory = null,
@@ -57,8 +66,11 @@ namespace RavenFS.Tests
 #endif
 				DefaultStorageTypeName = storageType,
                 DefaultFileSystemStorageTypeName = storageType,
-				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
 			};
+
+	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
 
             if (enableAuthentication)
             {

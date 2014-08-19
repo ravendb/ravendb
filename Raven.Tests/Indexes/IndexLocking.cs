@@ -21,13 +21,13 @@ namespace Raven.Tests.Indexes
 				};
 				index.Execute(store);
 
-				var indexDefinition = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
+				var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
 
 				var definition = indexDefinition.Clone();
 				definition.LockMode = IndexLockMode.LockedIgnore;
-				store.DocumentDatabase.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+				store.SystemDatabase.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
 
-				indexDefinition = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
+				indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
 				Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);
 			}
 		}

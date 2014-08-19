@@ -34,6 +34,7 @@ namespace Raven.Database.Storage
 		DatabaseSizeInformation GetDatabaseSize();
 		long GetDatabaseCacheSizeInBytes();
 		long GetDatabaseTransactionVersionSizeInBytes();
+		StorageStats GetStorageStats();
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);

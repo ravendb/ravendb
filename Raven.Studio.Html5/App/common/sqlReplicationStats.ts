@@ -25,6 +25,7 @@ class sqlReplicationStats {
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type == "Meter") {
                          value["Name"] = key;
+                         value["Table"] = "";
                          $.map(value, (propertyValue, propertyName) => {
                              if (!isNaN(propertyValue)) {
                                  value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
@@ -40,7 +41,8 @@ class sqlReplicationStats {
                     $.map(tablesMetricsData, (value, key) => {
                         if (value.Type == "Meter") {
                             var newMetric = value;
-                            newMetric["Name"] = tableMetricsKey + "." + key;
+                            newMetric["Name"] = key;
+                            value["Table"] = tableMetricsKey;
                             $.map(value, (propertyValue, propertyName) => {
                                 if (!isNaN(propertyValue)) {
                                     value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
@@ -64,6 +66,7 @@ class sqlReplicationStats {
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type == "Historgram") {
                          value["Name"] = key;
+                         value["Table"] = "";
                          value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
                              return {
                                  percentileValue: genUtils.formatAsCommaSeperatedString(percentileValue, 2),
@@ -84,7 +87,8 @@ class sqlReplicationStats {
                  $.map(tablesMetrics, (tablesMetricsData: dictionary<metricsDataDto>, tableMetricsKey: string) => {
                     $.map(tablesMetricsData, (value, key) => {
                         if (value.Type == "Historgram") {
-                            value["Name"] = tableMetricsKey + "." + key;
+                            value["Name"] = key;
+                            value["Table"] = tableMetricsKey ;
                             value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
                              return {
                                     percentileValue: genUtils.formatAsCommaSeperatedString(percentileValue, 2),

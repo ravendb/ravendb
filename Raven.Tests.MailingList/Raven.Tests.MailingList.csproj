@@ -153,6 +153,7 @@
     <Compile Include="chad.cs" />
     <Compile Include="ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="Chirea.cs" />
+    <Compile Include="Chirea2.cs" />
     <Compile Include="ChrisDNF.cs" />
     <Compile Include="ChrisH.cs" />
     <Compile Include="ChrisMarisic.cs" />
@@ -198,6 +199,7 @@
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="Gal.cs" />
     <Compile Include="Garrett.cs" />
+    <Compile Include="gaz.cs" />
     <Compile Include="Georgiosd.cs" />
     <Compile Include="gjerster.cs" />
     <Compile Include="Groenewoud.cs" />
@@ -251,6 +253,7 @@
     <Compile Include="LastModifiedMetadataTest.cs" />
     <Compile Include="LateBoundValue.cs" />
     <Compile Include="LazilyLoadByIdsWithTransformer.cs" />
+    <Compile Include="LazyBug.cs" />
     <Compile Include="LazyCount.cs" />
     <Compile Include="LazyEncoding.cs" />
     <Compile Include="LazyLoadFromSessionCache.cs" />

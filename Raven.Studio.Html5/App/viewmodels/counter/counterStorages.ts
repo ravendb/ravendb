@@ -12,6 +12,7 @@ class counterStorages extends viewModelBase {
     counterStorages = ko.observableArray<counterStorage>();
     selectedCounterStorage = ko.observable<counterStorage>();
     searchCounterStorageByText = ko.observable<string>();
+    optionsClicked = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -121,11 +122,14 @@ class counterStorages extends viewModelBase {
     }
 
     selectCounterStorage(cs: counterStorage, activateCounterStorage: boolean = true) {
-        this.counterStorages().forEach((c: counterStorage)=> c.isSelected(c.name === cs.name));
-        if (activateCounterStorage) {
-            cs.activate();
+        if (this.optionsClicked() == false) {
+            if (activateCounterStorage) {
+                cs.activate();
+            }
+            this.selectedCounterStorage(cs);
         }
-        this.selectedCounterStorage(cs);
+
+        this.optionsClicked(false);
     }
 
     getCounterStorageUrl(storage: counterStorage) {

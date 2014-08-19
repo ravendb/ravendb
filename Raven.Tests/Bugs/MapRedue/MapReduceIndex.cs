@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs.MapRedue
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.MaxNumberOfParallelIndexTasks = 1;
+            configuration.MaxNumberOfParallelProcessingTasks = 1;
         }
 
         [Fact]
@@ -117,7 +117,7 @@ namespace Raven.Tests.Bugs.MapRedue
                 IRavenQueryable<DocumentView> query =
                     session.Query<Document, VersionedDocuments>()
                         .Customize(aCustomization => aCustomization.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(10)))
-                        .AsProjection<DocumentView>();
+						.ProjectFromIndexFieldsInto<DocumentView>();
 
                 foreach (DocumentView document in query)
                 {

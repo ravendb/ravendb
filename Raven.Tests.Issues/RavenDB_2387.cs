@@ -76,9 +76,9 @@ namespace Raven.Tests.Issues
 					Id = "tx",
 					Timeout = TimeSpan.FromDays(1)
 				};
-				store.DocumentDatabase.Documents.Put("child/2", null, new RavenJObject { { "Data", "Bar" } }, new RavenJObject(), tx);
+				store.SystemDatabase.Documents.Put("child/2", null, new RavenJObject { { "Data", "Bar" } }, new RavenJObject(), tx);
 
-				store.DocumentDatabase.PrepareTransaction("tx");
+				store.SystemDatabase.PrepareTransaction("tx");
 
 				using (var session = store.OpenSession())
 				{
@@ -94,7 +94,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.Commit("tx");
+				store.SystemDatabase.Commit("tx");
 
 				WaitForIndexing(store);
 

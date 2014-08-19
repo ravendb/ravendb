@@ -31,10 +31,6 @@ class search extends viewModelBase {
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.searchFiles(s));
     }
 
-    canActivate(args: any) {
-        return true;
-    }
-
     activate(args) {
         super.activate(args);
 
@@ -45,7 +41,7 @@ class search extends viewModelBase {
             this.searchText("");
         });
        
-        this.loadFiles(false);
+        this.loadFiles();
     }
 
     attached() {
@@ -60,23 +56,16 @@ class search extends viewModelBase {
     }
 
     searchFiles(query: string) {
+        this.allFilesPagedItems(this.createPagedList(query));
+    }
+
+    loadFiles() {
+        this.allFilesPagedItems(this.createPagedList(""));
+    }
+
+    createPagedList(query: string): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchFiles(query, skip, take);
-        var list = new pagedList(fetcher);
-        this.allFilesPagedItems(list);
-    }
-
-    loadFiles(force: boolean) {
-        if (!this.allFilesPagedItems() || force) {
-            this.allFilesPagedItems(this.createPagedList());
-        }
-
-        return this.allFilesPagedItems;
-    }
-
-    createPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.fetchFiles("", skip, take);
-        var list = new pagedList(fetcher);
-        return list;
+        return new pagedList(fetcher);
     }
 
     fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
@@ -89,7 +78,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__fileName:" + input + "*"));
+                .done((input: string) => this.addToSearchInput("__fileName:" + this.escapeQueryString(input) + "*"));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -99,7 +88,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__rfileName:" + String.prototype.reverse(input) + "*"));
+                .done((input: string) => this.addToSearchInput("__rfileName:" + String.prototype.reverse(this.escapeQueryString(input)) + "*"));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -119,7 +108,7 @@ class search extends viewModelBase {
             var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
             searchHasMetadataClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput(input));
+                .done((input: string) => this.addToSearchInput(this.escapeQueryString(input)));
             app.showDialog(searchHasMetadataClauseViewModel);
         });
     }
@@ -129,7 +118,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__directory:/" + input));
+                .done((input: string) => this.addToSearchInput("__directory:/" + this.escapeQueryString(input)));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -149,6 +138,10 @@ class search extends viewModelBase {
         if (currentSearchText != null && currentSearchText.trim().length > 0)
             currentSearchText += " AND ";
         this.searchText(currentSearchText + input);
+    }
+
+    private escapeQueryString(query: string) : string {
+        return query.replace(/([ /\-\_\.])/g, '\\$1');
     }
 }
 

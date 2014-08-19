@@ -64,8 +64,17 @@ class row {
             customColumns.columns().forEach((column, index) => {
                 var binding = column.binding();
                 var context = {};
+                var stringify = typeof rowData === "object" && this.getCellTemplateName(binding, rowData) !== cell.customTemplate;
+
                 $.each(rowData, (name: string, value: any) => {
-                    context[name] = value;
+                    if (stringify) {
+                        context[name] = JSON.stringify(value, null, 4);
+                        if (context[name] && context[name].length > 250) {
+                            context[name] = context[name].substring(0, 250);
+                        }
+                    } else {
+                        context[name] = value;
+                    }
                 });
 
                 for (var p in this.compiledCustomFunctions) {
@@ -83,6 +92,10 @@ class row {
                 // pass json object when not custom template!
                 if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
                     cellValue = JSON.stringify(cellValue, null, 4);
+                }
+
+                if (cellValue.length > 250) {
+                    cellValue = cellValue.substring(0, 250);
                 }
                 this.addOrUpdateCellMap(prop, cellValue);
             }
@@ -139,7 +152,14 @@ class row {
         } else if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
         }
-        else if (!!data) {
+
+        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
+        // note: we just inform here about custom template - without specific name of this template.
+        if (colParam && colParam.template() !== cell.defaultTemplate) {
+            return cell.customTemplate;
+        } 
+
+        if (!!data) {
             if (typeof data == "string") {
                 var cleanData = data.replace('/\t+/g', '')
                     .replace(/\s+/g, '')
@@ -159,11 +179,7 @@ class row {
             }
         }
 
-        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
-        // note: we just inform here about custom template - without specific name of this template.
-        if (colParam && colParam.template() !== cell.defaultTemplate) {
-            return cell.customTemplate;
-        }
+        
 
         return cell.defaultTemplate;
     }

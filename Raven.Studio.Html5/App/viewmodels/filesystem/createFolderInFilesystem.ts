@@ -2,8 +2,7 @@
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
-import commandBase = require("commands/commandBase");
-
+import messagePublisher = require("common/messagePublisher");
 import filesystem = require("models/filesystem/filesystem");
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
@@ -15,7 +14,6 @@ class createFolderInFilesystem extends dialogViewModelBase {
     public folderName = ko.observable('');
 
     private folders : string[];
-    private newCommandBase = new commandBase();
 
     constructor(folders) {
         super();
@@ -44,12 +42,12 @@ class createFolderInFilesystem extends dialogViewModelBase {
 
         if (this.isClientSideInputOK(folderName)) {
             this.creationTaskStarted = true;
-            this.creationTask.resolve(folderName);
+            this.creationTask.resolve(folderName.toLowerCase());
             dialog.close(this);
         }
     }
 
-    private isClientSideInputOK(folderName): boolean {
+    private isClientSideInputOK(folderName: string): boolean {
         var errorMessage;
 
         if (folderName == null) {
@@ -60,7 +58,7 @@ class createFolderInFilesystem extends dialogViewModelBase {
         }
 
         if (errorMessage != null) {
-            this.newCommandBase.reportError(errorMessage);
+            messagePublisher.reportError(errorMessage);
             return false;
         }
         return true;
@@ -68,7 +66,7 @@ class createFolderInFilesystem extends dialogViewModelBase {
 
     private folderExists(folderName: string, folders: string[]): boolean {
         for (var i = 0; i < folders.length; i++) {
-            if (folderName == folders[i]) {
+            if (folderName.toLowerCase() == folders[i]) {
                 return true;
             }
         }

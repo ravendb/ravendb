@@ -25,7 +25,7 @@ namespace Raven.Tests.Storage
 		public IndexStaleViaEtags()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		    entityNameId = db.IndexDefinitionStorage.GetIndexDefinition(new RavenDocumentsByEntityName().IndexName).IndexId;
 

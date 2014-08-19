@@ -191,6 +191,8 @@ namespace Raven.Client.Document
                 requestUrl += "overwriteExisting=true";
             if (options.CheckReferencesInIndexes)
                 requestUrl += "&checkReferencesInIndexes=true";
+			if(options.SkipOverwriteIfUnchanged)
+				requestUrl += "&skipOverwriteIfUnchanged=true";
 
             requestUrl += "&operationId=" + OperationId;
 

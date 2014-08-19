@@ -23,7 +23,7 @@ namespace Raven.Tests.Storage
 		public CreateUpdateDeleteDocuments()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()

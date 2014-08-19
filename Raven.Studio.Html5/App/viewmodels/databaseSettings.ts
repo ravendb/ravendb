@@ -144,8 +144,8 @@ class databaseSettings extends viewModelBase {
                     var newDoc = new document(updatedDto);
                     var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
                     var saveTask = saveCommand.execute();
-                    saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-                        this.document().__metadata['@etag'] = idAndEtag.ETag;
+                    saveTask.done((saveResult: databaseDocumentSaveDto) => {
+                        this.document().__metadata['@etag'] = saveResult.ETag;
                         this.metadataText("{}");
                         this.docEditor.setReadOnly(true);
                         this.isEditingEnabled(false);

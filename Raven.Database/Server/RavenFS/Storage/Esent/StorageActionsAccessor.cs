@@ -376,7 +376,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             if (metadata.ContainsKey(Constants.LastModified))
                 metadata[Constants.LastModified] = metadata.Value<DateTimeOffset>(Constants.LastModified);   
 
-            metadata[Constants.MetadataEtagField] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
+            metadata[Constants.MetadataEtagField] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransformToGuidWithProperSorting());
             
             return metadata;
         }

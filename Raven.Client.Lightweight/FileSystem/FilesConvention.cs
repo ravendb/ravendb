@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 
 namespace Raven.Client.FileSystem

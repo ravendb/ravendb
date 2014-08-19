@@ -26,6 +26,7 @@ using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -403,12 +404,8 @@ namespace Raven.Database.Linq
 
 		private static string GetIndexFilePath(string source, string indexCacheDir)
 		{
-			string sourceHashed;
-			using (var md5 = MD5.Create())
-			{
-				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
-				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
-			}
+			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
+			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
 			var indexFilePath = Path.Combine(indexCacheDir,
 				IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
 				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");

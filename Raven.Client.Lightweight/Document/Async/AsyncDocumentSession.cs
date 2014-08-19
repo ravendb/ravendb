@@ -110,9 +110,9 @@ namespace Raven.Client.Document.Async
             return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
         }
 
-	   
 
-	    /// <summary>
+
+		/// <summary>
         /// Loads the specified id and a function to call when it is evaluated
         /// </summary>
         public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval)
@@ -187,13 +187,14 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation<TResult[]>(lazyOp, null);
         }
 
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation);
+			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
             return AddLazyOperation<T[]>(operation, null);
         }
-	    /// <summary>
+
+		/// <summary>
         /// Loads the specified entities with the specified id after applying
         /// conventions on the provided id to get the real document id.
         /// </summary>
@@ -331,15 +332,16 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, skipAfter: skipAfter)
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
 		}
 
 		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
 		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
-		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		                                                    Action<ILoadConfiguration> configure = null,
+															string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -351,7 +353,8 @@ namespace Raven.Client.Document.Async
 
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
 			                                             pagingInformation: pagingInformation, transformer: transformer,
-			                                             transformerParameters: configuration.TransformerParameters)
+			                                             transformerParameters: configuration.TransformerParameters,
+														 skipAfter: skipAfter)
 			                            .ContinueWith(
 				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
 		}
@@ -514,17 +517,17 @@ namespace Raven.Client.Document.Async
         /// <returns></returns>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
-            var index = new TIndexCreator();
+			var index = new TIndexCreator();
 
             return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
-        }
+		}
 
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
         [Obsolete("Use AsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
-        {
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
+		{
             return AsyncDocumentQuery<T>(index, isMapReduce);
         }
 
@@ -536,12 +539,12 @@ namespace Raven.Client.Document.Async
 			return new AsyncDocumentQuery<T>(this,null,AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
+		/// <summary>
+		/// Dynamically query RavenDB using Lucene syntax
+		/// </summary>
         [Obsolete("Use AsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
-        {
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+		{
             return AsyncDocumentQuery<T>();
         }
 
@@ -549,7 +552,7 @@ namespace Raven.Client.Document.Async
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
-		{
+			{
             var indexName = CreateDynamicIndexName<T>();
 			
 			return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
@@ -666,7 +669,7 @@ namespace Raven.Client.Document.Async
 		    {
 		        includedDocumentsByKey.Remove(id);
 		        return TrackEntity<T>(value);
-		    }
+			}
 		    if (IsDeleted(id))
 		        return default(T);
 
@@ -787,28 +790,28 @@ namespace Raven.Client.Document.Async
 			}
 
             var getResponse = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, transformerParameters).ConfigureAwait(false));
-			var items = new List<T>();
-			foreach (var result in getResponse.Results)
-			{
-				if (result == null)
-				{
-					items.Add(default(T));
-					continue;
-				}
-				var transformedResults = result.Value<RavenJArray>("$values").ToArray()
-					  .Select(JsonExtensions.ToJObject)
-					  .Select(x =>
-					  {
+		    var items = new List<T>();
+		    foreach (var result in getResponse.Results)
+		    {
+                if (result == null)
+                {
+                    items.Add(default(T));
+                    continue;
+                }
+		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
+		              .Select(JsonExtensions.ToJObject)
+		              .Select(x =>
+		              {
 						  HandleInternalMetadata(x);
 						  return ConvertToEntity(typeof(T),null, x, new RavenJObject());
-					  })
-					  .Cast<T>();
+		              })
+		              .Cast<T>();
 
 
-				items.AddRange(transformedResults);
+                items.AddRange(transformedResults);
 
-			}
-
+		    }
+				
 			if (items.Count > ids.Length)
 			{
 				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
@@ -830,7 +833,7 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation(lazyOp, onEval);
 	    }
 
-	    /// <summary>
+		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -969,5 +972,16 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
+
+		public async Task RefreshAsync<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a transient instance");
+			IncrementRequestCount();
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key);
+			RefreshInternal(entity, jsonDocument, value);
+		}
+
 	}
 }

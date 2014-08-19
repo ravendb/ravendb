@@ -61,27 +61,30 @@
             </div>
         </div>
         <div class="btn-group">
-             <a class="btn btn-default" data-bind="click: toggleExpandAll , attr:{state: btnState , title:btnTitle}" accesskey="="><i data-bind="css: { 'fa-plus-square-o': btnState, 'fa-minus-square-o': !btnState() }" class="fa"></i></a>
+             <a class="btn btn-default" data-bind="click: toggleExpandAll , attr: { state: btnState, title: btnTitle }" accesskey="="><i data-bind="css: { 'fa-plus-square-o': btnState, 'fa-minus-square-o': !btnState() }" class="fa"></i></a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default" data-bind="click: pasteIndex" title="Paste Index Definition From JSON (Alt+v)" accesskey="v"><i class="fa fa-paste"></i></a>
+        </div>
+        <div class="btn-group">
+            <a class="btn btn-default" title="Show Merge Suggestions" data-bind="attr: { href: appUrls.megeSuggestions }"><i class="fa fa-compress"></i></a>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
                 <i class="fa fa-trash-o"></i> <span class="caret"></span>
             </button>
             <ul class="dropdown-menu" role="menu">
-                <li data-bind="click: deleteIdleIndexes"><a href="#">Delete <span class="text-warning">Idle</span> Indexes</a></li>
-                <li data-bind="click: deleteDisabledIndexes"><a href="#">Delete <span class="text-muted">Disabled</span> Indexes</a></li>
-                <li data-bind="click: deleteAbandonedIndexes"><a href="#">Delete <span class="text-danger">Abandoned</span> Indexes</a></li>
+                <li data-bind="click: deleteIdleIndexes"><a href="#">Delete Idle Indexes</a></li>
+                <li data-bind="click: deleteDisabledIndexes"><a href="#">Delete Disabled Indexes</a></li>
+                <li data-bind="click: deleteAbandonedIndexes"><a href="#">Delete Abandoned Indexes</a></li>
                 <li class="divider"></li>
                 <li data-bind="click: deleteAllIndexes"><a href="#">Delete All Indexes</a></li>
             </ul>
         </div>
     </div>
     
-    <div class="alert alert-warning text-center" data-bind="visible: sortedGroups().length == 0">
-        <h3>
+    <div class="text-center" data-bind="visible: sortedGroups().length == 0">
+        <h3 class="page-header text-info">
             No indexes have been created for this database.
             <small>
                 Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create an index</a>

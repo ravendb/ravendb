@@ -62,10 +62,10 @@ namespace Raven.Client.Shard
 			return GetShardsToOperateOn(resultionData).Select(x => x.Item2).ToList();
 		}
 
-		protected IEnumerable<IGrouping<IList<TDatabaseCommands>, IdToLoad<T>>> GetIdsThatNeedLoading<T>(string[] ids, string[] includes)
+		protected IEnumerable<IGrouping<IList<TDatabaseCommands>, IdToLoad<T>>> GetIdsThatNeedLoading<T>(string[] ids, string[] includes, string transformer)
 		{
 			string[] idsToLoad;
-			if (includes != null)
+			if (includes != null || string.IsNullOrEmpty(transformer) == false)
 			{
 				// Need to load everything, for the includes
 				idsToLoad = ids;
