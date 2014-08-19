@@ -254,7 +254,7 @@ class editIndex extends viewModelBase {
                     commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
                 }
 
-                jQuery.when(commands).done(() => {
+                $.when.apply($, commands).done(() => {
                     this.initializeDirtyFlag();
                     this.editedIndex().name.valueHasMutated();
                     var isSavingMergedIndex = this.mergeSuggestion() != null;

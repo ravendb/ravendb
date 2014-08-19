@@ -10,7 +10,7 @@ class indexMergeSuggestion {
 
     constructor(dto: suggestionDto) {
         this.canMerge = dto.CanMerge;
-        this.collection = "123";//dto.Collection;
+        this.collection = dto.Collection;
         this.mergedIndexDefinition = new indexDefinition(dto.MergedIndex);
         this.id(idGenerator.generateId());
     }

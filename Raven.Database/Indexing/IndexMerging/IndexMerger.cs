@@ -350,6 +350,8 @@ namespace Raven.Database.Indexing.IndexMerging
 
                 mergeSuggestion.MergedIndex.Map = mergeProposal.ProposedForMerge[0].BuildExpression(selectExpressionDict);
 
+				mergeSuggestion.Collection = mergeProposal.ProposedForMerge[0].FromExpression.ToString();
+
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
                     indexMergeResults.Suggestions.Add(mergeSuggestion);

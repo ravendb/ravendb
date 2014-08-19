@@ -20,9 +20,7 @@ class deleteFilesCommand extends commandBase {
         var successMessage = this.fileIds.length > 1 ? "Deleted " + this.fileIds.length + " files" : "Deleted " + this.fileIds[0];
 
         var combinedTask = $.when.apply($, deletionTasks)
-            .done(x => {
-                this.reportSuccess(successMessage)
-            })
+            .done(x => this.reportSuccess(successMessage))
             .fail((response: JQueryXHR) => this.reportError("Failed to delete files", response.responseText, response.statusText));
 
         return combinedTask;
