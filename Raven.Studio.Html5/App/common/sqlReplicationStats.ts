@@ -66,7 +66,7 @@ class sqlReplicationStats {
                          value["Name"] = key;
                          value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
                              return {
-                                 percentileValue: percentileValue,
+                                 percentileValue: genUtils.formatAsCommaSeperatedString(percentileValue, 2),
                                  percentile: percentile
                              }
                          });
@@ -85,6 +85,12 @@ class sqlReplicationStats {
                     $.map(tablesMetricsData, (value, key) => {
                         if (value.Type == "Historgram") {
                             value["Name"] = tableMetricsKey + "." + key;
+                            value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
+                             return {
+                                    percentileValue: genUtils.formatAsCommaSeperatedString(percentileValue, 2),
+                                    percentile: percentile
+                                }
+                         });
                             $.map(value, (propertyValue, propertyName) => {
                                 if (!isNaN(propertyValue)) {
                                     value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);

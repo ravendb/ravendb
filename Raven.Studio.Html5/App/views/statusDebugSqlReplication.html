@@ -110,39 +110,39 @@
                         <div from-group>
                             <div class="meterTable col-sm-12">
                                 <span class="headers">
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'em' }">
                                         <span class="column-handle" column="0"></span>
                                         <span>Metric Name</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + 'em' }">
                                         <span class="column-handle" column="1"></span>
                                         <span>Count</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + 'em' }">
                                         <span class="column-handle" column="2"></span>
                                         <span>MeanRate</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + 'em' }">
                                         <span class="column-handle" column="3"></span>
                                         <span>OneMinuteRate</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + 'em' }">
                                         <span class="column-handle" column="4"></span>
                                         <span>FiveMinuteRate</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + 'em' }">
                                         <span class="column-handle" column="5"></span>
                                         <span>FifteenMinuteRate</span>
                                     </div>
                                 </span>
                                 <div style="white-space: nowrap" data-bind="foreach: rateMetrics">
                                     <div style="display: block; white-space: nowrap" class="logRecord log-table-row">
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Name"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Count"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: MeanRate"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: OneMinuteRate"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: FiveMinuteRate"></div>
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: FifteenMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'em' }, text: Name"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'em' }, text: Count"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'em' }, text: MeanRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'em' }, text: OneMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'em' }, text: FiveMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[5]() + 'em' }, text: FifteenMinuteRate"></div>
                                     </div>
                                 </div>
                             </div>
@@ -151,57 +151,58 @@
                             </div>
                             <div class="meterTable col-sm-12">
                                 <span class="headers">
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
                                         <span class="column-handle" column="6"></span>
                                         <span>Metric Name</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[7]() + '%' }">
                                         <span class="column-handle" column="7"></span>
                                         <span>Counter</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[8]() + '%' }">
                                         <span class="column-handle" column="8"></span>
                                         <span>Max</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[9]() + '%' }">
                                         <span class="column-handle" column="9"></span>
                                         <span>Min</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[10]() + '%' }">
                                         <span class="column-handle" column="10"></span>
                                         <span>Mean</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[11]() + '%' }">
                                         <span class="column-handle" column="11"></span>
                                         <span>Stdev</span>
                                     </div>
-                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
-                                        <span class="column-handle" column="12"></span>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[12]() + '%' }">
                                         <span>Percentiles</span>
-                                        <div ><div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
-                                                     <span class="column-handle" column="13"></span>
-                                                     <span>50%</span>
-                                                 </div>
-                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                        <div style="width:100%">
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[13]() + '%' }">
+                                                      <span class="column-handle" column="13"></span>
+                                                      <span>50%</span>
+                                                  </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[14]() + '%' }">
                                                 <span class="column-handle" column="14"></span>
                                                 <span>75%</span>
                                             </div>
-                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[15]() + '%' }">
                                                 <span class="column-handle" column="15"></span>
                                                 <span>95%</span>
                                             </div>
-                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[16]() + '%' }">
                                                 <span class="column-handle" column="16"></span>
                                                 <span>99%</span>
                                             </div>
-                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[17]() + '%' }">
                                                 <span class="column-handle" column="17"></span>
                                                 <span>99.9%</span>
                                             </div>
-                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + '%' }">
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[18]() + '%' }">
                                                 <span class="column-handle" column="18"></span>
                                                 <span>99.99%</span>
-                                            </div></div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </span>
@@ -213,11 +214,14 @@
                                         <div class="column" data-bind="style: { width: $root.columnWidths[9]() + '%' }, text: Min"></div>
                                         <div class="column" data-bind="style: { width: $root.columnWidths[10]() + '%' }, text: Min"></div>
                                         <div class="column" data-bind="style: { width: $root.columnWidths[11]() + '%' }, text: Stdev"></div>
-                                        <!--ko:foreach:Percentiles-->
-                                        <div class="column" data-bind="style: { width: $root.columnWidths[13+$index()]() + '%' }, text: percentileValue"></div>
-                                        <!-- /ko -->​
-                                        
-                                        
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[12]() + '%' }, if:!!Percentiles[0]">
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[13]() + '%' }, text: Percentiles[0].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[14]() + '%' }, text: Percentiles[1].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[15]() + '%' }, text: Percentiles[2].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[16]() + '%' }, text: Percentiles[3].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[17]() + '%' }, text: Percentiles[4].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[18]() + '%' }, text: Percentiles[5].percentileValue"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
