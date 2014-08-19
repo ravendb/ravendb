@@ -27,8 +27,9 @@ import predefinedSqlConnection = require("models/predefinedSqlConnection");
 
 
 class editSqlReplication extends viewModelBase {
-
+    
     static editSqlReplicationSelector = "#editSQLReplication";
+    static sqlReplicationDocumentPrefix = "Raven/SqlReplication/Configuration/";
 
     static sqlProvidersConnectionStrings: { ProviderName: string; ConnectionString: string; }[] = [
         { ProviderName: 'System.Data.SqlClient', ConnectionString: 'Server=[Server Address];Database=[Database Name];User Id=[User ID];Password=[Password];' },
@@ -49,6 +50,7 @@ class editSqlReplication extends viewModelBase {
     isEditingNewReplication = ko.observable(false);
     isBasicView = ko.observable(true);
     availableConnectionStrings = ko.observableArray<string>();
+    sqlReplicaitonStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
     
     appUrls: computedAppUrls;
 
@@ -140,7 +142,7 @@ class editSqlReplication extends viewModelBase {
         $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
             .done(() => {
                 this.editedReplication().collections = this.collections;
-                new getDocumentsMetadataByIDPrefixCommand("Raven/SqlReplication/Configuration/", 256, this.activeDatabase())
+                new getDocumentsMetadataByIDPrefixCommand(editSqlReplication.sqlReplicationDocumentPrefix, 256, this.activeDatabase())
                     .execute()
                     .done((results: string[]) => {
                         this.loadedSqlReplications = results;
@@ -156,7 +158,7 @@ class editSqlReplication extends viewModelBase {
     }
 
     fetchSqlReplicationToEdit(sqlReplicationName: string): JQueryPromise<any> {
-        var loadDocTask = new getDocumentWithMetadataCommand("Raven/SqlReplication/Configuration/" + sqlReplicationName, this.activeDatabase()).execute();
+        var loadDocTask = new getDocumentWithMetadataCommand(editSqlReplication.sqlReplicationDocumentPrefix + sqlReplicationName, this.activeDatabase()).execute();
         loadDocTask.done((document: document) => {
             var sqlReplicationDto: any = document.toDto(true);
             this.editedReplication(new sqlReplication(sqlReplicationDto));
@@ -260,14 +262,15 @@ class editSqlReplication extends viewModelBase {
         
         var newDoc = new document(this.editedReplication().toDto());
         newDoc.__metadata = new documentMetadata();
-        this.attachReservedMetaProperties("Raven/SqlReplication/Configuration/" + currentDocumentId, newDoc.__metadata);
+        this.attachReservedMetaProperties(editSqlReplication.sqlReplicationDocumentPrefix + currentDocumentId, newDoc.__metadata);
         
-        var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Configuration/" + currentDocumentId, newDoc, this.activeDatabase());
+        var saveCommand = new saveDocumentCommand(editSqlReplication.sqlReplicationDocumentPrefix + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
-            this.loadSqlReplication(savedDocumentDto.Key);
-            this.updateUrl(savedDocumentDto.Key);
+            var sqlReplicationKey = savedDocumentDto.Key.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
+            this.loadSqlReplication(sqlReplicationKey);
+            this.updateUrl(sqlReplicationKey);
 
             this.dirtyFlag().reset(); //Resync Changes
 

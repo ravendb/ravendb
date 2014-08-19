@@ -21,19 +21,19 @@ class statusDebugSqlReplication extends viewModelBase {
             ko.observable<number>(widthUnit),
             ko.observable<number>(widthUnit),
             ko.observable<number>(10),
-            ko.observable<number>(3* widthUnit),
-            ko.observable<number>(widthUnit),//Name
-            ko.observable<number>(widthUnit),//Counter
-            ko.observable<number>(widthUnit),//Max
-            ko.observable<number>(widthUnit),//Min
-            ko.observable<number>(widthUnit),//Stdev
-            ko.observable<number>(4*widthUnit),//Percentiles
-            ko.observable<number>(widthUnit*2),
-            ko.observable<number>(widthUnit*2),
-            ko.observable<number>(widthUnit*2),
-            ko.observable<number>(widthUnit*2),
-            ko.observable<number>(widthUnit*2),
-            ko.observable<number>(widthUnit*2)
+            ko.observable<number>(18),
+            ko.observable<number>(6),//Name
+            ko.observable<number>(6),//Counter
+            ko.observable<number>(6),//Max
+            ko.observable<number>(6),//Min
+            ko.observable<number>(6),//Stdev
+            ko.observable<number>(4*6),//Percentiles
+            ko.observable<number>(6),
+            ko.observable<number>(6),
+            ko.observable<number>(6),
+            ko.observable<number>(6),
+            ko.observable<number>(6),
+            ko.observable<number>(6)
         ];
         super.activate(args);
 
@@ -78,14 +78,9 @@ class statusDebugSqlReplication extends viewModelBase {
 
         $(document).on("mousemove.logTableColumnResize", "", (e: any) => {
             if (resizingColumn) {
-                var W = window;
-                var elem = e.toElement;
-                var parent = $(elem).parent()[0];
-                var parentFontSize = parseInt(W.getComputedStyle(parent,null).fontSize, 10),
-                    elemFontSize = parseInt(W.getComputedStyle(elem, null).fontSize, 10);
-                var pxInEms = Math.floor((elemFontSize / parentFontSize) * 100) / 10;
+                var elemFontSize = parseInt(window.getComputedStyle(e.toElement, null).fontSize, 10);
                 
-                var targetColumnSize = startingWidth + (e.pageX - startX) / pxInEms;
+                var targetColumnSize = startingWidth + (e.pageX - startX) / elemFontSize;
                 this.columnWidths[columnIndex](targetColumnSize);
 
                 // Stop propagation of the event so the text selection doesn't fire up

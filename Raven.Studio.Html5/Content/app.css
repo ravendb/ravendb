@@ -6688,16 +6688,16 @@ body {
 }
 #sqlReplicationStats .sectionTitle {
   text-align: left;
-  padding-left: 1%;
+  padding-left: 1em;
   text-decoration: underline;
-  margin-top: 2%;
+  margin-top: 1em;
+  margin-bottom: 2em!important;
 }
 #sqlReplicationStats .subSectionTitle {
   text-align: left;
-  padding-left: 6%;
+  padding-left: 6em;
   text-decoration: underline;
-  margin-top: 2%;
-  margin-right: 10%;
+  margin-right: 10em;
 }
 #sqlReplicationStats .statisticsSection .form-group {
   margin-bottom: 0;
@@ -6766,6 +6766,13 @@ body {
 }
 #sqlReplications label {
   text-align: left;
+}
+#editSQLReplication .tools a {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+#editSQLReplication .tools i {
+  padding-left: 1em;
 }
 #editSQLReplication label {
   text-align: left;
