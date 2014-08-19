@@ -45,7 +45,7 @@ using metrics.Core;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IResourceStore,IDisposable
+	public class DocumentDatabase : IResourceStore, IDisposable
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -427,23 +427,28 @@ namespace Raven.Database
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
-					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
-		{
-			Index indexInstance = IndexStorage.GetIndexInstance(indexId);
-			return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
-		}).Select(indexId =>
-		{
-			Index index = IndexStorage.GetIndexInstance(indexId);
-			return index == null ? null : index.PublicName;
-		}).ToArray();
-					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-			{
-				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-				if (indexInstance != null)
-					x.PublicName = indexInstance.PublicName;
 
-				return x;
-			}).ToArray();
+					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
+					{
+						Index indexInstance = IndexStorage.GetIndexInstance(indexId);
+						return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+					}).Select(indexId =>
+					{
+						Index index = IndexStorage.GetIndexInstance(indexId);
+						return index == null ? null : index.PublicName;
+					}).ToArray();
+
+					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
+					{
+						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+						if (indexInstance == null)
+							return null;
+						x.PublicName = indexInstance.PublicName;
+
+						return x;
+					})
+					.Where(x => x != null)
+					.ToArray();
 				});
 
 				if (result.Indexes != null)
