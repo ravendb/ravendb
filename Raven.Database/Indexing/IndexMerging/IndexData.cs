@@ -33,6 +33,8 @@ namespace Raven.Database.Indexing.IndexMerging
         public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
 
+		public string Collection { get; set; }
+
         public IDictionary<string, FieldStorage> Stores
         {
             get { return index.Stores; }
