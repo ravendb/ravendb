@@ -471,7 +471,7 @@ class shell extends viewModelBase {
             .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
 
         $.when(this.databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
-            .done(() => {
+            .always(() => {
                 var locationHash = window.location.hash;
                 if (locationHash.indexOf(appUrl.forFilesystems()) == 0) { //filesystems section
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems);

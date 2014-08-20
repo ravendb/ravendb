@@ -38,7 +38,7 @@ class createDatabase extends dialogViewModelBase {
         super();
 
         this.licenseStatus = licenseStatus;
-        if (this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
+        if (!!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
             this.isPeriodicExportBundleEnabled(false);
         }
 
