@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -92,47 +93,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromKeyByEtagIndice()
-		{
-			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-				.Iterate(Snapshot, writeBatch.Value))
-			{
-				if (!iterator.Seek(Slice.AfterAllKeys))
-					yield break;
-				do
-				{
-					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
-						continue;
-
-					var key = GetKeyFromCurrent(iterator);
-					var etag = Etag.Parse(iterator.CurrentKey.ToString());
-
-					yield return new KeyValuePair<string, Etag>(key,etag);
-				} while (iterator.MovePrev());
-			}
-		}
-
-		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromMetadata()
-		{			
-			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-				.Iterate(Snapshot, writeBatch.Value))
-			{
-				if (!iterator.Seek(Slice.AfterAllKeys))
-					yield break;
-				do
-				{
-					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
-						continue;
-
-					var key = GetKeyFromCurrent(iterator);
-					var documentMetadata = DocumentMetadataByKey(key);
-					yield return new KeyValuePair<string, Etag>(key, documentMetadata.Etag);
-
-				} while (iterator.MovePrev());
-			}
-		}
-
-
 		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
 		{
 			if (take < 0)
@@ -149,10 +109,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 											.Iterate(Snapshot, writeBatch.Value))
 			{
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-				{
+				if (untilEtag != null)
+					iterator.MaxKey = untilEtag.ToString();
+				if (iterator.Seek(etag.ToString()) == false ||
+					iterator.MoveNext() == false) // gt, not ge
 					yield break;
-				}
 
 				long fetchedDocumentTotalSize = 0;
 				int fetchedDocumentCount = 0;
@@ -161,18 +122,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
-					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
-						yield break;
-
 					var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
-
-					if (!EtagUtil.IsGreaterThan(docEtag, etag)) continue;
-
-					if (untilEtag != null && fetchedDocumentCount > 0)
-					{
-						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-							yield break;
-					}
 
 					var key = GetKeyFromCurrent(iterator);
 
@@ -615,10 +565,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var loweredKey = CreateKey(key);
 
 			size = -1;
-
+			
 			var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, existingEtag);
 			if (existingCachedDocument != null)
+			{
+				size = existingCachedDocument.Size;
 				return existingCachedDocument.Document;
+			}
 
 			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
 			if (documentReadResult == null) //non existing document
@@ -629,12 +582,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				using (var decodedDocumentStream = documentCodecs.Aggregate(stream,
 						(current, codec) => codec.Value.Decode(loweredKey, metadata, current)))
 				{
+					var streamToUse = decodedDocumentStream;
+					if(stream != decodedDocumentStream)
+						streamToUse = new CountingStream(decodedDocumentStream);
+
 					var documentData = decodedDocumentStream.ToJObject();
 
-					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)stream.Length);
+					size = (int)Math.Max(stream.Position, streamToUse.Position);
 
-
-					size = (int) Math.Max(stream.Position, decodedDocumentStream.Position);
+					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
 					return documentData;	
 				}
 			}
