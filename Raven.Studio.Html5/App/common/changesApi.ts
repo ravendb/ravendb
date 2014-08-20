@@ -81,7 +81,7 @@ class changesApi {
                 if (e.status == 0) {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);
-                } else {
+                } else if (e.status != 403) { // authorized connection
                     this.connectToChangesApiTask.reject();
                 }
             });
