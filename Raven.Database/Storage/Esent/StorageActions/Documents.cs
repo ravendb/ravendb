@@ -35,9 +35,9 @@ namespace Raven.Storage.Esent.StorageActions
 			return 0;
 		}
 
-		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocument DocumentByKey(string key)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) =>
+			return DocumentByKeyInternal(key, (metadata, createDocument) =>
 			{
 				Debug.Assert(metadata.Etag != null);
 				return new JsonDocument
@@ -52,12 +52,12 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
-		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocumentMetadata DocumentMetadataByKey(string key)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, func) => metadata);
+			return DocumentByKeyInternal(key, (metadata, func) => metadata);
 		}
 
-		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
+		private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
 
@@ -263,7 +263,7 @@ namespace Raven.Storage.Esent.StorageActions
 	            var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
 	                                                 Encoding.Unicode);
                
-                var doc = DocumentByKey(key, null);
+                var doc = DocumentByKey(key);
                 var size = doc.SerializedSizeOnDisk;
                 stat.TotalSize += size;
 	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))

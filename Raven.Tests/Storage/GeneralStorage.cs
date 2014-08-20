@@ -137,7 +137,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.Documents.DocumentByKey("a", null);
+				var doc = actions.Documents.DocumentByKey("a");
 				var documents = actions.Documents.GetDocumentsAfter(doc.Etag, 5, CancellationToken.None).Select(x => x.Key).ToArray();
 				Assert.Equal(2, documents.Length);
 				Assert.Equal("b", documents[0]);
@@ -158,7 +158,7 @@ namespace Raven.Tests.Storage
 			Etag etag = null;
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.Documents.DocumentByKey("a", null);
+				var doc = actions.Documents.DocumentByKey("a");
 				etag = doc.Etag;
 				actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
 			});

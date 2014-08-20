@@ -596,7 +596,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 			    
-                var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName, null);
+                var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName);
                 var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
                 
 				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))

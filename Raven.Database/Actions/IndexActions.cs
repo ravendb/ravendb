@@ -118,7 +118,17 @@ namespace Raven.Database.Actions
                 Etag afterTouchEtag = null;
                 try
                 {
-                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+	                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+	                var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
+
+	                if (docMetadata != null)
+	                {
+						var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
+
+						if(string.IsNullOrEmpty(entityName) == false)
+							Database.IndexingExecuter.UpdateHighestEtagForCollection(entityName, afterTouchEtag);
+	                }
                 }
                 catch (ConcurrencyException)
                 {
@@ -249,7 +259,7 @@ namespace Raven.Database.Actions
 
             TransactionalStorage.Batch(actions =>
             {
-                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
                 IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
                 // this has to happen in this fashion so we will expose the in memory status after the commit, but 

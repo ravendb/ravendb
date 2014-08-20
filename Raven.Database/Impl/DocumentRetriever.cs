@@ -217,7 +217,7 @@ namespace Raven.Database.Impl
 			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
 				
-			doc = actions.Documents.DocumentByKey(key, null);
+			doc = actions.Documents.DocumentByKey(key);
 			EnsureIdInMetadata(doc);
 
 			if (doc != null && doc.Metadata != null)

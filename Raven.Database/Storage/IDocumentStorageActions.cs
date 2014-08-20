@@ -20,8 +20,8 @@ namespace Raven.Database.Storage
 
 		long GetDocumentsCount();
 
-		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
-		JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation);
+		JsonDocument DocumentByKey(string key);
+		JsonDocumentMetadata DocumentMetadataByKey(string key);
 
 		bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);
 		AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);

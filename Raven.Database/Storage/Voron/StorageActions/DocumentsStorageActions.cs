@@ -79,7 +79,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var key = GetKeyFromCurrent(iterator);
 
-					var document = DocumentByKey(key, null);
+					var document = DocumentByKey(key);
 					if (document == null) //precaution - should never be true
 					{
 						throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found.", key));
@@ -125,7 +125,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 
 					var key = GetKeyFromCurrent(iterator);
-					var documentMetadata = DocumentMetadataByKey(key, null);
+					var documentMetadata = DocumentMetadataByKey(key);
 					yield return new KeyValuePair<string, Etag>(key, documentMetadata.Etag);
 
 				} while (iterator.MovePrev());
@@ -176,7 +176,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var key = GetKeyFromCurrent(iterator);
 
-					var document = DocumentByKey(key, null);
+					var document = DocumentByKey(key);
 					if (document == null) //precaution - should never be true
 					{
 						throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
@@ -246,7 +246,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var key = iterator.CurrentKey.ToString();
 
-					var fetchedDocument = DocumentByKey(key, null);
+					var fetchedDocument = DocumentByKey(key);
 					if (fetchedDocument == null) continue;
 
 					fetchedDocumentCount++;
@@ -260,7 +260,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return tableStorage.GetEntriesCount(tableStorage.Documents);
 		}
 
-		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocument DocumentByKey(string key)
 		{
 			if (string.IsNullOrEmpty(key))
 			{
@@ -300,7 +300,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			};
 		}
 
-		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocumentMetadata DocumentMetadataByKey(string key)
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
@@ -657,7 +657,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = GetKeyFromCurrent(iterator);
-                    var doc = DocumentByKey(key, null);
+                    var doc = DocumentByKey(key);
                     var size = doc.SerializedSizeOnDisk;
 				    stat.TotalSize += size;
 				    if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))

@@ -85,7 +85,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag, out bool deleted)
 		{
-			var existingDoc = Actions.Documents.DocumentByKey(id, null);
+			var existingDoc = Actions.Documents.DocumentByKey(id);
 			if(existingDoc != null)
 			{
 				ReplicationTask.EnsureReplicationInformationInMetadata(existingDoc.Metadata, Database);
@@ -124,7 +124,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
 		{
-				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null),
+				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key),
 														   out metadataToSave, out documentToSave))
 					return true;
 		}
