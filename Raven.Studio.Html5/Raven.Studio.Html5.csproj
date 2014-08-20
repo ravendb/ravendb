@@ -139,6 +139,7 @@
     <TypeScriptCompile Include="App\common\recentQueriesStorage.ts" />
     <TypeScriptCompile Include="App\common\serverBuildReminder.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
+    <TypeScriptCompile Include="App\common\sqlReplicationStats.ts" />
     <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\generalUtils.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />

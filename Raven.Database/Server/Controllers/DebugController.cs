@@ -97,7 +97,22 @@ namespace Raven.Database.Server.Controllers
 					Error = "SQL Replication bundle is not installed"
 				}, HttpStatusCode.NotFound);
 
-			return GetMessageWithObject(task.Statistics);
+            
+		    //var metrics = task.SqlReplicationMetricsCounters.ToDictionary(x => x.Key, x => x.Value.ToSqlReplicationMetricsData());
+
+		    var statisticsAndMetrics = task.GetConfiguredReplicationDestinations().Select(x =>
+		    {
+		        SqlReplicationStatistics stats;
+		        task.Statistics.TryGetValue(x.Name, out stats);
+                var metrics = task.GetSqlReplicationMetricsManager(x).ToSqlReplicationMetricsData();
+		        return new
+		        {
+                    x.Name,
+		            Statistics = stats,
+                    Metrics = metrics
+		        };
+		    });
+		    return GetMessageWithObject(statisticsAndMetrics);
 		}
 
 

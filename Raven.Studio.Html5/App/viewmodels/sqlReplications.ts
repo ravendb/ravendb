@@ -69,9 +69,15 @@ class sqlReplications extends viewModelBase {
     }
 
     resetSqlReplication(replicationId: string) {
-        new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-            .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"))
-            .fail(() => messagePublisher.reportError("SQL replication " + replicationId + " failed to reset!"));
+        app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
+            .then((dialogResult: string) => {
+                if (dialogResult === "Reset") {
+                    new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+                        .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"))
+                        .fail(() => messagePublisher.reportError("SQL replication " + replicationId + " failed to reset!"));
+                }
+            });
+        
     }
 
     itemNumber = (index) => {

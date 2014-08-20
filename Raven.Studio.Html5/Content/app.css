@@ -6668,6 +6668,50 @@ body {
 .replicationError {
   color: red;
 }
+.exceptionText {
+  white-space: pre-wrap !important;
+}
+#sqlReplicationStats .sqlStatsPanel {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 80vw;
+}
+#sqlReplicationStats .sectionTitle {
+  text-align: left;
+  padding-left: 1em;
+  text-decoration: underline;
+  margin-top: 1em;
+  margin-bottom: 2em!important;
+}
+#sqlReplicationStats .subSectionTitle {
+  text-align: left;
+  padding-left: 6em;
+  text-decoration: underline;
+  margin-right: 10em;
+}
+#sqlReplicationStats .statisticsSection .form-group {
+  margin-bottom: 0;
+}
+#sqlReplicationStats .statisticsSection .form-group label {
+  padding-top: 0;
+}
+#sqlReplicationStats .statisticsSection .form-group p {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+#sqlReplicationStats .meterTable {
+  overflow-x: visible;
+  overflow-y: visible;
+  margin-bottom: 1%;
+  margin-top: 1%;
+  padding-left: 10%;
+}
+#sqlReplicationStats .meterTable .column {
+  display: inline-block;
+}
+#sqlReplicationStats .meterTable .headers {
+  white-space: nowrap;
+}
 #sqlReplications .replications-container {
   margin-top: 10px;
 }
@@ -6712,6 +6756,13 @@ body {
 }
 #sqlReplications label {
   text-align: left;
+}
+#editSQLReplication .tools a {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+#editSQLReplication .tools i {
+  padding-left: 1em;
 }
 #editSQLReplication label {
   text-align: left;

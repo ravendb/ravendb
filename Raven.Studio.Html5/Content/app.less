@@ -77,7 +77,57 @@ html, body {
 .replicationError {
     color: red;
 }
+.exceptionText{
+    white-space: pre-wrap!important;
 
+}
+#sqlReplicationStats{
+    .sqlStatsPanel
+    {
+        overflow-x:auto;
+        overflow-y:auto;
+        max-width:80vw;
+        
+    }
+    .sectionTitle{
+        text-align:left;
+        padding-left:1em;
+        text-decoration:underline;
+        margin-top:1em;
+        margin-bottom:2em!important;
+    }
+    .subSectionTitle{
+        text-align:left;
+        padding-left:6em;
+        text-decoration:underline;        
+        margin-right:10em;
+    }
+    .statisticsSection{
+        .form-group{
+            margin-bottom:0;
+            label{
+                padding-top:0;
+            }
+            p{
+                padding-top:0;
+                padding-bottom:0;
+            }
+        }
+    }
+    .meterTable{
+        overflow-x:visible;
+        overflow-y:visible;
+        margin-bottom:1%;
+        margin-top:1%;
+        padding-left:10%;
+        .column{
+            display:inline-block;
+        }
+        .headers{
+            white-space: nowrap;
+        }
+    }
+}
 #sqlReplications {
     .replications-container {
         margin-top: 10px;
@@ -140,6 +190,16 @@ html, body {
 }
 
 #editSQLReplication {
+    .tools
+    {
+        a{
+            padding-left:6px;
+            padding-right:6px;
+        }
+        i{
+            padding-left:1em;
+        }
+    }
     label {
         text-align: left;
     }

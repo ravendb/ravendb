@@ -6,13 +6,15 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-
+using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Tasks;
 
 using metrics;
 using metrics.Core;
 
 using System.Linq;
+using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Util
 {
@@ -38,13 +40,11 @@ namespace Raven.Database.Util
         public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
 
         public ConcurrentDictionary<string, MeterMetric> ReplicationBatchSizeMeter { get; private set; }
-
-        public ConcurrentDictionary<string, MeterMetric> ReplicationDurationMeter { get; private set; }
-
+        
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
 
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
-
+        
         public MetricsCountersManager()
         {
             StaleIndexMaps = dbMetrics.Histogram("metrics", "stale index maps");
@@ -61,9 +61,10 @@ namespace Raven.Database.Util
             ReducedPerSecond = dbMetrics.TimedCounter("metrics", "reduces/sec", "Reduced Per Second Counter");
             IndexedPerSecond = dbMetrics.TimedCounter("metrics", "indexed/sec", "Index Per Second Counter");
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
-            ReplicationDurationMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
+            
+
         }
 
         public void AddGauge<T>(Type type, string name, Func<T> function)
@@ -92,12 +93,6 @@ namespace Raven.Database.Util
         {
             return ReplicationBatchSizeMeter.GetOrAdd(destination.ConnectionStringOptions.Url,
                 s => dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes));
-        }
-
-        public MeterMetric GetReplicationDurationMetric(ReplicationStrategy destination)
-        {
-            return ReplicationDurationMeter.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Meter("metrics", "duration for " + s, "Replication duration Counter", TimeUnit.Minutes));
         }
 
         public HistogramMetric GetReplicationBatchSizeHistogram(ReplicationStrategy destination)

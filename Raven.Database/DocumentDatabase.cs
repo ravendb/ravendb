@@ -591,52 +591,18 @@ namespace Raven.Database
 			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
 			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
 			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-			RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
-			Requests = CreateMeterData(metrics.ConcurrentRequests),
+            RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+            Requests = metrics.ConcurrentRequests.CreateMeterData(),
 			Gauges = metrics.Gauges,
-			StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
-			StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
-			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-			ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+            StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+            StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+            ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
 		};
 		}
 
-		private static HistogramData CreateHistogramData(HistogramMetric histogram)
-		{
-			double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
-
-			return new HistogramData
-			{
-				Counter = histogram.Count,
-				Max = histogram.Max,
-				Mean = histogram.Mean,
-				Min = histogram.Min,
-				Stdev = histogram.StdDev,
-				Percentiles = new Dictionary<string, double>
-                {
-                        {"50%", percentiles[0]},
-                        {"75%", percentiles[1]},
-                        {"95%", percentiles[2]},
-                        {"99%", percentiles[3]},
-                        {"99.9%", percentiles[4]},
-                        {"99.99%", percentiles[5]},
-                }
-			};
-		}
-
-		private static MeterData CreateMeterData(MeterMetric metric)
-		{
-			return new MeterData
-			{
-				Count = metric.Count,
-				FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, 3),
-				FiveMinuteRate = Math.Round(metric.FiveMinuteRate, 3),
-				MeanRate = Math.Round(metric.MeanRate, 3),
-				OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
-			};
-		}
+		
 
 		/// <summary>
 		///     This API is provided solely for the use of bundles that might need to run
@@ -652,18 +618,18 @@ namespace Raven.Database
 			bool old = disableAllTriggers.Value;
 			disableAllTriggers.Value = true;
 			return new DisposableAction(() =>
-		{
-			if (disposed)
-				return;
+			{
+				if (disposed)
+					return;
 
-			try
-			{
-				disableAllTriggers.Value = old;
-			}
-			catch (ObjectDisposedException)
-			{
-			}
-		});
+				try
+				{
+					disableAllTriggers.Value = old;
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			});
 		}
 
 		public void Dispose()
@@ -689,25 +655,25 @@ namespace Raven.Database
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
-			{
-				if (lastCollectionEtags != null)
-					lastCollectionEtags.Flush();
-			});
+							{
+								if (lastCollectionEtags != null)
+									lastCollectionEtags.Flush();
+							});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (prefetcher != null)
-				prefetcher.Dispose();
-		});
+								{
+									if (prefetcher != null)
+										prefetcher.Dispose();
+								});
 
 			exceptionAggregator.Execute(() =>
-						{
-							initializer.UnsubscribeToDomainUnloadOrProcessExit();
-							disposed = true;
+							{
+								initializer.UnsubscribeToDomainUnloadOrProcessExit();
+								disposed = true;
 
-							if (workContext != null)
-								workContext.StopWorkRude();
-						});
+								if (workContext != null)
+									workContext.StopWorkRude();
+							});
 
 			if (initializer != null)
 			{
@@ -724,25 +690,25 @@ namespace Raven.Database
 		});
 
 			exceptionAggregator.Execute(() =>
-						{
-							if (toDispose == null)
-								return;
-
-							foreach (IDisposable shouldDispose in toDispose)
-								exceptionAggregator.Execute(shouldDispose.Dispose);
-						});
-
-			exceptionAggregator.Execute(() =>
 		{
-			if (Tasks != null)
-				Tasks.Dispose(exceptionAggregator);
+			if (toDispose == null)
+				return;
+
+			foreach (IDisposable shouldDispose in toDispose)
+				exceptionAggregator.Execute(shouldDispose.Dispose);
 		});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (indexingBackgroundTask != null)
-				indexingBackgroundTask.Wait();
-		});
+			{
+				if (Tasks != null)
+					Tasks.Dispose(exceptionAggregator);
+			});
+
+			exceptionAggregator.Execute(() =>
+			{
+				if (indexingBackgroundTask != null)
+					indexingBackgroundTask.Wait();
+			});
 			exceptionAggregator.Execute(() =>
 			{
 				if (reducingBackgroundTask != null)

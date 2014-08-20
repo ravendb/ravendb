@@ -11,7 +11,7 @@
                             <i class="fa fa-refresh"></i>
                         </button>
                     </div>
-                    <div class="btn-group">
+                    <div class="btn-group tools">
                         <a type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="A">
                             Tools
                             <span class="caret"></span>
@@ -21,9 +21,12 @@
                                 <button type="button" class="btn-link" title="View current SQL Replication stats" data-bind="click: showStats">Stats</button>
                             </li>
                             <li>
-                                <button type="button" class="btn-link" title="Simulate SQL Replication" data-bind="disable: $root.isSaveEnabled(),click: simulateSqlReplication">
+                                <button type="button" class="btn-link" title="Simulate SQL Replication" data-bind="click: simulateSqlReplication">
                                     Simulation
                                 </button>
+                            </li>
+                            <li>
+                                <a class="btn-link" title="Open Sql Replication Statistics and Metrics View" data-bind="attr:{href:sqlReplicaitonStatsAndMetricsHref}" target="_blank">Metrics Page<i class="fa fa-external-link"></i></a>
                             </li>
                         </ul>
                     </div>

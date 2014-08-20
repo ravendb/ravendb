@@ -7,13 +7,9 @@ class getStatusDebugSqlReplicationCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<sqlReplicationStatisticsDto[]> {
+    execute(): JQueryPromise<sqlReplicationStatsDto[]> {
         var url = "/debug/sql-replication-stats";
-        var resultsSelector = (result) => $.map(result, (value, key) => {
-            value["Name"] = key;
-            return value;
-        });
-        return this.query<sqlReplicationStatisticsDto[]>(url, null, this.db, resultsSelector);
+        return this.query<sqlReplicationStatsDto[]>(url, null, this.db);
     }
 }
 

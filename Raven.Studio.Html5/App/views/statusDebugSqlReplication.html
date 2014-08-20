@@ -1,15 +1,18 @@
 ﻿<section>
-    <div class="panel-group" data-bind="foreach: data">
-        <div class="panel panel-default">
+    <div id="sqlReplicationStats" class="panel-group" data-bind="foreach: data">
+        <div class="sqlStatsPanel panel panel-default">
             <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse"  data-bind="text: Name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
-                </h4>
+                <a data-toggle="collapse" data-bind="attr: { href: '#statsDebugSqlRepCollapse' + $index() }">
+                    <h4 class="panel-title" data-bind="text:name"></h4>
+                </a>
             </div>
             <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugSqlRepCollapse' + $index() }">
                 <div class="panel-body">
-                    <div class="form-horizontal" role="form">
-                        <div class="form-group">
+                    <div class="form-horizontal statisticsSection" role="form" data-bind="with:statistics">
+                        <div class="form-group sectionTitle">
+                            <strong class="control-label">Statistics:</strong>
+                        </div>
+                        <div class="form-group col-sm-12">
                             <label class="col-md-2 control-label">Last error time</label>
                             <div class="col-md-10">
                                 <p class="form-control-static" data-bind="text: LastErrorTime"></p>
@@ -40,56 +43,199 @@
                             </div>
                         </div>
                         <!-- ko with: LastAlert -->
-                        <div class="panel panel-warning">
+                        <div class="panel panel-warning" data-bind="attr:{id:'statsAccordion' + $index()}">
                             <div class="panel-heading">
-                                <h3 class="panel-title">Last Alert</h3>
+                                <a data-toggle="collapse" data-bind="attr:{'data-parent':'#statsAccordion' + $index(), 'href':'#collapselasterror' + $index()}">
+                                    <h3 class="panel-title">
+                                        Last Alert
+                                    </h3>
+                                </a>
                             </div>
-                            <div class="panel-body">
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Title</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Title"></p>
+                            <div class="panel-collapse collapse" data-bind="attr:{id:'collapselasterror' + $index()}">
+                                <div class="panel-body">
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Title</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: Title"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Created at</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Created at</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Observed</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Observed"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Observed</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: Observed"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Message</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Message"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Message</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: Message"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Alert level</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Alert level</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Exception</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: Exception"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Exception</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static"><span class="exceptionText" data-bind="text: Exception"></span></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-2 control-label">Unique key</label>
-                                    <div class="col-md-10">
-                                        <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Unique key</label>
+                                        <div class="col-md-10">
+                                            <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <!-- /ko -->
+                    </div>
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group sectionTitle">
+                            <strong class="control-label">Metrics:</strong>
+                        </div>
+                        <div class="form-group subSectionTitle">
+                            <strong class="control-label">Rate Metrics:</strong>
+                        </div>
+                        <div from-group>
+                            <div class="meterTable col-sm-12">
+                                <span class="headers">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'em' }">
+                                        <span class="column-handle" column="0"></span>
+                                        <span>Table</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + 'em' }">
+                                        <span class="column-handle" column="1"></span>
+                                        <span>Metric Name</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + 'em' }">
+                                        <span class="column-handle" column="2"></span>
+                                        <span>Count</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + 'em' }">
+                                        <span class="column-handle" column="3"></span>
+                                        <span>MeanRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + 'em' }">
+                                        <span class="column-handle" column="4"></span>
+                                        <span>OneMinuteRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + 'em' }">
+                                        <span class="column-handle" column="5"></span>
+                                        <span>FiveMinuteRate</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[6]() + 'em' }">
+                                        <span class="column-handle" column="6"></span>
+                                        <span>FifteenMinuteRate</span>
+                                    </div>
+                                </span>
+                                <div style="white-space: nowrap" data-bind="foreach: rateMetrics">
+                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row">
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'em' }, text: Table"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'em' }, text: Name"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'em' }, text: Count"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'em' }, text: MeanRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'em' }, text: OneMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[5]() + 'em' }, text: FiveMinuteRate"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[6]() + 'em' }, text: FifteenMinuteRate"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group subSectionTitle">
+                                <strong class="control-label">Histograms:</strong>
+                            </div>
+                            <div class="meterTable col-sm-12">
+                                <span class="headers">
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[7]() + 'em' }">
+                                        <span class="column-handle" column="7"></span>
+                                        <span>Table</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[8]() + 'em' }">
+                                        <span class="column-handle" column="8"></span>
+                                        <span>Metric Name</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[9]() + 'em' }">
+                                        <span class="column-handle" column="9"></span>
+                                        <span>Counter</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[10]() + 'em' }">
+                                        <span class="column-handle" column="10"></span>
+                                        <span>Max</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[11]() + 'em' }">
+                                        <span class="column-handle" column="11"></span>
+                                        <span>Min</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[12]() + 'em' }">
+                                        <span class="column-handle" column="12"></span>
+                                        <span>Mean</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[13]() + 'em' }">
+                                        <span class="column-handle" column="13"></span>
+                                        <span>Stdev</span>
+                                    </div>
+                                    <div class="column column-header" data-bind="style: { width: $root.columnWidths[14]() + 'em' }">
+                                        <span>Percentiles</span>
+                                        <div style="width:100%">
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[15]() + 'em' }">
+                                                <span class="column-handle" column="15"></span>
+                                                <span>50%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[16]() + 'em' }">
+                                                <span class="column-handle" column="16"></span>
+                                                <span>75%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[17]() + 'em' }">
+                                                <span class="column-handle" column="17"></span>
+                                                <span>95%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[18]() + 'em' }">
+                                                <span class="column-handle" column="18"></span>
+                                                <span>99%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[19]() + 'em' }">
+                                                <span class="column-handle" column="19"></span>
+                                                <span>99.9%</span>
+                                            </div>
+                                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[20]() + 'em' }">
+                                                <span class="column-handle" column="20"></span>
+                                                <span>99.99%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </span>
+                                <div style="white-space: nowrap" data-bind="foreach: histogramMetrics">
+                                    <div style="display: block; white-space: nowrap" class="logRecord log-table-row">
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[7]() + 'em' }, text: Table"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[8]() + 'em' }, text: Name"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[9]() + 'em' }, text: Counter"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[10]() + 'em' }, text: Max"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[11]() + 'em' }, text: Min"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[12]() + 'em' }, text: Min"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[13]() + 'em' }, text: Stdev"></div>
+                                        <div class="column" data-bind="style: { width: $root.columnWidths[14]() + 'em' }, if:!!Percentiles[0]">
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[15]() + 'em' }, text: Percentiles[0].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[16]() + 'em' }, text: Percentiles[1].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[17]() + 'em' }, text: Percentiles[2].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[18]() + 'em' }, text: Percentiles[3].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[19]() + 'em' }, text: Percentiles[4].percentileValue"></div>
+                                            <div class="column" data-bind="style: { width: $root.columnWidths[20]() + 'em' }, text: Percentiles[5].percentileValue"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,39 +11,49 @@ namespace Raven.Database.Extensions
 {
     public static class MetricExtensions
     {
-        public static MeterData GetMeterData(this MeterMetric metric,int accuracy)
+        public static HistogramData CreateHistogramData(this HistogramMetric self)
         {
-            return new MeterData()
-            {
-                Count = metric.Count,
-                FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, accuracy),
-                FiveMinuteRate = Math.Round(metric.FiveMinuteRate, accuracy),
-                MeanRate = Math.Round(metric.MeanRate, accuracy),
-                OneMinuteRate = Math.Round(metric.OneMinuteRate, accuracy)
-            };
-        }
-
-        public static HistogramData GetHistogramData(this HistogramMetric histogram, double[] percentiles)
-        {
-            var percentileValues = histogram.Percentiles(percentiles);
+            double[] percentiles = self.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
 
             return new HistogramData
             {
-                Counter = histogram.Count,
-                Max = histogram.Max,
-                Mean = histogram.Mean,
-                Min = histogram.Min,
-                Stdev = histogram.StdDev,
+                Counter = self.Count,
+                Max = self.Max,
+                Mean = self.Mean,
+                Min = self.Min,
+                Stdev = self.StdDev,
                 Percentiles = new Dictionary<string, double>
                 {
-                    {string.Format("{0}%", percentiles[0]), percentileValues[0]},
-                    {string.Format("{0}%", percentiles[1]), percentileValues[1]},
-                    {string.Format("{0}%", percentiles[2]), percentileValues[2]},
-                    {string.Format("{0}%", percentiles[3]), percentileValues[3]},
-                    {string.Format("{0}%", percentiles[4]), percentileValues[4]},
-                    {string.Format("{0}%", percentiles[5]), percentileValues[5]},
+                        {"50%", percentiles[0]},
+                        {"75%", percentiles[1]},
+                        {"95%", percentiles[2]},
+                        {"99%", percentiles[3]},
+                        {"99.9%", percentiles[4]},
+                        {"99.99%", percentiles[5]},
                 }
             };
+        }
+
+        public static MeterData CreateMeterData(this MeterMetric self)
+        {
+            return new MeterData
+            {
+                Count = self.Count,
+                FifteenMinuteRate = Math.Round(self.FifteenMinuteRate, 3),
+                FiveMinuteRate = Math.Round(self.FiveMinuteRate, 3),
+                MeanRate = Math.Round(self.MeanRate, 3),
+                OneMinuteRate = Math.Round(self.OneMinuteRate, 3),
+            };
+        }
+        
+        public static Dictionary<string, HistogramData> ToHistogramDataDictionary(this ConcurrentDictionary<string, HistogramMetric> self)
+        {
+            return self.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value));
+        }
+
+        public static Dictionary<string, MeterData> ToMeterDataDictionary(this ConcurrentDictionary<string, MeterMetric> self)
+        {
+            return self.ToDictionary(x => x.Key, x => CreateMeterData(x.Value));
         }
     }
 }
