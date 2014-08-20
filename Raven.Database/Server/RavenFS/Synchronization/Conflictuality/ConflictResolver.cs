@@ -19,7 +19,6 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 
 		private readonly CompositionContainer container;
 		private readonly ITransactionalStorage storage;
-		private readonly ConflictArtifactManager conflictArtifactManager;
 
 		public ConflictResolver(ITransactionalStorage storage, CompositionContainer container)
 		{

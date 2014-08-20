@@ -103,8 +103,10 @@ namespace Raven.Tests.Issues
 
         public bool Connected { get; set; }
 
-        public event Action Disconnected;
-
+#pragma warning disable 67
+		public event Action Disconnected;
+#pragma warning restore 67
+        
         public void SendAsync(object msg)
         {
             var message = msg as LogEventInfo;

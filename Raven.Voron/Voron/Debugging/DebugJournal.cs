@@ -229,7 +229,7 @@ namespace Voron.Debugging
                 return string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, length);
             }
 
-            public static WriteActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
+            public new static WriteActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
             {
                 var columnArray = csvLine.Split(new[] { ',' }).ToList();
                 if (columnArray.Count != 5)

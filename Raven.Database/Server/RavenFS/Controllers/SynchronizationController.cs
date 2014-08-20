@@ -951,7 +951,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.FileSystemUrl, sourceServer.Id);
 		}
 
-		public virtual RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
+		protected override RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
 		{
 			var result = base.GetFilteredMetadataFromHeaders(headers);
 
