@@ -215,7 +215,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
-				if (untilEtag != null && count > 0)
+				if (untilEtag != null)
 				{
 					var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 					if (EtagUtil.IsGreaterThan(docEtag, untilEtag))

@@ -109,8 +109,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 											.Iterate(Snapshot, writeBatch.Value))
 			{
-				if (untilEtag != null)
-					iterator.MaxKey = untilEtag.ToString();
 				Slice slice = etag.ToString();
 				if (iterator.Seek(slice) == false) 
 					yield break;
@@ -128,7 +126,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
+					
 					var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
+					
+					if (untilEtag != null)
+					{
+						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
+							yield break;
+					}
 
 					var key = GetKeyFromCurrent(iterator);
 
