@@ -34,21 +34,19 @@ namespace Raven.Database.Actions
         }
 
         public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
-    IStorageActionsAccessor actions,
-    TransactionInformation transactionInformation)
+    IStorageActionsAccessor actions)
         {
             int tries;
-            return GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, transactionInformation, out tries);
+            return GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, out tries);
         }
 
         public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
             IStorageActionsAccessor actions,
-            TransactionInformation transactionInformation,
             out int tries)
         {
             long nextIdentityValue = actions.General.GetNextIdentityValue(key);
 
-            if (actions.Documents.DocumentMetadataByKey(key + nextIdentityValue, transactionInformation) == null)
+            if (actions.Documents.DocumentMetadataByKey(key + nextIdentityValue) == null)
             {
                 tries = 1;
                 return nextIdentityValue;
@@ -62,7 +60,7 @@ namespace Raven.Database.Actions
             while (true)
             {
                 tries++;
-                if (actions.Documents.DocumentMetadataByKey(key + maybeFree, transactionInformation) == null)
+                if (actions.Documents.DocumentMetadataByKey(key + maybeFree) == null)
                 {
                     if (lastKnownBusy + 1 == maybeFree)
                     {
@@ -283,7 +281,7 @@ namespace Raven.Database.Actions
 
 								if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
 								{
-									var existingDoc = accessor.Documents.DocumentByKey(doc.Key, null);
+									var existingDoc = accessor.Documents.DocumentByKey(doc.Key);
 
 									if (IsTheSameDocument(doc, existingDoc)) 
 										continue;
@@ -308,7 +306,7 @@ namespace Raven.Database.Actions
 	                            var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
 	                            Etag highestEtagInCollection;
-	                            if (entityName != null && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false || 
+	                            if (string.IsNullOrEmpty(entityName) == false && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false || 
 									result.Etag.CompareTo(highestEtagInCollection) > 0))
 	                            {
 		                            collectionsAndEtags[entityName] = result.Etag;
@@ -462,7 +460,7 @@ namespace Raven.Database.Actions
                 // first we check the dtc state, then the storage, to avoid race conditions
                 var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
 
-                TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key, transactionInformation); });
+                TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
 
                 if (nonAuthoritativeInformationBehavior != null)
                     document = nonAuthoritativeInformationBehavior(document);
@@ -486,7 +484,7 @@ namespace Raven.Database.Actions
                 var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
                 TransactionalStorage.Batch(actions =>
                 {
-                    document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
+                    document = actions.Documents.DocumentMetadataByKey(key);
                 });
                 if (nonAuthoritativeInformationBehavior != null)
                     document = nonAuthoritativeInformationBehavior(document);
@@ -572,8 +570,7 @@ namespace Raven.Database.Actions
                 {
                     if (key.EndsWith("/"))
                     {
-                        key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions,
-                                                                                         transactionInformation);
+                        key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions);
                     }
                     AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
                     if (transactionInformation == null)
@@ -635,7 +632,7 @@ namespace Raven.Database.Actions
                     }
                     else
                     {
-                        var doc = actions.Documents.DocumentMetadataByKey(key, null);
+                        var doc = actions.Documents.DocumentMetadataByKey(key);
                         newEtag = Database.InFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
                                                                                       transactionInformation,
                                                                                       doc == null
@@ -733,7 +730,7 @@ namespace Raven.Database.Actions
                     }
                     else
                     {
-                        var doc = actions.Documents.DocumentMetadataByKey(key, null);
+                        var doc = actions.Documents.DocumentMetadataByKey(key);
 
                         Database.InFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
                                                                                etag,

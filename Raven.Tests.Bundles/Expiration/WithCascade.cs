@@ -54,7 +54,7 @@ namespace Raven.Tests.Bundles.Expiration
 			{
                 database.TransactionalStorage.Batch(accessor =>
 				{
-					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
+					documentByKey = accessor.Documents.DocumentByKey("doc/1");
 
 				});
 				if (documentByKey == null)
@@ -88,7 +88,7 @@ namespace Raven.Tests.Bundles.Expiration
 			{
 				database.TransactionalStorage.Batch(accessor =>
 				{
-					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
+					documentByKey = accessor.Documents.DocumentByKey("doc/1");
 
 				});
 				if (documentByKey == null)
@@ -99,7 +99,7 @@ namespace Raven.Tests.Bundles.Expiration
 			Assert.Null(documentByKey);
 
 
-            database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2", null)));
+            database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2")));
 		}
 
 		[Fact]

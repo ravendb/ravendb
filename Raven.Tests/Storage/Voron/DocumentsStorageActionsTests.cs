@@ -177,7 +177,7 @@ namespace Raven.Tests.Storage.Voron
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				JsonDocument document = null;
-				storage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null));
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo"));
 				Assert.Null(document);
 			}
 		}
@@ -233,7 +233,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(
 					viewer =>
 					{
-						jsonDocument = viewer.Documents.DocumentByKey(documentKey, null);
+						jsonDocument = viewer.Documents.DocumentByKey(documentKey);
 						document = jsonDocument.DataAsJson;
 					});
 
@@ -272,7 +272,7 @@ namespace Raven.Tests.Storage.Voron
 						RavenJObject.FromObject(new { Meta = "Data" })));
 
 				JsonDocumentMetadata fetchedMetadata = null;
-				storage.Batch(viewer => fetchedMetadata = viewer.Documents.DocumentMetadataByKey(documentKey, null));
+				storage.Batch(viewer => fetchedMetadata = viewer.Documents.DocumentMetadataByKey(documentKey));
 
 				Etag deletedEtag = null;
 				RavenJObject deletedMetadata = null;
@@ -280,10 +280,10 @@ namespace Raven.Tests.Storage.Voron
 					mutator => mutator.Documents.DeleteDocument(documentKey, null, out deletedMetadata, out deletedEtag));
 
 				JsonDocument documentAfterDelete = null;
-				storage.Batch(viewer => documentAfterDelete = viewer.Documents.DocumentByKey(documentKey, null));
+				storage.Batch(viewer => documentAfterDelete = viewer.Documents.DocumentByKey(documentKey));
 
 				JsonDocumentMetadata metadataAfterDelete = null;
-				storage.Batch(viewer => metadataAfterDelete = viewer.Documents.DocumentMetadataByKey(documentKey, null));
+				storage.Batch(viewer => metadataAfterDelete = viewer.Documents.DocumentMetadataByKey(documentKey));
 
 				//after delete --> DocumentByKey()/DocumentMetadataByKey() methods should return null
 				Assert.Null(documentAfterDelete);
@@ -315,7 +315,7 @@ namespace Raven.Tests.Storage.Voron
 						documentKey, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
 
 				RavenJObject document = null;
-				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey).DataAsJson);
 
 				System.Diagnostics.Trace.WriteLine("DocumentStorage_InsertDocument_And_DocumentRead --> " + document);
 				Assert.NotNull(document);
@@ -333,7 +333,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
 
 				RavenJObject document = null;
-				storage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo").DataAsJson);
 
 				Assert.NotNull(document);
 				Assert.Equal("Bar", document.Value<string>("Name"));
@@ -432,8 +432,8 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 
 				RavenJObject document1 = null, document2 = null;
-				storage.Batch(viewer => document1 = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
-				storage.Batch(viewer => document2 = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+				storage.Batch(viewer => document1 = viewer.Documents.DocumentByKey("Foo").DataAsJson);
+				storage.Batch(viewer => document2 = viewer.Documents.DocumentByKey("Foo").DataAsJson);
 
 				Assert.NotNull(document1);
 				Assert.Equal("Bar", document1.Value<string>("Name"));
@@ -454,7 +454,7 @@ namespace Raven.Tests.Storage.Voron
 							RavenJObject.FromObject(new { Meta = "Data" })));
 
 				JsonDocumentMetadata metadata = null;
-				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
+				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo"));
 
 				Assert.NotNull(metadata);
 				Assert.NotNull(metadata.Metadata);
@@ -469,7 +469,7 @@ namespace Raven.Tests.Storage.Voron
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				JsonDocumentMetadata metadata = null;
-				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
+				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo"));
 				Assert.Null(metadata);
 			}
 		}
@@ -484,7 +484,7 @@ namespace Raven.Tests.Storage.Voron
 
 				JsonDocumentMetadata metadata = null;
 				Assert.DoesNotThrow(
-					() => storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo2", null)));
+					() => storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo2")));
 
 				Assert.Equal(null, metadata);
 
@@ -503,7 +503,7 @@ namespace Raven.Tests.Storage.Voron
 
 
 				JsonDocumentMetadata metadata = null;
-				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
+				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo"));
 				Assert.Equal("NotData", metadata.Metadata.Value<string>("Meta"));
 
 			}
@@ -526,7 +526,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(mutator => mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, addResult.Etag, RavenJObject.FromObject(new { Name = TEST_DOCUMENT_EXPECTED_NAME }), new RavenJObject()));
 
 				RavenJObject document = null;
-				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(TEST_DOCUMENT_KEY, null).DataAsJson);
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(TEST_DOCUMENT_KEY).DataAsJson);
 
 				Assert.NotNull(document);
 				Assert.Equal(TEST_DOCUMENT_EXPECTED_NAME, document.Value<string>("Name"));
@@ -714,7 +714,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(viewer =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
-						existingDocuments.Add(viewer.Documents.DocumentByKey("Foo" + docIndex, null));
+						existingDocuments.Add(viewer.Documents.DocumentByKey("Foo" + docIndex));
 				});
 
 				var documentAfterSkip = existingDocuments

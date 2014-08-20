@@ -26,7 +26,7 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("Ayende").DataAsJson;
 				});
 
 				Assert.Equal("Rahien", document.Value<string>("Name"));
@@ -47,7 +47,7 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("Ayende").DataAsJson;
 				});
 
 				Assert.Equal("Oren", document.Value<string>("Name"));
@@ -90,7 +90,7 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("docs/0", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("docs/0").DataAsJson;
 				});
 
 				Assert.Equal("Oren", document.Value<string>("Name"));
@@ -112,7 +112,7 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("Ayende").DataAsJson;
 				});
 
 				Assert.Equal("Rahien", document.Value<string>("Name"));
@@ -134,7 +134,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
+				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende")));
 
 			}
 		}
@@ -158,7 +158,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
+				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende")));
 				tx.Batch(accessor => Assert.Equal(0, accessor.Documents.GetDocumentsCount()));
 			}
 		}

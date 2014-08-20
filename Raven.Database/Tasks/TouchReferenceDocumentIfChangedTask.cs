@@ -61,7 +61,7 @@ namespace Raven.Database.Tasks
 				{
 					foreach (var kvp in ReferencesToCheck)
 					{
-						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key, null);
+						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key);
 
 						if (doc == null)
 						{
@@ -78,7 +78,7 @@ namespace Raven.Database.Tasks
 
 						var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-						if(entityName == null)
+						if(string.IsNullOrEmpty(entityName))
 							continue;
 
 						Etag highestEtagInCollection;
