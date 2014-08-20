@@ -111,9 +111,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (untilEtag != null)
 					iterator.MaxKey = untilEtag.ToString();
-				if (iterator.Seek(etag.ToString()) == false ||
-					iterator.MoveNext() == false) // gt, not ge
+				Slice slice = etag.ToString();
+				if (iterator.Seek(slice) == false) 
 					yield break;
+
+				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+				{
+					if(iterator.MoveNext() == false)
+						yield break;
+				}
 
 				long fetchedDocumentTotalSize = 0;
 				int fetchedDocumentCount = 0;
