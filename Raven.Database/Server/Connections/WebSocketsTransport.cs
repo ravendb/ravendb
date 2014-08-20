@@ -440,7 +440,7 @@ namespace Raven.Database.Server.Connections
             get { return WebSocketTransportFactory.CUSTOM_LOGGING_WEBSOCKET_SUFFIX; }
         }
 
-        protected override async Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
+        protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
         {
             var typedMessage = message as LogEventInfo;
 
@@ -449,7 +449,7 @@ namespace Raven.Database.Server.Connections
                 message = new LogEventInfoFormatted(typedMessage);
             }
 
-            base.SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
+            return base.SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
         }
 
         protected override async Task<bool> ValidateRequest()

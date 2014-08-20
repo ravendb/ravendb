@@ -22,7 +22,6 @@ namespace Raven.Bundles.Compression.Streams
 			this.underlyingStream = new StreamReaderWithUnread(underlyingStream);
 			compressed = CheckMagicNumber();
 
-			pos = 4;
 			if (compressed)
 			{
 				deflateStream = new DeflateStream(underlyingStream, CompressionMode.Decompress, leaveOpen: true);
