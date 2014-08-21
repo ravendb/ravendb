@@ -17,7 +17,7 @@ namespace Raven.Database.Plugins.Builtins
 			if (entityName == null)
 				return;
 
-			Database.IndexingExecuter.UpdateHighestEtagForCollection(entityName, etag);
+			Database.LastCollectionEtags.Update(entityName, etag);
 		}
 	}
 }

@@ -1,121 +1,93 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LastCollectionEtags.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
-    public class LastCollectionEtags
-    {
-	    private readonly WorkContext context;
+	public class LastCollectionEtags
+	{
+		private readonly WorkContext context;
+		private ConcurrentDictionary<string, Etag> lastCollectionEtags;
 
-	    public ITransactionalStorage TransactionalStorage { get; private set; }
-        private readonly ConcurrentDictionary<string, Etag> lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
+		public LastCollectionEtags(WorkContext context)
+		{
+			this.context = context;
+		}
 
-        public LastCollectionEtags(ITransactionalStorage storage, WorkContext context)
-        {
-	        this.context = context;
-	        this.TransactionalStorage = storage;
-        }
+		public void InitializeBasedOnIndexingResults()
+		{
+			List<IndexStats> indexesStats = null;
+			context.Database.TransactionalStorage.Batch(accessor =>
+			{
+				indexesStats = accessor.Indexing.GetIndexesStats().ToList();
+			});
 
-	    public void Initialize()
-        {
-            TransactionalStorage.Batch(accessor =>
-                accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
-                   .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
+			if (indexesStats.Count == 0)
+			{
+				lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
+				return;
+			}
 
-            var lastKnownEtag = Etag.Empty;
-            if (!lastCollectionEtags.TryGetValue("All", out lastKnownEtag))
-                lastKnownEtag = Etag.Empty;
-            var lastDatabaseEtag = Etag.Empty;
-            TransactionalStorage.Batch(accessor => { lastDatabaseEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
-            SeekMissingEtagsFrom(lastKnownEtag, lastDatabaseEtag);
-        }
+			foreach (var stat in indexesStats)
+			{
+				stat.ForEntityName = context.IndexDefinitionStorage.GetViewGenerator(stat.Id).ForEntityNames.ToList();
+			}
 
-        private void SeekMissingEtagsFrom(Etag lastKnownEtag, Etag destinationEtag)
-        {
-            if (lastKnownEtag.CompareTo(destinationEtag) >= 0) return;
+			var collectionEtags = indexesStats.Where(x => x.ForEntityName.Count > 0)
+										.SelectMany(x => x.ForEntityName, (stats, collectionName) => new Tuple<string, Etag>(collectionName, stats.LastIndexedEtag))
+										.GroupBy(x => x.Item1)
+										.Select(x => new
+										{
+											CollectionName = x.Key, MaxEtag = x.Max(y => y.Item2)
+										})
+										.ToDictionary(x => x.CollectionName, y => y.MaxEtag);
 
-            TransactionalStorage.Batch(accessor =>
-            {
-                lastKnownEtag = UpdatePerCollectionEtags(
-                    accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000, context.CancellationToken));
-            });
+			lastCollectionEtags = new ConcurrentDictionary<string, Etag>(collectionEtags);
+		}
 
-            if(lastKnownEtag != null)
-                SeekMissingEtagsFrom(lastKnownEtag, destinationEtag);
-        }
+		public bool HasEtagGreaterThan(List<string> collectionsToCheck, Etag etagToCheck)
+		{
+			var higherEtagExists = true;
 
+			foreach (var collectionName in collectionsToCheck)
+			{
+				Etag highestEtagForCollection;
+				if (lastCollectionEtags.TryGetValue(collectionName, out highestEtagForCollection))
+				{
+					if (highestEtagForCollection.CompareTo(etagToCheck) > 0)
+						return true;
 
-        private void WriteLastEtagsForCollections()
-        {
-             TransactionalStorage.Batch(accessor => lastCollectionEtags.ForEach(x=> 
-                     accessor.Lists.Set("Raven/Collection/Etag", x.Key, RavenJObject.FromObject(new { Etag = x.Value }), UuidType.Documents)));
-        }
+					higherEtagExists = false;
+				}
+				else
+				{
+					return true;
+				}
+			}
 
-        public Etag ReadLastETagForCollection(string collectionName)
-        {
-            Etag value = Etag.Empty;
-            TransactionalStorage.Batch(accessor =>
-            {
-                var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
-                if (dbvalue != null) value = Etag.Parse(dbvalue.Data.Value<string>("Etag"));
-            });
-            return value;
-        }
+			return higherEtagExists;
+		}
 
-        public Etag OptimizeCutoffForIndex(AbstractViewGenerator viewGenerator, Etag cutoffEtag)
-        {
-            if (cutoffEtag != null) return cutoffEtag;
-            if (viewGenerator.ReduceDefinition == null && viewGenerator.ForEntityNames.Count > 0)
-            {
-                var etags = viewGenerator.ForEntityNames.Select(GetLastEtagForCollection)
-                                        .Where(x=> x != null);
-                if (etags.Any())
-                    return etags.Max();
-            }
-            return null;
-        }
+		public void Update(string collectionName, Etag etag)
+		{
+			lastCollectionEtags.AddOrUpdate(collectionName, etag, (existingEntity, existingEtag) => etag.CompareTo(existingEtag) > 0 ? etag : existingEtag);
+		}
 
-        public Etag UpdatePerCollectionEtags(IEnumerable<JsonDocument> documents)
-        {
-            if (!documents.Any()) return null;
+		public Etag GetLastEtagForCollection(string collectionName)
+		{
+			Etag result;
+			if (lastCollectionEtags.TryGetValue(collectionName, out result))
+				return result;
 
-            var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
-                .Where(x=>x.Key != null)
-                .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString()})
-                .ToArray();
-             
-            foreach (var collection in collections)
-                UpdateLastEtagForCollection(collection.CollectionName, collection.Etag);
-
-            var maximumEtag = documents.Max(x => x.Etag);
-            UpdateLastEtagForCollection("All", maximumEtag);
-            return maximumEtag;
-        }
-
-        private void UpdateLastEtagForCollection(string collectionName, Etag etag)
-        {
-            lastCollectionEtags.AddOrUpdate(collectionName, etag,
-                (v, oldEtag) => etag.CompareTo(oldEtag) < 0 ? oldEtag : etag);
-        }
-
-        public Etag GetLastEtagForCollection(string collectionName)
-        {
-            Etag result = Etag.Empty;
-            if (lastCollectionEtags.TryGetValue(collectionName, out result))
-                return result;
-            return null;
-        }
-
-        public void Flush()
-        {
-            this.WriteLastEtagsForCollections();
-        }
-    }
+			return null;
+		}
+	}
 }
