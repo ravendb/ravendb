@@ -100,6 +100,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bundles\MoreLikeThis.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="ChangesApi\WebsocketsTests.cs" />
@@ -121,6 +122,7 @@
     <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
     <Compile Include="Utils\Entities\ISearchable.cs" />
     <Compile Include="Utils\Indexes\MultiMapIndex.cs" />
+    <Compile Include="Utils\Indexes\Posts_ByTitleAndContent.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
