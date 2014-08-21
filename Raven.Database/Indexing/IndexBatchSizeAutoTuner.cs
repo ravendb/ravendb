@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
@@ -51,6 +52,23 @@ namespace Raven.Database.Indexing
 		protected override IEnumerable<int> GetLastAmountOfItems()
 		{
 			return context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex();
+		}
+
+		public Action ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc)
+		{
+			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= context.Configuration.MaxIndexOutputsPerDocument)
+				return null;
+
+			var oldValue = NumberOfItemsToProcessInSingleBatch;
+
+			var newValue = Math.Max(NumberOfItemsToProcessInSingleBatch / (maxIndexOutputsPerDoc.Value / 2), InitialNumberOfItems);
+
+			if (oldValue == newValue)
+				return null;
+
+			NumberOfItemsToProcessInSingleBatch = newValue;
+
+			return () => NumberOfItemsToProcessInSingleBatch = oldValue;
 		}
 	}
 }

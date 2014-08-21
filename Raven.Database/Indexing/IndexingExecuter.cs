@@ -111,7 +111,11 @@ namespace Raven.Database.Indexing
             var lastIndexedEtagForAllIndexes =
                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
 
-			context.CancellationToken.ThrowIfCancellationRequested();
+	        var maxIndexOutputsPerDoc = indexesToWorkOn.Max(x => x.Index.MaxIndexOutputsPerDocument);
+
+	        var recoverTunerState = ((IndexBatchSizeAutoTuner) autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
+
+	        context.CancellationToken.ThrowIfCancellationRequested();
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
@@ -157,6 +161,9 @@ namespace Raven.Database.Indexing
 		        }
 		        finally
 		        {
+			        if (recoverTunerState != null)
+				        recoverTunerState();
+
 			        if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 			        {
 				        PrefetchingBehavior.CleanupDocuments(lastEtag);

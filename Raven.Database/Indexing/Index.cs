@@ -144,7 +144,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-	    public string PublicName { get { return this.indexDefinition.Name; } }
+	    public string PublicName { get { return indexDefinition.Name; } }
+
+		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
 
 		public volatile bool IsMapIndexingInProgress;
 
