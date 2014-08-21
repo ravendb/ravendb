@@ -111,14 +111,9 @@ namespace Raven.Client.Document
 		private string GetId(object entity)
 		{
 			string id;
-			if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id))
+			if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
 			{
 				id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
-			}
-			else
-			{
-				id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
-				generateEntityIdOnTheClient.TrySetIdentity(entity, id);
 			}
 			return id;
 		}

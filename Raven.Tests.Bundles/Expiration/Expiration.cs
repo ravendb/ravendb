@@ -124,7 +124,7 @@ namespace Raven.Tests.Bundles.Expiration
 			{
 				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					documentByKey = accessor.Documents.DocumentByKey("companies/1", null);
+					documentByKey = accessor.Documents.DocumentByKey("companies/1");
 				});
 				if (documentByKey == null)
 					return;

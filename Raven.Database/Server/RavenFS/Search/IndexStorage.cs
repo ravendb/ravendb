@@ -12,6 +12,7 @@ using Lucene.Net.Store;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Database.Server.RavenFS.Extensions;
+using Lucene.Net.QueryParsers;
 
 namespace Raven.Database.Server.RavenFS.Search
 {
@@ -59,7 +60,7 @@ namespace Raven.Database.Server.RavenFS.Search
 				else
 				{
 					var queryParser = new RavenQueryParser(analyzer, NumericIndexFields);
-					q = queryParser.Parse(query);
+                    q = queryParser.Parse(query);
 				}
 
 				var topDocs = ExecuteQuery(searcher, sortFields, q, pageSize + start);

@@ -98,6 +98,13 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Dictionary<string, double> TimingsInMilliseconds { get; set; }
 
+
+		/// <summary>
+		/// The size of the request which were sent from the server.
+		/// This value is the _uncompressed_ size. 
+		/// </summary>
+		public long ResultSize { get; set; }
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>

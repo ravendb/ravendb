@@ -72,17 +72,22 @@ namespace Raven.Bundles.Replication.Responders
 			RavenJArray conflictArray;
 			existingConflict["Conflicts"] = conflictArray = new RavenJArray(existingConflict.Value<RavenJArray>("Conflicts"));
 
-			conflictArray.Add(newConflictId);
-
-			var memoryStream = new MemoryStream();
-			existingConflict.WriteTo(memoryStream);
-			memoryStream.Position = 0;
-
-			var newETag = Actions.Attachments.AddAttachment(id, existingItem.Etag, memoryStream, existingItem.Metadata);
-
-			return new CreatedConflict()
+			var conflictEtag = existingItem.Etag;
+			if (conflictArray.Contains(newConflictId) == false)
 			{
-				Etag = newETag,
+				conflictArray.Add(newConflictId);
+
+				var memoryStream = new MemoryStream();
+				existingConflict.WriteTo(memoryStream);
+				memoryStream.Position = 0;
+
+				var newETag = Actions.Attachments.AddAttachment(id, existingItem.Etag, memoryStream, existingItem.Metadata);
+				conflictEtag = newETag;
+			}
+				
+			return new CreatedConflict
+			{
+				Etag = conflictEtag,
 				ConflictedIds = conflictArray.Select(x => x.Value<string>()).ToArray()
 			};
 		}

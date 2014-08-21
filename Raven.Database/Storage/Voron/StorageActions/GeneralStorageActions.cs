@@ -55,7 +55,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		    }
 	    }
 
-        public long GetNextIdentityValue(string name)
+        public long GetNextIdentityValue(string name, int val)
         {
             if (string.IsNullOrEmpty(name)) 
 				throw new ArgumentNullException("name");
@@ -65,13 +65,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var readResult = storage.General.Read(Snapshot, lowerKeyName, writeBatch.Value); 
             if (readResult == null)
             {
-                storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes((long)1), expectedVersion: 0);
-                return 1;
+	            if (val == 0)
+		            return 0;
+                storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes((long)val), expectedVersion: 0);
+				return val;
             }
 
             using (var stream = readResult.Reader.AsStream())
             {
-                var newValue = stream.ReadInt64() + 1;
+	            long existingValue = stream.ReadInt64();
+	            if (val == 0)
+		            return val;
+	            var newValue = existingValue + val;
 
                 storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(newValue), expectedVersion: readResult.Version);
                 return newValue;

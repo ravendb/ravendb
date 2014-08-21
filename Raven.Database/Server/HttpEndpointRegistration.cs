@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Logging;
+using Raven.Database.Server.Connections;
 using Raven.Database.Util;
 
 namespace Raven.Database.Server
@@ -9,5 +10,10 @@ namespace Raven.Database.Server
 		{
 			LogManager.RegisterTarget<DatabaseMemoryTarget>();
 		}
+
+        public static void RegisterOnDemandLogTarget()
+        {
+            LogManager.RegisterTarget<OnDemandLogTarget>();
+        }
 	}
 }

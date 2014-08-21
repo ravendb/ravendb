@@ -45,10 +45,10 @@ namespace Raven.Tests.MailingList
 				                                     		Value = new RavenJValue("EntityTypeId")
 				                                     	}
 				                                     }, false);
-			    var id = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("EntityEntityIdPatch").IndexId;
+			    var id = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("EntityEntityIdPatch").IndexId;
 				store.DatabaseCommands.DeleteIndex("EntityEntityIdPatch");
 
-				Assert.False(store.DocumentDatabase.Statistics.Indexes.Any(x => x.Id == id));
+				Assert.False(store.SystemDatabase.Statistics.Indexes.Any(x => x.Id == id));
 			}
 		}
 	}

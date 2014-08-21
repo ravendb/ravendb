@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Specialized;
 
+using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
-    using System.Collections.Specialized;
-	using Raven.Abstractions.Connection;
-
 	public static class RavenUrlExtensions
 	{
         public static string ForDatabase(this string url, string database)
@@ -45,7 +45,7 @@ namespace Raven.Client.Connection
 
 		public static string AdminStats(this string url)
 		{
-			return url + "/admin/stats";
+			return MultiDatabase.GetRootDatabaseUrl(url) +"/admin/stats";
 		}
 
 		public static string ReplicationInfo(this string url)
@@ -60,7 +60,7 @@ namespace Raven.Client.Connection
 
 		public static string Databases(this string url, int pageSize, int start)
 		{
-			var databases = url + "/databases?pageSize=" + pageSize;
+			var databases = MultiDatabase.GetRootDatabaseUrl(url) +"/databases?pageSize=" + pageSize;
 			return start > 0 ? databases + "&start=" + start : databases;
 		}
 
@@ -99,9 +99,9 @@ namespace Raven.Client.Connection
 												 NameValueCollection operationsHeaders, string method)
 		{
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
-							.AddOperationHeaders(operationsHeaders));
-
+				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
+					.AddOperationHeaders(operationsHeaders));
+			
 			return httpJsonRequest;
 		}
 	}

@@ -76,7 +76,7 @@ namespace Raven.Tests.Bugs
 						.As<Order>()
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(orders);
 				}

@@ -14,8 +14,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -171,7 +173,7 @@ namespace Raven.Client.Connection
 				});
 				return cachedResult;
 			}
-
+			
 			if (writeCalled)
                 return await ReadJsonInternalAsync().ConfigureAwait(false);
 
@@ -440,13 +442,17 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public long Size { get; private set; }
+
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
 			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				var data = RavenJToken.TryLoad(responseStream);
+				var countingStream = new CountingStream(responseStream);
+				var data = RavenJToken.TryLoad(countingStream);
+				Size = countingStream.NumberOfReadBytes;
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
@@ -800,12 +806,36 @@ namespace Raven.Client.Connection
                     case JTokenType.Array:
                         AddHeader(item.Key, item.Value.ToString(Formatting.None));
                         break;
+					case JTokenType.Date:
+							var rfc1123 = GetDateString(item.Value, "r");
+							var iso8601 = GetDateString(item.Value, "o");
+							AddHeader(item.Key, rfc1123);
+							if (item.Key.StartsWith("Raven-") == false)
+								AddHeader("Raven-" + item.Key, iso8601);
+						break;
                     default:
                         AddHeader(item.Key, item.Value.Value<string>());
                         break;
                 }                
             }
         }
+
+		private string GetDateString(RavenJToken token, string format)
+		{
+			var value = token as RavenJValue;
+			if (value == null)
+				return token.ToString();
+
+			var obj = value.Value;
+
+			if (obj is DateTime)
+				return ((DateTime)obj).ToString(format);
+
+			if (obj is DateTimeOffset)
+				return ((DateTimeOffset)obj).ToString(format);
+
+			return obj.ToString();
+		}
 
 		public void AddHeaders(NameValueCollection nameValueHeaders)
 		{

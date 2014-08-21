@@ -36,7 +36,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null);
+		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
 		/// <summary>
 		///  Loads documents with the specified key prefix and applies the specified results transformer against the results
@@ -47,7 +47,8 @@ namespace Raven.Client
 		                                                                   int start = 0,
 		                                                                   int pageSize = 25, string exclude = null,
 		                                                                   RavenPagingInformation pagingInformation = null,
-		                                                                   Action<ILoadConfiguration> configure = null)
+																		   Action<ILoadConfiguration> configure = null, 
+																		   string skipAfter = null)
 			where TTransformer : AbstractTransformerCreationTask, new();
 
 	    /// <summary>
@@ -155,5 +156,12 @@ namespace Raven.Client
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
+
+		/// <summary>
+		/// Refreshes the specified entity from Raven server.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		Task RefreshAsync<T>(T entity);
+
 	}
 }

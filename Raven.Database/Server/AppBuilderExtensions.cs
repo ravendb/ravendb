@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
+using System.Web.UI;
 using Microsoft.Owin;
 using Raven.Abstractions.Connection;
-using Raven.Database;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -83,13 +83,6 @@ namespace Owin
 
         private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
         {
-            if (context.Request.Uri.LocalPath.EndsWith("changes/websocket") == false)
-            {
-                // Not a websocket request
-                await next();
-                return;
-            }
-
             var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
             if (accept == null)
             {
@@ -97,11 +90,17 @@ namespace Owin
                 await next();
                 return;
             }
-
-            var webSocketsTrasport = new WebSocketsTransport(options, context);
-            if (await webSocketsTrasport.TrySetupRequest())
-                accept(null, webSocketsTrasport.Run);
+            
+            WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
+            
+            if (webSocketsTrasport != null)
+            {
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
         }
+        
+
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();
@@ -176,7 +175,7 @@ namespace Owin
 
 		    private bool ShouldBuffer(HttpContent content)
 		    {
-		        return (content is ChangesPushContent ||
+		        return (content is IEventsTransport ||
 		                content is StreamsController.StreamQueryContent ||
 		                content is StreamContent ||
 		                content is PushStreamContent ||

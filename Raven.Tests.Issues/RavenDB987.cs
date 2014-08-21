@@ -90,7 +90,7 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.MaxNumberOfParallelIndexTasks = 1;
+			configuration.MaxNumberOfParallelProcessingTasks = 1;
 		}
 
 		[Fact]
@@ -134,7 +134,7 @@ namespace Raven.Tests.Issues
 					       .ToList();
 
 					Assert.Equal(6, results.Count);
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 				}
 			}
 		}

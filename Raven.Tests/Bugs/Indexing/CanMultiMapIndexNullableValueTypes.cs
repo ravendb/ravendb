@@ -56,7 +56,7 @@ namespace Raven.Tests.Bugs.Indexing
 					Assert.Equal(results.Length, 4);
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

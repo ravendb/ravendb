@@ -15,8 +15,8 @@ class periodicExport extends viewModelBase {
 
     canActivate(args: any): any {
         super.canActivate(args);
-
         this.backupSetup(new periodicExportSetup);
+
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
@@ -47,7 +47,7 @@ class periodicExport extends viewModelBase {
         new getPeriodicExportSetupCommand(db)
             .execute()
             .done((result: periodicExportSetupDto) => this.backupSetup().fromDto(result) )
-            .always(() => deferred.resolve({ can: true }));
+            .always(() => deferred.resolve());
         return deferred;
     }
 
@@ -56,7 +56,7 @@ class periodicExport extends viewModelBase {
         new getDatabaseSettingsCommand(db)
             .execute()
             .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
-            .always(() => deferred.resolve({ can: true }));
+            .always(() => deferred.resolve());
         return deferred;
     }
 

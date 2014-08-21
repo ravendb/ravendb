@@ -46,7 +46,7 @@ namespace Raven.Tests.MailingList
 					TestDocument[] results = session.Query<TestDocument, TestDocumentIndex>()
 						.Customize(c => c.WaitForNonStaleResultsAsOfLastWrite())
 						.ToArray();
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 					Assert.NotEmpty(results);
 				}
 			}

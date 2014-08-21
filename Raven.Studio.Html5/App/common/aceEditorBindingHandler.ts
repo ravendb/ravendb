@@ -1,6 +1,8 @@
 /// <amd-dependency path="ace/ext/language_tools" />
 /// <amd-dependency path="ace/mode/lucene" />
 /// <amd-dependency path="ace/theme/xcode" />
+/// <amd-dependency path="ace/mode/json_newline_friendly" />
+/// <amd-dependency path="ace/mode/json" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 import aceLang = require("ace/ext/language_tools");
@@ -136,6 +138,7 @@ class aceEditorBindingHandler {
         var aceEditor: any = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
+        aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
         aceEditor.getSession().setMode(lang);
@@ -182,6 +185,7 @@ class aceEditorBindingHandler {
                 aceEditor.resize();
             }
         });
+
         aceEditor.resize(); //for ace elements smaller than 'minHeight'
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
         $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');

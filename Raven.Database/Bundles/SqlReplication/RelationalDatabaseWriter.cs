@@ -39,6 +39,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbTransaction tx;
 		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
         private bool IsSqlServerFactoryType = false;
+        private SqlReplicationMetricsCountersManager sqlReplicationMetrics;
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -95,6 +96,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			tx = connection.BeginTransaction();
 
             stringParserList = GenerateStringParsers();
+            sqlReplicationMetrics = database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault().GetSqlReplicationMetricsManager(cfg);
 		}
 
 	    public List<Func<DbParameter, string, bool>> GenerateStringParsers()
@@ -199,8 +201,9 @@ namespace Raven.Database.Bundles.SqlReplication
             // first, delete all the rows that might already exist there
             foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
             {
-                var commands = DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
-                    identifiers,true);
+                var commands = new List<DbCommand>();
+                DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
+                    identifiers, commands.Add);
                 yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
 
             }
@@ -210,13 +213,14 @@ namespace Raven.Database.Bundles.SqlReplication
                 List<ItemToReplicate> dataForTable;
                 if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
                     continue;
-
-                var commands = InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, true);
+                var commands = new List<DbCommand>();
+                InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, commands.Add);
 
                 yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
             }
 
             Rollback();
+
         }
 
 		public bool Commit()
@@ -231,10 +235,17 @@ namespace Raven.Database.Bundles.SqlReplication
             return true;
         }
 
-        private IEnumerable<DbCommand> InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, bool exportCommands = false)
-		{
+        private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand>commandCallback =null)
+        {
+            var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
+            var replicationInsertActionsMetrics = sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter;
+            var replicationInsertActionsHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsHistogram;
+            var replicationInsertDurationHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsDurationHistogram;
+
+            var sp = new Stopwatch();
 			foreach (var itemToReplicate in dataForTable)
 			{
+                sp.Restart();
 				using (var cmd = connection.CreateCommand())
 				{
 					cmd.Transaction = tx;
@@ -284,33 +295,50 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					cmd.CommandText = sb.ToString();
 
-				    if (exportCommands)
+                    if (commandCallback!= null)
 				    {
-				        yield return cmd;
+                        commandCallback(cmd);
 				    }
-					try
-					{
-                        cmd.ExecuteNonQuery(); ;
-					}
-					catch (Exception e)
-					{
-						log.WarnException(
-							"Failure to replicate changes to relational database for: " + cfg.Name + " (doc: "+  itemToReplicate.DocumentId +" ), will continue trying." +
-							Environment.NewLine + cmd.CommandText, e);
-						replicationStatistics.RecordWriteError(e, database);
-						hadErrors = true;
-					}
+				    try
+				    {
+				        cmd.ExecuteNonQuery();
+				    }
+				    catch (Exception e)
+				    {
+				        log.WarnException(
+				            "Failure to replicate changes to relational database for: " + cfg.Name + " (doc: " + itemToReplicate.DocumentId + " ), will continue trying." +
+				            Environment.NewLine + cmd.CommandText, e);
+				        replicationStatistics.RecordWriteError(e, database);
+				        hadErrors = true;
+				    }
+				    finally
+				    {
+                        sp.Stop();
+				        var elapsedMicroseconds = (long)(sp.ElapsedTicks*SystemTime.MicroSecPerTick);
+                        replicationInsertDurationHistogram.Update(elapsedMicroseconds);
+                        replicationInsertActionsMetrics.Mark(1);
+                        replicationInsertActionsHistogram.Update(1);
+				    }
 				}
 			}
+            
+            
 		}
 
 
 
-	    public IEnumerable<DbCommand> DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, bool exportCommands=false)
+        public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, Action<DbCommand> commandCallback = null)
 		{
 			const int maxParams = 1000;
+            var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
+            var replicationDeleteDurationHistogram = sqlReplicationTableMetrics.SqlReplicationDeleteActionsDurationHistogram;
+            var replicationDeletesActionsMetrics = sqlReplicationTableMetrics.SqlReplicationDeleteActionsMeter;
+            var replicationDeletesActionsHistogram = sqlReplicationTableMetrics.SqlReplicationDeleteActionsHistogram;
+            
+	        var sp = new Stopwatch();
 			using (var cmd = connection.CreateCommand())
 			{
+                sp.Restart();
 				cmd.Transaction = tx;
 				database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				for (int i = 0; i < identifiers.Count; i += maxParams)
@@ -348,23 +376,31 @@ namespace Raven.Database.Bundles.SqlReplication
 				    }
 					cmd.CommandText = sb.ToString();
 
-				    if (exportCommands)
+                    if (commandCallback != null)
 				    {
-				        yield return cmd;
+                        commandCallback(cmd);
 				    }
 
-					try
-					{
-                        cmd.ExecuteNonQuery(); 
-					}
-					catch (Exception e)
-					{
-						log.WarnException(
-							"Failure to replicate changes to relational database for: " + cfg.Name + ", will continue trying." +
-							Environment.NewLine + cmd.CommandText, e);
-						replicationStatistics.RecordWriteError(e, database);
-						hadErrors = true;
-					}
+				    try
+				    {
+				        cmd.ExecuteNonQuery();
+				    }
+				    catch (Exception e)
+				    {
+				        log.WarnException(
+				            "Failure to replicate changes to relational database for: " + cfg.Name + ", will continue trying." +
+				            Environment.NewLine + cmd.CommandText, e);
+				        replicationStatistics.RecordWriteError(e, database);
+				        hadErrors = true;
+				    }
+				    finally
+				    {
+				        sp.Stop();
+                        var elapsedMicroseconds = (long)(sp.ElapsedTicks * SystemTime.MicroSecPerTick);
+                        replicationDeleteDurationHistogram.Update(elapsedMicroseconds);
+                        replicationDeletesActionsHistogram.Update(1);
+                        replicationDeletesActionsMetrics.Mark(1);
+				    }
 				}
 			}
 		}

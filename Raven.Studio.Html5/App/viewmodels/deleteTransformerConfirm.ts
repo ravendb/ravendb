@@ -23,7 +23,7 @@ class deleteTransformerConfirm extends dialogViewModelBase {
         var deleteTasks = this.transformersNames
             .map(name => new deleteTransformerCommand(name, this.db).execute());
 
-        $.when(deleteTasks).done(() => this.deleteTask.resolve());
+        $.when.apply($, deleteTasks).done(() => this.deleteTask.resolve());
         dialog.close(this);
     }
 

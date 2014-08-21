@@ -30,8 +30,9 @@ namespace Raven.Client.Document.Batches
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 
 	    private readonly RavenPagingInformation pagingInformation;
+		private readonly string skipAfter;
 
-	    public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, RavenPagingInformation pagingInformation)
+		public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, RavenPagingInformation pagingInformation, string skipAfter)
 		{
 			this.keyPrefix = keyPrefix;
 			this.matches = matches;
@@ -40,6 +41,7 @@ namespace Raven.Client.Document.Batches
 			this.pageSize = pageSize;
 			this.sessionOperations = sessionOperations;
 		    this.pagingInformation = pagingInformation;
+		    this.skipAfter = skipAfter;
 		}
 
 		public GetRequest CreateRequest()
@@ -55,13 +57,14 @@ namespace Raven.Client.Document.Batches
 				Url = "/docs",
 				Query =
 					string.Format(
-						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}",
+						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}&skipAfter={6}",
 						Uri.EscapeDataString(keyPrefix),
                         actualStart.ToInvariantString(),
 						pageSize.ToInvariantString(),
 						Uri.EscapeDataString(matches ?? ""),
                         Uri.EscapeDataString(exclude ?? ""),
-                        nextPage ? "true" : "false")
+                        nextPage ? "true" : "false",
+						skipAfter)
 			};
 		}
 

@@ -36,7 +36,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.UploadAsync("test.bin", new MemoryStream(new byte[] {1, 2, 3}));
 
 			var notificationTask = sourceStore.Changes().ForSynchronization()
-				      .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+				      .Where(s => s.Direction == SynchronizationDirection.Outgoing)
 				      .Timeout(TimeSpan.FromSeconds(20)).Take(2).ToArray().
 				       ToTask();
 
@@ -57,7 +57,7 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.UpdateMetadataAsync("test.bin", new RavenJObject { { "key", "value" } });
 
             notificationTask = sourceStore.Changes().ForSynchronization()
-				                    .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+				                    .Where(s => s.Direction == SynchronizationDirection.Outgoing)
 				                    .Timeout(TimeSpan.FromSeconds(20))
                                     .Take(2).ToArray()
                                     .ToTask();
@@ -79,7 +79,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.RenameAsync("test.bin", "rename.bin");
 
             notificationTask = sourceStore.Changes().ForSynchronization()
-				                  .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+				                  .Where(s => s.Direction == SynchronizationDirection.Outgoing)
 				                  .Timeout(TimeSpan.FromSeconds(20))
                                   .Take(2).ToArray()
                                   .ToTask();
@@ -101,7 +101,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.DeleteAsync("rename.bin");
 
             notificationTask = sourceStore.Changes().ForSynchronization()
-                                  .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
+                                  .Where(s => s.Direction == SynchronizationDirection.Outgoing)
                                   .Timeout(TimeSpan.FromSeconds(20))
                                   .Take(2).ToArray()
                                   .ToTask();
@@ -127,7 +127,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.UploadAsync("test.bin", new MemoryStream(new byte[] {1, 2, 3}));
 
             var notificationTask = destinationStore.Changes().ForSynchronization()
-				                        .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                        .Where(s => s.Direction == SynchronizationDirection.Incoming)
 				                        .Timeout(TimeSpan.FromSeconds(20))
                                         .Take(1).ToArray()
                                         .ToTask();
@@ -146,7 +146,7 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.UpdateMetadataAsync("test.bin", new RavenJObject { { "key", "value" } });
 
             notificationTask = destinationStore.Changes().ForSynchronization()
-				                   .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                   .Where(s => s.Direction == SynchronizationDirection.Incoming)
 				                   .Timeout(TimeSpan.FromSeconds(20))
                                    .Take(1).ToArray()
                                    .ToTask();
@@ -165,7 +165,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.RenameAsync("test.bin", "rename.bin");
 
             notificationTask = destinationStore.Changes().ForSynchronization()
-				                   .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                   .Where(s => s.Direction == SynchronizationDirection.Incoming)
 				                   .Timeout(TimeSpan.FromSeconds(20))
                                    .Take(1).ToArray()
                                    .ToTask();
@@ -184,7 +184,7 @@ namespace RavenFS.Tests.Synchronization
 			await sourceClient.DeleteAsync("rename.bin");
 
             notificationTask = destinationStore.Changes().ForSynchronization()
-				                   .Where(s => s.SynchronizationDirection == SynchronizationDirection.Incoming)
+				                   .Where(s => s.Direction == SynchronizationDirection.Incoming)
 				                   .Timeout(TimeSpan.FromSeconds(20))
                                    .Take(1).ToArray()
                                    .ToTask();

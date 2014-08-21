@@ -66,12 +66,16 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				throw new HttpResponseException(HttpStatusCode.NotFound);
 			}
 
-			var readingStream = StorageStream.Reading(Storage, name);
-            var result = StreamResult(name, readingStream);
+            var readingStream = StorageStream.Reading(Storage, name);
+
+            var filename = Path.GetFileName(name);
+            var result = StreamResult(filename, readingStream);
 
             var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
             fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
             WriteHeaders(fileAndPages.Metadata, etag, result);
+
+            log.Debug("File '{0}' with etag {1} is being retrieved.", name, etag);
 
             return result.WithNoCache();
 		}
@@ -298,7 +302,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
-                headers["Creation-Date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+                headers[Constants.CreationDate] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);
@@ -390,8 +394,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		private void StartSynchronizeDestinationsInBackground()
 		{
-			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None,
-								  TaskCreationOptions.None, TaskScheduler.Default);
+			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
 
 		private class ReadFileToDatabase : IDisposable

@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
                         .Search(o => o.Name, "Test")
                         .Where(o => o.Resolutions.Any(x => x >= 5 && x <= 9))
-                        .AsProjection<IndexEntry>()
+						.ProjectFromIndexFieldsInto<IndexEntry>()
                         .ToList();
 
                     Assert.Equal(2, results.Count);

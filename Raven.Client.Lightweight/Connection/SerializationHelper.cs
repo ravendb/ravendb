@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -130,7 +131,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Translate a result for a query
 		/// </summary>
-		public static QueryResult ToQueryResult(RavenJObject json, Etag etag, string tempRequestTime)
+		public static QueryResult ToQueryResult(RavenJObject json, Etag etag, string tempRequestTime, long numberOfCharactersRead)
 		{
 			var result = new QueryResult
 			{
@@ -147,6 +148,8 @@ namespace Raven.Client.Connection
 				.JsonDeserialization<Dictionary<string, string>>(),
 				TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>()
 			};
+
+			result.ResultSize = numberOfCharactersRead;
 
 			foreach (var r in ((RavenJArray)json["Results"]))
 			{

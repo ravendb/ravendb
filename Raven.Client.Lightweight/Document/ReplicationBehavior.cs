@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
-			var doc = await asyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
+			var doc = await asyncDatabaseCommands.GetAsync(Constants.RavenReplicationDestinations);
 			if (doc == null)
 				return -1;
 

@@ -77,7 +77,7 @@ namespace Raven.Database.Actions
 
             TransactionalStorage.Batch(accessor =>
             {
-                definition.TransfomerId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("TransformerId", accessor, null);
+                definition.TransfomerId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("TransformerId", accessor);
             });
 
             IndexDefinitionStorage.CreateAndPersistTransform(definition);

@@ -35,9 +35,9 @@ namespace Raven.Storage.Esent.StorageActions
 			return 0;
 		}
 
-		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocument DocumentByKey(string key)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) =>
+			return DocumentByKeyInternal(key, (metadata, createDocument) =>
 			{
 				Debug.Assert(metadata.Etag != null);
 				return new JsonDocument
@@ -52,12 +52,12 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
-		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocumentMetadata DocumentMetadataByKey(string key)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, func) => metadata);
+			return DocumentByKeyInternal(key, (metadata, func) => metadata);
 		}
 
-		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
+		private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
 
@@ -215,7 +215,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
-				if (untilEtag != null && count > 0)
+				if (untilEtag != null)
 				{
 					var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 					if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
@@ -263,7 +263,7 @@ namespace Raven.Storage.Esent.StorageActions
 	            var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
 	                                                 Encoding.Unicode);
                
-                var doc = DocumentByKey(key, null);
+                var doc = DocumentByKey(key);
                 var size = doc.SerializedSizeOnDisk;
                 stat.TotalSize += size;
 	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
@@ -299,12 +299,12 @@ namespace Raven.Storage.Esent.StorageActions
 	        return stat;
 	    }
 
-	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
+	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (take <= 0)
 				yield break;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Documents, skipAfter ?? idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				yield break;
 
@@ -313,6 +313,9 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) ==
 				false)
 				yield break;
+
+		    if (skipAfter != null && TryMoveTableRecords(Documents, 1, backward: false))
+			    yield break;
 
 			if (TryMoveTableRecords(Documents, start, backward: false))
 				yield break;

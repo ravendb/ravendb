@@ -8,10 +8,8 @@ using Raven.Client.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 
@@ -69,7 +67,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filesystem))
                 filesystem = this.DefaultFileSystem;
 
-            return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges);
+            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x) );
         }
 
         protected virtual IFilesChanges CreateFileSystemChanges(string filesystem)
@@ -83,16 +81,20 @@ namespace Raven.Client.FileSystem
 
             using (NoSynchronizationContext.Scope())
             {
-                return new FilesChangesClient(tenantUrl,
+                var client = new FilesChangesClient(tenantUrl,
                     ApiKey,
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
                     commands.ReplicationInformer,
-                    () => {
+                    ((AsyncFilesServerClient) this.AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
+                    () =>
+                    {
                         fileSystemChanges.Remove(filesystem);
                         fileSystemCommands.Remove(filesystem);
                     });
+
+                return client;
             }
         }
 
@@ -222,7 +224,7 @@ namespace Raven.Client.FileSystem
         {
             asyncFilesCommandsGenerator = () =>
             {
-                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId);
+                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, this.Listeners.ConflictListeners);
             };
         }
 

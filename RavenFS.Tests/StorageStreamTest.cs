@@ -47,7 +47,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void SynchronizingFileStream_should_write_to_storage_by_64kB_pages()
 		{
-            using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWritting(
+            using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(
                                                             transactionalStorage, new MockIndexStorage(),
                                                             new StorageOperationsTask(transactionalStorage, new MockIndexStorage(), new EmptyNotificationsPublisher()),
                                                             "file", EmptyETagMetadata))

@@ -72,6 +72,9 @@ var JsonHighlightRules = function() {
                 token : "paren.rparen",
                 regex : "[\\])}]"
             }, {
+                token : "comma",
+                regex : "[,]"
+            },{
                 token : "text",
                 regex : "\\s+"
             }

@@ -1,7 +1,7 @@
 /// <reference path="../models/dto.ts" />
 
-import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
@@ -9,6 +9,7 @@ import appUrl = require("common/appUrl");
 import shell = require("viewmodels/shell");
 import oauthContext = require("common/oauthContext");
 import forge = require("forge/forge_custom.min");
+import router = require("plugins/router");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
@@ -16,6 +17,7 @@ class commandBase {
     // TODO: better place for this?
     static ravenClientVersion = '3.0.0.0';
     static splashTimerHandle = 0;
+    static alertTimeout = 0;
     static loadingCounter = 0;
 
     constructor() {
@@ -23,25 +25,6 @@ class commandBase {
 
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
-    }
-
-    reportInfo(title: string, details?: string) {
-        this.reportProgress(alertType.info, title, details);
-    }
-
-    reportError(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.danger, title, details, httpStatusText);
-        if (console && console.log && typeof console.log === "function") {
-            console.log("Error during command execution", title, details, httpStatusText);
-        }
-    }
-
-    reportSuccess(title: string, details?: string) {
-        this.reportProgress(alertType.success, title, details);
-    }
-
-    reportWarning(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.warning, title, details, httpStatusText);
     }
 
     urlEncodeArgs(args: any): string {
@@ -110,8 +93,8 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", resource, options);
+    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
     }
 
     reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -121,12 +104,12 @@ class commandBase {
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "DELETE", resource, options);
+    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
-    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", resource, options);
+    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", resource, options, timeToAlert);
     }
 
     patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -153,7 +136,23 @@ class commandBase {
             dataType: "json",
             contentType: contentType, 
             type: method,
-            headers: undefined
+            headers: undefined,
+            xhr: () => {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
+                    if (evt.lengthComputable) {
+                        var percentComplete = (evt.loaded / evt.total) * 100;
+                        if (percentComplete < 100) {
+                            // waiting for upload progress to complete
+                            clearTimeout(commandBase.alertTimeout);
+                            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+                        }
+                        ko.postbox.publish("UploadProgress", percentComplete);
+                    }
+                }, false);
+
+                return xhr;
+            }
         };
         
         if (options) {
@@ -161,7 +160,7 @@ class commandBase {
                 defaultOptions[prop] = options[prop];
             }
         }
-        if (commandBase.loadingCounter == 0) {
+        if (commandBase.loadingCounter == 0 && timeToAlert > 0) {
             commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert);
         }
 
@@ -185,13 +184,19 @@ class commandBase {
         $.ajax(defaultOptions).always(() => {
             --commandBase.loadingCounter;
             if (commandBase.loadingCounter == 0) {
+                clearTimeout(commandBase.alertTimeout);
+                commandBase.alertTimeout = 0;
                 clearTimeout(commandBase.splashTimerHandle);
                 commandBase.hideSpin();
             }
         }).done((results, status, xhr) => {
-                ajaxTask.resolve(results, status, xhr);
+            ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
-            if (request.status == 412 && oauthContext.apiKey()) {
+			var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
+            if (dbBeingUpdated) {
+                ajaxTask.reject(request, status, error);
+                router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
+            } else if (request.status == 412 && oauthContext.apiKey()) {
                 this.handleOAuth(ajaxTask, request, originalArguments);
             } else {
                 ajaxTask.reject(request, status, error);
@@ -302,9 +307,11 @@ class commandBase {
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
 	}
 
-    private static showSpin(timeToAlert:number) {
+    private static showSpin(timeToAlert: number) {
         ko.postbox.publish("LoadProgress", alertType.warning);
-        commandBase.splashTimerHandle = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+        if (commandBase.alertTimeout == 0) {
+            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+        }
     }
 
     private static showServerNotRespondingAlert() {
@@ -315,8 +322,20 @@ class commandBase {
         ko.postbox.publish("LoadProgress", null);
     }
 
-    private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details, httpStatusText));
+    reportInfo(title: string, details?: string) {
+        messagePublisher.reportInfo(title, details);
+    }
+
+    reportError(title: string, details?: string, httpStatusText?: string) {
+        messagePublisher.reportError(title, details, httpStatusText);
+    }
+
+    reportSuccess(title: string, details?: string) {
+        messagePublisher.reportSuccess(title, details);
+    }
+
+    reportWarning(title: string, details?: string, httpStatusText?: string) {
+        messagePublisher.reportWarning(title, details, httpStatusText);
     }
 }
 

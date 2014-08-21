@@ -102,7 +102,14 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		
+		public Task<RavenJObject> GetDatabaseConfigurationAsync()
+		{
+			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationMetadata =>
+			{
+				return (RavenJObject) await adminRequest.GetDatabaseConfiguration(operationMetadata.Url).ReadResponseJsonAsync();
+			});
+		}
+
 		public async Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false)
 		{
 			var serverClient = (AsyncServerClient) (innerAsyncServerClient.ForSystemDatabase());

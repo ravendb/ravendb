@@ -4,7 +4,7 @@
             <label class="col-md-2 control-label">Show documents referencing:</label>
             <div class="col-md-6">
                 <div class="input-group">
-                    <input type="text" data-bind="value: docId, valueUpdate: 'keyup'" class="form-control">
+                    <input type="text" data-bind="value: docId, valueUpdate: 'afterkeydown'" class="form-control">
                     <span class="input-group-btn">
                         <button data-bind="click: fetchDocRefs, enable: canSearch" class="btn btn-default"><i class="fa fa-search"></i></button>
                     </span>

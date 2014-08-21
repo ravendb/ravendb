@@ -11,8 +11,7 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import alertType = require("common/alertType");
-import alertArgs = require("common/alertArgs");
+import messagePublisher = require("common/messagePublisher");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -38,7 +37,7 @@ class editTransformer extends viewModelBase {
             this.editExistingTransformer(transformerToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                    messagePublisher.reportError("Could not find " + transformerToEditName + " transformer");
                     canActivateResult.resolve({ redirect: appUrl.forTransformers(this.activeDatabase()) });
                 });
 
@@ -71,7 +70,7 @@ class editTransformer extends viewModelBase {
         $("#transformerResultsLabel").popover({
             html: true,
             trigger: 'hover',
-            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders <br/> <span class="code-keyword">let</span> region = Database.Load(result.RegionId) <br/> <span class="code-keyword">select new</span> { <br/> result.Date, <br/> result.Amount, <br/> Region = region.Name, <br/> Manager = region.Manager <br/>}</pre>',
+            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/> result.Name, <br/> result.PricePerUser, <br/> Category = category.Name, <br/> CategoryDescription = category.Description <br/>}</pre>',
         });
     }
 

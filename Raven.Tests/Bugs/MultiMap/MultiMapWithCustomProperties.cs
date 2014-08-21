@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs.MultiMap
 
 				WaitForIndexing(store);
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 				using (var s = store.OpenSession())
 				{

@@ -4,25 +4,24 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
-import router = require("plugins/router"); 
+import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
+import messagePublisher = require("common/messagePublisher");
 
 class copyIndexDialog extends dialogViewModelBase {
-    
+
     indexJSON = ko.observable<string>("");
 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
     }
-    
-    canActivate(args: any):any {
+
+    canActivate(args: any): any {
         if (this.isPaste) {
             return true;
         }
-        else{
+        else {
             var canActivateResult = $.Deferred();
             new getIndexDefinitionCommand(this.indexName, this.db)
                 .execute()
@@ -32,10 +31,11 @@ class copyIndexDialog extends dialogViewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => canActivateResult.reject());
-                    canActivateResult.resolve({ can: true });
+            canActivateResult.resolve({ can: true });
             return canActivateResult;
         }
     }
+
     attached() {
         super.attached();
         this.selectText();
@@ -56,13 +56,9 @@ class copyIndexDialog extends dialogViewModelBase {
             try {
                 indexDto = JSON.parse(this.indexJSON());
                 var testIndex = new indexDefinition(indexDto);
-            } catch(e) {
+            } catch (e) {
                 indexDto = null;
-                var title = "Index paste failed, invalid json string";
-                ko.postbox.publish("Alert", new alertArgs(alertType.danger, title, e));
-                if (console && console.log && typeof console.log === "function") {
-                    console.log("Error during command execution", title, e);
-                }
+                messagePublisher.reportError("Index paste failed, invalid json string", e);
             }
 
             if (indexDto) {
@@ -78,23 +74,13 @@ class copyIndexDialog extends dialogViewModelBase {
                                     this.close();
                                 });
                         } else {
-                            var title = "Cannot paste Index, Error occured";
-                            ko.postbox.publish("Alert", new alertArgs(alertType.danger, title, error));
-                        if (console && console.log && typeof console.log === "function") {
-                            console.log("Cannot paste Index, Error occured", title, error);
-                        }
+                            messagePublisher.reportError("Cannot paste index, error occured!", error);
                         }
                     })
-                    .done(() => {
-                        var title = "Cannot paste, Index with that name already exist";
-                        ko.postbox.publish("Alert", new alertArgs(alertType.danger, title));
-                        if (console && console.log && typeof console.log === "function") {
-                            console.log("Cannot paste Index, Index with that name already exist", title);
-                        }
-                    });
-            } 
+                    .done(() => messagePublisher.reportError("Cannot paste index, error occured!", "Index with that name already exists!"));
+            }
         } else {
-            this.close();    
+            this.close();
         }
     }
 

@@ -12,6 +12,7 @@ namespace Raven.Abstractions.FileSystem
     public class FileHeader
     {
         public RavenJObject Metadata { get; set; }
+        public RavenJObject OriginalMetadata { get; set; }
 
         public string Name { get; set; }
 
@@ -52,10 +53,8 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var creationDate = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains("Creation-Date"))
-                {
-                    creationDate = this.Metadata["Creation-Date"].Value<DateTimeOffset>();
-                }
+                if (this.Metadata.Keys.Contains(Constants.CreationDate))
+                    creationDate = this.Metadata[Constants.CreationDate].Value<DateTimeOffset>();
                 return creationDate;
             }
         }
@@ -94,20 +93,25 @@ namespace Raven.Abstractions.FileSystem
         {
             this.Name = name;
             this.Metadata = metadata;
+            this.OriginalMetadata = (RavenJObject)metadata.CloneToken();
             SetFileSize();
+        }
+
+        public void Refresh()
+        {
+            this.SetFileSize();
         }
 
         private void SetFileSize()
         {
-            if (!this._totalSize.HasValue && this.Metadata.Keys.Contains("RavenFS-Size"))
+            if (this.Metadata.Keys.Contains("RavenFS-Size"))
             {
                 var metadataTotalSize = this.Metadata["RavenFS-Size"].Value<long>();
                 if (metadataTotalSize > 0)
                     this._totalSize = metadataTotalSize;
             }
             
-            if (this.UploadedSize <= 0)
-                this.UploadedSize = this._totalSize.HasValue ? this._totalSize.Value : 0;
+            this.UploadedSize = this._totalSize.HasValue ? this._totalSize.Value : 0;
 
         }
 

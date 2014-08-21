@@ -78,6 +78,12 @@ namespace Raven.Client
 		public Dictionary<string, double> TimingsInMilliseconds { get; set; }
 
 		/// <summary>
+		/// The size of the request which were sent from the server.
+		/// This value is the _uncompressed_ size. 
+		/// </summary>
+		public long ResultSize { get; set; }
+
+		/// <summary>
 		/// Update the query stats from the query results
 		/// </summary>
 		internal void UpdateQueryStats(QueryResult qr)
@@ -93,6 +99,7 @@ namespace Raven.Client
 			IndexEtag = qr.IndexEtag;
 			TimingsInMilliseconds = qr.TimingsInMilliseconds;
 			LastQueryTime = qr.LastQueryTime;
+			ResultSize = qr.ResultSize;
 		}
 
 		

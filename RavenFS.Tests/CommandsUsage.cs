@@ -629,9 +629,9 @@ namespace RavenFS.Tests
             Assert.NotNull(fileMetadata[1].Etag);
 
             Assert.NotNull(fileMetadata[0].LastModified);
-            Assert.Equal(fileMetadata[0].Metadata["Last-Modified"].Value<DateTimeOffset>(), fileMetadata[0].LastModified);
+            Assert.Equal(fileMetadata[0].Metadata[Constants.LastModified].Value<DateTimeOffset>(), fileMetadata[0].LastModified);
             Assert.NotNull(fileMetadata[0].CreationDate);
-            Assert.Equal(fileMetadata[1].Metadata["Creation-Date"].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
+            Assert.Equal(fileMetadata[1].Metadata[Constants.CreationDate].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
             Assert.Equal(".txt", fileMetadata[0].Extension);
             Assert.Equal(".txt", fileMetadata[1].Extension);
             Assert.Equal("", fileMetadata[0].Path);

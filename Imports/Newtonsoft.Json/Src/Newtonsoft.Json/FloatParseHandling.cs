@@ -37,6 +37,11 @@ namespace Raven.Imports.Newtonsoft.Json
     /// <summary>
     /// Floating point numbers are parsed to <see cref="Decimal"/>.
     /// </summary>
-    Decimal
+    Decimal,
+	/// <summary>
+	/// Floating point numbers are parsed to <see cref="Decimal"/>, unless 
+	/// we encounter a NaN
+	/// </summary>
+	PreferDecimalFallbackToDouble
   }
 }

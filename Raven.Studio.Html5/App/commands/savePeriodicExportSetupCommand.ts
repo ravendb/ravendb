@@ -11,7 +11,7 @@ class savePeriodicExportSetupCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         this.reportInfo("Saving Periodic Export setup.");
-        return jQuery.when(this.saveAccountInformation(), this.saveSetup())
+        return $.when(this.saveAccountInformation(), this.saveSetup())
             .done(() => this.reportSuccess("Saved Periodic Export setup."))
             .fail((response: JQueryXHR) => this.reportError("Failed to save Periodic Export setup.", response.responseText));
     }

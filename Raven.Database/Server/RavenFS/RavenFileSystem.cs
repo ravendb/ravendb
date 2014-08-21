@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
 using Raven.Abstractions.Data;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -7,6 +8,8 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -22,7 +25,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.RavenFS
 {
-	public class RavenFileSystem : IDisposable
+    public class RavenFileSystem : IResourceStore, IDisposable
 	{
 		private readonly ConflictArtifactManager conflictArtifactManager;
 		private readonly ConflictDetector conflictDetector;
@@ -75,7 +78,7 @@ namespace Raven.Database.Server.RavenFS
 			BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
 			conflictArtifactManager = new ConflictArtifactManager(storage, search);
 			conflictDetector = new ConflictDetector();
-			conflictResolver = new ConflictResolver();
+			conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
 			synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
 			storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher);
             metricsCounters = new MetricsCountersManager();
@@ -182,39 +185,14 @@ namespace Raven.Database.Server.RavenFS
         public FileSystemMetrics CreateMetrics()
         {
             var metrics = metricsCounters;
-
-            var percentiles = metrics.RequestDuationMetric.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
-
+            
             return new FileSystemMetrics
             {
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 FilesWritesPerSecond = Math.Round(metrics.FilesPerSecond.CurrentValue, 3),
 
-                RequestsDuration = new HistogramData
-                {
-                    Counter = metrics.RequestDuationMetric.Count,
-                    Max = metrics.RequestDuationMetric.Max,
-                    Mean = metrics.RequestDuationMetric.Mean,
-                    Min = metrics.RequestDuationMetric.Min,
-                    Stdev = metrics.RequestDuationMetric.StdDev,
-                    Percentiles = new Dictionary<string, double>
-                            {
-                                {"50%", percentiles[0]},
-                                {"75%", percentiles[1]},
-                                {"95%", percentiles[2]},
-                                {"99%", percentiles[3]},
-                                {"99.9%", percentiles[4]},
-                                {"99.99%", percentiles[5]},
-                            }
-                },
-                Requests = new MeterData
-                {
-                    Count = metrics.ConcurrentRequests.Count,
-                    FifteenMinuteRate = Math.Round(metrics.ConcurrentRequests.FifteenMinuteRate, 3),
-                    FiveMinuteRate = Math.Round(metrics.ConcurrentRequests.FiveMinuteRate, 3),
-                    MeanRate = Math.Round(metrics.ConcurrentRequests.MeanRate, 3),
-                    OneMinuteRate = Math.Round(metrics.ConcurrentRequests.OneMinuteRate, 3),
-                }
+                RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+                Requests = metrics.ConcurrentRequests.CreateMeterData()
             };
         }
 

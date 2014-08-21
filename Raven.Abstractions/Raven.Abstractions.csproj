@@ -115,6 +115,7 @@
     <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
+    <Compile Include="Data\EsentStorageStats.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\AggregationData.cs" />
@@ -179,6 +180,7 @@
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />
+    <Compile Include="Data\StorageStats.cs" />
     <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
@@ -187,6 +189,8 @@
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />
     <Compile Include="Data\UuidType.cs" />
+    <Compile Include="Data\VoronActiveTransaction.cs" />
+    <Compile Include="Data\VoronStorageStats.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
@@ -313,12 +317,19 @@
     <Compile Include="FileSystem\Notifications\SynchronizationUpdateNotification.cs" />
     <Compile Include="FileSystem\SyncingMultipartConstants.cs" />
     <Compile Include="FileSystem\Notifications\UploadFailedNotification.cs" />
+    <Compile Include="Replication\FailoverBehavior.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
+    <Compile Include="Replication\ReplicationClientConfiguration.cs" />
     <Compile Include="Replication\ReplicationConfig.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
+    <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
+    <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\Tombstone.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
+    <Compile Include="Smuggler\ISmugglerOperations.cs" />
+    <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />

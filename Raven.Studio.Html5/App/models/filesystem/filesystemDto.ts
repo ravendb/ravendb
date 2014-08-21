@@ -10,7 +10,7 @@ interface filesystemSynchronizationDetailsDto {
     FileName: string;
     FileETag: string;
     DestinationUrl: string;
-    Type: filesystemSynchronizationType;
+    Type: string;
     Direction: synchronizationDirection;
 }
 
@@ -67,19 +67,6 @@ interface fileMetadataDto {
     'Origin': string;
 }
 
-interface filesystemSynchronizationReportDto {
-
-    FileName: string;
-    FileETag: string;
-    Type: filesystemSynchronizationType;
-
-    BytesTransfered: number;
-    BytesCopied: number;
-    NeedListLength: number;
-
-    Exception: any;
-}
-
 interface filesystemSearchResultsDto {
     Files: filesystemFileHeaderDto[];
     FileCount: number;
@@ -124,6 +111,7 @@ interface synchronizationDestinationDto {
     Domain: string;
     ApiKey: string;
     FileSystem: string;
+    Enabled: boolean;
 }
 
 interface folderNodeDto {
@@ -142,7 +130,7 @@ interface synchronizationUpdateNotification {
     SourceFileSystemUrl: string;
     Type: filesystemSynchronizationType;
     Action: synchronizationAction;
-    SynchronizationDirection: synchronizationDirection;
+    Direction: synchronizationDirection;
 }
 
 enum synchronizationAction {
@@ -161,6 +149,7 @@ interface synchronizationConflictNotification {
     FileName: string;
     SourceServerUrl: string;
     Status: conflictStatus;
+    RemoteFileHeader: any;
 }
 
 enum conflictStatus {

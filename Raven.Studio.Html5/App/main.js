@@ -7,13 +7,14 @@
         ace: '../Scripts/ace',
         moment: '../Scripts/moment',
         'd3': '../Scripts/nvd3',
-        forge: '../Scripts/forge'
+        forge: '../Scripts/forge',
+        jszip: '../Scripts/jszip'
     }
 });
 
 define('jquery', function() { return jQuery; });
 define('knockout', ko);
-define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function(d3, nv, timelines, chart) { return nv; });
+define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function (d3, nv, timelines, chart) { return nv; });
 
 define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dialog'], function (system, app, viewLocator, dialog) {
     //>>excludeStart("build", true);

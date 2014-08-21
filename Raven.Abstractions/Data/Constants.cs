@@ -21,6 +21,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
+        public const string CreationDate = "Creation-Date";
 		public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
@@ -47,12 +48,14 @@ namespace Raven.Abstractions.Data
 		public const string RavenAlerts = "Raven/Alerts";
 		public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
 
+		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
+		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
+
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
 
 		// Indexing
-		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
 		public const int DefaultPrefetchingDurationLimit = 5000;
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
@@ -101,7 +104,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";
-		public const string RavenReplicationVersionHiLo = "Raven/Replication/VersionHilo";
 		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
 		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
@@ -155,7 +157,11 @@ namespace Raven.Abstractions.Data
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
 
+        public const string MetadataEtagField = "ETag";
 
-        public const string MetadataEtagField = "ETag";        
+		public const string TempUploadsDirectoryName = "RavenTempUploads";
+
+		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
+
 	}
 }

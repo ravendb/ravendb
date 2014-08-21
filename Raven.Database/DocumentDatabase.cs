@@ -36,6 +36,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -44,7 +45,7 @@ using metrics.Core;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IDisposable
+	public class DocumentDatabase : IResourceStore, IDisposable
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -129,7 +130,7 @@ namespace Raven.Database
 				{
 					uuidGenerator = new SequentialUuidGenerator();
 					initializer.InitializeTransactionalStorage(uuidGenerator);
-					lastCollectionEtags = new LastCollectionEtags(TransactionalStorage, WorkContext);
+					lastCollectionEtags = new LastCollectionEtags(WorkContext);
 				}
 				catch (Exception)
 				{
@@ -168,7 +169,7 @@ namespace Raven.Database
 					InitializeTriggersExceptIndexCodecs();
 					SecondStageInitialization();
 					ExecuteStartupTasks();
-					lastCollectionEtags.Initialize();
+					lastCollectionEtags.InitializeBasedOnIndexingResults();
 
 					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
@@ -426,23 +427,40 @@ namespace Raven.Database
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
+
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
 		{
 			Index indexInstance = IndexStorage.GetIndexInstance(indexId);
-			return (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+						
+						var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+
+						if (isStale && actions.Staleness.IsReduceStale(indexId) == false)
+						{
+							var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+							var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+
+							if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
+								return false;
+						}
+
+						return isStale;
 		}).Select(indexId =>
 		{
 			Index index = IndexStorage.GetIndexInstance(indexId);
 			return index == null ? null : index.PublicName;
 		}).ToArray();
+
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
 			{
 				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-				if (indexInstance != null)
+						if (indexInstance == null)
+							return null;
 					x.PublicName = indexInstance.PublicName;
 
 				return x;
-			}).ToArray();
+					})
+					.Where(x => x != null)
+					.ToArray();
 				});
 
 				if (result.Indexes != null)
@@ -573,52 +591,18 @@ namespace Raven.Database
 			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
 			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
 			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-			RequestsDuration = CreateHistogramData(metrics.RequestDuationMetric),
-			Requests = CreateMeterData(metrics.ConcurrentRequests),
+            RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+            Requests = metrics.ConcurrentRequests.CreateMeterData(),
 			Gauges = metrics.Gauges,
-			StaleIndexMaps = CreateHistogramData(metrics.StaleIndexMaps),
-			StaleIndexReduces = CreateHistogramData(metrics.StaleIndexReduces),
-			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-			ReplicationDurationMeter = metrics.ReplicationDurationMeter.ToDictionary(x => x.Key, x => CreateMeterData(x.Value)),
-			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
-			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToDictionary(x => x.Key, x => CreateHistogramData(x.Value)),
+            StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+            StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+            ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
 		};
 		}
 
-		private static HistogramData CreateHistogramData(HistogramMetric histogram)
-		{
-			double[] percentiles = histogram.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
-
-			return new HistogramData
-			{
-				Counter = histogram.Count,
-				Max = histogram.Max,
-				Mean = histogram.Mean,
-				Min = histogram.Min,
-				Stdev = histogram.StdDev,
-				Percentiles = new Dictionary<string, double>
-                {
-                        {"50%", percentiles[0]},
-                        {"75%", percentiles[1]},
-                        {"95%", percentiles[2]},
-                        {"99%", percentiles[3]},
-                        {"99.9%", percentiles[4]},
-                        {"99.99%", percentiles[5]},
-                }
-			};
-		}
-
-		private static MeterData CreateMeterData(MeterMetric metric)
-		{
-			return new MeterData
-				   {
-					   Count = metric.Count,
-					   FifteenMinuteRate = Math.Round(metric.FifteenMinuteRate, 3),
-					   FiveMinuteRate = Math.Round(metric.FiveMinuteRate, 3),
-					   MeanRate = Math.Round(metric.MeanRate, 3),
-					   OneMinuteRate = Math.Round(metric.OneMinuteRate, 3),
-				   };
-		}
+		
 
 		/// <summary>
 		///     This API is provided solely for the use of bundles that might need to run
@@ -669,12 +653,6 @@ namespace Raven.Database
 			}
 
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
-
-			exceptionAggregator.Execute(() =>
-							{
-								if (lastCollectionEtags != null)
-									lastCollectionEtags.Flush();
-							});
 
 			exceptionAggregator.Execute(() =>
 								{
@@ -841,7 +819,6 @@ namespace Raven.Database
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
 				Tasks.ClearCompletedPendingTasks();
-				lastCollectionEtags.Flush();
 			}
 			finally
 			{
@@ -1111,12 +1088,12 @@ namespace Raven.Database
 				bool fips;
 				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
 				{
-					if (!fips && configuration.UseFips)
+					if (!fips && configuration.Encryption.UseFips)
 						throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
 				}
 
-				Encryptor.Initialize(configuration.UseFips);
-				Cryptography.FIPSCompliant = configuration.UseFips;
+				Encryptor.Initialize(configuration.Encryption.UseFips);
+				Cryptography.FIPSCompliant = configuration.Encryption.UseFips;
 			}
 
 			private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)

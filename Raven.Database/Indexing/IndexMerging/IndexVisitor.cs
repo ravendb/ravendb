@@ -13,7 +13,6 @@ namespace Raven.Database.Indexing.IndexMerging
             this.indexData = indexData;
             indexData.NumberOfFromClauses = 0;
             indexData.SelectExpressions = new Dictionary<string, Expression>();
-           
         }
 
         public override void VisitQueryFromClause(QueryFromClause queryFromClause)
@@ -22,8 +21,13 @@ namespace Raven.Database.Indexing.IndexMerging
             indexData.FromExpression = queryFromClause.Expression.Clone();
             indexData.FromIdentifier = queryFromClause.Identifier;
             indexData.NumberOfFromClauses++;
-
         }
+
+		public override void VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
+		{
+			base.VisitMemberReferenceExpression(memberReferenceExpression);
+			indexData.Collection = memberReferenceExpression.MemberName;
+		}
 
         public override void VisitInvocationExpression(InvocationExpression invocationExpression)
         {

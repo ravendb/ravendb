@@ -59,7 +59,7 @@ namespace Raven.Tests.MailingList
                     Assert.Equal(1, x);
                 }
 
-                Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+                Assert.Empty(store.SystemDatabase.Statistics.Errors);
             }
         }
     }

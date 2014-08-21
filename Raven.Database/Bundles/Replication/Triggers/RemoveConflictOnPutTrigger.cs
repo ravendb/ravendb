@@ -85,5 +85,16 @@ namespace Raven.Bundles.Replication.Triggers
                 }
 			}
 		}
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					Constants.RavenReplicationHistory
+				};
+			}
+		}
 	}
 }

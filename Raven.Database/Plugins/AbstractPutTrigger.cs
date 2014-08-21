@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -91,5 +92,7 @@ namespace Raven.Database.Plugins
 		}
 
 		public DocumentDatabase Database { get; set; }
+
+		public virtual IEnumerable<string> GeneratedMetadataNames { get; protected set; } 
 	}
 }

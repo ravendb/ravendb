@@ -1,10 +1,14 @@
 // Interface
 interface computedAppUrls {
+    adminSettings: KnockoutComputed<string>;
+
     databases: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
+    megeSuggestions: KnockoutComputed<string>;
+    upgrade: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     newTransformer: KnockoutComputed<string>;
@@ -50,7 +54,7 @@ interface computedAppUrls {
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
-
+    infoPackage: KnockoutComputed<string>;
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
@@ -64,6 +68,7 @@ interface computedAppUrls {
     filesystemStatus: KnockoutComputed<string>;
     filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
+
     couterStorages:KnockoutComputed<string>;
     counterStorageManagement: KnockoutComputed<string>;
     counterStorageCounters: KnockoutComputed<string>;

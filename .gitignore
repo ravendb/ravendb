@@ -85,3 +85,4 @@ Tools/Raven.Filesystem.CreateSample/packages/
 /invalid-test-output.txt
 /last-test.txt
 RavenDB.sln.ide/
+/Raven.Web/Raven/CompiledIndexCache

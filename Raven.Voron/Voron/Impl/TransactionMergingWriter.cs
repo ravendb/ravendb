@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -114,6 +109,8 @@ namespace Voron.Impl
 			try
 			{
 				writes = BuildBatchGroup(mine);
+			    var completedSuccessfully = false;
+
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					HandleOperations(tx, writes, _cancellationToken);
@@ -124,8 +121,7 @@ namespace Voron.Impl
 						if (ShouldRecordToDebugJournal)
 							_debugJournal.Flush();
 
-						foreach (var write in writes)
-							write.Completed();
+					    completedSuccessfully = true;
 					}
 					catch (Exception e)
 					{
@@ -136,6 +132,12 @@ namespace Voron.Impl
 						}
 					}
 				}
+
+                if (completedSuccessfully)
+                {
+                    foreach (var write in writes)
+                        write.Completed();
+                }
 			}
 			catch (Exception e)
 			{
@@ -205,7 +207,7 @@ namespace Voron.Impl
 										throw new ArgumentOutOfRangeException();
 								}
 
-								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.GetValueForDebugJournal());
+								_debugJournal.RecordWriteAction(actionType, tx, operation.Key, treeName, operation.GetValueForDebugJournal());
 							}
 
 							switch (operation.Type)

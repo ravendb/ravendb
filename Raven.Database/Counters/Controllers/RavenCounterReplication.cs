@@ -230,8 +230,8 @@ namespace Raven.Database.Counters.Controllers
 			finally
 			{
                 replicationStopwatch.Stop();
-                storage.MetricsCounters.GetReplicationDurationHistogram(destination.CounterStorageUrl).Update((long)replicationStopwatch.Elapsed.TotalMilliseconds);
-                storage.MetricsCounters.GetReplicationDurationMetric(destination.CounterStorageUrl).Mark((long)replicationStopwatch.Elapsed.TotalMilliseconds);
+			    var elapsedMicroseconds = (long) (replicationStopwatch.Elapsed.TotalMilliseconds*SystemTime.MicroSecPerTick);
+                storage.MetricsCounters.GetReplicationDurationHistogram(destination.CounterStorageUrl).Update(elapsedMicroseconds);
 				var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
 				holder.Release();
 			}

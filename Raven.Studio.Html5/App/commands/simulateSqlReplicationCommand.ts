@@ -12,11 +12,11 @@ class simulateSqlReplicationCommand extends  commandBase{
     execute(): JQueryPromise<sqlReplicationSimulationResultDto> {
         var args = {
             documentId: this.documentId,
-            performRolledBackTransaction:this.performRolledbackTransaction,
+            performRolledBackTransaction: this.performRolledbackTransaction,
             sqlReplication: JSON.stringify(this.simulatedSqlReplication.toDto())
         };
 
-        return this.query<sqlReplicationSimulationResultDto>("/studio-tasks/simulate-sql-replication",args,this.db,null,60000);
+        return this.query<sqlReplicationSimulationResultDto>("/studio-tasks/simulate-sql-replication", args, this.db, null, 60000);
     }
 }
 

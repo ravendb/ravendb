@@ -33,6 +33,8 @@ namespace Raven.Database.Indexing.IndexMerging
         public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
 
+		public string Collection { get; set; }
+
         public IDictionary<string, FieldStorage> Stores
         {
             get { return index.Stores; }
@@ -100,7 +102,14 @@ namespace Raven.Database.Indexing.IndexMerging
             var printer = new StringWriter();
             var printerVisitor = new CSharpOutputVisitor(printer, FormattingOptionsFactory.CreateSharpDevelop());
             queryExpr.AcceptVisitor(printerVisitor);
-            return printer.GetStringBuilder().ToString();
+
+			var format = printer.GetStringBuilder().ToString();
+			if (format.Substring(0, 3) == "\r\n\t")
+			{
+				format = format.Remove(0, 3);
+			}
+			format = format.Replace("\r\n\t", "\n");
+	        return format;
         }
     }
 }

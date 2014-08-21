@@ -121,6 +121,8 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+        public event Action<object, TrafficWatchNotification> OnLogNotification = delegate { };
+
         public ConnectionState For(string id, RavenBaseApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>

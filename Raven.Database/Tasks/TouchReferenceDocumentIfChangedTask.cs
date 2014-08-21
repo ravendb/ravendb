@@ -55,11 +55,13 @@ namespace Raven.Database.Tasks
 			using (context.Database.TransactionalStorage.DisableBatchNesting())
 			{
 				var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
+
 				context.TransactionalStorage.Batch(accessor =>
 				{
 					foreach (var kvp in ReferencesToCheck)
 					{
-						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key, null);
+						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key);
 
 						if (doc == null)
 						{
@@ -72,8 +74,19 @@ namespace Raven.Database.Tasks
 							continue;
 						}
 
-
 						docsToTouch.Add(kvp.Key);
+
+						var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+
+						if(string.IsNullOrEmpty(entityName))
+							continue;
+
+						Etag highestEtagInCollection;
+
+						if (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false || doc.Etag.CompareTo(highestEtagInCollection) > 0)
+						{
+							collectionsAndEtags[entityName] = doc.Etag;
+						}
 					}
 				});
 
@@ -94,6 +107,11 @@ namespace Raven.Database.Tasks
 								logger.Info("Concurrency exception when touching {0}", doc);
 							}
 							context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+						}
+
+						foreach (var collectionEtagPair in collectionsAndEtags)
+						{
+							context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
 						}
 					});
 				}

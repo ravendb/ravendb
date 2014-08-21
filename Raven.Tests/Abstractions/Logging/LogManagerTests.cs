@@ -79,6 +79,11 @@ namespace Raven.Tests.Abstractions.Logging
 			{
 				LastMessage = logEvent.FormattedMessage;
 			}
+
+		    public override bool ShouldLog(ILog logger, LogLevel level)
+		    {
+		        return true;
+		    }
 		}
 	}
 }

@@ -16,12 +16,12 @@ namespace Raven.Database.Storage
 	{
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
         IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null);
-		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take);
+		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
 
 		long GetDocumentsCount();
 
-		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
-		JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation);
+		JsonDocument DocumentByKey(string key);
+		JsonDocumentMetadata DocumentMetadataByKey(string key);
 
 		bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);
 		AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);

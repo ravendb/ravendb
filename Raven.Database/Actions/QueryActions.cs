@@ -106,7 +106,7 @@ namespace Raven.Database.Actions
             private readonly IndexQuery query;
             private readonly IStorageActionsAccessor actions;
 
-            private readonly CancellationTokenSource cancellationTokenSource;
+            private readonly CancellationToken cancellationToken;
 
             private readonly ExecutingQueryInfo queryStat;
             public QueryResultWithIncludes Result = new QueryResultWithIncludes();
@@ -131,7 +131,7 @@ namespace Raven.Database.Actions
                 this.indexName = indexName != null ? indexName.Trim() : null;
                 this.query = query;
                 this.actions = actions;
-                this.cancellationTokenSource = cancellationTokenSource;
+                cancellationToken = cancellationTokenSource.Token;
                 queryStat = database.Queries.AddToCurrentlyRunningQueryList(indexName, query, cancellationTokenSource);
 
 	            if (query.ShowTimings == false)
@@ -184,6 +184,15 @@ namespace Raven.Database.Actions
                     stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
                 }
 
+				if (stale && actions.Staleness.IsReduceStale(index.IndexId) == false)
+				{
+					var forEntityNames = viewGenerator.ForEntityNames.ToList();
+					var lastIndexedEtag = actions.Indexing.GetIndexStats(index.IndexId).LastIndexedEtag;
+
+					if (database.LastCollectionEtags.HasEtagGreaterThan(forEntityNames, lastIndexedEtag) == false)
+						stale = false;
+				}
+
                 indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
                 var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
                 if (indexFailureInformation.IsInvalidIndex)
@@ -197,7 +206,7 @@ namespace Raven.Database.Actions
                         : Constants.ReduceKeyFieldName);
                 Func<IndexQueryResult, bool> shouldIncludeInResults =
                     result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
-                var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers, cancellationTokenSource.Token);
+                var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers, cancellationToken);
                 indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
 				if (query.ShowTimings)
@@ -213,7 +222,7 @@ namespace Raven.Database.Actions
                 transformerErrors = new List<string>();
 				results = database
 					.Queries
-					.GetQueryResults(query, viewGenerator, docRetriever, docs, transformerErrors, timeInMilliseconds => executionTimes[QueryTimings.LoadDocuments] = timeInMilliseconds, timeInMilliseconds => executionTimes[QueryTimings.TransformResults] = timeInMilliseconds, query.ShowTimings, cancellationTokenSource);
+					.GetQueryResults(query, viewGenerator, docRetriever, docs, transformerErrors, timeInMilliseconds => executionTimes[QueryTimings.LoadDocuments] = timeInMilliseconds, timeInMilliseconds => executionTimes[QueryTimings.TransformResults] = timeInMilliseconds, query.ShowTimings, cancellationToken);
 
                 Header = new QueryHeaderInformation
                 {
@@ -228,13 +237,11 @@ namespace Raven.Database.Actions
 
             public void Execute(Action<RavenJObject> onResult)
             {
-                var token = cancellationTokenSource.Token;
-
                 using (new CurrentTransformationScope(database, docRetriever))
                 {
                     foreach (var result in results)
                     {
-                        token.ThrowIfCancellationRequested();
+                        cancellationToken.ThrowIfCancellationRequested();
                         onResult(result);
                     }
                     if (transformerErrors.Count > 0)
@@ -292,14 +299,6 @@ namespace Raven.Database.Actions
             if (WorkContext.CurrentlyRunningQueries.TryGetValue(index, out set) == false)
                 return;
 
-            try
-            {
-                queryStat.TokenSource.Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-
             set.TryRemove(queryStat);
         }
 
@@ -313,7 +312,7 @@ namespace Raven.Database.Actions
             return executingQueryInfo;
         }
 
-        private IEnumerable<RavenJObject> GetQueryResults(IndexQuery query, AbstractViewGenerator viewGenerator, DocumentRetriever docRetriever, IEnumerable<JsonDocument> results, List<string> transformerErrors, Action<double> loadingDocumentsFinish, Action<double> transformerFinish, bool showTimings, CancellationTokenSource tokenSource)
+        private IEnumerable<RavenJObject> GetQueryResults(IndexQuery query, AbstractViewGenerator viewGenerator, DocumentRetriever docRetriever, IEnumerable<JsonDocument> results, List<string> transformerErrors, Action<double> loadingDocumentsFinish, Action<double> transformerFinish, bool showTimings, CancellationToken token)
         {
             if (query.PageSize <= 0) // maybe they just want the stats? 
             {
@@ -340,7 +339,7 @@ namespace Raven.Database.Actions
 	        }
                 
             var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson()));
-            var robustEnumerator = new RobustEnumerator(tokenSource.Token, 100)
+            var robustEnumerator = new RobustEnumerator(token, 100)
             {
                 OnError =
                     (exception, o) =>

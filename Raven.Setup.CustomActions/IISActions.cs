@@ -313,45 +313,6 @@ namespace Raven.Setup.CustomActions
 			return ActionResult.Success;
 		}
 
-		[CustomAction]
-		public static ActionResult SetupPerformanceCountersForIISUser(Session session)
-		{
-			try
-			{
-				PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(string.Format("{0}\\{1}", session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"]));
-			}
-			catch (Exception ex)
-			{
-				Log.Error(session, "Exception was thrown during SetupPerformanceCountersForIISUser:" + ex);
-
-				var sb =
-					new StringBuilder(
-						string.Format("Warning: The access to performance counters has not been configured for the account '{0}\\{1}'.{2}",
-						              session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"], Environment.NewLine));
-
-
-				if (ex is IdentityNotMappedException)
-				{
-					sb.Append("The account does not exist.");
-				}
-				else
-				{
-					sb.Append("Exception type: " + ex.GetType());
-				}
-
-				if (string.IsNullOrEmpty(session["LOG_FILE_PATH"]) == false)
-				{
-					sb.Append(string.Format("{0}For more details check the log file:{0}{1}", Environment.NewLine, session["LOG_FILE_PATH"]));
-				}
-
-				MessageBox.Show(sb.ToString(), "Failed to grant permissions", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-				return ActionResult.Success;
-			}
-
-			return ActionResult.Success;
-		}
-
 		private static bool IsIIS7Upwards
         {
             get

@@ -33,6 +33,11 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
+		protected override void Configure(StorageEnvironmentOptions options)
+		{
+			options.MaxScratchBufferSize *= 2;
+		}
+
 		[Fact]
 		public void ParallelWritesInBatchesAndReadsByUsingTreeIterator()
 		{

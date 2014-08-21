@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -65,6 +66,44 @@ namespace Raven.Database.Server.Controllers.Admin
 		private bool SupportedByAnyAdditionalRoles(IPrincipal user)
 		{
 			return AdditionalSupportedRoles.Any(role => user.IsInRole(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, role));
+		}
+
+		protected static MessageWithStatusCode CheckNameFormat(string name, string dataDirectory)
+		{
+			string errorMessage = null;
+			const HttpStatusCode errorCode = HttpStatusCode.BadRequest;
+
+			if (name == null)
+			{
+				errorMessage = "An empty name is forbidden for use!";
+			}
+			else if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+			{
+				errorMessage = string.Format("The name '{0}' contains charaters that are forbidden for use!", name);
+			}
+			else if (Array.IndexOf(Constants.WindowsReservedFileNames, name.ToLower()) >= 0)
+			{
+				errorMessage = string.Format("The name '{0}' is forbidden for use!", name);
+			}
+			else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (name.Length > Constants.LinuxMaxFileNameLength) && (dataDirectory.Length + name.Length > Constants.LinuxMaxPath))
+			{
+				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - dataDirectory.Length;
+				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
+				errorMessage = string.Format("Invalid name! Name cannot exceed {0} characters", maxfileNameLength);
+			}
+			else if (Path.Combine(dataDirectory, name).Length > Constants.WindowsMaxPath)
+			{
+				int maxfileNameLength = Constants.WindowsMaxPath - dataDirectory.Length;
+				errorMessage = string.Format("Invalid name! Name cannot exceed {0} characters", maxfileNameLength);
+			}
+
+			return new MessageWithStatusCode { Message = errorMessage, ErrorCode = errorCode };
+		}
+
+		protected class MessageWithStatusCode
+		{
+			public string Message;
+			public HttpStatusCode ErrorCode = HttpStatusCode.OK;
 		}
 	}
 }

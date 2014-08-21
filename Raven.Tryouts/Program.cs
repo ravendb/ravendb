@@ -1,6 +1,8 @@
-﻿namespace Raven.Tryouts
+﻿using System;
+
+namespace Raven.Tryouts
 {
-	public class Program
+    public class Program
 	{
 		private static void Main(string[] args)
 		{

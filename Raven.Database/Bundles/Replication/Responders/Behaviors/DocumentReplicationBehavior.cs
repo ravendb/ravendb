@@ -1,12 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -65,22 +64,28 @@ namespace Raven.Bundles.Replication.Responders
 		protected override CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, JsonDocument existingItem)
 		{
 			// just update the current doc with the new conflict document
-			RavenJArray ravenJArray ;
+			RavenJArray ravenJArray;
 			existingItem.DataAsJson["Conflicts"] =
 				ravenJArray = new RavenJArray(existingItem.DataAsJson.Value<RavenJArray>("Conflicts"));
-			ravenJArray.Add(RavenJToken.FromObject(newConflictId));
-			var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
 
-			return new CreatedConflict()
+			var conflictEtag = existingItem.Etag;
+			if (ravenJArray.Contains(newConflictId) == false)
 			{
-				Etag = addResult.Etag,
+				ravenJArray.Add(newConflictId);
+			var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
+				conflictEtag = addResult.Etag;
+			}
+
+			return new CreatedConflict
+			{
+				Etag = conflictEtag,
 				ConflictedIds = ravenJArray.Select(x => x.Value<string>()).ToArray()
 			};
 		}
 
 		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag, out bool deleted)
 		{
-			var existingDoc = Actions.Documents.DocumentByKey(id, null);
+			var existingDoc = Actions.Documents.DocumentByKey(id);
 			if(existingDoc != null)
 			{
 				ReplicationTask.EnsureReplicationInformationInMetadata(existingDoc.Metadata, Database);
@@ -118,16 +123,15 @@ namespace Raven.Bundles.Replication.Responders
 										out RavenJObject documentToSave)
 		{
 			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
-			{
-				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null),
+		{
+				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key),
 														   out metadataToSave, out documentToSave))
 					return true;
-			}
+		}
 
 			metadataToSave = null;
 			documentToSave = null;
 
 			return false;
-		}
 	}
-}
+}}

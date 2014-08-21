@@ -31,7 +31,8 @@ namespace Raven.Database.Config
 	public class InMemoryRavenConfiguration
 	{
 	    public const string VoronTypeName = "voron";
-	    private const string EsentTypeName = "esent";
+	    public const string EsentTypeName = "esent";
+
 		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
@@ -44,11 +45,17 @@ namespace Raven.Database.Config
 
 		public StorageConfiguration Storage { get; private set; }
 
+        public FileSystemConfiguration FileSystem { get; private set; }
+
+		public EncryptionConfiguration Encryption { get; private set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
 			Storage = new StorageConfiguration();
+            FileSystem = new FileSystemConfiguration();
+			Encryption = new EncryptionConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -78,8 +85,8 @@ namespace Raven.Database.Config
 			SetupGC();
 		}
 
-		public void Initialize()
-		{
+		public InMemoryRavenConfiguration Initialize()
+		{			
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -97,11 +104,10 @@ namespace Raven.Database.Config
 			if (ConcurrentMultiGetRequests == null)
 				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
 
-			MemoryLimitForIndexingInMb = ravenSettings.MemoryLimitForIndexing.Value;
+			MemoryLimitForProcessingInMb = ravenSettings.MemoryLimitForProcessing.Value;
 
 			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
-			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
@@ -122,7 +128,7 @@ namespace Raven.Database.Config
 			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
 
 			// Index settings
-			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
+			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
@@ -130,26 +136,26 @@ namespace Raven.Database.Config
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
 
-			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
+			MaxNumberOfItemsToProcessInSingleBatch = ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Value;
 
-			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
+			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
-				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-																	MaxNumberOfItemsToIndexInSingleBatch);
+				InitialNumberOfItemsToProcessInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
+																	MaxNumberOfItemsToProcessInSingleBatch);
 			}
 			else
 			{
-				InitialNumberOfItemsToIndexInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default ?
+				InitialNumberOfItemsToProcessInSingleBatch = MaxNumberOfItemsToProcessInSingleBatch == ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Default ?
 				 defaultInitialNumberOfItemsToIndexInSingleBatch :
-				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToProcessInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
-			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
+			AvailableMemoryForRaisingBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingBatchSizeLimit.Value;
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
 			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
 				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
-				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToProcessInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
 
@@ -160,7 +166,7 @@ namespace Raven.Database.Config
 																	MaxNumberOfItemsToReduceInSingleBatch);
 			}
 
-			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
+			MaxNumberOfParallelProcessingTasks = ravenSettings.MaxNumberOfParallelProcessingTasks.Value;
 
 			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
@@ -221,7 +227,8 @@ namespace Raven.Database.Config
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
-				UseSsl = ravenSettings.UseSsl.Value;
+				Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
+				Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
 			}
 
 			SetVirtualDirectory();
@@ -237,9 +244,9 @@ namespace Raven.Database.Config
 
 			RedirectStudioUrl = ravenSettings.RedirectStudioUrl.Value;
 
-			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
+			DisableDocumentPreFetching = ravenSettings.DisableDocumentPreFetching.Value;
 
-			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
+			MaxNumberOfItemsToPreFetch = ravenSettings.MaxNumberOfItemsToPreFetch.Value;
 			
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
@@ -259,13 +266,22 @@ namespace Raven.Database.Config
 
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
+			Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
+			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
+			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
 
+            FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
+
+			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
+
 			PostInit();
+
+			return this;
 		}
 
 		public int MaxConcurrentServerRequests { get; set; }
@@ -273,8 +289,6 @@ namespace Raven.Database.Config
 		public int MaxConcurrentMultiGetRequests { get; set; }
 
 		public int PrefetchingDurationLimit { get; private set; }
-
-		public int EncryptionKeyBitsPreference { get; set; }
 
 		public TimeSpan BulkImportBatchTimeout { get; set; }
 
@@ -444,7 +458,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(Encryption.UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -494,13 +508,13 @@ namespace Raven.Database.Config
 		/// Max number of items to take for indexing in a batch
 		/// Minimum: 128
 		/// </summary>
-		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int MaxNumberOfItemsToProcessInSingleBatch { get; set; }
 
 		/// <summary>
-		/// The initial number of items to take when indexing a batch
+		/// The initial number of items to take when processing a batch
 		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
-		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
 		/// <summary>
 		/// Max number of items to take for reducing in a batch
@@ -522,10 +536,10 @@ namespace Raven.Database.Config
 		public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
 
 		/// <summary>
-		/// The maximum number of indexing tasks allowed to run in parallel
+		/// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
 		/// Default: The number of processors in the current machine
 		/// </summary>
-		public int MaxNumberOfParallelIndexTasks
+		public int MaxNumberOfParallelProcessingTasks
 		{
 			get
 			{
@@ -557,16 +571,6 @@ namespace Raven.Database.Config
 		/// Default: none, binds to all host names
 		/// </summary>
 		public string HostName { get; set; }
-
-		/// <summary>
-		/// Whatever we should use SSL for this connection
-		/// </summary>
-		public bool UseSsl { get; set; }
-
-		/// <summary>
-		/// Whatever we should use FIPS compliant encryption algorithms
-		/// </summary>
-		public bool UseFips { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
@@ -744,9 +748,15 @@ namespace Raven.Database.Config
 
 		#endregion
 
-		#region Misc settings
+        #region File System Settings
 
-		/// <summary>
+        public TimeSpan MaxSynchronizationInterval { get; set; } 
+
+        #endregion
+
+        #region Misc settings
+
+        /// <summary>
 		/// The directory to search for RavenDB's WebUI. 
 		/// This is usually only useful if you are debugging RavenDB's WebUI. 
 		/// Default: ~/Raven/WebUI 
@@ -814,9 +824,9 @@ namespace Raven.Database.Config
 			}
 		}
 
-		public bool DisableDocumentPreFetchingForIndexing { get; set; }
+		public bool DisableDocumentPreFetching { get; set; }
 
-		public int MaxNumberOfItemsToPreFetchForIndexing { get; set; }
+		public int MaxNumberOfItemsToPreFetch { get; set; }
 
 		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
@@ -859,9 +869,9 @@ namespace Raven.Database.Config
 		public int MaxNumberOfStoredCommitPoints { get; set; }
 
 		/// <summary>
-		/// Limit of how much indexing process can take memory (in MBytes)
+		/// Limit of how much memory a batch processing can take (in MBytes)
 		/// </summary>
-		public int MemoryLimitForIndexingInMb { get; set; }
+		public int MemoryLimitForProcessingInMb { get; set; }
 
 		public string IndexStoragePath
 		{
@@ -896,9 +906,9 @@ namespace Raven.Database.Config
 			set { fileSystemIndexStoragePath = value.ToFullPath(); }
 		}
 
-		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
+		public int AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
-		public TimeSpan MaxIndexingRunLatency { get; set; }
+		public TimeSpan MaxProcessingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
 		
@@ -1107,6 +1117,9 @@ namespace Raven.Database.Config
 			Port = defaultConfiguration.Port;
 			OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+
+            DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
+            FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
@@ -1136,6 +1149,23 @@ namespace Raven.Database.Config
 				/// You can use this setting to specify an initial file size for data file (in bytes).
 				/// </summary>
 				public int? InitialFileSize { get; set; }
+
+				/// <summary>
+				/// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
+				/// Default: 512.
+				/// </summary>
+				public int MaxScratchBufferSize { get; set; }
+
+				/// <summary>
+				/// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
+				/// Default: false.
+				/// </summary>
+				public bool AllowIncrementalBackups { get; set; }
+
+				/// <summary>
+				/// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
+				/// </summary>
+				public string TempPath { get; set; }
 			}
 		}
 
@@ -1158,6 +1188,26 @@ namespace Raven.Database.Config
 			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
 			/// </summary>
 			public int FetchingFromDiskTimeoutInSeconds { get; set; }
+		}
+
+        public class FileSystemConfiguration
+        {
+            public TimeSpan MaximumSynchronizationInterval { get; set; }
+        }
+
+		public class EncryptionConfiguration
+		{
+			/// <summary>
+			/// Whatever we should use FIPS compliant encryption algorithms
+			/// </summary>
+			public bool UseFips { get; set; }
+
+			public int EncryptionKeyBitsPreference { get; set; }
+
+			/// <summary>
+			/// Whatever we should use SSL for this connection
+			/// </summary>
+			public bool UseSsl { get; set; }
 		}
 	}
 }

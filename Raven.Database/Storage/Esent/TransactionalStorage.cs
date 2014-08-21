@@ -30,6 +30,7 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent;
 using Raven.Database.Storage.Esent.Backup;
 using Raven.Database.Storage.Esent.Debug;
 using Raven.Database.Util;
@@ -240,7 +241,7 @@ namespace Raven.Storage.Esent
                 using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
                 {
                     var value = counter.NextValue();
-                    return (long)(value * TransactionalStorageConfigurator.GetVersionPageSize());
+                    return (long)(value * StorageConfigurator.GetVersionPageSize());
                 }
             }
             catch (Exception e)
@@ -253,6 +254,14 @@ namespace Raven.Storage.Esent
                 return getDatabaseTransactionVersionSizeInBytesErrorValue = -3;
             }
         }
+
+	    public StorageStats GetStorageStats()
+	    {
+		    return new StorageStats()
+		    {
+			    EsentStats = new EsentStorageStats()
+		    };
+	    }
 
         public string FriendlyName
         {

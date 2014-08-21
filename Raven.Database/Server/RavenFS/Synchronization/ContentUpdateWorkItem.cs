@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -45,58 +46,56 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		}
 
         public override async Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
-		{
-			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
+        {
+            AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
             var destinationMetadata = await destination.Commands.GetMetadataForAsync(FileName);
-
-			if (destinationMetadata == null)
-			{
-				// if file doesn't exist on destination server - upload it there
+            if (destinationMetadata == null)
+            {
+                // if file doesn't exist on destination server - upload it there
                 return await UploadToAsync(destination);
-			}
+            }
 
-			var destinationServerRdcStats = await destination.GetRdcStatsAsync();
-			if (!IsRemoteRdcCompatible(destinationServerRdcStats))
-				throw new SynchronizationException("Incompatible RDC version detected on destination server");
+            var destinationServerRdcStats = await destination.GetRdcStatsAsync();
+            if (!IsRemoteRdcCompatible(destinationServerRdcStats))
+                throw new SynchronizationException("Incompatible RDC version detected on destination server");
 
-			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
+            var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
+	        if (conflict != null)
+	        {
+		        var report = await HandleConflict(destination, conflict, log);
 
-			if (conflict != null)
-                return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
+		        if (report != null)
+			        return report;
+	        }
 
-			using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
-			using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
-			{
-				var localRdcManager = new LocalRdcManager(localSignatureRepository, Storage, sigGenerator);
-				var destinationRdcManager = new RemoteRdcManager(destination, localSignatureRepository,
-																 remoteSignatureCache);
+            using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
+            using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
+            {
+                var localRdcManager = new LocalRdcManager(localSignatureRepository, Storage, sigGenerator);
+                var destinationRdcManager = new RemoteRdcManager(destination, localSignatureRepository, remoteSignatureCache);
 
-				log.Debug("Starting to retrieve signatures of a local file '{0}'.", FileName);
+                log.Debug("Starting to retrieve signatures of a local file '{0}'.", FileName);
 
-				Cts.Token.ThrowIfCancellationRequested();
+                Cts.Token.ThrowIfCancellationRequested();
 
-				// first we need to create a local file signatures before we synchronize with remote ones
-				var localSignatureManifest = await localRdcManager.GetSignatureManifestAsync(FileDataInfo);
+                // first we need to create a local file signatures before we synchronize with remote ones
+                var localSignatureManifest = await localRdcManager.GetSignatureManifestAsync(FileDataInfo);
 
-				log.Debug("Number of a local file '{0}' signatures was {1}.", FileName, localSignatureManifest.Signatures.Count);
+                log.Debug("Number of a local file '{0}' signatures was {1}.", FileName, localSignatureManifest.Signatures.Count);
 
-				if (localSignatureManifest.Signatures.Count > 0)
-				{
-					var destinationSignatureManifest = await destinationRdcManager.SynchronizeSignaturesAsync(FileDataInfo, Cts.Token);
-
-					if (destinationSignatureManifest.Signatures.Count > 0)
-					{
-						return
-							await
-                            SynchronizeTo(destination, localSignatureRepository, remoteSignatureCache, localSignatureManifest,
-										  destinationSignatureManifest);
-					}
-				}
+                if (localSignatureManifest.Signatures.Any())
+                {
+                    var destinationSignatureManifest = await destinationRdcManager.SynchronizeSignaturesAsync(FileDataInfo, Cts.Token);
+                    if (destinationSignatureManifest.Signatures.Any())
+                    {
+                        return await SynchronizeTo(destination, localSignatureRepository, remoteSignatureCache, localSignatureManifest, destinationSignatureManifest);
+                    }
+                }
 
                 return await UploadToAsync(destination);
-			}
-		}
+            }
+        }
 
 		private bool IsRemoteRdcCompatible(RdcStats destinationServerRdcStats)
 		{
@@ -179,7 +178,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			return new DataInfo
 			{
-                CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>(Constants.LastModified)).ToUniversalTime(),
+                LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified).ToUniversalTime(),
 				Length = fileAndPages.TotalSize ?? 0,
 				Name = fileAndPages.Name
 			};

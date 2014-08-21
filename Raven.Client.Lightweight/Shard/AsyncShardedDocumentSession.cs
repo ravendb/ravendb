@@ -108,7 +108,7 @@ namespace Raven.Client.Shard
 		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
 	    {
 	        throw new NotImplementedException();
 	    }
@@ -279,7 +279,7 @@ namespace Raven.Client.Shard
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null).ToList();
 
 			if (!idsToLoad.Any())
 				return results;
@@ -337,7 +337,7 @@ namespace Raven.Client.Shard
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
 
 			if (!idsToLoad.Any())
 				return results;
@@ -478,7 +478,7 @@ namespace Raven.Client.Shard
 			return AsyncDocumentQuery<T>(indexName);
 		}
 
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -491,13 +491,13 @@ namespace Raven.Client.Shard
 			{
 				EntityType = typeof(T),
 				Keys = { keyPrefix }
-			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude))
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, skipAfter:skipAfter))
 								.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
 		}
 
 		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
 		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
-		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+															Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -519,7 +519,8 @@ namespace Raven.Client.Shard
 				EntityType = typeof(TResult),
 				Keys = { keyPrefix }
 			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, transformer: transformer,
-														 transformerParameters: configuration.TransformerParameters))
+														 transformerParameters: configuration.TransformerParameters,
+														 skipAfter: skipAfter))
 								.ContinueWith(task => (IEnumerable<TResult>)task.Result.SelectMany(x => x).Select(TrackEntity<TResult>).ToList());
 		}
 
@@ -599,6 +600,36 @@ namespace Raven.Client.Shard
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public async Task RefreshAsync<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a transient instance");
+			IncrementRequestCount();
+
+			var shardRequestData = new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { value.Key }
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+
+			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
+			{
+				var jsonDocument = await dbCmd.GetAsync(value.Key);
+				if (jsonDocument == null)
+					return false;
+
+				RefreshInternal(entity, jsonDocument, value);
+				return true;
+			});
+
+			if (results.All(x => x == false))
+			{
+				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+			}
 		}
 
 		#endregion

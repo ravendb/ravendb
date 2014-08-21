@@ -49,7 +49,7 @@ class treeBindingHandler {
             },
             onActivate: function (node) {
                 treeBindingHandler.onActivateAndSelect(node, valueAccessor());
-            }
+            },
         });
 
         var firstNode = (<DynaTreeNode>$(element).dynatree("getRoot", [])).getChildren()[0];
@@ -59,10 +59,10 @@ class treeBindingHandler {
 
     static loadNodeChildren(tree: string, node: DynaTreeNode, options : any) {
         var dir;
-        if (node.data && node.data.key != "/") {
+        if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
         }
-        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 100, dir);
+        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 1024, dir);
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
 
@@ -89,7 +89,7 @@ class treeBindingHandler {
                 for (var k = 0; k < node.getChildren().length; k++) {
                     var nodeK = node.getChildren()[k];
                     if (!newSet[nodeK.data.key] && differenceSet[nodeK.data.key] && differenceSet[nodeK.data.key].data.addClass != treeBindingHandler.transientNodeStyle) {
-                        nodesToRemove.push(nodeK.data.key);
+                        nodesToRemove.push(k);
                     }
                     else {
                         newSet[nodeK.data.key] = null;
@@ -98,7 +98,7 @@ class treeBindingHandler {
 
                 //remove deleted nodes
                 for (var m = 0; m < nodesToRemove.length; m++) {
-                    node.getChildren()[m].remove();
+                    node.getChildren()[nodesToRemove[m]].remove();
                 }
             }
 
@@ -168,14 +168,39 @@ class treeBindingHandler {
     }
 
     static updateNodeHierarchyStyle(tree: string, key: string, styleClass?: string) {
-        var dynaTree = $(tree).dynatree("getTree");
+        var theTree = $(tree).dynatree("getTree");
         var slashPosition = key.length;
         while (slashPosition > 0) {
             key = key.substring(0, slashPosition);
-            var temporaryNode = dynaTree.getNodeByKey(key);
-            if (temporaryNode.data.addClass != styleClass) {
+            var temporaryNode = theTree.getNodeByKey(key);
+            if (temporaryNode && temporaryNode.data.addClass != styleClass) {
                 temporaryNode.data.addClass = styleClass
                 temporaryNode.reloadChildren();
+            }
+            slashPosition = key.lastIndexOf("/");
+        }
+    }
+
+    static setNodeLoadStatus(tree: string, key: string, status: number) {
+        // Set node load status
+        // -1 = error
+        // 0 = load OK
+        // 1 = loading
+        var object = $(tree);
+        if (!object || object.length <= 0)
+            return;
+
+        var theTree = object.dynatree("getTree");
+        if (!theTree) {
+            return;
+        }
+
+        var slashPosition = key.length;
+        while (slashPosition > 0) {
+            key = key.substring(0, slashPosition);
+            var temporaryNode = theTree.getNodeByKey(key);
+            if (temporaryNode) {
+                temporaryNode.setLazyNodeStatus(status);
             }
 
             slashPosition = key.lastIndexOf("/");
@@ -195,6 +220,8 @@ class treeBindingHandler {
 
     static isNodeExpanded(tree: string, key: string): boolean {
         var dynaTree = $(tree).dynatree("getTree");
+        if (!dynaTree)
+            return false;
         var node = dynaTree.getNodeByKey(key);
 
         return node && node.isExpanded();

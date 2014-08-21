@@ -35,19 +35,20 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-            var options = new SmugglerOptions
-            {
-                Filters =
-                    new EquatableList<FilterSetting>
-                                  {
-                                      new FilterSetting
-                                      {
-                                          Path = "Value",
-                                          ShouldMatch = false,
-                                          Values = new EquatableList<string> { "Value1" }
-                                      }
-                                  }
-            };
+	        var options =
+		        new SmugglerOptions
+		        {
+			        Filters =
+				        new EquatableList<FilterSetting>
+				        {
+					        new FilterSetting
+					        {
+						        Path = "Value",
+						        ShouldMatch = false,
+						        Values = new EquatableList<string> {"Value1"}
+					        }
+				        }
+		        };
 
             try
             {
@@ -55,16 +56,14 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi();
-
-					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerApi(options);
+	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi();
-
-					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
+					var smuggler = new SmugglerApi(options);
+	                smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 
@@ -91,19 +90,20 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-            var options = new SmugglerOptions
-                          {
-                              Filters =
-                                  new EquatableList<FilterSetting>
-                                  {
-                                      new FilterSetting
-                                      {
-                                          Path = "@metadata.Raven-Entity-Name",
-                                          ShouldMatch = false,
-                                          Values = new EquatableList<string> { "Products" }
-                                      }
-                                  }
-                          };
+	        var options =
+		        new SmugglerOptions
+		        {
+			        Filters =
+				        new EquatableList<FilterSetting>
+				        {
+					        new FilterSetting
+					        {
+						        Path = "@metadata.Raven-Entity-Name",
+						        ShouldMatch = false,
+						        Values = new EquatableList<string> {"Products"}
+					        }
+				        }
+		        };
 
             try
             {
@@ -111,16 +111,14 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi();
-
-					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
+					var smuggler = new SmugglerApi(options);
+	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi();
-
-					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
+					var smuggler = new SmugglerApi(options);
+	                smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 

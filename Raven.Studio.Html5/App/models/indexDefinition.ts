@@ -78,7 +78,7 @@ class indexDefinition {
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             TransformResults: this.transformResults(),
             Type: this.type,
-            MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument()? this.maxIndexOutputsPerDocument()> 0 ? this.maxIndexOutputsPerDocument() :null:null
+            MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument()> 0 ? this.maxIndexOutputsPerDocument() : null : null
         };
     }
 

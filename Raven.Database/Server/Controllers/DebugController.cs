@@ -19,6 +19,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
@@ -40,30 +41,35 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/prefetch-status")]
 		public HttpResponseMessage PrefetchingQueueStatus()
 		{
-			var prefetcherDocs = Database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
-			var compareToCollection = new Dictionary<Etag, int>();
-
-			for (int i = 1; i < prefetcherDocs.Length; i++)
-				compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
-
-			if (compareToCollection.Any(x => x.Value < 0))
-			{
-				return GetMessageWithObject(new
-				{
-					HasCorrectlyOrderedEtags = true,
-					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-				});
-			}
-			
-			return GetMessageWithObject(new
-			{
-				HasCorrectlyOrderedEtags = false,
-				IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-				EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-			});
+			return GetMessageWithObject(DebugInfoProvider.GetPrefetchingQueueStatusForDebug(Database));
 		}
 
-        [HttpGet]
+		[HttpPost]
+		[Route("debug/format-index")]
+		[Route("databases/{databaseName}/debug/format-index")]
+		public async Task<HttpResponseMessage> FormatIndex()
+		{
+			var array = await ReadJsonArrayAsync();
+			var results = new string[array.Length];
+			for (int i = 0; i < array.Length; i++)
+			{
+					var value = array[i].Value<string>();
+				try
+				{
+					results[i] = IndexPrettyPrinter.Format(value);
+				}
+				catch (Exception e)
+				{
+					results[i] = "Could not format:" + Environment.NewLine +
+					             value + Environment.NewLine + e;
+				}
+			}
+
+			return GetMessageWithObject(results);
+		}
+
+
+		[HttpGet]
         [Route("debug/plugins")]
         [Route("databases/{databaseName}/debug/plugins")]
         public HttpResponseMessage Plugins()
@@ -91,7 +97,22 @@ namespace Raven.Database.Server.Controllers
 					Error = "SQL Replication bundle is not installed"
 				}, HttpStatusCode.NotFound);
 
-			return GetMessageWithObject(task.Statistics);
+            
+		    //var metrics = task.SqlReplicationMetricsCounters.ToDictionary(x => x.Key, x => x.Value.ToSqlReplicationMetricsData());
+
+		    var statisticsAndMetrics = task.GetConfiguredReplicationDestinations().Select(x =>
+		    {
+		        SqlReplicationStatistics stats;
+		        task.Statistics.TryGetValue(x.Name, out stats);
+                var metrics = task.GetSqlReplicationMetricsManager(x).ToSqlReplicationMetricsData();
+		        return new
+		        {
+                    x.Name,
+		            Statistics = stats,
+                    Metrics = metrics
+		        };
+		    });
+		    return GetMessageWithObject(statisticsAndMetrics);
 		}
 
 
@@ -108,14 +129,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
-			var cfg = RavenJObject.FromObject(Database.Configuration);
-			cfg["OAuthTokenKey"] = "<not shown>";
-			var changesAllowed = Database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
-
-			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
-
-			return GetMessageWithObject(cfg);
+			return GetMessageWithObject(DebugInfoProvider.GetConfigForDebug(Database));
 		}
 
 		[HttpGet]
@@ -326,22 +340,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/tasks")]
 		public HttpResponseMessage Tasks()
 		{
-			IList<TaskMetadata> tasks = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				tasks = accessor.Tasks
-					.GetPendingTasksForDebug()
-					.ToList();
-			});
-
-			foreach (var taskMetadata in tasks)
-			{
-				var indexInstance = Database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
-				if (indexInstance != null)
-					taskMetadata.IndexName = indexInstance.PublicName;
-			}
-
-			return GetMessageWithObject(tasks);
+			return GetMessageWithObject(DebugInfoProvider.GetTasksForDebug(Database));
 		}
 
 		[HttpGet]
@@ -408,27 +407,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/currently-indexing")]
 		public HttpResponseMessage CurrentlyIndexing()
 		{
-			var indexingWork = Database.IndexingExecuter.GetCurrentlyProcessingIndexes();
-			var reduceWork = Database.ReducingExecuter.GetCurrentlyProcessingIndexes();
-
-			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-
-			return GetMessageWithObject(new
-			{
-				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x => new
-				{
-					IndexName = x.PublicName,
-					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount}),
-					Priority = x.Priority,
-					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
-					{
-						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
-					})
-				})
-			});
+			return GetMessageWithObject(DebugInfoProvider.GetCurrentlyIndexingForDebug(Database));
 		}
 
 		[HttpGet]
@@ -436,15 +415,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()
 		{
-			return GetMessageWithObject(RequestManager.GetRecentRequests(DatabaseName).Select(x => new
-			{
-				Uri = x.RequestUri,
-				Method = x.HttpMethod,
-				StatusCode = x.ResponseStatusCode,
-				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k)}),
-				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-				AdditionalInfo = x.CustomInfo ?? string.Empty
-			}));
+			return GetMessageWithObject(DebugInfoProvider.GetRequestTrackingForDebug(RequestManager, DatabaseName));
 		}
 
 		[HttpGet]
@@ -467,165 +438,39 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/info-package")]
 		[Route("databases/{databaseName}/debug/info-package")]
+		[Route("debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
-			var compressionLevel = CompressionLevel.Optimal;
-
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            try
+            {
+                using (var file = new FileStream(tempFileName, FileMode.Create))
+                using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+                {
+                    DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager);
+                }
 
-			using (var file = new FileStream(tempFileName, FileMode.Create))
-			using (var package = new ZipArchive(file, ZipArchiveMode.Create))
-			{
-				var jsonSerializer = new JsonSerializer
-				{
-					Formatting = Formatting.Indented
-				};
+                var response = new HttpResponseMessage();
 
-				var stats = package.CreateEntry("stats.txt", compressionLevel);
+                response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
+                                   {
+                                       Headers =
+                                       {
+                                           ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                                                                {
+                                                                    FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
+                                                                }, 
+                                                                ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                                       }
+                                   };
 
-				using (var statsStream = stats.Open())
-				using (var streamWriter = new StreamWriter(statsStream))
-				{
-					jsonSerializer.Serialize(streamWriter, Database.Statistics);
-					streamWriter.Flush();
-				}
-
-				var metrics = package.CreateEntry("metrics.txt", compressionLevel);
-
-				using (var metricsStream = metrics.Open())
-				using (var streamWriter = new StreamWriter(metricsStream))
-				{
-					jsonSerializer.Serialize(streamWriter, Database.CreateMetrics());
-					streamWriter.Flush();
-				}
-
-				var logs = package.CreateEntry("logs.txt", compressionLevel);
-
-				using (var logsStream = logs.Open())
-				using (var streamWriter = new StreamWriter(logsStream))
-				{
-					var target = LogManager.GetTarget<DatabaseMemoryTarget>();
-
-					if (target == null)
-						streamWriter.WriteLine("DatabaseMemoryTarget was not registered in the log manager, logs are not available");
-					else
-					{
-						var dbName = DatabaseName ?? Constants.SystemDatabase;
-						var boundedMemoryTarget = target[dbName];
-						var log = boundedMemoryTarget.GeneralLog;
-
-						streamWriter.WriteLine("time,logger,level,message,exception");
-
-						foreach (var logEvent in log)
-						{
-							streamWriter.WriteLine("{0:O},{1},{2},{3},{4}", logEvent.TimeStamp, logEvent.LoggerName, logEvent.Level, logEvent.FormattedMessage, logEvent.Exception);
-						}
-					}
-
-					streamWriter.Flush();
-				}
-
-
-				var stacktrace = package.CreateEntry("stacktraces.txt", compressionLevel);
-
-				using (var stacktraceStream = stacktrace.Open())
-				{
-					string stackDumpDir = null;
-
-					try
-					{
-						if(Debugger.IsAttached)
-							throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
-
-						stackDumpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-						var stackDumpExe = Path.Combine(stackDumpDir, "stackdump.exe");
-						var stackDumpOutput = Path.Combine(stackDumpDir, "stacktraces.txt");
-
-						Directory.CreateDirectory(stackDumpDir);
-
-						if (Environment.Is64BitProcess)
-							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
-						else
-							ExtractResource("Raven.Database.Util.StackDump.x64.StackDump.exe", stackDumpExe);
-
-						var process = new Process
-						{
-							StartInfo = new ProcessStartInfo
-							{
-								Verb = "runas",
-								Arguments = string.Format("/c {0} {1} > {2}", stackDumpExe, Process.GetCurrentProcess().Id, stackDumpOutput),
-								FileName = "cmd.exe",
-								WindowStyle = ProcessWindowStyle.Hidden,
-							}
-						};
-
-						process.Start();
-
-						process.WaitForExit();
-
-						using (var stackDumpOutputStream = File.Open(stackDumpOutput, FileMode.Open))
-						{
-							stackDumpOutputStream.CopyTo(stacktraceStream);
-						}
-					}
-					catch (Exception ex)
-					{
-						var streamWriter = new StreamWriter(stacktraceStream);
-						streamWriter.WriteLine("Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex);
-					}
-					finally
-					{
-						if (stackDumpDir != null && Directory.Exists(stackDumpDir))
-							IOExtensions.DeleteDirectory(stackDumpDir);
-					}
-
-					stacktraceStream.Flush();
-				}
-
-				file.Flush();
-			}
-
-			var response = new HttpResponseMessage();
-
-			response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-			{
-				Headers =
-				{
-					ContentDisposition = new ContentDispositionHeaderValue("attachment")
-					{
-						FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
-					},
-					ContentType = new MediaTypeHeaderValue("application/octet-stream")
-				}
-			};
-
-			return response;
-		}
-
-		private void ExtractResource(string resource, string path)
-		{
-			var stream = GetType().Assembly.GetManifestResourceStream(resource);
-
-			if(stream == null)
-				throw new InvalidOperationException("Could not find the requested resource: " + resource);
-
-			var bytes = new byte[4096];
-
-			using (var stackDump = File.Create(path, 4096))
-			{
-				while (true)
-				{
-					var read = stream.Read(bytes, 0, bytes.Length);
-					if(read == 0)
-						break;
-
-					stackDump.Write(bytes, 0, read);
-				}
-
-				stackDump.Flush();
-			}
+                return response;
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(tempFileName);
+            }
 		}
 	}
 

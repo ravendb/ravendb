@@ -118,7 +118,17 @@ namespace Raven.Database.Actions
                 Etag afterTouchEtag = null;
                 try
                 {
-                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+	                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+	                var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
+
+	                if (docMetadata != null)
+	                {
+						var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
+
+						if(string.IsNullOrEmpty(entityName) == false)
+							Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
+	                }
                 }
                 catch (ConcurrencyException)
                 {
@@ -249,7 +259,7 @@ namespace Raven.Database.Actions
 
             TransactionalStorage.Batch(actions =>
             {
-                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
                 IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
                 // this has to happen in this fashion so we will expose the in memory status after the commit, but 
@@ -351,7 +361,7 @@ namespace Raven.Database.Actions
                     op.Init();
                     if (op.Header.TotalResults == 0 ||
                         op.Header.TotalResults > (countOfDocuments * 0.25) ||
-                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 4))
+                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 4))
                     {
                         // we don't apply this optimization if the total number of results is more than
                         // 25% of the count of documents (would be easier to just run it regardless).

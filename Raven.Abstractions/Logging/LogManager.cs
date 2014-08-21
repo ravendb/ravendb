@@ -101,11 +101,34 @@ namespace Raven.Abstractions.Logging
 		{
 			targets.Clear();
 		}
+
+        public static bool ShouldLogToTargets(LogLevel logLevel, ILog logger)
+        {
+            switch (logLevel)
+            {
+                case LogLevel.Debug:
+                case LogLevel.Info:
+                    return logger.IsDebugEnabled;
+                case LogLevel.Warn:
+                    return logger.IsWarnEnabled;
+                case LogLevel.Error:
+                case LogLevel.Fatal:
+                    return true; // errors & fatal are ALWAYS logged to registered targets
+                default:
+                    return true;
+            }
+        }
 	}
 
-	public abstract class Target
+	public abstract class Target : IDisposable
 	{
 		public abstract void Write(LogEventInfo logEvent);
+
+        public abstract Boolean ShouldLog(ILog logger, LogLevel level);
+
+	    public virtual void Dispose()
+	    {
+	    }
 	}
 
 	public class LogEventInfo
@@ -116,4 +139,22 @@ namespace Raven.Abstractions.Logging
 		public string LoggerName { get; set; }
 		public Exception Exception { get; set; }
 	}
+
+    public class LogEventInfoFormatted
+    {
+        public String Level { get; set; }
+		public DateTime TimeStamp { get; set; }
+		public string Message { get; set; }
+		public string LoggerName { get; set; }
+		public string Exception { get; set; }
+
+        public LogEventInfoFormatted(LogEventInfo eventInfo)
+        {
+            TimeStamp = eventInfo.TimeStamp;
+            Message = eventInfo.FormattedMessage;
+            LoggerName = eventInfo.LoggerName;
+            Level = eventInfo.Level.ToString();
+            Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
+        }
+    }
 }

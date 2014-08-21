@@ -117,56 +117,62 @@ namespace Raven.Database.Indexing
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			var lastEtag = Etag.Empty;
 
-			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
-
 			List<JsonDocument> jsonDocs;
+
+	        using (MapIndexingInProgress(indexesToWorkOn))
 	        using (PrefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForAllIndexes, out jsonDocs))
 	        {
-			try
-			{
-				if (Log.IsDebugEnabled)
-				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                              jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
-				}
+		        try
+		        {
+			        if (Log.IsDebugEnabled)
+			        {
+				        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+					        jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+			        }
 
 			        context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 
-				context.CancellationToken.ThrowIfCancellationRequested();
+			        context.CancellationToken.ThrowIfCancellationRequested();
 
-				if (jsonDocs.Count <= 0)
-		        {
-					return;
+			        if (jsonDocs.Count <= 0)
+			        {
+				        return;
+			        }
+
+			        var sw = Stopwatch.StartNew();
+
+			        lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+
+			        indexingDuration = sw.Elapsed;
 		        }
-
-				var sw = Stopwatch.StartNew();
-
-				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
-
-				indexingDuration = sw.Elapsed;
-			}
-	        catch (InvalidDataException e)
-	        {
-		        Log.ErrorException("Failed to index because of data corruption. ", e);
-				indexesToWorkOn.ForEach(index =>
-					context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
-	        }
-			catch (OperationCanceledException)
-			{
-				operationCancelled = true;
-			}
-			finally
-			{
-				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
-				{
+		        catch (InvalidDataException e)
+		        {
+			        Log.ErrorException("Failed to index because of data corruption. ", e);
+			        indexesToWorkOn.ForEach(index =>
+				        context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+		        }
+		        catch (OperationCanceledException)
+		        {
+			        operationCancelled = true;
+		        }
+		        finally
+		        {
+			        if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+			        {
 				        PrefetchingBehavior.CleanupDocuments(lastEtag);
 				        PrefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
-				}
+			        }
 
 			        PrefetchingBehavior.BatchProcessingComplete();
-				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
-			}
+		        }
+	        }
 		}
+
+		private static IDisposable MapIndexingInProgress(IList<IndexToWorkOn> indexesToWorkOn)
+		{
+			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
+
+			return new DisposableAction(() => indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false));
 		}
 
 		private Etag DoActualIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
@@ -222,7 +228,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-				Log.WarnException("Failed to index " + batchForIndex.IndexId, e);
+				Log.WarnException("Failed to index " + batchForIndex.Index.PublicName, e);
 			}
 			finally
 			{
@@ -231,7 +237,7 @@ namespace Raven.Database.Indexing
 					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
 							  batchForIndex.Batch.Docs.Count,
 							  lastEtag,
-							  batchForIndex.IndexId);
+							  batchForIndex.Index.PublicName);
 				}
 
 				transactionalStorage.Batch(actions =>
@@ -409,5 +415,5 @@ namespace Raven.Database.Indexing
 
 			exceptionAggregator.ThrowIfNeeded();
 		}
-    }
+	}
 }

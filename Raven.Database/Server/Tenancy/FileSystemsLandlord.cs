@@ -22,6 +22,8 @@ namespace Raven.Database.Server.Tenancy
     {
 		private bool initialized;
         private readonly DocumentDatabase systemDatabase;
+        private const string FILESYSTEMS_PREFIX = "Raven/FileSystems/";
+        public override string ResourcePrefix { get { return FILESYSTEMS_PREFIX; } }
 
         public InMemoryRavenConfiguration SystemConfiguration
         {
@@ -53,18 +55,18 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
-            var document = GetTenantDatabaseDocument(tenantId);
+			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledFileSystem);
             if (document == null)
                 return null;
 
             return CreateConfiguration(tenantId, document,"Raven/FileSystem/DataDir", systemDatabase.Configuration);
         }
 
-        private DatabaseDocument GetTenantDatabaseDocument(string tenantId)
+		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -79,8 +81,8 @@ namespace Raven.Database.Server.Tenancy
             if (document.Settings.Keys.Contains("Raven/FileSystem/DataDir") == false)
                 throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
 
-            if (document.Disabled)
-                throw new InvalidOperationException("The database has been disabled.");
+			if (document.Disabled && !ignoreDisabledFileSystem)
+                throw new InvalidOperationException("The file system has been disabled.");
 
             return document;
         }

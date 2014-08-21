@@ -6,7 +6,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Newtonsoft.Json
+namespace Newtonsoft.Json.Sample
 {
     /// <summary>
     /// A minimal
@@ -29,7 +29,7 @@ namespace RavenTestConsole.RavenTests
 	{
 		private class StudentDto
 		{
-            [Newtonsoft.Json.JsonProperty("EmailAddress")]
+            [Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
 			public string Email { get; set; }
         
             [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]

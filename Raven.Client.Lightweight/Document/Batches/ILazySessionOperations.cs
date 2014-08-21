@@ -153,7 +153,7 @@ namespace Raven.Client.Document.Batches
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null);
+		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
 		Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query);
 	}
@@ -286,7 +286,7 @@ namespace Raven.Client.Document.Batches
         /// <summary>
         /// Load documents with the specified key prefix
         /// </summary>
-        Lazy<Task<TResult[]>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null);
+        Lazy<Task<TResult[]>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
         Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query);
     }

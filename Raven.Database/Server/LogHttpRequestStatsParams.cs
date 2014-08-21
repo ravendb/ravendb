@@ -1,4 +1,5 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Collections.Specialized;
 using System.Diagnostics;
 
 namespace Raven.Database.Server
@@ -24,7 +25,7 @@ namespace Raven.Database.Server
 
 		public int ResponseStatusCode { get; private set; }
 
-		public string RequestUri { get; private set; }
+        public string RequestUri { get; private set; }
 
 		public string CustomInfo { get; private set; }
 	}

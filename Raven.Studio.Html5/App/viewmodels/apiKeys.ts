@@ -4,30 +4,29 @@ import apiKey = require("models/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import database = require("models/database");
-import saveApiKeysCommand = require("commands/saveApiKeysCommand");
 import databaseAccess = require("models/databaseAccess");
 import shell = require('viewmodels/shell');
 
 class apiKeys extends viewModelBase {
 
     apiKeys = ko.observableArray<apiKey>().extend({ required: true });
+    static globalApiKeys: KnockoutObservableArray<apiKey>;
+    loadedApiKeys = ko.observableArray<apiKey>().extend({ required: true });
     allDatabases = ko.observableArray<string>();
     searchText = ko.observable<string>();
-    hasFetchedApiKeys = ko.observable(false);
     isSaveEnabled: KnockoutComputed<boolean>;
 
     constructor() {
         super();
 
+        apiKeys.globalApiKeys = this.apiKeys;
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
-
+        
         var databaseNames = shell.databases().filter(db => db.name != "<system>").map(db => db.name);
         this.allDatabases(databaseNames);
     }
 
     canActivate(args) {
-        super.canActivate(args);
-
         var deffered = $.Deferred();
         this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
 
@@ -41,17 +40,56 @@ class apiKeys extends viewModelBase {
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        $("form").on("keypress", 'input[name="databaseName"]', (e) => e.which != 13);
+    }
+
     private fetchApiKeys(): JQueryPromise<any> {
         return new getApiKeysCommand()
             .execute()
-            .done(results => {
+            .done((results: apiKey[]) => {
                 this.apiKeys(results);
-                this.hasFetchedApiKeys(true);
-            });
+                this.saveLoadedApiKeys(results);
+                apiKeys.globalApiKeys(results);
+                this.apiKeys().forEach((key: apiKey) => {
+                    this.subscribeToObservableKeyName(key);
+                });
+        });
+    }
+
+    private saveLoadedApiKeys(apiKeys: apiKey[]) {
+        // clones the apiKeys object
+        this.loadedApiKeys = ko.mapping.fromJS(ko.mapping.toJS(apiKeys));
+    }
+
+    private subscribeToObservableKeyName(key: apiKey) {
+        key.name.subscribe((previousApiKeyName) => {
+            var existingApiKeysExceptCurrent = this.apiKeys().filter((k: apiKey) => k !== key && k.name() == previousApiKeyName);
+            if (existingApiKeysExceptCurrent.length == 1) {
+                existingApiKeysExceptCurrent[0].nameCustomValidity('');
+            }
+        }, this, "beforeChange");
+        key.name.subscribe((newApiKeyName) => {
+            var errorMessage: string = '';
+            var isApiKeyNameValid = newApiKeyName.indexOf("\\") == -1;
+            var existingApiKeys = this.apiKeys().filter((k: apiKey) => k !== key && k.name() == newApiKeyName);
+
+            if (isApiKeyNameValid == false) {
+                errorMessage = "API Key name cannot contain '\\'";
+            } else if (existingApiKeys.length > 0) {
+                errorMessage = "API key name already exists!";
+            }
+
+            key.nameCustomValidity(errorMessage);
+        });
     }
 
     createNewApiKey() {
-        this.apiKeys.unshift(apiKey.empty());
+        var newApiKey = apiKey.empty();
+        this.subscribeToObservableKeyName(newApiKey);
+        newApiKey.generateSecret();
+        this.apiKeys.unshift(newApiKey);
     }
 
     removeApiKey(key: apiKey) {
@@ -59,12 +97,20 @@ class apiKeys extends viewModelBase {
     }
 
     saveChanges() {
-        this.apiKeys().forEach(k => k.setIdFromName());
-        new saveApiKeysCommand(this.apiKeys(), this.activeDatabase())
-            .execute()
-            .done((result: bulkDocumentDto[]) => {
-                this.updateKeys(result);
-                this.dirtyFlag().reset();
+        this.apiKeys().forEach((key: apiKey) => key.setIdFromName());
+
+        var apiKeysNamesArray: Array<string> = this.apiKeys().map((key: apiKey) => key.name());
+        var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => apiKeysNamesArray.contains(key.name()) == false);
+        deletedApiKeys.forEach((key: apiKey) => key.setIdFromName());
+
+        require(["commands/saveApiKeysCommand"], saveApiKeysCommand => {
+            new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
+                .execute()
+                .done((result: bulkDocumentDto[]) => {
+                    this.updateKeys(result);
+                    this.saveLoadedApiKeys(this.apiKeys());
+                    this.dirtyFlag().reset();
+                });
         });
     }
 

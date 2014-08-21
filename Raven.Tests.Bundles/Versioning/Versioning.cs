@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.IO;
+using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -17,6 +18,31 @@ namespace Raven.Tests.Bundles.Versioning
 {
 	public class Versioning : VersioningTest
 	{
+
+		[Fact]
+		public async Task Can_get_all_revisions_async()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+				Assert.Equal(1, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
+			}
+			using (var session = documentStore.OpenSession())
+			{
+				var company3 = session.Load<Company>(company.Id);
+				company3.Name = "Hibernating Rhinos";
+				session.SaveChanges();
+				Assert.Equal(2, session.Advanced.GetMetadataFor(company3).Value<int>("Raven-Document-Revision"));
+			}
+			using (var session = documentStore.OpenAsyncSession())
+			{
+				var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id, 0, 25);
+				Assert.Equal("Company Name", companiesRevisions[0].Name);
+				Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+			}
+		}
 		[Fact]
 		public void Will_automatically_set_metadata()
 		{
@@ -456,21 +482,22 @@ namespace Raven.Tests.Bundles.Versioning
             var file = Path.GetTempFileName();
 		    try
 			{
-				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait();
+				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait();
 
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
 					var importSmuggler = new SmugglerApi();
-					importSmuggler.ImportData(new SmugglerImportOptions
-					{
-						FromFile = file,
-						To = new RavenConnectionStringOptions
+					importSmuggler.ImportData(
+						new SmugglerImportOptions
 						{
-							Url = documentStore2.Url,
-							Credentials = documentStore2.Credentials,
-							DefaultDatabase = documentStore2.DefaultDatabase
-						}
-					}, new SmugglerOptions()).Wait();
+							FromFile = file,
+							To = new RavenConnectionStringOptions
+							{
+								Url = documentStore2.Url,
+								Credentials = documentStore2.Credentials,
+								DefaultDatabase = documentStore2.DefaultDatabase
+							}
+						}).Wait();
 
 					using (var session = documentStore2.OpenSession())
 					{

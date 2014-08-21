@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -79,7 +80,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var key = GetKeyFromCurrent(iterator);
 
-					var document = DocumentByKey(key, null);
+					var document = DocumentByKey(key);
 					if (document == null) //precaution - should never be true
 					{
 						throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found.", key));
@@ -91,47 +92,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				} while (iterator.MovePrev() && fetchedDocumentCount < take);
 			}
 		}
-
-		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromKeyByEtagIndice()
-		{
-			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-				.Iterate(Snapshot, writeBatch.Value))
-			{
-				if (!iterator.Seek(Slice.AfterAllKeys))
-					yield break;
-				do
-				{
-					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
-						continue;
-
-					var key = GetKeyFromCurrent(iterator);
-					var etag = Etag.Parse(iterator.CurrentKey.ToString());
-
-					yield return new KeyValuePair<string, Etag>(key,etag);
-				} while (iterator.MovePrev());
-			}
-		}
-
-		public IEnumerable<KeyValuePair<string, Etag>> GetDocumentEtagsFromMetadata()
-		{			
-			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-				.Iterate(Snapshot, writeBatch.Value))
-			{
-				if (!iterator.Seek(Slice.AfterAllKeys))
-					yield break;
-				do
-				{
-					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
-						continue;
-
-					var key = GetKeyFromCurrent(iterator);
-					var documentMetadata = DocumentMetadataByKey(key, null);
-					yield return new KeyValuePair<string, Etag>(key, documentMetadata.Etag);
-
-				} while (iterator.MovePrev());
-			}
-		}
-
 
 		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
 		{
@@ -149,9 +109,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 											.Iterate(Snapshot, writeBatch.Value))
 			{
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-				{
+				Slice slice = etag.ToString();
+				if (iterator.Seek(slice) == false) 
 					yield break;
+
+				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+				{
+					if(iterator.MoveNext() == false)
+						yield break;
 				}
 
 				long fetchedDocumentTotalSize = 0;
@@ -161,14 +126,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
-					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
-						yield break;
-
+					
 					var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
-
-					if (!EtagUtil.IsGreaterThan(docEtag, etag)) continue;
-
-					if (untilEtag != null && fetchedDocumentCount > 0)
+					
+					if (untilEtag != null)
 					{
 						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
 							yield break;
@@ -176,7 +137,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var key = GetKeyFromCurrent(iterator);
 
-					var document = DocumentByKey(key, null);
+					var document = DocumentByKey(key);
 					if (document == null) //precaution - should never be true
 					{
 						throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
@@ -218,7 +179,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return key;
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (string.IsNullOrEmpty(idPrefix))
 				throw new ArgumentNullException("idPrefix");
@@ -233,15 +194,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
 			{
 				iterator.RequiredPrefix = idPrefix.ToLowerInvariant();
-				if (iterator.Seek(iterator.RequiredPrefix) == false || !iterator.Skip(start))
+				var seekStart = skipAfter == null ? iterator.RequiredPrefix : skipAfter.ToLowerInvariant();
+				if (iterator.Seek(seekStart) == false || !iterator.Skip(start))
 					yield break;
+
+				if (skipAfter != null && !iterator.MoveNext())
+					yield break; // move to the _next_ one
+					
 
 				var fetchedDocumentCount = 0;
 				do
 				{
 					var key = iterator.CurrentKey.ToString();
 
-					var fetchedDocument = DocumentByKey(key, null);
+					var fetchedDocument = DocumentByKey(key);
 					if (fetchedDocument == null) continue;
 
 					fetchedDocumentCount++;
@@ -255,7 +221,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return tableStorage.GetEntriesCount(tableStorage.Documents);
 		}
 
-		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocument DocumentByKey(string key)
 		{
 			if (string.IsNullOrEmpty(key))
 			{
@@ -277,11 +243,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 			}
 
-			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata);
+			int sizeOnDisk;
+			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata,out sizeOnDisk);
 
 			logger.Debug("DocumentByKey() by key ='{0}'", key);
-
-			var docSize = tableStorage.Documents.GetDataSize(Snapshot, lowerKey);
 
 			var metadataSize = metadataIndex.GetDataSize(Snapshot, lowerKey);
 
@@ -291,12 +256,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				Etag = metadataDocument.Etag,
 				Key = metadataDocument.Key, //original key - with user specified casing, etc.
 				Metadata = metadataDocument.Metadata,
-				SerializedSizeOnDisk = docSize + metadataSize,
+				SerializedSizeOnDisk = sizeOnDisk + metadataSize,
 				LastModified = metadataDocument.LastModified
 			};
 		}
 
-		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocumentMetadata DocumentMetadataByKey(string key)
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
@@ -606,13 +571,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return isUpdated;
 		}
 
-		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
+		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata, out int size)
 		{
 			var loweredKey = CreateKey(key);
 
+			size = -1;
+			
 			var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, existingEtag);
 			if (existingCachedDocument != null)
+			{
+				size = existingCachedDocument.Size;
 				return existingCachedDocument.Document;
+			}
 
 			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
 			if (documentReadResult == null) //non existing document
@@ -623,10 +593,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				using (var decodedDocumentStream = documentCodecs.Aggregate(stream,
 						(current, codec) => codec.Value.Decode(loweredKey, metadata, current)))
 				{
+					var streamToUse = decodedDocumentStream;
+					if(stream != decodedDocumentStream)
+						streamToUse = new CountingStream(decodedDocumentStream);
+
 					var documentData = decodedDocumentStream.ToJObject();
 
-					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)stream.Length);
+					size = (int)Math.Max(stream.Position, streamToUse.Position);
 
+					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
 					return documentData;	
 				}
 			}
@@ -649,7 +624,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = GetKeyFromCurrent(iterator);
-                    var doc = DocumentByKey(key, null);
+                    var doc = DocumentByKey(key);
                     var size = doc.SerializedSizeOnDisk;
 				    stat.TotalSize += size;
 				    if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))

@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace Raven.Client.FileSystem.Impl
     {
         protected readonly InMemoryFilesSessionOperations sessionOperations;
 
-        public string Path { get; private set; }
+        public string Filename { get; set; }
 
         public Etag Etag { get; private set; }
 
@@ -21,17 +22,20 @@ namespace Raven.Client.FileSystem.Impl
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace.");
 
             this.sessionOperations = sessionOperations;
-            this.Path = path;
+            this.Filename = path;
             this.Etag = etag;
         }
 
-        public async Task Execute(IAsyncFilesSession session)
+        public async Task<FileHeader> Execute(IAsyncFilesSession session)
         {
             var commands = session.Commands;
 
-            var fileHeader = await session.LoadFileAsync(Path);
-
             bool delete = true;
+            
+            FileHeader fileHeader = null;
+            if (!sessionOperations.TryGetFromCache(Filename, out fileHeader))
+                fileHeader = await session.LoadFileAsync(Filename);
+
             foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
             {
                 if (!deleteListener.BeforeDelete(fileHeader))
@@ -40,17 +44,18 @@ namespace Raven.Client.FileSystem.Impl
 
             if (delete)
             {
-                await commands.DeleteAsync(Path, Etag)
+                await commands.DeleteAsync(Filename, Etag)
                               .ConfigureAwait(false);
 
-                sessionOperations.RegisterMissing(Path);
-                
+                sessionOperations.RegisterMissing(Filename);
+
                 foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
                 {
-                    deleteListener.AfterDelete(fileHeader);
+                    deleteListener.AfterDelete(Filename);
                 }
             }
 
+            return null;
         }
     }
 }

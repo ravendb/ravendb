@@ -16,7 +16,7 @@ switch ($result)
     {
         0 {
 			Get-ChildItem $path -Include bin,obj,build -Recurse -Force | Select -ExpandProperty FullName | Where {$_ -notlike '*Imports*' -and $_ -notlike '*pvc-packages*'} | Remove-Item -Force -Recurse
-			&"git" clean -f -x -d
+			&"C:\Program Files (x86)\Git\bin\git.exe" clean -f -x -d
 		}
         1 { return; }
     }

@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import alertType = require("common/alertType");
 import database = require("models/database");
 
 class importDatabaseCommand extends commandBase {
@@ -9,7 +8,7 @@ class importDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Importing...");
+        this.reportInfo("Importing data...");
 
         var args = {
             batchSize: this.batchSize,
@@ -22,12 +21,11 @@ class importDatabaseCommand extends commandBase {
         var url = "/studio-tasks/import" + this.urlEncodeArgs(args);
         var ajaxOptions: JQueryAjaxSettings = {
             processData: false, // Prevents JQuery from automatically transforming the data into a query string. http://api.jquery.com/jQuery.ajax/
-            contentType: false,
-            dataType: "text" // The server sends back an empty string, which is invalid JSON. So we must specify the return type as plain text, rather than JSON.
+            contentType: false
         }
         var importTask = this.post(url, this.fileData, this.db, ajaxOptions); 
-        importTask.done(() => this.reportSuccess("Database imported"));
-        importTask.fail((response: JQueryXHR) => this.reportError("Failed to import database", response.responseText, response.statusText));
+        importTask.done(() => this.reportInfo("Data was uploaded successfully, processing..."));
+        importTask.fail((response: JQueryXHR) => this.reportError("Failed to upload data", response.responseText, response.statusText));
         return importTask;
     }
 }

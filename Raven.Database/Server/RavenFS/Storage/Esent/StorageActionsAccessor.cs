@@ -371,7 +371,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             var metadataAsString = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
 
             var metadata = RavenJObject.Parse(metadataAsString);
-            metadata[Constants.MetadataEtagField] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
+            
+            // To avoid useless handling of conversions for special headers we return the same type we stored.
+            if (metadata.ContainsKey(Constants.LastModified))
+                metadata[Constants.LastModified] = metadata.Value<DateTimeOffset>(Constants.LastModified);   
+
+            metadata[Constants.MetadataEtagField] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransformToGuidWithProperSorting());
             
             return metadata;
         }

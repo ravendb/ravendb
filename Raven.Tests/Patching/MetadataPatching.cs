@@ -16,7 +16,7 @@ namespace Raven.Tests.Patching
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
+				store.SystemDatabase.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 				WaitForIndexing(store);
 				var operation = store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
@@ -41,7 +41,7 @@ namespace Raven.Tests.Patching
 
 				operation.WaitForCompletion();
 
-				var jsonDocument = store.DocumentDatabase.Documents.Get("foos/1", null);
+				var jsonDocument = store.SystemDatabase.Documents.Get("foos/1", null);
 				Assert.Equal("Bars", jsonDocument.Metadata.Value<string>("Raven-Entity-Name"));
 			}
 		}

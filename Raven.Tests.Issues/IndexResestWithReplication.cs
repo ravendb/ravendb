@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 						Assert.Equal(10, count);
 					}
 
-					store.DocumentDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
+					store.SystemDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
 
 					WaitForIndexing(store);
 

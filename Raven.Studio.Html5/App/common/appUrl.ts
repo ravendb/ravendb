@@ -5,23 +5,38 @@ import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 import collection = require("models/collection");
+import messagePublisher = require("common/messagePublisher");
 
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
+
+    static detectAppUrl() {
+        var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
+        var suffix = "studio/index.html";
+        if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
+            return path.substring(0, path.length - suffix.length - 1);
+        }
+        return "";
+    }
+
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
     
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
+        adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+
         databases: ko.computed(() => appUrl.forDatabases()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        megeSuggestions: ko.computed(() => appUrl.forMegeSuggestions(appUrl.currentDatabase())),
+        upgrade: ko.computed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
@@ -68,36 +83,36 @@ class appUrl {
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
+        infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
-        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
+        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
 
         filesystems: ko.computed(() => appUrl.forFilesystems()),
-        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
+        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
-        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?counterstorage=" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
+        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
-
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
-
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
         var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
         return isThereAny;
     }
 
-    static getEncodedCounterStoragePart(counterStorage:counterStorage): string {
+    static getEncodedCounterStoragePart(counterStorage: counterStorage): string {
         return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
     }
 
@@ -119,6 +134,45 @@ class appUrl {
     static forCounterStorageConfiguration(counterStorage: counterStorage) {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/configuration?" + counterStroragePart;
+    }
+
+    static forUpgrade(db: database) {
+        return "#databases/upgrade?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forAdminSettings(): string {
+        return "#admin/settings";
+    }
+    static forApiKeys(): string {
+        return "#admin/settings/apiKeys";
+    }
+
+    static forWindowsAuth(): string {
+        return "#admin/settings/windowsAuth";
+    }
+
+    static forBackupDatabase(): string {
+        return "#admin/settings/backupDatabase";
+    }
+
+    static forRestoreDatabase(): string {
+        return "#admin/settings/restoreDatabase";
+    }
+
+    static forAdminLogs(): string {
+        return "#admin/settings/adminLogs";
+    }
+
+    static forTrafficWatch(): string {
+        return "#admin/settings/trafficWatch";
+    }
+
+    static forDebugInfo(): string {
+        return "#admin/settings/debugInfo";
+    }
+
+    static forStudioConfig(): string {
+        return "#admin/settings/studioConfig";
     }
 
     static forDatabases(): string {
@@ -251,11 +305,14 @@ class appUrl {
         return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forSettings(db: database): string {
-        var path = (db && db.isSystem) ? "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(db) : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
-        return path;
+    static forInfoPackage(db: database): string {
+        return '#databases/status/infoPackage?' + appUrl.getEncodedDbPart(db);
     }
 
+    static forSettings(db: database): string {
+        return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+    }
+    
     static forLogs(db: database): string {
         return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
     }
@@ -288,16 +345,6 @@ class appUrl {
         return url;
     }
 
-    static forApiKeys(): string {
-        // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/apiKeys?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
-    }
-
-    static forWindowsAuth(): string {
-        // Doesn't take a database, because API keys always works against the system database only.
-        return "#databases/settings/windowsAuth?" + appUrl.getEncodedDbPart(appUrl.getSystemDatabase());
-    }
-
     static forDatabaseSettings(db: database): string {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
@@ -307,7 +354,7 @@ class appUrl {
     }
 
     static forPeriodicExport(db: database): string {
-        return "#databases/settings/periodicExports?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicExport?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {
@@ -370,6 +417,12 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
+    static forEditMerged(indexName: string, db: database): string {
+        return appUrl.forEditIndex(indexName, db) + "&"
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
+    }
+
     static forNewTransformer(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers/edit?" + databasePart;
@@ -420,9 +473,14 @@ class appUrl {
         return this.baseUrl;
     }
 
-    static forTerms(index: string, db: database): string {
+    static forTerms(indexName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
+        return "#databases/indexes/terms/" + encodeURIComponent(indexName) + "?" + databasePart;
+    }
+
+    static forMegeSuggestions(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/indexes/mergeSuggestions?" + databasePart;
     }
 
     static forImportDatabase(db: database): string {
@@ -442,16 +500,6 @@ class appUrl {
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName?format=excel&download=true&query=Tag:" + encodeURIComponent(collection.name);
     }
 
-    static forBackupDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/backupDatabase?" + databasePart;
-    }
-
-    static forRestoreDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/restoreDatabase?" + databasePart;
-    }
-
     static forToggleIndexing(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/toggleIndexing?" + databasePart;
@@ -465,6 +513,11 @@ class appUrl {
     static forCsvImport(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
+    }
+
+    static forDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases?" + databasePart;
     }
 
     static forFilesystem(fs: filesystem): string {
@@ -481,7 +534,7 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
 
-    static forIndexQueryRawData(db:database,indexName:string){
+    static forIndexQueryRawData(db:database, indexName:string){
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
     }
 
@@ -530,16 +583,6 @@ class appUrl {
     static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + encodeURIComponent(key);
         return "#filesystems/configuration?" + filesystemPart;
-    }
-
-    static forFilesystemUploadFile(fs: filesystem, folderName: string): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs);
-        var url = "#filesystems/upload?" + filesystemPart;
-        if (folderName) {
-            url += "&folderName=" + encodeURIComponent(folderName);
-        }
-
-        return url;
     }
 
     /**
@@ -710,7 +753,7 @@ class appUrl {
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
     }
-
+    
     private static getEncodedFsPart(fs?: filesystem) {
         return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
     }
@@ -720,6 +763,30 @@ class appUrl {
     }
 
     public static warnWhenUsingSystemDatabase: boolean = true;
+
+    public static mapUnknownRoutes(router: DurandalRouter) {
+        router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
+            var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+            messagePublisher.reportError("Invalid route!", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+            
+            var fragment = instruction.fragment;
+            var appUrls: computedAppUrls = appUrl.currentDbComputeds;
+            var newLoationHref;
+            if (fragment.indexOf("filesystems/") == 0) { //file systems section
+                newLoationHref = appUrls.filesystemsManagement();
+            }
+            else if (fragment.indexOf("counterstorages/") == 0) { //counter storages section
+                newLoationHref = appUrls.counterStorageManagement();
+            }
+            else if (fragment.indexOf("admin/settings") == 0) { //admin settings section
+                newLoationHref = appUrls.adminSettings();
+            }
+            else { // databases section
+                newLoationHref = appUrls.databasesManagement();
+            }
+            location.href = newLoationHref;
+        });
+    }
 }
 
 export = appUrl;

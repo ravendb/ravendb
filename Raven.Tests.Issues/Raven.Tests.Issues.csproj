@@ -110,6 +110,9 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="DatabaseConfiguration.cs" />
+    <Compile Include="EmbeddedMultipleDatabases.cs" />
+    <Compile Include="GermanUmlauts.cs" />
     <Compile Include="IndexResestWithReplication.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
@@ -133,6 +136,8 @@
     <Compile Include="RavenDB1519.cs" />
     <Compile Include="RavenDb1962.cs" />
     <Compile Include="RavenDB2408.cs" />
+    <Compile Include="RavenDB2537.cs" />
+    <Compile Include="RavenDB2568.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryMapReduceAnalyzedTests.cs" />
@@ -205,6 +210,7 @@
     <Compile Include="RavenDB_1489.cs" />
     <Compile Include="RavenDB_1493.cs" />
     <Compile Include="RavenDB_1497.cs" />
+    <Compile Include="RavenDB_2176.cs" />
     <Compile Include="RavenDB_2514.cs" />
     <Compile Include="RavenDB_2516.cs" />
     <Compile Include="RavenDB_1517.cs" />
@@ -278,6 +284,16 @@
     <Compile Include="RavenDB_2495.cs" />
     <Compile Include="RavenDB_2496.cs" />
     <Compile Include="RavenDB_2502.cs" />
+    <Compile Include="RavenDB_2556.cs" />
+    <Compile Include="RavenDB_2566.cs" />
+    <Compile Include="RavenDB_2571.cs" />
+    <Compile Include="RavenDB_2576.cs" />
+    <Compile Include="RavenDB_2586.cs" />
+    <Compile Include="RavenDB_2604.cs" />
+    <Compile Include="RavenDB_2605.cs" />
+    <Compile Include="RavenDB_2609.cs" />
+    <Compile Include="RavenDB_2607.cs" />
+    <Compile Include="RavenDB_2615.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />

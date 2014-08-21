@@ -42,10 +42,12 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
 				pageSize = int.MaxValue;
 
+			var skipAfter = GetQueryStringValue("skipAfter");
+
 			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new PushStreamContent((stream, content, transportContext) =>
-					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
+					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter))
 				{
 					Headers =
 					{
@@ -55,7 +57,7 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
-		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
+		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
 		{
 			using (var cts = new CancellationTokenSource())
 			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
@@ -88,7 +90,7 @@ namespace Raven.Database.Server.Controllers
 								timeout.Delay();
 								doc.WriteTo(writer);
                                 writer.WriteRaw(Environment.NewLine);
-							});
+							},skipAfter: skipAfter);
 
 							nextPageStart = nextPageStartInternal;
 						}
@@ -108,48 +110,46 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
-			using (var cts = new CancellationTokenSource())
-			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+			var cts = new CancellationTokenSource();
+			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+			var msg = GetEmptyMessage();
+
+			var index = id;
+			var query = GetIndexQuery(int.MaxValue);
+			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
+			var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+			if (isHeadRequest) query.PageSize = 0;
+
+			var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
+
+			try
 			{
-				var msg = GetEmptyMessage();
+				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
+				queryOp.Init();
+				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
+					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"});
 
-				var index = id;
-				var query = GetIndexQuery(int.MaxValue);
-				if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-				var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
-				if (isHeadRequest) query.PageSize = 0;
+				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+				msg.Headers.Add(
+					"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
-				var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
 
-				try
+				if (IsCsvDownloadRequest(InnerRequest))
 				{
-					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
-					queryOp.Init();
-					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
-						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
-
-					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
-					msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
-					msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
-					msg.Headers.Add("Raven-Index", queryOp.Header.Index);
-					msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-					msg.Headers.Add(
-						"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
-
-
-                    if (IsCsvDownloadRequest(InnerRequest))
-                    {
-                        msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
-                    }
+					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 				}
-				catch (Exception)
-				{
-					accessor.Dispose();
-					throw;
-				}
-
-				return msg;
 			}
+			catch (Exception)
+			{
+				accessor.Dispose();
+				throw;
+			}
+
+			return msg;
 		}
 
 		[HttpPost]
@@ -190,6 +190,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				using (queryOp)
 				using (accessor)
+				using(_timeout)
 				using (var writer = GetOutputWriter(req, stream))
 				{
                     outputContentTypeSetter(writer.ContentType);

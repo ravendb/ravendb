@@ -13,6 +13,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.NRefactory.PatternMatching;
+using metrics;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -42,6 +43,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
+        readonly Metrics sqlReplicationMetrics = new Metrics();
 
 		public DocumentDatabase Database { get; set; }
 
@@ -54,7 +56,9 @@ namespace Raven.Database.Bundles.SqlReplication
 		private PrefetchingBehavior prefetchingBehavior;
 
 		private Etag lastLatestEtag;
-
+        public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters = 
+            new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
+        
 		public void Execute(DocumentDatabase database)
 		{
 			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
@@ -128,6 +132,13 @@ namespace Raven.Database.Bundles.SqlReplication
 									: jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
 		}
 
+        public SqlReplicationMetricsCountersManager GetSqlReplicationMetricsManager(SqlReplicationConfig cfg)
+        {
+            return SqlReplicationMetricsCounters.GetOrAdd(cfg.Name,
+                s => new SqlReplicationMetricsCountersManager(sqlReplicationMetrics, cfg)
+                );
+        }
+
 		private void BackgroundSqlReplication()
 		{
 			int workCounter = 0;
@@ -166,8 +177,10 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				List<JsonDocument> documents;
 
+				using (prefetchingBehavior.DocumentBatchFrom(leastReplicatedEtag, out documents))
+				{
 				Etag latestEtag = null, lastBatchEtag = null;
 				if (documents.Count != 0)
 					lastBatchEtag = documents[documents.Count - 1].Etag;
@@ -224,6 +237,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						try
 						{
+                            Stopwatch spRepTime = new Stopwatch();
+						    spRepTime.Start();
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
 
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
@@ -248,8 +263,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
+
+						    int countOfReplicatedItems = 0;
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
+                                ReplicateChangesToDestination(replicationConfig, docsToReplicate, out countOfReplicatedItems))
 							{
 								if (deletedDocs.Count > 0)
 								{
@@ -258,6 +275,15 @@ namespace Raven.Database.Bundles.SqlReplication
 								}
 								successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
 							}
+
+                            spRepTime.Stop();
+                            var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
+
+                            var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
+                            sqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
+                            sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
+                            sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
+
 						}
 						catch (Exception e)
 						{
@@ -310,6 +336,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 				}
 			}
+		}
 		}
 
 		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
@@ -417,13 +444,14 @@ namespace Raven.Database.Bundles.SqlReplication
 			return leastReplicatedEtag;
 		}
 
-		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs, out int countOfReplicatedItems)
 		{
+		    countOfReplicatedItems = 0;
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
 				return true;
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-			var countOfItems = scriptResult.Data.Sum(x => x.Value.Count);
+            countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
 			try
 			{
 				using (var writer = new RelationalDatabaseWriter(Database, cfg, replicationStats))
@@ -431,12 +459,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					if (writer.Execute(scriptResult))
 					{
 						log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
-						replicationStats.CompleteSuccess(countOfItems);
+                        replicationStats.CompleteSuccess(countOfReplicatedItems);
 					}
 					else
 					{
 						log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
-						replicationStats.Success(countOfItems);
+                        replicationStats.Success(countOfReplicatedItems);
 					}
 				}
 				return true;
@@ -455,7 +483,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
 					newTime = SystemTime.UtcNow.AddSeconds(Math.Max(60 * 15, Math.Min(5, totalSeconds + 5)));
 				}
-				replicationStats.RecordWriteError(e, Database, countOfItems, newTime);
+                replicationStats.RecordWriteError(e, Database, countOfReplicatedItems, newTime);
 				return false;
 			}
 		}
@@ -582,7 +610,7 @@ namespace Raven.Database.Bundles.SqlReplication
             return resutls;
         }
 
-		private List<SqlReplicationConfig> GetConfiguredReplicationDestinations()
+		public List<SqlReplicationConfig> GetConfiguredReplicationDestinations()
 		{
 			var sqlReplicationConfigs = replicationConfigs;
 			if (sqlReplicationConfigs != null)
@@ -593,11 +621,10 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 			    
-                var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName, null);
+                var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName);
                 var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
                 
-				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(
-								prefix, 0, 256))
+				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
 				{
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));

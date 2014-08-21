@@ -9,6 +9,9 @@ namespace Raven.Abstractions
 {
 	public static class SystemTime
 	{
+        public static readonly double MicroSecPerTick =
+            1000000D / System.Diagnostics.Stopwatch.Frequency;
+
 		public static Func<DateTime> UtcDateTime;
 
 		public static DateTime UtcNow

@@ -1,6 +1,5 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem.Impl;
 using Raven.Client.Util;
@@ -9,9 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Pipes;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -143,9 +140,9 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);   
         }
 
-        public void RegisterUpload(FileHeader file, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.Path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
+            var operation = new UploadFileOperation(this, file.Name, stream.Length, x => { stream.CopyTo(x); }, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -161,9 +158,9 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);           
         }
 
-        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.Path, size, write, metadata, etag);
+            var operation = new UploadFileOperation(this, file.Name, size, write, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -204,9 +201,23 @@ namespace Raven.Client.FileSystem
 
         public void AddToCache(string filename, FileHeader fileHeader)
         {
-            entitiesByKey.Add(filename, fileHeader);
+            if (!entitiesByKey.ContainsKey(filename))
+                entitiesByKey.Add(filename, fileHeader);
+            else
+                entitiesByKey[filename] = fileHeader;
+
             if (this.IsDeleted(filename))
                 knownMissingIds.Remove(filename);
+        }
+
+        internal bool TryGetFromCache(string filename, out FileHeader fileHeader)
+        {
+            fileHeader = null;
+
+            if (entitiesByKey.ContainsKey(filename))
+                fileHeader = entitiesByKey[filename] as FileHeader;
+
+            return fileHeader != null;
         }
 
         /// <summary>
@@ -223,12 +234,22 @@ namespace Raven.Client.FileSystem
         /// </summary>
         public bool IsDeleted(string id)
         {
-            return knownMissingIds.Contains(id);
+            return knownMissingIds.Contains(id) || deletedEntities.Contains(id);
+        }
+
+        public bool DeletedInLastBatch(string id)
+        {
+            return deletedEntities.Contains(id);
         }
 
         public void RegisterMissing(string id)
         {
             knownMissingIds.Add(id);
+        }
+
+        public void RegisterDeleted(string id)
+        {
+            deletedEntities.Add(id);
         }
 
         public async Task SaveChangesAsync()
@@ -237,31 +258,137 @@ namespace Raven.Client.FileSystem
             if (session == null)
                 throw new InvalidCastException("This object does not implement IAsyncFilesSession.");
 
+            var changes = new SaveChangesData();
             var operationsToExecute = this.registeredOperations; // Potential race condition in between this two, not thread safe.
             this.registeredOperations = new ConcurrentQueue<IFilesOperation>();
+            
+            PrepareForSaveChanges(changes, operationsToExecute.ToList());
 
-            IFilesOperation op;
-            while (operationsToExecute.TryDequeue(out op))
+            try
             {
-                AssertConflictsAreNotAffectingOperation(op);
-                await op.Execute(session);
+                var results = new List<FileHeader>();
+                FileHeader operationResult;
+                foreach (var op in changes.Operations)
+                {
+                    AssertConflictsAreNotAffectingOperation(op);
+                    operationResult = await op.Execute(session);
+                    if (operationResult != null)
+                        results.Add(operationResult);
+                }
+                ProcessResults(results, changes);
             }
+            finally
+            {
+                deletedEntities.Clear();
+            }
+
+        }
+
+        private void PrepareForSaveChanges(SaveChangesData changes, List<IFilesOperation> operations)
+        {
+            PrepareForDeletion(changes, operations);
+            PrepareForUpdate(changes, operations);
+            
+            operations.RemoveAll( x => typeof(DeleteFileOperation) == x.GetType());
+
+            // all other operations
+            foreach (var op in operations)
+            {
+                changes.Entities.Add(op.Filename);
+                changes.Operations.Add(op);
+            }
+        }
+
+        private void PrepareForDeletion(SaveChangesData changes, IEnumerable<IFilesOperation> operations)
+        {
+            var deleteOperations = operations.OfType<DeleteFileOperation>().ToList();
+            foreach (var op in deleteOperations)
+            {
+                //TODO: this should work in order to avoid deletes when a file will be overriden
+                //if (!entitiesByKey.ContainsKey(op.Filename) || !UploadRegisteredForFileAfterDelete(op.Filename, operations))
+                //{
+                    changes.Operations.Add(op);
+                    deletedEntities.Add(op.Filename);
+                //}
+            }
+        }
+
+        private void PrepareForUpdate(SaveChangesData changes, IEnumerable<IFilesOperation> operations)
+        {
+            foreach( var key in entitiesByKey.Keys)
+            {
+                var fileHeader = entitiesByKey[key] as FileHeader;
+
+                if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.Name, operations))
+                {
+                    changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
+                    changes.Entities.Add(fileHeader.Name);
+                }
+            }
+        }
+
+        private bool UploadRegisteredForFile(string fileName, IEnumerable<IFilesOperation> operations)
+        {
+            return operations.Any(o => { return o.Filename == fileName && o.GetType() == typeof(UploadFileOperation); });
+        }
+
+        private void ProcessResults(IList<FileHeader> results, SaveChangesData data)
+        {
+			for (var i = 0; i < results.Count; i++)
+			{
+				var result = results[i];
+                var savedEntity = data.Entities[i];
+
+				object existingEntity;
+                if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
+					continue;
+
+                var existingFileHeader = (FileHeader)existingEntity;
+                existingFileHeader.Metadata = result.Metadata;
+                existingFileHeader.OriginalMetadata = (RavenJObject)result.Metadata.CloneToken();
+                existingFileHeader.Refresh();
+
+                if (savedEntity != result.Name)
+                {
+                    if ( !entitiesByKey.ContainsKey(result.Name) )
+                    {
+                        existingFileHeader.Name = result.Name;
+                        entitiesByKey.Add(result.Name, existingFileHeader);
+                        entitiesByKey.Remove(savedEntity);
+                    }
+                }
+
+                AddToCache(existingFileHeader.Name, existingFileHeader);
+			}
         }
 
         private void AssertConflictsAreNotAffectingOperation(IFilesOperation operation)
         {
             string fileName = null;
-            if (operation.GetType() == typeof(UploadFileOperation))
+            if (operation.GetType() == typeof(UploadFileOperation) || operation.GetType() == typeof(RenameFileOperation) || operation.GetType() == typeof(UpdateMetadataOperation))
             {
-                fileName = (operation as UploadFileOperation).Path;
-            }
-            else if (operation.GetType() == typeof(RenameFileOperation))
-            {
-                fileName = (operation as RenameFileOperation).Source;
+                fileName = operation.Filename;
             }
 
             if (fileName != null && conflicts.Contains(fileName))
                 throw new NotSupportedException( string.Format("There is a conflict over file: {0}. Update or remove operations are not supported", fileName));
+        }
+
+        public bool EntityChanged(FileHeader fileHeader)
+        {
+            if (fileHeader == null)
+                return true;
+
+            return RavenJToken.DeepEquals(fileHeader.Metadata, fileHeader.OriginalMetadata, null) == false;
+        }
+
+        public bool EntityChanged(string filename)
+        {
+            if (filename == null || !entitiesByKey.ContainsKey(filename))
+                return false;
+
+            var fileHeader = entitiesByKey[filename] as FileHeader;
+            return EntityChanged(fileHeader);
         }
 
         public void IncrementRequestCount()
@@ -276,6 +403,31 @@ You can increase the limit by setting FilesConvention.MaxNumberOfRequestsPerSess
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.",
                         MaxNumberOfRequestsPerSession));
+        }
+
+        /// <summary>
+        /// Data for a sending operations to the server
+        /// </summary>
+        internal class SaveChangesData
+        {
+            public SaveChangesData()
+            {
+                Operations = new List<IFilesOperation>();
+                Entities = new List<String>();
+            }
+
+            /// <summary>
+            /// Gets or sets the commands.
+            /// </summary>
+            /// <value>The commands.</value>
+            internal List<IFilesOperation> Operations { get; set; }
+
+            /// <summary>
+            /// Gets or sets the entities.
+            /// </summary>
+            /// <value>The entities.</value>
+            internal IList<String> Entities { get; set; }
+
         }
 
         /// <summary>

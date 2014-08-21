@@ -63,7 +63,7 @@ namespace Raven.Database.Tasks
 		/// </summary>
 		private bool FilterDocuments(WorkContext context, IStorageActionsAccessor accessor, string key)
 		{
-			var documentMetadataByKey = accessor.Documents.DocumentMetadataByKey(key, null);
+			var documentMetadataByKey = accessor.Documents.DocumentMetadataByKey(key);
 			if (documentMetadataByKey == null)
 				return true;
 			var generator = context.IndexDefinitionStorage.GetViewGenerator(Index);

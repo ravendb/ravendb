@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs.Indexing
 						.Customize(x=>x.WaitForNonStaleResults())
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 					Assert.NotNull(users);
 					Assert.True(users.Count > 0);
 				}
@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs.Indexing
 						.As<User>()
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 					Assert.True(users.Count > 0);
 				}
 			}

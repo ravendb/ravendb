@@ -11,7 +11,7 @@ class deleteFilesCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var deletionTasks = [];
+        var deletionTasks = new Array<JQueryPromise<any>>();;
         for (var i = 0; i < this.fileIds.length; i++) {
             var deleteCommand = this.deleteFile(this.fileIds[i]);
             deletionTasks.push(deleteCommand);
@@ -19,7 +19,7 @@ class deleteFilesCommand extends commandBase {
 
         var successMessage = this.fileIds.length > 1 ? "Deleted " + this.fileIds.length + " files" : "Deleted " + this.fileIds[0];
 
-        var combinedTask = $.when(deletionTasks)
+        var combinedTask = $.when.apply($, deletionTasks)
             .done(x => this.reportSuccess(successMessage))
             .fail((response: JQueryXHR) => this.reportError("Failed to delete files", response.responseText, response.statusText));
 
@@ -28,7 +28,7 @@ class deleteFilesCommand extends commandBase {
 
     deleteFile(fileId : string): JQueryPromise<any> {
         var url = "/files/" + fileId;
-        return this.del(url, null, this.fs)
+        return this.del(url, null, this.fs, null, 9000 * this.fileIds.length);
     }
 
 }

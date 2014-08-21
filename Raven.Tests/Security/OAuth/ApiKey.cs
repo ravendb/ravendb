@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
