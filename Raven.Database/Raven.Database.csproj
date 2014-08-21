@@ -212,6 +212,7 @@
     </Compile>
     <Compile Include="Actions\ActionsBase.cs" />
     <Compile Include="Actions\AttachmentActions.cs" />
+    <Compile Include="Actions\LastCollectionEtags.cs" />
     <Compile Include="Actions\MaintenanceActions.cs" />
     <Compile Include="Actions\DocumentActions.cs" />
     <Compile Include="Actions\IndexActions.cs" />
@@ -348,7 +349,6 @@
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
-    <Compile Include="Actions\LastCollectionEtags.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />

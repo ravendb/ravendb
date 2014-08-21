@@ -189,7 +189,7 @@ namespace Raven.Database.Actions
 					var forEntityNames = viewGenerator.ForEntityNames.ToList();
 					var lastIndexedEtag = actions.Indexing.GetIndexStats(index.IndexId).LastIndexedEtag;
 
-					if (database.IndexingExecuter.IsIndexingStaleForCollections(forEntityNames, lastIndexedEtag) == false)
+					if (database.LastCollectionEtags.HasEtagGreaterThan(forEntityNames, lastIndexedEtag) == false)
 						stale = false;
 				}
 

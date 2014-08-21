@@ -130,7 +130,7 @@ namespace Raven.Database
 				{
 					uuidGenerator = new SequentialUuidGenerator();
 					initializer.InitializeTransactionalStorage(uuidGenerator);
-					lastCollectionEtags = new LastCollectionEtags(TransactionalStorage, WorkContext);
+					lastCollectionEtags = new LastCollectionEtags(WorkContext);
 				}
 				catch (Exception)
 				{
@@ -169,7 +169,7 @@ namespace Raven.Database
 					InitializeTriggersExceptIndexCodecs();
 					SecondStageInitialization();
 					ExecuteStartupTasks();
-					lastCollectionEtags.Initialize();
+					lastCollectionEtags.InitializeBasedOnIndexingResults();
 
 					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
@@ -436,10 +436,10 @@ namespace Raven.Database
 
 						if (isStale && actions.Staleness.IsReduceStale(indexId) == false)
 						{
-							var forEntityNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+							var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
 							var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
 
-							if (IndexingExecuter.IsIndexingStaleForCollections(forEntityNames, lastIndexedEtag) == false)
+							if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
 								return false;
 						}
 
@@ -655,12 +655,6 @@ namespace Raven.Database
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
-							{
-								if (lastCollectionEtags != null)
-									lastCollectionEtags.Flush();
-							});
-
-			exceptionAggregator.Execute(() =>
 								{
 									if (prefetcher != null)
 										prefetcher.Dispose();
@@ -825,7 +819,6 @@ namespace Raven.Database
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
 				Tasks.ClearCompletedPendingTasks();
-				lastCollectionEtags.Flush();
 			}
 			finally
 			{

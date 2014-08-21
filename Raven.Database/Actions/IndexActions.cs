@@ -127,7 +127,7 @@ namespace Raven.Database.Actions
 						var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
 
 						if(string.IsNullOrEmpty(entityName) == false)
-							Database.IndexingExecuter.UpdateHighestEtagForCollection(entityName, afterTouchEtag);
+							Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
 	                }
                 }
                 catch (ConcurrencyException)

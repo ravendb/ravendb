@@ -345,7 +345,7 @@ namespace Raven.Database.Actions
 
 	                    foreach (var collectionEtagPair in collectionsAndEtags)
 	                    {
-		                    Database.IndexingExecuter.UpdateHighestEtagForCollection(collectionEtagPair.Key, collectionEtagPair.Value);
+		                    Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
 	                    }
 
                         WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
@@ -601,7 +601,6 @@ namespace Raven.Database.Actions
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
-                            Database.LastCollectionEtags.UpdatePerCollectionEtags(documents);
                             Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
                         });
 

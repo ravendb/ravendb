@@ -111,7 +111,7 @@ namespace Raven.Database.Tasks
 
 						foreach (var collectionEtagPair in collectionsAndEtags)
 						{
-							context.Database.IndexingExecuter.UpdateHighestEtagForCollection(collectionEtagPair.Key, collectionEtagPair.Value);
+							context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
 						}
 					});
 				}
