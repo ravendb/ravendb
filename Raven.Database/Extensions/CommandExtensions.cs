@@ -90,6 +90,7 @@ namespace Raven.Database.Extensions
 				if(advPatchCommandData.DebugMode)
 				{
 					advPatchCommandData.AdditionalData["Document"] = result.Item1.Document;
+					advPatchCommandData.AdditionalData["Actions"] = result.Item1.DebugActions;
 					return;
 				}
 

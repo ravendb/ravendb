@@ -17,12 +17,19 @@ namespace Raven.Database.Json
 {
 	public abstract class ScriptedJsonPatcherOperationScope : JintOperationScope
 	{
+		private readonly bool debugMode;
+
 		protected DocumentDatabase Database { get; private set; }
 
 		public JsonDocument CustomFunctions { get; private set; }
 
-		protected ScriptedJsonPatcherOperationScope(DocumentDatabase database)
+		public RavenJObject DebugActions { get; private set; }
+
+		protected ScriptedJsonPatcherOperationScope(DocumentDatabase database, bool debugMode)
 		{
+			this.debugMode = debugMode;
+			DebugActions = debugMode ? new RavenJObject() : null;
+
 			Database = database;
 
 			if (database != null)
@@ -38,6 +45,38 @@ namespace Raven.Database.Json
 		public abstract void PutDocument(string documentKey, object data, object meta, Engine jintEngine);
 
 		public abstract void DeleteDocument(string documentKey);
+
+		protected void RecordActionForDebug(string actionName, string documentKey, RavenJObject documentData, RavenJObject documentMetadata)
+		{
+			if (debugMode == false)
+				return;
+
+			var actions = DebugActions[actionName] as RavenJArray;
+
+			switch (actionName)
+			{
+				case "LoadDocument":
+				case "DeleteDocument":
+					if (actions == null)
+						DebugActions[actionName] = actions = new RavenJArray();
+
+					actions.Add(documentKey);
+					break;
+				case "PutDocument":
+					if (actions == null)
+						DebugActions[actionName] = actions = new RavenJArray();
+
+					actions.Add(new RavenJObject
+					            {
+						            { "Key", documentKey }, 
+									{ "Data", documentData }, 
+									{ "Metadata", documentMetadata }
+					            });
+					break;
+				default:
+					throw new NotSupportedException("Cannot record action: " + actionName);
+			}
+		}
 	}
 
 	public class DefaultScriptedJsonPatcherOperationScope : ScriptedJsonPatcherOperationScope
@@ -52,8 +91,8 @@ namespace Raven.Database.Json
 			                                                "ETag"
 		                                                };
 
-		public DefaultScriptedJsonPatcherOperationScope(DocumentDatabase database = null)
-			: base(database)
+		public DefaultScriptedJsonPatcherOperationScope(DocumentDatabase database = null, bool debugMode = false)
+			: base(database, debugMode)
 		{
 		}
 
@@ -61,6 +100,8 @@ namespace Raven.Database.Json
 		{
 			if (Database == null)
 				throw new InvalidOperationException("Cannot load by id without database context");
+
+			RecordActionForDebug("LoadDocument", documentKey, null, null);
 
 			JsonDocument document;
 			if (documentKeyContext.TryGetValue(documentKey, out document) == false)
@@ -124,6 +165,8 @@ namespace Raven.Database.Json
 
 				newDocument.Metadata = metadata;
 			}
+
+			RecordActionForDebug("PutDocument", newDocument.Key, newDocument.DataAsJson, newDocument.Metadata);
 
 			ValidateDocument(newDocument);
 			AddToContext(key, newDocument);

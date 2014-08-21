@@ -17,7 +17,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 		private readonly HashSet<string> forbiddenDocuments = new HashSet<string>();
 
 		public ScriptedIndexResultsJsonPatcherScope(DocumentDatabase database, HashSet<string> entityNames)
-			: base(database)
+			: base(database, false)
 		{
 			this.entityNames = entityNames;
 		}
@@ -48,6 +48,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
 		public override void DeleteDocument(string documentKey)
 		{
+			RecordActionForDebug("DeleteDocument", documentKey, null, null);
 			DeleteFromContext(documentKey);
 		}
 
