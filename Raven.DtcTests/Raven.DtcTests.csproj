@@ -79,6 +79,7 @@
     <Compile Include="PatchingWithDTC.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenDB_1562.cs" />
+    <Compile Include="RavenDB_2613.cs" />
     <Compile Include="RavenDB_551.cs" />
     <Compile Include="tjbsb.cs" />
     <Compile Include="Transactions\Deletes.cs" />

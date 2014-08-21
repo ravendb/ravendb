@@ -746,7 +746,6 @@ namespace Raven.Client.Document
         /// <param name="txId">The tx id.</param>
         public override void Commit(string txId)
         {
-            IncrementRequestCount();
             DatabaseCommands.Commit(txId);
             ClearEnlistment();
         }
@@ -757,14 +756,12 @@ namespace Raven.Client.Document
         /// <param name="txId">The tx id.</param>
         public override void Rollback(string txId)
         {
-            IncrementRequestCount();
             DatabaseCommands.Rollback(txId);
             ClearEnlistment();
         }
 
         public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
         {
-            IncrementRequestCount();
             DatabaseCommands.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
             ClearEnlistment();
         }
