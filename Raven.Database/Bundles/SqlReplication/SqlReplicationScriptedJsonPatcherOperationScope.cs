@@ -8,7 +8,7 @@ namespace Raven.Database.Bundles.SqlReplication
 	public class SqlReplicationScriptedJsonPatcherOperationScope : DefaultScriptedJsonPatcherOperationScope
 	{
 		public SqlReplicationScriptedJsonPatcherOperationScope(DocumentDatabase database)
-			: base(database)
+			: base(database, false)
 		{
 		}
 

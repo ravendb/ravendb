@@ -33,7 +33,7 @@ namespace Raven.Database.Actions
                 throw new ArgumentNullException("docId");
             return ApplyPatchInternal(docId, etag, transactionInformation,
                                       jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchDoc),
-                                      () => null, () => null, debugMode);
+									  () => null, () => null, () => null, debugMode);
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag,
@@ -53,7 +53,9 @@ namespace Raven.Database.Actions
                                           jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
                                           return new JsonPatcher(jsonDoc).Apply(patchDefaultDoc);
                                       },
-                                      () => null, debugMode);
+                                      () => null,
+									  () => null,
+									  debugMode);
         }
 
         private PatchResultData ApplyPatchInternal(string docId, Etag etag,
@@ -61,6 +63,7 @@ namespace Raven.Database.Actions
                                        Func<JsonDocument, RavenJObject> patcher,
                                        Func<RavenJObject> patcherIfMissing,
                                        Func<IList<JsonDocument>> getDocsCreatedInPatch,
+									   Func<RavenJObject> getDebugActions,
                                        bool debugMode)
         {
             if (docId == null) throw new ArgumentNullException("docId");
@@ -103,6 +106,7 @@ namespace Raven.Database.Actions
                     {
                         result.Document = jsonDoc;
                         result.PatchResult = PatchResult.Tested;
+						result.DebugActions = getDebugActions();
                     }
                     else
                     {
@@ -176,7 +180,7 @@ namespace Raven.Database.Actions
 				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 					jsonDoc =>
 					{
-						scope = new DefaultScriptedJsonPatcherOperationScope(Database);
+						scope = new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
 						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
 						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patch, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
 					},
@@ -188,7 +192,15 @@ namespace Raven.Database.Actions
 						return scope
 							.GetPutOperations()
 							.ToList();
-					}, debugMode);
+					}, 
+					() =>
+					{
+						if (scope == null)
+							return null;
+
+						return scope.DebugActions;
+					},
+					debugMode);
 
 				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 			}
@@ -211,7 +223,7 @@ namespace Raven.Database.Actions
 				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 					jsonDoc =>
 					{
-						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database);
+						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
 						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
 						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
 					},
@@ -220,7 +232,7 @@ namespace Raven.Database.Actions
 						if (patchDefault == null)
 							return null;
 
-						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database);
+						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
 
 						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
 						var jsonDoc = new RavenJObject();
@@ -234,7 +246,15 @@ namespace Raven.Database.Actions
 						return scope
 							.GetPutOperations()
 							.ToList();
-					}, debugMode);
+					},
+					() =>
+					{
+						if (scope == null)
+							return null;
+
+						return scope.DebugActions;
+					},
+					debugMode);
 				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 			}
 			finally
