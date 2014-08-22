@@ -184,7 +184,9 @@ namespace Raven.Database.Actions
                     stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
                 }
 
-				if (stale && actions.Staleness.IsReduceStale(index.IndexId) == false)
+				if (stale && 
+					actions.Staleness.IsIndexStaleByTask(index.IndexId, query.Cutoff) == false && 
+					actions.Staleness.IsReduceStale(index.IndexId) == false)
 				{
 					var forEntityNames = viewGenerator.ForEntityNames.ToList();
 					var lastIndexedEtag = actions.Indexing.GetIndexStats(index.IndexId).LastIndexedEtag;
