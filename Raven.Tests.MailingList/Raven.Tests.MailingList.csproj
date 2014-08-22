@@ -164,6 +164,7 @@
     <Compile Include="ConcurrencyTests.cs" />
     <Compile Include="ConcurrencyTests2.cs" />
     <Compile Include="CustomAnalyzerStartsWithFailure.cs" />
+    <Compile Include="CustomIdInIndexCreationTask.cs" />
     <Compile Include="Daniel.cs" />
     <Compile Include="DataSetIndexTest.cs" />
     <Compile Include="DateTimeOffsetIssues.cs" />
