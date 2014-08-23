@@ -683,10 +683,12 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexStats(string index)
 		{
 			IndexStats stats = null;
+			Etag lastEtag = null;
 			var instance = Database.IndexStorage.GetIndexInstance(index);
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				stats = accessor.Indexing.GetIndexStats(instance.indexId);
+				lastEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 			});
 
 			if (stats == null)
@@ -694,7 +696,7 @@ namespace Raven.Database.Server.Controllers
 
 			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
 			stats.Performance = Database.IndexStorage.GetIndexingPerformance(instance.indexId);
-
+			stats.SetLastDocumentEtag(lastEtag);
 			return GetMessageWithObject(stats);
 		}
 	}

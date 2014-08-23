@@ -431,34 +431,34 @@ namespace Raven.Database
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
 		{
 			Index indexInstance = IndexStorage.GetIndexInstance(indexId);
-						
-						var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
-						if (isStale && actions.Staleness.IsReduceStale(indexId) == false)
-						{
-							var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
-							var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+			var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
-							if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
-								return false;
-						}
+			if (isStale && actions.Staleness.IsReduceStale(indexId) == false)
+			{
+				var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+				var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
 
-						return isStale;
+				if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
+					return false;
+			}
+
+			return isStale;
 		}).Select(indexId =>
 		{
 			Index index = IndexStorage.GetIndexInstance(indexId);
 			return index == null ? null : index.PublicName;
 		}).ToArray();
 
-					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
+		result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
 			{
 				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-						if (indexInstance == null)
-							return null;
-					x.PublicName = indexInstance.PublicName;
-
+				if (indexInstance == null)
+					return null;
+				x.PublicName = indexInstance.PublicName;
+				x.SetLastDocumentEtag(result.LastDocEtag);
 				return x;
-					})
+			})
 					.Where(x => x != null)
 					.ToArray();
 				});
@@ -591,18 +591,18 @@ namespace Raven.Database
 			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
 			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
 			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-            RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
-            Requests = metrics.ConcurrentRequests.CreateMeterData(),
+			RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+			Requests = metrics.ConcurrentRequests.CreateMeterData(),
 			Gauges = metrics.Gauges,
-            StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
-            StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+			StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+			StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
 			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
 			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
-            ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
+			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
 		};
 		}
 
-		
+
 
 		/// <summary>
 		///     This API is provided solely for the use of bundles that might need to run
