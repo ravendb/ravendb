@@ -437,6 +437,7 @@
     <Compile Include="TypeConverter.cs" />
     <Compile Include="TypeNameHandlingWithCollectionsTest.cs" />
     <Compile Include="UintId.cs" />
+    <Compile Include="UpdatingData.cs" />
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />
