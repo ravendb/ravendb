@@ -124,7 +124,8 @@ namespace Raven.Database.Storage
                 {
 					RemoveTransformer(transformerDefinition.Name);
 
-                    AddAndCompileTransform(transformerDefinition);
+                    var generator = CompileTransform(transformerDefinition);
+					transformCache[transformerDefinition.TransfomerId] = generator;
                     AddTransform(transformerDefinition.TransfomerId, transformerDefinition);
                 }
                 catch (Exception e)
@@ -256,9 +257,9 @@ namespace Raven.Database.Storage
                               JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
         }
 
-        public string CreateAndPersistTransform(TransformerDefinition transformerDefinition)
+        public string CreateAndPersistTransform(TransformerDefinition transformerDefinition, AbstractTransformer transformer)
         {
-            var transformer = AddAndCompileTransform(transformerDefinition);
+			transformCache.AddOrUpdate(transformerDefinition.TransfomerId, transformer, (s, viewGenerator) => transformer);
             if (configuration.RunInMemory == false)
             {
                 WriteTransformerDefinition(transformerDefinition);
@@ -289,17 +290,16 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
-        private DynamicTransformerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
+	    public AbstractTransformer CompileTransform(TransformerDefinition transformerDefinition)
         {
             var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions,
                                                              transformerDefinition.Name, path);
             var generator = transformer.GenerateInstance();
-            transformCache.AddOrUpdate(transformerDefinition.TransfomerId, generator, (s, viewGenerator) => generator);
 
             logger.Info("New transformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name,
                         transformer.CompiledQueryText,
                         transformer.CompiledQueryText);
-            return transformer;
+			return generator;
         }
 
         public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)

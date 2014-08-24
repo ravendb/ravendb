@@ -72,6 +72,8 @@ namespace Raven.Database.Actions
             if (existingDefinition != null && existingDefinition.Equals(definition))
                 return name; // no op for the same transformer
 
+			var generator = IndexDefinitionStorage.CompileTransform(definition);
+
 			if (existingDefinition != null)
 				IndexDefinitionStorage.RemoveTransformer(existingDefinition.TransfomerId);
 
@@ -80,7 +82,7 @@ namespace Raven.Database.Actions
                 definition.TransfomerId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("TransformerId", accessor);
             });
 
-            IndexDefinitionStorage.CreateAndPersistTransform(definition);
+			IndexDefinitionStorage.CreateAndPersistTransform(definition, generator);
             IndexDefinitionStorage.AddTransform(definition.TransfomerId, definition);
 
             TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new TransformerChangeNotification()
