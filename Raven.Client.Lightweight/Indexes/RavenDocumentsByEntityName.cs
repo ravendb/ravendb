@@ -22,7 +22,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the Raven/DocumentsByEntityName index
 		/// </summary>
-		public override IndexDefinition CreateIndexDefinition()
+		public override IndexDefinition CreateIndexDefinition(bool prettify = true)
 		{
 			return new IndexDefinition
 			{

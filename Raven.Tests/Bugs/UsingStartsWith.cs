@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = this.NewDocumentStore())
 			{
-				var index = new IndexDefinitionBuilder<Blog, BlogTagItem>()
+				var index = new IndexDefinitionBuilder<Blog, BlogTagItem>(true)
 				{
 					Map = docs => from doc in docs
 								  from tag in doc.Tags

@@ -102,7 +102,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 		public class Accounts_Search : AbstractIndexCreationTask<object, Account>
 		{
-			public override IndexDefinition CreateIndexDefinition()
+			public override IndexDefinition CreateIndexDefinition(bool prettify = true)
 			{
 				var index = new IndexDefinition
 				{

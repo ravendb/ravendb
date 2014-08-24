@@ -56,12 +56,12 @@ namespace Raven.Client.Indexes
 		/// Creates the index definition.
 		/// </summary>
 		/// <returns></returns>
-		public override IndexDefinition CreateIndexDefinition()
+		public override IndexDefinition CreateIndexDefinition(bool prettify = true)
 		{
 			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
-			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
+			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>(prettify)
 			{
 				Indexes = Indexes,
 				SortOptions = IndexSortOptions,
@@ -82,7 +82,10 @@ namespace Raven.Client.Indexes
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{
-				indexDefinition.Maps.Add(map);
+				string formattedMap = map;
+				if (prettify)
+					formattedMap = IndexPrettyPrinter.Format(formattedMap);
+				indexDefinition.Maps.Add(formattedMap);
 			}
 			return indexDefinition;
 		}

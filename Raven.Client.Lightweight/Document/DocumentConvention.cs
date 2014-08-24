@@ -67,6 +67,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			PrettifyGeneratedLinqExpressions = true;
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
@@ -555,6 +556,11 @@ namespace Raven.Client.Document
 		/// this to inject your own replication / failover logic.
 		/// </summary>
 		public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
+
+		/// <summary>
+		///  Attempts to prettify the generated linq expressions for indexes and transformers
+		/// </summary>
+		public bool PrettifyGeneratedLinqExpressions { get; set; }
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

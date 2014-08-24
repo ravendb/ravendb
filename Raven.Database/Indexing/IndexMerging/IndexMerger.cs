@@ -9,6 +9,7 @@ using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 
 namespace Raven.Database.Indexing.IndexMerging
 {

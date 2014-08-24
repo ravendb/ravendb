@@ -39,7 +39,7 @@ namespace Raven.Client.Indexes
 		/// Creates the index definition.
 		/// </summary>
 		/// <returns></returns>
-		public abstract IndexDefinition CreateIndexDefinition();
+		public abstract IndexDefinition CreateIndexDefinition(bool prettify = true);
 
 		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
 		{
@@ -202,7 +202,22 @@ namespace Raven.Client.Indexes
 		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition();
+			var indexDefinition = CreateIndexDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
+			if (documentConvention.PrettifyGeneratedLinqExpressions)
+			{
+				var serverDef = databaseCommands.GetIndex(IndexName);
+				if (serverDef != null)
+				{
+					if (serverDef.Equals(indexDefinition))
+						return;
+
+					// now we need to check if this is a legacy index...
+					var legacyIndexDefinition = CreateIndexDefinition(prettify: false);
+					if (serverDef.Equals(legacyIndexDefinition))
+						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
+				}
+			}
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -218,8 +233,22 @@ namespace Raven.Client.Indexes
 		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition();
-			
+			var indexDefinition = CreateIndexDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
+			if (documentConvention.PrettifyGeneratedLinqExpressions)
+			{
+				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName);
+				if (serverDef != null)
+				{
+					if (serverDef.Equals(indexDefinition))
+						return;
+
+					// now we need to check if this is a legacy index...
+					var legacyIndexDefinition = CreateIndexDefinition(prettify: false);
+					if (serverDef.Equals(legacyIndexDefinition))
+						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
+				}
+			}
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -258,13 +287,13 @@ namespace Raven.Client.Indexes
 		/// Creates the index definition.
 		/// </summary>
 		/// <returns></returns>
-		public override IndexDefinition CreateIndexDefinition()
+		public override IndexDefinition CreateIndexDefinition(bool prettify = true)
 		{
 			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
 
-			return new IndexDefinitionBuilder<TDocument, TReduceResult>
+			return new IndexDefinitionBuilder<TDocument, TReduceResult>(prettify)
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,

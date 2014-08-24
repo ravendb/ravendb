@@ -112,7 +112,7 @@ namespace Raven.Tests.Bugs
 				get { return "ChildrenMapReduceIndex"; }
 			}
 
-			public override IndexDefinition CreateIndexDefinition()
+			public override IndexDefinition CreateIndexDefinition(bool prettify = true)
 			{
 				return new IndexDefinitionBuilder<Children, ChildreReduceResult>
 				{

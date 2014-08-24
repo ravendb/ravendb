@@ -108,9 +108,9 @@ namespace Raven.Tests.Bugs
 
 		public class PurchaseHistoryIndex : AbstractIndexCreationTask
 		{
-			public override IndexDefinition CreateIndexDefinition()
+			public override IndexDefinition CreateIndexDefinition(bool prettify = true)
 			{
-				return new IndexDefinitionBuilder<Shipment, Shipment>()
+				return new IndexDefinitionBuilder<Shipment, Shipment>(prettify)
 				{
 					Map = docs => from doc in docs
 								  from product in doc.Items
