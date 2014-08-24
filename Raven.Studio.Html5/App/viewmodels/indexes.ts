@@ -24,7 +24,7 @@ class indexes extends viewModelBase {
     appUrls: computedAppUrls;
     btnState = ko.observable<boolean>(false);
     btnStateTooltip = ko.observable<string>("ExpandAll");
-    btnTitle = ko.computed(() => this.btnState() === true ? "ExpandAll" : "CollapseAll");
+    btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
 
     constructor() {

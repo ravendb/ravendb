@@ -214,9 +214,9 @@ class shell extends viewModelBase {
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
+    // The view must be attached to the DOM before we can hook up keyboard shortcuts.
     attached() {
-        // The view must be attached to the DOM before we can hook up keyboard shortcuts.
-        jwerty.key("ctrl+alt+n", e=> {
+        jwerty.key("ctrl+alt+n", e => {
             e.preventDefault();
             this.newDocument();
         });
@@ -230,7 +230,7 @@ class shell extends viewModelBase {
             if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-
+        
         sys.error = (e) => {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);

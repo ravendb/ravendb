@@ -108,11 +108,15 @@ class exportDatabase extends viewModelBase {
     }
 
     addFilter() {
-        this.filters.push({
+        var filter = {
             Path: "",
             ShouldMatch: false,
+            ShouldMatchObservable: ko.observable(false),
             Values: []
-        });
+        };
+
+        filter.ShouldMatchObservable.subscribe(val => filter.ShouldMatch = val);
+        this.filters.splice(0, 0, filter);
     }
 
 }

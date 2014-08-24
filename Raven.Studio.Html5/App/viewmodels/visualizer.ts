@@ -320,7 +320,7 @@ class visualizer extends viewModelBase {
         } else {
 
             var dataFormatted = JSON.stringify(data.payload.Data, undefined, 2);
-            content += '<button type="button" class="close close-ret" data-bind="click: tooltipClose" aria-hidden="true"></button>' +
+            content += '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>' +
             "<table> ";
 
             if (data.level < 4) {

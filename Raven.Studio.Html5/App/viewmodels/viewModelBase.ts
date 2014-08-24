@@ -106,10 +106,19 @@ class viewModelBase {
     canDeactivate(isClose: boolean): any {
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            return this.confirmationMessage('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?', undefined, true);
+            var discard = "Discard changes";
+            var stay = "Stay on this page";
+            var discardStayResult = $.Deferred();
+            var confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
+            confirmation.done((result: { can: boolean; }) => {
+                result.can = !result.can;
+                discardStayResult.resolve(result);
+            });
+
+            return discardStayResult;
         }
 
-        return $.Deferred().resolve({ can: true });
+        return true;
     }
     
     /*

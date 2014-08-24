@@ -22,9 +22,11 @@
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                 <a class="btn btn-default" data-bind="click: refreshDocument, visible: lodaedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
                 <button type="button" class="btn btn-default" data-bind="enable:isNewLineFriendlyMode()===false || $root.isEditingMetadata()===true ,click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
-                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" accesskey="N" data-bind="enable:$root.isEditingMetadata() === false,click:function(){toggleNewlineMode();}, css:{'pressed':isNewLineFriendlyMode()===true}"><span class="text-lowercase" data-bind="text: newLineToggle"></span></button>
+                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: $root.isEditingMetadata() === false, click: toggleNewlineMode">
+                    <span class="text-lowercase" data-bind="text: newLineToggle"></span>
+                </button>
                 <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
-                
+
             </div>
 
             <div class="btn-group" data-bind="with: docsList">
@@ -59,7 +61,7 @@
                 <div class="col-md-12" data-bind="with: metadata">
                     <h4><strong>Metadata</strong></h4>
                     <hr />
-  
+
                     <div class="row">
                         <label class="col-md-5">Raven-Entity-Name</label>
                         <span class="col-md-7" data-bind="text: ravenEntityName, attr: {title:ravenEntityName}"></span>
@@ -75,18 +77,28 @@
                     <div class="row">
                         <label class="col-md-5">Size in KB</label>
                         <span class="col-md-7" data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span>
-                        
+
                     </div>
                 </div>
-                <div class="col-md-12 query-metadata" data-bind="visible:topRecentDocuments().length>0">
+                <div class="col-md-12 query-metadata" data-bind="visible:topRecentDocuments().length > 0">
                     <h4><strong>Recent Documents</strong></h4>
                     <hr />
-                    <div class="documents-links-container" data-bind="foreach: topRecentDocuments"><a class="btn btn-default document-link" data-bind="text:$data.docId, attr:{href:$data.docUrl}"></a></div>
+                    <div class="documents-links-container" data-bind="foreach: topRecentDocuments">
+                        <a class="document-link" data-bind="attr: { href: docUrl }">
+                            <span class="collection-color-strip" data-bind="css: $root.getColorClass($data.docId)">&nbsp;</span>
+                            <span data-bind="text: docId"></span>
+                        </a>
+                    </div>
                 </div>
                 <div class="col-md-12 query-metadata" data-bind="visible: relatedDocumentHrefs().length >0">
                     <h4><strong>Related Documents</strong></h4>
                     <hr />
-                    <div class="documents-links-container" data-bind="foreach: relatedDocumentHrefs"><a class="btn btn-default document-link" data-bind="text:$data.id, attr:{href:$data.href}"></a></div>
+                    <div class="documents-links-container" data-bind="foreach: relatedDocumentHrefs">
+                        <a class="document-link" data-bind="attr: { href:href }">
+                            <span class="collection-color-strip" data-bind="css: $root.getColorClass($data.id)">&nbsp;</span>
+                            <span data-bind="text: id"></span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

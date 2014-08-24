@@ -61,7 +61,9 @@
             </div>
         </div>
         <div class="btn-group">
-             <a class="btn btn-default" data-bind="click: toggleExpandAll , attr: { state: btnState, title: btnTitle }" accesskey="="><i data-bind="css: { 'fa-plus-square-o': btnState, 'fa-minus-square-o': !btnState() }" class="fa"></i></a>
+            <a class="btn btn-default" data-bind="click: toggleExpandAll , attr: { state: btnState, title: btnTitle }" accesskey="=">
+                <i data-bind="css: { 'fa-plus-square-o': btnState, 'fa-minus-square-o': !btnState() }" class="fa"></i>
+            </a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default" data-bind="click: pasteIndex" title="Paste Index Definition From JSON (Alt+v)" accesskey="v"><i class="fa fa-paste"></i></a>
@@ -82,7 +84,7 @@
             </ul>
         </div>
     </div>
-    
+
     <div class="text-center" data-bind="visible: sortedGroups().length == 0">
         <h3 class="page-header text-info">
             No indexes have been created for this database.
@@ -98,12 +100,12 @@
             <div class="index-group panel panel-default index-panel">
                 <div class="panel-heading">
                     <div class="pull-right indexGroup-actions-container">
-                            <button class="btn btn-danger" title="Delete all indexes in group"  data-bind="click: $root.deleteIndexGroup.bind($root)">
+                        <button class="btn btn-danger" title="Delete all indexes in group" data-bind="click: $root.deleteIndexGroup.bind($root)">
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>
 
-                    <h4 class="panel-title" >
+                    <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#indexCollapse' + $index() }">
                             <span data-bind="text: entityName"></span>
                             <span class="text-muted" data-bind="text: '(' + indexes().length + ')'"></span>
@@ -111,7 +113,7 @@
                     </h4>
 
                 </div>
-                <div class=" index-group-content panel-collapse in index-panel"  data-bind="attr: { id: 'indexCollapse' + $index() }">
+                <div class=" index-group-content panel-collapse in index-panel" data-bind="attr: { id: 'indexCollapse' + $index() }">
                     <div class="panel panel-default index-panel" style="overflow: visible;">
                         <div class="panel-body index-panel" data-bind="foreach: indexes">
                             <div class="index-panel panel panel-default">
@@ -141,7 +143,7 @@
                                                     <a class="btn" data-bind="click: $root.copyIndex.bind($root)">Copy index</a>
                                                 </li>
                                                 <li role="presentation">
-                                                    <a class="btn" title="Delete the index"   data-bind="click: $root.deleteIndex.bind($root)">
+                                                    <a class="btn" title="Delete the index" data-bind="click: $root.deleteIndex.bind($root)">
                                                         Delete Index
                                                     </a>
                                                 </li>
@@ -172,11 +174,11 @@
                                             </ul>
                                         </div>
                                         <!--
-                                COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
+                                        COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
 
-                                <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
-                                    <i class="fa fa-download"></i>
-                                </button>-->
+                                        <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
+                                            <i class="fa fa-download"></i>
+                                        </button>-->
                                     </div>
                                 </div>
                             </div>

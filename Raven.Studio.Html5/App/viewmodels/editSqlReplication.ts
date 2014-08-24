@@ -24,8 +24,6 @@ import sqlReplicationSimulationDialog = require("viewmodels/sqlReplicationSimula
 import sqlReplicationConnections = require("models/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/predefinedSqlConnection");
 
-
-
 class editSqlReplication extends viewModelBase {
     
     static editSqlReplicationSelector = "#editSQLReplication";
@@ -50,12 +48,11 @@ class editSqlReplication extends viewModelBase {
     isEditingNewReplication = ko.observable(false);
     isBasicView = ko.observable(true);
     availableConnectionStrings = ko.observableArray<string>();
-    sqlReplicaitonStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
-    
+    sqlReplicationStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
     appUrls: computedAppUrls;
 
     isBusy = ko.observable(false);
-    initialReplicationId:string='';
+    initialReplicationId: string = '';
 
     constructor() {
         super();
@@ -71,13 +68,13 @@ class editSqlReplication extends viewModelBase {
             trigger: 'hover',
             content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
             selector: '.script-label',
-            placement:"right"
+            placement: "right"
         };
         $('body').popover(popOverSettings);
         $('form :input[name="ravenEntityName"]').on("keypress", (e) => e.which != 13);
     }
 
-    loadSqlReplicationConnections() :JQueryPromise<any> {
+    loadSqlReplicationConnections(): JQueryPromise<any> {
         return new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
             .execute()
             .done((x: document) => {
@@ -103,7 +100,7 @@ class editSqlReplication extends viewModelBase {
             } else {
                 this.isEditingNewReplication(true);
                 this.editedReplication(this.createSqlReplication());
-                this.fetchCollections(this.activeDatabase()).always(() =>canActivateResult.resolve({ can: true }));
+                this.fetchCollections(this.activeDatabase()).always(() => canActivateResult.resolve({ can: true }));
             }
         });
         return canActivateResult;
@@ -117,7 +114,7 @@ class editSqlReplication extends viewModelBase {
 
     providerChanged(obj, event) {
         if (event.originalEvent && obj.connectionStringType() == obj.CONNECTION_STRING) {
-            var curConnectionString = !!this.editedReplication().connectionStringValue()? this.editedReplication().connectionStringValue().trim():"";
+            var curConnectionString = !!this.editedReplication().connectionStringValue() ? this.editedReplication().connectionStringValue().trim() : "";
             if (curConnectionString === "" ||
                 editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
                 var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
@@ -127,12 +124,12 @@ class editSqlReplication extends viewModelBase {
                         matchingConnectionStringValue
                         );
                 }
-                
+
             }
         }
     }
-    
-   
+
+
     loadSqlReplication(replicationToLoadName: string) {
         var loadDeferred = $.Deferred();
         $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
@@ -147,8 +144,8 @@ class editSqlReplication extends viewModelBase {
                     fail(() => loadDeferred.reject());
             })
             .fail(() => {
-            loadDeferred.reject();
-        });
+                loadDeferred.reject();
+            });
 
         return loadDeferred;
     }
@@ -196,7 +193,7 @@ class editSqlReplication extends viewModelBase {
             this.initializeAceValidity(currentPreElement);
         });
     }
-    
+
     createSqlReplication(): sqlReplication {
         var newSqlReplication: sqlReplication = sqlReplication.empty();
         newSqlReplication.collections(this.collections());
@@ -233,7 +230,7 @@ class editSqlReplication extends viewModelBase {
 
     private isSqlReplicationNameExists(name): boolean {
         var count = 0;
-        return !!this.loadedSqlReplications.first(x=>x==name);
+        return !!this.loadedSqlReplications.first(x=> x == name);
     }
 
     private initializeAceValidity(element: Element) {
@@ -255,11 +252,11 @@ class editSqlReplication extends viewModelBase {
             delete this.editedReplication().__metadata.etag;
             delete this.editedReplication().__metadata.lastModified;
         }
-        
+
         var newDoc = new document(this.editedReplication().toDto());
         newDoc.__metadata = new documentMetadata();
         this.attachReservedMetaProperties(editSqlReplication.sqlReplicationDocumentPrefix + currentDocumentId, newDoc.__metadata);
-        
+
         var saveCommand = new saveDocumentCommand(editSqlReplication.sqlReplicationDocumentPrefix + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((saveResult: bulkDocumentDto[]) => {
@@ -286,10 +283,10 @@ class editSqlReplication extends viewModelBase {
         target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
         target.id = id;
     }
-    
+
     deleteSqlReplication() {
         var newDoc = new document(this.editedReplication().toDto());
-        
+
         if (newDoc) {
             var viewModel = new deleteDocuments([newDoc]);
             viewModel.deletionTask.done(() => {
@@ -297,21 +294,21 @@ class editSqlReplication extends viewModelBase {
                 router.navigate(appUrl.forCurrentDatabase().sqlReplications());
             });
             app.showDialog(viewModel, editSqlReplication.editSqlReplicationSelector);
-            
-        } 
+
+        }
     }
     resetSqlReplication() {
 
         app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
-            .then((dialogResult:string) =>{
-            if (dialogResult === "Reset") {
-                var replicationId = this.initialReplicationId;
-                new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-                    .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"))
-                    .fail(() => messagePublisher.reportError("SQL replication " + replicationId + " failed to reset!"));
-            }
-        });
-        
+            .then((dialogResult: string) => {
+                if (dialogResult === "Reset") {
+                    var replicationId = this.initialReplicationId;
+                    new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+                        .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"))
+                        .fail(() => messagePublisher.reportError("SQL replication " + replicationId + " failed to reset!"));
+                }
+            });
+
     }
 
     simulateSqlReplication() {

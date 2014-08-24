@@ -48,8 +48,7 @@ html, body {
     .message {
         font-size: 5em;
         line-height: 1.5em;
-        -webkit-text-shadow: rgba(0, 0, 0, 0.5) 0px 0px 15px;
-        text-shadow: rgba(0, 0, 0, 0.5) 0px 0px 15px;
+        text-shadow: rgba(0, 0, 0, 0.5) 0 0 15px;
         text-transform: uppercase;
     }
 }
@@ -190,7 +189,7 @@ html, body {
 }
 
 #editSQLReplication {
-    .tools
+    /*.tools
     {
         a{
             padding-left:6px;
@@ -210,7 +209,7 @@ html, body {
 
     .edit-sql-replication-actions {
         padding-top: 0.5%;
-    }
+    }*/
 }
 
 .sqlReplication-Stats {
@@ -1313,6 +1312,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         column-width: 10px;
 
         .document-link {
+            margin-left: 10px;
             width: 80%;
             overflow: hidden;
             white-space: nowrap;
@@ -1597,6 +1597,65 @@ footer {
     cursor: pointer;
 }
 
+#replicationTopologySection {
+    svg {
+        background-color: #FFF;
+        cursor: default;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    path.link {
+        fill: none;
+        stroke: @brand-success;
+        stroke-width: 5px;
+        cursor: default;
+    }
+
+    path.link.error {
+        stroke: @brand-danger;
+    }
+
+    svg:not(.active):not(.ctrl) path.link {
+        cursor: pointer;
+    }
+
+    path.link.selected {
+        stroke-dasharray: 10,2;
+    }
+
+    path.link.hidden {
+        stroke-width: 0;
+    }
+
+    rect.node {
+        stroke-width: 1.5px;
+        fill: fadeOut(@brand-primary, 85%); // rgb(31, 119, 180);
+        stroke: darken(@brand-primary, 10%);
+    }
+
+    text {
+        font: 12px sans-serif;
+        pointer-events: none;
+    }
+
+    text.id {
+        text-anchor: middle;
+        font-weight: bold;
+    }
+
+    table {
+        table-layout: fixed;
+
+        td {
+            -ms-word-break: break-all;
+            word-break: break-all;
+        }
+    }
+}
+
 #status-debug > ul.nav {
     margin-bottom: 15px;
 }
@@ -1640,15 +1699,34 @@ footer {
 }
 
 // Start of icons
+/* 
+Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button: 
+
+    // For modals:
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+
+    // For everything else:
+    <button type="button" class="close"><i class="fa fa-times"></i></button>
+
 .remove-icon {
     color: #d2322d;
     border-color: #802925;
     cursor: pointer;
     border-radius: 6px;
-}
 
-.remove-icon:hover {
-    color: #ac2925;
+    &:hover {
+        color: #ac2925;
+    }
+}*/
+
+.close {
+    .fa-times {
+        color: @gray;
+
+        &:hover {
+            color: @gray-darker;
+        }
+    }
 }
 
 /*.fa-plus {
@@ -1855,7 +1933,30 @@ footer {
     background-clip: padding-box;
 }
 
-.pressed {
+// Note: Instead of .pressed, use the Bootstrap built-in .active.
+// Or if you're looking for toggle buttons, see Bootstrap's bult-in toggle button: http://getbootstrap.com/javascript/#buttons
+/*.pressed {
     background-color: #73c773 !important;
     border-color: #61b261 !important;
+}*/
+
+.btn-file {
+    position: relative;
+    overflow: hidden;
+
+    input[type=file] {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 100%;
+        min-height: 100%;
+        font-size: 100px;
+        text-align: right;
+        filter: alpha(opacity=0);
+        opacity: 0;
+        outline: none;
+        background: white;
+        cursor: inherit;
+        display: block;
+    }
 }

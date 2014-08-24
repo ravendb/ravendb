@@ -1,13 +1,10 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/getReplicationStatsCommand");
 import moment = require("moment");
-
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-
 import getReplicationTopology = require("commands/getReplicationTopology");
-
 import d3 = require('d3/d3');
 
 class replicationStats extends viewModelBase {
@@ -324,6 +321,7 @@ class replicationStats extends viewModelBase {
             .done((topo) => {
                 this.topology(topo); 
                 this.createReplicationTopology();
+                $("#replicationSetupCollapse").addClass("in"); // Force the panel to expand. Fixes a bug where the panel collapses when we fill it with content.
             })
             .always(() => this.showLoadingIndicator(false)); 
     }

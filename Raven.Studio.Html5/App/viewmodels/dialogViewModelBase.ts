@@ -14,6 +14,7 @@ class dialogViewModelBase {
     left: KnockoutComputed<number>;
     top: KnockoutComputed<number>;
     bodyHeight: KnockoutComputed<number>;
+    isFocused = ko.observable(false);
 
     constructor(private elementToFocusOnDismissal?: string) {
         this.left = ko.computed<number>(() => -this.width() * 0.5);
@@ -22,13 +23,9 @@ class dialogViewModelBase {
     }
 
     attached() {
-        var that = this;
-        jwerty.key("esc", e => {
-            e.preventDefault();
-            dialog.close(that);
-        }, this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName );
+        jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
-        $(dialogViewModelBase.dialogSelector).focus();
+        setTimeout(() => $(dialogViewModelBase.dialogSelector).focus(), 100); // We have to time-delay this, else it never receives focus.
     }
 
     deactivate(args) {
@@ -46,7 +43,13 @@ class dialogViewModelBase {
         if (acceptButton && acceptButton.click) {
             acceptButton.click();
         }
+
         return true;
+    }
+
+    escapeKeyPressed(e: KeyboardEvent) {
+        e.preventDefault();
+        dialog.close(this);
     }
 
     unregisterResizing(id:string) {

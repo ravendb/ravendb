@@ -345,7 +345,7 @@ namespace Raven.Database.Actions
 
 	                    foreach (var collectionEtagPair in collectionsAndEtags)
 	                    {
-		                    Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
+                            Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
 	                    }
 
                         WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
