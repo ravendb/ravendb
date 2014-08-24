@@ -101,8 +101,8 @@ class editTransformer extends viewModelBase {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
             saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => {
-                this.updateUrl(this.editedTransformer().name());
                 this.dirtyFlag().reset(); // Resync Changes
+                this.updateUrl(this.editedTransformer().name());
             });
             dialog.show(saveTransformerWithNewNameViewModel);
         } else {
@@ -124,18 +124,16 @@ class editTransformer extends viewModelBase {
     
     refreshTransformer() {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the transformer from the server?');
-        canContinue.done(() => {
-            this.fetchTransformerToEdit(this.loadedTransformerName())
-                .done((trans: savedTransformerDto) => {
-                    this.editedTransformer().initFromSave(trans);
-                    this.dirtyFlag().reset(); // Resync Changes
-                });
-
-/*            this.fetchIndexData(this.loadedIndexName())
-                .done(() => {
-                    this.initializeDirtyFlag();
-                    this.editedIndex().name.valueHasMutated();*/
-            //});
+        canContinue
+            .done(() => {
+                var transformerName = this.loadedTransformerName();
+                this.fetchTransformerToEdit(transformerName)
+                    .always(() => this.dirtyFlag().reset())
+                    .done((trans: savedTransformerDto) => this.editedTransformer().initFromSave(trans))
+                    .fail(() => {
+                        messagePublisher.reportError("Could not find " + transformerName + " transformer");
+                        this.navigate(appUrl.forTransformers(this.activeDatabase()));
+                    });
         });
     }
 
