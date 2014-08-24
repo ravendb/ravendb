@@ -22,6 +22,7 @@ class editTransformer extends viewModelBase {
     appUrls: computedAppUrls;
     transformerName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
+    loadedTransformerName = ko.observable<string>();
 
     constructor() {
         super();
@@ -85,8 +86,9 @@ class editTransformer extends viewModelBase {
     }
 
     editExistingTransformer(unescapedTransformerName: string): JQueryPromise<any> {
-        var indexName = decodeURIComponent(unescapedTransformerName);
-        return this.fetchTransformerToEdit(indexName)
+        var transformerName = decodeURIComponent(unescapedTransformerName);
+        this.loadedTransformerName(transformerName);
+        return this.fetchTransformerToEdit(transformerName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
     }
 
@@ -118,6 +120,41 @@ class editTransformer extends viewModelBase {
 
     updateUrl(transformerName:string) {
         router.navigate(appUrl.forEditTransformer(transformerName, this.activeDatabase()));
+    }
+    
+    refreshTransformer() {
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the transformer from the server?');
+        canContinue.done(() => {
+            this.fetchTransformerToEdit(this.loadedTransformerName())
+                .done((trans: savedTransformerDto) => {
+                    this.editedTransformer().initFromSave(trans);
+                    this.dirtyFlag().reset(); // Resync Changes
+                });
+
+/*            this.fetchIndexData(this.loadedIndexName())
+                .done(() => {
+                    this.initializeDirtyFlag();
+                    this.editedIndex().name.valueHasMutated();*/
+            //});
+        });
+    }
+
+    formatTransformer() {
+        require(["commands/formatIndexCommand"], formatIndexCommand => {
+            var editedTransformer: transformer = this.editedTransformer();
+
+            new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()], this.activeDatabase())
+                .execute()
+                .done((result: string[]) => {
+                    var formatedTransformer = result[0];
+                    if (formatedTransformer.indexOf("Could not format:") == -1) {
+                        editedTransformer.transformResults(formatedTransformer);
+                    }
+                    else {
+                        messagePublisher.reportError("Failed to format transformer!", formatedTransformer);
+                    }
+            });
+        });
     }
 
     deleteTransformer() {
