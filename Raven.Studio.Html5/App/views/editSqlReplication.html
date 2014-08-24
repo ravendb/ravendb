@@ -24,11 +24,14 @@
                                 <a href="#" title="View current SQL Replication stats" data-bind="click: showStats">Stats</a>
                             </li>
                             <li>
-							</li>
+                                <a href="#" title="Simulate SQL Replication" data-bind="click: simulateSqlReplication">
+                                    Simulation
+                                </a>
+                            </li>
                             <li>
-                                <a href="#" title="Open Sql Replication Statistics and Metrics View" data-bind="attr:{href:sqlReplicaitonStatsAndMetricsHref}" target="_blank">
-									Metrics Page<i class="fa fa-external-link"></i>
-								</a>
+                                <a href="#" title="Open Sql Replication Statistics and Metrics View" data-bind="attr: {href: $root.sqlReplicationStatsAndMetricsHref }" target="_blank">
+                                    Metrics Page<i class="fa fa-external-link"></i>
+                                </a>
                             </li>
                         </ul>
                     </div>
