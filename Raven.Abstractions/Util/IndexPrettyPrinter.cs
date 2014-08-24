@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
+using Mono.CSharp;
+using CSharpParser = ICSharpCode.NRefactory.CSharp.CSharpParser;
+using Expression = ICSharpCode.NRefactory.CSharp.Expression;
+using LambdaExpression = ICSharpCode.NRefactory.CSharp.LambdaExpression;
+using ParenthesizedExpression = ICSharpCode.NRefactory.CSharp.ParenthesizedExpression;
 
 public static class IndexPrettyPrinter
 {
@@ -387,7 +392,33 @@ public static class IndexPrettyPrinter
 			if (query == null)
 				return;
 			membersToRemove.Add(query.Identifier);
-			query.PrecedingQuery.Clauses.Remove(query.PrecedingQuery.Clauses.LastOrNullObject());
+			var lastClause = query.PrecedingQuery.Clauses.LastOrNullObject() as QuerySelectClause;
+			if (lastClause != null)
+			{
+				var anonymousTypeCreateExpression = lastClause.Expression as AnonymousTypeCreateExpression;
+				if (anonymousTypeCreateExpression != null)
+				{
+					lastClause.Remove();
+
+					foreach (var initializer in anonymousTypeCreateExpression.Initializers)
+					{
+						var namedExpression = initializer as NamedExpression;
+						if (namedExpression == null) // shouldn't happen
+							throw new InvalidOperationException("Unexpected expression in initializer for: " + lastClause.GetText());
+
+						var identifierExpression = namedExpression.Expression as IdentifierExpression;
+						if (identifierExpression != null && identifierExpression.Identifier == namedExpression.Name)
+							continue; // can safely ignore this
+
+						query.PrecedingQuery.Clauses.Add(new QueryLetClause
+						{
+							Identifier = namedExpression.Name,
+							Expression = Detach(namedExpression.Expression)
+						});
+					}
+				}
+			}
+
 			var parent = (QueryExpression)query.Parent;
 			while (query.PrecedingQuery.Clauses.Count > 0)
 			{

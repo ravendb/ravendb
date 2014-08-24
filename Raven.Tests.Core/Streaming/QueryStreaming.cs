@@ -16,7 +16,7 @@ namespace Raven.Tests.Core.Streaming
 		{
 			using (var store = GetDocumentStore())
 			{
-				new Users_ByName().Execute(store);
+			new Users_ByName().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
