@@ -77,7 +77,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     addSqlReplicationConnection() {
         var newPredefinedConnection: predefinedSqlConnection;
         newPredefinedConnection = predefinedSqlConnection.empty();
-        this.connections().predefinedConnections.push(newPredefinedConnection);
+        this.connections().predefinedConnections.splice(0, 0, newPredefinedConnection);
         this.subscribeToSqlReplicationConnectionName(newPredefinedConnection);
         newPredefinedConnection.name("New");
     }

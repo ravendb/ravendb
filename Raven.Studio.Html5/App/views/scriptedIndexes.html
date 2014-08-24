@@ -26,7 +26,7 @@
                     <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#scriptedIndex' + $index() }">
                         <h3 class="panel-title">
                             <span data-bind="text: indexName"></span>
-                            <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeScriptedIndex.bind($root, $data)" title="Remove this Scripted Index"></span>
+                            <span class="close" aria-hidden="true" data-bind="click: $root.removeScriptedIndex.bind($root, $data)" title="Remove this Scripted Index"><i class="fa fa-times"></i></span>
                         </h3>
                     </a>
                 </div>

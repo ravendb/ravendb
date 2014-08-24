@@ -9,7 +9,10 @@
             Import a csv file into a collection. Each column will be treated as a property.
         </p>
         <div id="addfileContainer">
-            <input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+            <!--<input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />-->
+            <span class="btn btn-primary btn-file">
+                Choose file <input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+            </span>
             <br />
             <div class="btn-toolbar" data-bind="visible: hasFileSelected">
                 <div class="btn-group">

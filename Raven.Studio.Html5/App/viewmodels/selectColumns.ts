@@ -1,4 +1,3 @@
-
 import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
@@ -98,7 +97,7 @@ class selectColumns extends dialogViewModelBase {
 
     attached() {
         super.attached();
-        this.form = $("#select-columns-form");
+        this.form = $("#selectColumnsForm");
     }
 
     cancel() {

@@ -88,14 +88,6 @@ class replications extends viewModelBase {
         this.replicationsSetup().destinations.remove(repl);
     }
 
-    toggleUserCredentials(destination: replicationDestination) {
-        destination.isUserCredentials.toggle();
-    }
-
-    toggleApiKeyCredentials(destination: replicationDestination) {
-        destination.isApiKeyCredentials.toggle();
-    }
-
     saveChanges() {
         if (this.isConfigSaveEnabled())
             this.saveAutomaticConflictResolutionSettings();

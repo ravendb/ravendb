@@ -767,7 +767,7 @@ class appUrl {
     public static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
-            messagePublisher.reportError("Invalid route!", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+            messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
             
             var fragment = instruction.fragment;
             var appUrls: computedAppUrls = appUrl.currentDbComputeds;

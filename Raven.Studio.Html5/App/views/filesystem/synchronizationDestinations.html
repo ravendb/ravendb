@@ -17,7 +17,7 @@
                     <div class="panel-heading">
                         <h3 class="panel-title">
                             <span data-bind="text: name"></span>
-                            <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination"></span>
+                            <button data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination" type="button" class="close" aria-hidden="true"><i class="fa fa-times"></i></button>
                         </h3>
                     </div>
                     <div class="panel-body">
