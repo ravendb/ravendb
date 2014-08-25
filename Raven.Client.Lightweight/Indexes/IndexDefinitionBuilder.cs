@@ -19,7 +19,6 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument, TReduceResult>
 	{
-		private readonly bool prettify;
 		/// <summary>
 		/// Gets or sets the map function
 		/// </summary>
@@ -117,17 +116,11 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-		public IndexDefinitionBuilder() : this(true)
-		{
-			
-		}
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
-		public IndexDefinitionBuilder(bool prettify)
+		public IndexDefinitionBuilder()
 		{
-			this.prettify = prettify;
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			StoresStrings = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
@@ -170,7 +163,7 @@ namespace Raven.Client.Indexes
 				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			};
 
-			if (prettify)
+			if (convention.PrettifyGeneratedLinqExpressions)
 				indexDefinition.Reduce = IndexPrettyPrinter.Format(indexDefinition.Reduce);
 
 			foreach (var indexesString in IndexesStrings)
@@ -220,7 +213,7 @@ namespace Raven.Client.Indexes
 				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
 					Map, convention, querySource, translateIdentityProperty: true);
 
-				if (prettify)
+				if (convention.PrettifyGeneratedLinqExpressions)
 					indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
 			}
 			return indexDefinition;
@@ -263,13 +256,5 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument>
 	{
-		public IndexDefinitionBuilder() : base(true)
-		{
-			
-		}
-		public IndexDefinitionBuilder(bool prettify)
-			: base(prettify)
-		{
-		}
 	}
 }

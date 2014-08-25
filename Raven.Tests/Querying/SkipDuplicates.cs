@@ -19,7 +19,7 @@ namespace Raven.Tests.Querying
 			{
 				store.DatabaseCommands.PutIndex(
 					"BlogPosts/PostsCountByTag",
-					new IndexDefinitionBuilder<BlogPost>(true)
+					new IndexDefinitionBuilder<BlogPost>()
 					{
 						Map = posts => from post in posts
 							from tag in post.Tags

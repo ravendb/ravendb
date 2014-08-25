@@ -20,7 +20,7 @@ namespace Raven.Tests.Common.Attributes
 
         public class CameraCostIndex : Raven.Client.Indexes.AbstractIndexCreationTask
         {
-			public override IndexDefinition CreateIndexDefinition(bool prettify = true)
+			public override IndexDefinition CreateIndexDefinition()
             {
                 return new IndexDefinition
                 {

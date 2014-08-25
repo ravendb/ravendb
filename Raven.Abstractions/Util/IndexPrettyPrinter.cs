@@ -368,23 +368,25 @@ namespace Raven.Abstractions.Util
 				RemoveMembersFromContinuation(compilationUnit);
 			}
 
-			private void RemoveMembersFromContinuation(AstNode node)
+			private AstNode RemoveMembersFromContinuation(AstNode node)
 			{
 				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
 				{
-					RemoveMembersFromContinuation(child);
+					child = RemoveMembersFromContinuation(child);
 				}
 				var mre = node as MemberReferenceExpression;
 				if (mre == null)
-					return;
+					return node;
 
 				var identifierExpression = mre.Target as IdentifierExpression;
 				if (identifierExpression == null)
-					return;
+					return node;
 				if (membersToRemove.Contains(identifierExpression.Identifier) == false)
-					return;
+					return node;
 
-				mre.ReplaceWith(new IdentifierExpression(mre.MemberName));
+				var newNode = new IdentifierExpression(mre.MemberName);
+				mre.ReplaceWith(newNode);
+				return newNode;
 			}
 			private void RemoveContinuation(AstNode node)
 			{

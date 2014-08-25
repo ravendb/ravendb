@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -87,7 +88,8 @@ namespace Raven.Tests.Linq
 				                    .Customize(customization => customization.WaitForNonStaleResults())
 				                    .ToList();
 
-				Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+				ServerError[] serverErrors = store.DatabaseCommands.GetStatistics().Errors;
+				Assert.Empty(serverErrors);
 
 				Assert.Equal(2, result.Count);
 				Assert.Equal("creative/1", result.First().CreativeId);

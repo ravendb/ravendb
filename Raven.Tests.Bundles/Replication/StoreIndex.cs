@@ -98,7 +98,7 @@ namespace Raven.Tests.Bundles.Replication
 				return "TestIndex";
 			}
 		}
-		public override IndexDefinition CreateIndexDefinition(bool prettify = true)
+		public override IndexDefinition CreateIndexDefinition()
 		{
 			return new IndexDefinition()
 			{

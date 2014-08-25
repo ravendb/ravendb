@@ -81,7 +81,7 @@ namespace Raven.Tests.Bugs
 
 		public class ClassificationSummary : AbstractIndexCreationTask
 		{
-			public override IndexDefinition CreateIndexDefinition(bool prettify = true)
+			public override IndexDefinition CreateIndexDefinition()
 			{
 				return new IndexDefinition
 				{

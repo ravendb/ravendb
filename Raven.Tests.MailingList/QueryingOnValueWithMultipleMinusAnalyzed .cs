@@ -15,7 +15,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
-				var indexDefinition = new IndexDefinitionBuilder<Product>(prettify:true)
+				var indexDefinition = new IndexDefinitionBuilder<Product>()
 				{
 					Map = products => from product in products
 										select new

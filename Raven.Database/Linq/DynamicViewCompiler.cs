@@ -481,34 +481,7 @@ Reduce only fields: {2}
 			var queryExpression = ((QueryExpression)variableDeclaration.Initializer);
 			var fromClause = queryExpression.Clauses.OfType<QueryFromClause>().First();
 			var expression = fromClause.Expression;
-			if (expression is MemberReferenceExpression) // collection
-			{
-				var mre = (MemberReferenceExpression)expression;
-				entityName = mre.MemberName;
-				fromClause.Expression = mre.Target;
-				//doc["@metadata"]["Raven-Entity-Name"]
-				var metadata = new IndexerExpression(
-					new IndexerExpression(new IdentifierExpression(fromClause.Identifier), new List<Expression> { new StringLiteralExpression("@metadata") }),
-					new List<Expression> { new StringLiteralExpression(Constants.RavenEntityName) }
-					);
-
-				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
-				var binaryOperatorExpression =
-					new InvocationExpression(
-						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
-						new List<Expression>
-						{
-							metadata,
-							new StringLiteralExpression(mre.MemberName),
-							new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
-						});
-
-				queryExpression.Clauses.InsertAfter(fromClause,
-													 new QueryWhereClause
-													 {
-														 Condition = binaryOperatorExpression
-													 });
-			}
+			HandleCollectionName(expression, fromClause, queryExpression, ref entityName);
 			var projection = 
 				QueryParsingUtils.GetAnonymousCreateExpression(
 					queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression);
@@ -535,6 +508,75 @@ Reduce only fields: {2}
 			variableDeclaration.AcceptVisitor(this.transformFromClauses, null);
 
 			return variableDeclaration;
+		}
+
+		private static void HandleCollectionName(Expression expression, QueryFromClause fromClause, QueryExpression queryExpression, ref string entityName)
+		{
+			// from d in docs.Users.SelectMany(x=>x.Roles) ...
+			// from d in docs.Users.Where(x=>x.IsActive)   ...
+			var mie = expression as InvocationExpression;
+			string methodToCall = null;
+			if (mie != null)
+			{
+				expression = mie.Target;
+
+				var target = expression as MemberReferenceExpression;
+				if (target != null)
+				{
+					methodToCall = target.MemberName;
+					expression = target.Target;
+				}
+			}
+
+			var mre = expression as MemberReferenceExpression;
+			if (mre == null) 
+				return;
+
+			string oldIdentifier = fromClause.Identifier;
+			if (mie != null)
+			{
+				fromClause.Identifier += "Item";
+			}
+
+			entityName = mre.MemberName;
+			fromClause.Expression = mre.Target;
+			//doc["@metadata"]["Raven-Entity-Name"]
+			var metadata = new IndexerExpression(
+				new IndexerExpression(new IdentifierExpression(fromClause.Identifier), new List<Expression> {new StringLiteralExpression("@metadata")}),
+				new List<Expression> {new StringLiteralExpression(Constants.RavenEntityName)}
+				);
+
+			// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
+			var binaryOperatorExpression =
+				new InvocationExpression(
+					new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
+					new List<Expression>
+					{
+						metadata,
+						new StringLiteralExpression(mre.MemberName),
+						new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType(typeof (StringComparison).FullName)), "InvariantCultureIgnoreCase")
+					});
+
+			var queryWhereClause = new QueryWhereClause
+			{
+				Condition = binaryOperatorExpression
+			};
+			queryExpression.Clauses.InsertAfter(fromClause,
+				queryWhereClause);
+
+			if (mie != null)
+			{
+				var newSource = new ArrayCreateExpression
+				{
+					Initializer = new ArrayInitializerExpression(new IdentifierExpression(fromClause.Identifier)),
+					AdditionalArraySpecifiers = { new ArraySpecifier(1) }
+				};
+				queryExpression.Clauses.InsertAfter(queryWhereClause, new QueryFromClause
+				{
+					Identifier = oldIdentifier,
+					Expression = new InvocationExpression(new MemberReferenceExpression(newSource, methodToCall), mie.Arguments.Select(x => x.Clone()))
+				});
+			}
 		}
 
 		public AbstractViewGenerator GenerateInstance()

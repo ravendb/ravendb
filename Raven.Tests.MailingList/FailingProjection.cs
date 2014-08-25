@@ -33,7 +33,7 @@ namespace Raven.Tests.MailingList
                {
                    store.DatabaseCommands
                        .PutIndex("MyClass/ByIndex",
-                       new IndexDefinitionBuilder<MyClass>(prettify:true)
+                       new IndexDefinitionBuilder<MyClass>()
                        {
                            Map = docs => from doc in docs select new { Index = doc.Index }
                        }, true);

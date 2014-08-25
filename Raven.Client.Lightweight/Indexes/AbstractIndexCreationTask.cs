@@ -39,7 +39,7 @@ namespace Raven.Client.Indexes
 		/// Creates the index definition.
 		/// </summary>
 		/// <returns></returns>
-		public abstract IndexDefinition CreateIndexDefinition(bool prettify = true);
+		public abstract IndexDefinition CreateIndexDefinition();
 
 		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
 		{
@@ -202,7 +202,7 @@ namespace Raven.Client.Indexes
 		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
+			var indexDefinition = CreateIndexDefinition();
 			if (documentConvention.PrettifyGeneratedLinqExpressions)
 			{
 				var serverDef = databaseCommands.GetIndex(IndexName);
@@ -212,7 +212,7 @@ namespace Raven.Client.Indexes
 						return;
 
 					// now we need to check if this is a legacy index...
-					var legacyIndexDefinition = CreateIndexDefinition(prettify: false);
+					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
 					if (serverDef.Equals(legacyIndexDefinition))
 						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
 				}
@@ -227,13 +227,28 @@ namespace Raven.Client.Indexes
 				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 		}
 
+		private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+		{
+			IndexDefinition legacyIndexDefinition;
+			documentConvention.PrettifyGeneratedLinqExpressions = false;
+			try
+			{
+				legacyIndexDefinition = CreateIndexDefinition();
+			}
+			finally
+			{
+				documentConvention.PrettifyGeneratedLinqExpressions = true;
+			}
+			return legacyIndexDefinition;
+		}
+
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
 		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
+			var indexDefinition = CreateIndexDefinition();
 			if (documentConvention.PrettifyGeneratedLinqExpressions)
 			{
 				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName);
@@ -243,7 +258,7 @@ namespace Raven.Client.Indexes
 						return;
 
 					// now we need to check if this is a legacy index...
-					var legacyIndexDefinition = CreateIndexDefinition(prettify: false);
+					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
 					if (serverDef.Equals(legacyIndexDefinition))
 						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
 				}
@@ -287,13 +302,13 @@ namespace Raven.Client.Indexes
 		/// Creates the index definition.
 		/// </summary>
 		/// <returns></returns>
-		public override IndexDefinition CreateIndexDefinition(bool prettify = true)
+		public override IndexDefinition CreateIndexDefinition()
 		{
 			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
 
-			return new IndexDefinitionBuilder<TDocument, TReduceResult>(prettify)
+			return new IndexDefinitionBuilder<TDocument, TReduceResult>()
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,
