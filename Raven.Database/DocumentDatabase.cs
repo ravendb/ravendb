@@ -434,7 +434,7 @@ namespace Raven.Database
 
 			var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
-			if (isStale && actions.Staleness.IsReduceStale(indexId) == false)
+			if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
 			{
 				var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
 				var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
