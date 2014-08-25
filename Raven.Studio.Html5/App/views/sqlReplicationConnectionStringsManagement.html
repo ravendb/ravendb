@@ -2,7 +2,9 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add connection string (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New connection string</button>
+            <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add connection string (Alt+N)" accesskey="N">
+                <i class="fa fa-plus"></i> New connection string
+            </button>
         </div>
         <br />
         <div class="panel-body" data-bind="with: connections">

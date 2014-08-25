@@ -9,7 +9,7 @@
     <li data-bind="with: activeDatabase">
         <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
-    <li class ="active">
+    <li class="active">
         Transformers
     </li>
 </ul>
@@ -17,7 +17,9 @@
 <div id="transformersContainer">
     <div class="btn-toolbar" role="toolbar" data-bind="visible: transformersGroups().length > 0">
         <div class="btn-group">
-            <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }" title="Add a new transformer (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>
+            <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }" title="Add a new transformer (Alt+N)" accesskey="N">
+                <i class="fa fa-plus"></i>
+            </a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default" data-bind="click: toggleExpandAll" title="Toggle Expand All Groups (Alt+=)" accesskey="="><i class="fa fa-plus-square-o"></i></a>
@@ -27,8 +29,8 @@
         </div>
     </div>
 
-    <div class="text-center" data-bind="visible: transformersGroups().length == 0">
-        <h3 class="page-header text-info">No transformers have been created for this database. <small>Go ahead and <a href="#" data-bind="attr: { href: newTransformerUrl }">create a transformer</a>.</small></h3>
+    <div data-bind="visible: transformersGroups().length == 0">
+        <h4 class="page-header text-info">No transformers have been created for this database. <a href="#" data-bind="attr: { href: newTransformerUrl }">Create one now</a>.</h4>
     </div>
 
     <br />

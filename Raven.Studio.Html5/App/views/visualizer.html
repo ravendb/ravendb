@@ -1,95 +1,105 @@
 ﻿<style>
-.nvtooltip {
-    -webkit-border-radius: 5px;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    -webkit-box-shadow: 2px 2px 5px 0px rgba(50, 50, 50, 0.61);
-    -moz-box-shadow:    2px 2px 5px 0px rgba(50, 50, 50, 0.61);
-    box-shadow:         2px 2px 5px 0px rgba(50, 50, 50, 0.61);
-}
+    .nvtooltip {
+        border-radius: 5px;
+        box-shadow: 2px 2px 5px 0 rgba(50, 50, 50, 0.61);
+    }
 
-.nvtooltip .string { color: #D14; }
-.nvtooltip .number { color: #099; }
-.nvtooltip .boolean { color: #0000ff; }
-.nvtooltip .null { color: #0000ff; }
-.nvtooltip .key { color: #000; }
+        .nvtooltip .string {
+            color: #D14;
+        }
 
-.nodeRect {
-    fill-opacity: .4 !important;
-    stroke: #777;
-    stroke-width: 1.5px;
-}
+        .nvtooltip .number {
+            color: #099;
+        }
 
+        .nvtooltip .boolean {
+            color: #0000ff;
+        }
 
-rect.hover {
-  stroke-width: 2px;
-  stroke: black;
-  fill-opacity: .95 !important;
-  stroke-opacity: .95 !important;
-}
+        .nvtooltip .null {
+            color: #0000ff;
+        }
 
-.nodeRect.highlight {
-  fill-opacity: 0.8 !important;
-}
+        .nvtooltip .key {
+            color: #000;
+        }
 
-.nodeCheck {
-    stroke-width: 2px;
-    stroke: black;
-    fill: white;
-}
-.nodeCheck.selected  {
-    stroke-width: 2px;
-    stroke: black;
-    fill: black;
-}
-
-.hidden {
-    display: none;
-}
-
-circle {
-  fill: #fff;
-  stroke: steelblue;
-  stroke-width: 1.5px;
-}
-
-g {
-  font: 10px sans-serif;
-  cursor: pointer;
-}
-
-.link {
-  fill: none;
-  stroke: #ccc;
-  stroke-width: 1.5px;
-}
-.link.selected {
-    fill: none;
-    stroke: black;
-    stroke-width: 2.5px;
-     
-}
-.selectable-tooltip {
-    pointer-events: all;
-     -webkit-touch-callout: all;
-  -webkit-user-select: all;
-  -khtml-user-select: all;
-  -moz-user-select: all;
-  -ms-user-select: all;
-  user-select: all;
-
-}
-text {
-    pointer-events: none;
-    text-anchor: middle;
-}
+    .nodeRect {
+        fill-opacity: .4 !important;
+        stroke: #777;
+        stroke-width: 1.5px;
+    }
 
 
+    rect.hover {
+        stroke-width: 2px;
+        stroke: black;
+        fill-opacity: .95 !important;
+        stroke-opacity: .95 !important;
+    }
+
+    .nodeRect.highlight {
+        fill-opacity: 0.8 !important;
+    }
+
+    .nodeCheck {
+        stroke-width: 2px;
+        stroke: black;
+        fill: white;
+    }
+
+        .nodeCheck.selected {
+            stroke-width: 2px;
+            stroke: black;
+            fill: black;
+        }
+
+    .hidden {
+        display: none;
+    }
+
+    circle {
+        fill: #fff;
+        stroke: steelblue;
+        stroke-width: 1.5px;
+    }
+
+    g {
+        font: 10px sans-serif;
+        cursor: pointer;
+    }
+
+    .link {
+        fill: none;
+        stroke: #ccc;
+        stroke-width: 1.5px;
+    }
+
+        .link.selected {
+            fill: none;
+            stroke: black;
+            stroke-width: 2.5px;
+        }
+
+    .selectable-tooltip {
+        pointer-events: all;
+        -webkit-touch-callout: all;
+        -webkit-user-select: all;
+        -khtml-user-select: all;
+        -moz-user-select: all;
+        -ms-user-select: all;
+        user-select: all;
+    }
+
+    text {
+        pointer-events: none;
+        text-anchor: middle;
+    }
 </style>
 
 <section id="visualizerSection">
     <form class="form-inline" role="form">
-        
+
         <h4 class="pull-left" data-bind="visible: !onlineMode()">Offline analysis for index <strong data-bind="text: indexName"></strong>&nbsp;&nbsp;</h4>
         <div class="btn-group" data-bind="visible: onlineMode">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -105,8 +115,10 @@ text {
         <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
                 <input id="docKey" type="text" data-bind="value: docKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Document Id" autocomplete="off">
-                <span class="input-group-btn" style="width: auto" >
-                    <button data-bind="click: addDocKey.bind($root, docKey())" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
+                <span class="input-group-btn" style="width: auto">
+                    <button data-bind="click: addDocKey.bind($root, docKey())" class="btn btn-default" type="button">
+                        <i class="fa fa-plus"></i>
+                    </button>
                 </span>
             </div>
             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: docKeysSearchResults">
@@ -120,7 +132,7 @@ text {
         <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
                 <input id="itemKey" type="text" data-bind="value: reduceKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Reduce key" autocomplete="off">
-                <span class="input-group-btn" style="width: auto" >
+                <span class="input-group-btn" style="width: auto">
                     <button data-bind="click: addReduceKey.bind($root, reduceKey()), visible: hasIndexSelected" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
                 </span>
             </div>
@@ -133,8 +145,8 @@ text {
             </ul>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default"  data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected() && onlineMode()" title="Edit index"><i class="fa fa-pencil"></i></a>
-            <a class="btn btn-default"  data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected() && onlineMode()" title="Run query"><i class="fa fa-gears"></i></a>
+            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected() && onlineMode()" title="Edit index"><i class="fa fa-pencil"></i></a>
+            <a class="btn btn-default" data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected() && onlineMode()" title="Run query"><i class="fa fa-gears"></i></a>
             <button id="fullScreenButton" class="btn btn-default" data-bind="visible: hasIndexSelected, click: toggleFullscreen" title="Fullscreen mode">
                 <i class="fa fa-expand"></i>
             </button>
@@ -145,7 +157,7 @@ text {
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>
-        
+
         <div class="btn-group" data-bind="visible: hasIndexSelected">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 <i class="fa fa-download"></i>
@@ -156,7 +168,7 @@ text {
                 <li data-bind="click: saveAsJson"><a href="#"><i class="fa fa-file-text-o"></i> JSON</a></li>
             </ul>
         </div>
-        
+
         <div class="btn-group">
             <button type="button" class="btn btn-default" data-bind="click: chooseImportFile">
                 <i class="fa fa-upload"></i>
@@ -166,18 +178,18 @@ text {
         <div class="btn-group" data-bind="visible: hasIndexSelected">
             <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
         </div>
-        
-        
+
+
     </form>
 
     <svg id="visHeader" style="height: 25px" height="25">
-            
+
     </svg>
     <div id="visualizerContainer" style="height: 600px" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" class="with-3d-shadow with-transitions">
-        
+
         <div>
             <svg id="visualizer" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
         </div>
     </div>
-    
+
 </section>

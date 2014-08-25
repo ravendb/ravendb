@@ -25,7 +25,6 @@ class dialogViewModelBase {
     attached() {
         jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
-        setTimeout(() => $(dialogViewModelBase.dialogSelector).focus(), 100); // We have to time-delay this, else it never receives focus.
     }
 
     deactivate(args) {
@@ -37,6 +36,10 @@ class dialogViewModelBase {
             $(this.elementToFocusOnDismissal).focus();
         }
     }
+
+    compositionComplete(view: any, parent: any) {
+        setTimeout(() => $(dialogViewModelBase.dialogSelector).focus(), 100); // We have to time-delay this, else it never receives focus.
+    }    
 
     enterKeyPressed(): boolean {
         var acceptButton = <HTMLAnchorElement>$(".modal-footer:visible .btn-primary")[0];

@@ -1,4 +1,9 @@
-﻿@import url("//fonts.googleapis.com/css?family=Roboto:300,400,700,400italic");
+﻿@font-face {
+  font-family: 'WebRoboto';
+  font-style: normal;
+  font-weight: 700;
+  src: url(http://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
+}
 /*!
  * Bootswatch v3.2.0
  * Homepage: http://bootswatch.com
@@ -889,7 +894,7 @@ html {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 body {
-  font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "WebRoboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 16px;
   color: #555555;
   background-color: #ffffff;

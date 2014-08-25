@@ -11,7 +11,7 @@ import messagePublisher = require("common/messagePublisher");
 
 class copyIndexDialog extends dialogViewModelBase {
 
-    indexJSON = ko.observable<string>("");
+    indexJSON = ko.observable("");
 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
@@ -27,7 +27,8 @@ class copyIndexDialog extends dialogViewModelBase {
                 .execute()
                 .done((results: indexDefinitionContainerDto) => {
                     var prettifySpacing = 4;
-                    this.indexJSON(JSON.stringify(new indexDefinition(results.Index).toDto(), null, prettifySpacing));
+                    var jsonString = JSON.stringify(new indexDefinition(results.Index).toDto(), null, prettifySpacing);
+                    this.indexJSON(jsonString);
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => canActivateResult.reject());
@@ -36,9 +37,8 @@ class copyIndexDialog extends dialogViewModelBase {
         }
     }
 
-    attached() {
-        super.attached();
-        this.selectText();
+    compositionComplete(view, parent) {
+        setTimeout(() => this.selectText(), 100);
     }
 
     deactivate() {
