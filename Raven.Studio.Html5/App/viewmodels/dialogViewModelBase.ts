@@ -25,7 +25,6 @@ class dialogViewModelBase {
     attached() {
         jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
-        setTimeout(() => $(dialogViewModelBase.dialogSelector).focus(), 100); // We have to time-delay this, else it never receives focus.
     }
 
     deactivate(args) {
@@ -35,6 +34,20 @@ class dialogViewModelBase {
     detached() {
         if (this.elementToFocusOnDismissal) {
             $(this.elementToFocusOnDismissal).focus();
+        }
+    }
+
+    compositionComplete(view: any, parent: any) {
+        setTimeout(() => this.setInitialFocus(), 100); // We have to time-delay this, else it never receives focus.
+    }
+
+    setInitialFocus() {
+        var autoFocusElement = $(".messageBox [autofocus]");
+        if (autoFocusElement.length) {
+            autoFocusElement.focus();
+            autoFocusElement.select();
+        } else {
+            $(dialogViewModelBase.dialogSelector).focus();
         }
     }
 

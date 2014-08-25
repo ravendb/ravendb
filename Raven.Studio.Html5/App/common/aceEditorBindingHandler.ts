@@ -18,7 +18,10 @@ class aceEditorBindingHandler {
         theme: "ace/theme/xcode",
         fontSize: "16px",
         lang: "ace/mode/csharp",
-        readOnly: false
+        readOnly: false,
+        selectAll: false,
+        bubbleEscKey: false,
+        bubbleEnterKey: false
     }
 
     static dom = require("ace/lib/dom");
@@ -109,7 +112,10 @@ class aceEditorBindingHandler {
             completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
             completerHostObject?: any;
-            minHeight?:number;
+            minHeight?: number;
+            selectAll?: boolean;
+            bubbleEscKey: boolean;
+            bubbleEnterKey: boolean;
         },
         allBindings,
         viewModel,
@@ -124,14 +130,16 @@ class aceEditorBindingHandler {
         var langTools = null;
         var completerHostObject = bindingValues.completerHostObject;
         var minHeight = bindingValues.minHeight ? bindingValues.minHeight:140;
-
+        var selectAll = bindingValues.selectAll || this.defaults.selectAll;
+        var bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
+        var bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
+        var getFocus = bindingValues.getFocus;
 
         if (typeof code !== "function") {
             throw new Error("code should be an observable");
         }
 
         if (!!bindingValues.completer) {
-
             langTools = ace.require("ace/ext/language_tools");
         }
 
@@ -144,6 +152,14 @@ class aceEditorBindingHandler {
         aceEditor.getSession().setMode(lang);
         aceEditor.setReadOnly(readOnly);
 
+        // Setup key bubbling 
+        if (bubbleEscKey) {
+            aceEditor.commands.addCommand({
+                name: "RavenStudioBubbleEsc",
+                bindKey: "esc",
+                exec: () => false // Returning false causes the event to bubble up.
+            });
+        }
 
         // setup the autocomplete mechanism, bind recieved function with recieved type, will only work if both were recieved
         if (!!typeName) {
@@ -202,8 +218,12 @@ class aceEditorBindingHandler {
         // Keep track of the editor for this element.
         ko.utils.domData.set(element, "aceEditor", aceEditor);
 
-        if (bindingValues.getFocus && bindingValues.getFocus == true) {
-            aceEditor.focus();
+        if (bindingValues.getFocus) {
+            setTimeout(() => aceEditor.focus(), 0);
+        }
+
+        if (selectAll) {
+            setTimeout(() => aceEditor.selectAll(), 0);
         }
     }
 
