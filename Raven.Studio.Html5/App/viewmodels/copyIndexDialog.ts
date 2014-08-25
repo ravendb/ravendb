@@ -8,6 +8,7 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
 import messagePublisher = require("common/messagePublisher");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class copyIndexDialog extends dialogViewModelBase {
 
@@ -15,6 +16,7 @@ class copyIndexDialog extends dialogViewModelBase {
 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
+        aceEditorBindingHandler.install();
     }
 
     canActivate(args: any): any {
@@ -37,16 +39,19 @@ class copyIndexDialog extends dialogViewModelBase {
         }
     }
 
-    compositionComplete(view, parent) {
-        setTimeout(() => this.selectText(), 100);
+    setInitialFocus() {
+        // Overrides the base class' setInitialFocus and does nothing.
+        // Doing nothing because we will focus the Ace Editor when it's initialized.
     }
 
-    deactivate() {
-        $("#indexJSON").unbind('keydown.jwerty');
-    }
+    enterKeyPressed(): boolean {
+        // Overrides the base class' enterKeyPressed. Because the user might
+        // edit the JSON, or even type some in manually, enter might really mean new line, not Save changes.
+        if (!this.isPaste) {
+            return super.enterKeyPressed();
+        }
 
-    selectText() {
-        $("#indexJSON").select();
+        return true;
     }
 
     saveIndex() {
@@ -86,14 +91,6 @@ class copyIndexDialog extends dialogViewModelBase {
 
     close() {
         dialog.close(this);
-    }
-
-    activateDocs() {
-        this.selectText();
-    }
-
-    activateIds() {
-        this.selectText();
     }
 }
 

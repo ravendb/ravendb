@@ -12,6 +12,7 @@ import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
+import formatIndexCommand = require("commands/formatIndexCommand");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -118,10 +119,10 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    updateUrl(transformerName:string) {
+    updateUrl(transformerName: string) {
         router.navigate(appUrl.forEditTransformer(transformerName, this.activeDatabase()));
     }
-    
+
     refreshTransformer() {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the transformer from the server?');
         canContinue
@@ -134,25 +135,23 @@ class editTransformer extends viewModelBase {
                         messagePublisher.reportError("Could not find " + transformerName + " transformer");
                         this.navigate(appUrl.forTransformers(this.activeDatabase()));
                     });
-        });
+            });
     }
 
     formatTransformer() {
-        require(["commands/formatIndexCommand"], formatIndexCommand => {
-            var editedTransformer: transformer = this.editedTransformer();
+        var editedTransformer: transformer = this.editedTransformer();
 
-            new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()], this.activeDatabase())
-                .execute()
-                .done((result: string[]) => {
-                    var formatedTransformer = result[0];
-                    if (formatedTransformer.indexOf("Could not format:") == -1) {
-                        editedTransformer.transformResults(formatedTransformer);
-                    }
-                    else {
-                        messagePublisher.reportError("Failed to format transformer!", formatedTransformer);
-                    }
+        new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()])
+            .execute()
+            .done((result: string[]) => {
+                var formatedTransformer = result[0];
+                if (formatedTransformer.indexOf("Could not format:") == -1) {
+                    editedTransformer.transformResults(formatedTransformer);
+                }
+                else {
+                    messagePublisher.reportError("Failed to format transformer!", formatedTransformer);
+                }
             });
-        });
     }
 
     deleteTransformer() {

@@ -15,14 +15,22 @@
 </ul>
 
 <div id="transformersContainer">
-    <div class="btn-toolbar" role="toolbar" data-bind="visible: transformersGroups().length > 0">
+    <div class="btn-toolbar" role="toolbar">
+        <!--data-bind="visible: transformersGroups().length > 0"-->
         <div class="btn-group">
             <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }" title="Add a new transformer (Alt+N)" accesskey="N">
-                <i class="fa fa-plus"></i>
+                <i class="fa fa-plus"></i> New transformer
             </a>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default" data-bind="click: toggleExpandAll" title="Toggle Expand All Groups (Alt+=)" accesskey="="><i class="fa fa-plus-square-o"></i></a>
+            <button class="btn btn-default" data-bind="click: toggleExpandAll, attr: { title: expandCollapseTitle }" accesskey="=">
+                <i data-bind="css: { 'fa-plus-square-o': !allTransformersExpanded(), 'fa-minus-square-o': allTransformersExpanded }" class="fa fa-fw"></i>
+            </button>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-default" data-bind="click: pasteTransformer" title="Paste transformer from JSON (Alt+V)" accesskey="V">
+                <i class="fa fa-paste"></i>
+            </button>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-danger" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
@@ -57,8 +65,11 @@
                                         </a>
                                     </h4>
                                     <div class="pull-right index-actions-container">
-                                        <a class="btn btn-primary" title="Edit the transformer" data-bind="attr: { href: editUrl }">
+                                        <a class="btn btn-default" title="Edit the transformer" data-bind="attr: { href: editUrl }">
                                             <i class="fa fa-pencil"></i>
+                                        </a>
+                                        <a class="btn btn-default" title="Copy the transformer" data-bind="click: $root.copyTransformer.bind($root)">
+                                            <i class="fa fa-copy"></i>
                                         </a>
                                         <button class="btn btn-danger" title="Delete the transformer" data-bind="click: $root.deleteTransformer.bind($root)">
                                             <i class="fa fa-trash-o"></i>

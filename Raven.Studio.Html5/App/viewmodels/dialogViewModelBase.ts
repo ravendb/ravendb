@@ -38,8 +38,18 @@ class dialogViewModelBase {
     }
 
     compositionComplete(view: any, parent: any) {
-        setTimeout(() => $(dialogViewModelBase.dialogSelector).focus(), 100); // We have to time-delay this, else it never receives focus.
-    }    
+        setTimeout(() => this.setInitialFocus(), 100); // We have to time-delay this, else it never receives focus.
+    }
+
+    setInitialFocus() {
+        var autoFocusElement = $(".messageBox [autofocus]");
+        if (autoFocusElement.length) {
+            autoFocusElement.focus();
+            autoFocusElement.select();
+        } else {
+            $(dialogViewModelBase.dialogSelector).focus();
+        }
+    }
 
     enterKeyPressed(): boolean {
         var acceptButton = <HTMLAnchorElement>$(".modal-footer:visible .btn-primary")[0];

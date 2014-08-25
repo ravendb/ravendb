@@ -80,9 +80,7 @@ class transformer {
                 'TransformResults': ""
             }
         });
-    }
-
-    
+    }    
 
 }
 
