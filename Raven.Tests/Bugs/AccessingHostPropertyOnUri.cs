@@ -58,7 +58,7 @@ namespace Raven.Tests.Issues
         public void ShouldNotConvertUriToStringWhenIndexing ()
         {
             using (var store = NewDocumentStore())
-			{
+            {
                 new WebActivityIndex().Execute(store);
 
                 var activities1 = new WebItems()

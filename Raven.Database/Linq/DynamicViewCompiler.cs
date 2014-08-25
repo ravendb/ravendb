@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using ICSharpCode.NRefactory.CSharp;
@@ -422,7 +423,74 @@ Reduce only fields: {2}
 
 				return true;
 			}
+		}
 
+		[CLSCompliant(false)]
+		public class AddDocumentIdToQueries : DepthFirstAstVisitor<object, object>
+		{
+			public override object VisitAnonymousTypeCreateExpression(AnonymousTypeCreateExpression objectCreateExpression, object data)
+			{
+
+				var initializers = objectCreateExpression.Initializers;
+				if (initializers.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+					return false;
+
+				// need to find the currect from / group identifier
+
+				var parentQueryClause = GetRelevantClause(objectCreateExpression);
+
+				var queryFromClause = parentQueryClause as QueryFromClause;
+				if (queryFromClause != null)
+				{
+					var identifierExpression = new IdentifierExpression(queryFromClause.Identifier);
+					objectCreateExpression.Initializers.Add(new NamedExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
+					});
+				}
+				var queryGroupClause = parentQueryClause as QueryGroupClause;
+				if (queryGroupClause != null)
+				{
+					objectCreateExpression.Initializers.Add(new NamedExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(queryGroupClause.Projection.Clone(), Constants.DocumentIdFieldName)
+					});
+				}
+				var queryContinuationClause = parentQueryClause as QueryContinuationClause;
+				if (queryContinuationClause != null)
+				{
+					Expression identifier = new IdentifierExpression(queryContinuationClause.Identifier);
+					if(queryContinuationClause.PrecedingQuery.Clauses.LastOrNullObject() is QueryGroupClause)
+						identifier = new MemberReferenceExpression(identifier, "Key");
+
+					objectCreateExpression.Initializers.Add(new NamedExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(identifier, Constants.DocumentIdFieldName)
+					});
+				}
+
+				return data;
+			}
+
+			private static QueryClause GetRelevantClause(AstNode node)
+			{
+				var relevantClause = node.GetParent<QueryClause>();
+				do
+				{
+					if(relevantClause == null)
+						throw new IOException("Can't figure out how to find the relevant clause for this query");
+					if (relevantClause is QueryGroupClause)
+						return relevantClause;
+					if (relevantClause is QueryFromClause)
+						return relevantClause;
+					if (relevantClause is QueryContinuationClause)
+						return relevantClause;
+					relevantClause = relevantClause.GetPrevNode() as QueryClause;
+				} while (true);
+			}
 		}
 
 		private void AddEntityNameFilteringIfNeeded(VariableInitializer variableDeclaration, out string entityName)
@@ -479,7 +547,7 @@ Reduce only fields: {2}
 			entityName = null;
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(query, RequiresSelectNewAnonymousType);
 			var queryExpression = ((QueryExpression)variableDeclaration.Initializer);
-			var fromClause = queryExpression.Clauses.OfType<QueryFromClause>().First();
+			var fromClause = GetFromClause(queryExpression);
 			var expression = fromClause.Expression;
 			HandleCollectionName(expression, fromClause, queryExpression, ref entityName);
 			var projection = 
@@ -498,16 +566,23 @@ Reduce only fields: {2}
 			if (objectInitializer.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
-			objectInitializer.Add(
-				new NamedExpression
-				{
-					Name = Constants.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
-				});
+			variableDeclaration.AcceptVisitor(new AddDocumentIdToQueries(), null);
 
 			variableDeclaration.AcceptVisitor(this.transformFromClauses, null);
 
 			return variableDeclaration;
+		}
+
+		private static QueryFromClause GetFromClause(QueryExpression queryExpression)
+		{
+			var first = queryExpression.Clauses.First();
+			var queryFromClause = first as QueryFromClause;
+			if (queryFromClause != null)
+				return queryFromClause;
+			var queryContinuationClause = first as QueryContinuationClause;
+			if (queryContinuationClause == null)
+				throw new InvalidOperationException("Don't understand how to parse this query");
+			return GetFromClause(queryContinuationClause.PrecedingQuery);
 		}
 
 		private static void HandleCollectionName(Expression expression, QueryFromClause fromClause, QueryExpression queryExpression, ref string entityName)
@@ -561,7 +636,7 @@ Reduce only fields: {2}
 			{
 				Condition = binaryOperatorExpression
 			};
-			queryExpression.Clauses.InsertAfter(fromClause,
+			((QueryExpression)fromClause.Parent).Clauses.InsertAfter(fromClause,
 				queryWhereClause);
 
 			if (mie != null)
