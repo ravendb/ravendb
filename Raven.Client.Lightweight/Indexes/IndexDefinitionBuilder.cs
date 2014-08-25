@@ -216,12 +216,13 @@ namespace Raven.Client.Indexes
 			}
 
 			if (Map != null)
+			{
 				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
-				Map, convention, querySource, translateIdentityProperty: true);
+					Map, convention, querySource, translateIdentityProperty: true);
 
-			if (prettify)
-				indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
-
+				if (prettify)
+					indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
+			}
 			return indexDefinition;
 		}
 
