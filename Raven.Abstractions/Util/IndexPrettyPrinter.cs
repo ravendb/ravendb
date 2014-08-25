@@ -3,142 +3,143 @@ using System.Collections.Generic;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
-using Mono.CSharp;
 using CSharpParser = ICSharpCode.NRefactory.CSharp.CSharpParser;
 using Expression = ICSharpCode.NRefactory.CSharp.Expression;
 using LambdaExpression = ICSharpCode.NRefactory.CSharp.LambdaExpression;
 using ParenthesizedExpression = ICSharpCode.NRefactory.CSharp.ParenthesizedExpression;
 
-public static class IndexPrettyPrinter
+namespace Raven.Abstractions.Util
 {
-	public static string Format(string code)
+	public static class IndexPrettyPrinter
 	{
-		if (string.IsNullOrEmpty(code))
-			return code;
-
-		var cSharpParser = new CSharpParser();
-		var expr = cSharpParser.ParseExpression(code);
-		if (cSharpParser.HasErrors)
-			throw new ArgumentException(string.Join(Environment.NewLine, cSharpParser.Errors.Select(e => e.ErrorType + " " + e.Message + " " + e.Region)));
-
-		// Wrap expression in parenthesized expression, this is necessary because the transformations
-		// can't replace the root node of the syntax tree
-		expr = new ParenthesizedExpression(expr);
-		// Apply transformations
-		new IntroduceQueryExpressions().Run(expr);
-		new CombineQueryExpressions().Run(expr);
-		new RemoveQueryContinuation().Run(expr);
-		// Unwrap expression
-		expr = ((ParenthesizedExpression)expr).Expression;
-
-		var format = expr.GetText(FormattingOptionsFactory.CreateAllman());
-		if (format.Substring(0, 3) == "\r\n\t")
+		public static string Format(string code)
 		{
-			format = format.Remove(0, 3);
-		}
-		format = format.Replace("\r\n\t", "\n");
-		return format;
-	}
+			if (string.IsNullOrEmpty(code))
+				return code;
 
-	#region Decompiler Logic
-	// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-	// 
-	// Permission is hereby granted, free of charge, to any person obtaining a copy of this
-	// software and associated documentation files (the "Software"), to deal in the Software
-	// without restriction, including without limitation the rights to use, copy, modify, merge,
-	// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
-	// to whom the Software is furnished to do so, subject to the following conditions:
-	// 
-	// The above copyright notice and this permission notice shall be included in all copies or
-	// substantial portions of the Software.
-	// 
-	// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-	// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-	// PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
-	// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-	// DEALINGS IN THE SOFTWARE.
+			var cSharpParser = new CSharpParser();
+			var expr = cSharpParser.ParseExpression(code);
+			if (cSharpParser.HasErrors)
+				throw new ArgumentException(string.Join(Environment.NewLine, cSharpParser.Errors.Select(e => e.ErrorType + " " + e.Message + " " + e.Region)));
 
-	// Code taken from ILSpy 2.1; slightly adjusted for NRefactory 5.2.
+			// Wrap expression in parenthesized expression, this is necessary because the transformations
+			// can't replace the root node of the syntax tree
+			expr = new ParenthesizedExpression(expr);
+			// Apply transformations
+			new IntroduceQueryExpressions().Run(expr);
+			new CombineQueryExpressions().Run(expr);
+			new RemoveQueryContinuation().Run(expr);
+			// Unwrap expression
+			expr = ((ParenthesizedExpression)expr).Expression;
 
-	/// <summary>
-	/// Decompiles query expressions.
-	/// Based on C# 4.0 spec, §7.16.2 Query expression translation
-	/// </summary>
-	public class IntroduceQueryExpressions
-	{
-		public void Run(AstNode compilationUnit)
-		{
-			DecompileQueries(compilationUnit);
-			// After all queries were decompiled, detect degenerate queries (queries not property terminated with 'select' or 'group')
-			// and fix them, either by adding a degenerate select, or by combining them with another query.
-			foreach (QueryExpression query in compilationUnit.Descendants.OfType<QueryExpression>())
+			var format = expr.GetText(FormattingOptionsFactory.CreateAllman());
+			if (format.Substring(0, 3) == "\r\n\t")
 			{
-				var fromClause = query.Clauses.First() as QueryFromClause;
-				if (fromClause == null) continue;
+				format = format.Remove(0, 3);
+			}
+			format = format.Replace("\r\n\t", "\n");
+			return format;
+		}
 
-				if (IsDegenerateQuery(query))
+		#region Decompiler Logic
+		// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
+		// 
+		// Permission is hereby granted, free of charge, to any person obtaining a copy of this
+		// software and associated documentation files (the "Software"), to deal in the Software
+		// without restriction, including without limitation the rights to use, copy, modify, merge,
+		// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+		// to whom the Software is furnished to do so, subject to the following conditions:
+		// 
+		// The above copyright notice and this permission notice shall be included in all copies or
+		// substantial portions of the Software.
+		// 
+		// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+		// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+		// PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+		// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+		// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+		// DEALINGS IN THE SOFTWARE.
+
+		// Code taken from ILSpy 2.1; slightly adjusted for NRefactory 5.2.
+
+		/// <summary>
+		/// Decompiles query expressions.
+		/// Based on C# 4.0 spec, §7.16.2 Query expression translation
+		/// </summary>
+		public class IntroduceQueryExpressions
+		{
+			public void Run(AstNode compilationUnit)
+			{
+				DecompileQueries(compilationUnit);
+				// After all queries were decompiled, detect degenerate queries (queries not property terminated with 'select' or 'group')
+				// and fix them, either by adding a degenerate select, or by combining them with another query.
+				foreach (QueryExpression query in compilationUnit.Descendants.OfType<QueryExpression>())
 				{
-					// introduce select for degenerate query
-					query.Clauses.Add(new QuerySelectClause { Expression = new IdentifierExpression(fromClause.Identifier) });
-				}
-				// See if the data source of this query is a degenerate query,
-				// and combine the queries if possible.
-				QueryExpression innerQuery = fromClause.Expression as QueryExpression;
-				while (IsDegenerateQuery(innerQuery))
-				{
-					QueryFromClause innerFromClause = (QueryFromClause)innerQuery.Clauses.First();
-					if (fromClause.Identifier != innerFromClause.Identifier)
-						break;
-					// Replace the fromClause with all clauses from the inner query
-					fromClause.Remove();
-					QueryClause insertionPos = null;
-					foreach (var clause in innerQuery.Clauses)
+					var fromClause = query.Clauses.First() as QueryFromClause;
+					if (fromClause == null) continue;
+
+					if (IsDegenerateQuery(query))
 					{
-						query.Clauses.InsertAfter(insertionPos, insertionPos = Detach(clause));
+						// introduce select for degenerate query
+						query.Clauses.Add(new QuerySelectClause { Expression = new IdentifierExpression(fromClause.Identifier) });
 					}
-					fromClause = innerFromClause;
-					innerQuery = fromClause.Expression as QueryExpression;
+					// See if the data source of this query is a degenerate query,
+					// and combine the queries if possible.
+					QueryExpression innerQuery = fromClause.Expression as QueryExpression;
+					while (IsDegenerateQuery(innerQuery))
+					{
+						QueryFromClause innerFromClause = (QueryFromClause)innerQuery.Clauses.First();
+						if (fromClause.Identifier != innerFromClause.Identifier)
+							break;
+						// Replace the fromClause with all clauses from the inner query
+						fromClause.Remove();
+						QueryClause insertionPos = null;
+						foreach (var clause in innerQuery.Clauses)
+						{
+							query.Clauses.InsertAfter(insertionPos, insertionPos = Detach(clause));
+						}
+						fromClause = innerFromClause;
+						innerQuery = fromClause.Expression as QueryExpression;
+					}
 				}
 			}
-		}
 
-		private T Detach<T>(T astNode)
-			where T : AstNode
-		{
-			astNode.Remove();
-			return astNode;
-		}
-
-		bool IsDegenerateQuery(QueryExpression query)
-		{
-			if (query == null)
-				return false;
-			var lastClause = query.Clauses.LastOrDefault();
-			return !(lastClause is QuerySelectClause || lastClause is QueryGroupClause);
-		}
-
-		void DecompileQueries(AstNode node)
-		{
-			QueryExpression query = DecompileQuery(node as InvocationExpression);
-			if (query != null)
-				node.ReplaceWith(query);
-			for (AstNode child = (query ?? node).FirstChild; child != null; child = child.NextSibling)
+			private T Detach<T>(T astNode)
+				where T : AstNode
 			{
-				DecompileQueries(child);
+				astNode.Remove();
+				return astNode;
 			}
-		}
 
-		QueryExpression DecompileQuery(InvocationExpression invocation)
-		{
-			if (invocation == null)
-				return null;
-			MemberReferenceExpression mre = invocation.Target as MemberReferenceExpression;
-			if (mre == null)
-				return null;
-			switch (mre.MemberName)
+			bool IsDegenerateQuery(QueryExpression query)
 			{
-				case "Select":
+				if (query == null)
+					return false;
+				var lastClause = query.Clauses.LastOrDefault();
+				return !(lastClause is QuerySelectClause || lastClause is QueryGroupClause);
+			}
+
+			void DecompileQueries(AstNode node)
+			{
+				QueryExpression query = DecompileQuery(node as InvocationExpression);
+				if (query != null)
+					node.ReplaceWith(query);
+				for (AstNode child = (query ?? node).FirstChild; child != null; child = child.NextSibling)
+				{
+					DecompileQueries(child);
+				}
+			}
+
+			QueryExpression DecompileQuery(InvocationExpression invocation)
+			{
+				if (invocation == null)
+					return null;
+				MemberReferenceExpression mre = invocation.Target as MemberReferenceExpression;
+				if (mre == null)
+					return null;
+				switch (mre.MemberName)
+				{
+					case "Select":
 					{
 						if (invocation.Arguments.Count != 1)
 							return null;
@@ -153,15 +154,15 @@ public static class IndexPrettyPrinter
 						}
 						return null;
 					}
-				case "GroupBy":
+					case "GroupBy":
 					{
 						if (invocation.Arguments.Count == 2)
 						{
 							string parameterName1, parameterName2;
 							Expression keySelector, elementSelector;
 							if (MatchSimpleLambda(invocation.Arguments.ElementAt(0), out parameterName1, out keySelector)
-								&& MatchSimpleLambda(invocation.Arguments.ElementAt(1), out parameterName2, out elementSelector)
-								&& parameterName1 == parameterName2)
+							    && MatchSimpleLambda(invocation.Arguments.ElementAt(1), out parameterName2, out elementSelector)
+							    && parameterName1 == parameterName2)
 							{
 								QueryExpression query = new QueryExpression();
 								query.Clauses.Add(new QueryFromClause { Identifier = parameterName1, Expression = Detach(mre.Target) });
@@ -183,7 +184,7 @@ public static class IndexPrettyPrinter
 						}
 						return null;
 					}
-				case "SelectMany":
+					case "SelectMany":
 					{
 						if (invocation.Arguments.Count != 2)
 							return null;
@@ -207,7 +208,7 @@ public static class IndexPrettyPrinter
 						}
 						return null;
 					}
-				case "Where":
+					case "Where":
 					{
 						if (invocation.Arguments.Count != 1)
 							return null;
@@ -222,10 +223,10 @@ public static class IndexPrettyPrinter
 						}
 						return null;
 					}
-				case "OrderBy":
-				case "OrderByDescending":
-				case "ThenBy":
-				case "ThenByDescending":
+					case "OrderBy":
+					case "OrderByDescending":
+					case "ThenBy":
+					case "ThenByDescending":
 					{
 						if (invocation.Arguments.Count != 1)
 							return null;
@@ -267,8 +268,8 @@ public static class IndexPrettyPrinter
 						}
 						return null;
 					}
-				case "Join":
-				case "GroupJoin":
+					case "Join":
+					case "GroupJoin":
 					{
 						if (invocation.Arguments.Count != 4)
 							return null;
@@ -305,106 +306,109 @@ public static class IndexPrettyPrinter
 						}
 						return null;
 					}
-				default:
-					return null;
-			}
-		}
-
-		/// <summary>
-		/// Ensure that all ThenBy's are correct, and that the list of ThenBy's is terminated by an 'OrderBy' invocation.
-		/// </summary>
-		bool ValidateThenByChain(InvocationExpression invocation, string expectedParameterName)
-		{
-			if (invocation == null || invocation.Arguments.Count != 1)
-				return false;
-			MemberReferenceExpression mre = invocation.Target as MemberReferenceExpression;
-			if (mre == null)
-				return false;
-			string parameterName;
-			Expression body;
-			if (!MatchSimpleLambda(invocation.Arguments.Single(), out parameterName, out body))
-				return false;
-			if (parameterName != expectedParameterName)
-				return false;
-
-			if (mre.MemberName == "OrderBy" || mre.MemberName == "OrderByDescending")
-				return true;
-			else if (mre.MemberName == "ThenBy" || mre.MemberName == "ThenByDescending")
-				return ValidateThenByChain(mre.Target as InvocationExpression, expectedParameterName);
-			else
-				return false;
-		}
-
-		/// <summary>Matches simple lambdas of the form "a => b"</summary>
-		bool MatchSimpleLambda(Expression expr, out string parameterName, out Expression body)
-		{
-			LambdaExpression lambda = expr as LambdaExpression;
-			if (lambda != null && lambda.Parameters.Count == 1 && lambda.Body is Expression)
-			{
-				ParameterDeclaration p = lambda.Parameters.Single();
-				if (p.ParameterModifier == ParameterModifier.None)
-				{
-					parameterName = p.Name;
-					body = (Expression)lambda.Body;
-					return true;
+					default:
+						return null;
 				}
 			}
-			parameterName = null;
-			body = null;
-			return false;
-		}
-	}
 
-	public class RemoveQueryContinuation
-	{
-		private readonly HashSet<string> membersToRemove = new HashSet<string>();
-		public void Run(AstNode compilationUnit)
-		{
-			RemoveContinuation(compilationUnit);
-			RemoveMembersFromContinuation(compilationUnit);
-		}
-
-		private void RemoveMembersFromContinuation(AstNode node)
-		{
-			for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+			/// <summary>
+			/// Ensure that all ThenBy's are correct, and that the list of ThenBy's is terminated by an 'OrderBy' invocation.
+			/// </summary>
+			bool ValidateThenByChain(InvocationExpression invocation, string expectedParameterName)
 			{
-				RemoveMembersFromContinuation(child);
+				if (invocation == null || invocation.Arguments.Count != 1)
+					return false;
+				MemberReferenceExpression mre = invocation.Target as MemberReferenceExpression;
+				if (mre == null)
+					return false;
+				string parameterName;
+				Expression body;
+				if (!MatchSimpleLambda(invocation.Arguments.Single(), out parameterName, out body))
+					return false;
+				if (parameterName != expectedParameterName)
+					return false;
+
+				if (mre.MemberName == "OrderBy" || mre.MemberName == "OrderByDescending")
+					return true;
+				else if (mre.MemberName == "ThenBy" || mre.MemberName == "ThenByDescending")
+					return ValidateThenByChain(mre.Target as InvocationExpression, expectedParameterName);
+				else
+					return false;
 			}
-			var mre = node as MemberReferenceExpression;
-			if (mre == null)
-				return;
 
-			var identifierExpression = mre.Target as IdentifierExpression;
-			if (identifierExpression == null)
-				return;
-			if (membersToRemove.Contains(identifierExpression.Identifier) == false)
-				return;
-
-			mre.ReplaceWith(new IdentifierExpression(mre.MemberName));
-		}
-		private void RemoveContinuation(AstNode node)
-		{
-			for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+			/// <summary>Matches simple lambdas of the form "a => b"</summary>
+			bool MatchSimpleLambda(Expression expr, out string parameterName, out Expression body)
 			{
-				RemoveContinuation(child);
+				LambdaExpression lambda = expr as LambdaExpression;
+				if (lambda != null && lambda.Parameters.Count == 1 && lambda.Body is Expression)
+				{
+					ParameterDeclaration p = lambda.Parameters.Single();
+					if (p.ParameterModifier == ParameterModifier.None)
+					{
+						parameterName = p.Name;
+						body = (Expression)lambda.Body;
+						return true;
+					}
+				}
+				parameterName = null;
+				body = null;
+				return false;
 			}
-			var query = node as QueryContinuationClause;
-			if (query == null)
-				return;
-			membersToRemove.Add(query.Identifier);
-			var lastClause = query.PrecedingQuery.Clauses.LastOrNullObject() as QuerySelectClause;
-			if (lastClause != null)
+		}
+
+		public class RemoveQueryContinuation
+		{
+			private readonly HashSet<string> membersToRemove = new HashSet<string>();
+			public void Run(AstNode compilationUnit)
 			{
-				var anonymousTypeCreateExpression = lastClause.Expression as AnonymousTypeCreateExpression;
+				RemoveContinuation(compilationUnit);
+				RemoveMembersFromContinuation(compilationUnit);
+			}
+
+			private void RemoveMembersFromContinuation(AstNode node)
+			{
+				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+				{
+					RemoveMembersFromContinuation(child);
+				}
+				var mre = node as MemberReferenceExpression;
+				if (mre == null)
+					return;
+
+				var identifierExpression = mre.Target as IdentifierExpression;
+				if (identifierExpression == null)
+					return;
+				if (membersToRemove.Contains(identifierExpression.Identifier) == false)
+					return;
+
+				mre.ReplaceWith(new IdentifierExpression(mre.MemberName));
+			}
+			private void RemoveContinuation(AstNode node)
+			{
+				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+				{
+					RemoveContinuation(child);
+				}
+				var query = node as QueryContinuationClause;
+				if (query == null)
+					return;
+				membersToRemove.Add(query.Identifier);
+				var lastClause = query.PrecedingQuery.Clauses.LastOrNullObject();
+				var lastSelectclause = lastClause as QuerySelectClause;
+				if (lastSelectclause == null)
+				{
+					return;
+				}
+				var anonymousTypeCreateExpression = lastSelectclause.Expression as AnonymousTypeCreateExpression;
 				if (anonymousTypeCreateExpression != null)
 				{
-					lastClause.Remove();
+					lastSelectclause.Remove();
 
 					foreach (var initializer in anonymousTypeCreateExpression.Initializers)
 					{
 						var namedExpression = initializer as NamedExpression;
 						if (namedExpression == null) // shouldn't happen
-							throw new InvalidOperationException("Unexpected expression in initializer for: " + lastClause.GetText());
+							throw new InvalidOperationException("Unexpected expression in initializer for: " + lastSelectclause.GetText());
 
 						var identifierExpression = namedExpression.Expression as IdentifierExpression;
 						if (identifierExpression != null && identifierExpression.Identifier == namedExpression.Name)
@@ -417,199 +421,199 @@ public static class IndexPrettyPrinter
 						});
 					}
 				}
-			}
 
-			var parent = (QueryExpression)query.Parent;
-			while (query.PrecedingQuery.Clauses.Count > 0)
-			{
-				var clause = query.PrecedingQuery.Clauses.FirstOrNullObject();
-				parent.Clauses.InsertBefore(query, Detach(clause));
-			}
-			query.Remove();
-		}
-
-		private T Detach<T>(T astNode)
-			where T : AstNode
-		{
-			astNode.Remove();
-			return astNode;
-		}
-
-	}
-
-	/// <summary>
-	/// Combines query expressions and removes transparent identifiers.
-	/// </summary>
-	public class CombineQueryExpressions
-	{
-		public void Run(AstNode compilationUnit)
-		{
-			CombineQueries(compilationUnit);
-		}
-
-		static readonly InvocationExpression castPattern = new InvocationExpression
-		{
-			Target = new MemberReferenceExpression
-			{
-				Target = new AnyNode("inExpr"),
-				MemberName = "Cast",
-				TypeArguments = { new AnyNode("targetType") }
-			}
-		};
-
-		void CombineQueries(AstNode node)
-		{
-			for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
-			{
-				CombineQueries(child);
-			}
-			QueryExpression query = node as QueryExpression;
-			if (query != null)
-			{
-				if (query.Clauses.First().GetType() != typeof(QueryFromClause)) return;
-
-				QueryFromClause fromClause = (QueryFromClause)query.Clauses.First();
-				QueryExpression innerQuery = fromClause.Expression as QueryExpression;
-				if (innerQuery != null)
+				var parent = (QueryExpression)query.Parent;
+				while (query.PrecedingQuery.Clauses.Count > 0)
 				{
-					if (TryRemoveTransparentIdentifier(query, fromClause, innerQuery))
-					{
-						RemoveTransparentIdentifierReferences(query);
-					}
-					else
-					{
-						QueryContinuationClause continuation = new QueryContinuationClause();
-						continuation.PrecedingQuery = Detach(innerQuery);
-						continuation.Identifier = fromClause.Identifier;
-						fromClause.ReplaceWith(continuation);
-					}
+					var clause = query.PrecedingQuery.Clauses.FirstOrNullObject();
+					parent.Clauses.InsertBefore(query, Detach(clause));
 				}
-				else
-				{
-					Match m = castPattern.Match(fromClause.Expression);
-					if (m.Success)
-					{
-						fromClause.Type = Detach(m.Get<AstType>("targetType").Single());
-						fromClause.Expression = Detach(m.Get<Expression>("inExpr").Single());
-					}
-				}
+				query.Remove();
 			}
-		}
 
-		static readonly QuerySelectClause selectTransparentIdentifierPattern = new QuerySelectClause
-		{
-			Expression = new Choice {
-				new AnonymousTypeCreateExpression {
-					Initializers = {
-						new NamedNode("nae1", new NamedExpression {
-							Name = Pattern.AnyString,
-							Expression = new IdentifierExpression(Pattern.AnyString)
-						}),
-						new NamedNode("nae2", new NamedExpression {
-							Name = Pattern.AnyString,
-							Expression = new AnyNode("nae2Expr")
-						})
-					}
-				},
-				new AnonymousTypeCreateExpression {
-					Initializers = {
-						new NamedNode("identifier", new IdentifierExpression(Pattern.AnyString)),
-						new AnyNode("nae2Expr")
-					}
-				}
-			}
-		};
-
-		bool IsTransparentIdentifier(string identifier)
-		{
-			return identifier.Contains("h__TransparentIdentifier");
-		}
-
-		bool TryRemoveTransparentIdentifier(QueryExpression query, QueryFromClause fromClause, QueryExpression innerQuery)
-		{
-			if (!IsTransparentIdentifier(fromClause.Identifier))
-				return false;
-			Match match = selectTransparentIdentifierPattern.Match(innerQuery.Clauses.Last());
-			if (!match.Success)
-				return false;
-			QuerySelectClause selectClause = (QuerySelectClause)innerQuery.Clauses.Last();
-			NamedExpression nae1 = match.Get<NamedExpression>("nae1").SingleOrDefault();
-			NamedExpression nae2 = match.Get<NamedExpression>("nae2").SingleOrDefault();
-			if (nae1 != null && nae1.Name != ((IdentifierExpression)nae1.Expression).Identifier)
-				return false;
-			Expression nae2Expr = match.Get<Expression>("nae2Expr").Single();
-			IdentifierExpression nae2IdentExpr = nae2Expr as IdentifierExpression;
-			if (nae2IdentExpr != null && (nae2 == null || nae2.Name == nae2IdentExpr.Identifier))
+			private T Detach<T>(T astNode)
+				where T : AstNode
 			{
-				// from * in (from x in ... select new { x = x, y = y }) ...
-				// =>
-				// from x in ... ...
-				fromClause.Remove();
-				selectClause.Remove();
-				// Move clauses from innerQuery to query
-				QueryClause insertionPos = null;
-				foreach (var clause in innerQuery.Clauses)
-				{
-					query.Clauses.InsertAfter(insertionPos, insertionPos = Detach(clause));
-				}
+				astNode.Remove();
+				return astNode;
 			}
-			else
-			{
-				// from * in (from x in ... select new { x = x, y = expr }) ...
-				// =>
-				// from x in ... let y = expr ...
-				fromClause.Remove();
-				selectClause.Remove();
-				// Move clauses from innerQuery to query
-				QueryClause insertionPos = null;
-				foreach (var clause in innerQuery.Clauses)
-				{
-					query.Clauses.InsertAfter(insertionPos, insertionPos = Detach(clause));
-				}
-				string ident;
-				if (nae2 != null)
-					ident = nae2.Name;
-				else if (nae2Expr is IdentifierExpression)
-					ident = ((IdentifierExpression)nae2Expr).Identifier;
-				else if (nae2Expr is MemberReferenceExpression)
-					ident = ((MemberReferenceExpression)nae2Expr).MemberName;
-				else
-					throw new InvalidOperationException("Could not infer name from initializer in AnonymousTypeCreateExpression");
-				query.Clauses.InsertAfter(insertionPos, new QueryLetClause { Identifier = ident, Expression = Detach(nae2Expr) });
-			}
-			return true;
+
 		}
 
 		/// <summary>
-		/// Removes all occurrences of transparent identifiers
+		/// Combines query expressions and removes transparent identifiers.
 		/// </summary>
-		void RemoveTransparentIdentifierReferences(AstNode node)
+		public class CombineQueryExpressions
 		{
-			foreach (AstNode child in node.Children)
+			public void Run(AstNode compilationUnit)
 			{
-				RemoveTransparentIdentifierReferences(child);
+				CombineQueries(compilationUnit);
 			}
-			MemberReferenceExpression mre = node as MemberReferenceExpression;
-			if (mre != null)
+
+			static readonly InvocationExpression castPattern = new InvocationExpression
 			{
-				IdentifierExpression ident = mre.Target as IdentifierExpression;
-				if (ident != null && IsTransparentIdentifier(ident.Identifier))
+				Target = new MemberReferenceExpression
 				{
-					IdentifierExpression newIdent = new IdentifierExpression(mre.MemberName);
-					mre.TypeArguments.MoveTo(newIdent.TypeArguments);
-					mre.ReplaceWith(newIdent);
-					return;
+					Target = new AnyNode("inExpr"),
+					MemberName = "Cast",
+					TypeArguments = { new AnyNode("targetType") }
+				}
+			};
+
+			void CombineQueries(AstNode node)
+			{
+				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+				{
+					CombineQueries(child);
+				}
+				QueryExpression query = node as QueryExpression;
+				if (query != null)
+				{
+					if (query.Clauses.First().GetType() != typeof(QueryFromClause)) return;
+
+					QueryFromClause fromClause = (QueryFromClause)query.Clauses.First();
+					QueryExpression innerQuery = fromClause.Expression as QueryExpression;
+					if (innerQuery != null)
+					{
+						if (TryRemoveTransparentIdentifier(query, fromClause, innerQuery))
+						{
+							RemoveTransparentIdentifierReferences(query);
+						}
+						else
+						{
+							QueryContinuationClause continuation = new QueryContinuationClause();
+							continuation.PrecedingQuery = Detach(innerQuery);
+							continuation.Identifier = fromClause.Identifier;
+							fromClause.ReplaceWith(continuation);
+						}
+					}
+					else
+					{
+						Match m = castPattern.Match(fromClause.Expression);
+						if (m.Success)
+						{
+							fromClause.Type = Detach(m.Get<AstType>("targetType").Single());
+							fromClause.Expression = Detach(m.Get<Expression>("inExpr").Single());
+						}
+					}
 				}
 			}
+
+			static readonly QuerySelectClause selectTransparentIdentifierPattern = new QuerySelectClause
+			{
+				Expression = new Choice {
+					new AnonymousTypeCreateExpression {
+						Initializers = {
+							new NamedNode("nae1", new NamedExpression {
+								Name = Pattern.AnyString,
+								Expression = new IdentifierExpression(Pattern.AnyString)
+							}),
+							new NamedNode("nae2", new NamedExpression {
+								Name = Pattern.AnyString,
+								Expression = new AnyNode("nae2Expr")
+							})
+						}
+					},
+					new AnonymousTypeCreateExpression {
+						Initializers = {
+							new NamedNode("identifier", new IdentifierExpression(Pattern.AnyString)),
+							new AnyNode("nae2Expr")
+						}
+					}
+				}
+			};
+
+			bool IsTransparentIdentifier(string identifier)
+			{
+				return identifier.Contains("h__TransparentIdentifier");
+			}
+
+			bool TryRemoveTransparentIdentifier(QueryExpression query, QueryFromClause fromClause, QueryExpression innerQuery)
+			{
+				if (!IsTransparentIdentifier(fromClause.Identifier))
+					return false;
+				Match match = selectTransparentIdentifierPattern.Match(innerQuery.Clauses.Last());
+				if (!match.Success)
+					return false;
+				QuerySelectClause selectClause = (QuerySelectClause)innerQuery.Clauses.Last();
+				NamedExpression nae1 = match.Get<NamedExpression>("nae1").SingleOrDefault();
+				NamedExpression nae2 = match.Get<NamedExpression>("nae2").SingleOrDefault();
+				if (nae1 != null && nae1.Name != ((IdentifierExpression)nae1.Expression).Identifier)
+					return false;
+				Expression nae2Expr = match.Get<Expression>("nae2Expr").Single();
+				IdentifierExpression nae2IdentExpr = nae2Expr as IdentifierExpression;
+				if (nae2IdentExpr != null && (nae2 == null || nae2.Name == nae2IdentExpr.Identifier))
+				{
+					// from * in (from x in ... select new { x = x, y = y }) ...
+					// =>
+					// from x in ... ...
+					fromClause.Remove();
+					selectClause.Remove();
+					// Move clauses from innerQuery to query
+					QueryClause insertionPos = null;
+					foreach (var clause in innerQuery.Clauses)
+					{
+						query.Clauses.InsertAfter(insertionPos, insertionPos = Detach(clause));
+					}
+				}
+				else
+				{
+					// from * in (from x in ... select new { x = x, y = expr }) ...
+					// =>
+					// from x in ... let y = expr ...
+					fromClause.Remove();
+					selectClause.Remove();
+					// Move clauses from innerQuery to query
+					QueryClause insertionPos = null;
+					foreach (var clause in innerQuery.Clauses)
+					{
+						query.Clauses.InsertAfter(insertionPos, insertionPos = Detach(clause));
+					}
+					string ident;
+					if (nae2 != null)
+						ident = nae2.Name;
+					else if (nae2Expr is IdentifierExpression)
+						ident = ((IdentifierExpression)nae2Expr).Identifier;
+					else if (nae2Expr is MemberReferenceExpression)
+						ident = ((MemberReferenceExpression)nae2Expr).MemberName;
+					else
+						throw new InvalidOperationException("Could not infer name from initializer in AnonymousTypeCreateExpression");
+					query.Clauses.InsertAfter(insertionPos, new QueryLetClause { Identifier = ident, Expression = Detach(nae2Expr) });
+				}
+				return true;
+			}
+
+			/// <summary>
+			/// Removes all occurrences of transparent identifiers
+			/// </summary>
+			void RemoveTransparentIdentifierReferences(AstNode node)
+			{
+				foreach (AstNode child in node.Children)
+				{
+					RemoveTransparentIdentifierReferences(child);
+				}
+				MemberReferenceExpression mre = node as MemberReferenceExpression;
+				if (mre != null)
+				{
+					IdentifierExpression ident = mre.Target as IdentifierExpression;
+					if (ident != null && IsTransparentIdentifier(ident.Identifier))
+					{
+						IdentifierExpression newIdent = new IdentifierExpression(mre.MemberName);
+						mre.TypeArguments.MoveTo(newIdent.TypeArguments);
+						mre.ReplaceWith(newIdent);
+						return;
+					}
+				}
+			}
+
+			private T Detach<T>(T astNode)
+				where T : AstNode
+			{
+				astNode.Remove();
+				return astNode;
+			}
 		}
 
-		private T Detach<T>(T astNode)
-			where T : AstNode
-		{
-			astNode.Remove();
-			return astNode;
-		}
+		#endregion
 	}
-
-	#endregion
 }

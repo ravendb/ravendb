@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Abstractions.MissingFromBCL;
 using Raven.Client.Linq;
