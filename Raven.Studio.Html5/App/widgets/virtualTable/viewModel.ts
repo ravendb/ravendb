@@ -182,14 +182,13 @@ class ctor {
         this.settings.rowsAreLoading(true);
         this.ensureRowsCoverViewport();
 
-        window.clearTimeout(this.scrollThrottleTimeoutHandle);
-        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
-
-        // COMMENTED OUT: while requestAnimationFrame works, there are some problems:
-        // 1. It needs polyfill on IE9 and earlier.
-        // 2. While the screen redraws much faster, it results in a more laggy scroll.
-        //window.cancelAnimationFrame(this.scrollThrottleTimeoutHandle);
-        //this.scrollThrottleTimeoutHandle = window.requestAnimationFrame(() => this.loadRowData());
+        if (window.requestAnimationFrame) {
+            window.cancelAnimationFrame(this.scrollThrottleTimeoutHandle);
+            this.scrollThrottleTimeoutHandle = window.requestAnimationFrame(() => this.loadRowData());
+        } else {
+            window.clearTimeout(this.scrollThrottleTimeoutHandle);
+            this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
+        }
     }
 
     onWindowHeightChanged() {
