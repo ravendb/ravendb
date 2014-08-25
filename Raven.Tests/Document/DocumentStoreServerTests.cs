@@ -58,6 +58,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_get_index_def()
 		{
+			documentStore.Conventions.PrettifyGeneratedLinqExpressions = false;
 			documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
 			                                                          	{
 			                                                          		Map = companies => from c in companies

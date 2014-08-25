@@ -7,7 +7,7 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Abstractions.Linq
 {
-	public class DynamicNullObject : DynamicObject, IEnumerable<object>
+	public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
 	{
 		public override string ToString()
 		{
@@ -160,6 +160,13 @@ namespace Raven.Abstractions.Linq
 		public override int GetHashCode()
 		{
 			return 0;
+		}
+
+		public int CompareTo(object obj)
+		{
+			if (obj is DynamicNullObject || obj == null)
+				return 0;
+			return -1;
 		}
 
 		public static implicit operator string(DynamicNullObject self)

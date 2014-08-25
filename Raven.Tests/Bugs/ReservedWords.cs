@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs
 		{
 			var indexDefinition = new Events_ByDate_Count
 			{
-				Conventions = new DocumentConvention()
+				Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false}
 			}.CreateIndexDefinition();
 
 			Assert.Equal(@"docs.Events.Select(@event => new {

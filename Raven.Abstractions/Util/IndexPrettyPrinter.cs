@@ -362,10 +362,13 @@ namespace Raven.Abstractions.Util
 		public class RemoveQueryContinuation
 		{
 			private readonly HashSet<string> membersToRemove = new HashSet<string>();
+
+			private AstNode src;
+
 			public void Run(AstNode compilationUnit)
 			{
+				src = compilationUnit;
 				RemoveContinuation(compilationUnit);
-				RemoveMembersFromContinuation(compilationUnit);
 			}
 
 			private AstNode RemoveMembersFromContinuation(AstNode node)
@@ -392,6 +395,7 @@ namespace Raven.Abstractions.Util
 			{
 				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
 				{
+					RemoveMembersFromContinuation(child);
 					RemoveContinuation(child);
 				}
 				var query = node as QueryContinuationClause;
@@ -401,9 +405,16 @@ namespace Raven.Abstractions.Util
 				var lastSelectclause = lastClause as QuerySelectClause;
 				if (lastSelectclause == null)
 				{
+					if (lastClause is QueryGroupClause)
+						membersToRemove.Clear();
 					return;
 				}
-				membersToRemove.Add(query.Identifier);
+				membersToRemove.Clear();
+
+				// need to check if the contiuation member is used elsewhere as a single whole (if so, can't just remove it)
+				if (UsedIndependently(query))
+					return;
+
 				var anonymousTypeCreateExpression = lastSelectclause.Expression as AnonymousTypeCreateExpression;
 				if (anonymousTypeCreateExpression != null)
 				{
@@ -428,12 +439,52 @@ namespace Raven.Abstractions.Util
 				}
 
 				var parent = (QueryExpression)query.Parent;
+				membersToRemove.Add(query.Identifier);
 				while (query.PrecedingQuery.Clauses.Count > 0)
 				{
 					var clause = query.PrecedingQuery.Clauses.FirstOrNullObject();
 					parent.Clauses.InsertBefore(query, Detach(clause));
 				}
 				query.Remove();
+			}
+
+			private bool UsedIndependently(QueryContinuationClause node)
+			{
+				bool foundNode = false;
+				foreach (var astNode in All(src))
+				{
+					if (foundNode == false && astNode != node)
+						continue;
+
+					foundNode = true;
+
+					if (astNode == node) // skip current one, we don't care about it.
+						continue;
+
+					if (astNode is QueryContinuationClause)
+						break;
+
+					var identifierExpression = astNode as IdentifierExpression;
+					if (identifierExpression == null)
+						continue;
+					if (identifierExpression.Identifier != node.Identifier)
+						continue;
+					if (identifierExpression.Parent is MemberReferenceExpression == false)
+						return true;
+				}
+				return false;
+			}
+
+			private IEnumerable<AstNode> All(AstNode node)
+			{
+				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+				{
+					foreach (var grandChild in All(child))
+					{
+						yield return grandChild;
+					}
+					yield return child;
+				}
 			}
 
 			private T Detach<T>(T astNode)

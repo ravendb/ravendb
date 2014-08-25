@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -165,14 +166,15 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> IndexFields()
 		{
 			var indexStr = await ReadStringAsync();
-			var mapDefinition = indexStr.Trim().StartsWith("from")
+			bool querySyntax = indexStr.Trim().StartsWith("from");
+			var mapDefinition = querySyntax
 				? QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexStr, true)
 				: QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexStr, true);
 
-			var captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
+			var captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor(querySyntax == false, new HashSet<string>(), new Dictionary<string, Expression>());
 			mapDefinition.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 
-			return GetMessageWithObject(new { captureSelectNewFieldNamesVisitor.FieldNames });
+			return GetMessageWithObject(new { FieldNames = captureSelectNewFieldNamesVisitor.FieldNames });
 		}
 
 		[HttpGet]

@@ -29,8 +29,9 @@ namespace Raven.Database.Linq
 	public class DynamicViewCompiler : DynamicCompilerBase
 	{
 		private readonly IndexDefinition indexDefinition;
-	
-		private readonly CaptureSelectNewFieldNamesVisitor captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
+
+		private readonly HashSet<string> _fieldNames = new HashSet<string>();
+		private readonly Dictionary<string, Expression> _selectExpressions = new Dictionary<string, Expression>();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
 		private readonly TransformFromClauses transformFromClauses = new TransformFromClauses();
@@ -129,7 +130,11 @@ namespace Raven.Database.Linq
 		{
 			string entityName;
 
-			VariableInitializer mapDefinition = map.Trim().StartsWith("from") ?
+			bool querySyntax = map.Trim().StartsWith("from");
+
+			var captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor(querySyntax == false, _fieldNames, _selectExpressions);
+
+			VariableInitializer mapDefinition = querySyntax ?
 				TransformMapDefinitionFromLinqQuerySyntax(map, out entityName) :
 				TransformMapDefinitionFromLinqMethodSyntax(map, out entityName);
 
@@ -168,7 +173,7 @@ namespace Raven.Database.Linq
 			}
 			else
 			{
-				var secondMapFieldNames = new CaptureSelectNewFieldNamesVisitor();
+				var secondMapFieldNames = new CaptureSelectNewFieldNamesVisitor(querySyntax == false, new HashSet<string>(), new Dictionary<string, Expression>());
 				mapDefinition.Initializer.AcceptVisitor(secondMapFieldNames, null);
 				if (secondMapFieldNames.FieldNames.SetEquals(captureSelectNewFieldNamesVisitor.FieldNames) == false)
 				{
@@ -204,7 +209,8 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		        AstNode groupBySource;
 		        string groupByParameter;
 		        string groupByIdentifier;
-		        if (indexDefinition.Reduce.Trim().StartsWith("from"))
+			    bool querySyntax = indexDefinition.Reduce.Trim().StartsWith("from");
+			    if (querySyntax)
 		        {
 		            reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce,
 		                                                                                    RequiresSelectNewAnonymousType);
@@ -262,9 +268,10 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 					groupByIdentifier = groupByParameter;
 		        }
 
-		        var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
-		        captureSelectNewFieldNamesVisitor.Clear(); // reduce override the map fields
-		        reduceDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+		        var mapFields = _fieldNames.ToList();
+				_fieldNames.Clear(); // reduce override the map fields
+				_selectExpressions.Clear();
+				reduceDefinition.Initializer.AcceptVisitor(new CaptureSelectNewFieldNamesVisitor(querySyntax == false, _fieldNames, _selectExpressions), null);
 		        reduceDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
 				reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCallsInReduce(groupByIdentifier), null);
 
@@ -328,7 +335,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		private void ValidateMapReduceFields(List<string> mapFields)
 		{
 			mapFields.Remove(Constants.DocumentIdFieldName);
-			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
+			var reduceFields = _fieldNames;
 			if (reduceFields.SetEquals(mapFields) == false)
 			{
 				throw new InvalidOperationException(
@@ -346,7 +353,7 @@ Reduce only fields: {2}
 
 		private void AddAdditionalInformation(ConstructorDeclaration ctor)
 		{
-			AddInformation(ctor, captureSelectNewFieldNamesVisitor.FieldNames, "AddField");
+			AddInformation(ctor, _fieldNames, "AddField");
 			AddInformation(ctor, captureQueryParameterNamesVisitorForMap.QueryParameters, "AddQueryParameterForMap");
 			AddInformation(ctor, captureQueryParameterNamesVisitorForMap.QueryParameters, "AddQueryParameterForReduce");
 		}
