@@ -139,7 +139,13 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 				return;
 
 			var initializer = simpleType.Ancestors.OfType<VariableInitializer>().Single();
-			var rootExpression = (InvocationExpression)initializer.Initializer;
+			var rootExpression = initializer.Initializer as InvocationExpression;
+			if (rootExpression == null)
+			{
+				// query format, probably
+				HandleGroupByQueryFormat(initializer.Initializer);
+				return;
+			}
 
 			var nodes = rootExpression.Children.Where(x => x.NodeType != NodeType.Token).ToList();
 			if (nodes.Count < 2)
@@ -182,6 +188,18 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			{
 				AssertInvocationExpression(invocation, parameter);
 			}
+		}
+
+		private void HandleGroupByQueryFormat(Expression initializer)
+		{
+			var queryExpression = initializer as QueryExpression;
+			if (queryExpression == null)
+				return;
+
+			var queryGroupClause = queryExpression.Descendants.OfType<QueryGroupClause>().First();
+			if (queryGroupClause == null)
+				return;
+			Expression projection = queryGroupClause.Projection;
 		}
 
 		protected virtual void AssertInvocationExpression(InvocationExpression invocation, ParameterDeclaration parameter)

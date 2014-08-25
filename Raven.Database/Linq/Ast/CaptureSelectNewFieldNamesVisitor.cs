@@ -26,12 +26,14 @@ namespace Raven.Database.Linq.Ast
 			this.selectExpressions = selectExpressions;
 		}
 
-		public HashSet<string> FieldNames { get{return fieldNames;} }
+		public HashSet<string> FieldNames { get { return fieldNames; } }
 
 		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
 		{
 			ProcessQuery(querySelectClause.Expression);
-			return base.VisitQuerySelectClause(querySelectClause, data);
+			if(_outerMostRequired)
+				return base.VisitQuerySelectClause(querySelectClause, data);
+			return null;
 		}
 
 

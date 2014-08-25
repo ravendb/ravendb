@@ -395,8 +395,8 @@ namespace Raven.Abstractions.Util
 			{
 				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
 				{
-					RemoveMembersFromContinuation(child);
 					RemoveContinuation(child);
+					RemoveMembersFromContinuation(child);
 				}
 				var query = node as QueryContinuationClause;
 				if (query == null)
@@ -405,37 +405,34 @@ namespace Raven.Abstractions.Util
 				var lastSelectclause = lastClause as QuerySelectClause;
 				if (lastSelectclause == null)
 				{
-					if (lastClause is QueryGroupClause)
-						membersToRemove.Clear();
 					return;
 				}
-				membersToRemove.Clear();
 
 				// need to check if the contiuation member is used elsewhere as a single whole (if so, can't just remove it)
 				if (UsedIndependently(query))
 					return;
 
 				var anonymousTypeCreateExpression = lastSelectclause.Expression as AnonymousTypeCreateExpression;
-				if (anonymousTypeCreateExpression != null)
+				if (anonymousTypeCreateExpression == null)
+					return;
+
+				lastSelectclause.Remove();
+
+				foreach (var initializer in anonymousTypeCreateExpression.Initializers)
 				{
-					lastSelectclause.Remove();
+					var namedExpression = initializer as NamedExpression;
+					if (namedExpression == null) // shouldn't happen
+						throw new InvalidOperationException("Unexpected expression in initializer for: " + lastSelectclause.GetText());
 
-					foreach (var initializer in anonymousTypeCreateExpression.Initializers)
+					var identifierExpression = namedExpression.Expression as IdentifierExpression;
+					if (identifierExpression != null && identifierExpression.Identifier == namedExpression.Name)
+						continue; // can safely ignore this
+
+					query.PrecedingQuery.Clauses.Add(new QueryLetClause
 					{
-						var namedExpression = initializer as NamedExpression;
-						if (namedExpression == null) // shouldn't happen
-							throw new InvalidOperationException("Unexpected expression in initializer for: " + lastSelectclause.GetText());
-
-						var identifierExpression = namedExpression.Expression as IdentifierExpression;
-						if (identifierExpression != null && identifierExpression.Identifier == namedExpression.Name)
-							continue; // can safely ignore this
-
-						query.PrecedingQuery.Clauses.Add(new QueryLetClause
-						{
-							Identifier = namedExpression.Name,
-							Expression = Detach(namedExpression.Expression)
-						});
-					}
+						Identifier = namedExpression.Name,
+						Expression = Detach(namedExpression.Expression)
+					});
 				}
 
 				var parent = (QueryExpression)query.Parent;
@@ -443,6 +440,7 @@ namespace Raven.Abstractions.Util
 				while (query.PrecedingQuery.Clauses.Count > 0)
 				{
 					var clause = query.PrecedingQuery.Clauses.FirstOrNullObject();
+					RemoveMembersFromContinuation(clause);
 					parent.Clauses.InsertBefore(query, Detach(clause));
 				}
 				query.Remove();
@@ -628,8 +626,6 @@ namespace Raven.Abstractions.Util
 					string ident;
 					if (nae2 != null)
 						ident = nae2.Name;
-					else if (nae2Expr is IdentifierExpression)
-						ident = ((IdentifierExpression)nae2Expr).Identifier;
 					else if (nae2Expr is MemberReferenceExpression)
 						ident = ((MemberReferenceExpression)nae2Expr).MemberName;
 					else
