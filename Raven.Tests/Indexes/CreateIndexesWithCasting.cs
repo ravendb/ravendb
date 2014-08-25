@@ -15,7 +15,7 @@ namespace Raven.Tests.Indexes
 		{
 			var indexDefinition = new WithCasting
 			{
-				Conventions = new DocumentConvention()	
+				Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false}	
 			}.CreateIndexDefinition();
 
 			Assert.Contains("docs.People.Select(person => new {", indexDefinition.Map);

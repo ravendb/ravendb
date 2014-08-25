@@ -484,12 +484,35 @@ Reduce only fields: {2}
 						throw new IOException("Can't figure out how to find the relevant clause for this query");
 					if (relevantClause is QueryGroupClause)
 						return relevantClause;
-					if (relevantClause is QueryFromClause)
+					var queryFromClause = relevantClause as QueryFromClause;
+					if (queryFromClause != null)
+					{
+						var parentClause = GetPreviousQueryFromClause(queryFromClause);
+						
+						if (parentClause != null)
+						{
+							relevantClause = parentClause;
+							continue;
+						}
 						return relevantClause;
+					}
 					if (relevantClause is QueryContinuationClause)
 						return relevantClause;
 					relevantClause = relevantClause.GetPrevNode() as QueryClause;
 				} while (true);
+			}
+
+			private static QueryFromClause GetPreviousQueryFromClause(AstNode node)
+			{
+				while (true)
+				{
+					node = node.GetPrevNode();
+					if (node == null)
+						return null;
+					var qfc = node as QueryFromClause;
+					if (qfc != null)
+						return qfc;
+				}
 			}
 		}
 
