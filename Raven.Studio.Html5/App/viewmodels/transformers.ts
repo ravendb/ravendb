@@ -1,6 +1,4 @@
-﻿/// <reference path="../models/dto.ts" />
-
-import viewModelBase = require("viewmodels/viewModelBase");
+﻿import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/transformer");
 import getTransformersCommand = require("commands/getTransformersCommand");
 import appUrl = require("common/appUrl");
@@ -9,6 +7,7 @@ import dialog = require("plugins/dialog");
 import app = require("durandal/app");
 import changeSubscription = require("models/changeSubscription");
 import shell = require("viewmodels/shell");
+import copyTransformerDialog = require("viewmodels/copyTransformerDialog");
 
 class Transformers extends viewModelBase {
 
@@ -17,6 +16,8 @@ class Transformers extends viewModelBase {
     transformersGroups = ko.observableArray<{ entityName: string; transformers: KnockoutObservableArray<transformer> }>();
     containerSelector = "#transformersContainer";
     transformersMutex = true;
+    allTransformersExpanded = ko.observable(true);
+    expandCollapseTitle = ko.computed(() => this.allTransformersExpanded() ? "Collapse all" : "Expand all");
 
 
     constructor() {
@@ -98,7 +99,8 @@ class Transformers extends viewModelBase {
     }
 
     toggleExpandAll() {
-        $(".index-group-content").collapse('toggle');
+        $(".index-group-content").collapse("toggle");
+        this.allTransformersExpanded.toggle();
     }
 
     deleteAllTransformers() {
@@ -113,9 +115,16 @@ class Transformers extends viewModelBase {
         return all.distinct();
     }
 
-
     deleteTransformer(transformerToDelete: transformer) {
         this.promptDeleteTransformers([transformerToDelete]);
+    }
+
+    pasteTransformer() {
+        app.showDialog(new copyTransformerDialog('', this.activeDatabase(), true));
+    }
+
+    copyTransformer(t: transformer) {
+        app.showDialog(new copyTransformerDialog(t.name(), this.activeDatabase(), false));
     }
 
     private promptDeleteTransformers(transformers: Array<transformer>) {

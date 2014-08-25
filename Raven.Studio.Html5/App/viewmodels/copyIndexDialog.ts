@@ -8,13 +8,15 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
 import messagePublisher = require("common/messagePublisher");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class copyIndexDialog extends dialogViewModelBase {
 
-    indexJSON = ko.observable<string>("");
+    indexJSON = ko.observable("");
 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
+        aceEditorBindingHandler.install();
     }
 
     canActivate(args: any): any {
@@ -27,7 +29,8 @@ class copyIndexDialog extends dialogViewModelBase {
                 .execute()
                 .done((results: indexDefinitionContainerDto) => {
                     var prettifySpacing = 4;
-                    this.indexJSON(JSON.stringify(new indexDefinition(results.Index).toDto(), null, prettifySpacing));
+                    var jsonString = JSON.stringify(new indexDefinition(results.Index).toDto(), null, prettifySpacing);
+                    this.indexJSON(jsonString);
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => canActivateResult.reject());
@@ -36,17 +39,19 @@ class copyIndexDialog extends dialogViewModelBase {
         }
     }
 
-    attached() {
-        super.attached();
-        this.selectText();
+    setInitialFocus() {
+        // Overrides the base class' setInitialFocus and does nothing.
+        // Doing nothing because we will focus the Ace Editor when it's initialized.
     }
 
-    deactivate() {
-        $("#indexJSON").unbind('keydown.jwerty');
-    }
+    enterKeyPressed(): boolean {
+        // Overrides the base class' enterKeyPressed. Because the user might
+        // edit the JSON, or even type some in manually, enter might really mean new line, not Save changes.
+        if (!this.isPaste) {
+            return super.enterKeyPressed();
+        }
 
-    selectText() {
-        $("#indexJSON").select();
+        return true;
     }
 
     saveIndex() {
@@ -86,14 +91,6 @@ class copyIndexDialog extends dialogViewModelBase {
 
     close() {
         dialog.close(this);
-    }
-
-    activateDocs() {
-        this.selectText();
-    }
-
-    activateIds() {
-        this.selectText();
     }
 }
 
