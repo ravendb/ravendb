@@ -11,7 +11,6 @@
             <span data-bind="text: isPaste === true ? 'to save' : 'to copy'"></span>
         </h4>
         <div>
-            <!--<textarea id="indexJSON" rows="13" style="width: 600px;" class="form-control" autofocus="autofocus" data-bind="value: indexJSON, valueUpdate: 'afterkeydown', event: { focus: function () { $(this).select(); } }"></textarea>-->
             <pre data-bind="aceEditor: { code: indexJSON, lang: 'ace/mode/json', getFocus: true, selectAll: true, readOnly: !isPaste, bubbleEscKey: true }" style="width: 600px; height: 400px;"></pre>
         </div>
     </div>
