@@ -44,6 +44,7 @@ namespace Raven.Tests.MailingList
 		{
 			using(var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false; 
 				new Index_ByDescriptionAndTitle().Execute(store);
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("Index/ByDescriptionAndTitle");
@@ -59,6 +60,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new Index_ByDescriptionAndTitle2().Execute(store);
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("Index/ByDescriptionAndTitle2");

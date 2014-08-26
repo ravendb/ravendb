@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Util
 			// Apply transformations
 			new IntroduceQueryExpressions().Run(expr);
 			new CombineQueryExpressions().Run(expr);
+			new IntroduceParenthesisForNestedQueries().Run(expr);
 			new RemoveQueryContinuation().Run(expr);
 			// Unwrap expression
 			expr = ((ParenthesizedExpression)expr).Expression;
@@ -66,10 +67,12 @@ namespace Raven.Abstractions.Util
 		/// Decompiles query expressions.
 		/// Based on C# 4.0 spec, §7.16.2 Query expression translation
 		/// </summary>
-		public class IntroduceQueryExpressions
+		private class IntroduceQueryExpressions
 		{
+			private AstNode root;
 			public void Run(AstNode compilationUnit)
 			{
+				root = compilationUnit;
 				DecompileQueries(compilationUnit);
 				// After all queries were decompiled, detect degenerate queries (queries not property terminated with 'select' or 'group')
 				// and fix them, either by adding a degenerate select, or by combining them with another query.
@@ -121,9 +124,11 @@ namespace Raven.Abstractions.Util
 
 			void DecompileQueries(AstNode node)
 			{
-				QueryExpression query = DecompileQuery(node as InvocationExpression);
+				Expression query = DecompileQuery(node as InvocationExpression);
 				if (query != null)
+				{
 					node.ReplaceWith(query);
+				}
 				for (AstNode child = (query ?? node).FirstChild; child != null; child = child.NextSibling)
 				{
 					DecompileQueries(child);
@@ -359,7 +364,32 @@ namespace Raven.Abstractions.Util
 			}
 		}
 
-		public class RemoveQueryContinuation
+		private class IntroduceParenthesisForNestedQueries
+		{
+			public void Run(AstNode compilationUnit)
+			{
+				IntroduceParenthesis(compilationUnit);
+			}
+
+			private static AstNode IntroduceParenthesis(AstNode node)
+			{
+				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+				{
+					child = IntroduceParenthesis(child);
+				}
+
+				if (node is QueryExpression && node.Parent is QueryFromClause)
+				{
+					var parenthesizedExpression = new ParenthesizedExpression();
+					node.ReplaceWith(parenthesizedExpression);
+					parenthesizedExpression.Expression = (Expression)node;
+				}
+
+				return node;
+			}
+		}
+
+		private class RemoveQueryContinuation
 		{
 			private readonly HashSet<string> membersToRemove = new HashSet<string>();
 
@@ -497,7 +527,7 @@ namespace Raven.Abstractions.Util
 		/// <summary>
 		/// Combines query expressions and removes transparent identifiers.
 		/// </summary>
-		public class CombineQueryExpressions
+		private class CombineQueryExpressions
 		{
 			public void Run(AstNode compilationUnit)
 			{

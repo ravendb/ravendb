@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
 			var indexDefinition = new IndexDefinitionBuilder<Person>()
 			{
 				Map = persons => from p in persons select new {DateTime = (DateTime?) null}
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 
 			const string expected = @"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)
