@@ -110,7 +110,7 @@ namespace Voron.Impl.Paging
 			var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
 			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the legnth to less than the current length");
+				throw new ArgumentException("Cannot set the length to less than the current length");
 
 			if (newLengthAfterAdjustment == _totalAllocationSize)
 				return;
@@ -127,7 +127,7 @@ namespace Voron.Impl.Paging
 				if (newPagerState == null)
 				{
 					var errorMessage = string.Format(
-						"Unable to allocate more pages - unsucsessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
+						"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
 						(_totalAllocationSize + allocationSize));
 
 					throw new OutOfMemoryException(errorMessage);
