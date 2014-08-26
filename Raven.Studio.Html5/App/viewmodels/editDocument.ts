@@ -879,7 +879,7 @@ class editDocument extends viewModelBase {
     getColorClass(documentId: string) {
         var entityName = document.getEntityNameFromId(documentId);
         if (entityName) {
-            return collection.getCollectionCssClass(entityName);
+            return collection.getCollectionCssClass(entityName, this.activeDatabase());
         }
 
         return "";
