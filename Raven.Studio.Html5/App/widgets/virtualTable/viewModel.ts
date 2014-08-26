@@ -39,6 +39,7 @@ class ctor {
     collections: KnockoutObservableArray<string>;
     noResults: KnockoutComputed<boolean>;
     getCollectionClassFromEntityNameMemoized: (collectionName: string) => string;
+    ensureColumnsAnimationFrameHandle = 0;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -174,8 +175,6 @@ class ctor {
             r.isInUse(false);
         }
 
-        //this.recycleRows().length = rowCount;
-
         app.trigger(this.settings.gridSelector + 'RowsCreated', true);
     }
 
@@ -183,13 +182,7 @@ class ctor {
         this.settings.rowsAreLoading(true);
         this.ensureRowsCoverViewport();
 
-        if (window.requestAnimationFrame) {
-            window.cancelAnimationFrame(this.scrollThrottleTimeoutHandle);
-            this.scrollThrottleTimeoutHandle = window.requestAnimationFrame(() => this.loadRowData());
-        } else {
-            window.clearTimeout(this.scrollThrottleTimeoutHandle);
-            this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
-        }
+        this.scrollThrottleTimeoutHandle = this.requestAnimationFrame(() => this.loadRowData(), this.scrollThrottleTimeoutHandle);
     }
 
     onWindowHeightChanged() {
@@ -273,10 +266,35 @@ class ctor {
                 if (!firstVisibleRowIndexHasChanged) {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
-                    this.ensureColumnsForRows(resultSet.items);
+                    
+                    // Because processing all columns can take time for many columns, we
+                    // asynchronously load the column information in the next animation frame.
+                    this.ensureColumnsAnimationFrameHandle = this.requestAnimationFrame(() => this.ensureColumnsForRows(resultSet.items), this.ensureColumnsAnimationFrameHandle);
                 }
                 this.settings.rowsAreLoading(false);
             });
+        }
+    }
+
+    requestAnimationFrame(action: () => void, existingHandleToCancel: number): number {
+        if (window.requestAnimationFrame) {
+            if (existingHandleToCancel) {
+                window.cancelAnimationFrame(existingHandleToCancel);
+            }
+
+            return window.requestAnimationFrame(action);
+        } else if (window.msRequestAnimationFrame) {
+            if (window.msCancelRequestAnimationFrame) {
+                window.msCancelRequestAnimationFrame(existingHandleToCancel);
+            }
+
+            return window.msRequestAnimationFrame(action);
+        } else {
+            if (existingHandleToCancel) {
+                window.clearTimeout(existingHandleToCancel);
+            }
+
+            return setTimeout(action, 1);
         }
     }
 
@@ -347,6 +365,7 @@ class ctor {
     }
 
     ensureColumnsForRows(rows: Array<documentBase>) {
+        // Hot path.
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
@@ -369,33 +388,35 @@ class ctor {
             }
         }
 
-        for (var i = 0; i < this.columns().length; i++) {
-            var colName = this.columns()[i].binding;
+        var existingColumns = this.columns();
+        var desiredColumns = existingColumns.concat([]);
+
+        for (var i = 0; i < existingColumns.length; i++) {
+            var colName = existingColumns[i].binding;
             delete columnsNeeded[colName];
         }
 
         var idColumn = this.columns.first(x=> x.binding == "Id");
         var idColumnExists = idColumn ? 1 : 0;
 
-        var unneededColumns = new Array<string>();
-        ko.utils.arrayForEach(this.columns(), col => {
-            if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
-                rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+        var unneededColumns: string[] = [];
+        ko.utils.arrayForEach(existingColumns, col => {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" && rows.every(row => !row.getDocumentPropertyNames().contains(col.binding))) {
                 unneededColumns.push(col.binding);
+            }
         });
 
-        this.columns.remove(c => unneededColumns.contains(c.binding));
-        this.columns.valueHasMutated();
+        desiredColumns = desiredColumns.filter(c => !unneededColumns.contains(c.binding));
         this.settings.customColumns().columns.remove(c => unneededColumns.contains(c.binding()));
 
         var columnsCurrentTotalWidth = 0;
-        for (var i = 2; i < this.columns().length; i++) {
-            columnsCurrentTotalWidth += this.columns()[i].width();
+        for (var i = 2; i < existingColumns.length; i++) {
+            columnsCurrentTotalWidth += existingColumns[i].width();
         }
 
         var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
         var freeWidth = availiableWidth;
-        var fontSize = parseInt(this.grid.css("font-size"));
+        var fontSize = parseInt(this.grid.css("font-size"), 10);
         var columnCount = 0;
         for (var binding in columnsNeeded) {
             var curColWidth = (binding.length + 2) * fontSize;
@@ -420,9 +441,9 @@ class ctor {
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
             if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
-                this.columns.splice(2, 0, newColumn);
+                desiredColumns.splice(2, 0, newColumn);
             } else {
-                this.columns.push(newColumn);
+                desiredColumns.push(newColumn);
             }
 
             var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
@@ -440,6 +461,12 @@ class ctor {
                     this.settings.customColumns().columns.push(newCustomColumn);
                 }
             }
+        }
+
+        // Update the columns only if we have to.
+        var columnsHaveChanged = desiredColumns.length !== existingColumns.length || desiredColumns.some((newCol, index) => newCol.binding !== existingColumns[index].binding);
+        if (columnsHaveChanged) {
+            this.columns(desiredColumns);
         }
     }
 
