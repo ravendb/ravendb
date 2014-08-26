@@ -20,7 +20,6 @@ namespace Raven.Tests.Bugs
 		{
 			using(var store = NewDocumentStore())
 			{
-				//store.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new ReadingHabits_ByDayOfWeek_MultiMap().Execute(store);
 			}
 		}
