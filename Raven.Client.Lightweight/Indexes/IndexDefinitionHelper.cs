@@ -59,8 +59,7 @@ namespace Raven.Client.Indexes
 
             linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
             linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
-            linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
-            linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\d)+", "this$1");
+            linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\w)+", "this$1");
             linqQuery = JSBeautify.Apply(linqQuery);
             return linqQuery;
         }
