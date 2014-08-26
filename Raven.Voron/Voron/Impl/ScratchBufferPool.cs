@@ -107,7 +107,8 @@ namespace Voron.Impl
             if (!_freePagesBySize.TryGetValue(size, out list) || list.Count <= 0)
                 return false;
             var val = list.Last.Value;
-            if (val.ValidAfterTransactionId >= tx.Environment.OldestTransaction)
+	        var oldestTransaction = tx.Environment.OldestTransaction;
+			if (oldestTransaction != 0 && val.ValidAfterTransactionId >= oldestTransaction) // OldestTransaction can be 0 when there are none other transactions and we are in process of new transaction header allocation
                 return false;
 
             list.RemoveLast();
