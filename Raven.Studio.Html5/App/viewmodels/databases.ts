@@ -95,9 +95,6 @@ class databases extends viewModelBase {
                 db.activate();
             }
             this.selectedDatabase(db);
-
-            /*var updatedUrl = appUrl.forDatabase(db);
-            this.navigate(updatedUrl);*/
         }
 
         this.optionsClicked(false);
@@ -328,8 +325,8 @@ class databases extends viewModelBase {
     }
 
     navigateToAdminSettings() {
-        shell.disconnectFromResourceChangesApi();
         this.navigate(this.appUrls.adminSettings());
+        shell.disconnectFromResourceChangesApi();
     }
 }
 
