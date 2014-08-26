@@ -38,6 +38,7 @@ class ctor {
     isIndexMapReduce: KnockoutObservable<boolean>;
     collections: KnockoutObservableArray<string>;
     noResults: KnockoutComputed<boolean>;
+    getCollectionClassFromEntityNameMemoized: (collectionName: string) => string;
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -93,10 +94,10 @@ class ctor {
             this.isIndexMapReduce = ko.observable<boolean>(false);
         }
 
+        this.getCollectionClassFromEntityNameMemoized = <any>this.getCollectionClassFromEntityName.memoize(this);
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
-
         this.refreshIdAndCheckboxColumn();
 
         this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
@@ -297,6 +298,15 @@ class ctor {
         }
     }
 
+    getCollectionClassFromDocument(doc: documentBase): string {
+        var entityName = this.getEntityName(doc);
+        return this.getCollectionClassFromEntityNameMemoized(entityName);
+    }
+
+    getCollectionClassFromEntityName(entityName: string) {
+        return collection.getCollectionCssClass(entityName, appUrl.getDatabase());
+    }
+
     getEntityName(item: documentBase) {
         var obj: any = item;
         if (obj && obj instanceof document && obj.getEntityName) {
@@ -304,10 +314,6 @@ class ctor {
             return documentObj.getEntityName();
         }
         return null;
-    }
-
-    getCollectionClassFromDocument(doc: documentBase): string {
-        return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {

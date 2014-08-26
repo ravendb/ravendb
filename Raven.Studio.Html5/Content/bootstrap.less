@@ -2840,7 +2840,7 @@ table th[class*="col-"] {
 .table-hover > tbody > tr.danger:hover > td,
 .table-hover > tbody > tr:hover > .danger,
 .table-hover > tbody > tr.danger:hover > th {
-    background-color: #ff291c;
+    background-color: darken(@brand-danger, 10%);
 }
 
 @media screen and (max-width: 767px) {
@@ -3688,7 +3688,7 @@ fieldset[disabled] .btn-warning.active {
 .btn-danger {
     color: #ffffff;
     background-color: @brand-danger;
-    border-color: #ff291c;
+    border-color: darken(@brand-danger, 10%);
 }
 
 .btn-danger:hover,
@@ -3698,7 +3698,7 @@ fieldset[disabled] .btn-warning.active {
 .open > .dropdown-toggle.btn-danger {
     color: #ffffff;
     background-color: darken(@brand-danger, 10%);
-    border-color: #de0c00;
+    border-color: darken(@brand-danger, 15%);
 }
 
 .btn-danger:active,
@@ -3723,7 +3723,7 @@ fieldset[disabled] .btn-danger:active,
 .btn-danger[disabled].active,
 fieldset[disabled] .btn-danger.active {
     background-color: @brand-danger;
-    border-color: #ff291c;
+    border-color: darken(@brand-danger, 10%);
 }
 
 .btn-danger .badge {
@@ -6087,7 +6087,7 @@ a.list-group-item-danger .list-group-item-heading {
 a.list-group-item-danger:hover,
 a.list-group-item-danger:focus {
     color: #ffffff;
-    background-color: #ff291c;
+    background-color: darken(@brand-danger, 10%);
 }
 
 a.list-group-item-danger.active,
@@ -7604,7 +7604,7 @@ button.close {
 .btn-danger:focus,
 .btn-group.open .dropdown-toggle.btn-danger {
     background-color: @brand-danger;
-    border-color: #ff291c;
+    border-color: darken(@brand-danger, 15%);
 }
 
 .btn-group.open .dropdown-toggle {

@@ -37,6 +37,7 @@ class documents extends viewModelBase {
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
     showLoadingIndicator = ko.observable<boolean>(false);
+    showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     currentExportUrl: KnockoutComputed<string>;
     isRegularCollection: KnockoutComputed<boolean>;
 
@@ -45,8 +46,6 @@ class documents extends viewModelBase {
     isAnyDocumentsAutoSelected = ko.observable<boolean>(false);
     isAllDocumentsAutoSelected = ko.observable<boolean>(false);
     canCopyAllSelected: KnockoutComputed<boolean>;
-    rightClickedCollection = ko.observable<collection>();
-    isRightClickedCollectionRegular: KnockoutComputed<boolean>;
 
     static gridSelector = "#documentsGrid";
 
@@ -85,10 +84,6 @@ class documents extends viewModelBase {
 
             return false;
         });
-        this.isRightClickedCollectionRegular = ko.computed(() => {
-            var clickedCollection: collection = this.rightClickedCollection();
-            return !!clickedCollection && !clickedCollection.isAllDocuments && !clickedCollection.isSystemDocuments;
-        });
         this.isRegularCollection = ko.computed(() => {
             var collection: collection = this.selectedCollection();
             return !!collection && !collection.isAllDocuments && !collection.isSystemDocuments;
@@ -112,18 +107,6 @@ class documents extends viewModelBase {
 
         var db = this.activeDatabase();
         this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
-    }
-
-    attached() {
-        // Initialize the context menu (using Bootstrap-ContextMenu library).
-        // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
-        (<any>$('.document-collections')).contextmenu({
-            target: '#collections-context-menu',
-            before: (e: MouseEvent) => {
-                this.rightClickedCollection(ko.dataFor(e.target));
-                return true;
-            }
-        });
     }
 
     private fetchCollections(db: database): JQueryPromise<Array<collection>> {
@@ -173,7 +156,6 @@ class documents extends viewModelBase {
         this.collections(allCollections);
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
-        this.rightClickedCollection(collectionToSelect);
         collectionToSelect.activate();
     }
 

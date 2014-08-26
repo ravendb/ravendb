@@ -737,7 +737,7 @@ class shell extends viewModelBase {
     }
 
     getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name']);
+        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name'], this.activeDatabase());
     }
 
     fetchServerBuildVersion() {
