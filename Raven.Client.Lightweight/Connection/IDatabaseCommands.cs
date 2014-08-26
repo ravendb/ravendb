@@ -452,6 +452,11 @@ namespace Raven.Client.Connection
 		long NextIdentityFor(string name);
 
 		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		long SeedIdentityFor(string name, long value);
+
+		/// <summary>
 		/// Get the full URL for the given document key
 		/// </summary>
 		string UrlFor(string documentKey);

@@ -991,6 +991,20 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<long> SeedIdentityForAsync(string name, long value)
+		{
+			return ExecuteWithReplication("POST", async operationMetadata =>
+			{
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString()), "POST", operationMetadata.Credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
+
+				var readResponseJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+
+				return readResponseJson.Value<long>("Value");
+			});
+		}
+
 		private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
 		{
 			return ExecuteWithReplication(method, async operationMetadata =>
