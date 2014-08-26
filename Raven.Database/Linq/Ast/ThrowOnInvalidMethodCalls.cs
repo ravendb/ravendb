@@ -136,6 +136,8 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 		public override object VisitQueryContinuationClause(QueryContinuationClause queryContinuationClause, object data)
 		{
 			var result = base.VisitQueryContinuationClause(queryContinuationClause, data);
+			if (groupByIdentifier == null)
+				return result;
 
 			var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.LastOrNullObject() as QueryGroupClause;
 			if(queryGroupClause == null)
