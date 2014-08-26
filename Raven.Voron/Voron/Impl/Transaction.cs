@@ -332,10 +332,10 @@ namespace Voron.Impl
 				return; // nothing to do
 
             if (Committed)
-                throw new InvalidOperationException("Cannot commit already commited transaction.");
+                throw new InvalidOperationException("Cannot commit already committed transaction.");
 
             if (RolledBack)
-                throw new InvalidOperationException("Cannot commit rolledback transaction.");
+                throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
 			FlushAllMultiValues();
 
