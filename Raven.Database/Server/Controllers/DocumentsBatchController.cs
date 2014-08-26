@@ -11,6 +11,7 @@ using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Data;
@@ -126,8 +127,19 @@ namespace Raven.Database.Server.Controllers
 
 			var task = Task.Factory.StartNew(() =>
 			{
-				var array = batchOperation(index, indexQuery, allowStale);
-				status.State = array;
+				status.State = batchOperation(index, indexQuery, allowStale);
+			}).ContinueWith(t =>
+			{
+				if (t.IsFaulted == false)
+				{
+					status.Completed = true;
+					return;
+				}
+
+				var exception = t.Exception.ExtractSingleInnerException();
+
+				status.State = RavenJObject.FromObject(new { Error = exception.Message });
+				status.Faulted = true;
 				status.Completed = true;
 			});
 
@@ -143,8 +155,9 @@ namespace Raven.Database.Server.Controllers
 
 		public class BulkOperationStatus
 		{
-			public RavenJArray State { get; set; }
+			public RavenJToken State { get; set; }
 			public bool Completed { get; set; }
+			public bool Faulted { get; set; }
 		}
 	}
 }

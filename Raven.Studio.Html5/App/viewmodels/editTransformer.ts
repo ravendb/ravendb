@@ -12,6 +12,7 @@ import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
+import formatIndexCommand = require("commands/formatIndexCommand");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -70,8 +71,8 @@ class editTransformer extends viewModelBase {
     addTransformerHelpPopover() {
         $("#transformerResultsLabel").popover({
             html: true,
-            trigger: 'hover',
-            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/> result.Name, <br/> result.PricePerUser, <br/> Category = category.Name, <br/> CategoryDescription = category.Description <br/>}</pre>',
+            trigger: "hover",
+            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUser, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
         });
     }
 
@@ -109,21 +110,21 @@ class editTransformer extends viewModelBase {
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
                 .done(() => {
+                    this.dirtyFlag().reset();
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
                         this.updateUrl(this.editedTransformer().name());
                     }
-                    this.dirtyFlag().reset(); // Resync Changes
                 });
         }
     }
 
-    updateUrl(transformerName:string) {
+    updateUrl(transformerName: string) {
         router.navigate(appUrl.forEditTransformer(transformerName, this.activeDatabase()));
     }
-    
+
     refreshTransformer() {
-        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the transformer from the server?');
+        var canContinue = this.canContinueIfNotDirty("Unsaved Data", "You have unsaved data. Are you sure you want to refresh the transformer from the server?");
         canContinue
             .done(() => {
                 var transformerName = this.loadedTransformerName();
@@ -134,25 +135,22 @@ class editTransformer extends viewModelBase {
                         messagePublisher.reportError("Could not find " + transformerName + " transformer");
                         this.navigate(appUrl.forTransformers(this.activeDatabase()));
                     });
-        });
+            });
     }
 
     formatTransformer() {
-        require(["commands/formatIndexCommand"], formatIndexCommand => {
-            var editedTransformer: transformer = this.editedTransformer();
+        var editedTransformer: transformer = this.editedTransformer();
 
-            new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()], this.activeDatabase())
-                .execute()
-                .done((result: string[]) => {
-                    var formatedTransformer = result[0];
-                    if (formatedTransformer.indexOf("Could not format:") == -1) {
-                        editedTransformer.transformResults(formatedTransformer);
-                    }
-                    else {
-                        messagePublisher.reportError("Failed to format transformer!", formatedTransformer);
-                    }
+        new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()])
+            .execute()
+            .done((result: string[]) => {
+                var formatedTransformer = result[0];
+                if (formatedTransformer.indexOf("Could not format:") == -1) {
+                    editedTransformer.transformResults(formatedTransformer);
+                } else {
+                    messagePublisher.reportError("Failed to format transformer!", formatedTransformer);
+                }
             });
-        });
     }
 
     deleteTransformer() {

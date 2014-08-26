@@ -573,7 +573,7 @@ class visualizer extends viewModelBase {
         return result;
     }
 
-    treeTranverse(queue: visualizerDataObjectNodeDto[], callback: (node:visualizerDataObjectNodeDto) => void, refPropName:string = "connections") {
+    treeTranverse(queue: visualizerDataObjectNodeDto[], callback: (node: visualizerDataObjectNodeDto) => void, refPropName: string = "connections") {
         var everQueued = d3.set([]);
 
         while (queue.length > 0) {
@@ -597,7 +597,7 @@ class visualizer extends viewModelBase {
             level: root.level,
             name: root.name,
             payload: root.payload,
-            children: root.children?$.map(root.children, (v, i) => this.exportTree(v)):undefined
+            children: root.children ? $.map(root.children, (v, i) => this.exportTree(v)) : undefined
         }
     }
 
@@ -733,7 +733,7 @@ class visualizer extends viewModelBase {
 
         app.showDialog(dialog);
     }
-    
+
 
     static visualizationCss = '* { box-sizing: border-box; }\n' +
     '.hidden { display: none !important; visibility: hidden !important; }\n' +

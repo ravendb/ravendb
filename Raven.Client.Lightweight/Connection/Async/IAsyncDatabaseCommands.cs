@@ -461,6 +461,11 @@ namespace Raven.Client.Connection.Async
 		/// Generate the next identity value from the server
 		/// </summary>
         Task<long> NextIdentityForAsync(string name);
+
+		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		Task<long> SeedIdentityForAsync(string name, long value);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands

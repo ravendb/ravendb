@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -53,6 +52,20 @@ namespace Raven.Database.Actions
                             var indexInstance = Database.IndexStorage.GetIndexInstance(index);
                             isStale = isStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
                         }
+
+						if (isStale && actions.Staleness.IsIndexStaleByTask(definition.IndexId, query.Cutoff) == false && 
+							actions.Staleness.IsReduceStale(definition.IndexId) == false)
+						{
+							var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
+							if (viewGenerator == null)
+								throw new ArgumentException("specified index definition was not found", "index");
+
+							var forEntityNames = viewGenerator.ForEntityNames.ToList();
+							var lastIndexedEtag = actions.Indexing.GetIndexStats(definition.IndexId).LastIndexedEtag;
+
+							if (Database.LastCollectionEtags.HasEtagGreaterThan(forEntityNames, lastIndexedEtag) == false)
+								isStale = false;
+						}
 
                         var indexFailureInformation = actions.Indexing.GetFailureRate(definition.IndexId);
 

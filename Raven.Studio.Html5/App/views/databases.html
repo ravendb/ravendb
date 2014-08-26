@@ -18,7 +18,9 @@
 
     <div class="btn-toolbar" data-bind="visible: databases().length > 1">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
+            <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)">
+                <i class="fa fa-plus"></i> New Database
+            </button>
         </div>
         <div class="btn-group">
             <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: databases().length > 0" title="Search for a database (Alt+/)">

@@ -2,11 +2,15 @@
 // Bootswatch
 // -----------------------------------------------------
 
-@import url("//fonts.googleapis.com/css?family=Roboto:300,400,700,400italic");
+@font-face {
+  font-family: 'WebRoboto'; // Prevents collisions with locally-installed font called Roboto. http://stackoverflow.com/questions/12129355/google-webfont-conflict-with-local-font
+  font-style: normal;
+  font-weight: 700;
+  src: url(http://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
+}
+
 @import "variables.less";
 @import "functions.less";
-
-@brand-primary-border: darken(@brand-primary, 10%);
 
 /*!
  * Bootswatch v3.2.0
@@ -1161,7 +1165,7 @@ html {
 }
 
 body {
-    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "WebRoboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 16px;
     color: #555555;
     background-color: #ffffff;
@@ -3512,7 +3516,7 @@ fieldset[disabled] .btn-default.active {
 .open > .dropdown-toggle.btn-primary {
     color: #ffffff;
     background-color: darken(@brand-primary, 10%);
-    border-color: darken(@brand-primary, 10%);
+    border-color: darken(@brand-primary, 15%);
 }
 
 .btn-primary:active,
@@ -3537,7 +3541,7 @@ fieldset[disabled] .btn-primary:active,
 .btn-primary[disabled].active,
 fieldset[disabled] .btn-primary.active {
     background-color: @brand-primary;
-    border-color: @brand-primary-border;
+    border-color: darken(@brand-primary-border, 10%);
 }
 
 .btn-primary .badge {
@@ -4045,6 +4049,8 @@ tbody.collapse.in {
 
 .btn-toolbar {
     margin-left: -5px;
+    background-color: lighten(@gray-lighter, 4%);
+    padding: 5px;
 }
 
 .btn-toolbar .btn-group,
@@ -4434,7 +4440,8 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .nav .open > a,
 .nav .open > a:hover,
 .nav .open > a:focus {
-    background-color: #ffffff;
+    /*background-color: #ffffff;*/
+    background-color: transparent;
     border-color: @brand-primary-alt;
 }
 
@@ -5084,8 +5091,9 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .navbar-default .navbar-nav > .open > a,
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus {
-    background-color: @brand-primary;
-    color: white;
+    /*background-color: @brand-primary;
+    color: white;*/
+    color: @brand-primary-alt;
 }
 
 @media (max-width: 767px) {
@@ -5139,7 +5147,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 }
 
 .navbar-inverse {
-    background-color: #ffffff;
+    background-color: lighten(@gray-lighter, 3%);
     border-color: #e6e6e6;
 }
 

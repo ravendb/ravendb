@@ -1,4 +1,9 @@
-﻿@import url("//fonts.googleapis.com/css?family=Roboto:300,400,700,400italic");
+﻿@font-face {
+  font-family: 'WebRoboto';
+  font-style: normal;
+  font-weight: 700;
+  src: url(http://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
+}
 /*!
  * Bootswatch v3.2.0
  * Homepage: http://bootswatch.com
@@ -889,7 +894,7 @@ html {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 body {
-  font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "WebRoboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 16px;
   color: #555555;
   background-color: #ffffff;
@@ -2903,7 +2908,7 @@ fieldset[disabled] .btn-default.active {
 .open > .dropdown-toggle.btn-primary {
   color: #ffffff;
   background-color: #d74c0c;
-  border-color: #d74c0c;
+  border-color: #bf440a;
 }
 .btn-primary:active,
 .btn-primary.active,
@@ -2926,7 +2931,7 @@ fieldset[disabled] .btn-primary:active,
 .btn-primary[disabled].active,
 fieldset[disabled] .btn-primary.active {
   background-color: #f36523;
-  border-color: #d74c0c;
+  border-color: #a73b09;
 }
 .btn-primary .badge {
   color: #f36523;
@@ -3365,6 +3370,8 @@ tbody.collapse.in {
 }
 .btn-toolbar {
   margin-left: -5px;
+  background-color: #f9f9f9;
+  padding: 5px;
 }
 .btn-toolbar .btn-group,
 .btn-toolbar .input-group {
@@ -3689,7 +3696,8 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .nav .open > a,
 .nav .open > a:hover,
 .nav .open > a:focus {
-  background-color: #ffffff;
+  /*background-color: #ffffff;*/
+  background-color: transparent;
   border-color: #af282e;
 }
 .nav .nav-divider {
@@ -4227,8 +4235,9 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .navbar-default .navbar-nav > .open > a,
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus {
-  background-color: #f36523;
-  color: white;
+  /*background-color: @brand-primary;
+    color: white;*/
+  color: #af282e;
 }
 @media (max-width: 767px) {
   .navbar-default .navbar-nav .open .dropdown-menu > li > a {
@@ -4272,7 +4281,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
   color: #eeeeee;
 }
 .navbar-inverse {
-  background-color: #ffffff;
+  background-color: #f6f6f6;
   border-color: #e6e6e6;
 }
 .navbar-inverse .navbar-brand {
@@ -7092,9 +7101,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #index-merge-suggestions .index-name {
   text-decoration: underline;
   font-weight: bold;
-}
-.index-panel {
-  overflow: visible !important;
 }
 .index-dropdown {
   right: 0;

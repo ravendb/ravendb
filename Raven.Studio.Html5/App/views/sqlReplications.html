@@ -1,47 +1,47 @@
 ﻿<div id="sqlReplications" class="innerWindowsStyle">
-    <div id="sqlReplicationsForm" class="panel panel-default">
-        <div class="panel-heading">
-            <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationUrl('')}" title="New SQL Replication (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL replication</a>
-            <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationConnectionStringsUrl()}" accesskey="M" title="Manage SQL connection strings (Alt+M)"><i class="fa fa-database"></i> Manage connection strings</a>
-        </div>
-        <div class="panel-body">
+    <div id="sqlReplicationsForm">
+        <div class="btn-toolbar">
+            <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationUrl('')}" title="New SQL Replication (Alt+N)" accesskey="N">
+                <i class="fa fa-plus"></i> New SQL replication
+            </a>
+            <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationConnectionStringsUrl()}" accesskey="M" title="Manage SQL connection strings (Alt+M)">
+                <i class="fa fa-database"></i> Manage connection strings
+            </a>
             <p data-bind="visible: replications().length === 0">
                 <i class="fa fa-warning text-warning"></i> You've got no SQL replications set up.
             </p>
-            <div class="replications-container" data-bind="foreach: replications">
-                <div class="replication">
-                    <h4 data-bind="attr: { 'href': '', titel:'$root.appUrl.forEditSqlReplication(name, this.activeDatabase()) '}">
-                        <a data-bind="text: name, attr: { href: $root.getSqlReplicationUrl(name()) }"></a>
+        </div>
+        <div class="replications-container" data-bind="foreach: replications">
+            <div class="replication">
+                <h4 data-bind="attr: { 'href': '', titel:'$root.appUrl.forEditSqlReplication(name, this.activeDatabase()) '}">
+                    <a data-bind="text: name, attr: { href: $root.getSqlReplicationUrl(name()) }"></a>
 
-                    </h4>
-                    <label>
-                        <i class="fa fa-power-off" data-bind="attr: { title:disabled() === false?'SQL Replication is Enabled':'SQL Replication is Disabled'},css:{enabledReplication:disabled() === false,disabledReplication:disabled() === true }">
-
-                        </i>
-                    </label>
-                    <div class="sqlRepActions pull-right">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
-                                <i class="fa fa-cogs"></i>
-                            </button>
-                            <ul class="dropdown-menu index-dropdown" role="menu">
-                                <li role="presentation">
-                                    <a href="#" title="Delete the replication" data-bind="click: $root.removeSqlReplication.bind($root,$data)">
-                                        <i class="fa fa-trash-o text-danger"></i> Delete
-                                    </a>
-                                </li>
-                                <li role="presentation">
-                                    <a href="#" title="Show replication stats dialog" data-bind="click: $root.showStats.bind($root,Name)">
-                                        Show stats
-                                    </a>
-                                </li>
-                                <li role="presentation">
-                                    <a href="#" title="Reset current replication" data-bind="click: function(){ $root.resetSqlReplication(Name)}">
-                                        Reset
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
+                </h4>
+                <label>
+                    <i class="fa fa-power-off" data-bind="attr: { title:disabled() === false?'SQL Replication is Enabled':'SQL Replication is Disabled'},css:{enabledReplication:disabled() === false,disabledReplication:disabled() === true }"></i>
+                </label>
+                <div class="sqlRepActions pull-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-placement="left">
+                            <i class="fa fa-cogs"></i>
+                        </button>
+                        <ul class="dropdown-menu index-dropdown" role="menu">
+                            <li role="presentation">
+                                <a href="#" title="Delete the replication" data-bind="click: $root.removeSqlReplication.bind($root,$data)">
+                                    <i class="fa fa-trash-o text-danger"></i> Delete
+                                </a>
+                            </li>
+                            <li role="presentation">
+                                <a href="#" title="Show replication stats dialog" data-bind="click: $root.showStats.bind($root,Name)">
+                                    Show stats
+                                </a>
+                            </li>
+                            <li role="presentation">
+                                <a href="#" title="Reset current replication" data-bind="click: function(){ $root.resetSqlReplication(Name)}">
+                                    Reset
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>

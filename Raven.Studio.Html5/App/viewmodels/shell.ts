@@ -55,7 +55,7 @@ class shell extends viewModelBase {
     systemDatabase: database;
     isSystemConnected: KnockoutComputed<boolean>;
     isActiveDatabaseDisabled: KnockoutComputed<boolean>;
-    canShowDatabaseNavbar = ko.computed(() => shell.databases().length > 1 && this.appUrls.isAreaActive('databases')());
+    canShowDatabaseNavbar = ko.computed(() => (shell.databases().length > 1 || !!this.activeDatabase() && this.activeDatabase().isSystem) && this.appUrls.isAreaActive('databases')());
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
@@ -85,7 +85,7 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
-    hasReplicationSupport = ko.computed(() => this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
+    hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
@@ -486,12 +486,10 @@ class shell extends viewModelBase {
     }
 
     private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResource: resource = null) {
-        var arrayLength = resourceObservableArray().length;
-
         if (activeResource != null && activeResource.name != '<system>') {
             activeResource.activate();
         }
-        else if (arrayLength > 0) {
+        else if (resourceObservableArray().length > 0) {
             var newResource;
 
             if (resource != null && (newResource = resourceObservableArray.first(rs => rs.name == resource.name)) != null) {
@@ -506,7 +504,7 @@ class shell extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
 
         if (resourceHash == appUrl.forDatabases()) {
-            this.activateResource(appUrl.getDatabase(), shell.databases, this.activeDatabase());
+            shell.databases().length == 1 ? this.activeDatabase(null) : this.activateResource(appUrl.getDatabase(), shell.databases, this.activeDatabase());
         }
         else if (resourceHash == appUrl.forFilesystems()) {
             this.activateResource(appUrl.getFileSystem(), shell.fileSystems, this.activeFilesystem());
