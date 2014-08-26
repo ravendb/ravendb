@@ -308,7 +308,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		    }
 		    catch (InvalidOperationException ex)
 		    {
-		        throw new IndexCompilationException(ex.Message)
+		        throw new IndexCompilationException(ex.Message,ex)
 		        {
 		            ProblematicText = indexDefinition.Reduce,
                     IndexDefinitionProperty = "Reduce",

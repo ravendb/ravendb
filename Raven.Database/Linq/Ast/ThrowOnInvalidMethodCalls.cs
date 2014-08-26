@@ -133,6 +133,35 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			return base.VisitSimpleType(simpleType, data);
 		}
 
+		public override object VisitQueryContinuationClause(QueryContinuationClause queryContinuationClause, object data)
+		{
+			var result = base.VisitQueryContinuationClause(queryContinuationClause, data);
+
+			var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.LastOrNullObject() as QueryGroupClause;
+			if(queryGroupClause == null)
+				return result;
+
+			var queryExpression = queryContinuationClause.Parent as QueryExpression;
+			if(queryExpression == null)
+				return result;
+
+			bool foundIt = false;
+			foreach (var queryClause in queryExpression.Clauses)
+			{
+				if (foundIt == false)
+				{
+					foundIt = queryClause == queryContinuationClause;
+					continue;
+				}
+				foreach (var invocationExpression in queryClause.Descendants.OfType<InvocationExpression>())
+				{
+					AssertInvocationExpression(invocationExpression, queryContinuationClause.Identifier);
+				}
+			}
+
+			return result;
+		}
+
 		private void HandleGroupBy(SimpleType simpleType)
 		{
 			if (string.IsNullOrEmpty(groupByIdentifier))
@@ -142,8 +171,6 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			var rootExpression = initializer.Initializer as InvocationExpression;
 			if (rootExpression == null)
 			{
-				// query format, probably
-				HandleGroupByQueryFormat(initializer.Initializer);
 				return;
 			}
 
@@ -186,25 +213,13 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 			foreach (var invocation in lambda.Descendants.OfType<InvocationExpression>())
 			{
-				AssertInvocationExpression(invocation, parameter);
+				AssertInvocationExpression(invocation, parameter.Name);
 			}
 		}
 
-		private void HandleGroupByQueryFormat(Expression initializer)
+		protected virtual void AssertInvocationExpression(InvocationExpression invocation, string name)
 		{
-			var queryExpression = initializer as QueryExpression;
-			if (queryExpression == null)
-				return;
-
-			var queryGroupClause = queryExpression.Descendants.OfType<QueryGroupClause>().First();
-			if (queryGroupClause == null)
-				return;
-			Expression projection = queryGroupClause.Projection;
-		}
-
-		protected virtual void AssertInvocationExpression(InvocationExpression invocation, ParameterDeclaration parameter)
-		{
-			var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == parameter.Name);
+			var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == name);
 
 			foreach (var identifier in identifiers)
 			{

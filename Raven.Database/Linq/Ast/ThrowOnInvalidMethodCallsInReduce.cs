@@ -29,7 +29,7 @@ namespace Raven.Database.Linq.Ast
 			base.AssertInvocationExpression(invocation);
 		}
 
-		protected override void AssertInvocationExpression(InvocationExpression invocation, ParameterDeclaration parameter)
+		protected override void AssertInvocationExpression(InvocationExpression invocation, string parameter)
 		{
 			foreach (var member in invocation.Descendants.OfType<MemberReferenceExpression>())
 			{
