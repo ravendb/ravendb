@@ -215,7 +215,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		            reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce,
 		                                                                                    RequiresSelectNewAnonymousType);
 		            var queryExpression = ((QueryExpression) reduceDefinition.Initializer);
-		            var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().FirstOrDefault();
+		            var queryContinuationClause = GetQueryContinuationClauseForGroupBy(queryExpression);
                     if (queryContinuationClause == null)
                     {
                         throw new IndexCompilationException("Reduce query must contain a 'group ... into ...' clause")
@@ -314,6 +314,11 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
                     IndexDefinitionProperty = "Reduce",
 		        };
 		    }
+		}
+
+		private static QueryContinuationClause GetQueryContinuationClauseForGroupBy(QueryExpression queryExpression)
+		{
+			return queryExpression.Descendants.OfType<QueryContinuationClause>().FirstOrDefault(q => q.PrecedingQuery.Clauses.Any(x=>x is QueryGroupClause));
 		}
 
 		private static LambdaExpression GetLambdaExpression(InvocationExpression invocation)
