@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
+using Mono.CSharp;
 using CSharpParser = ICSharpCode.NRefactory.CSharp.CSharpParser;
 using Expression = ICSharpCode.NRefactory.CSharp.Expression;
 using LambdaExpression = ICSharpCode.NRefactory.CSharp.LambdaExpression;
@@ -29,7 +31,26 @@ namespace Raven.Abstractions.Util
 			new IntroduceQueryExpressions().Run(expr);
 			new CombineQueryExpressions().Run(expr);
 			new IntroduceParenthesisForNestedQueries().Run(expr);
-			new RemoveQueryContinuation().Run(expr);
+
+			//new RemoveQueryContinuation().Run(expr);
+			//TODO: Add this again, but note that this breaks tests, especially when we have situations like:
+			/*
+			 docs.Books.Select(p => new {
+    Name = p.Name,
+    Category = p.Category,
+    Ratings = p.Ratings.Select(x => x.Rate)
+}).Select(p => new {
+    Category = p.Category,
+    Books = new object[] {
+        new {
+            Name = p.Name,
+            MinRating = DynamicEnumerable.Min(p.Ratings),
+            MaxRating = DynamicEnumerable.Max(p.Ratings)
+        }
+    }
+}) 
+			 */
+
 			// Unwrap expression
 			expr = ((ParenthesizedExpression)expr).Expression;
 
@@ -401,58 +422,52 @@ namespace Raven.Abstractions.Util
 				RemoveContinuation(compilationUnit);
 			}
 
-			private AstNode RemoveMembersFromContinuation(AstNode node)
-			{
-				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
-				{
-					child = RemoveMembersFromContinuation(child);
-				}
-				var mre = node as MemberReferenceExpression;
-				if (mre == null)
-					return node;
-
-				var identifierExpression = mre.Target as IdentifierExpression;
-				if (identifierExpression == null)
-					return node;
-				if (membersToRemove.Contains(identifierExpression.Identifier) == false)
-					return node;
-
-				var newNode = new IdentifierExpression(mre.MemberName);
-				mre.ReplaceWith(newNode);
-				return newNode;
-			}
 			private void RemoveContinuation(AstNode node)
 			{
 				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
 				{
 					RemoveContinuation(child);
-					RemoveMembersFromContinuation(child);
 				}
+
 				var query = node as QueryContinuationClause;
 				if (query == null)
 					return;
-				var lastClause = query.PrecedingQuery.Clauses.LastOrNullObject();
-				var lastSelectclause = lastClause as QuerySelectClause;
-				if (lastSelectclause == null)
-				{
+
+				var selectClause = query.PrecedingQuery.Clauses.LastOrNullObject() as QuerySelectClause;
+
+				if (selectClause == null)
 					return;
+
+				// if we have group by / join clauses after this entry, we can't remove it
+				bool foundIt = false;
+				foreach (var queryClause in ((QueryExpression)query.Parent).Clauses)
+				{
+					if (foundIt == false)
+					{
+						foundIt = queryClause == query;
+						continue;
+					}
+					if (queryClause is QueryJoinClause || // shouldn't happen
+						queryClause is QueryFromClause ||
+						queryClause is QueryLetClause) // avoid overly complex queries that cause <>h_TransparentIdentifier0 cannot be used with type arguments issue
+						return;
 				}
 
-				// need to check if the contiuation member is used elsewhere as a single whole (if so, can't just remove it)
+				// need to check if the continuation member is used elsewhere as a single whole (if so, can't just remove it)
 				if (UsedIndependently(query))
 					return;
 
-				var anonymousTypeCreateExpression = lastSelectclause.Expression as AnonymousTypeCreateExpression;
+				var anonymousTypeCreateExpression = selectClause.Expression as AnonymousTypeCreateExpression;
 				if (anonymousTypeCreateExpression == null)
 					return;
 
-				lastSelectclause.Remove();
+				selectClause.Remove();
 
 				foreach (var initializer in anonymousTypeCreateExpression.Initializers)
 				{
 					var namedExpression = initializer as NamedExpression;
 					if (namedExpression == null) // shouldn't happen
-						throw new InvalidOperationException("Unexpected expression in initializer for: " + lastSelectclause.GetText());
+						throw new InvalidOperationException("Unexpected expression in initializer for: " + selectClause.GetText());
 
 					var identifierExpression = namedExpression.Expression as IdentifierExpression;
 					if (identifierExpression != null && identifierExpression.Identifier == namedExpression.Name)
@@ -466,29 +481,65 @@ namespace Raven.Abstractions.Util
 				}
 
 				var parent = (QueryExpression)query.Parent;
-				membersToRemove.Add(query.Identifier);
+
 				while (query.PrecedingQuery.Clauses.Count > 0)
 				{
 					var clause = query.PrecedingQuery.Clauses.FirstOrNullObject();
-					RemoveMembersFromContinuation(clause);
+
+					clause.AddAnnotation(new PreserveMember { Name = query.Identifier });
+
 					parent.Clauses.InsertBefore(query, Detach(clause));
 				}
+				membersToRemove.Add(query.Identifier);
+
+				foreach (var astNode in AllAfter(src, query))
+				{
+					RemoveMembersFromContinuation(astNode);
+
+				}
+
 				query.Remove();
+			}
+
+			private class PreserveMember
+			{
+				public string Name;
+			}
+
+			private void RemoveMembersFromContinuation(AstNode node)
+			{
+				var mre = node as MemberReferenceExpression;
+				if (mre == null)
+					return;
+
+
+				var identifierExpression = mre.Target as IdentifierExpression;
+				if (identifierExpression == null)
+					return;
+
+				var queryClause = mre.GetParent<QueryClause>();
+				while (queryClause != null)
+				{
+					foreach (var preserveMember in queryClause.Annotations.OfType<PreserveMember>())
+					{
+						if (preserveMember.Name == identifierExpression.Identifier)
+							return;
+					}
+					queryClause = queryClause.GetParent<QueryClause>();
+				}
+
+				if (membersToRemove.Contains(identifierExpression.Identifier) == false)
+					return;
+
+				var newNode = new IdentifierExpression(mre.MemberName);
+				mre.ReplaceWith(newNode);
+				return;
 			}
 
 			private bool UsedIndependently(QueryContinuationClause node)
 			{
-				bool foundNode = false;
-				foreach (var astNode in All(src))
+				foreach (var astNode in AllAfter(src, node))
 				{
-					if (foundNode == false && astNode != node)
-						continue;
-
-					foundNode = true;
-
-					if (astNode == node) // skip current one, we don't care about it.
-						continue;
-
 					if (astNode is QueryContinuationClause)
 						break;
 
@@ -497,17 +548,37 @@ namespace Raven.Abstractions.Util
 						continue;
 					if (identifierExpression.Identifier != node.Identifier)
 						continue;
+
+					// ignore this0 = this0 references
+					var namedExpression = identifierExpression.Parent as NamedExpression;
+					if (namedExpression != null && namedExpression.Name == node.Identifier)
+						continue;
 					if (identifierExpression.Parent is MemberReferenceExpression == false)
 						return true;
 				}
 				return false;
 			}
 
-			private IEnumerable<AstNode> All(AstNode node)
+			private IEnumerable<AstNode> AllAfter(AstNode start, AstNode after, bool foundNode = false)
 			{
-				for (AstNode child = node.FirstChild; child != null; child = child.NextSibling)
+				for (AstNode child = start.FirstChild; child != null; child = child.NextSibling)
 				{
-					foreach (var grandChild in All(child))
+					if (foundNode == false && after != child)
+					{
+						foreach (var grandChild in AllAfter(child, after))
+						{
+							foundNode = true;
+							yield return grandChild;
+						}
+						continue;
+					}
+
+					foundNode = true;
+
+					if (after == src) // skip current one, we don't care about it.
+						continue;
+
+					foreach (var grandChild in AllAfter(child, after, true))
 					{
 						yield return grandChild;
 					}
