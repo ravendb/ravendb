@@ -447,27 +447,52 @@ Reduce only fields: {2}
 				if (initializers.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 					return false;
 
-				// need to find the currect from / group identifier
+				// need to find the current from / group identifier
 
 				var parentQueryClause = GetRelevantClause(objectCreateExpression);
-
+				
 				var queryFromClause = parentQueryClause as QueryFromClause;
 				if (queryFromClause != null)
 				{
-					var identifierExpression = new IdentifierExpression(queryFromClause.Identifier);
+					string identifier = queryFromClause.Identifier;
+					var prev = queryFromClause.GetPrevNode();
+					while (prev != null)
+					{
+						var fromClause = prev as QueryFromClause;
+						if (fromClause != null)
+						{
+							identifier = fromClause.Identifier;
+							break;
+						}
+						var continuationClause = prev as QueryContinuationClause;
+						if (continuationClause != null)
+						{
+							identifier = continuationClause.Identifier;
+							break;
+						}
+						prev = prev.GetPrevNode();
+					}
+
 					objectCreateExpression.Initializers.Add(new NamedExpression
 					{
 						Name = Constants.DocumentIdFieldName,
-						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
+						Expression = new MemberReferenceExpression(new IdentifierExpression(identifier), Constants.DocumentIdFieldName)
 					});
 				}
 				var queryGroupClause = parentQueryClause as QueryGroupClause;
 				if (queryGroupClause != null)
 				{
+					var projection = queryGroupClause.Projection;
+					var mre = projection as MemberReferenceExpression;
+					while (mre != null)
+					{
+						projection = mre.Target;
+						mre = projection as MemberReferenceExpression;
+					}
 					objectCreateExpression.Initializers.Add(new NamedExpression
 					{
 						Name = Constants.DocumentIdFieldName,
-						Expression = new MemberReferenceExpression(queryGroupClause.Projection.Clone(), Constants.DocumentIdFieldName)
+						Expression = new MemberReferenceExpression(projection.Clone(), Constants.DocumentIdFieldName)
 					});
 				}
 				var queryContinuationClause = parentQueryClause as QueryContinuationClause;
@@ -492,8 +517,9 @@ Reduce only fields: {2}
 				var relevantClause = node.GetParent<QueryClause>();
 				do
 				{
-					if(relevantClause == null)
+					if (relevantClause == null)
 						throw new IOException("Can't figure out how to find the relevant clause for this query");
+
 					if (relevantClause is QueryGroupClause)
 						return relevantClause;
 					var queryFromClause = relevantClause as QueryFromClause;
