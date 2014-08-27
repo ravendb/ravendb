@@ -50,7 +50,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
         {
 	        this.configuration = configuration;
 	        settings = configuration.Settings;
-            path = configuration.FileSystemDataDirectory.ToFullPath();
+            path = configuration.FileSystem.DataDirectory.ToFullPath();
             database = Path.Combine(path, "Data.ravenfs");
 
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();

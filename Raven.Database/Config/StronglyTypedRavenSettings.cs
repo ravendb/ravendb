@@ -110,12 +110,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
-			FileSystemDataDir =
-				new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
 			CountersDataDir =
 				new StringSetting(settings["Raven/Counters/DataDir"], @"~\Data\Counters");
-			FileSystemIndexStoragePath =
-				new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
 			
 			HostName =
 				new StringSetting(settings["Raven/HostName"], (string) null);
@@ -188,10 +184,17 @@ namespace Raven.Database.Config
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
+			FileSystem.IndexStoragePath = new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
+			FileSystem.DataDir = new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
+			FileSystem.DefaultStorageTypeName = new StringSetting(settings["Raven/FileSystem/Storage"], InMemoryRavenConfiguration.VoronTypeName);
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
+
+			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], InMemoryRavenConfiguration.VoronTypeName);
+
+			JournalsStoragePath = new StringSetting(settings["Raven/Esent/LogsPath"] ?? settings[Constants.RavenTxJournalPath], (string)null);
 		}
 
 		private string GetDefaultWebDir()
@@ -264,12 +267,8 @@ namespace Raven.Database.Config
 
 		public StringSetting IndexStoragePath { get; private set; }
 
-		public StringSetting FileSystemDataDir { get; private set; }
-
 		public StringSetting CountersDataDir { get; private set; }
 		
-		public StringSetting FileSystemIndexStoragePath { get; private set; }
-
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
@@ -327,7 +326,11 @@ namespace Raven.Database.Config
     
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
-		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
+		public IntegerSetting MaxRecentTouchesToRemember { get; private set; }
+
+		public StringSetting DefaultStorageTypeName { get; private set; }
+
+		public StringSetting JournalsStoragePath { get; private set; }
 
 		public class VoronConfiguration
 		{
@@ -357,6 +360,12 @@ namespace Raven.Database.Config
         public class FileSystemConfiguration
         {
             public TimeSpanSetting MaximumSynchronizationInterval { get; set; }
+
+			public StringSetting DataDir { get; set; }
+
+			public StringSetting IndexStoragePath { get; set; }
+
+			public StringSetting DefaultStorageTypeName { get; set; }
         }
 
 		public class EncryptionConfiguration

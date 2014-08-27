@@ -20,7 +20,10 @@ namespace RavenFS.Tests
 		{
 			var configuration = new InMemoryRavenConfiguration
 			{
-				FileSystemDataDirectory = "test",
+				FileSystem =
+				{
+					DataDirectory = "test"
+				},
 				Settings = new NameValueCollection
 				           {
 					           { Constants.MetadataEtagField, Guid.Empty.ToString() }
