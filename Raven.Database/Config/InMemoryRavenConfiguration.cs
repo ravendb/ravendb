@@ -234,6 +234,9 @@ namespace Raven.Database.Config
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
+			FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
+			MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.MaximumSizeAllowedToFetchFromStorageInMb.Value;
+
 			PostInit();
 		}
 
