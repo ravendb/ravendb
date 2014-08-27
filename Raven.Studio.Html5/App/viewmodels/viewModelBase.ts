@@ -46,16 +46,14 @@ class viewModelBase {
                 messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system while it's disabled.");
                 return { redirect: appUrl.forFilesystems() };
             }
-        }
-        else if (resource instanceof counterStorage) {
+        } else if (resource instanceof counterStorage) {
             var cs = this.activeCounterStorage();
 
             if (!!cs && cs.disabled()) {
                 messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
                 return { redirect: appUrl.forFilesystems() };
             }
-        }
-        else { //it's a database
+        } else { //it's a database
             var db = this.activeDatabase();
 
             // we only want to prompt warning to system db if we are in the databases section
@@ -220,7 +218,7 @@ class viewModelBase {
         clearInterval(viewModelBase.modelPollingHandle);
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[] = ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
         var confirmTask = app.showDialog(new confirmationDialog(confirmationMessage, title, options));
 
@@ -257,8 +255,7 @@ class viewModelBase {
 
         if (!appUrl.warnWhenUsingSystemDatabase || viewModelBase.isConfirmedUsingSystemDatabase) {
             canNavTask.resolve({ can: true });
-        }
-        else {
+        } else {
             var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
             systemDbConfirm.viewTask
                 .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forDatabases() }) : canNavTask.reject())
