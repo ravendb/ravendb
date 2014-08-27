@@ -32,24 +32,7 @@ namespace Raven.Abstractions.Util
 			new CombineQueryExpressions().Run(expr);
 			new IntroduceParenthesisForNestedQueries().Run(expr);
 
-			//new RemoveQueryContinuation().Run(expr);
-			//TODO: Add this again, but note that this breaks tests, especially when we have situations like:
-			/*
-			 docs.Books.Select(p => new {
-    Name = p.Name,
-    Category = p.Category,
-    Ratings = p.Ratings.Select(x => x.Rate)
-}).Select(p => new {
-    Category = p.Category,
-    Books = new object[] {
-        new {
-            Name = p.Name,
-            MinRating = DynamicEnumerable.Min(p.Ratings),
-            MaxRating = DynamicEnumerable.Max(p.Ratings)
-        }
-    }
-}) 
-			 */
+			new RemoveQueryContinuation().Run(expr);
 
 			// Unwrap expression
 			expr = ((ParenthesizedExpression)expr).Expression;
@@ -438,27 +421,30 @@ namespace Raven.Abstractions.Util
 				if (selectClause == null)
 					return;
 
-				// if we have group by / join clauses after this entry, we can't remove it
-				bool foundIt = false;
-				foreach (var queryClause in ((QueryExpression)query.Parent).Clauses)
-				{
-					if (foundIt == false)
-					{
-						foundIt = queryClause == query;
-						continue;
-					}
-					if (queryClause is QueryJoinClause || // shouldn't happen
-						queryClause is QueryFromClause ||
-						queryClause is QueryLetClause) // avoid overly complex queries that cause <>h_TransparentIdentifier0 cannot be used with type arguments issue
-						return;
-				}
-
 				// need to check if the continuation member is used elsewhere as a single whole (if so, can't just remove it)
 				if (UsedIndependently(query))
 					return;
 
 				var anonymousTypeCreateExpression = selectClause.Expression as AnonymousTypeCreateExpression;
 				if (anonymousTypeCreateExpression == null)
+					return;
+
+				var trivial = anonymousTypeCreateExpression.Initializers.All(x =>
+				{
+					var namedExpression = x as NamedExpression;
+					if (namedExpression == null)
+						return false;
+					var identifierExpression = namedExpression.Expression as IdentifierExpression;
+					if (identifierExpression == null)
+						return false;
+					return namedExpression.Name == identifierExpression.Identifier;
+				});
+
+				if (trivial == false)
+					return;
+
+				bool usedByOtherClauses = ((QueryExpression)query.Parent).Clauses.SkipWhile(x => x != query).All(q => (q is QueryLetClause || q is QueryFromClause || q is QueryJoinClause) == false);
+				if (usedByOtherClauses)
 					return;
 
 				selectClause.Remove();
@@ -495,7 +481,6 @@ namespace Raven.Abstractions.Util
 				foreach (var astNode in AllAfter(src, query))
 				{
 					RemoveMembersFromContinuation(astNode);
-
 				}
 
 				query.Remove();
