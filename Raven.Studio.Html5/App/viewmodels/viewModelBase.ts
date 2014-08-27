@@ -10,9 +10,9 @@ import shell = require("viewmodels/shell");
 import changesCallback = require("common/changesCallback");
 import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
-import ace = require("ace/ace");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
+import confirmationDialog = require("viewmodels/confirmationDialog");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -46,16 +46,14 @@ class viewModelBase {
                 messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system while it's disabled.");
                 return { redirect: appUrl.forFilesystems() };
             }
-        }
-        else if (resource instanceof counterStorage) {
+        } else if (resource instanceof counterStorage) {
             var cs = this.activeCounterStorage();
 
             if (!!cs && cs.disabled()) {
                 messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
                 return { redirect: appUrl.forFilesystems() };
             }
-        }
-        else { //it's a database
+        } else { //it's a database
             var db = this.activeDatabase();
 
             // we only want to prompt warning to system db if we are in the databases section
@@ -120,7 +118,7 @@ class viewModelBase {
 
         return true;
     }
-    
+
     /*
      * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
      */
@@ -197,10 +195,10 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() { 
+    modelPolling() {
     }
 
-    forceModelPolling() {  
+    forceModelPolling() {
         this.modelPolling();
     }
 
@@ -222,10 +220,11 @@ class viewModelBase {
 
     confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
-        var messageView = app.showMessage(confirmationMessage, title, options);
+        var confirmTask = app.showDialog(new confirmationDialog(confirmationMessage, title, options));
 
-        messageView.done((answer) => {
-            if (answer == options[1]) {
+        confirmTask.done((answer) => {
+            var isConfirmed = answer === options.last();
+            if (isConfirmed) {
                 viewTask.resolve({ can: true });
             } else if (!forceRejectWithResolve) {
                 viewTask.reject();
@@ -256,8 +255,7 @@ class viewModelBase {
 
         if (!appUrl.warnWhenUsingSystemDatabase || viewModelBase.isConfirmedUsingSystemDatabase) {
             canNavTask.resolve({ can: true });
-        }
-        else {
+        } else {
             var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
             systemDbConfirm.viewTask
                 .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forDatabases() }) : canNavTask.reject())

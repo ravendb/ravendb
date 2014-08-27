@@ -75,13 +75,13 @@
                     <label class="col-sm-2 control-label">Collections</label>
                     <div class="col-sm-10">
                         <!--<div class="btn-group">
-                            <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
-                                All collections
-                            </label>
-                            <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
-                                Specified collections only
-                            </label>
-                        </div>-->
+                    <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
+                        All collections
+                    </label>
+                    <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
+                        Specified collections only
+                    </label>
+                </div>-->
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                 <span data-bind="visible: includeAllCollections">All collections</span>
@@ -96,7 +96,10 @@
                         <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
                             <p class="form-control-static">Choose collections:</p>
                             <div class="btn-group-vertical" data-bind="foreach: includedCollections">
-                                <label class="btn btn-default" data-bind="text: collection, click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }"></label>
+                                <label class="btn btn-default" data-bind="click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }">
+                                    <i class="fa fa-fw" data-bind="css: { 'fa-check': isIncluded }"></i>
+                                    <span data-bind="text: collection"></span>
+                                </label>
                             </div>
                         </div>
                     </div>

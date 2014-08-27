@@ -153,19 +153,33 @@
                 Sort By
             </label>
             <div class="col-md-9" data-bind="foreach: sortBys">
-                <div class="col-xs-12 col-sm-9 col-md-6 col-lg-3" style="padding-left: 0">
+                <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5" style="padding-left: 0">
                     <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <div class="btn-group col-md-11">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
-                                    <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
-                                    <!-- ko if: $root.indexFields().length === 0 -->
-                                    <li><a href="#" data-bind="click: function() { }">[There are no available fields]</a></li>
-                                    <!-- /ko -->
-                                </ul>
+                        <div class="panel-body">
+                            <div class="col-md-11">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
+                                        <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
+                                    </ul>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="visible: isAscending() && !isRange()">Ascending</span>
+                                        <span data-bind="visible: !isAscending() && !isRange()">Descending</span>
+                                        <span data-bind="visible: isAscending() && isRange()">Range Ascending</span>
+                                        <span data-bind="visible: !isAscending() && isRange()">Range Descending</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a></li>
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a></li>
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a></li>
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Range Descending</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div>
                                 <button type="button" class="close" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">
@@ -173,23 +187,6 @@
                                 </button>
                             </div>
                             <div class="clearfix"></div>
-                        </div>
-                        <div class="panel-body">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="visible: isAscending() && !isRange()">Ascending</span>
-                                    <span data-bind="visible: !isAscending() && !isRange()">Descending</span>
-                                    <span data-bind="visible: isAscending() && isRange()">Range Ascending</span>
-                                    <span data-bind="visible: !isAscending() && isRange()">Range Descending</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" role="menu">
-                                    <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a></li>
-                                    <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a></li>
-                                    <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a></li>
-                                    <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Range Descending</a></li>
-                                </ul>
-                            </div>
                         </div>
                     </div>
                 </div>

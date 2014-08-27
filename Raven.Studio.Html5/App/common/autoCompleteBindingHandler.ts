@@ -29,7 +29,11 @@ class autoCompleteBindingHandler {
         var inputId = valueAccessor();
         var input = $(inputId);
         if (input.length !== 1) {
-            throw new Error("Expected 1 auto complete element, '" + inputId + "', but found " + input.length);
+            // Don't throw an error here, because we may cancel navigation, and Durandal may pull the element out.
+            // Instead, we'll just issue a warning in the console and return.
+            //throw new Error("Expected 1 auto complete element, '" + inputId + "', but found " + input.length);
+            console.warn("Expected 1 auto complete element, '" + inputId + "', but found " + input.length);
+            return;
         }
 
         // Hide the auto complete container and size it to the same size as the textbox.

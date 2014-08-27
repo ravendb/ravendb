@@ -91,7 +91,7 @@ class row {
                 var cellValue = rowData[prop];
                 // pass json object when not custom template!
                 if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
-                    cellValue = JSON.stringify(cellValue, null, 4);
+                    cellValue = JSON.stringify(cellValue, null, 4) || "";
                 }
 
                 if (cellValue.length > 250) {

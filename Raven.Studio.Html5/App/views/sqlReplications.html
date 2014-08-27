@@ -7,7 +7,10 @@
             <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationConnectionStringsUrl()}" accesskey="M" title="Manage SQL connection strings (Alt+M)">
                 <i class="fa fa-database"></i> Manage connection strings
             </a>
-            <p data-bind="visible: replications().length === 0">
+        </div>
+        <div data-bind="visible: replications().length === 0">
+            <br />
+            <p>
                 <i class="fa fa-warning text-warning"></i> You've got no SQL replications set up.
             </p>
         </div>
@@ -15,7 +18,6 @@
             <div class="replication">
                 <h4 data-bind="attr: { 'href': '', titel:'$root.appUrl.forEditSqlReplication(name, this.activeDatabase()) '}">
                     <a data-bind="text: name, attr: { href: $root.getSqlReplicationUrl(name()) }"></a>
-
                 </h4>
                 <label>
                     <i class="fa fa-power-off" data-bind="attr: { title:disabled() === false?'SQL Replication is Enabled':'SQL Replication is Disabled'},css:{enabledReplication:disabled() === false,disabledReplication:disabled() === true }"></i>

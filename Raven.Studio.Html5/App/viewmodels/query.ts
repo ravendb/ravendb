@@ -141,6 +141,11 @@ class query extends viewModelBase {
         });
 
         aceEditorBindingHandler.install();
+
+        // Refetch the index fields whenever the selected index name changes.
+        this.selectedIndex
+            .where(indexName => indexName != null)
+            .subscribe(indexName => this.fetchIndexFields(indexName));
     }
 
     openQueryStats() {
@@ -169,8 +174,8 @@ class query extends viewModelBase {
 
         $("#indexQueryLabel").popover({
             html: true,
-            trigger: 'hover',
-            container: '.form-horizontal',
+            trigger: "hover",
+            container: ".form-horizontal",
             content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
@@ -216,7 +221,8 @@ class query extends viewModelBase {
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
-            this.setSelectedIndex(this.indexes.first().name);
+            var firstIndexName = this.indexes.first().name;
+            this.setSelectedIndex(firstIndexName);
         } else if (this.indexes.first(i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
@@ -479,34 +485,6 @@ class query extends viewModelBase {
         var url = appUrl.forQuery(this.activeDatabase(), indexQuery);
         this.updateUrl(url);
         NProgress.done();
-
-        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
-        // Fields don't show for All Documents.
-        var isAllDocumentsDynamicQuery = indexName === "All Documents";
-        if (!isAllDocumentsDynamicQuery) {
-
-            //if index is dynamic, get columns using index definition, else get it using first index result
-            if (indexName.indexOf(this.dynamicPrefix) === 0) {
-                var collectionName = indexName.substring(8);
-                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
-                    .execute()
-                    .done((result: pagedResultSet) => {
-                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
-                            var dynamicIndexPattern: document = new document(result.items[0]);
-                            if (!!dynamicIndexPattern) {
-                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
-                            }
-
-                        }
-                    });
-            } else {
-                new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
-                    .execute()
-                    .done((result: indexDefinitionContainerDto) => {
-                        this.indexFields(result.Index.Fields);
-                    });
-            }
-        }
     }
 
     static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {
@@ -610,6 +588,34 @@ class query extends viewModelBase {
         task.done((cf: customFunctions) => {
             this.currentCustomFunctions(cf);
         });
+    }
+
+    fetchIndexFields(indexName: string) {
+        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
+        // Fields don't show for All Documents.
+        var isAllDocumentsDynamicQuery = indexName === "All Documents";
+        if (!isAllDocumentsDynamicQuery) {
+            //if index is dynamic, get columns using index definition, else get it using first index result
+            if (indexName.indexOf(this.dynamicPrefix) === 0) {
+                var collectionName = indexName.substring(8);
+                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
+                    .execute()
+                    .done((result: pagedResultSet) => {
+                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
+                            var dynamicIndexPattern: document = new document(result.items[0]);
+                            if (!!dynamicIndexPattern) {
+                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                            }
+                        }
+                    });
+            } else {
+                new getIndexDefinitionCommand(indexName, this.activeDatabase())
+                    .execute()
+                    .done((result: indexDefinitionContainerDto) => {
+                        this.indexFields(result.Index.Fields);
+                    });
+            }
+        }
     }
 
     findTransformerByName(transformerName: string): transformerDto {

@@ -181,30 +181,6 @@ html, body {
     }
 }
 
-#editSQLReplication {
-    /*.tools
-    {
-        a{
-            padding-left:6px;
-            padding-right:6px;
-        }
-        i{
-            padding-left:1em;
-        }
-    }
-    label {
-        text-align: left;
-    }
-
-    .script-label {
-        padding-left: 0;
-    }
-
-    .edit-sql-replication-actions {
-        padding-top: 0.5%;
-    }*/
-}
-
 .sqlReplication-Stats {
     width: 60vw;
 
@@ -429,8 +405,8 @@ html, body {
 
             @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
-            @enabledColor: #3A822D;
-            @disabledColor: #d9534f;
+            @enabledColor: darken(@brand-success, 20%); //#3A822D;
+            @disabledColor: @brand-danger; // #d9534f;
 
             .checkbox {
                 display: none;
@@ -683,7 +659,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         cursor: pointer;
         overflow: hidden;
         white-space: nowrap;
+        -ms-word-wrap: break-word;
         word-wrap: break-word;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
         border-bottom: 1px solid #ddd;
         margin: 0px;
@@ -719,9 +698,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
             border-top-width: 2px;
             margin-top: 1%;
             padding-top: 1%;
-            border-style: dashed;
-            border-width: thin;
-            border-color: black;
+            border: thin dashed black;
             width: 60vw;
             margin-left: 1%;
         }
@@ -1002,10 +979,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     .documents-select {
         text-align: center;
-        background-color: #ffffcc;
+        background-color: @selectionColor;
         margin-top: 5px;
-        border: 1px solid;
-        border-radius: 25px;
+        padding: 5px;
+        border: 1px solid @gray-light;
 
         .select-link {
             text-decoration: underline;
