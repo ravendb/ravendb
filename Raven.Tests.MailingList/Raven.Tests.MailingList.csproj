@@ -271,6 +271,7 @@
     <Compile Include="LoadAllStartingWith.cs" />
     <Compile Include="LoadWithIncludeTests.cs" />
     <Compile Include="LongIds.cs" />
+    <Compile Include="LowerCaseIdIndexTest.cs" />
     <Compile Include="LuceneQueryHighlightTest.cs" />
     <Compile Include="LuceneScoreTests.cs" />
     <Compile Include="LuceneSearchSample.cs" />
