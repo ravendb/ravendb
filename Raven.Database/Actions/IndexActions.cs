@@ -352,7 +352,8 @@ namespace Raven.Database.Actions
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
                 {
-                    Query = query
+                    Query = query,
+					PageSize = int.MaxValue
                 }, actions, linked)
                 {
                     ShouldSkipDuplicateChecking = true
