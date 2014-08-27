@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
 
 			var indexesByIndexedEtag = indexes
 				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
-				.OrderBy(x => x.Key, new RoughEtagEqualityAndComparison())
+				.OrderByDescending(x => x.Key, new RoughEtagEqualityAndComparison())
 				.ToList();
 
 			if (indexesByIndexedEtag.Count == 1)
