@@ -133,6 +133,7 @@ class ctor {
             // Don't throw an error here, because the user can cancel navigation, causing the element not to be found on the page. 
             //throw new Error("There should be 1 " + this.settings.gridSelector + " on the page, but found " + this.grid.length.toString());
             console.warn("There should be 1 " + this.settings.gridSelector + " on the page, but found " + this.grid.length.toString());
+            return;
         }
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
