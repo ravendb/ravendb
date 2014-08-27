@@ -1,7 +1,7 @@
 ﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
-  font-weight: 700;
+  font-weight: 400;
   src: url(http://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
 }
 /*!
@@ -16,9 +16,17 @@ html {
   font-family: sans-serif;
   -ms-text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  font-size: 10px;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 body {
   margin: 0;
+  font-family: WebRoboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  color: #555555;
+  background-color: #ffffff;
 }
 article,
 aside,
@@ -888,16 +896,6 @@ th {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-}
-html {
-  font-size: 10px;
-  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-}
-body {
-  font-family: "WebRoboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  color: #555555;
-  background-color: #ffffff;
 }
 input,
 button,
@@ -3941,6 +3939,9 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
   left: 0;
   z-index: 1030;
   -webkit-transform: translate3d(0, 0, 0);
+  -moz-transform: translate3d(0, 0, 0);
+  -ms-transform: translate3d(0, 0, 0);
+  -o-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
 }
 @media (min-width: 768px) {
@@ -4796,6 +4797,7 @@ a.thumbnail.active {
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.15);
   -webkit-transition: width 0.6s ease;
   -o-transition: width 0.6s ease;
+  -moz-transition: width 0.6s ease;
   transition: width 0.6s ease;
 }
 .progress-striped .progress-bar,
@@ -5663,6 +5665,8 @@ button.close {
   padding: 1px;
   text-align: left;
   background-color: #ffffff;
+  -moz-background-clip: padding-box;
+  -webkit-background-clip: padding-box;
   background-clip: padding-box;
   border: 1px solid #cccccc;
   border: 1px solid rgba(0, 0, 0, 0.2);
@@ -6044,6 +6048,9 @@ button.close {
 .affix {
   position: fixed;
   -webkit-transform: translate3d(0, 0, 0);
+  -moz-transform: translate3d(0, 0, 0);
+  -ms-transform: translate3d(0, 0, 0);
+  -o-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
 }
 @-ms-viewport {
@@ -7109,7 +7116,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   cursor: pointer;
   overflow: hidden;
   white-space: nowrap;
+  -ms-word-wrap: break-word;
   word-wrap: break-word;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
   border-bottom: 1px solid #ddd;
   margin: 0px;
@@ -7141,9 +7151,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   border-top-width: 2px;
   margin-top: 1%;
   padding-top: 1%;
-  border-style: dashed;
-  border-width: thin;
-  border-color: black;
+  border: thin dashed black;
   width: 60vw;
   margin-left: 1%;
 }
@@ -7368,8 +7376,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-align: center;
   background-color: #ffffcc;
   margin-top: 5px;
-  border: 1px solid;
-  border-radius: 25px;
+  padding: 5px;
+  border: 1px solid #999999;
 }
 .documents-page .documents-select .select-link {
   text-decoration: underline;

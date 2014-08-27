@@ -1,16 +1,12 @@
-// Lumen 3.2.0
-// Bootswatch
-// -----------------------------------------------------
+@import "variables.less";
+@import "functions.less";
 
 @font-face {
   font-family: 'WebRoboto'; // Prevents collisions with locally-installed font called Roboto. http://stackoverflow.com/questions/12129355/google-webfont-conflict-with-local-font
   font-style: normal;
-  font-weight: 700;
+  font-weight: 400;
   src: url(http://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
 }
-
-@import "variables.less";
-@import "functions.less";
 
 /*!
  * Bootswatch v3.2.0
@@ -24,10 +20,18 @@ html {
     font-family: sans-serif;
     -ms-text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    font-size: 10px;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 
 body {
     margin: 0;
+    font-family: WebRoboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    color: #555555;
+    background-color: #ffffff;
 }
 
 article,
@@ -1157,18 +1161,6 @@ th {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
-}
-
-html {
-    font-size: 10px;
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-}
-
-body {
-    font-family: "WebRoboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 16px;
-    color: #555555;
-    background-color: #ffffff;
 }
 
 input,
@@ -4739,6 +4731,9 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
     left: 0;
     z-index: 1030;
     -webkit-transform: translate3d(0, 0, 0);
+    -moz-transform: translate3d(0, 0, 0);
+    -ms-transform: translate3d(0, 0, 0);
+    -o-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
 }
 
@@ -5771,6 +5766,7 @@ a.thumbnail.active {
     box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.15);
     -webkit-transition: width 0.6s ease;
     -o-transition: width 0.6s ease;
+    -moz-transition: width 0.6s ease;
     transition: width 0.6s ease;
 }
 
@@ -6811,6 +6807,8 @@ button.close {
     padding: 1px;
     text-align: left;
     background-color: #ffffff;
+    -moz-background-clip: padding-box;
+    -webkit-background-clip: padding-box;
     background-clip: padding-box;
     border: 1px solid #cccccc;
     border: 1px solid rgba(0, 0, 0, 0.2);
@@ -7252,6 +7250,9 @@ button.close {
 .affix {
     position: fixed;
     -webkit-transform: translate3d(0, 0, 0);
+    -moz-transform: translate3d(0, 0, 0);
+    -ms-transform: translate3d(0, 0, 0);
+    -o-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
 }
 

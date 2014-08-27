@@ -10,9 +10,9 @@ import shell = require("viewmodels/shell");
 import changesCallback = require("common/changesCallback");
 import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
-import ace = require("ace/ace");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
+import confirmationDialog = require("viewmodels/confirmationDialog");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -120,7 +120,7 @@ class viewModelBase {
 
         return true;
     }
-    
+
     /*
      * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
      */
@@ -197,10 +197,10 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() { 
+    modelPolling() {
     }
 
-    forceModelPolling() {  
+    forceModelPolling() {
         this.modelPolling();
     }
 
@@ -220,12 +220,13 @@ class viewModelBase {
         clearInterval(viewModelBase.modelPollingHandle);
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[] = ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
-        var messageView = app.showMessage(confirmationMessage, title, options);
+        var confirmTask = app.showDialog(new confirmationDialog(confirmationMessage, title, options));
 
-        messageView.done((answer) => {
-            if (answer == options[1]) {
+        confirmTask.done((answer) => {
+            var isConfirmed = answer === options.last();
+            if (isConfirmed) {
                 viewTask.resolve({ can: true });
             } else if (!forceRejectWithResolve) {
                 viewTask.reject();
