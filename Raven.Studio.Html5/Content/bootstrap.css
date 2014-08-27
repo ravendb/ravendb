@@ -6369,10 +6369,6 @@ button.close {
 .text-info:hover {
   color: #772953;
 }
-table a:not(.btn),
-.table a:not(.btn) {
-  text-decoration: underline;
-}
 table .success,
 .table .success,
 table .warning,

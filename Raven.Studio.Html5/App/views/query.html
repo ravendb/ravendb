@@ -163,9 +163,6 @@
                                     </button>
                                     <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
                                         <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
-                                        <!-- ko if: $root.indexFields().length === 0 -->
-                                        <li><a href="#" data-bind="click: function() { }">[There are no available fields]</a></li>
-                                        <!-- /ko -->
                                     </ul>
                                 </div>
                                 <div class="btn-group">
