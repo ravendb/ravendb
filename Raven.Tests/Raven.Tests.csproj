@@ -245,6 +245,7 @@
     <Compile Include="Issues\RavenDB_2314.cs" />
     <Compile Include="Issues\RavenDB_2387.cs" />
     <Compile Include="Issues\RavenDB_2502.cs" />
+    <Compile Include="Issues\RavenDB_2571.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
@@ -825,6 +826,7 @@
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Garrett.cs" />
+    <Compile Include="MailingList\gaz.cs" />
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
