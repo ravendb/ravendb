@@ -4382,6 +4382,13 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .input-group-btn:last-child > .btn,
 .input-group-btn:last-child > .btn-group {
     margin-left: -1px;
+    padding-top: 7px;
+    border: none;
+    box-shadow: 0 0 1px 0 @gray-light inset;
+
+    &:hover {
+        box-shadow: 0 0 1px 0 @gray inset;
+    }
 }
 
 .nav {
@@ -7694,7 +7701,7 @@ table > tfoot > tr > td,
 }
 
 label {
-    font-weight: normal;
+    font-weight: bold;
 }
 
 .has-warning .help-block,

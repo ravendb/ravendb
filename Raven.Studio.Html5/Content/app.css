@@ -3651,6 +3651,13 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .input-group-btn:last-child > .btn,
 .input-group-btn:last-child > .btn-group {
   margin-left: -1px;
+  padding-top: 7px;
+  border: none;
+  box-shadow: 0 0 1px 0 #999999 inset;
+}
+.input-group-btn:last-child > .btn:hover,
+.input-group-btn:last-child > .btn-group:hover {
+  box-shadow: 0 0 1px 0 #555555 inset;
 }
 .nav {
   margin-bottom: 0;
@@ -6407,7 +6414,7 @@ table > tfoot > tr > td,
   box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.075);
 }
 label {
-  font-weight: normal;
+  font-weight: bold;
 }
 .has-warning .help-block,
 .has-warning .control-label,
@@ -6737,29 +6744,6 @@ body {
 #sqlReplications label {
   text-align: left;
 }
-#editSQLReplication {
-  /*.tools
-    {
-        a{
-            padding-left:6px;
-            padding-right:6px;
-        }
-        i{
-            padding-left:1em;
-        }
-    }
-    label {
-        text-align: left;
-    }
-
-    .script-label {
-        padding-left: 0;
-    }
-
-    .edit-sql-replication-actions {
-        padding-top: 0.5%;
-    }*/
-}
 .sqlReplication-Stats {
   width: 60vw;
   max-height: 60vh !important;
@@ -6956,10 +6940,10 @@ body {
   pointer-events: none;
 }
 #resources-page .resources-container .resource .details .stats {
-  color: #3a822d;
+  color: #20662a;
 }
 #resources-page .resources-container .resource .details .stats-disabled {
-  color: #d9534f;
+  color: #df382c;
 }
 #resources-page .resources-container .resource .btn-group {
   float: right;
@@ -6967,10 +6951,10 @@ body {
   margin-top: 45.3px;
 }
 #resources-page .resources-container .resource .btn-group .dropdown-menu .fa-trash-o {
-  color: #eba5a3;
+  color: #ec8c85;
 }
 #resources-page .resources-container .resource .btn-group .dropdown-menu .delete-resource:hover .fa-trash-o {
-  color: #d9534f;
+  color: #df382c;
 }
 #resources-page .resources-container .resource .btn-default {
   padding: 4px;

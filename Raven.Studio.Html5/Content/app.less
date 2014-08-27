@@ -181,30 +181,6 @@ html, body {
     }
 }
 
-#editSQLReplication {
-    /*.tools
-    {
-        a{
-            padding-left:6px;
-            padding-right:6px;
-        }
-        i{
-            padding-left:1em;
-        }
-    }
-    label {
-        text-align: left;
-    }
-
-    .script-label {
-        padding-left: 0;
-    }
-
-    .edit-sql-replication-actions {
-        padding-top: 0.5%;
-    }*/
-}
-
 .sqlReplication-Stats {
     width: 60vw;
 
@@ -429,8 +405,8 @@ html, body {
 
             @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
-            @enabledColor: #3A822D;
-            @disabledColor: #d9534f;
+            @enabledColor: darken(@brand-success, 20%); //#3A822D;
+            @disabledColor: @brand-danger; // #d9534f;
 
             .checkbox {
                 display: none;

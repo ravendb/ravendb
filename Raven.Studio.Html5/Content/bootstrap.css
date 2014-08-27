@@ -3651,6 +3651,13 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .input-group-btn:last-child > .btn,
 .input-group-btn:last-child > .btn-group {
   margin-left: -1px;
+  padding-top: 7px;
+  border: none;
+  box-shadow: 0 0 1px 0 #999999 inset;
+}
+.input-group-btn:last-child > .btn:hover,
+.input-group-btn:last-child > .btn-group:hover {
+  box-shadow: 0 0 1px 0 #555555 inset;
 }
 .nav {
   margin-bottom: 0;
@@ -6407,7 +6414,7 @@ table > tfoot > tr > td,
   box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.075);
 }
 label {
-  font-weight: normal;
+  font-weight: bold;
 }
 .has-warning .help-block,
 .has-warning .control-label,
