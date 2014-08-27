@@ -20,6 +20,10 @@ namespace Raven.Tests.Core.Utils.Indexes
             Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
 
             IndexSuggestions.Add(x => x.Name, new SuggestionOptions());
+
+            Analyzers.Add(x => x.Name, "SimpleAnalyzer");
+
+            Stores.Add(x => x.Name, FieldStorage.Yes);
 		}
 	}
 }

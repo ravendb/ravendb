@@ -95,5 +95,40 @@ namespace Raven.Tests.Core.Bundles
                 }
             }
         }
+
+        [Fact]
+        public void CanUseMoreLikeThisWithIncludes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Users_ByName();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Id = "users/1", AddressId = "addresses/1", Name = "John" });
+                    session.Store(new User { Id = "users/2", AddressId = "addresses/2", Name = "John Doe" });
+                    session.Store(new Address { Id = "addresses/1", City = "New York", Country = "USA" });
+                    session.Store(new Address { Id = "addresses/2", City = "New York2", Country = "USA2" });
+                    session.SaveChanges();
+
+                    WaitForIndexing(store);
+
+                    var list = session.Advanced.MoreLikeThis<User, Users_ByName>(new MoreLikeThisQuery
+                    {
+                        DocumentId = "users/1",
+                        Includes = new [] {"AddressId"},
+                        MinimumDocumentFrequency = 1,
+                        MinimumTermFrequency = 0
+                    });
+
+                    Assert.Equal(1, list.Length);
+                    Assert.Equal("John Doe", list[0].Name);
+
+                    var address = session.Load<Address>(list[0].AddressId);
+                    Assert.Equal("USA2", address.Country);
+                }
+            }
+        }
     }
 }
