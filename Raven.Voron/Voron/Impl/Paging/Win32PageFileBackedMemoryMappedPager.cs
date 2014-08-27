@@ -71,7 +71,7 @@ namespace Voron.Impl.Paging
 			var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
 			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the legnth to less than the current length");
+				throw new ArgumentException("Cannot set the length to less than the current length");
 
 			if (newLengthAfterAdjustment == _totalAllocationSize)
 				return;
@@ -87,7 +87,7 @@ namespace Voron.Impl.Paging
 		        if (newPagerState == null)
 		        {
 		            var errorMessage = string.Format(
-		                "Unable to allocate more pages - unsucsessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
+		                "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
 		                (_totalAllocationSize + allocationSize));
 
 		            throw new OutOfMemoryException(errorMessage);
@@ -101,7 +101,7 @@ namespace Voron.Impl.Paging
 		            tx.AddPagerState(newPagerState);
 		        }
                 // we always share the same memory mapped files references between all pages, since to close them 
-                // would be to lose all the memory assoicated with them
+                // would be to lose all the memory associated with them
 		        PagerState.DisposeFilesOnDispose = false;
 		        var tmp = PagerState;
                 PagerState = newPagerState;

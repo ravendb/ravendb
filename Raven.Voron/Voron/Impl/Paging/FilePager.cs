@@ -70,7 +70,7 @@ namespace Voron.Impl.Paging
         public override void AllocateMorePages(Transaction tx, long newLength)
         {
             if (newLength < _fileStream.Length)
-                throw new ArgumentException("Cannot set the legnth to less than the current length");
+                throw new ArgumentException("Cannot set the length to less than the current length");
 
             if (newLength == _fileStream.Length)
                 return;
