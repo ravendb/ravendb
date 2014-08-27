@@ -48,7 +48,7 @@ namespace Raven.Database.Config
 			CreateAnalyzersDirectoryIfNotExisting = true;
 
 
-			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
+			IndexingScheduler = new FairIndexingSchedulerWithOlderIndexesBias();
 
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
