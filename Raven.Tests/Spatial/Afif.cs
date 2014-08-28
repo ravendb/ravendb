@@ -6,9 +6,12 @@ using FizzWare.NBuilder;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Database.Config;
+using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 using Raven.Tests.Common.Util;
 
@@ -68,42 +71,16 @@ namespace Raven.Tests.Spatial
 			public double Longitude { get; private set; }
 		}
 
-		public class CanGetFacetsOnVehicleSpatialSearch :UsingEmbeddedRavenStoreWithVehicles
-		{
-			[Theory]
-			[CriticalCultures]
-			public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
-			{
-				FacetResults facetvalues;
-
-				using(new TemporaryCulture(criticalCulture))
-				using (var s = Store.OpenSession())
-				{
-					var index = typeof(ByVehicle).Name;
-
-					facetvalues = Store.DatabaseCommands.GetFacets(
-						index: index,
-						query: new SpatialIndexQuery()
-						{
-							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(new Darwin().Latitude, new Darwin().Longitude, 5),
-							SpatialRelation = SpatialRelation.Within,
-							SpatialFieldName = Constants.DefaultSpatialFieldName,
-						},
-						facetSetupDoc: "facets/Vehicle");
-				}
-
-				Assert.NotNull(facetvalues);
-				Assert.Equal(2, facetvalues.Results["Make"].Values.Count());
-			}
-		}
-
-		public abstract class UsingEmbeddedRavenStoreWithVehicles : UsingEmbeddedRavenStore
+		public class CanGetFacetsOnVehicleSpatialSearch : RavenTest
 		{
 			protected static IEnumerable<Vehicle> Vehicles { get; set; }
 
-			public UsingEmbeddedRavenStoreWithVehicles()
+			public IDocumentStore Store;
+
+			public CanGetFacetsOnVehicleSpatialSearch()
 			{
-				Open();
+				Store = NewDocumentStore();
+
 				Vehicles = Builder<Vehicle>.CreateListOfSize(10)
 					.TheFirst(3)
 						.With(x => x.Make = "Mazda")
@@ -142,30 +119,30 @@ namespace Raven.Tests.Spatial
 				}
 			}
 
-			public override void Dispose()
+			[Theory]
+			[CriticalCultures]
+			public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
 			{
-				Vehicles = null;
-				base.Dispose();
-			}
-		}
+				FacetResults facetvalues;
 
-		public abstract class UsingEmbeddedRavenStore : IDisposable
-		{
-			protected EmbeddableDocumentStore Store { get; set; }
-
-			protected void Open()
-			{
-				Store = new EmbeddableDocumentStore
+				using(new TemporaryCulture(criticalCulture))
+				using (var s = Store.OpenSession())
 				{
-					RunInMemory =
-						true
-				};
-				Store.Initialize();
-			}
+					var index = typeof(ByVehicle).Name;
 
-			public virtual void Dispose()
-			{
-				Store.Dispose();
+					facetvalues = Store.DatabaseCommands.GetFacets(
+						index: index,
+						query: new SpatialIndexQuery()
+						{
+							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(new Darwin().Latitude, new Darwin().Longitude, 5),
+							SpatialRelation = SpatialRelation.Within,
+							SpatialFieldName = Constants.DefaultSpatialFieldName,
+						},
+						facetSetupDoc: "facets/Vehicle");
+				}
+
+				Assert.NotNull(facetvalues);
+				Assert.Equal(2, facetvalues.Results["Make"].Values.Count());
 			}
 		}
 	}

@@ -195,8 +195,13 @@ namespace Raven.Tests.Core.Commands
                 }
                 WaitForIndexing(store);
 
+				var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+				Assert.Equal(0, stats.StaleIndexes.Length);
+
+	            await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
                 await store.AsyncDatabaseCommands.ResetIndexAsync(index.IndexName);
-                var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+
+                stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
                 Assert.Equal(1, stats.StaleIndexes.Length);
                 Assert.Equal(index.IndexName, stats.StaleIndexes[0]);
             }

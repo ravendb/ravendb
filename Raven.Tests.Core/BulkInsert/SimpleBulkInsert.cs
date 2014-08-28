@@ -66,7 +66,7 @@ namespace Raven.Tests.Core.BulkInsert
 					}
 				});
 
-				Assert.Contains("'users/1' already exists", e.Message);
+				Assert.Contains("users/1", e.Message);
 
 				using (var session = store.OpenSession())
 				{

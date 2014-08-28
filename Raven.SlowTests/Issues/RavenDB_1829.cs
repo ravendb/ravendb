@@ -3,24 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
+
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1829 : ReplicationBase
     {
@@ -42,7 +43,8 @@ namespace Raven.Tests.Issues
                 TellFirstInstanceToReplicateToSecondInstance();
 
                 var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store1.DatabaseCommands);
+				replicationInformerForDatabase.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
+				replicationInformerForDatabase.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;
@@ -96,8 +98,9 @@ namespace Raven.Tests.Issues
             {
                 TellFirstInstanceToReplicateToSecondInstance();
 
-                var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store1.DatabaseCommands);
+				var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
+				replicationInformerForDatabase.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
+				replicationInformerForDatabase.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;

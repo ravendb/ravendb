@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -20,25 +21,29 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class Basic : RavenTest, IDisposable
+	public class Basic : RavenTest
 	{
 		protected RavenDbServer GetNewServer(int port)
 		{
-		    RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
-		    {
-		        Port = port,
-		        RunInMemory = true,
-		        DataDirectory = "Data",
-		        AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-		    })
-		    {
-		        UseEmbeddedHttpServer = true
-		    };
-		    ravenDbServer.Initialize();
-		    return ravenDbServer;
+			var dataDirectory = Path.Combine(NewDataPath(), "System");
+			var configuration = new RavenConfiguration
+								{
+									Port = port,
+									DataDirectory = dataDirectory,
+									AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+								};
+			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+
+			var ravenDbServer = new RavenDbServer(configuration)
+			{
+				UseEmbeddedHttpServer = true
+			};
+
+			ravenDbServer.Initialize();
+			return ravenDbServer;
 		}
 
-	    [Fact]
+		[Fact]
 		public void CanCreateDatabaseUsingExtensionMethod()
 		{
 			using (GetNewServer(8079))
@@ -48,7 +53,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 			}.Initialize())
 			{
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
-				
+
 				string userId;
 
 				using (var s = store.OpenSession("Northwind"))
@@ -169,13 +174,13 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void CanUseMultipleDatabases()
 		{
-			using(GetNewServer(8079))
-			using(var store = new DocumentStore
+			using (GetNewServer(8079))
+			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Store(new DatabaseDocument
 					{
@@ -192,7 +197,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 
 				string userId;
 
-				using(var session = store.OpenSession("Northwind"))
+				using (var session = store.OpenSession("Northwind"))
 				{
 					var entity = new User
 					{

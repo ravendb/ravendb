@@ -7,6 +7,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
@@ -105,7 +106,9 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void CanInsertSeveralDocuments()
         {
-            using (var server = new RavenDbServer { RunInMemory = true }.Initialize())
+	        var configuration = new RavenConfiguration();
+	        configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            using (var server = new RavenDbServer(configuration).Initialize())
             {
                 var store = server.DocumentStore;
                 var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(), (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes());

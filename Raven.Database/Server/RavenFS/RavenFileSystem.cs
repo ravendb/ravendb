@@ -50,18 +50,6 @@ namespace Raven.Database.Server.RavenFS
 			this.systemConfiguration = systemConfiguration;
 
 		    var storageType = systemConfiguration.DefaultFileSystemStorageTypeName;
-            if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageType, StringComparison.OrdinalIgnoreCase) == false)
-            {
-                if (Directory.Exists(systemConfiguration.FileSystemDataDirectory) &&
-                        Directory.EnumerateFileSystemEntries(systemConfiguration.FileSystemDataDirectory).Any())
-                    throw new InvalidOperationException(
-                        string.Format(
-                            "We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}",
-                            storageType));
-
-                Trace.WriteLine("Forcing filesystem to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(systemConfiguration.FileSystemDataDirectory)));
-                storageType = InMemoryRavenConfiguration.VoronTypeName;
-            }
 
             storage = CreateTransactionalStorage(storageType, systemConfiguration);
 			search = new IndexStorage(systemConfiguration.FileSystemIndexStoragePath, systemConfiguration.Settings);
