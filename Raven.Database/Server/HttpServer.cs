@@ -1078,13 +1078,21 @@ namespace Raven.Database.Server
 			{
 			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 			    var documentDatabase = new DocumentDatabase(config, transportState);
+				try
+				{
+					AssertLicenseParameters(config);
+					documentDatabase.SpinBackgroundWorkers();
+					InitializeRequestResponders(documentDatabase);
 
-			    AssertLicenseParameters(config);
-				documentDatabase.SpinBackgroundWorkers();
-				InitializeRequestResponders(documentDatabase);
-
-				// if we have a very long init process, make sure that we reset the last idle time for this db.
-				documentDatabase.WorkContext.UpdateFoundWork();
+					// if we have a very long init process, make sure that we reset the last idle time for this db.
+					documentDatabase.WorkContext.UpdateFoundWork();
+				}
+				catch (Exception)
+				{
+					documentDatabase.Dispose();
+					throw;
+				}
+			   
 				return documentDatabase;
 			}).ContinueWith(task =>
 			{
