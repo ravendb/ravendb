@@ -18,12 +18,12 @@ using Xunit;
 
 namespace Raven.Tests.Embedded
 {
-    public class EmbeddedTests : NoDisposalNeeded
+    public class EmbeddedTests : RavenTest
     {
         [Fact]
         public void Can_get_documents()
         {
-            using (var server = new RavenDbServer { RunInMemory = true }.Initialize())
+            using (var server = GetNewServer())
             {
                 using (var session = server.DocumentStore.OpenSession())
                 {
@@ -32,14 +32,14 @@ namespace Raven.Tests.Embedded
                     session.SaveChanges();
                 }
                 JsonDocument[] jsonDocuments = server.DocumentStore.DatabaseCommands.GetDocuments(0, 10, true);
-                Assert.Equal(2, jsonDocuments.Length);
+                Assert.Equal(3, jsonDocuments.Length);
             }
         }
 
         [Fact]
         public void Can_receive_changes_notification()
         {
-            using (var server = new RavenDbServer { RunInMemory = true }.Initialize())
+			using (var server = GetNewServer())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
                 var taskObservable = server.DocumentStore.Changes();
@@ -62,7 +62,7 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void Streaming_Results_Should_Sort_Properly()
         {
-            using (var server = new RavenDbServer { RunInMemory = true }.Initialize())
+			using (var server = GetNewServer())
             {
                 var documentStore = server.DocumentStore;
                 documentStore.ExecuteIndex(new FooIndex());
@@ -77,7 +77,7 @@ namespace Raven.Tests.Embedded
                     }
                     session.SaveChanges();
                 }
-                RavenTestBase.WaitForIndexing(documentStore);
+                WaitForIndexing(documentStore);
 
                 Foo last = null;
 
