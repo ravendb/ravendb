@@ -12,10 +12,6 @@
         </li>
     </ul>
 
-    <div class="pull-right">
-        <button class="btn btn-warning" data-bind="click: navigateToAdminSettings">Manage Your Server</button>
-    </div>
-
     <div class="btn-toolbar" data-bind="visible: databases().length > 1">
         <div class="btn-group">
             <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)">
@@ -32,6 +28,9 @@
             <button type="button" class="btn btn-default" data-bind="click: toggleCheckedDatabases, visible: allCheckedDatabasesDisabled() != null, attr: { title: allCheckedDatabasesDisabled() ? 'Enable selected databases' : 'Disable selected databases' }">
                 <i class="fa" data-bind="css: { 'fa-lock': !allCheckedDatabasesDisabled(), 'fa-unlock': allCheckedDatabasesDisabled }"></i>
             </button>
+        </div>
+        <div class="btn-group pull-right">
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings">Manage Your Server</button>
         </div>
     </div>
 

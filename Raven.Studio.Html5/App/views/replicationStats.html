@@ -1,7 +1,7 @@
 ﻿<section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
 
     <div class="page-header" data-bind="visible: hasNoReplStatsAvailable">
-        <h3><i class="fa fa-info-circle text-info"></i> No replication stats available. <small>Either this database isn't <a target="_blank" href="http://ravendb.net/docs/2.5/server/scaling-out/replication">setup for replication</a>, or replication hasn't occurred in some time.</small></h3>
+        <h3><i class="fa fa-info-circle text-info"></i> No replication stats available. <small>Either this database isn't <a target="_blank" href="http://ravendb.net/docs/server/scaling-out/replication">setup for replication</a>, or replication hasn't occurred in some time.</small></h3>
     </div>
 
     <div data-bind="with: replStatsDoc">

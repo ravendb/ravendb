@@ -1,4 +1,10 @@
-﻿interface KnockoutObservable<T> {
+﻿// Want Intellisense comments for your extensions? Use JSDoc format:
+/**
+ * Summary goes here.
+ * @someArg Description of someArg here.
+ */
+
+interface KnockoutObservable<T> {
     where(predicate: (item: T) => boolean): KnockoutObservable<string>;
     throttle(throttleTimeInMs: number): KnockoutObservable<T>;
     select<TReturn>(selector: (item: any) => any): KnockoutObservable<TReturn>;
@@ -64,6 +70,11 @@ interface String {
     multiply: (amount:number)=>string;
     paddingLeft: (paddingChar: string, paddingLength: number) => string;
     paddingRight: (paddingChar: string, paddingLength: number) => string;
+
+    /**
+     * Converts an ISO date string to a humanized date, e.g. "3 hours ago (11:32am, 8/28/2014)"
+     */
+    toHumanizedDate(): string;
 }
 
 // Storage extensions

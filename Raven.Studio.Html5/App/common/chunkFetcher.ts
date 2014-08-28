@@ -1,6 +1,3 @@
-/// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
-/// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
-
 import pagedResultSet = require("common/pagedResultSet");
 
 class chunkFetcher<T> {

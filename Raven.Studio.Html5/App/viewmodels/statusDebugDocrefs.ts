@@ -36,6 +36,7 @@ class statusDebugDocrefs extends viewModelBase {
         var fetcher = (skip: number, take: number) => {
             return new getDocRefsCommand(db, this.docId(), skip, take).execute();
         }
+
         return new pagedList(fetcher);
     }
 }
