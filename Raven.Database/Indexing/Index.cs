@@ -56,7 +56,6 @@ namespace Raven.Database.Indexing
 		protected Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
-		private bool neverFlushed = true;
 		private readonly long flushSize;
 
 		public IndexingPriority Priority { get; set; }
@@ -425,10 +424,9 @@ namespace Raven.Database.Indexing
 			            {
 			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 
-							if(indexWriter != null && (neverFlushed || indexWriter.RamSizeInBytes() >= flushSize))
+							if(indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 							{
 								Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
-								neverFlushed = false; // to ensure index crash-proof RavenDB-2396
 							}
 				            
 							UpdateIndexingStats(context, stats);
