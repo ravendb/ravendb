@@ -9,10 +9,10 @@ import getStatusDebugMetricsCommand = require("commands/getStatusDebugMetricsCom
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 
-
 class metricsRequests extends viewModelBase {
 
     currentMetrics: KnockoutObservable<statusDebugMetricsDto> = ko.observable(null);
+    requestsMetricsUrl = ko.observable("");
 
     requestCounterChart: any = null; 
     requestCounterChartData = [
@@ -108,8 +108,11 @@ class metricsRequests extends viewModelBase {
     fetchMetrics(): JQueryPromise<statusDebugMetricsDto> {
         var db = this.activeDatabase();
         if (db) {
-            return new getStatusDebugMetricsCommand(db)
-                .execute().done((m: statusDebugMetricsDto) => this.currentMetrics(m)); 
+            var command = new getStatusDebugMetricsCommand(db);
+            this.requestsMetricsUrl(command.getQueryUrl());
+            return command
+                .execute()
+                .done((m: statusDebugMetricsDto) => this.currentMetrics(m)); 
         }
 
         return null;

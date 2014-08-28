@@ -1,5 +1,8 @@
 ﻿<section class="metricsContainer">
-    <h3>Request Counter</h3>
+    <h3>
+        Request Counter
+        <small><a href="#" target="_blank" title="URL for raw request metrics. Opens in a new tab." data-bind="text: requestsMetricsUrl, attr: { href: requestsMetricsUrl }"></a></small>
+    </h3>
     <div id="requestCounterContainer" class="with-3d-shadow with-transitions">
         <svg height="300" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }"></svg>
     </div>

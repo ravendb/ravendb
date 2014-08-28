@@ -29,7 +29,6 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         adminSettings: ko.computed(() => appUrl.forAdminSettings()),
-
         databases: ko.computed(() => appUrl.forDatabases()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
@@ -47,6 +46,7 @@ class appUrl {
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
+        metricsIndexing: ko.computed(() => appUrl.forMetricsIndexing(appUrl.currentDatabase())),
         metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
         metricsIndexBatchSize: ko.computed(() => appUrl.forMetricsIndexBatchSize(appUrl.currentDatabase())),
         metricsPrefetches: ko.computed(() => appUrl.forMetricsPrefetches(appUrl.currentDatabase())),
@@ -238,7 +238,11 @@ class appUrl {
     }
 
     static forMetricsRequests(db: database): string {
-        return "#databases/status/metrics/requests?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forMetricsIndexing(db: database): string {
+        return "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
     }
 
     static forMetricsIndexBatchSize(db: database): string {

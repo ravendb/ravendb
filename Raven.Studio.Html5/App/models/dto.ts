@@ -75,6 +75,7 @@ interface documentMetadataDto {
 
 interface databaseStatisticsDto {
     ApproximateTaskCount: number;
+    CountOfAttachments: number;
     CountOfDocuments: number;
     CountOfIndexes: number;
     CurrentNumberOfItemsToIndexInSingleBatch: number;
@@ -84,11 +85,12 @@ interface databaseStatisticsDto {
     Errors: serverErrorDto[];
     InMemoryIndexingQueueSize: number;
     Indexes: indexStatisticsDto[];
+    IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
-    Prefetches: Array<any>;
-    StaleIndexes: Array<any>;
-    ActualIndexingBatchSize: Array<any>;
+    Prefetches: any[];
+    StaleIndexes: string[];
+    SupportsDtc: boolean;
 }
 
 interface indexStatisticsDto {
@@ -108,11 +110,17 @@ interface indexStatisticsDto {
     LastReducedTimestamp: string;
     CreatedTimestamp: string;
     LastIndexingTime: string;
-    IsOnRam: string; // Yep, really. Example values: "false", "true (3 KBytes)"
+    IsOnRam: string; // Yep, it's really a string. Example values: "false", "true (3 KBytes)"
     LockMode: string;
     ForEntityName: string[];
     Performance: indexPerformanceDto[];
     DocsCount: number;
+}
+
+interface indexingBatchInfoDto {
+    TotalDocumentCount: number;
+    TotalDocumentSize: number;
+    Timestamp: string; // ISO date string.
 }
 
 interface indexPerformanceDto {
