@@ -117,6 +117,11 @@ namespace Raven.Database.Indexing
 			RecreateIfNecessary();
 		}
 
+		public long RamSizeInBytes()
+		{
+			return indexWriter.RamSizeInBytes();
+		}
+
 		public void Optimize()
 		{
 			indexWriter.Optimize();

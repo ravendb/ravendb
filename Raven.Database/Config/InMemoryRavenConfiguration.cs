@@ -120,6 +120,7 @@ namespace Raven.Database.Config
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
+			FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
@@ -875,7 +876,12 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
 
-	    [Browsable(false)]
+		/// <summary>
+		/// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
+		/// </summary>
+		public long FlushIndexToDiskSizeInMb { get; set; }
+
+		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{
