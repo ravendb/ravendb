@@ -373,6 +373,7 @@ namespace Raven.Database.Indexing
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
 				var itemsInfo = new IndexedItemsInfo(null);
+				bool flushed = false;
 
 			    try
 			    {
@@ -427,6 +428,7 @@ namespace Raven.Database.Indexing
 							if(indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 							{
 								Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
+								flushed = true;
 							}
 				            
 							UpdateIndexingStats(context, stats);
@@ -454,13 +456,16 @@ namespace Raven.Database.Indexing
 					LastIndexTime = SystemTime.UtcNow;
 				}
 
-				try
+				if (flushed)
 				{
-					HandleCommitPoints(itemsInfo, GetCurrentSegmentsInfo());
-				}
-				catch (Exception e)
-				{
-					logIndexing.WarnException("Could not handle commit point properly, ignoring", e);
+					try
+					{
+						HandleCommitPoints(itemsInfo, GetCurrentSegmentsInfo());
+					}
+					catch (Exception e)
+					{
+						logIndexing.WarnException("Could not handle commit point properly, ignoring", e);
+					}
 				}
 
 				if (shouldRecreateSearcher)
