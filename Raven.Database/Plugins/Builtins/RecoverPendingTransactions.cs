@@ -80,7 +80,6 @@ namespace Raven.Database.Plugins.Builtins
                     catch (Exception e)
                     {
                         logger.WarnException("Could not apply recovered transaction " + transactionId +", aborting transaction", e);
-                        throw;
                     }
                 }
 
