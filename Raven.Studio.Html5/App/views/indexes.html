@@ -128,9 +128,9 @@
                                         <small class="text-warning" data-bind="visible: isIdle">Idle</small>
                                         <small class="text-danger" data-bind="visible: isAbandoned">Abandoned</small>
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
-                                        <small class="text-muted" data-bind="text: ' - ' + docsCount + ' docs' " title=" the number of documents affected by this index"></small>
+                                        <small class="text-muted" data-bind="text: ' - ' + docsCount + ' entries' " title=" the number of documents affected by this index"></small>
                                         <label>
-                                            <i data-bind="css: {'fa': 1==1, 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore'  }"></i>
+                                            <i class="fa" data-bind="css: { 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore' }"></i>
                                         </label>
                                     </h4>
                                     <div class="pull-right">

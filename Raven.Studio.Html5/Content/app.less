@@ -717,14 +717,36 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
-#logsContainer .logRecord {
-    .logName .logName-actions-container {
-        display: none;
+#logsContainer {
+    .column {
+        display: inline-block;
+        cursor: pointer;
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-word-wrap: break-word;
+        word-wrap: break-word;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #ddd;
+        margin: 0;
+        padding: 5px;
+        height: 30px;
     }
 
-    &:hover {
-        .logName-actions-container {
-            display: inline-block;
+    .selected .column {
+        background-color: @selectionColor;
+    }
+
+    .logRecord {
+        .logName .logName-actions-container {
+            display: none;
+        }
+
+        &:hover {
+            .logName-actions-container {
+                display: inline-block;
+            }
         }
     }
 }
