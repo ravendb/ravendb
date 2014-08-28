@@ -622,6 +622,14 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
+		public long SeedIdentityFor(string name, long value)
+		{
+			return asyncServerClient.SeedIdentityForAsync(name, value).ResultUnwrap();
+		}
+
+		/// <summary>
 		/// Get the full URL for the given document key
 		/// </summary>
 		public string UrlFor(string documentKey)

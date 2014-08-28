@@ -14,6 +14,7 @@ namespace Raven.Tests.Bugs.MultiMap
 		{
 			using(var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new CatsAndDogs().Execute(store);
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("CatsAndDogs");

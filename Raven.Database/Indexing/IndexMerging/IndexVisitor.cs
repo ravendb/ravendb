@@ -33,7 +33,8 @@ namespace Raven.Database.Indexing.IndexMerging
         {
             base.VisitInvocationExpression(invocationExpression);
 
-            var visitor = new CaptureSelectNewFieldNamesVisitor();
+	        var selectExpressions = new Dictionary<string, Expression>();
+	        var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
             invocationExpression.AcceptVisitor(visitor, null);
 
             var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
@@ -48,14 +49,15 @@ namespace Raven.Database.Indexing.IndexMerging
             if (memberReferenceExpression.MemberName == "Where")
                 indexData.HasWhere = true;
 
-            indexData.SelectExpressions = visitor.SelectExpressions;
+			indexData.SelectExpressions = selectExpressions;
         }
         public override void VisitQuerySelectClause(QuerySelectClause querySelectClause)
         {
-            var visitor = new CaptureSelectNewFieldNamesVisitor();
+	        var selectExpressions = new Dictionary<string, Expression>();
+	        var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
             querySelectClause.AcceptVisitor(visitor, null);
 
-            indexData.SelectExpressions = visitor.SelectExpressions;
+            indexData.SelectExpressions = selectExpressions;
             indexData.NumberOfSelectClauses++;
         }
        

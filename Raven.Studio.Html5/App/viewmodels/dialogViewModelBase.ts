@@ -14,6 +14,7 @@ class dialogViewModelBase {
     left: KnockoutComputed<number>;
     top: KnockoutComputed<number>;
     bodyHeight: KnockoutComputed<number>;
+    isFocused = ko.observable(false);
 
     constructor(private elementToFocusOnDismissal?: string) {
         this.left = ko.computed<number>(() => -this.width() * 0.5);
@@ -22,13 +23,8 @@ class dialogViewModelBase {
     }
 
     attached() {
-        var that = this;
-        jwerty.key("esc", e => {
-            e.preventDefault();
-            dialog.close(that);
-        }, this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName );
+        jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
-        $(dialogViewModelBase.dialogSelector).focus();
     }
 
     deactivate(args) {
@@ -41,12 +37,32 @@ class dialogViewModelBase {
         }
     }
 
+    compositionComplete(view: any, parent: any) {
+        setTimeout(() => this.setInitialFocus(), 100); // We have to time-delay this, else it never receives focus.
+    }
+
+    setInitialFocus() {
+        var autoFocusElement = $(".messageBox [autofocus]");
+        if (autoFocusElement.length) {
+            autoFocusElement.focus();
+            autoFocusElement.select();
+        } else {
+            $(dialogViewModelBase.dialogSelector).focus();
+        }
+    }
+
     enterKeyPressed(): boolean {
         var acceptButton = <HTMLAnchorElement>$(".modal-footer:visible .btn-primary")[0];
         if (acceptButton && acceptButton.click) {
             acceptButton.click();
         }
+
         return true;
+    }
+
+    escapeKeyPressed(e: KeyboardEvent) {
+        e.preventDefault();
+        dialog.close(this);
     }
 
     unregisterResizing(id:string) {

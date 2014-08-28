@@ -28,14 +28,14 @@
 
 <div class="btn-toolbar" role="toolbar">
     <div class="btn-group">
-              <button class="btn btn-primary" title="Run the report (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex, click: runReport">
-                <i class="fa fa-play"></i>
-            </button>
+        <button class="btn btn-primary" title="Run the report (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex, click: runReport">
+            <i class="fa fa-play"></i>
+        </button>
     </div>
     <div class="btn-group">
-             <a class="btn btn-default" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
-                <i class=" fa fa-pencil"></i>
-            </a>
+        <a class="btn btn-default" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
+            <i class=" fa fa-pencil"></i>
+        </a>
     </div>
 </div>
 <br />
@@ -45,9 +45,9 @@
         <label class="col-sm-1 control-label">Group By</label>
         <div class="col-md-5">
             <div class="btn-group">
-                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="G" title="Group By (Alt+G)">
-                        <span data-bind="text: selectedFieldLabel"></span> <span class="caret"></span>
-                    </button>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="G" title="Group By (Alt+G)">
+                    <span data-bind="text: selectedFieldLabel"></span> <span class="caret"></span>
+                </button>
                 <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
                     <li data-bind="click: $root.setSelectedField.bind($root, $data)">
                         <a href="#" data-bind="text: $data"></a>
@@ -63,9 +63,9 @@
         </label>
         <div class="col-md-6">
             <div class="btn-group">
-                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a value (Alt+V)" accesskey="V">
-                        <i class="fa fa-plus"></i> Add a value <span class="caret"></span>
-                    </button>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a value (Alt+V)" accesskey="V">
+                    <i class="fa fa-plus"></i> Add a value <span class="caret"></span>
+                </button>
                 <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
                     <li data-bind="click: $root.addValue.bind($root, $data)">
                         <a href="#" data-bind="text: $data"></a>
@@ -90,7 +90,9 @@
                             <li data-bind="click: setAggregationToAverage"><a href="#">Average</a></li>
                         </ul>
                     </div>
-                    <button type="button" class="close close-ret" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true" title="Remove this value"></button>
+                    <button type="button" class="close" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true" title="Remove this value">
+                        <i class="fa fa-times"></i>
+                    </button>
                 </li>
             </ul>
         </div>
@@ -107,9 +109,9 @@
             </span>
         </label>
         <div class="col-md-5">
-                 <button class="btn btn-default" title="Add a filter (Alt+F)" data-bind="visible: !hasFilter(), click: hasFilter.bind(true)">
-                    <i class="fa fa-plus"></i>
-                </button>
+            <button class="btn btn-default" title="Add a filter (Alt+F)" data-bind="visible: !hasFilter(), click: hasFilter.bind(true)">
+                <i class="fa fa-plus"></i> Add a filter
+            </button>
             <div data-bind="visible: hasFilter">
                 <div class="row">
                     <div class="col-md-11">

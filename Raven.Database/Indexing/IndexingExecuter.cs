@@ -303,7 +303,7 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
-				var indexName = indexToWorkOn.IndexId;
+				var indexName = indexToWorkOn.Index.PublicName;
 				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
 				if (viewGenerator == null)
 					return; // probably deleted

@@ -82,7 +82,6 @@ interface databaseStatisticsDto {
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
     Errors: serverErrorDto[];
-    Extensions: Array<any>;
     InMemoryIndexingQueueSize: number;
     Indexes: indexStatisticsDto[];
     LastAttachmentEtag: string;
@@ -90,7 +89,6 @@ interface databaseStatisticsDto {
     Prefetches: Array<any>;
     StaleIndexes: Array<any>;
     ActualIndexingBatchSize: Array<any>;
-    Triggers: Array<any>;
 }
 
 interface indexStatisticsDto {

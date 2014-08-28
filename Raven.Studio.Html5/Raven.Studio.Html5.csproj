@@ -129,6 +129,7 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
+    <TypeScriptCompile Include="App\models\databaseCollectionStyleMap.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\idGenerator.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
@@ -181,6 +182,8 @@
     <TypeScriptCompile Include="App\viewmodels\adminSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyIndexDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
@@ -380,6 +383,8 @@
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\confirmationDialog.html" />
+    <Content Include="App\views\copyTransformerDialog.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
     <Content Include="App\views\upgrade.html" />
     <Content Include="App\views\customLogging.html" />
@@ -799,6 +804,7 @@
     <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\jszip\jszip-utils.min.js" />
     <Content Include="Scripts\jszip\jszip.js" />
+    <Content Include="Scripts\knockout-3.2.0.js" />
     <Content Include="Scripts\knockout.mapping-2.4.1.js" />
     <Content Include="Scripts\nvd3\d3.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
@@ -829,8 +835,6 @@
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
-    <Content Include="Scripts\knockout-3.1.0.debug.js" />
-    <Content Include="Scripts\knockout-3.1.0.js" />
     <Content Include="Scripts\knockout-delegatedEvents.js" />
     <Content Include="Scripts\knockout-delegatedEvents.min.js" />
     <Content Include="Scripts\knockout-postbox.js" />

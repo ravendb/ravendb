@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Abstractions.MissingFromBCL;
 using Raven.Client.Linq;
@@ -61,7 +62,7 @@ namespace Raven.Client.Indexes
 			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
-			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
+			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
 			{
 				Indexes = Indexes,
 				SortOptions = IndexSortOptions,
@@ -82,7 +83,10 @@ namespace Raven.Client.Indexes
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{
-				indexDefinition.Maps.Add(map);
+				string formattedMap = map;
+				if (Conventions.PrettifyGeneratedLinqExpressions)
+					formattedMap = IndexPrettyPrinter.Format(formattedMap);
+				indexDefinition.Maps.Add(formattedMap);
 			}
 			return indexDefinition;
 		}

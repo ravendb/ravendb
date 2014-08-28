@@ -4,7 +4,9 @@
             <div class="collapse navbar-collapse">
                 <div class="navbar-form navbar-right">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: inactiveIndexNames().length > 0" title=" Create Script"><i class="fa fa-plus"></i> Create Script for Index: <span class="caret"></span></button>
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: inactiveIndexNames().length > 0" title=" Create Script">
+                            <i class="fa fa-plus"></i> Create Script for Index: <span class="caret"></span>
+                        </button>
                         <ul class="dropdown-menu" role="menu">
                             <!-- ko foreach: inactiveIndexNames -->
                             <li data-bind="click: $root.createScriptedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
@@ -26,7 +28,7 @@
                     <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#scriptedIndex' + $index() }">
                         <h3 class="panel-title">
                             <span data-bind="text: indexName"></span>
-                            <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeScriptedIndex.bind($root, $data)" title="Remove this Scripted Index"></span>
+                            <span class="close" aria-hidden="true" data-bind="click: $root.removeScriptedIndex.bind($root, $data)" title="Remove this Scripted Index"><i class="fa fa-times"></i></span>
                         </h3>
                     </a>
                 </div>

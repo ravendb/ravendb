@@ -67,6 +67,7 @@ namespace RavenTestConsole.RavenTests
 		{
 			using (var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new StudentDtos_ByEmailDomain().Execute(store);
 
                 var definition = store.DatabaseCommands.GetIndex(new StudentDtos_ByEmailDomain().IndexName);

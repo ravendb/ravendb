@@ -1372,7 +1372,8 @@ namespace Raven.Client.Indexes
 			}
             }
 
-			OutMember(node.Expression, node.Member, node.Expression == null ? node.Type : node.Expression.Type);
+			var exprType = node.Expression != null ? node.Member.DeclaringType : node.Type;
+			OutMember(node.Expression, node.Member, exprType);
 			return node;
 		}
 

@@ -12,7 +12,7 @@ class replicationConfig {
         this.documentConflictResolution(dto.DocumentConflictResolution);
         this.attachmentConflictResolution(dto.AttachmentConflictResolution);
 
-        this.documentConflictResolution.subscribe((val)=> this.attachmentConflictResolution(val)); // todo: remove that if decided to treat attachments differently
+        this.documentConflictResolution.subscribe((val) => this.attachmentConflictResolution(val)); // todo: remove that if decided to treat attachments differently
 
     }
 
@@ -23,7 +23,7 @@ class replicationConfig {
         };
     }
 
-   
+
 }
 
 export = replicationConfig;

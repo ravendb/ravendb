@@ -43,6 +43,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var s = NewDocumentStore())
 			{
+				s.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new Index().Execute(s);
 				var indexDefinition = s.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
 				Assert.Equal(@"docs.Items.Select(item => new {

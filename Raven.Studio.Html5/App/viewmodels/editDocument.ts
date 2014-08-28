@@ -313,7 +313,7 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
-    setupKeyboardShortcuts() {        
+    setupKeyboardShortcuts() {       
         this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
@@ -874,6 +874,15 @@ class editDocument extends viewModelBase {
             this.documentText(response.Document);
             this.metadataText(response.Metadata);
         });
+    }
+
+    getColorClass(documentId: string) {
+        var entityName = document.getEntityNameFromId(documentId);
+        if (entityName) {
+            return collection.getCollectionCssClass(entityName, this.activeDatabase());
+        }
+
+        return "";
     }
 }
 

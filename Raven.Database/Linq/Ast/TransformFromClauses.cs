@@ -17,7 +17,7 @@ namespace Raven.Database.Linq.Ast
 			else
 			{
 				var target = invocationExpression.Target as MemberReferenceExpression;
-				if (target == null || target.Target is IdentifierExpression)
+				if (target == null || target.Target is IdentifierExpression || target.Target is ThisReferenceExpression)
 					return base.VisitQueryFromClause(fromClause, data);
 
 			    node = target.Target;

@@ -91,7 +91,7 @@ class row {
                 var cellValue = rowData[prop];
                 // pass json object when not custom template!
                 if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
-                    cellValue = JSON.stringify(cellValue, null, 4);
+                    cellValue = JSON.stringify(cellValue, null, 4) || "";
                 }
 
                 if (cellValue.length > 250) {
@@ -143,7 +143,8 @@ class row {
         if (this.cellMap && this.cellMap.Id) {
             this.cellMap["Id"].data();
         }
-        return null;
+
+        return "nullTemplate";
     }
 
     getCellTemplateName(propertyName: string, data: any): string {
@@ -153,12 +154,7 @@ class row {
             return cell.checkboxTemplate;
         }
 
-        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
-        // note: we just inform here about custom template - without specific name of this template.
-        if (colParam && colParam.template() !== cell.defaultTemplate) {
-            return cell.customTemplate;
-        } 
-
+        // See if this is an ID or external ID cell.
         if (!!data) {
             if (typeof data == "string") {
                 var cleanData = data.replace('/\t+/g', '')
@@ -179,7 +175,11 @@ class row {
             }
         }
 
-        
+        // note: we just inform here about custom template - without specific name of this template.
+        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
+        if (colParam && colParam.template() !== cell.defaultTemplate) {
+            return cell.customTemplate;
+        } 
 
         return cell.defaultTemplate;
     }

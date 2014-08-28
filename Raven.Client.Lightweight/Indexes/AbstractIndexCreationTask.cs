@@ -203,6 +203,21 @@ namespace Raven.Client.Indexes
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
+			if (documentConvention.PrettifyGeneratedLinqExpressions)
+			{
+				var serverDef = databaseCommands.GetIndex(IndexName);
+				if (serverDef != null)
+				{
+					if (serverDef.Equals(indexDefinition))
+						return;
+
+					// now we need to check if this is a legacy index...
+					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+					if (serverDef.Equals(legacyIndexDefinition))
+						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
+				}
+			}
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -212,6 +227,21 @@ namespace Raven.Client.Indexes
 				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 		}
 
+		private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+		{
+			IndexDefinition legacyIndexDefinition;
+			documentConvention.PrettifyGeneratedLinqExpressions = false;
+			try
+			{
+				legacyIndexDefinition = CreateIndexDefinition();
+			}
+			finally
+			{
+				documentConvention.PrettifyGeneratedLinqExpressions = true;
+			}
+			return legacyIndexDefinition;
+		}
+
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
@@ -219,7 +249,21 @@ namespace Raven.Client.Indexes
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
-			
+			if (documentConvention.PrettifyGeneratedLinqExpressions)
+			{
+				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName);
+				if (serverDef != null)
+				{
+					if (serverDef.Equals(indexDefinition))
+						return;
+
+					// now we need to check if this is a legacy index...
+					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+					if (serverDef.Equals(legacyIndexDefinition))
+						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
+				}
+			}
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -264,7 +308,7 @@ namespace Raven.Client.Indexes
 				Conventions = new DocumentConvention();
 
 
-			return new IndexDefinitionBuilder<TDocument, TReduceResult>
+			return new IndexDefinitionBuilder<TDocument, TReduceResult>()
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,

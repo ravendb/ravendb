@@ -14,7 +14,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void Can_define_index_with_WhereEntityIs()
 		{
-			var idxBuilder = new IndexDefinitionBuilder<object>
+			var idxBuilder = new IndexDefinitionBuilder<object>()
 			{
 				Map =
 					docs =>

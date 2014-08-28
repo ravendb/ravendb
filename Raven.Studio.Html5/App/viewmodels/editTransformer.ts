@@ -12,6 +12,7 @@ import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
+import formatIndexCommand = require("commands/formatIndexCommand");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -22,6 +23,7 @@ class editTransformer extends viewModelBase {
     appUrls: computedAppUrls;
     transformerName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
+    loadedTransformerName = ko.observable<string>();
 
     constructor() {
         super();
@@ -69,8 +71,8 @@ class editTransformer extends viewModelBase {
     addTransformerHelpPopover() {
         $("#transformerResultsLabel").popover({
             html: true,
-            trigger: 'hover',
-            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/> result.Name, <br/> result.PricePerUser, <br/> Category = category.Name, <br/> CategoryDescription = category.Description <br/>}</pre>',
+            trigger: "hover",
+            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUser, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
         });
     }
 
@@ -85,8 +87,9 @@ class editTransformer extends viewModelBase {
     }
 
     editExistingTransformer(unescapedTransformerName: string): JQueryPromise<any> {
-        var indexName = decodeURIComponent(unescapedTransformerName);
-        return this.fetchTransformerToEdit(indexName)
+        var transformerName = decodeURIComponent(unescapedTransformerName);
+        this.loadedTransformerName(transformerName);
+        return this.fetchTransformerToEdit(transformerName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
     }
 
@@ -99,25 +102,55 @@ class editTransformer extends viewModelBase {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
             saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => {
-                this.updateUrl(this.editedTransformer().name());
                 this.dirtyFlag().reset(); // Resync Changes
+                this.updateUrl(this.editedTransformer().name());
             });
             dialog.show(saveTransformerWithNewNameViewModel);
         } else {
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
                 .done(() => {
+                    this.dirtyFlag().reset();
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
                         this.updateUrl(this.editedTransformer().name());
                     }
-                    this.dirtyFlag().reset(); // Resync Changes
                 });
         }
     }
 
-    updateUrl(transformerName:string) {
+    updateUrl(transformerName: string) {
         router.navigate(appUrl.forEditTransformer(transformerName, this.activeDatabase()));
+    }
+
+    refreshTransformer() {
+        var canContinue = this.canContinueIfNotDirty("Unsaved Data", "You have unsaved data. Are you sure you want to refresh the transformer from the server?");
+        canContinue
+            .done(() => {
+                var transformerName = this.loadedTransformerName();
+                this.fetchTransformerToEdit(transformerName)
+                    .always(() => this.dirtyFlag().reset())
+                    .done((trans: savedTransformerDto) => this.editedTransformer().initFromSave(trans))
+                    .fail(() => {
+                        messagePublisher.reportError("Could not find " + transformerName + " transformer");
+                        this.navigate(appUrl.forTransformers(this.activeDatabase()));
+                    });
+            });
+    }
+
+    formatTransformer() {
+        var editedTransformer: transformer = this.editedTransformer();
+
+        new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()])
+            .execute()
+            .done((result: string[]) => {
+                var formatedTransformer = result[0];
+                if (formatedTransformer.indexOf("Could not format:") == -1) {
+                    editedTransformer.transformResults(formatedTransformer);
+                } else {
+                    messagePublisher.reportError("Failed to format transformer!", formatedTransformer);
+                }
+            });
     }
 
     deleteTransformer() {

@@ -14,6 +14,8 @@ namespace Raven.Database.Storage
 	{
 	    bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag);
 
+		bool IsIndexStaleByTask(int view, DateTime? cutOff);
+
 		bool IsReduceStale(int view);
 		bool IsMapStale(int view);
 

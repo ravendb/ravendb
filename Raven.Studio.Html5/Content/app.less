@@ -48,8 +48,7 @@ html, body {
     .message {
         font-size: 5em;
         line-height: 1.5em;
-        -webkit-text-shadow: rgba(0, 0, 0, 0.5) 0px 0px 15px;
-        text-shadow: rgba(0, 0, 0, 0.5) 0px 0px 15px;
+        text-shadow: rgba(0, 0, 0, 0.5) 0 0 15px;
         text-transform: uppercase;
     }
 }
@@ -134,7 +133,6 @@ html, body {
 
         .replication {
             border-radius: 10px;
-            -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
             min-width: 140px;
             min-height: 60px;
@@ -161,14 +159,8 @@ html, body {
             }
 
             .btn-default:hover {
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
             }
-            /*   &:hover {
-                background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
-                box-shadow: 0 0 5px 0 @hoverColor;
-            }*/
         }
     }
 
@@ -186,30 +178,6 @@ html, body {
 
     label {
         text-align: left;
-    }
-}
-
-#editSQLReplication {
-    .tools
-    {
-        a{
-            padding-left:6px;
-            padding-right:6px;
-        }
-        i{
-            padding-left:1em;
-        }
-    }
-    label {
-        text-align: left;
-    }
-
-    .script-label {
-        padding-left: 0;
-    }
-
-    .edit-sql-replication-actions {
-        padding-top: 0.5%;
     }
 }
 
@@ -427,7 +395,6 @@ html, body {
         .resource {
             cursor: pointer;
             border-radius: 2px;
-            -webkit-box-shadow: 0 0 5px 2px silver;
             box-shadow: 0 0 5px 2px silver;
             min-width: 160px;
             min-height: 70px;
@@ -438,8 +405,8 @@ html, body {
 
             @selectColor: @brand-primary;
             @hoverColor: darken(@selectColor, 10%);
-            @enabledColor: #3A822D;
-            @disabledColor: #d9534f;
+            @enabledColor: darken(@brand-success, 20%); //#3A822D;
+            @disabledColor: @brand-danger; // #d9534f;
 
             .checkbox {
                 display: none;
@@ -499,7 +466,6 @@ html, body {
             }
 
             .btn-default:hover {
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
             }
 
@@ -513,12 +479,10 @@ html, body {
 
             &:hover {
                 background-color: white;
-                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
                 box-shadow: 0 0 5px 0 @hoverColor;
             }
 
             &.selected {
-                -webkit-box-shadow: 0 0 20px 0 @selectColor;
                 box-shadow: 0 0 20px 0 @selectColor;
             }
 
@@ -602,7 +566,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         -ms-text-overflow: ellipsis;
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
-        max-width: 70%;
+        max-width: 80%;
     }
 
     .collection-name {
@@ -627,10 +591,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
-.index-panel {
-    overflow: visible !important;
-}
-
 .index-dropdown {
     right: 0;
     left: auto;
@@ -640,7 +600,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 
     li > a.active {
-        -webkit-box-shadow: inset 0 0 0 rgba(0, 0, 0, .125) !important;
         box-shadow: inset 0 0 0 rgba(0, 0, 0, .125) !important;
         text-decoration: underline !important;
         font-weight: bold;
@@ -700,7 +659,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         cursor: pointer;
         overflow: hidden;
         white-space: nowrap;
+        -ms-word-wrap: break-word;
         word-wrap: break-word;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
         border-bottom: 1px solid #ddd;
         margin: 0px;
@@ -736,9 +698,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
             border-top-width: 2px;
             margin-top: 1%;
             padding-top: 1%;
-            border-style: dashed;
-            border-width: thin;
-            border-color: black;
+            border: thin dashed black;
             width: 60vw;
             margin-left: 1%;
         }
@@ -1019,15 +979,20 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     .documents-select {
         text-align: center;
-        background-color: #ffffcc;
+        background-color: @selectionColor;
         margin-top: 5px;
-        border: 1px solid;
-        border-radius: 25px;
+        padding: 5px;
+        border: 1px solid @gray-light;
 
         .select-link {
             text-decoration: underline;
             cursor: pointer;
         }
+    }
+
+    #loadingIndicator {
+        margin-top: 5px;
+        margin-left: 5px;
     }
 }
 
@@ -1313,6 +1278,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         column-width: 10px;
 
         .document-link {
+            margin-left: 10px;
             width: 80%;
             overflow: hidden;
             white-space: nowrap;
@@ -1530,7 +1496,6 @@ footer {
 .splash .message {
     font-size: 5em;
     line-height: 1.5em;
-    -webkit-text-shadow: rgba(0, 0, 0, 0.5) 0 0 15px;
     text-shadow: rgba(0, 0, 0, 0.5) 0 0 15px;
     text-transform: uppercase;
 }
@@ -1597,6 +1562,65 @@ footer {
     cursor: pointer;
 }
 
+#replicationTopologySection {
+    svg {
+        background-color: #FFF;
+        cursor: default;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    path.link {
+        fill: none;
+        stroke: @brand-success;
+        stroke-width: 5px;
+        cursor: default;
+    }
+
+    path.link.error {
+        stroke: @brand-danger;
+    }
+
+    svg:not(.active):not(.ctrl) path.link {
+        cursor: pointer;
+    }
+
+    path.link.selected {
+        stroke-dasharray: 10,2;
+    }
+
+    path.link.hidden {
+        stroke-width: 0;
+    }
+
+    rect.node {
+        stroke-width: 1.5px;
+        fill: fadeOut(@brand-primary, 85%); // rgb(31, 119, 180);
+        stroke: darken(@brand-primary, 10%);
+    }
+
+    text {
+        font: 12px sans-serif;
+        pointer-events: none;
+    }
+
+    text.id {
+        text-anchor: middle;
+        font-weight: bold;
+    }
+
+    table {
+        table-layout: fixed;
+
+        td {
+            -ms-word-break: break-all;
+            word-break: break-all;
+        }
+    }
+}
+
 #status-debug > ul.nav {
     margin-bottom: 15px;
 }
@@ -1640,15 +1664,34 @@ footer {
 }
 
 // Start of icons
+/* 
+Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button: 
+
+    // For modals:
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+
+    // For everything else:
+    <button type="button" class="close"><i class="fa fa-times"></i></button>
+
 .remove-icon {
     color: #d2322d;
     border-color: #802925;
     cursor: pointer;
     border-radius: 6px;
-}
 
-.remove-icon:hover {
-    color: #ac2925;
+    &:hover {
+        color: #ac2925;
+    }
+}*/
+
+.close {
+    .fa-times {
+        color: @gray;
+
+        &:hover {
+            color: @gray-darker;
+        }
+    }
 }
 
 /*.fa-plus {
@@ -1781,13 +1824,6 @@ footer {
     color: rgb(0, 0, 255);
 }
 
-.animated-loader {
-    background-image: url('images/animated-loader.gif');
-    background-repeat: no-repeat;
-    background-position-x: center;
-    background-position-y: center;
-}
-
 .metricsContainer {
 
     .nv-point {
@@ -1843,19 +1879,38 @@ footer {
     background-color: white;
     border: 1px solid #999;
     border: 1px solid rgba(0, 0, 0, 0.3);
-    -webkit-border-radius: 6px;
-    -moz-border-radius: 6px;
     border-radius: 6px;
     outline: none;
-    -webkit-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
-    -moz-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
     box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
     -webkit-background-clip: padding-box;
     -moz-background-clip: padding-box;
     background-clip: padding-box;
 }
 
-.pressed {
+// Note: Instead of .pressed, use the Bootstrap built-in .active.
+// Or if you're looking for toggle buttons, see Bootstrap's bult-in toggle button: http://getbootstrap.com/javascript/#buttons
+/*.pressed {
     background-color: #73c773 !important;
     border-color: #61b261 !important;
+}*/
+
+.btn-file {
+    position: relative;
+    overflow: hidden;
+
+    input[type=file] {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 100%;
+        min-height: 100%;
+        font-size: 100px;
+        text-align: right;
+        filter: alpha(opacity=0);
+        opacity: 0;
+        outline: none;
+        background: white;
+        cursor: inherit;
+        display: block;
+    }
 }

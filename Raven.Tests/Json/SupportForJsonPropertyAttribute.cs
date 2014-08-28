@@ -41,6 +41,7 @@ namespace Raven.Tests.Json
 		{
 			using (var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new Stations_ByLocation().Execute(store);
 				var definition = store.DatabaseCommands.GetIndex(new Stations_ByLocation().IndexName);
 

@@ -57,12 +57,21 @@ class databaseSettingsDialog extends dialogViewModelBase {
 
     showView(moduleId: string) {
         var canDeactivate = this.canDeactivate();
-        canDeactivate.done((answer) => {
-            if (answer.can) {
-                this.currentModel.dirtyFlag().reset();
-                this.activeScreen(moduleId);
-            }
-        });
+
+        if (canDeactivate.done) {
+            canDeactivate.done((answer) => {
+                if (answer.can) {
+                    this.onSuccessfulDeactivation(moduleId);
+                }
+            });
+        } else if (canDeactivate === true) {
+            this.onSuccessfulDeactivation(moduleId);
+        }
+    }
+
+    onSuccessfulDeactivation(moduleId: string) {
+        this.currentModel.dirtyFlag().reset();
+        this.activeScreen(moduleId);
     }
 
     isActive(moduleId: string) {

@@ -11,18 +11,19 @@ class collection {
 
     colorClass = ""; 
     documentCount: any = ko.observable(0);
+    documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
     isAllDocuments = false;
     isSystemDocuments = false;
 
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";
-    private static styleMap: any = {};
+    private static collectionColorMaps: databaseCollectionStyleMap[] = [];
 
     constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
         this.isAllDocuments = name === collection.allDocsCollectionName;
         this.isSystemDocuments = name === collection.systemDocsCollectionName;
-        this.colorClass = collection.getCollectionCssClass(name);
+        this.colorClass = collection.getCollectionCssClass(name, ownerDatabase);
         this.documentCount(docCount);
     }
 
@@ -67,7 +68,8 @@ class collection {
         return new collection(collection.allDocsCollectionName, ownerDatabase);
     }
 
-    static getCollectionCssClass(entityName: string): string {
+    static getCollectionCssClass(entityName: string, db: database): string {
+
         if (entityName === collection.allDocsCollectionName) {
             return "all-documents-collection";
         }
@@ -76,16 +78,25 @@ class collection {
             return "system-documents-collection";
         }
 
-        var existingStyle = collection.styleMap[entityName];
+        var databaseStyleMap = this.collectionColorMaps.first(map => map.databaseName == db.name);
+        if (!databaseStyleMap) {
+            databaseStyleMap = {
+                databaseName: db.name,
+                styleMap: {}
+            };
+            this.collectionColorMaps.push(databaseStyleMap);
+        }
+
+        var existingStyle = databaseStyleMap.styleMap[entityName];
         if (existingStyle) {
             return existingStyle;
         } 
 
         // We don't have an existing style. Assign one in the form of 'collection-style-X', where X is a number between 0 and maxStyleCount. These styles are found in app.less.
         var maxStyleCount = 32;
-        var styleNumber = Object.keys(collection.styleMap).length % maxStyleCount;
+        var styleNumber = Object.keys(databaseStyleMap.styleMap).length % maxStyleCount;
         var style = "collection-style-" + styleNumber;
-        collection.styleMap[entityName] = style;
+        databaseStyleMap.styleMap[entityName] = style;
         return style;
     }
 

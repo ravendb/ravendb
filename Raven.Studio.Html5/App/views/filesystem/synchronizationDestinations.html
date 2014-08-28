@@ -3,7 +3,9 @@
         <div class="panel-heading">
             <div class="pull-left panel-title">Replication Destinations</div>
             <div class="pull-right">
-                <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
+                    <i class="fa fa-plus"></i> Add destination
+                </button>
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
@@ -17,7 +19,7 @@
                     <div class="panel-heading">
                         <h3 class="panel-title">
                             <span data-bind="text: name"></span>
-                            <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination"></span>
+                            <button data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination" type="button" class="close" aria-hidden="true"><i class="fa fa-times"></i></button>
                         </h3>
                     </div>
                     <div class="panel-body">

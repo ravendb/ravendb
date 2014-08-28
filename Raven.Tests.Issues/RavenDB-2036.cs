@@ -16,7 +16,7 @@ namespace Raven.Tests.Issues
 
         public class Index__TestByName : AbstractIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+			public override IndexDefinition CreateIndexDefinition()
             {
                 return new IndexDefinition
                 {
@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 
      public class DynamicByNameIndex : AbstractIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+		 public override IndexDefinition CreateIndexDefinition()
             {
                 return new IndexDefinition
                 {
@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
 
      public class Dynamic : AbstractIndexCreationTask
      {
-         public override IndexDefinition CreateIndexDefinition()
+		 public override IndexDefinition CreateIndexDefinition()
          {
              return new IndexDefinition
              {
@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
      }
      public class Dynamic_ : AbstractIndexCreationTask
      {
-         public override IndexDefinition CreateIndexDefinition()
+		 public override IndexDefinition CreateIndexDefinition()
          {
              return new IndexDefinition
              {

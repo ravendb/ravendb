@@ -164,6 +164,7 @@
     <Compile Include="ConcurrencyTests.cs" />
     <Compile Include="ConcurrencyTests2.cs" />
     <Compile Include="CustomAnalyzerStartsWithFailure.cs" />
+    <Compile Include="CustomIdInIndexCreationTask.cs" />
     <Compile Include="Daniel.cs" />
     <Compile Include="DataSetIndexTest.cs" />
     <Compile Include="DateTimeOffsetIssues.cs" />
@@ -270,6 +271,7 @@
     <Compile Include="LoadAllStartingWith.cs" />
     <Compile Include="LoadWithIncludeTests.cs" />
     <Compile Include="LongIds.cs" />
+    <Compile Include="LowerCaseIdIndexTest.cs" />
     <Compile Include="LuceneQueryHighlightTest.cs" />
     <Compile Include="LuceneScoreTests.cs" />
     <Compile Include="LuceneSearchSample.cs" />
@@ -436,6 +438,7 @@
     <Compile Include="TypeConverter.cs" />
     <Compile Include="TypeNameHandlingWithCollectionsTest.cs" />
     <Compile Include="UintId.cs" />
+    <Compile Include="UpdatingData.cs" />
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />

@@ -4,6 +4,7 @@ import database = require("models/database");
 import collection = require("models/collection");
 import getOperationStatusCommand = require('commands/getOperationStatusCommand');
 import messagePublisher = require("common/messagePublisher");
+import importDatabaseCommand = require("commands/importDatabaseCommand");
 
 class importDatabase extends viewModelBase {
     showAdvancedOptions = ko.observable(false);
@@ -16,8 +17,6 @@ class importDatabase extends viewModelBase {
     includeAttachments = ko.observable(false);
     includeTransformers = ko.observable(true);
     removeAnalyzers = ko.observable(false);
-    //includeAllCollections = ko.observable(true);
-    //includedCollections = ko.observableArray<{ collection: string; isIncluded: KnockoutObservable<boolean>; }>();
     hasFileSelected = ko.observable(false);
     isUploading = false;
     private importedFileName: string;
@@ -70,16 +69,21 @@ class importDatabase extends viewModelBase {
     }
 
     addFilter() {
-        this.filters.push({
+        var filter = {
             Path: "",
             ShouldMatch: false,
+            ShouldMatchObservable: ko.observable(false),
             Values: []
-        });
+        };
+
+        filter.ShouldMatchObservable.subscribe(val => filter.ShouldMatch = val);
+        this.filters.splice(0, 0, filter);
     }
 
     fileSelected(fileName: string) {
         var isFileSelected = !!$.trim(fileName);
         this.hasFileSelected(isFileSelected);
+        this.importDb();
     }
 
     importDb() {
@@ -108,44 +112,43 @@ class importDatabase extends viewModelBase {
         if (this.removeAnalyzers()) {
             importItemTypes.push(ImportItemType.RemoveAnalyzers);
         }
-
-        require(["commands/importDatabaseCommand"], importDatabaseCommand => {
-            new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
-                .execute()
-                .done((result: operationIdDto) => {
-                    var operationId = result.OperationId;
-                    this.waitForOperationToComplete(db, operationId);
-                    db.importStatus("Processing uploaded file");
-                })
-                .fail(() => db.importStatus(""))
-                .always(() => this.isUploading = false);
-        });
+                
+        new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
+            .execute()
+            .done((result: operationIdDto) => {
+                var operationId = result.OperationId;
+                this.waitForOperationToComplete(db, operationId);
+                db.importStatus("Processing uploaded file");
+            })
+            .fail(() => db.importStatus(""))
+            .always(() => this.isUploading = false);
     }
 
-    private waitForOperationToComplete(db: database, operationId: number) {
-        
-        var getOperationStatusTask = new getOperationStatusCommand(db, operationId);
-        getOperationStatusTask.execute()
-            .done((result: importOperationStatusDto) => {
-                if (result.Completed) {
-                    if (result.ExceptionDetails == null) {
-                        this.hasFileSelected(false);
-                        $(this.filePickerTag).val('');
-                        db.importStatus("Last import was from '" + this.importedFileName + "', " + result.LastProgress.toLocaleLowerCase());
-                        messagePublisher.reportSuccess("Successfully imported data to " + db.name);
-                    } else {
-                        db.importStatus("");
-                        messagePublisher.reportError("Failed to import data!", result.ExceptionDetails);
-                    }
-                    db.isImporting(false);
-                }
-                else {
-                    if (!!result.LastProgress) {
-                        db.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
-                    }
-                    setTimeout(() => this.waitForOperationToComplete(db, operationId), 500);
-                }
-            });
+    private waitForOperationToComplete(db: database, operationId: number) {        
+        new getOperationStatusCommand(db, operationId)
+            .execute()
+            .done((result: importOperationStatusDto) => this.importStatusRetrieved(db, operationId, result));
+    }
+
+    private importStatusRetrieved(db: database, operationId: number, result: importOperationStatusDto) {
+        if (result.Completed) {
+            if (result.ExceptionDetails == null) {
+                this.hasFileSelected(false);
+                $(this.filePickerTag).val('');
+                db.importStatus("Last import was from '" + this.importedFileName + "', " + result.LastProgress.toLocaleLowerCase());
+                messagePublisher.reportSuccess("Successfully imported data to " + db.name);
+            } else {
+                db.importStatus("");
+                messagePublisher.reportError("Failed to import data!", result.ExceptionDetails);
+            }
+            db.isImporting(false);
+        }
+        else {
+            if (!!result.LastProgress) {
+                db.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
+            }
+            setTimeout(() => this.waitForOperationToComplete(db, operationId), 500);
+        }
     }
 }
 

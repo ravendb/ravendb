@@ -105,7 +105,7 @@ namespace Raven.Tests.Server.Runner.Controllers
 			var port = configuration.Port.ToString(CultureInfo.InvariantCulture);
 
 			configuration.DataDirectory = Path.Combine(Context.DataDir, port, "System");
-			configuration.FileSystemDataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
+			configuration.FileSystem.DataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
 			configuration.AccessControlAllowOrigin = new HashSet<string> { "*" };
 
 			if (configuration.RunInMemory == false && deleteData)

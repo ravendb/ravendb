@@ -55,7 +55,7 @@ class shell extends viewModelBase {
     systemDatabase: database;
     isSystemConnected: KnockoutComputed<boolean>;
     isActiveDatabaseDisabled: KnockoutComputed<boolean>;
-    canShowDatabaseNavbar = ko.computed(() => shell.databases().length > 1 && this.appUrls.isAreaActive('databases')());
+    canShowDatabaseNavbar = ko.computed(() => (shell.databases().length > 1 || !!this.activeDatabase() && this.activeDatabase().isSystem) && this.appUrls.isAreaActive('databases')());
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
@@ -85,7 +85,7 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
-    hasReplicationSupport = ko.computed(() => this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
+    hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
     static currentResourceChangesApi = ko.observable<changesApi>(null);
@@ -173,31 +173,31 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: 'admin/settings*details', title: 'Admin Settings', moduleId: 'viewmodels/adminSettings', nav: true, hash: this.appUrls.adminSettings },
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
-            { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
-            { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
-            { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
-            { route: 'databases/upgrade', title: 'Upgrade in progress', moduleId: 'viewmodels/upgrade', nav: false, hash: this.appUrls.upgrade },
-            { route: 'databases/indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
-            { route: 'databases/transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
-            { route: 'databases/query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
-            { route: 'databases/tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
-            { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
-            { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
-            { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
-            { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
-            { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
-            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
-            { route: 'filesystems/synchronization*details', title: 'Synchronization', moduleId: 'viewmodels/filesystem/synchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
-            { route: 'filesystems/status*details', title: 'Status', moduleId: 'viewmodels/filesystem/status', nav: true, hash: this.appUrls.filesystemStatus },
-            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: 'filesystems/edit', title: 'Edit File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
-            { route: ['', 'counterstorages'], title: 'Counter Storages', moduleId: 'viewmodels/counter/counterStorages', nav: true, hash: this.appUrls.couterStorages },
-            { route: 'counterstorages/counters', title: 'counters', moduleId: 'viewmodels/counter/counterStoragecounters', nav: true, hash: this.appUrls.counterStorageCounters },
-            { route: 'counterstorages/replication', title: 'replication', moduleId: 'viewmodels/counter/counterStorageReplication', nav: true, hash: this.appUrls.counterStorageReplication },
-            { route: 'counterstorages/stats', title: 'stats', moduleId: 'viewmodels/counter/counterStorageStats', nav: true, hash: this.appUrls.counterStorageStats },
-            { route: 'counterstorages/configuration', title: 'configuration', moduleId: 'viewmodels/counter/counterStorageConfiguration', nav: true, hash: this.appUrls.counterStorageConfiguration }
+            { route: "admin/settings*details", title: "Admin Settings", moduleId: "viewmodels/adminSettings", nav: true, hash: this.appUrls.adminSettings },
+            { route: ["", "databases"], title: "Databases", moduleId: "viewmodels/databases", nav: true, hash: this.appUrls.databasesManagement },
+            { route: "databases/documents", title: "Documents", moduleId: "viewmodels/documents", nav: true, hash: this.appUrls.documents },
+            { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/conflicts", nav: true, hash: this.appUrls.conflicts },
+            { route: "databases/patch", title: "Patch", moduleId: "viewmodels/patch", nav: true, hash: this.appUrls.patch },
+            { route: "databases/upgrade", title: "Upgrade in progress", moduleId: "viewmodels/upgrade", nav: false, hash: this.appUrls.upgrade },
+            { route: "databases/indexes*details", title: "Indexes", moduleId: "viewmodels/indexesShell", nav: true, hash: this.appUrls.indexes },
+            { route: "databases/transformers*details", title: "Transformers", moduleId: "viewmodels/transformersShell", nav: false, hash: this.appUrls.transformers },
+            { route: "databases/query*details", title: "Query", moduleId: "viewmodels/queryShell", nav: true, hash: this.appUrls.query(null) },
+            { route: "databases/tasks*details", title: "Tasks", moduleId: "viewmodels/tasks", nav: true, hash: this.appUrls.tasks, },
+            { route: "databases/settings*details", title: "Settings", moduleId: "viewmodels/settings", nav: true, hash: this.appUrls.settings },
+            { route: "databases/status*details", title: "Status", moduleId: "viewmodels/status", nav: true, hash: this.appUrls.status },
+            { route: "databases/edit", title: "Edit Document", moduleId: "viewmodels/editDocument", nav: false },
+            { route: ["", "filesystems"], title: "File Systems", moduleId: "viewmodels/filesystem/filesystems", nav: true, hash: this.appUrls.filesystemsManagement },
+            { route: "filesystems/files", title: "Files", moduleId: "viewmodels/filesystem/filesystemFiles", nav: true, hash: this.appUrls.filesystemFiles },
+            { route: "filesystems/search", title: "Search", moduleId: "viewmodels/filesystem/search", nav: true, hash: this.appUrls.filesystemSearch },
+            { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: "filesystems/status*details", title: "Status", moduleId: "viewmodels/filesystem/status", nav: true, hash: this.appUrls.filesystemStatus },
+            { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
+            { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/filesystemEditFile", nav: false },
+            { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },
+            { route: "counterstorages/counters", title: "counters", moduleId: "viewmodels/counter/counterStoragecounters", nav: true, hash: this.appUrls.counterStorageCounters },
+            { route: "counterstorages/replication", title: "replication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: "counterstorages/stats", title: "stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
+            { route: "counterstorages/configuration", title: "configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -214,9 +214,9 @@ class shell extends viewModelBase {
     }
 
     // Called by Durandal when shell.html has been put into the DOM.
+    // The view must be attached to the DOM before we can hook up keyboard shortcuts.
     attached() {
-        // The view must be attached to the DOM before we can hook up keyboard shortcuts.
-        jwerty.key("ctrl+alt+n", e=> {
+        jwerty.key("ctrl+alt+n", e => {
             e.preventDefault();
             this.newDocument();
         });
@@ -230,7 +230,7 @@ class shell extends viewModelBase {
             if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-
+        
         sys.error = (e) => {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
@@ -486,12 +486,10 @@ class shell extends viewModelBase {
     }
 
     private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResource: resource = null) {
-        var arrayLength = resourceObservableArray().length;
-
         if (activeResource != null && activeResource.name != '<system>') {
             activeResource.activate();
         }
-        else if (arrayLength > 0) {
+        else if (resourceObservableArray().length > 0) {
             var newResource;
 
             if (resource != null && (newResource = resourceObservableArray.first(rs => rs.name == resource.name)) != null) {
@@ -506,7 +504,7 @@ class shell extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
 
         if (resourceHash == appUrl.forDatabases()) {
-            this.activateResource(appUrl.getDatabase(), shell.databases, this.activeDatabase());
+            shell.databases().length == 1 ? this.activeDatabase(null) : this.activateResource(appUrl.getDatabase(), shell.databases, this.activeDatabase());
         }
         else if (resourceHash == appUrl.forFilesystems()) {
             this.activateResource(appUrl.getFileSystem(), shell.fileSystems, this.activeFilesystem());
@@ -737,7 +735,7 @@ class shell extends viewModelBase {
     }
 
     getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name']);
+        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name'], this.activeDatabase());
     }
 
     fetchServerBuildVersion() {

@@ -12,15 +12,15 @@ class replicationDestination {
     clientVisibleUrl = ko.observable<string>().extend({ required: true });
 
     name = ko.computed(() => {
-        if (this.url() && this.database()) {
-            return this.database() + " on " + this.url();
-        } else if (this.url()) {
-            return this.url();
-        } else if (this.database()) {
-            return this.database();
-        }
+        var prefix = this.disabled() ? "[disabled]" : null;
+        var database = this.database();
+        var on = this.database() && this.url() ? "on" : null;
+        var url = this.url();
 
-        return "[empty]";
+        return [prefix, database, on, url]
+            .filter(s => !!s)
+            .join(" ")
+            || "[empty]";
     });
     isValid = ko.computed(() => this.url() != null && this.url().length > 0);
 
@@ -38,18 +38,19 @@ class replicationDestination {
         }
     });
 
-    toggleUserCredentials() {
-        this.isUserCredentials.toggle();
-        if (this.isUserCredentials()) {
-            this.isApiKeyCredentials(false);
-        }
+    useUserCredentials() {
+        this.isUserCredentials(true);
+        this.isApiKeyCredentials(false);
     }
 
-    toggleApiKeyCredentials() {
-        this.isApiKeyCredentials.toggle();
-        if (this.isApiKeyCredentials()) {
-            this.isUserCredentials(false);
-        }
+    useApiKeyCredentials() {
+        this.isApiKeyCredentials(true);
+        this.isUserCredentials(false);
+    }
+
+    useNoCredentials() {
+        this.isUserCredentials(false);
+        this.isApiKeyCredentials(false);
     }
 
     toggleIsAdvancedShows(item, event) {
@@ -83,7 +84,7 @@ class replicationDestination {
             Domain: null,
             ApiKey: null,
             Database: databaseName,
-            TransitiveReplicationBehavior: "None",
+            TransitiveReplicationBehavior: "Replicate",
             IgnoredClient: false,
             Disabled: false,
             ClientVisibleUrl: null

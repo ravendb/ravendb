@@ -227,7 +227,6 @@
     <Compile Include="Bundles\Replication\Utils\ReplicationUtils.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationMetricsCountersManager.cs" />
-    <Compile Include="Indexing\IndexPrettyPrinter.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Plugins\Builtins\HighestEtagsPerCollection.cs" />
     <Compile Include="Plugins\IServerStartupTask.cs" />
@@ -671,7 +670,7 @@
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IIndexingScheduler.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
-    <Compile Include="Indexing\FairIndexingSchedulerWithNewIndexesBias.cs" />
+    <Compile Include="Indexing\FairIndexingSchedulerWithOlderIndexesBias.cs" />
     <Compile Include="Indexing\IndexingWorkStats.cs" />
     <Compile Include="Indexing\IndexToWorkOn.cs" />
     <Compile Include="Indexing\IntersectionCollector.cs" />

@@ -3,29 +3,19 @@
         <h3 class="panel-title">Import Database</h3>
     </div>
     <div class="panel-body">
-        <h5 class="pull-left">Import data from a .ravendump file into the current database.</h5>
-        <div class="alert alert-warning pull-right">
-            <i class="fa fa-warning"></i>
+        <h4>Import data from a .ravendump file into the current database.</h4>
+        <p class="help-block">
+            <i class="fa fa-warning text-warning"></i>
             Importing will overwrite any existing documents and indexes.
-        </div>
-        <br />
-        <br />
+        </p>
         <div data-bind="with: activeDatabase">
-            <input id="importDatabaseFilePicker" type="file" data-bind="visible: isImporting() == false, event: { change: $root.fileSelected.bind($root, $element.value) }" />
+            <span class="btn btn-primary btn-file" data-bind="visible: !isImporting()">
+                Choose file <input id="importDatabaseFilePicker" type="file" data-bind="visible: isImporting() == false, event: { change: $root.fileSelected.bind($root, $element.value) }" />
+            </span>
             <br />
-            <div class="btn-toolbar" data-bind="visible: $root.hasFileSelected() && isImporting() == false">
-                <div class="btn-group">
-                    <button class="btn btn-primary" data-bind="click: $root.importDb.bind($root)">
-                        <div class="glyphicon glyphicon-import"></div>
-                        Import Database
-                    </button>
-                </div>
-            </div>
             <br />
-            <div>
-                <span data-bind="text: importStatus"></span>
-                <br />
-            </div>
+            <p data-bind="text: importStatus"></p>
+            <br />
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
             </div>
@@ -78,26 +68,34 @@
                 </div>
                 <!--This doesn'tappear to be supported in Raven 3.-->
                 <!--<div class="form-group">
-                    <label class="col-sm-2 control-label">Collections</label>
-                    <div class="col-sm-10">
-                        <div class="btn-group">
-                            <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
-                                All collections
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
-                                Specified collections only
-                            </label>
-                        </div>
-                        <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
-                            <p class="form-control-static">Choose collections:</p>
-                            <div class="btn-group-vertical" data-bind="foreach: includedCollections">
-                                <label class="btn btn-primary" data-bind="text: collection, click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }"></label>
-                            </div>
+                <label class="col-sm-2 control-label">Collections</label>
+                <div class="col-sm-10">
+                    <div class="btn-group">
+                        <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
+                            All collections
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
+                            Specified collections only
+                        </label>
+                    </div>
+                    <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
+                        <p class="form-control-static">Choose collections:</p>
+                        <div class="btn-group-vertical" data-bind="foreach: includedCollections">
+                            <label class="btn btn-primary" data-bind="text: collection, click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }"></label>
                         </div>
                     </div>
-                </div>-->
+                </div>
+            </div>-->
                 <div class="form-group">
-                    <label class="col-sm-2 control-label">Filters <a title="External link: RavenDB filter settings documentation" target="_blank" href="http://ravendb.net/docs/server/administration/export-import"><i class="fa fa-question-circle"></i></a></label>
+                    <label class="col-sm-2 control-label">
+                        <span>Filters</span>
+                        <span class="help-block">
+                            <a class="text-muted" title="External link: RavenDB filters documentation" target="_blank" href="http://ravendb.net/docs/server/administration/export-import">
+                                <i class="fa fa-question-circle"></i>
+                                Help
+                            </a>
+                        </span>
+                    </label>
                     <div class="col-sm-10">
                         <div class="btn-group">
                             <table class="table table-striped" style="max-width: 500px;" data-bind="visible: filters().length">
@@ -113,27 +111,37 @@
                                     <tr>
                                         <td><input class="form-control" type="text" data-bind="value: Path" /></td>
                                         <td><input class="form-control" type="text" data-bind="value: Values[0]" /></td>
-                                        <td>
-                                            <div class="checkbox">
-                                                <label>
-                                                    <input type="checkbox" data-bind="checked: ShouldMatch" />
-                                                </label>
+                                        <td>                                                
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="visible: ShouldMatchObservable">Should match</span>
+                                                    <span data-bind="visible: !ShouldMatchObservable()">Should <strong>not</strong> match</span>
+                                                    <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: ShouldMatchObservable.bind(ShouldMatchObservable, true)">Should match</a></li>
+                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: ShouldMatchObservable.bind(ShouldMatchObservable, false)">Should <strong>not</strong> match</a></li>
+                                                </ul>
                                             </div>
                                         </td>
                                         <td>
-                                            <button type="button" class="close close-ret" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">×</button>
+                                            <button type="button" class="close" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">
+                                                <i class="fa fa-times"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
-                            <button class="btn btn-default" data-bind="click: addFilter"><i class="fa fa-plus"></i> Add filter</button>
+                            <button class="btn btn-default" data-bind="click: addFilter">
+                                <i class="fa fa-plus"></i> Add filter
+                            </button>
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label id="transformScriptHelp" class="col-sm-2 control-label">
                         Transform script&nbsp;
-                        <i class="fa fa-info-circle help-cursor"></i>
+                        <i class="fa fa-info-circle help-cursor text-info"></i>
                     </label>
                     <div class="col-sm-10">
                         <pre style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }">

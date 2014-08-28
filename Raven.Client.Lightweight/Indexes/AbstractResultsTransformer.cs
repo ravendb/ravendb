@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -105,7 +106,7 @@ namespace Raven.Client.Indexes
 		/// Creates the Transformer definition.
 		/// </summary>
 		/// <returns></returns>
-		public abstract TransformerDefinition CreateTransformerDefinition();
+		public abstract TransformerDefinition CreateTransformerDefinition(bool prettify = true);
 
 		public void Execute(IDocumentStore store)
 		{
@@ -123,7 +124,7 @@ namespace Raven.Client.Indexes
 		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var transformerDefinition = CreateTransformerDefinition();
+			var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -139,7 +140,7 @@ namespace Raven.Client.Indexes
 		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var transformerDefinition = CreateTransformerDefinition();
+			var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -174,15 +175,20 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
-      
-	    public override TransformerDefinition CreateTransformerDefinition()
-	    {
-		    return new TransformerDefinition
+
+		public override TransformerDefinition CreateTransformerDefinition(bool prettify = true)
+		{
+			var transformerDefinition = new TransformerDefinition
 			{
 				Name = TransformerName,
 				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TFrom, object>(
 					TransformResults, Conventions, "results", translateIdentityProperty: false),
 			};
-	    }
+
+			if (prettify)
+				transformerDefinition.TransformResults = IndexPrettyPrinter.Format(transformerDefinition.TransformResults);
+
+			return transformerDefinition;
+		}
     }
 }

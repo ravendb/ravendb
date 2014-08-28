@@ -66,7 +66,7 @@ namespace Raven.Tests.Indexes
 		public void CorrectlyUseExtensionMethodsOnConvertedType()
 		{
 			var indexDefinition = new PainfulIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
-			Assert.Contains("((String[]) doc.Tags.Split(", indexDefinition.Map);
+			Assert.Contains("((String[])doc.Tags.Split(", indexDefinition.Map);
 		}
 
 		private class PainfulIndex : AbstractMultiMapIndexCreationTask<Result>

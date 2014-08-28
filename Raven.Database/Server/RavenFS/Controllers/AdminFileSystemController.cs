@@ -24,7 +24,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         public async Task<HttpResponseMessage> FileSystemPut(string id, bool update = false)
         {
 			
-			MessageWithStatusCode fileSystemNameFormat = CheckNameFormat(id, Database.Configuration.FileSystemDataDirectory);
+			MessageWithStatusCode fileSystemNameFormat = CheckNameFormat(id, Database.Configuration.FileSystem.DataDirectory);
 			if (fileSystemNameFormat.Message != null)
 			{
 				return GetMessageWithString(fileSystemNameFormat.Message, fileSystemNameFormat.ErrorCode);
@@ -145,7 +145,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			if (isHardDeleteNeeded)
 			{
-				IOExtensions.DeleteDirectory(configuration.FileSystemDataDirectory);
+				IOExtensions.DeleteDirectory(configuration.FileSystem.DataDirectory);
 				//TODO: find out which path should be deleted
 				/*if (configuration.IndexStoragePath != null)
 					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);*/

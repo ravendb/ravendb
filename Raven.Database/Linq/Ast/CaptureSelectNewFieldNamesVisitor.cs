@@ -14,22 +14,34 @@ namespace Raven.Database.Linq.Ast
 	[CLSCompliant(false)]
 	public class CaptureSelectNewFieldNamesVisitor : DepthFirstAstVisitor<object, object>
 	{
-		public HashSet<string> FieldNames = new HashSet<string>();
-        public Dictionary<string,Expression> SelectExpressions = new Dictionary<string, Expression>();
+		private readonly bool _outerMostRequired;
+		private HashSet<string> fieldNames;
+		private Dictionary<string,Expression> selectExpressions;
 		private bool queryProcessed;
+
+		public CaptureSelectNewFieldNamesVisitor(bool outerMostRequired, HashSet<string> fieldNames, Dictionary<string, Expression> selectExpressions)
+		{
+			_outerMostRequired = outerMostRequired;
+			this.fieldNames = fieldNames;
+			this.selectExpressions = selectExpressions;
+		}
+
+		public HashSet<string> FieldNames { get { return fieldNames; } }
 
 		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
 		{
 			ProcessQuery(querySelectClause.Expression);
-			return base.VisitQuerySelectClause(querySelectClause, data);
+			if(_outerMostRequired)
+				return base.VisitQuerySelectClause(querySelectClause, data);
+			return null;
 		}
 
 
 		public void Clear()
 		{
 			queryProcessed = false;
-			FieldNames.Clear();
-            SelectExpressions.Clear();
+			fieldNames.Clear();
+            selectExpressions.Clear();
 		}
 
 
@@ -40,33 +52,36 @@ namespace Raven.Database.Linq.Ast
 				return;
 
 			// we only want the outer most value
-			if (queryProcessed)
+			if (queryProcessed && _outerMostRequired)
 				return;
+
+			fieldNames.Clear();
+			selectExpressions.Clear();
 
 			queryProcessed = true;
 
             foreach (var expression in objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
             {
-                FieldNames.Add(expression.Name);
-                SelectExpressions[expression.Name] = expression.Expression;
+                fieldNames.Add(expression.Name);
+                selectExpressions[expression.Name] = expression.Expression;
             }
 
 		    foreach (var expression in objectCreateExpression.Initializers.OfType<NamedExpression>())
 		    {
-		        FieldNames.Add(expression.Name);
-		        SelectExpressions[expression.Name] = expression.Expression;
+		        fieldNames.Add(expression.Name);
+		        selectExpressions[expression.Name] = expression.Expression;
 
 		    }
 		    foreach (var expression in objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
 			{
-				FieldNames.Add(expression.MemberName);
-			    SelectExpressions[expression.MemberName] = expression;
+				fieldNames.Add(expression.MemberName);
+			    selectExpressions[expression.MemberName] = expression;
 			}
 
 			foreach (var expression in objectCreateExpression.Initializers.OfType<IdentifierExpression>())
 			{
-				FieldNames.Add(expression.Identifier);
-			    SelectExpressions[expression.Identifier] = expression;
+				fieldNames.Add(expression.Identifier);
+			    selectExpressions[expression.Identifier] = expression;
 			}
 		}
 

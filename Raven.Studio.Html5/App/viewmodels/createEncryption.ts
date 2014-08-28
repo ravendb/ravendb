@@ -14,11 +14,7 @@ class createEncryption extends dialogViewModelBase {
     key = ko.observable();
     encryptionAlgorithm = ko.observable('Rijndael');
     encryptionBits = ko.observable<number>(256);
-    isEncryptedIndexes = ko.observable(true);
-    keyFocus = ko.observable(true);
-    algorithmFocus = ko.observable(false);
-    bitsFocus = ko.observable(false);
-    
+    isEncryptedIndexes = ko.observable(true);    
 
     private newEncryptionKey: getNewEncryptionKey;
     private base64Matcher = new RegExp("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$");
@@ -37,10 +33,9 @@ class createEncryption extends dialogViewModelBase {
     attached() {
         this.dialogSelectorName = "#CreateEncriptionDialog";
         super.attached();
-        var self = this;
         var inputElement: any = $("#key")[0];
         this.key.subscribe((newKey) => {
-            if (!self.base64Matcher.test(newKey.toString())) {
+            if (!this.base64Matcher.test(newKey.toString())) {
                 inputElement.setCustomValidity("The key must be in Base64 encoding format!");
             }
             else {

@@ -12,7 +12,10 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanCompile()
 		{
-			var technologySummaryIndex = new TechnologySummary_Index {Conventions = new DocumentConvention()};
+			var technologySummaryIndex = new TechnologySummary_Index {Conventions = new DocumentConvention
+			{
+				PrettifyGeneratedLinqExpressions = false
+			}};
 
 			var indexDefinition = technologySummaryIndex.CreateIndexDefinition();
 

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Abstractions.Data
@@ -17,6 +18,7 @@ namespace Raven.Abstractions.Data
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
 		public Etag LastIndexedEtag { get; set; }
+		public int? IndexingLag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
 		public DateTime? LastQueryTimestamp { get; set; }
 		public int TouchCount { get; set; }
@@ -37,7 +39,20 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-		    return Id.ToString();
+		    return Id.ToString(CultureInfo.InvariantCulture);
+		}
+
+		public void SetLastDocumentEtag(Etag lastDocEtag)
+		{
+			if (lastDocEtag == null)
+				return;
+
+			IndexingLag = (int) (lastDocEtag.Changes - LastIndexedEtag.Changes);
+
+			if (lastDocEtag.Restarts != LastIndexedEtag.Restarts)
+			{
+				IndexingLag *= -1;
+			}
 		}
 	}
 

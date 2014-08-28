@@ -14,6 +14,7 @@ class deleteResourceConfirm extends dialogViewModelBase {
     isDeletingDatabase: boolean;
     resourceType: string;
     resourcesTypeText: string;
+    exportDatabaseUrl: string;
 
     constructor(resources: Array<resource>) {
         super();
@@ -26,12 +27,9 @@ class deleteResourceConfirm extends dialogViewModelBase {
         this.isDeletingDatabase = resources[0] instanceof database;
         this.resourceType = resources[0].type;
         this.resourcesTypeText = this.resourceType == database.type ? 'databases' : this.resourceType == filesystem.type ? 'file systems' : 'counter storages';
-    }
-
-    navigateToExportDatabase() {
-        dialog.close(this);
-        var db: any = this.resourcesToDelete()[0];
-        router.navigate(appUrl.forExportDatabase(db));
+        if (this.isDeletingDatabase) {
+            this.exportDatabaseUrl = appUrl.forExportDatabase(<any>resources[0]);
+        }
     }
 
     keepFiles() {
