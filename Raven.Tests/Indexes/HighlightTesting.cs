@@ -21,7 +21,7 @@ namespace Raven.Tests.Indexes
 			};
 
 			var searchFor = "about";
-			using(var store = NewDocumentStore().Initialize())
+			using(var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
 				session.Store(item);
@@ -49,7 +49,7 @@ namespace Raven.Tests.Indexes
 			};
 
 			var searchFor = "about";
-			using (var store = NewDocumentStore().Initialize())
+			using (var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
 				session.Store(item);
@@ -77,7 +77,7 @@ namespace Raven.Tests.Indexes
 			};
 
 			var searchFor = "about";
-			using (var store = NewDocumentStore().Initialize())
+			using (var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
 				session.Store(item);
@@ -104,7 +104,7 @@ namespace Raven.Tests.Indexes
 			};
 
 			var searchFor = "cat";
-			using (var store = NewDocumentStore().Initialize())
+			using (var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
 				session.Store(item);
@@ -135,7 +135,7 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 			};
 
 			var searchFor = "dog";
-			using (var store = NewDocumentStore().Initialize())
+			using (var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
 				session.Store(item);
@@ -175,7 +175,7 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 			};
 
 			var searchFor = "dog look";
-			using (var store = NewDocumentStore().Initialize())
+			using (var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
 				session.Store(item);

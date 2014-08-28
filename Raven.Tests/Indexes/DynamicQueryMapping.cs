@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.IO;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
@@ -15,81 +16,96 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class DynamicQueryMapping : NoDisposalNeeded
+	public class DynamicQueryMapping : RavenTest
 	{
+		private DocumentDatabase CreateDocumentDatabase()
+		{
+			var configuration = new RavenConfiguration();
+			configuration.DataDirectory = Path.Combine(NewDataPath(), "System");
+			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+			return new DocumentDatabase(configuration);
+		}
+
 		[Fact]
 		public void CanExtractTermsFromRangedQuery()
 		{
-			Database.Data.DynamicQueryMapping mapping =
-				Database.Data.DynamicQueryMapping.Create(new DocumentDatabase(new RavenConfiguration { RunInMemory = true }),
+			using (var database = CreateDocumentDatabase())
+			{
+				Database.Data.DynamicQueryMapping mapping =
+				Database.Data.DynamicQueryMapping.Create(database,
 														 "Term:[0 TO 10]", null);
 
-			Assert.Equal("Term", mapping.Items[0].From);
+				Assert.Equal("Term", mapping.Items[0].From);
+			}
 		}
-
 
 		[Fact]
 		public void CanExtractTermsFromEqualityQuery()
 		{
-			Database.Data.DynamicQueryMapping mapping =
-				Database.Data.DynamicQueryMapping.Create(new DocumentDatabase(new RavenConfiguration { RunInMemory = true }),
-														 "Term:Whatever", null);
+			using (var database = CreateDocumentDatabase())
+			{
+				Database.Data.DynamicQueryMapping mapping = Database.Data.DynamicQueryMapping.Create(database, "Term:Whatever", null);
 
-			Assert.Equal("Term", mapping.Items[0].From);
+				Assert.Equal("Term", mapping.Items[0].From);
+			}
 		}
 
 
 		[Fact]
 		public void CanExtractMultipleTermsQuery()
 		{
-			Database.Data.DynamicQueryMapping mapping =
-				Database.Data.DynamicQueryMapping.Create(new DocumentDatabase(new RavenConfiguration { RunInMemory = true }),
-														 "Term:Whatever OR Term2:[0 TO 10]", null);
+			using (var database = CreateDocumentDatabase())
+			{
+				Database.Data.DynamicQueryMapping mapping = Database.Data.DynamicQueryMapping.Create(database, "Term:Whatever OR Term2:[0 TO 10]", null);
 
 
-			Assert.Equal(2, mapping.Items.Length);
+				Assert.Equal(2, mapping.Items.Length);
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term"));
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term2"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term2"));
+			}
 		}
 
 
 		[Fact]
 		public void CanExtractTermsFromComplexQuery()
 		{
-			Database.Data.DynamicQueryMapping mapping =
-				Database.Data.DynamicQueryMapping.Create(new DocumentDatabase(new RavenConfiguration { RunInMemory = true }),
-														 "+(Term:bar Term2:baz) +Term3:foo -Term4:rob", null);
+			using (var database = CreateDocumentDatabase())
+			{
+				Database.Data.DynamicQueryMapping mapping = Database.Data.DynamicQueryMapping.Create(database, "+(Term:bar Term2:baz) +Term3:foo -Term4:rob", null);
 
-			Assert.Equal(4, mapping.Items.Length);
+				Assert.Equal(4, mapping.Items.Length);
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term"));
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term2"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term2"));
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term3"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term3"));
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term4"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term4"));
+			}
 		}
 
 
 		[Fact]
 		public void CanExtractMultipleNestedTermsQuery()
 		{
-			Database.Data.DynamicQueryMapping mapping =
-				Database.Data.DynamicQueryMapping.Create(new DocumentDatabase(new RavenConfiguration { RunInMemory = true }),
+			using (var database = CreateDocumentDatabase())
+			{
+				Database.Data.DynamicQueryMapping mapping =
+				Database.Data.DynamicQueryMapping.Create(database,
 														 "Term:Whatever OR (Term2:Whatever AND Term3:Whatever)", null);
 
-			Assert.Equal(3, mapping.Items.Length);
+				Assert.Equal(3, mapping.Items.Length);
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term"));
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term2"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term2"));
 
-			Assert.True(mapping.Items.Any(x => x.From == "Term3"));
+				Assert.True(mapping.Items.Any(x => x.From == "Term3"));
+			}
 		}
-
 
 		[Fact]
 		public void CreateDefinitionSupportsSimpleProperties()
