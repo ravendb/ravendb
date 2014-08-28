@@ -4,6 +4,7 @@ import database = require("models/database");
 import moment = require("moment");
 import shell = require("viewmodels/shell");
 import changeSubscription = require('models/changeSubscription');
+import optional = require("common/optional");
 
 class statistics extends viewModelBase {
 
@@ -11,7 +12,6 @@ class statistics extends viewModelBase {
     indexes = ko.observableArray<KnockoutObservable<indexStatisticsDto>>();
 
     private refreshStatsObservable = ko.observable<number>();
-    
     private statsSubscription: KnockoutSubscription;
 
     attached() {
@@ -30,13 +30,13 @@ class statistics extends viewModelBase {
     fetchStats(): JQueryPromise<databaseStatisticsDto> {
         var db = this.activeDatabase();
         if (db) {
-          return new getDatabaseStatsCommand(db)
-            .execute()
-            .done((result: databaseStatisticsDto)=> this.processStatsResults(result));
+            return new getDatabaseStatsCommand(db)
+                .execute()
+                .done((result: databaseStatisticsDto) => this.processStatsResults(result));
         }
 
         return null;
-      }
+    }
 
     createNotifications(): Array<changeSubscription> {
         return [
@@ -45,48 +45,49 @@ class statistics extends viewModelBase {
         ];
     }
 
-  
-  processStatsResults(results: databaseStatisticsDto) {
 
-    // Attach some human readable dates to the indexes.
-    results.Indexes.forEach(i=> {
-      i['CreatedTimestampText'] = this.createHumanReadableTimeDuration(i.CreatedTimestamp);
-      i['LastIndexedTimestampText'] = this.createHumanReadableTimeDuration(i.LastIndexedTimestamp);
-      i['LastQueryTimestampText'] = this.createHumanReadableTimeDuration(i.LastQueryTimestamp);
-      i['LastIndexingTimeText'] = this.createHumanReadableTimeDuration(i.LastIndexingTime);
-      i['LastReducedTimestampText'] = this.createHumanReadableTimeDuration(i.LastReducedTimestamp);
-    });
+    processStatsResults(results: databaseStatisticsDto) {
 
-      this.stats(results);
+        // Attach some human readable dates to the indexes.
+        // Attach string versions numbers with thousands separator to the indexes.
+        results['CountOfDocumentsLocale'] = optional.val(results.CountOfDocuments).bind(v => v).bind(v => v.toLocaleString());
+        results['CurrentNumberOfItemsToIndexInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToIndexInSingleBatch).bind(v => v.toLocaleString());
+        results['CurrentNumberOfItemsToReduceInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToReduceInSingleBatch).bind(v => v.toLocaleString()); 
+        results.Indexes.forEach(i=> {
+            i['CreatedTimestampText'] = optional.val(i.CreatedTimestamp).bind(v => v.toHumanizedDate());
+            i['LastIndexedTimestampText'] = optional.val(i.LastIndexedTimestamp).bind(v => v.toHumanizedDate());
+            i['LastQueryTimestampText'] = optional.val(i.LastQueryTimestamp).bind(v => v.toHumanizedDate());
+            i['LastIndexingTimeText'] = optional.val(i.LastIndexingTime).bind(v => v.toHumanizedDate());
+            i['LastReducedTimestampText'] = optional.val(i.LastReducedTimestamp).bind(v => v.toHumanizedDate());
 
-      var existingIndexes = this.indexes().map(i => i().PublicName);
-      var newIndexes = results.Indexes.map(i => i.PublicName);
+            i['DocsCountLocale'] = optional.val(i.DocsCount).bind(v => v.toLocaleString());
+            i['ReduceIndexingAttemptsLocale'] = optional.val(i.ReduceIndexingAttempts).bind(v => v.toLocaleString());
+            i['ReduceIndexingErrorsLocale'] = optional.val(i.ReduceIndexingErrors).bind(v => v.toLocaleString());
+            i['ReduceIndexingSuccessesLocale'] = optional.val(i.ReduceIndexingSuccesses).bind(v => v.toLocaleString());
+            i['IndexingAttemptsLocale'] = optional.val(i.IndexingAttempts).bind(v => v.toLocaleString());
+            i['IndexingErrorsLocale'] = optional.val(i.IndexingErrors).bind(v => v.toLocaleString());
+            i['IndexingSuccessesLocale'] = optional.val(i.IndexingSuccesses).bind(v => v.toLocaleString());
+        });
+        results.Indexes.sort((a, b) => a.PublicName < b.PublicName ? -1 : a.PublicName > b.PublicName ? 1 : 0);
 
-      var enteringIndexes = newIndexes.filter(i => !existingIndexes.contains(i));
-      var exitIndexes = existingIndexes.filter(i => !newIndexes.contains(i));
-      var sameIndexes = newIndexes.filter(i => existingIndexes.contains(i));
+        this.stats(results);
 
-      this.indexes.pushAll(enteringIndexes.map(idx => ko.observable(results.Indexes.first(item => item.PublicName == idx))));
-      this.indexes.removeAll(exitIndexes.map(idx => this.indexes().first(item => item().PublicName == idx)));
+        var existingIndexes = this.indexes().map(i => i().PublicName);
+        var newIndexes = results.Indexes.map(i => i.PublicName);
 
-      sameIndexes.forEach(idx => {
-          var newData = results.Indexes.first(item => item.PublicName == idx);
-          this.indexes().first(item => item().PublicName == idx)(newData);
-      });
+        var enteringIndexes = newIndexes.filter(i => !existingIndexes.contains(i));
+        var exitIndexes = existingIndexes.filter(i => !newIndexes.contains(i));
+        var sameIndexes = newIndexes.filter(i => existingIndexes.contains(i));
 
-  }
+        this.indexes.pushAll(enteringIndexes.map(idx => ko.observable(results.Indexes.first(item => item.PublicName == idx))));
+        this.indexes.removeAll(exitIndexes.map(idx => this.indexes().first(item => item().PublicName == idx)));
 
-  createHumanReadableTimeDuration(aspnetJsonDate: string): string {
-    if (aspnetJsonDate) {
-      var dateMoment = moment(aspnetJsonDate);
-      var now = moment();
-      var agoInMs = dateMoment.diff(now);
-      return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MMMM Do YYYY, h:mma)");
+        sameIndexes.forEach(idx => {
+            var newData = results.Indexes.first(item => item.PublicName == idx);
+            this.indexes().first(item => item().PublicName == idx)(newData);
+        });
+
     }
-
-    return aspnetJsonDate;
-  }
-
 }
 
 export = statistics;

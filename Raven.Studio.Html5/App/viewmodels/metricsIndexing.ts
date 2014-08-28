@@ -9,11 +9,11 @@ import getStatusDebugMetricsCommand = require("commands/getStatusDebugMetricsCom
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 
-
 class metrics extends viewModelBase {
 
     currentStats: KnockoutObservable<databaseStatisticsDto> = ko.observable(null);
     currentMetrics: KnockoutObservable<statusDebugMetricsDto> = ko.observable(null);
+    indexingPerformanceUrl = ko.observable("");
 
     availableIndexes = ko.observableArray<indexStatisticsDto>();
     selectedIndex = ko.observable(null);
@@ -242,8 +242,11 @@ class metrics extends viewModelBase {
     fetchMetrics(): JQueryPromise<statusDebugMetricsDto> {
         var db = this.activeDatabase();
         if (db) {
-            return new getStatusDebugMetricsCommand(db)
-                .execute().done((m: statusDebugMetricsDto) => this.currentMetrics(m)); 
+            var queryCommand = new getStatusDebugMetricsCommand(db);
+            this.indexingPerformanceUrl(queryCommand.getQueryUrl());
+            return queryCommand
+                .execute()
+                .done((m: statusDebugMetricsDto) => this.currentMetrics(m)); 
         }
 
         return null;

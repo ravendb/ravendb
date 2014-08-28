@@ -1,8 +1,8 @@
 ﻿<section>
     <form class="form-horizontal" role="form">
         <div class="form-group row">
-            <label class="col-md-2 control-label">Show documents referencing:</label>
-            <div class="col-md-6">
+            <label class="col-md-2 control-label">Show documents referencing</label>
+            <div class="col-md-4">
                 <div class="input-group">
                     <input type="text" data-bind="value: docId, valueUpdate: 'afterkeydown'" class="form-control">
                     <span class="input-group-btn">
@@ -17,13 +17,14 @@
         <div class="row">
             <div class="col-md-12">
                 <div id="docRefsGrid" data-bind="widget: {
-    kind: 'virtualTable', itemsSource: currentDocRefs,
-    gridSelector: '#docRefsGrid',
-    showCheckboxes: false, useContextMenu: false,
-    customColumns: columns
+                    kind: 'virtualTable', 
+                    itemsSource: currentDocRefs,
+                    gridSelector: '#docRefsGrid',
+                    showCheckboxes: false, 
+                    useContextMenu: false,
+                    customColumns: columns
 
-}">
-                </div>
+                }"></div>
             </div>
         </div>
     </div>

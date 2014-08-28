@@ -11,6 +11,7 @@ import nv = require('nvd3');
 class metricsIndexBatchSize extends viewModelBase {
 
     currentStats: KnockoutObservable<databaseStatisticsDto> = ko.observable(null);
+    indexBatchSizeQueryUrl = ko.observable("");
 
     batchSizeChart: any = null;
     batchSizeChartData = [
@@ -33,14 +34,14 @@ class metricsIndexBatchSize extends viewModelBase {
 
     appendData() {
         var stats = this.currentStats();
-        var batchSize = stats.ActualIndexingBatchSize;
+        var batchInfos = stats.IndexingBatchInfo;
         var values = this.batchSizeChartData[0].values;
 
-        for (var i = 0; i < batchSize.length; i++) {
+        for (var i = 0; i < batchInfos.length; i++) {
             var item = {
-                x: new Date(batchSize[i].Timestamp),
-                y: batchSize[i].Size,
-                size: batchSize[i].Size
+                x: new Date(batchInfos[i].Timestamp),
+                y: batchInfos[i].TotalDocumentSize,
+                size: batchInfos[i].TotalDocumentSize
             }
             var match = values.first(e => e.x.getTime() == item.x.getTime() && e.y == item.y);
             if (!match) {
@@ -88,8 +89,11 @@ class metricsIndexBatchSize extends viewModelBase {
     fetchStats(): JQueryPromise<databaseStatisticsDto> {
         var db = this.activeDatabase();
         if (db) {
-            return new getDatabaseStatsCommand(db)
-                .execute().done((s: databaseStatisticsDto) => this.currentStats(s));
+            var command = new getDatabaseStatsCommand(db);
+            this.indexBatchSizeQueryUrl(command.getQueryUrl());
+            return command
+                .execute()
+                .done((s: databaseStatisticsDto) => this.currentStats(s));
         }
         return null;
     }

@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
+import appUrl = require("common/appUrl");
 
 class getStatusDebugMetricsCommand extends commandBase {
 
@@ -8,8 +9,16 @@ class getStatusDebugMetricsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<statusDebugMetricsDto> {
-        var url = "/debug/metrics";
+        var url = this.getQueryUrlFragment();
         return this.query<statusDebugMetricsDto>(url, null, this.db);
+    }
+
+    getQueryUrl(): string {
+        return appUrl.forResourceQuery(this.db) + this.getQueryUrlFragment();
+    }
+
+    private getQueryUrlFragment(): string {
+        return "/debug/metrics";
     }
 }
 

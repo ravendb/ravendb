@@ -29,8 +29,9 @@ import nv = require('nvd3');
 
 class visualizer extends viewModelBase {
 
+    static chooseIndexText = "Select an index";
     indexes = ko.observableArray<indexDataDto>();
-    indexName = ko.observable("Index Name");
+    indexName = ko.observable(visualizer.chooseIndexText);
 
     onlineMode = ko.observable(true);
     showLoadingIndicator = ko.observable(false);
@@ -44,7 +45,7 @@ class visualizer extends viewModelBase {
     reduceKeysSearchResults = ko.observableArray<string>();
 
     hasIndexSelected = ko.computed(() => {
-        return this.indexName() !== "Index Name";
+        return this.indexName() !== visualizer.chooseIndexText;
     });
 
     colors = d3.scale.category10();
@@ -250,7 +251,7 @@ class visualizer extends viewModelBase {
     }
 
     clearChart() {
-        this.indexName("Index Name");
+        this.indexName(visualizer.chooseIndexText);
         this.onlineMode(true);
         this.resetChart();
         this.updateGraph();

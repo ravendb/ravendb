@@ -17,9 +17,9 @@
 <div id="indexesContainer">
     <div class="btn-toolbar" role="toolbar" data-bind="visible: sortedGroups().length > 0">
         <div class="btn-group">
-            <button class="btn btn-primary" data-bind="attr: { href: newIndexUrl }" title="Add a new index (Alt+N)" accesskey="N">
+            <a class="btn btn-primary" data-bind="attr: { href: newIndexUrl }" title="Add a new index (Alt+N)" accesskey="N">
                 <i class="fa fa-plus"></i> New index
-            </button>
+            </a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default" data-bind="attr: { href: queryUrl }" title="New query (Alt+Q)" accesskey="Q"><i class="fa fa-search"></i> Query</a>
@@ -128,9 +128,9 @@
                                         <small class="text-warning" data-bind="visible: isIdle">Idle</small>
                                         <small class="text-danger" data-bind="visible: isAbandoned">Abandoned</small>
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
-                                        <small class="text-muted" data-bind="text: ' - ' + docsCount + ' docs' " title=" the number of documents affected by this index"></small>
+                                        <small class="text-muted" data-bind="text: ' - ' + docsCount + ' entries' " title=" the number of documents affected by this index"></small>
                                         <label>
-                                            <i data-bind="css: {'fa': 1==1, 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore'  }"></i>
+                                            <i class="fa" data-bind="css: { 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore' }"></i>
                                         </label>
                                     </h4>
                                     <div class="pull-right">

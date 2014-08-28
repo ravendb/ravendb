@@ -1,45 +1,51 @@
+import moment = require("moment");
+
 class extensions {
     static install() {
-        extensions.installNumberExtensions();
         extensions.installArrayExtensions();
+        extensions.installDateExtensions();
         extensions.installFunctionExtensions();
         extensions.installObservableExtensions();
         extensions.installStringExtension();
         extensions.installStorageExtension();
+        
         extensions.installBindingHandlers();
+
+        // Want Intellisense for your extensions?
+        // Go to extensionInterfaces.ts and add the function signature there.
     }
 
-    private static installNumberExtensions() {
+    private static installDateExtensions() {
         var datePrototype: any = Date.prototype;
+
+        var formatNumber = (num) => {
+            return num < 10 ? '0' + num : num;
+        }
 
         datePrototype.getUTCDateFormatted = function () {
             var date = this.getUTCDate();
-            return extensions.formatNumber(date);
+            return formatNumber(date);
         }
 
         datePrototype.getUTCMonthFormatted = function () {
             var month = this.getUTCMonth() + 1;
-            return extensions.formatNumber(month);
+            return formatNumber(month);
         }
 
         datePrototype.getUTCHoursFormatted = function () {
             var hours = this.getUTCHours();
-            return extensions.formatNumber(hours);
+            return formatNumber(hours);
         }
 
         datePrototype.getUTCMinutesFormatted = function () {
             var minutes = this.getUTCMinutes();
-            return extensions.formatNumber(minutes);
+            return formatNumber(minutes);
         }
 
         datePrototype.getUTCSecondsFormatted = function () {
             var seconds = this.getUTCSeconds();
-            return extensions.formatNumber(seconds);
+            return formatNumber(seconds);
         }
-    }
-
-    private static formatNumber(num) {
-        return num < 10 ? '0' + num : num;
     }
 
     private static installObservableExtensions() {
@@ -214,6 +220,7 @@ class extensions {
     }
 
     private static installStringExtension() {
+
         String.prototype.fixedCharCodeAt = function (idx) {
             idx = idx || 0;
             var code = this.charCodeAt(idx);
@@ -307,6 +314,17 @@ class extensions {
         String.prototype.paddingRight = function (paddingChar: string, paddingLength: number) {
             var paddingString = paddingChar.multiply(paddingLength);
             return String(paddingString + this).slice(paddingString.length);
+        }
+
+        String.prototype.toHumanizedDate = function () {
+            var dateMoment = moment(this);
+            if (dateMoment.isValid()) {
+                var now = moment();
+                var agoInMs = dateMoment.diff(now);
+                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MMMM Do YYYY, h:mma)");
+            }
+
+            return this;
         }
     }
 

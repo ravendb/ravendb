@@ -7151,6 +7151,24 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   padding-left: 2%;
   color: white;
 }
+#logsContainer .column {
+  display: inline-block;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-word-wrap: break-word;
+  word-wrap: break-word;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #ddd;
+  margin: 0;
+  padding: 5px;
+  height: 30px;
+}
+#logsContainer .selected .column {
+  background-color: #ffffcc;
+}
 #logsContainer .logRecord .logName .logName-actions-container {
   display: none;
 }

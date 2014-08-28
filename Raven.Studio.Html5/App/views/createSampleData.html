@@ -7,14 +7,14 @@
             <i class="fa fa-info-circle text-info"></i>
             Creating sample data requires an empty database.<br />
         </p>
-        <button class="btn btn-primary" data-bind="click: generateSampleData">
-            <i class="fa fa-download"></i>
-            Create sample data
-        </button>
-        <br />
-        <br />
-        <button class="btn btn-default" data-bind="click: showSampleDataClass , enable: isEnable">
-            <i class="fa fa-code"></i>
+        <div class="btn-group">
+            <button class="btn btn-primary" data-bind="click: generateSampleData">
+                <i class="fa fa-magic"></i>
+                Create sample data
+            </button>
+        </div>
+        <button class="btn btn-link" data-bind="click: showSampleDataClass , enable: isEnable">
+            <!--<i class="fa fa-file-code-o"></i>-->
             Show sample data classes
         </button>
 
