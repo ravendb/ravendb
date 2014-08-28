@@ -327,13 +327,5 @@ namespace Raven.Client.FileSystem.Changes
             })
             .Unwrap();
         }
-
-
-        //private List<IObserver<ConflictNotification>> conflictObservers = new List<IObserver<ConflictNotification>>();
-
-        //void IFilesChangesImpl.AddObserver(IObserver<ConflictNotification> observer)
-        //{
-        //    conflictObservers.Add(observer);
-        //}
     }
 }

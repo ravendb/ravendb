@@ -155,11 +155,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictNotification
-                    {
-                        FileName = fileName,
-                        Status = ConflictStatus.Resolved
-                    });
                 }    
         
 			}
@@ -193,6 +188,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			PublishFileNotification(fileName, isNewFile ? FileChangeAction.Add : FileChangeAction.Update);
             PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
+
+            if (isConflictResolved)
+            {
+                Publisher.Publish(new ConflictNotification
+                {
+                    FileName = fileName,
+                    Status = ConflictStatus.Resolved
+                });
+            }    
 
             return GetMessageWithObject(report);
 		}
@@ -295,6 +299,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/synchronization/UpdateMetadata/{*fileName}")]
         public HttpResponseMessage UpdateMetadata(string fileSystemName, string fileName)
 		{
+            bool isConflictResolved = false;
+
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
             var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
@@ -319,9 +325,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
 				var localMetadata = GetLocalMetadata(fileName);
-                var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
-
-                bool isConflictResolved;
+                var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);                
 
                 AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
@@ -334,11 +338,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 if (isConflictResolved)
                 {
                     ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictNotification 
-                    { 
-                        FileName = fileName,
-                        Status = ConflictStatus.Resolved
-                    });
                 }
 
                 PublishFileNotification(fileName, FileChangeAction.Update);
@@ -360,6 +359,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 
             PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
+
+            if (isConflictResolved )
+            {
+                Publisher.Publish(new ConflictNotification
+                {
+                    FileName = fileName,
+                    Status = ConflictStatus.Resolved
+                });
+            }
 
 			if (report.Exception == null)
 			{
@@ -462,6 +470,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/synchronization/Rename")]
 		public HttpResponseMessage Rename(string fileSystemName, string fileName, string rename)
 		{
+            bool isConflictResolved = false;
+
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
             var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
@@ -487,20 +497,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				var localMetadata = GetLocalMetadata(fileName);
 
-				bool isConflictResolved;
-
                 AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
-
+                
 				if (isConflictResolved)
-				{
-					ConflictArtifactManager.Delete(fileName);
-                    Publisher.Publish(new ConflictNotification 
-                    { 
-                        FileName = fileName,
-                        Status = ConflictStatus.Resolved
-                    });
-				}
-
+                {
+                    ConflictArtifactManager.Delete(fileName); 
+                }
+					
                 StorageOperationsTask.RenameFile(new RenameFileOperation
                 {
                     FileSystem = FileSystem.Name,
@@ -523,6 +526,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 
             PublishSynchronizationNotification(fileSystemName, fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
+
+            if (isConflictResolved)
+            {
+                Publisher.Publish(new ConflictNotification
+                {
+                    FileName = fileName,
+                    Status = ConflictStatus.Resolved
+                });
+            }
 
 			if (report.Exception == null)
 				Log.Debug("File '{0}' was renamed to '{1}' during synchronization from {2}", fileName, rename, sourceServerInfo);
@@ -691,11 +703,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 						// ConflictArtifactManager.Delete(fileName, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
 					});
 
-					Publisher.Publish(new ConflictNotification
-					{
-						FileName = fileName,
-						Status = ConflictStatus.Resolved
-					});
+                    //Publisher.Publish(new ConflictNotification
+                    //{
+                    //    FileName = fileName,
+                    //    Status = ConflictStatus.Resolved
+                    //});
 
 					Task.Run(() => SynchronizationTask.SynchronizeDestinationsAsync(true));
 					break;
