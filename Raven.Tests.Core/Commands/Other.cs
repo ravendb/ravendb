@@ -96,7 +96,7 @@ namespace Raven.Tests.Core.Commands
                 Assert.NotNull(doc);
                 Assert.Equal("For store1", doc.DataAsJson.Value<string>("Name"));
 
-                var docs = store1.DatabaseCommands.ForSystemDatabase().GetDocuments(0, 20);
+                var docs = store1.DatabaseCommands.ForSystemDatabase().StartsWith("Raven/Databases/", "store*", 0, 20);
                 Assert.Equal(2, docs.Length);
                 Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
                 Assert.NotNull(docs[1].DataAsJson.Value<RavenJObject>("Settings"));

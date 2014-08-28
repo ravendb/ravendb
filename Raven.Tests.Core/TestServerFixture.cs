@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.IO;
+
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Server;
 
 namespace Raven.Tests.Core
@@ -16,13 +19,16 @@ namespace Raven.Tests.Core
 
 		public TestServerFixture()
 		{
-			Server = new RavenDbServer(new RavenConfiguration()
+			var configuration = new RavenConfiguration();
+			configuration.Port = Port;
+			configuration.ServerName = ServerName;
+			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+			configuration.DataDirectory = Path.Combine(configuration.DataDirectory, "Tests");
+
+			IOExtensions.DeleteDirectory(configuration.DataDirectory);
+
+			Server = new RavenDbServer(configuration)
 			{
-				Port = Port,
-				ServerName = ServerName
-			})
-			{
-				RunInMemory = true,
 				UseEmbeddedHttpServer = true
 			}.Initialize();
 		}
