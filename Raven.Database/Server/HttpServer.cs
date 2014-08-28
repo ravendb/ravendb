@@ -1127,6 +1127,11 @@ namespace Raven.Database.Server
 			{
 				var bundlesList = bundles.Split(';').ToList();
 
+				// We explicitly don't want to fail here for missing bundle if the user
+				// has an valid license that expired, for example. We only perform the check
+				// if the user has a _valid_ license that doesn't have the specified bundle
+				if (ValidateLicense.CurrentLicense.Error) 
+					return;
 				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
 					string value;
