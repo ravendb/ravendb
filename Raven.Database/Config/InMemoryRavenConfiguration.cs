@@ -181,12 +181,12 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? VoronTypeName;
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? EsentTypeName;
 			}
 
             if (string.IsNullOrEmpty(DefaultFileSystemStorageTypeName))
             {
-                DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? VoronTypeName;
+                DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? EsentTypeName;
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
