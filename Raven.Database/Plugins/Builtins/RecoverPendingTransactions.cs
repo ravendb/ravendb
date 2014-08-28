@@ -34,7 +34,8 @@ namespace Raven.Database.Plugins.Builtins
                         var resourceManagerId = item.Data.Value<string>("ResourceManagerId");
                         var recoveryInformation = item.Data.Value<byte[]>("RecoveryInformation");
 
-                        database.InFlightTransactionalState.RecoverTransaction(transactionId, changes);
+                        if(database.InFlightTransactionalState.RecoverTransaction(transactionId, changes) == false)
+							continue;
                    
                         Guid resourceId;
                         if (Guid.TryParse(resourceManagerId, out resourceId) == false || 
