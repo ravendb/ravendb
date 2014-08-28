@@ -244,7 +244,7 @@ class metrics extends viewModelBase {
         if (db) {
             var queryCommand = new getStatusDebugMetricsCommand(db);
             this.indexingPerformanceUrl(queryCommand.getQueryUrl());
-            queryCommand
+            return queryCommand
                 .execute()
                 .done((m: statusDebugMetricsDto) => this.currentMetrics(m)); 
         }
