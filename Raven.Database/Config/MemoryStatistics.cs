@@ -170,7 +170,7 @@ namespace Raven.Database.Config
 			{
 				if (MaxParallelismSet == false)
 				{
-					return Environment.ProcessorCount;
+					return (Environment.ProcessorCount*2);
 				}
 				return maxParallelism;
 			}

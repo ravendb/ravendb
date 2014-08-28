@@ -537,7 +537,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
-		/// Default: The number of processors in the current machine
+		/// Default: Double the number of processors in the current machine
 		/// </summary>
 		public int MaxNumberOfParallelProcessingTasks
 		{
@@ -545,7 +545,7 @@ namespace Raven.Database.Config
 			{
 				if (MemoryStatistics.MaxParallelismSet)
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
-				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
+				return maxNumberOfParallelIndexTasks ?? (Environment.ProcessorCount*2);
 			}
 			set
 			{
