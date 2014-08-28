@@ -112,7 +112,6 @@ namespace Raven.Tests.Helpers
 				{
 					DefaultStorageTypeName = storageType,
 					DataDirectory = Path.Combine(dataDirectory, "System"),
-					FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = port == null ? 8079 : port.Value,
@@ -120,6 +119,7 @@ namespace Raven.Tests.Helpers
 				}
 			};
 
+			documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
 			documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
 			if (activeBundles != null)
@@ -247,7 +247,6 @@ namespace Raven.Tests.Helpers
 			{
 				Port = port,
 				DataDirectory = Path.Combine(directory, "System"),
-				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -256,6 +255,7 @@ namespace Raven.Tests.Helpers
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
 			};
 
+			ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
 			ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
 			ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
@@ -319,10 +319,10 @@ namespace Raven.Tests.Helpers
 			var ravenConfiguration = new RavenConfiguration
 			{
 				DataDirectory = dataDirectory,
-				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && (runInMemory ?? true),
 			};
 
+			ravenConfiguration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
 			ravenConfiguration.Storage.Voron.TempPath = tempDir;
 
 			if (storageType == "voron")

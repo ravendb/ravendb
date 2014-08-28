@@ -37,7 +37,6 @@ namespace Raven.Database.Config
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
-		private string fileSystemDataDirectory;
 
 		public ReplicationConfiguration Replication { get; private set; }
 
@@ -65,7 +64,7 @@ namespace Raven.Database.Config
 			CreateAnalyzersDirectoryIfNotExisting = true;
 
 
-			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
+			IndexingScheduler = new FairIndexingSchedulerWithOlderIndexesBias();
 
 			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
 
@@ -181,12 +180,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? EsentTypeName;
-			}
-
-            if (string.IsNullOrEmpty(DefaultFileSystemStorageTypeName))
-            {
-                DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? EsentTypeName;
+				DefaultStorageTypeName = ravenSettings.DefaultStorageTypeName.Value;
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
@@ -205,12 +199,7 @@ namespace Raven.Database.Config
 			SetupTransactionMode();
 
 			DataDirectory = ravenSettings.DataDir.Value;
-
-			FileSystemDataDirectory = ravenSettings.FileSystemDataDir.Value;
-			
 			CountersDataDirectory = ravenSettings.CountersDataDir.Value;
-
-			FileSystemIndexStoragePath = ravenSettings.FileSystemIndexStoragePath.Value;
 
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
@@ -219,7 +208,7 @@ namespace Raven.Database.Config
 			}
 
 			MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
-		    JournalsStoragePath = Settings["Raven/Esent/LogsPath"] ?? Settings[Constants.RavenTxJournalPath];
+			JournalsStoragePath = ravenSettings.JournalsStoragePath.Value;
 
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
@@ -276,6 +265,11 @@ namespace Raven.Database.Config
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
+			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
+			FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
+
+			if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
+				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
@@ -537,7 +531,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
-		/// Default: Double the number of processors in the current machine
+		/// Default: The number of processors in the current machine
 		/// </summary>
 		public int MaxNumberOfParallelProcessingTasks
 		{
@@ -545,7 +539,7 @@ namespace Raven.Database.Config
 			{
 				if (MemoryStatistics.MaxParallelismSet)
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
-				return maxNumberOfParallelIndexTasks ?? (Environment.ProcessorCount*2);
+				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
 			}
 			set
 			{
@@ -671,16 +665,6 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// The directory for the RavenDB file system. 
-		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// </summary>
-		public string FileSystemDataDirectory
-		{
-			get { return fileSystemDataDirectory; }
-			set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
-		}
-
-		/// <summary>
 		/// The directory for the RavenDB counters. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
 		/// </summary>
@@ -701,18 +685,6 @@ namespace Raven.Database.Config
 			set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
 		}
 		private string defaultStorageTypeName;
-
-        /// <summary>
-        /// What storage type to use in RavenFS (see: RavenFS Storage engines)
-        /// Allowed values: esent, voron
-        /// Default: esent
-        /// </summary>
-        public string DefaultFileSystemStorageTypeName
-        {
-            get { return defaultFileSystemStorageTypeName; }
-            set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
-        }
-        private string defaultFileSystemStorageTypeName;
 
 		private bool runInMemory;
 
@@ -747,12 +719,6 @@ namespace Raven.Database.Config
 		public TransactionMode TransactionMode { get; set; }
 
 		#endregion
-
-        #region File System Settings
-
-        public TimeSpan MaxSynchronizationInterval { get; set; } 
-
-        #endregion
 
         #region Misc settings
 
@@ -834,7 +800,7 @@ namespace Raven.Database.Config
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath, journalStoragePath;
-		private string fileSystemIndexStoragePath;
+		
 		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
 
@@ -895,16 +861,7 @@ namespace Raven.Database.Config
             }
         }
 
-		public string FileSystemIndexStoragePath
-		{
-			get
-			{
-				if (string.IsNullOrEmpty(fileSystemIndexStoragePath))
-					fileSystemIndexStoragePath = Path.Combine(FileSystemDataDirectory, "Indexes");
-				return fileSystemIndexStoragePath;
-			}
-			set { fileSystemIndexStoragePath = value.ToFullPath(); }
-		}
+		
 
 		public int AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
@@ -1118,7 +1075,7 @@ namespace Raven.Database.Config
 			OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 
-            DefaultFileSystemStorageTypeName = defaultConfiguration.DefaultFileSystemStorageTypeName;
+            FileSystem.DefaultStorageTypeName = defaultConfiguration.FileSystem.DefaultStorageTypeName;
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 
@@ -1192,7 +1149,45 @@ namespace Raven.Database.Config
 
         public class FileSystemConfiguration
         {
+			private string fileSystemDataDirectory;
+
+			private string fileSystemIndexStoragePath;
+
+			private string defaultFileSystemStorageTypeName;
+
             public TimeSpan MaximumSynchronizationInterval { get; set; }
+
+			/// <summary>
+			/// The directory for the RavenDB file system. 
+			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+			/// </summary>
+			public string DataDirectory
+			{
+				get { return fileSystemDataDirectory; }
+				set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+			}
+
+			public string IndexStoragePath
+			{
+				get
+				{
+					if (string.IsNullOrEmpty(fileSystemIndexStoragePath))
+						fileSystemIndexStoragePath = Path.Combine(DataDirectory, "Indexes");
+					return fileSystemIndexStoragePath;
+				}
+				set { fileSystemIndexStoragePath = value.ToFullPath(); }
+			}
+
+			/// <summary>
+			/// What storage type to use in RavenFS (see: RavenFS Storage engines)
+			/// Allowed values: esent, voron
+			/// Default: esent
+			/// </summary>
+			public string DefaultStorageTypeName
+			{
+				get { return defaultFileSystemStorageTypeName; }
+				set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
+			}
         }
 
 		public class EncryptionConfiguration

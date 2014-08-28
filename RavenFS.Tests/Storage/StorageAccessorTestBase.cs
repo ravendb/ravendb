@@ -50,7 +50,10 @@ namespace RavenFS.Tests.Storage
 
 			var configuration = new InMemoryRavenConfiguration
 			{
-				FileSystemDataDirectory = path,
+				FileSystem =
+				{
+					DataDirectory = path
+				},
 				Settings = new NameValueCollection
 				           {
 					           {"Raven/RunInMemory", runInMemory.ToString() }

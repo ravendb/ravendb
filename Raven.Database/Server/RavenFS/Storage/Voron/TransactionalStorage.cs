@@ -50,7 +50,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         public TransactionalStorage(InMemoryRavenConfiguration configuration)
         {
 	        this.configuration = configuration;
-	        path = configuration.FileSystemDataDirectory.ToFullPath();
+	        path = configuration.FileSystem.DataDirectory.ToFullPath();
 	        settings = configuration.Settings;
 
             bufferPool = new BufferPool(2L * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)

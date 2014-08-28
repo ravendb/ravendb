@@ -14,10 +14,13 @@ namespace RavenFS.Tests
 		public StorageTest()
 		{
 			var configuration = new InMemoryRavenConfiguration
-			{
-				FileSystemDataDirectory = "test",
-				Settings = new NameValueCollection()
-			};
+			                    {
+				                    Settings = new NameValueCollection(), 
+									FileSystem =
+									{
+										DataDirectory = "test"
+									}
+			                    };
 
 			IOExtensions.DeleteDirectory("test");
 			transactionalStorage = new TransactionalStorage(configuration);

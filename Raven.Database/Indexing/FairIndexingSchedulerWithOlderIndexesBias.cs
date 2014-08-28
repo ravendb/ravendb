@@ -11,7 +11,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
-	public class FairIndexingSchedulerWithNewIndexesBias : IIndexingScheduler
+	public class FairIndexingSchedulerWithOlderIndexesBias : IIndexingScheduler
 	{
 		private int current;
 		private int currentRepeated;
@@ -19,7 +19,7 @@ namespace Raven.Database.Indexing
 		private List<int> lastAmountOfItemsToIndex = new List<int>();
 		private List<int> lastAmountOfItemsToReduce = new List<int>();
 
-		public FairIndexingSchedulerWithNewIndexesBias()
+		public FairIndexingSchedulerWithOlderIndexesBias()
 		{
 			LastAmountOfItemsToIndexToRemember = 1;
 			LastAmountOfItemsToReduceToRemember = 1;
@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
 			var indexesByIndexedEtag = indexes
                 .Where(x => x.Index.IsMapIndexingInProgress == false) // indexes with precomputed docs are processes separately
 				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
-				.OrderBy(x => x.Key, new RoughEtagEqualityAndComparison())
+				.OrderByDescending(x => x.Key, new RoughEtagEqualityAndComparison())
 				.ToList();
 
 			if (indexesByIndexedEtag.Count == 0)

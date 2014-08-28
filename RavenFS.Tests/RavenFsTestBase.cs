@@ -59,18 +59,18 @@ namespace RavenFS.Tests
             {
 				Port = port,
 				DataDirectory = directory,
-				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
 				DefaultStorageTypeName = storageType,
-                DefaultFileSystemStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
 			};
 
 	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
             ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
+	        ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
+	        ravenConfiguration.FileSystem.DefaultStorageTypeName = storageType;
 
             if (enableAuthentication)
             {
