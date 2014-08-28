@@ -133,7 +133,9 @@ namespace Voron.Tests.Bugs
         {
             var ids = ReadIds("data2.txt");
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+	        StorageEnvironmentOptions storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+			storageEnvironmentOptions.MaxScratchBufferSize *=2;
+	        using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 var rand = new Random();
                 var testBuffer = new byte[69];
