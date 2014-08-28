@@ -353,7 +353,7 @@ namespace Raven.Database.Actions
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query,
-					PageSize = int.MaxValue
+					PageSize = Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 4
                 }, actions, linked)
                 {
                     ShouldSkipDuplicateChecking = true
