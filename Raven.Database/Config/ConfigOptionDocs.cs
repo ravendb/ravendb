@@ -55,7 +55,8 @@ namespace Raven.Database.Config
 			{"Raven/NumberOfItemsToExecuteReduceInSingleStep", "int", "10 - 100,000", "The number of items that will cause RavenDB to move to multi step reduce, default: 1,024"},
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			{"Raven/NewIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing. Default: 64 MB."},
-			
+			{"Raven/Indexing/FlushIndexToDiskSizeInMb", "int", null, "Number of megabytes after which indexes are flushed to a disk. Default: 5"},
+
 			// Encryption
 			{"Raven/Encryption/FIPS", "bool", null, "Use FIPS compliant encryption algorithms. Default: false."},
 
