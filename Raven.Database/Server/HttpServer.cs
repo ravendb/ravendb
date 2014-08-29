@@ -1100,11 +1100,12 @@ namespace Raven.Database.Server
                     return;
                 }
 
-                ResourcesStoresCache.Update(database.Name, (dbName) =>
+                ResourcesStoresCache.Set(database.Name, (dbName) =>
                 {
-                    return  new Task<DocumentDatabase>(()=>{
-                        throw new Exception("Database named " + dbName + " is being disposed right now and cannot be accessed. Access will be available when the dispose process will end");
-                    });                    
+	                var tcs = new TaskCompletionSource<DocumentDatabase>();
+					tcs.SetException(new ObjectDisposedException("Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
+					                                             "Access will be available when the dispose process will end"));
+	                return tcs.Task;
                 });
             }
             catch(Exception ex){
