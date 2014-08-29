@@ -44,7 +44,14 @@ namespace Raven.Database.Actions
 					stats = accessor.Indexing.GetIndexStats(indexId);
 				});
 
-				stats.ForEntityName = context.IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+				if (stats == null)
+					continue;
+
+				var abstractViewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexId);
+				if (abstractViewGenerator == null)
+					continue;
+
+				stats.ForEntityName = abstractViewGenerator.ForEntityNames.ToList();
 
 				indexesStats.Add(stats);
 			}
