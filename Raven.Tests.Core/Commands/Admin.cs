@@ -5,13 +5,31 @@ using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
+using System;
+using System.IO;
 using System.Linq;
 using Xunit;
 
 namespace Raven.Tests.Core.Commands
 {
 	public class Admin : RavenCoreTestBase
-	{
+    {
+        private string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
+        private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
+
+        public Admin()
+        {
+            IOExtensions.DeleteDirectory(BackupDir);
+            IOExtensions.DeleteDirectory(DataDir);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            IOExtensions.DeleteDirectory(BackupDir);
+            IOExtensions.DeleteDirectory(DataDir);
+        }
+
 		[Fact]
 		public void CanManageIndexingProcess()
 		{
@@ -88,22 +106,20 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanDoBackupAndRestore()
         {
-            const string DataDir = "C:\\raventest";
-            const string BackupDir = "C:\\";
-
             using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add("DataDirectory", DataDir)))
             {
                 store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
-                store.DatabaseCommands.GlobalAdmin.StartBackup("C:\\", new DatabaseDocument(), false, store.DefaultDatabase);
-                WaitForBackup(Server.SystemDatabase);
 
-                store.Dispose();
-                base.Dispose();
-                IOExtensions.DeleteDirectory(DataDir);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument(), false, store.DefaultDatabase);
+                WaitForBackup(Server.SystemDatabase);
             }
 
-            Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest { BackupLocation = BackupDir, DatabaseLocation = DataDir, DatabaseName = "CanDoBackupAndRestore" });
-            WaitForRestore(Server.DocumentStore.DatabaseCommands);
+            Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest 
+                { 
+                    BackupLocation = BackupDir, 
+                    DatabaseLocation = DataDir, 
+                    DatabaseName = "CanDoBackupAndRestore"
+                });
 
             using (var store = new DocumentStore
             {
