@@ -1,18 +1,14 @@
 ﻿using Raven.Abstractions.FileSystem;
-using Raven.Client.FileSystem;
-using Raven.Client.FileSystem.Listeners;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
-using Raven.Client.FileSystem.Extensions;
-using System.Threading;
-using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem.Listeners;
+using Raven.Json.Linq;
+using System;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace RavenFS.Tests.ClientApi
 {
@@ -150,6 +146,9 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void ConflictListeners_RemoteVersion()
         {
+            int firstStreamSize = 130;
+            int secondStreamSize = 128;
+
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
 
@@ -160,21 +159,21 @@ namespace RavenFS.Tests.ClientApi
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
 
-                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
+                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(firstStreamSize));
                 await sessionDestination2.SaveChangesAsync();
 
-                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(secondStreamSize));
                 await sessionDestination1.SaveChangesAsync();
                 
                 var file = await sessionDestination1.LoadFileAsync("test1.file");
                 var file2 = await sessionDestination2.LoadFileAsync("test1.file");
-                Assert.Equal(128, file.TotalSize);
-                Assert.Equal(130, file2.TotalSize);
+                Assert.Equal(secondStreamSize, file.TotalSize);
+                Assert.Equal(firstStreamSize, file2.TotalSize);
 
                 var notificationTask = WaitForConflictResolved(anotherStore, 1, 10);
 
-                var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
-                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
+                var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
+                await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
                 await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
 
                 //We need to sync again after conflict resolution because strategy was to resolve with remote
@@ -188,8 +187,8 @@ namespace RavenFS.Tests.ClientApi
                 file = await sessionDestination1.LoadFileAsync("test1.file");
                 file2 = await sessionDestination2.LoadFileAsync("test1.file");
 
-                Assert.Equal(128, file.TotalSize);
-                Assert.Equal(128, file2.TotalSize);
+                Assert.Equal(secondStreamSize, file.TotalSize);
+                Assert.Equal(secondStreamSize, file2.TotalSize);
             }
         }
 

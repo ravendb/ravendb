@@ -11,7 +11,7 @@ namespace Voron.Impl.Journal
 {
 	/// <summary>
 	/// This class assumes only a single writer at any given point in time
-	/// This require _external_ syncornization
+	/// This require _external_ synchronization
 	/// </summary>
 	public unsafe class Win32FileJournalWriter : IJournalWriter
 	{

@@ -31,7 +31,7 @@ namespace Voron.Util
 		// Modified only by Insert, allowed to be read racily by readers
 		private int _maxHeight = 1;
 
-		// Only used by Insert, which require externa syncronizastion
+		// Only used by Insert, which require external synchronization
 		private Random _rnd = new Random();
 
 		public int MaxHeight

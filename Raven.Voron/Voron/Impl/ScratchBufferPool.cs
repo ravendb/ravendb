@@ -17,7 +17,7 @@ namespace Voron.Impl
     /// created them. The pages will be kept around until the flush for the journals
     /// send them to the data file.
     /// 
-    /// This class relies on external syncronization and is not meant to be used in multiple
+    /// This class relies on external synchronization and is not meant to be used in multiple
     /// threads at the same time
     /// </summary>
     public unsafe class ScratchBufferPool : IDisposable
@@ -61,7 +61,7 @@ namespace Voron.Impl
 		        // is that we let the read transactions time to complete and do their work, at which point
 		        // we can continue running. 
 		        // We start this by forcing a flush, then we are waiting up to the timeout for we are waiting
-		        // for the read tranasactions to complete. It is possible that a long running read transaction
+		        // for the read transactions to complete. It is possible that a long running read transaction
 		        // would in fact generate enough work for us to timeout, but hopefully we can avoid that.
 
 		        tx.Environment.ForceLogFlushToDataFile(tx);
