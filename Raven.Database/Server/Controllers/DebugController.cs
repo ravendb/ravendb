@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -17,20 +17,15 @@ using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
+using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Raven.Database.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Index = Raven.Database.Indexing.Index;
 using IOExtensions = Raven.Database.Extensions.IOExtensions;
 
 namespace Raven.Database.Server.Controllers
@@ -55,7 +50,7 @@ namespace Raven.Database.Server.Controllers
 			var results = new string[array.Length];
 			for (int i = 0; i < array.Length; i++)
 			{
-					var value = array[i].Value<string>();
+				var value = array[i].Value<string>();
 				try
 				{
 					results[i] = IndexPrettyPrinter.Format(value);
@@ -63,21 +58,81 @@ namespace Raven.Database.Server.Controllers
 				catch (Exception e)
 				{
 					results[i] = "Could not format:" + Environment.NewLine +
-					             value + Environment.NewLine + e;
+								 value + Environment.NewLine + e;
 				}
 			}
 
 			return GetMessageWithObject(results);
 		}
 
+		[HttpGet]
+		[Route("debug/indexing-perf-stats")]
+		[Route("databases/{databaseName}/debug/indexing-perf-stats")]
+		public HttpResponseMessage IndexingPerfStats(string format = "json")
+		{
+			var databaseStatistics = Database.Statistics;
+			var stats = from index in databaseStatistics.Indexes
+						from perf in index.Performance
+						let k = new { index, perf}
+						group k by new { k.perf.Started,k.perf.Operation } into g
+						select new
+						{
+							Started = g.Key.Started,
+							Stats = from k in g
+									select new
+									{
+										Index = k.index.PublicName,
+										k.perf.DurationMilliseconds,
+										k.perf.InputCount,
+										k.perf.OutputCount,
+										k.perf.ItemsCount,
+										k.perf.Operation,
+									}
+						};
+
+			switch(format)
+			{
+				case "csv":
+				case "CSV":
+					var sw = new StringWriter();
+					sw.WriteLine();
+					foreach(var stat in stats)
+					{
+						sw.WriteLine(stat.Started.ToString("o"));
+						sw.WriteLine("Index, Duration (ms), Input, Output, Items, Operation");
+						foreach(var indexStat in stat.Stats)
+						{
+							sw.Write('"');
+							sw.Write(indexStat.Index);
+							sw.Write("\",{0},{1},{2},{3},{4}",indexStat.DurationMilliseconds, indexStat.InputCount, indexStat.OutputCount, indexStat.ItemsCount, indexStat.Operation);
+							sw.WriteLine();
+						}
+						sw.WriteLine();
+					}
+					var msg = sw.GetStringBuilder().ToString();
+					return new HttpResponseMessage(HttpStatusCode.OK)
+					{
+						Content = new StringContent(msg)
+						{
+							Headers =
+							{
+								ContentType = new MediaTypeHeaderValue("text/plain")
+							}
+						}
+					};
+				default:
+					return GetMessageWithObject(stats);
+			}
+		}
+
 
 		[HttpGet]
-        [Route("debug/plugins")]
-        [Route("databases/{databaseName}/debug/plugins")]
-        public HttpResponseMessage Plugins()
-        {
-            return GetMessageWithObject(Database.PluginsInfo);
-        }
+		[Route("debug/plugins")]
+		[Route("databases/{databaseName}/debug/plugins")]
+		public HttpResponseMessage Plugins()
+		{
+			return GetMessageWithObject(Database.PluginsInfo);
+		}
 
 		[HttpGet]
 		[Route("debug/changes")]
@@ -99,32 +154,32 @@ namespace Raven.Database.Server.Controllers
 					Error = "SQL Replication bundle is not installed"
 				}, HttpStatusCode.NotFound);
 
-            
-		    //var metrics = task.SqlReplicationMetricsCounters.ToDictionary(x => x.Key, x => x.Value.ToSqlReplicationMetricsData());
 
-		    var statisticsAndMetrics = task.GetConfiguredReplicationDestinations().Select(x =>
-		    {
-		        SqlReplicationStatistics stats;
-		        task.Statistics.TryGetValue(x.Name, out stats);
-                var metrics = task.GetSqlReplicationMetricsManager(x).ToSqlReplicationMetricsData();
-		        return new
-		        {
-                    x.Name,
-		            Statistics = stats,
-                    Metrics = metrics
-		        };
-		    });
-		    return GetMessageWithObject(statisticsAndMetrics);
+			//var metrics = task.SqlReplicationMetricsCounters.ToDictionary(x => x.Key, x => x.Value.ToSqlReplicationMetricsData());
+
+			var statisticsAndMetrics = task.GetConfiguredReplicationDestinations().Select(x =>
+			{
+				SqlReplicationStatistics stats;
+				task.Statistics.TryGetValue(x.Name, out stats);
+				var metrics = task.GetSqlReplicationMetricsManager(x).ToSqlReplicationMetricsData();
+				return new
+				{
+					x.Name,
+					Statistics = stats,
+					Metrics = metrics
+				};
+			});
+			return GetMessageWithObject(statisticsAndMetrics);
 		}
 
 
-        [HttpGet]
-        [Route("debug/metrics")]
-        [Route("databases/{databaseName}/debug/metrics")]
-        public HttpResponseMessage Metrics()
-        {
-            return GetMessageWithObject(Database.CreateMetrics());
-        }
+		[HttpGet]
+		[Route("debug/metrics")]
+		[Route("databases/{databaseName}/debug/metrics")]
+		public HttpResponseMessage Metrics()
+		{
+			return GetMessageWithObject(Database.CreateMetrics());
+		}
 
 		[HttpGet]
 		[Route("debug/config")]
@@ -146,9 +201,9 @@ namespace Raven.Database.Server.Controllers
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				totalCountReferencing = accessor.Indexing.GetCountOfDocumentsReferencing(id);
-				var documentsReferencing = 
-					op == "from" 
-					? accessor.Indexing.GetDocumentsReferencesFrom(id) 
+				var documentsReferencing =
+					op == "from"
+					? accessor.Indexing.GetDocumentsReferencesFrom(id)
 					: accessor.Indexing.GetDocumentsReferencing(id);
 				results = documentsReferencing.Skip(GetStart()).Take(GetPageSize(Database.Configuration.MaxPageSize)).ToList();
 			});
@@ -193,30 +248,30 @@ namespace Raven.Database.Server.Controllers
 				listItem = accessor.Lists.Read(listName, key);
 			});
 
-		    if (listItem == null)
-		        return GetEmptyMessage(HttpStatusCode.NotFound);
+			if (listItem == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			return GetMessageWithObject(listItem);
 		}
 
-        [HttpGet]
-        [Route("debug/list-all")]
-        [Route("databases/{databaseName}/debug/list-all")]
-        public HttpResponseMessage ListAll(string id)
-        {
-            var listName = id;
+		[HttpGet]
+		[Route("debug/list-all")]
+		[Route("databases/{databaseName}/debug/list-all")]
+		public HttpResponseMessage ListAll(string id)
+		{
+			var listName = id;
 
-            List<ListItem> listItems = null;
-            Database.TransactionalStorage.Batch(accessor =>
-            {
-                listItems = accessor.Lists.Read(listName, Etag.Empty, null, GetPageSize(Database.Configuration.MaxPageSize)).ToList();
-            });
+			List<ListItem> listItems = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				listItems = accessor.Lists.Read(listName, Etag.Empty, null, GetPageSize(Database.Configuration.MaxPageSize)).ToList();
+			});
 
-            if (listItems == null)
-                return GetEmptyMessage(HttpStatusCode.NotFound);
+			if (listItems == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-            return GetMessageWithObject(listItems);
-        }
+			return GetMessageWithObject(listItems);
+		}
 
 		[HttpGet]
 		[Route("debug/queries")]
@@ -226,14 +281,14 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
 
-        [HttpGet]
-        [Route("debug/suggest-index-merge")]
-        [Route("databases/{databaseName}/debug/suggest-index-merge")]
-        public HttpResponseMessage IndexMerge()
-        {
-            var mergeIndexSuggestions = Database.WorkContext.IndexDefinitionStorage.ProposeIndexMergeSuggestions();
-            return GetMessageWithObject(mergeIndexSuggestions);
-        }
+		[HttpGet]
+		[Route("debug/suggest-index-merge")]
+		[Route("databases/{databaseName}/debug/suggest-index-merge")]
+		public HttpResponseMessage IndexMerge()
+		{
+			var mergeIndexSuggestions = Database.WorkContext.IndexDefinitionStorage.ProposeIndexMergeSuggestions();
+			return GetMessageWithObject(mergeIndexSuggestions);
+		}
 
 		[HttpGet]
 		[Route("debug/sl0w-d0c-c0unts")]
@@ -378,18 +433,18 @@ namespace Raven.Database.Server.Controllers
 
 					foreach (var reflectedHttpActionDescriptor in actions)
 					{
-						
+
 						foreach (var httpMethod in reflectedHttpActionDescriptor.SupportedHttpMethods)
 						{
-							if (data.Methods.Any(method => method.Name == httpMethod.Method)) 
+							if (data.Methods.Any(method => method.Name == httpMethod.Method))
 								continue;
 
 							string description = null;
 							var descriptionAttibute =
 								reflectedHttpActionDescriptor.MethodInfo.CustomAttributes.FirstOrDefault(attributeData => attributeData.AttributeType == typeof(DescriptionAttribute));
-							if(descriptionAttibute != null)
+							if (descriptionAttibute != null)
 								description = descriptionAttibute.ConstructorArguments[0].Value.ToString();
-								
+
 							data.Methods.Add(new Method
 							{
 								Name = httpMethod.Method,
@@ -434,10 +489,10 @@ namespace Raven.Database.Server.Controllers
 			Database.TransactionalStorage.Batch(accessor => identities = accessor.General.GetIdentities(start, pageSize, out totalCount));
 
 			return GetMessageWithObject(new
-			                            {
-				                            TotalCount = totalCount,
+										{
+											TotalCount = totalCount,
 											Identities = identities
-			                            });
+										});
 		}
 
 		[HttpGet]
@@ -446,34 +501,34 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage InfoPackage()
 		{
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            try
-            {
-                using (var file = new FileStream(tempFileName, FileMode.Create))
-                using (var package = new ZipArchive(file, ZipArchiveMode.Create))
-                {
-                    DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager);
-                }
+			try
+			{
+				using (var file = new FileStream(tempFileName, FileMode.Create))
+				using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+				{
+					DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager);
+				}
 
-                var response = new HttpResponseMessage();
+				var response = new HttpResponseMessage();
 
-                response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-                                   {
-                                       Headers =
-                                       {
-                                           ContentDisposition = new ContentDispositionHeaderValue("attachment")
-                                                                {
-                                                                    FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
-                                                                }, 
-                                                                ContentType = new MediaTypeHeaderValue("application/octet-stream")
-                                       }
-                                   };
+				response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
+								   {
+									   Headers =
+									   {
+										   ContentDisposition = new ContentDispositionHeaderValue("attachment")
+																{
+																	FileName = string.Format("Debug-Info-{0}.zip", SystemTime.UtcNow),
+																},
+										   ContentType = new MediaTypeHeaderValue("application/octet-stream")
+									   }
+								   };
 
-                return response;
-            }
-            finally
-            {
-                IOExtensions.DeleteFile(tempFileName);
-            }
+				return response;
+			}
+			finally
+			{
+				IOExtensions.DeleteFile(tempFileName);
+			}
 		}
 	}
 
