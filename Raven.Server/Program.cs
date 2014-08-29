@@ -10,6 +10,7 @@ using System.Configuration.Install;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
@@ -28,6 +29,10 @@ using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
+
+using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
 namespace Raven.Server
 {
@@ -131,6 +136,7 @@ namespace Raven.Server
 		{
 			string backupLocation = null;
 			string restoreLocation = null;
+			string restoreDatabaseName = null;
 			bool defrag = false;
 			Action actionToTake = null;
 			bool launchBrowser = false;
@@ -172,23 +178,49 @@ namespace Raven.Server
 				{
 					actionToTake = () => PrintConfig(ravenConfiguration.GetConfigOptionsDocs());
 				}},
-				{"restore", 
-					"Restores a RavenDB database from backup",
+				{"restore", "[Obsolete] Use --restore-system-database or --restore-database",
+					key => actionToTake = () =>
+					{
+						throw new OptionException("This method is obsolete, use --restore-system-database or --restore-database", "restore");
+					}
+				},
+				{"restore-system-database", "Restores a SYSTEM database from backup.",
 					key => actionToTake = () =>
 					{
 						if(backupLocation == null || restoreLocation == null)
 						{
-							throw new OptionException("when using restore, source and destination must be specified", "restore");
+							throw new OptionException("when using --restore-system-database, --restore-source and --restore-destination must be specified", "restore-system-database");
 						}
-						RunRestoreOperation(backupLocation, restoreLocation, defrag);
-					}},
-				{"defrag", 
+
+						RunSystemDatabaseRestoreOperation(backupLocation, restoreLocation, defrag);
+					}
+				},
+				{"restore-database=", "Starts a restore operation from a backup on a REMOTE server found under specified {0:url}.", 
+					url =>
+				{
+					if (backupLocation == null)
+					{
+						throw new OptionException("when using --restore-database, --restore-source must be specified", "restore-database");
+					}
+
+					Uri uri;
+					if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
+					{
+						throw new OptionException("specified destination server url is not valid", "restore-database");
+					}
+
+					RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri);
+					Environment.Exit(0);
+				}
+				},
+				{"restore-defrag", 
 					"Applicable only during restore, execute defrag after the restore is completed", key =>
 					{
 						defrag = true;
 					}},
-				{"dest=|destination=", "The {0:path} of the new new database", value => restoreLocation = value},
-				{"src=|source=", "The {0:path} of the backup", value => backupLocation = value},
+				{"restore-destination=", "The {0:path} of the new database. If not specified it will be located in default data directory", value => restoreLocation = value},
+				{"restore-source=", "The {0:path} of the backup", value => backupLocation = value},
+				{"restore-database-name=", "The {0:name} of the new database. If not specified, it will be extracted from backup. Only applicable during REMOTE restore", value => restoreDatabaseName = value},
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
@@ -239,6 +271,30 @@ namespace Raven.Server
 
 			actionToTake();
 
+		}
+
+		private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, Uri uri)
+		{
+			var url = uri.AbsoluteUri + "/admin/restore";
+			var request = WebRequest.Create(url);
+			request.Method = "POST";
+			request.ContentType = "application/json; charset=utf-8";
+			using (var stream = request.GetRequestStream())
+			using (var writer = new StreamWriter(stream))
+			{
+				var json = RavenJObject.FromObject(new RestoreRequest
+				                                   {
+					                                   BackupLocation = backupLocation, 
+													   DatabaseLocation = restoreLocation,
+													   DatabaseName = restoreDatabaseName,
+													   Defrag = defrag
+				                                   }).ToString(Formatting.None);
+				writer.Write(json);
+			}
+
+			request.GetResponse();
+
+			Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
 		}
 
 		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
@@ -366,7 +422,7 @@ Configuration options:
 			}
 		}
 
-		private static void RunRestoreOperation(string backupLocation, string databaseLocation, bool defrag)
+		private static void RunSystemDatabaseRestoreOperation(string backupLocation, string databaseLocation, bool defrag)
 		{
 			try
 			{
