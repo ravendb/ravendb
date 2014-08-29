@@ -251,6 +251,19 @@ namespace Raven.Tests.Core.Commands
                     });
                 var debugInfo = output.Value<RavenJArray>("Debug");
                 Assert.Equal("Post 5", debugInfo[0]);
+
+                store.DatabaseCommands.Patch(
+                    "posts/4",
+                    new ScriptedPatchRequest()
+                    {
+                        Script = @"
+                            PutDocument('posts/4',
+                                { 'Title' : 'new title' }
+                            );"
+                    });
+                var post = store.DatabaseCommands.Get("posts/4");
+                Assert.NotNull(post);
+                Assert.Equal("new title", post.DataAsJson.Value<string>("Title"));
             }
         }
     }
