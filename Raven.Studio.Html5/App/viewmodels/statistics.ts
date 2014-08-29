@@ -68,23 +68,23 @@ class statistics extends viewModelBase {
             i['IndexingErrorsLocale'] = optional.val(i.IndexingErrors).bind(v => v.toLocaleString());
             i['IndexingSuccessesLocale'] = optional.val(i.IndexingSuccesses).bind(v => v.toLocaleString());
         });
-        results.Indexes.sort((a, b) => a.PublicName < b.PublicName ? -1 : a.PublicName > b.PublicName ? 1 : 0);
+        results.Indexes.sort((a, b) => a.Name < b.Name ? -1 : a.Name > b.Name ? 1 : 0);
 
         this.stats(results);
 
-        var existingIndexes = this.indexes().map(i => i().PublicName);
-        var newIndexes = results.Indexes.map(i => i.PublicName);
+        var existingIndexes = this.indexes().map(i => i().Name);
+        var newIndexes = results.Indexes.map(i => i.Name);
 
         var enteringIndexes = newIndexes.filter(i => !existingIndexes.contains(i));
         var exitIndexes = existingIndexes.filter(i => !newIndexes.contains(i));
         var sameIndexes = newIndexes.filter(i => existingIndexes.contains(i));
 
-        this.indexes.pushAll(enteringIndexes.map(idx => ko.observable(results.Indexes.first(item => item.PublicName == idx))));
-        this.indexes.removeAll(exitIndexes.map(idx => this.indexes().first(item => item().PublicName == idx)));
+        this.indexes.pushAll(enteringIndexes.map(idx => ko.observable(results.Indexes.first(item => item.Name == idx))));
+        this.indexes.removeAll(exitIndexes.map(idx => this.indexes().first(item => item().Name == idx)));
 
         sameIndexes.forEach(idx => {
-            var newData = results.Indexes.first(item => item.PublicName == idx);
-            this.indexes().first(item => item().PublicName == idx)(newData);
+            var newData = results.Indexes.first(item => item.Name == idx);
+            this.indexes().first(item => item().Name == idx)(newData);
         });
 
     }

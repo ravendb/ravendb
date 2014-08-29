@@ -94,7 +94,7 @@ interface databaseStatisticsDto {
 }
 
 interface indexStatisticsDto {
-    PublicName: string;
+    Name: string;
     IndexingAttempts: number;
     IndexingSuccesses: number;
     IndexingErrors: number;

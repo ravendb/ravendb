@@ -42,7 +42,7 @@ class reporting extends viewModelBase {
     fetchIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.PublicName)));
+            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.Name)));
     }
 
     fetchIndexDefinition(indexName: string) {

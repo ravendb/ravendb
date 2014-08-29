@@ -53,7 +53,7 @@ class index {
         this.lastReducedEtag = dto.LastReducedEtag;
         this.lastReducedTimestamp = dto.LastReducedTimestamp;
         this.lockMode(dto.LockMode);
-        this.name = dto.PublicName;
+        this.name = dto.Name;
         this.performance = dto.Performance;
         this.priority = dto.Priority;
         this.reduceIndexingAttempts = dto.ReduceIndexingAttempts;

@@ -72,7 +72,7 @@ class metrics extends viewModelBase {
 
     appendIndexData() {
         var stats = this.currentStats();
-        var currentStat = stats.Indexes.filter((indexStat) => indexStat.PublicName == this.currentIndexName());
+        var currentStat = stats.Indexes.filter((indexStat) => indexStat.Name == this.currentIndexName());
         if (currentStat && currentStat.length == 1) {
             var newData = metrics.mapStatsData(currentStat[0].Performance);
 

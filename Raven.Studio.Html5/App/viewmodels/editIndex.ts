@@ -226,7 +226,7 @@ class editIndex extends viewModelBase {
             .execute()
             .done((stats: databaseStatisticsDto) => {
                 var lowerIndexName = indexName.toLowerCase();
-                var matchingIndex = stats.Indexes.first(i => i.PublicName.toLowerCase() === lowerIndexName);
+                var matchingIndex = stats.Indexes.first(i => i.Name.toLowerCase() === lowerIndexName);
                 if (matchingIndex) {
                     var priorityWithoutWhitespace = matchingIndex.Priority.replace(", ", ",");
                     this.priority(index.priorityFromString(priorityWithoutWhitespace));

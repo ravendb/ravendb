@@ -114,7 +114,7 @@ class scriptedIndexes extends viewModelBase {
     }
 
     private performAllIndexesResult(results: databaseStatisticsDto) {
-        this.indexNames(results.Indexes.map(i => i.PublicName));
+        this.indexNames(results.Indexes.map(i => i.Name));
     }
 
     private fetchAllScriptedIndexes(db): JQueryPromise<any> {
