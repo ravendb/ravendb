@@ -85,13 +85,13 @@ namespace Raven.Database.Config
 		}
 
 		public InMemoryRavenConfiguration Initialize()
-		{			
+		{
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-			
+
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
@@ -136,6 +136,8 @@ namespace Raven.Database.Config
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
 
 			MaxNumberOfItemsToProcessInSingleBatch = ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Value;
+			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
+			FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
@@ -409,7 +411,7 @@ namespace Raven.Database.Config
 		}
 
 		private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
-		{
+			{
 			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				return rsa.ExportCspBlob(true);
@@ -720,9 +722,9 @@ namespace Raven.Database.Config
 
 		#endregion
 
-        #region Misc settings
+		#region Misc settings
 
-        /// <summary>
+		/// <summary>
 		/// The directory to search for RavenDB's WebUI. 
 		/// This is usually only useful if you are debugging RavenDB's WebUI. 
 		/// Default: ~/Raven/WebUI 
@@ -861,7 +863,7 @@ namespace Raven.Database.Config
             }
         }
 
-		
+
 
 		public int AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
@@ -920,6 +922,21 @@ namespace Raven.Database.Config
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
+
+		/// <summary>
+		/// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
+		/// </summary>
+		public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+
+		/// <summary>
+		/// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
+		/// </summary>
+		public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+
+		/// <summary>
+		/// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
+		/// </summary>
+		public long FlushIndexToDiskSizeInMb { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -1089,7 +1106,7 @@ namespace Raven.Database.Config
 			public StorageConfiguration()
 			{
 				Voron = new VoronConfiguration();
-			}
+	}
 
 			public VoronConfiguration Voron { get; private set; }
 
@@ -1123,7 +1140,7 @@ namespace Raven.Database.Config
 				/// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
 				/// </summary>
 				public string TempPath { get; set; }
-			}
+}
 		}
 
 		public class PrefetcherConfiguration

@@ -287,7 +287,7 @@ namespace Raven.Database.Impl.DTC
 		}
 
         protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
-		{
+        {
             changes = null;
 			TransactionState value;
 		    if (transactionStates.TryGetValue(id, out value) == false)
@@ -326,8 +326,8 @@ namespace Raven.Database.Impl.DTC
 						{
 							databasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
 							documentIdsToTouch.Add(doc.Key);
+						}
 					}
-				}
 				    return documentIdsToTouch;
 				}
 				finally
@@ -337,15 +337,27 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-	    public void RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+	    public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
 	    {
             var txInfo = new TransactionInformation
             {
                 Id = id,
                 Timeout = TimeSpan.FromMinutes(5)
             };
+		    if (changes == null)
+		    {
+			    log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
+
+			    return false;
+		    }
 	        foreach (var changedDoc in changes)
 	        {
+			    if (changedDoc == null)
+			    {
+				    log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
+				    return false;
+			    }
+			    
                 changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
                 changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
 		        
@@ -355,6 +367,6 @@ namespace Raven.Database.Impl.DTC
 				//var etag = changedDoc.CommittedEtag;
 		        Etag etag = null; 
 	            AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
-	}
-}	}
-}
+	        }
+		    return true;
+	    }

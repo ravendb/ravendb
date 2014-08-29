@@ -49,8 +49,8 @@ namespace Raven.Database.Config
 			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
 
 			MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
-				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
+                // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
+                Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75))); 
 
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -194,6 +194,9 @@ namespace Raven.Database.Config
 
 			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], InMemoryRavenConfiguration.VoronTypeName);
 
+			MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
+
+			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 			JournalsStoragePath = new StringSetting(settings["Raven/Esent/LogsPath"] ?? settings[Constants.RavenTxJournalPath], (string)null);
 		}
 
@@ -330,6 +333,8 @@ namespace Raven.Database.Config
 
 		public StringSetting DefaultStorageTypeName { get; private set; }
 
+		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
+
 		public StringSetting JournalsStoragePath { get; private set; }
 
 		public class VoronConfiguration
@@ -347,15 +352,15 @@ namespace Raven.Database.Config
 
 		public class PrefetcherConfiguration
 		{
-			public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
 
 			public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
-		}
+	}
 
 		public class ReplicationConfiguration
 		{
 			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
-		}
+}
 
         public class FileSystemConfiguration
         {

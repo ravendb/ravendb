@@ -37,6 +37,9 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			var ramDirectory = new RAMDirectory();
 			using (new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED)){}
+			var inMemoryRavenConfiguration = new InMemoryRavenConfiguration();
+			inMemoryRavenConfiguration.Initialize();
+
 			var simpleIndex = new SimpleIndex(ramDirectory, 0, new IndexDefinition
 			{
 				Map =
@@ -60,7 +63,10 @@ namespace Raven.Tests.Bugs.Indexing
 			                                                        		{"f_License", SortOptions.Int},
 			                                                        	}
 
-			}, new MapOnlyView(), new WorkContext());
+			}, new MapOnlyView(), new WorkContext()
+			{
+				Configuration = inMemoryRavenConfiguration
+			});
 
 			var perFieldAnalyzerWrapper = simpleIndex.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), new List<Action>());
 

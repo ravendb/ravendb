@@ -380,7 +380,7 @@ namespace Rhino.Licensing
 			}
 			catch (Exception e)
 			{
-				Logger.Error("Could not re-lease subscription license", e);
+				Logger.ErrorException("Could not re-lease subscription license", e);
 			}
 			finally
 			{
