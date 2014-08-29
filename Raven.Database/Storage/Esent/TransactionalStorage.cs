@@ -142,22 +142,32 @@ namespace Raven.Storage.Esent
                     {
 	                    try
 	                    {
-							Api.JetTerm2(instance, TermGrbit.Complete);
+		                    Api.JetTerm2(instance, TermGrbit.Complete);
 	                    }
-						catch (EsentDiskIOException e)
-						{
-							log.ErrorException(
-								"Could not properly terminate Esent instance because of disk exception. Ignoring this error to allow to shutdown RavenDB instance.",
-								e);
-						}
-                        catch (Exception ex)
-                        {
-                            log.ErrorException(
-                                "Unexpected error occured while terminating Esent Storage. Ignoring this error to allow to shutdown RavenDB instance.",
-                                ex);
-                        }
-                        
-                        GC.SuppressFinalize(this);
+	                    catch (Exception e1)
+	                    {
+		                    log.ErrorException(
+			                    "Unexpected error occured while terminating Esent Storage. Ignoring this error to allow to shutdown RavenDB instance.",
+			                    e1);
+
+		                    try
+		                    {
+			                    log.Warn(
+				                    "Will now attempt to perform an abrupt shutdown, because asking nicely didn't work. You might need to run defrag on the database to recover potentially lost space (but no data will be lost).");
+			                    Api.JetTerm2(instance, TermGrbit.Abrupt);
+		                    }
+		                    catch (Exception e2)
+		                    {
+
+								log.FatalException(
+									"Couldn't shut down the database server even when using abrupt, something is probably wrong and you'll need to restart the server process to access the database",
+									e2);
+		                    }
+	                    }
+	                    finally
+	                    {
+							GC.SuppressFinalize(this);		                    
+	                    }
                     });
 
                 exceptionAggregator.ThrowIfNeeded();
