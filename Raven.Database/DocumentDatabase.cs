@@ -455,6 +455,7 @@ namespace Raven.Database
         public IndexStorage IndexStorage { get; private set; }
 
         public event EventHandler Disposing;
+        public event EventHandler DisposingEnded;
 
         public void Dispose()
         {
@@ -564,10 +565,29 @@ namespace Raven.Database
             if (workContext != null)
                 exceptionAggregator.Execute(workContext.Dispose);
 
-            exceptionAggregator.ThrowIfNeeded();
+            try
+            {
+                exceptionAggregator.ThrowIfNeeded();
+            }
+            finally
+            {
+                var onDisposingEnded = DisposingEnded;
+                if (onDisposingEnded != null)
+                {
+                    try
+                    {
+                        onDisposingEnded(this, EventArgs.Empty);
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Error when notifying about db disposal ending, ignoring error and continuing with disposal", e);
+                    }
+                }                
+            }
 
             log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
-        }
+        } 
+
 
         public void StopBackgroundWorkers()
         {

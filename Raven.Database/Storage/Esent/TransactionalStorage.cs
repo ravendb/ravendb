@@ -150,6 +150,12 @@ namespace Raven.Storage.Esent
 								"Could not properly terminate Esent instance because of disk exception. Ignoring this error to allow to shutdown RavenDB instance.",
 								e);
 						}
+                        catch (Exception ex)
+                        {
+                            log.ErrorException(
+                                "Unexpected error occured while terminating Esent Storage. Ignoring this error to allow to shutdown RavenDB instance.",
+                                ex);
+                        }
                         
                         GC.SuppressFinalize(this);
                     });

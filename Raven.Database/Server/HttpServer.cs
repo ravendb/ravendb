@@ -511,11 +511,7 @@ namespace Raven.Database.Server
 				{
 					return;
 				}
-				if (databaseTask.Status == TaskStatus.Faulted || databaseTask.Status == TaskStatus.Canceled)
-				{
-					ResourcesStoresCache.TryRemove(db, out databaseTask);
-					return;
-				}
+				
 				if (databaseTask.Status != TaskStatus.RanToCompletion)
 				{
 					return; // still starting up
@@ -553,8 +549,6 @@ namespace Raven.Database.Server
 					return;
 				}
 				
-				ResourcesStoresCache.TryRemove(db, out databaseTask);
-
 				var onDatabaseCleanupOccured = DatabaseCleanupOccured;
 				if (onDatabaseCleanupOccured != null)
 					onDatabaseCleanupOccured(db);
@@ -1055,16 +1049,8 @@ namespace Raven.Database.Server
 		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-			{
-				if (database.IsFaulted || database.IsCanceled)
-				{
-					ResourcesStoresCache.TryRemove(tenantId, out database);
-					// and now we will try creating it again
-				}
-				else
-				{
-					return true;
-				}
+			{				
+                return true;				
 			}
 
 			if (LockedDatabases.Contains(tenantId))
@@ -1092,7 +1078,8 @@ namespace Raven.Database.Server
 					documentDatabase.Dispose();
 					throw;
 				}
-			   
+                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 				return documentDatabase;
 			}).ContinueWith(task =>
 			{
@@ -1104,6 +1091,43 @@ namespace Raven.Database.Server
 			}).Unwrap());
 			return true;
 		}
+
+        private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
+        {
+            try{
+                DocumentDatabase database = documentDatabase as DocumentDatabase;
+                if (database == null){
+                    return;
+                }
+
+                ResourcesStoresCache.Update(database.Name, (dbName) =>
+                {
+                    return  new Task<DocumentDatabase>(()=>{
+                        throw new Exception("Database named " + dbName + " is being disposed right now and cannot be accessed. Access will be available when the dispose process will end");
+                    });                    
+                });
+            }
+            catch(Exception ex){
+                logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
+            }
+            
+        }
+
+        private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
+        {
+            try{
+                DocumentDatabase database = documentDatabase as DocumentDatabase;
+                if (database == null){
+                    return;
+                }
+
+                ResourcesStoresCache.Remove(database.Name);
+            }
+            catch(Exception ex){
+                logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
+            }
+           
+        }
 
 		private void AssertLicenseParameters(InMemoryRavenConfiguration config)
 		{
