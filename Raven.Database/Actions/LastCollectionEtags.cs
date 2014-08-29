@@ -24,21 +24,29 @@ namespace Raven.Database.Actions
 
 		public void InitializeBasedOnIndexingResults()
 		{
-			List<IndexStats> indexesStats = null;
-			context.Database.TransactionalStorage.Batch(accessor =>
-			{
-				indexesStats = accessor.Indexing.GetIndexesStats().ToList();
-			});
+			var indexDefinitions = context.IndexDefinitionStorage.IndexDefinitions.Values.ToList();
 
-			if (indexesStats.Count == 0)
+			if (indexDefinitions.Count == 0)
 			{
 				lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
 				return;
 			}
 
-			foreach (var stat in indexesStats)
+			var indexesStats = new List<IndexStats>();
+
+			foreach (var definition in indexDefinitions)
 			{
-				stat.ForEntityName = context.IndexDefinitionStorage.GetViewGenerator(stat.Id).ForEntityNames.ToList();
+				var indexId = definition.IndexId;
+
+				IndexStats stats = null;
+				context.Database.TransactionalStorage.Batch(accessor =>
+				{
+					stats = accessor.Indexing.GetIndexStats(indexId);
+				});
+
+				stats.ForEntityName = context.IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+
+				indexesStats.Add(stats);
 			}
 
 			var collectionEtags = indexesStats.Where(x => x.ForEntityName.Count > 0)
