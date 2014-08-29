@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Xml;
 using Raven.Abstractions.Data;
@@ -204,6 +203,7 @@ namespace Raven.Database.Commercial
 				};
 				return false;
 			}
+
 			licenseValidator.DisableFloatingLicenses = true;
 			licenseValidator.SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc";
 			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;

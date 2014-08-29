@@ -337,36 +337,38 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-	    public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
-	    {
-            var txInfo = new TransactionInformation
-            {
-                Id = id,
-                Timeout = TimeSpan.FromMinutes(5)
-            };
-		    if (changes == null)
-		    {
-			    log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
+		public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+		{
+			var txInfo = new TransactionInformation
+			{
+				Id = id,
+				Timeout = TimeSpan.FromMinutes(5)
+			};
+			if (changes == null)
+			{
+				log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
 
-			    return false;
-		    }
-	        foreach (var changedDoc in changes)
-	        {
-			    if (changedDoc == null)
-			    {
-				    log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
-				    return false;
-			    }
-			    
-                changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-                changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
-		        
+				return false;
+			}
+			foreach (var changedDoc in changes)
+			{
+				if (changedDoc == null)
+				{
+					log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
+					return false;
+				}
+
+				changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+				changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
+
 				//we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
 				//that happened during the transaction, which changed the committed etag. That is fine when we are just running
 				//the transaction, since we can just report the error and abort. But it isn't fine when we recover
 				//var etag = changedDoc.CommittedEtag;
-		        Etag etag = null; 
-	            AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
-	        }
-		    return true;
-	    }
+				Etag etag = null;
+				AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
+			}
+			return true;
+		}
+	}
+}

@@ -136,7 +136,6 @@ namespace Raven.Database.Config
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
 
 			MaxNumberOfItemsToProcessInSingleBatch = ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Value;
-			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 			FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
@@ -922,16 +921,6 @@ namespace Raven.Database.Config
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
-
-		/// <summary>
-		/// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
-		/// </summary>
-		public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
-
-		/// <summary>
-		/// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
-		/// </summary>
-		public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
 
 		/// <summary>
 		/// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
