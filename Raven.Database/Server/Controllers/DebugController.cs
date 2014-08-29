@@ -81,7 +81,7 @@ namespace Raven.Database.Server.Controllers
 							Stats = from k in g
 									select new
 									{
-										Index = k.index.PublicName,
+										Index = k.index.Name,
 										k.perf.DurationMilliseconds,
 										k.perf.InputCount,
 										k.perf.OutputCount,

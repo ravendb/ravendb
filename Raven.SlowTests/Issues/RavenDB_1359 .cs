@@ -71,7 +71,7 @@ namespace Raven.SlowTests.Issues
 				WaitForIndexing(store);
 
 				IndexStats indexStats =
-					store.DatabaseCommands.GetStatistics().Indexes.First(x => x.PublicName == indexWithAttachments.IndexName);
+					store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == indexWithAttachments.IndexName);
 			}
 		}
 	}

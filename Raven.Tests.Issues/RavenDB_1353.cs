@@ -118,7 +118,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				var stats = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.PublicName == index.IndexName);
+				var stats = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == index.IndexName);
 
 				Assert.Equal(IndexingPriority.Error, stats.Priority);
 			}

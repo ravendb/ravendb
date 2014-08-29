@@ -92,8 +92,8 @@ namespace Raven.Tests.Issues
 
 				var indexInfo = store.DatabaseCommands.GetStatistics().Indexes;
 				Assert.Equal(3, indexInfo.Length); //the third is Raven/DocumentEntityByName
-				Assert.True(indexInfo.Any(index => index.PublicName.Equals("Index1")));
-				Assert.True(indexInfo.Any(index => index.PublicName.Equals("Index3")));
+				Assert.True(indexInfo.Any(index => index.Name.Equals("Index1")));
+				Assert.True(indexInfo.Any(index => index.Name.Equals("Index3")));
 			}
 		}
 
@@ -117,8 +117,8 @@ namespace Raven.Tests.Issues
 
 				var indexInfo = store.DatabaseCommands.GetStatistics().Indexes;
 				Assert.Equal(3, indexInfo.Length); //the third is Raven/DocumentEntityByName
-				Assert.True(indexInfo.Any(index => index.PublicName.Equals("Index1")));
-				Assert.True(indexInfo.Any(index => index.PublicName.Equals("Index3")));
+				Assert.True(indexInfo.Any(index => index.Name.Equals("Index1")));
+				Assert.True(indexInfo.Any(index => index.Name.Equals("Index3")));
 			}
 		}
 	}

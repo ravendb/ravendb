@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
 				}
 
 				var statistics = store.DatabaseCommands.GetStatistics();
-				var indexStats = statistics.Indexes.Single(stats => stats.PublicName == indexName);
+				var indexStats = statistics.Indexes.Single(stats => stats.Name == indexName);
 				Assert.Equal(IndexingPriority.Normal, indexStats.Priority);
 			}
 		}

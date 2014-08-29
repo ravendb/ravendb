@@ -455,7 +455,7 @@ namespace Raven.Database
 				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
 				if (indexInstance == null)
 					return null;
-				x.PublicName = indexInstance.PublicName;
+				x.Name = indexInstance.PublicName;
 				x.SetLastDocumentEtag(result.LastDocEtag);
 				return x;
 			})

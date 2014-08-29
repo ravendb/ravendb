@@ -144,7 +144,7 @@ class patch extends viewModelBase {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((results: databaseStatisticsDto) => {
-                this.indexNames(results.Indexes.map(i => i.PublicName));
+                this.indexNames(results.Indexes.map(i => i.Name));
                 if (this.indexNames().length > 0) {
                     this.setSelectedIndex(this.indexNames().first());
                 }

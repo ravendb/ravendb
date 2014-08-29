@@ -253,7 +253,7 @@ class query extends viewModelBase {
             .execute()
             .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
                 return {
-                    name: i.PublicName,
+                    name: i.Name,
                     hasReduce: !!i.LastReducedTimestamp
                 };
             })));

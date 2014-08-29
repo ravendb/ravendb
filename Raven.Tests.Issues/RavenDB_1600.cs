@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(db);
 
-				var autoIdexes = db.Statistics.Indexes.Where(x => x.PublicName.StartsWith("Auto")).ToList();
+				var autoIdexes = db.Statistics.Indexes.Where(x => x.Name.StartsWith("Auto")).ToList();
 
 				Assert.True(autoIdexes.Count > 0);
 
@@ -98,7 +98,7 @@ namespace Raven.Tests.Issues
 				db.SpinBackgroundWorkers();
 				db.RunIdleOperations();
 
-                var autoIndexes = db.Statistics.Indexes.Where(x => x.PublicName.StartsWith("Auto")).ToList();
+                var autoIndexes = db.Statistics.Indexes.Where(x => x.Name.StartsWith("Auto")).ToList();
 
 				Assert.True(autoIndexes.Count > 0);
 
