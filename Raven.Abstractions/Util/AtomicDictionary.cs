@@ -64,24 +64,15 @@ namespace Raven.Abstractions.Util
 			}
 		}
 
-        public void Update(string key, Func<string, TVal> valueGenerator)
+        public void Set(string key, Func<string, TVal> valueGenerator)
         {
             using (globalLocker.EnterReadLock())
             {
                 key = key ?? NullValue;
-                object value;
-                if (locks.TryGetValue(key, out value) == false)
+                lock (locks.GetOrAdd(key, new object()))
                 {
-                    this.GetOrAdd(key, valueGenerator);
-                    return;
-                }
-                lock (value)
-                {                    
-                    TVal val;
-                    if (items.TryGetValue(key, out val)){
-                        items.TryUpdate(key,valueGenerator(null),val);
-                    }
-                    
+	                var addValue = valueGenerator(null);
+	                items.AddOrUpdate(key, addValue, (s, val) => addValue);
                 }
             }
         }
