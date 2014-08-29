@@ -196,7 +196,7 @@ select new
 
 				foreach (var staleIndex in statistics.StaleIndexes)
 				{
-					var indexStats = statistics.Indexes.Single(x => x.PublicName == staleIndex);
+					var indexStats = statistics.Indexes.Single(x => x.Name == staleIndex);
 					var latencyInTime = (DateTime.UtcNow - indexStats.LastIndexedTimestamp).TotalMilliseconds;
 					LatencyTimes.Add(new KeyValuePair<string, double>(staleIndex, latencyInTime));
 
