@@ -599,10 +599,7 @@ namespace Raven.Database.Actions
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents =>
-                        {
-                            Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
-                        });
+                        }, documents => Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents));
 
                         if (addDocumentResult.Updated)
                             Database.Prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
@@ -683,30 +680,9 @@ namespace Raven.Database.Actions
 
                             Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
-                            foreach (var indexName in IndexDefinitionStorage.IndexNames)
-                            {
-                                AbstractViewGenerator abstractViewGenerator =
-                                    IndexDefinitionStorage.GetViewGenerator(indexName);
-                                if (abstractViewGenerator == null)
-                                    continue;
-
-                                var token = metadataVar.Value<string>(Constants.RavenEntityName);
-
-                                if (token != null && // the document has a entity name
-                                    abstractViewGenerator.ForEntityNames.Count > 0)
-                                // the index operations on specific entities
-                                {
-                                    if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
-                                        continue;
-                                }
-
-                                var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                                var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
-                                {
-                                    Index = instance.IndexId
-                                });
-                                task.Keys.Add(key);
-                            }
+							var collection = metadataVar.Value<string>(Constants.RavenEntityName);
+							
+							DeleteDocumentFromIndexesForCollection(key, collection, actions);
                             if (deletedETag != null)
                                 Database.Prefetcher.AfterDelete(key, deletedETag);
                             Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
@@ -746,5 +722,31 @@ namespace Raven.Database.Actions
             }
         }
 
+	    internal void DeleteDocumentFromIndexesForCollection(string key, string collection, IStorageActionsAccessor actions)
+	    {
+		    foreach (var indexName in IndexDefinitionStorage.IndexNames)
+		    {
+			    AbstractViewGenerator abstractViewGenerator =
+				    IndexDefinitionStorage.GetViewGenerator(indexName);
+			    if (abstractViewGenerator == null)
+				    continue;
+
+
+			    if (collection != null && // the document has a entity name
+			        abstractViewGenerator.ForEntityNames.Count > 0)
+				    // the index operations on specific entities
+			    {
+				    if (abstractViewGenerator.ForEntityNames.Contains(collection) == false)
+					    continue;
+			    }
+
+			    var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
+			    var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
+			    {
+				    Index = instance.IndexId
+			    });
+			    task.Keys.Add(key);
+		    }
+	    }
     }
 }
