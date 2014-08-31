@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
@@ -19,7 +20,7 @@ namespace Raven.Database.Plugins.Builtins
 					return;
 				var existingVal = documentMetadataByKey.Metadata.Value<string>(Constants.RavenEntityName);
 				var newVal = metadata.Value<string>(Constants.RavenEntityName);
-				if (existingVal == newVal)
+				if (string.Equals(existingVal, newVal, StringComparison.InvariantCultureIgnoreCase))
 					return;
 
 				// the collection name changed, need to notify all old indexes about it.
