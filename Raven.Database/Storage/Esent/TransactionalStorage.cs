@@ -304,7 +304,31 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
+
+		private static object compactLocker = new object();
+
+	    public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
+	    {
+		    bool lockTaken = false;
+		    try
+		    {
+			    Monitor.TryEnter(compactLocker, 30*1000, ref lockTaken);
+			    if (lockTaken == false)
+			    {
+				    throw new TimeoutException("Could not take Esent Compact Lock. Because of a probable bug in Esent, we only allow a single database to be compacted at a given time.\r\n" +
+				                               "However, we waited for 30 seconds for the compact lock to be released, and gave up. The database wasn't compacted, please try again later, when the other compaction process is over.");
+			    }
+				CompactInternal(ravenConfiguration, statusCallback);
+		    }
+		    finally
+		    {
+
+			    if (lockTaken)
+				    Monitor.Exit(compactLocker);
+		    }
+	    }
+
+	    private static void CompactInternal(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
         {
             var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
             var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");
@@ -571,6 +595,7 @@ namespace Raven.Storage.Esent
                     case JET_err.DatabaseDirtyShutdown:
                         try
                         {
+							Api.JetTerm2(instance, TermGrbit.Complete);
                             using (var recoverInstance = new Instance("Recovery instance for: " + database))
                             {
 								new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(recoverInstance.JetInstance, path);
@@ -583,9 +608,12 @@ namespace Raven.Storage.Esent
                                 }
                             }
                         }
-                        catch (Exception)
+                        catch (Exception e2)
                         {
+	                        log.WarnException("Could not recover database " + database + ", will try opening it one last time. If that doesn't work, try using esentutl", e2);
                         }
+						CreateInstance(out instance, uniquePrefix + "-" + database);
+                        Api.JetInit(ref instance);
                         using (var session = new Session(instance))
                         {
                             Api.JetAttachDatabase2(session, database, maxSize, AttachDatabaseGrbit.None);
@@ -784,6 +812,7 @@ namespace Raven.Storage.Esent
         private void Output(string message)
         {
             log.Info(message);
+			Console.Write("DB {0}: ", Path.GetFileName(Path.GetDirectoryName(database)));
             Console.Write(message);
             Console.WriteLine();
         }
