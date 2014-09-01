@@ -399,9 +399,9 @@ namespace Raven.Client.FileSystem
             var queryString = queryText.ToString().Trim();
 
             if ( queryString.EndsWith("OR") )
-                queryString.Substring(0, queryString.Length - 2);
+                queryString = queryString.Substring(0, queryString.Length - 2);
             else if ( queryString.EndsWith("AND"))
-                queryString.Substring(0, queryString.Length - 3);
+                queryString = queryString.Substring(0, queryString.Length - 3);
             
             return queryString;
         }
@@ -687,7 +687,7 @@ namespace Raven.Client.FileSystem
 
             log.Debug("Executing query on file system '{1}' in '{2}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
-            var result = await Commands.SearchAsync(this.queryText.ToString(), this.orderByFields, start, pageSize);
+            var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize);
 
             return result.Files.ConvertAll<T>(x => x as T);
         }

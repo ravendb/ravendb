@@ -398,6 +398,8 @@ If you really want to do in memory filtering on the data returned from the query
             var normalizedPath = path;
             if (!path.StartsWith("/"))
                 normalizedPath = "/" + path.TrimEnd('/');
+            else
+                normalizedPath = path.TrimEnd('/');
 
             if (recursive)
             {
