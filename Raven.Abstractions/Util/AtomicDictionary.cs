@@ -68,7 +68,7 @@ namespace Raven.Abstractions.Util
                 key = key ?? NullValue;
                 lock (locks.GetOrAdd(key, new object()))
                 {
-	                var addValue = valueGenerator(null);
+	                var addValue = valueGenerator(key);
 	                items.AddOrUpdate(key, addValue, (s, val) => addValue);
                 }
             }
