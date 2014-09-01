@@ -111,8 +111,10 @@
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Replication\ManualConfilctResolution.cs" />
     <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
+    <Compile Include="Smuggler\SmugglerApi.cs" />
     <Compile Include="Utils\Entities\Camera.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
     <Compile Include="Utils\Entities\Headquater.cs" />
@@ -162,6 +164,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
+      <Name>Raven.Smuggler</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
