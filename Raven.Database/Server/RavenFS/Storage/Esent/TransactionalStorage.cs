@@ -80,7 +80,22 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 				if (disposed)
 					return;
 				GC.SuppressFinalize(this);
-				Api.JetTerm2(instance, TermGrbit.Complete);
+				try
+				{
+					Api.JetTerm2(instance, TermGrbit.Complete);
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not do gracefully disposal of RavenFS", e);
+					try
+					{
+						Api.JetTerm2(instance, TermGrbit.Abrupt);
+					}
+					catch (Exception e2)
+					{
+						log.FatalException("Even ungraceful shutdown was unsuccessful, restarting the server process may be required", e2);
+					}
+				}
 			}
 			finally
 			{

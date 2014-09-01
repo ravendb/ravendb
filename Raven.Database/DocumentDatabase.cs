@@ -183,6 +183,8 @@ namespace Raven.Database
 
 		public event EventHandler Disposing;
 
+		public event EventHandler DisposingEnded;
+
 		public event Action OnIndexingWiringComplete;
 
 		public static string BuildVersion
@@ -361,20 +363,20 @@ namespace Raven.Database
 					Type = "Put"
 				})
 				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
-					{
-						Name = x.ToString(),
-						Type = "Delete"
-					}))
+				{
+					Name = x.ToString(),
+					Type = "Delete"
+				}))
 				   .Concat(ReadTriggers.Select(x => new TriggerInfo
-					{
-						Name = x.ToString(),
-						Type = "Read"
-					}))
+		{
+			Name = x.ToString(),
+			Type = "Read"
+		}))
 				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
-						{
-							Name = x.ToString(),
-							Type = "Index Update"
-						})).ToList();
+			{
+				Name = x.ToString(),
+				Type = "Index Update"
+			})).ToList();
 
 				var extensions = Configuration.ReportExtensions(
 					typeof(IStartupTask),
@@ -429,38 +431,38 @@ namespace Raven.Database
 					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
-		{
-			Index indexInstance = IndexStorage.GetIndexInstance(indexId);
+						{
+							Index indexInstance = IndexStorage.GetIndexInstance(indexId);
 
-			var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+							var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
-			if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
-			{
-				var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
-				var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+							if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
+							{
+								var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+								var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
 
-				if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
-					return false;
-			}
+								if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
+									return false;
+							}
 
-			return isStale;
-		}).Select(indexId =>
-		{
-			Index index = IndexStorage.GetIndexInstance(indexId);
-			return index == null ? null : index.PublicName;
-		}).ToArray();
+							return isStale;
+						}).Select(indexId =>
+				{
+					Index index = IndexStorage.GetIndexInstance(indexId);
+					return index == null ? null : index.PublicName;
+				}).ToArray();
 
-		result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-			{
-				Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-				if (indexInstance == null)
-					return null;
-				x.Name = indexInstance.PublicName;
-				x.SetLastDocumentEtag(result.LastDocEtag);
-				return x;
-			})
-					.Where(x => x != null)
-					.ToArray();
+					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
+					{
+						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+						if (indexInstance == null)
+							return null;
+						x.Name = indexInstance.PublicName;
+						x.SetLastDocumentEtag(result.LastDocEtag);
+						return x;
+					})
+								.Where(x => x != null)
+								.ToArray();
 				});
 
 				if (result.Indexes != null)
@@ -655,10 +657,10 @@ namespace Raven.Database
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
-								{
-									if (prefetcher != null)
-										prefetcher.Dispose();
-								});
+							{
+								if (prefetcher != null)
+									prefetcher.Dispose();
+							});
 
 			exceptionAggregator.Execute(() =>
 							{
@@ -675,22 +677,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (ExtensionsState == null)
-				return;
+			{
+				if (ExtensionsState == null)
+					return;
 
-			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-				exceptionAggregator.Execute(value.Dispose);
-		});
+				foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+					exceptionAggregator.Execute(value.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (toDispose == null)
-				return;
+			{
+				if (toDispose == null)
+					return;
 
-			foreach (IDisposable shouldDispose in toDispose)
-				exceptionAggregator.Execute(shouldDispose.Dispose);
-		});
+				foreach (IDisposable shouldDispose in toDispose)
+					exceptionAggregator.Execute(shouldDispose.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -710,11 +712,11 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			var disposable = backgroundTaskScheduler as IDisposable;
-			if (disposable != null)
-				disposable.Dispose();
-		});
+			{
+				var disposable = backgroundTaskScheduler as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			});
 
 
 			if (IndexStorage != null)
@@ -731,7 +733,25 @@ namespace Raven.Database
 			if (workContext != null)
 				exceptionAggregator.Execute(workContext.Dispose);
 
-			exceptionAggregator.ThrowIfNeeded();
+			try
+			{
+				exceptionAggregator.ThrowIfNeeded();
+			}
+			finally
+			{
+				var onDisposingEnded = DisposingEnded;
+				if (onDisposingEnded != null)
+				{
+					try
+					{
+						onDisposingEnded(this, EventArgs.Empty);
+					}
+					catch (Exception e)
+					{
+						Log.WarnException("Error when notifying about db disposal ending, ignoring error and continuing with disposal", e);
+					}
+				}
+			}
 
 			Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 		}
