@@ -673,7 +673,7 @@ namespace Raven.Storage.Esent
             {
                 if (disposed)
                 {
-                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
                     return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
                 }
 
