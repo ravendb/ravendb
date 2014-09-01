@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[TimeBombedFact(2014, 9, 1, "This test applies only to esent storage. After 3.0 stable is out and Voron is not enforced as the only storage engine, this test should pass")]
+		[Fact]
 		public void Many_concurrent_inserts_from_different_DocumentStore_within_TransactionScope_should_not_result_in_missing_documents_in_index()
 		{
 			const int ParallelThreadCount = 100;
