@@ -125,10 +125,12 @@
     <Compile Include="Utils\Indexes\Posts_ByTitleAndContent.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />
+    <Compile Include="Utils\Indexes\Users_CountByLastName.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithAsDocumentTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithMetadataForTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithContentTransformer.cs" />
+    <Compile Include="Utils\Transformers\UsersTransformer.cs" />
     <Compile Include="Utils\Transformers\UserWithCustomDataAndAddressIncludeTransformer.cs" />
     <Compile Include="Utils\Indexes\Companies_WithReferencedEmployees.cs" />
     <Compile Include="Utils\Transformers\CompanyEmployeesTransformer.cs" />
