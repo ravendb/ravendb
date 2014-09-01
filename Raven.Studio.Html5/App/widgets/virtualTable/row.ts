@@ -94,7 +94,7 @@ class row {
                     cellValue = JSON.stringify(cellValue, null, 4) || "";
                 }
 
-                if (cellValue.length > 250) {
+                if (cellValue && cellValue.length > 250) {
                     cellValue = cellValue.substring(0, 250);
                 }
                 this.addOrUpdateCellMap(prop, cellValue);
