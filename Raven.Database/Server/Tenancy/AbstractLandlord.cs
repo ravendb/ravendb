@@ -260,36 +260,33 @@ namespace Raven.Database.Server.Tenancy
 				}
 			});
 
-            using (ResourcesStoresCache.WithAllLocks())
+            // shut down all databases in parallel, avoid having to wait for each one
+            Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
             {
-                // shut down all databases in parallel, avoid having to wait for each one
-                Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
+                if (dbTask.IsCompleted == false)
                 {
-                    if (dbTask.IsCompleted == false)
+                    dbTask.ContinueWith(task =>
                     {
-                        dbTask.ContinueWith(task =>
-                        {
-                            if (task.Status != TaskStatus.RanToCompletion)
-                                return;
+                        if (task.Status != TaskStatus.RanToCompletion)
+                            return;
 
-                            try
-                            {
-                                task.Result.Dispose();
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.WarnException("Failure in deferred disposal of a database", e);
-                            }
-                        });
-                    }
-                    else if (dbTask.Status == TaskStatus.RanToCompletion)
-                    {
-                        exceptionAggregator.Execute(dbTask.Result.Dispose);
-                    }
-                    // there is no else, the db is probably faulted
-                });
-                ResourcesStoresCache.Clear();
-            }
+                        try
+                        {
+                            task.Result.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.WarnException("Failure in deferred disposal of a database", e);
+                        }
+                    });
+                }
+                else if (dbTask.Status == TaskStatus.RanToCompletion)
+                {
+                    exceptionAggregator.Execute(dbTask.Result.Dispose);
+                }
+                // there is no else, the db is probably faulted
+            });
+            ResourcesStoresCache.Clear();
         }
     }
 }
