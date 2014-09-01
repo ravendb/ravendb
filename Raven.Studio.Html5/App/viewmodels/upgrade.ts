@@ -1,6 +1,9 @@
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import router = require("plugins/router");
+import database = require("models/database");
+import appUrl = require("common/appUrl");
 
 class upgrade extends viewModelBase {
 
@@ -10,6 +13,11 @@ class upgrade extends viewModelBase {
 
     attached() {
         this.poolStats();
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.dbChanged(db));
+    }
+
+    dbChanged(db:database) {
+        router.navigate(appUrl.forDocuments(null, db));
     }
 
     poolStats() {
