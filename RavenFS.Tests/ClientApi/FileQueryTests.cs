@@ -34,6 +34,49 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
+        public async void CanQueryAll()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                       .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(4, query.Count());
+            }
+        }
+
+        [Fact]
+        public async void CanQueryAllOnDirectory()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("a/test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("b/test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("b/test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("b/test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OnDirectory("/b/")
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(3, query.Count());
+            }
+        }
+
+        [Fact]
         public async void CanQueryByMultipleWithOrStatement()
         {
             var store = this.NewStore();
