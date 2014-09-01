@@ -488,5 +488,37 @@ namespace Raven.Tests.Core.Session
                 }
             }
         }
+
+        [Fact]
+        public void CanAggressivelyCacheFor()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Id = "users/1", Name = "Name" });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i <= 20; i++)
+                    {
+                        using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(1)))
+                        {
+                            session.Load<User>("users/1");
+                            Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                            if (i == 20)
+                            {
+                                System.Threading.Thread.Sleep(1000);
+                                session.Load<User>("users/1");
+                                Assert.Equal(2, session.Advanced.NumberOfRequests);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
